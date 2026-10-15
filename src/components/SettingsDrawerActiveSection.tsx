@@ -94,6 +94,10 @@ export type SettingsDrawerActiveSectionProps = {
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onUpdateMemory: (id: string, content: string) => void
+  onPatchMemory?: (
+    id: string,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
+  ) => void
   onUpdateNotificationChannel?: (id: string, patch: Partial<NotificationChannel>) => Promise<void>
   petModel: PetModelDefinition
   petModelImport: PetModelImport
@@ -150,6 +154,7 @@ export function SettingsDrawerActiveSection({
   onSetMemoryEnabled,
   onUpdateDailyEntry,
   onUpdateMemory,
+  onPatchMemory,
   onUpdateNotificationChannel,
   petModel,
   petModelImport,
@@ -262,6 +267,7 @@ export function SettingsDrawerActiveSection({
           onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}
           onAddManualMemory={onAddManualMemory}
           onUpdateMemory={onUpdateMemory}
+          onPatchMemory={onPatchMemory}
           onSetMemoryEnabled={onSetMemoryEnabled}
           onRemoveMemory={onRemoveMemory}
           onClearDailyMemory={onClearDailyMemory}

@@ -5,6 +5,7 @@ import type {
   MemoryCategory,
   MemoryImportance,
   MemoryItem,
+  LoopStatus,
   MemoryKind,
   MemoryStatus,
 } from '../../types'
@@ -35,7 +36,8 @@ const VALID_CATEGORIES = new Set<MemoryCategory>([
   'reference',
 ])
 const VALID_IMPORTANCE = new Set<MemoryImportance>(['low', 'normal', 'high', 'pinned', 'reflection'])
-const VALID_KINDS = new Set<MemoryKind>(['preference', 'fact', 'relationship', 'knowledge'])
+const VALID_KINDS = new Set<MemoryKind>(['preference', 'fact', 'relationship', 'knowledge', 'open_loop'])
+const VALID_LOOP_STATUSES = new Set<LoopStatus>(['open', 'done', 'dismissed'])
 const VALID_VALENCES = new Set<EmotionalValence>(['positive', 'negative', 'neutral', 'mixed'])
 
 function normalizeIsoTimestamp(value: unknown, fallbackIndex?: number): string | null {
@@ -142,6 +144,14 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
   const statusReason = normalizeBoundedText(value.statusReason, 240, true)
   const mergedFrom = normalizeRelatedIds(value.mergedFrom)
   const userConfirmed = value.userConfirmed === true || source === 'manual'
+  const loopStatus = typeof value.loopStatus === 'string' && VALID_LOOP_STATUSES.has(value.loopStatus as LoopStatus)
+    ? value.loopStatus as LoopStatus
+    : undefined
+  const loopDueAt = normalizeIsoTimestamp(value.loopDueAt)
+  const loopDueText = normalizeBoundedText(value.loopDueText, 80, true)
+  const loopSnoozeUntil = normalizeIsoTimestamp(value.loopSnoozeUntil)
+  const loopSurfacedCount = normalizeNonNegativeInteger(value.loopSurfacedCount)
+  const loopLastSurfacedAt = normalizeIsoTimestamp(value.loopLastSurfacedAt)
 
   return {
     id,
@@ -173,6 +183,12 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
     ...(statusReason ? { statusReason } : {}),
     ...(mergedFrom ? { mergedFrom } : {}),
     ...(userConfirmed ? { userConfirmed: true } : {}),
+    ...(loopStatus ? { loopStatus } : {}),
+    ...(loopDueAt ? { loopDueAt } : {}),
+    ...(loopDueText ? { loopDueText } : {}),
+    ...(loopSnoozeUntil ? { loopSnoozeUntil } : {}),
+    ...(loopSurfacedCount !== undefined ? { loopSurfacedCount } : {}),
+    ...(loopLastSurfacedAt ? { loopLastSurfacedAt } : {}),
   }
 }
 

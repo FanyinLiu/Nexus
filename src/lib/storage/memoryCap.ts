@@ -19,6 +19,7 @@ export function isProtectedMemory(memory: MemoryItem): boolean {
   return memory.importance === 'pinned'
     || memory.userConfirmed === true
     || memory.source === 'manual'
+    || (memory.kind === 'open_loop' && (memory.loopStatus ?? 'open') === 'open')
 }
 
 function keepScore(memory: MemoryItem): number {

@@ -15,6 +15,7 @@ import { createId } from '../../lib/index.ts'
 import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
 import { commitLongTermMemoryCap } from './memoryCapCommit.ts'
 import { localDayKey } from '../../lib/localDate.ts'
+import { attachOpenLoops } from './openLoops.ts'
 
 const longTermDuplicateThreshold = 0.72
 const dailyDuplicateThreshold = 0.88
@@ -151,7 +152,7 @@ export function extractMemoriesFromMessage(
 
   const valence = emotionState ? inferValence(emotionState) : undefined
 
-  return splitMessageSegments(message.content)
+  const extracted = splitMessageSegments(message.content)
     .filter((segment) => (
       /(我是|我叫|我喜欢|我想|我要|我打算|我最近|我在|我的|希望|讨厌|偏好|习惯|计划|准备|我讨厌|我热爱|我常常|我从来|我已经|我正在|我住在|我来自|我工作|不要这样|别这么|记住|下次|项目|上线|截止|文档在|地址是|i am|i'm|my|i like|i want|i plan|i need|i hate|i love|i usually|i always|don't|stop|remember|project|deadline|url|link)/i
         .test(segment)
@@ -176,6 +177,8 @@ export function extractMemoriesFromMessage(
         significance: emotionState ? computeMemorySignificance(emotionState) : undefined,
       }
     })
+
+  return attachOpenLoops(extracted, message.content, message.createdAt)
 }
 
 function inferValence(emo: EmotionState): EmotionalValence {

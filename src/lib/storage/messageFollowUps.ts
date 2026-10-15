@@ -139,6 +139,15 @@ export function recordMessageFollowUp(
 }
 
 /**
+ * Mark a legacy follow-up fired without consuming its prompt. The shared
+ * agenda calls this so turning the agenda off cannot repeat the same nudge.
+ */
+export function settleMessageFollowUp(conversationKey: string, now = Date.now()): void {
+  const list = pruneFollowUps(loadMessageFollowUps(), now)
+  saveMessageFollowUps(markFollowUpFired(list, conversationKey, now))
+}
+
+/**
  * Pop the one due follow-up (if any) for this chat turn, marking it fired so
  * it never repeats. Returns the ready-to-inject prompt text or ''.
  */

@@ -127,7 +127,7 @@ const MEMORY_CATEGORIES: readonly MemoryCategory[] = [
   'reference',
 ]
 
-const MEMORY_KINDS: readonly MemoryKind[] = ['preference', 'fact', 'relationship', 'knowledge']
+const MEMORY_KINDS: readonly MemoryKind[] = ['preference', 'fact', 'relationship', 'knowledge', 'open_loop']
 const MEMORY_IMPORTANCE_LEVELS: readonly MemoryImportance[] = ['low', 'normal', 'high', 'pinned', 'reflection']
 
 function byteLength(value: string | null | undefined): number {

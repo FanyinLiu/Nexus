@@ -11,6 +11,7 @@
 import { createId as defaultCreateId } from '../../lib/storage/core.ts'
 import { applyLongTermMemoryCap, isProtectedMemory } from '../../lib/storage/memoryCap.ts'
 import type {
+  LoopStatus,
   MemoryItem,
   MemoryOpActor,
   MemoryOpRecord,
@@ -18,6 +19,7 @@ import type {
 } from '../../types/memory.ts'
 import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
 import { normalizeText, scoreContainment, scoreLexicalSimilarity } from './memory.ts'
+import { resolveOpenLoops } from './openLoops.ts'
 import { cosineSimilarity, embedLocalHashMemoryText } from './vectorSearch.ts'
 
 const LEXICAL_DUPLICATE = 0.72
@@ -44,6 +46,7 @@ interface DraftOp {
   content?: string
   reason: string
   candidateId?: string
+  loopStatus?: LoopStatus
 }
 
 export interface TurnMemoryWritePlan {
@@ -287,18 +290,23 @@ export function applyReconcileOps(
 
     if (draft.op === 'UPDATE') {
       const target = targets[0]!
-      if (isProtectedMemory(target)) {
+      if (isProtectedMemory(target) && !draft.loopStatus) {
         push('NOOP', [target.id], 'protected')
         continue
       }
       const content = draft.content?.trim()
-      if (!content) {
+      if (!content && !draft.loopStatus) {
         push('NOOP', [target.id], 'empty-update')
         continue
       }
       memories = memories.map((memory) => (
         memory.id === target.id
-          ? withV2(memory, now, { content, lastUsedAt: now, status: memory.status ?? 'active' })
+          ? withV2(memory, now, {
+            ...(content ? { content } : {}),
+            ...(draft.loopStatus ? { loopStatus: draft.loopStatus } : {}),
+            lastUsedAt: now,
+            status: memory.status ?? 'active',
+          })
           : memory
       ))
       push('UPDATE', [target.id], draft.reason || 'update')
@@ -450,6 +458,36 @@ function exceedsLossGuard(drafts: readonly DraftOp[], memories: readonly MemoryI
   return destructiveCount(drafts, memories) > limit
 }
 
+function utteranceText(utterance: string | undefined, candidates: readonly MemoryItem[]): string {
+  const explicit = utterance?.trim()
+  if (explicit) return explicit
+  return candidates.map((candidate) => candidate.content).filter(Boolean).join('\n')
+}
+
+function withLoopResolution(
+  applied: { memories: MemoryItem[]; ops: MemoryOpRecord[] },
+  utterance: string,
+  now: string,
+): { memories: MemoryItem[]; ops: MemoryOpRecord[] } {
+  try {
+    const resolved = resolveOpenLoops(applied.memories, utterance, now)
+    if (!resolved.changes.length) return applied
+    const createOpId = (index: number) => `memory-op-${index}-${Date.parse(now) || index}`
+    const extra = resolved.changes.map((change, index) => stampOp(
+      'turn',
+      now,
+      applied.ops.length + index,
+      'UPDATE',
+      [change.id],
+      change.snoozeUntil ? 'loop-snoozed' : `loop-${change.status}`,
+      createOpId,
+    ))
+    return { memories: resolved.memories, ops: [...applied.ops, ...extra] }
+  } catch {
+    return applied
+  }
+}
+
 function fallbackResult(
   existing: readonly MemoryItem[],
   candidates: readonly MemoryItem[],
@@ -457,11 +495,16 @@ function fallbackResult(
   reason: MemoryReconcileResult['fallbackReason'],
   embed?: MemoryTextEmbedder,
   createId?: (prefix: string) => string,
+  utterance?: string,
 ): MemoryReconcileResult {
-  const applied = applyReconcileOps(
-    existing,
-    buildFallbackReconcileOps(existing, candidates, embed),
-    { now, actor: 'turn', candidates, createId },
+  const applied = withLoopResolution(
+    applyReconcileOps(
+      existing,
+      buildFallbackReconcileOps(existing, candidates, embed),
+      { now, actor: 'turn', candidates, createId },
+    ),
+    utteranceText(utterance, candidates),
+    now,
   )
   return {
     memories: applied.memories,
@@ -502,10 +545,16 @@ export function parseReconcileResponse(responseContent: string): { ok: true; ops
       const reason = typeof record.reason === 'string' && record.reason.trim()
         ? record.reason.trim().slice(0, 240)
         : opName.toLowerCase()
+      const loopStatus = record.loopStatus === 'open'
+        || record.loopStatus === 'done'
+        || record.loopStatus === 'dismissed'
+        ? record.loopStatus
+        : undefined
       ops.push({
         op: opName as MemoryReconcileOpName,
         targetIds,
         ...(content ? { content } : {}),
+        ...(loopStatus ? { loopStatus } : {}),
         reason,
       })
     }
@@ -518,6 +567,12 @@ export function parseReconcileResponse(responseContent: string): { ok: true; ops
 function promptMemories(existing: readonly MemoryItem[], candidates: readonly MemoryItem[]): MemoryItem[] {
   const active = activeMemories(existing)
   const picked = new Map<string, MemoryItem>()
+  for (const memory of active) {
+    if (memory.kind === 'open_loop' && (memory.loopStatus ?? 'open') === 'open') {
+      picked.set(memory.id, memory)
+    }
+    if (picked.size >= MAX_PROMPT_MEMORIES) break
+  }
   for (const candidate of candidates) {
     const ranked = [...active].sort((left, right) => (
       scoreLexicalSimilarity(right.content, candidate.content)
@@ -538,18 +593,21 @@ export function buildReconcilePrompt(
   candidates: readonly MemoryItem[],
 ): { system: string; user: string } {
   const shown = promptMemories(existing, candidates)
-  const existingSection = shown.length
-    ? shown.map((memory) => `- id=${memory.id} [${memory.category}] ${memory.content}`).join('\n')
-    : '(none)'
-  const candidateSection = candidates.length
-    ? candidates.map((memory) => `- id=${memory.id} [${memory.category}] ${memory.content}`).join('\n')
-    : '(none)'
+  const line = (memory: MemoryItem) => {
+    const loop = memory.kind === 'open_loop'
+      ? ` open_loop:${memory.loopStatus ?? 'open'}${memory.loopDueText ? ` due=${memory.loopDueText}` : ''}`
+      : ''
+    return `- id=${memory.id} [${memory.category}${loop}] ${memory.content}`
+  }
+  const existingSection = shown.length ? shown.map(line).join('\n') : '(none)'
+  const candidateSection = candidates.length ? candidates.map(line).join('\n') : '(none)'
   const system = `You reconcile new memory candidates into an existing long-term memory store.
 Return strict JSON only, no markdown. Use only the operations ADD, UPDATE, MERGE, SUPERSEDE, DELETE, and NOOP.
 Every UPDATE, MERGE, SUPERSEDE, DELETE, and NOOP must copy target ids exactly from the id= values below. Never invent an id.
 SUPERSEDE when a candidate replaces an older fact. MERGE when two stored rows say the same thing. DELETE only when a candidate retracts a stored fact. NOOP when nothing should change.
-Do not modify pinned or user-confirmed memories.
-{"ops":[{"op":"ADD","content":"...","reason":"..."},{"op":"UPDATE","targetId":"...","content":"...","reason":"..."},{"op":"MERGE","targetIds":["..."],"content":"...","reason":"..."},{"op":"SUPERSEDE","targetId":"...","content":"...","reason":"..."},{"op":"DELETE","targetId":"...","reason":"..."},{"op":"NOOP","targetId":"...","reason":"..."}]}`
+When a candidate shows an open_loop is finished, UPDATE that id with loopStatus "done" and do not ADD a duplicate. Use loopStatus "dismissed" when the user says not to bring it up.
+Do not modify pinned or user-confirmed memories, except to set loopStatus when the user resolved that loop.
+{"ops":[{"op":"ADD","content":"...","reason":"..."},{"op":"UPDATE","targetId":"...","content":"...","loopStatus":"done","reason":"..."},{"op":"MERGE","targetIds":["..."],"content":"...","reason":"..."},{"op":"SUPERSEDE","targetId":"...","content":"...","reason":"..."},{"op":"DELETE","targetId":"...","reason":"..."},{"op":"NOOP","targetId":"...","reason":"..."}]}`
   const user = `Existing memories:\n${existingSection}\n\nNew candidates:\n${candidateSection}`
   return { system, user }
 }
@@ -565,25 +623,27 @@ export async function reconcileExtractedMemories(input: {
   complete?: ((prompt: { system: string; user: string }) => Promise<string | null | undefined>) | null
   embed?: MemoryTextEmbedder
   createId?: (prefix: string) => string
+  utterance?: string
 }): Promise<MemoryReconcileResult> {
   const now = input.now ?? new Date().toISOString()
   try {
     if (!input.complete) {
-      return fallbackResult(input.existing, input.candidates, now, 'no-model', input.embed, input.createId)
+      return fallbackResult(input.existing, input.candidates, now, 'no-model', input.embed, input.createId, input.utterance)
     }
     let text: string | null = null
     try {
       text = (await input.complete(buildReconcilePrompt(input.existing, input.candidates))) ?? null
     } catch {
-      return fallbackResult(input.existing, input.candidates, now, 'model-failed', input.embed, input.createId)
+      return fallbackResult(input.existing, input.candidates, now, 'model-failed', input.embed, input.createId, input.utterance)
     }
     return reconcileFromModelText(input.existing, input.candidates, text ?? '', {
       now,
       embed: input.embed,
       createId: input.createId,
+      utterance: input.utterance,
     })
   } catch {
-    return fallbackResult(input.existing, input.candidates, now, 'model-failed', input.embed, input.createId)
+    return fallbackResult(input.existing, input.candidates, now, 'model-failed', input.embed, input.createId, input.utterance)
   }
 }
 
@@ -596,26 +656,32 @@ export function reconcileFromModelText(
     now?: string
     embed?: MemoryTextEmbedder
     createId?: (prefix: string) => string
+    utterance?: string
   },
 ): MemoryReconcileResult {
   const now = options?.now ?? new Date().toISOString()
+  const utterance = options?.utterance
   try {
     const parsed = parseReconcileResponse(text)
     if (!parsed.ok) {
-      return fallbackResult(existing, candidates, now, 'invalid-response', options?.embed, options?.createId)
+      return fallbackResult(existing, candidates, now, 'invalid-response', options?.embed, options?.createId, utterance)
     }
     if (exceedsLossGuard(parsed.ops, existing)) {
-      return fallbackResult(existing, candidates, now, 'loss-guard', options?.embed, options?.createId)
+      return fallbackResult(existing, candidates, now, 'loss-guard', options?.embed, options?.createId, utterance)
     }
-    const applied = applyReconcileOps(existing, parsed.ops, {
+    const applied = withLoopResolution(
+      applyReconcileOps(existing, parsed.ops, {
+        now,
+        actor: 'turn',
+        candidates,
+        createId: options?.createId,
+      }),
+      utteranceText(utterance, candidates),
       now,
-      actor: 'turn',
-      candidates,
-      createId: options?.createId,
-    })
+    )
     return { memories: applied.memories, ops: applied.ops, decisionSource: 'model' }
   } catch {
-    return fallbackResult(existing, candidates, now, 'model-failed', options?.embed, options?.createId)
+    return fallbackResult(existing, candidates, now, 'model-failed', options?.embed, options?.createId, utterance)
   }
 }
 
@@ -630,19 +696,24 @@ export function planTurnMemoryWrite(input: {
   now?: string
   embed?: MemoryTextEmbedder
   createId?: (prefix: string) => string
+  /** Full user turn. Resolution still runs when extraction found nothing. */
+  utterance?: string
 }): TurnMemoryWritePlan {
   if (input.memoryPaused) {
     return { paused: true, memories: [...input.existing], evicted: [], ops: [] }
   }
-  if (!input.candidates.length) {
+  if (!input.candidates.length && !input.utterance?.trim()) {
     return { paused: false, memories: [...input.existing], evicted: [], ops: [] }
   }
   const now = input.now ?? new Date().toISOString()
-  const reconciled = applyReconcileOps(
-    input.existing,
-    buildFallbackReconcileOps(input.existing, input.candidates, input.embed),
-    { now, actor: 'turn', candidates: input.candidates, createId: input.createId },
-  )
+  const drafted = input.candidates.length
+    ? applyReconcileOps(
+      input.existing,
+      buildFallbackReconcileOps(input.existing, input.candidates, input.embed),
+      { now, actor: 'turn', candidates: input.candidates, createId: input.createId },
+    )
+    : { memories: [...input.existing], ops: [] as MemoryOpRecord[] }
+  const reconciled = withLoopResolution(drafted, utteranceText(input.utterance, input.candidates), now)
   const capped = applyLongTermMemoryCap(reconciled.memories)
   const ops = [...reconciled.ops]
   if (capped.evicted.length) {

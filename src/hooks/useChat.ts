@@ -8,6 +8,7 @@ import {
   markRecalled,
 } from '../features/memory/index.ts'
 import { logVoiceEvent } from '../features/voice/index.ts'
+import { noteUserTyping } from '../features/autonomy/userTyping.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
@@ -63,6 +64,7 @@ export function useChat(ctx: UseChatContext) {
   const inputRef = useRef('')
   const setInputValue = useCallback((value: string) => {
     inputRef.current = value
+    noteUserTyping()
     setInput(value)
   }, [])
   const pendingImageRef = useRef<string | null>(null)

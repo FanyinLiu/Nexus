@@ -17,7 +17,7 @@ const MEMORY_CATEGORIES = new Set([
   'reference',
 ])
 const MEMORY_IMPORTANCE = new Set(['low', 'normal', 'high', 'pinned', 'reflection'])
-const MEMORY_KINDS = new Set(['preference', 'fact', 'relationship', 'knowledge'])
+const MEMORY_KINDS = new Set(['preference', 'fact', 'relationship', 'knowledge', 'open_loop'])
 const MEMORY_VALENCES = new Set(['positive', 'negative', 'neutral', 'mixed'])
 
 function isPlainObject(value) {
@@ -167,6 +167,17 @@ export function normalizeMemoryMigrationItem(value, index = 0) {
   if (value.userConfirmed === true || memory.source === 'manual') memory.userConfirmed = true
   const mergedFrom = normalizeRelatedIds(value.mergedFrom, `memory ${index} mergedFrom`)
   if (mergedFrom !== undefined) memory.mergedFrom = mergedFrom
+  if (value.loopStatus === 'open' || value.loopStatus === 'done' || value.loopStatus === 'dismissed') {
+    memory.loopStatus = value.loopStatus
+  }
+  for (const field of ['loopDueAt', 'loopSnoozeUntil', 'loopLastSurfacedAt']) {
+    const stamped = normalizeOptionalString(value[field], `memory ${index} ${field}`, 64)
+    if (stamped) memory[field] = normalizeIsoTimestamp(stamped, `memory ${index} ${field}`)
+  }
+  const loopDueText = normalizeOptionalString(value.loopDueText, `memory ${index} loopDueText`, 80)
+  if (loopDueText) memory.loopDueText = loopDueText
+  const loopSurfacedCount = normalizeNonNegativeInteger(value.loopSurfacedCount, `memory ${index} loopSurfacedCount`)
+  if (loopSurfacedCount !== undefined) memory.loopSurfacedCount = loopSurfacedCount
   return memory
 }
 

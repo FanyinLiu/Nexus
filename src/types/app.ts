@@ -1,6 +1,7 @@
 import type { AutonomySettings } from './autonomy.ts'
 import type { AppLocale } from './i18n.ts'
 import type { MemorySearchMode } from './memory.ts'
+import type { ProactiveFrequencyPreset } from './proactive.ts'
 import type { CompanionPresenceState, PetMood } from './pet.ts'
 import type { ThemeId } from './theme.ts'
 import type { WebSearchProviderId } from './tools.ts'
@@ -265,6 +266,14 @@ interface MemorySettings {
   // small LLM call per turn but catches colloquial phrasing that the
   // literal user text misses against formal lorebook entries.
   lorebookRewriteQueryEnabled: boolean
+  /** Shared queue for open-loop reminders and proactive chat. */
+  proactiveAgendaEnabled: boolean
+  /** Low is 1 a day. Normal is the hard cap of 3. */
+  proactiveFrequency: ProactiveFrequencyPreset
+  /** Local hour the proactive quiet window starts. Default 23. */
+  proactiveQuietHoursStart: number
+  /** Local hour the proactive quiet window ends. Default 8. */
+  proactiveQuietHoursEnd: number
 }
 
 interface ContextSettings {

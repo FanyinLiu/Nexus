@@ -202,6 +202,27 @@ export function useMemory({ settings }: UseMemoryParams) {
     })
   }, [])
 
+  const patchMemory = useCallback((
+    id: string,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'loopSurfacedCount' | 'loopLastSurfacedAt'>>,
+  ) => {
+    setMemories((current) => {
+      const nextMemories = current.map((memory) => {
+        if (memory.id !== id) return memory
+        const content = typeof patch.content === 'string' ? patch.content.trim() : memory.content
+        if (!content) return memory
+        return {
+          ...memory,
+          ...patch,
+          content,
+          updatedAt: new Date().toISOString(),
+        }
+      })
+      memoriesRef.current = nextMemories
+      return nextMemories
+    })
+  }, [])
+
   const updateMemory = useCallback((id: string, content: string) => {
     const normalizedContent = content.trim()
     if (!normalizedContent) {
@@ -352,6 +373,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     addManualMemory,
     removeMemory,
     updateMemory,
+    patchMemory,
     setMemoryEnabled,
     clearTodayDailyMemory,
     updateDailyEntry,
@@ -369,6 +391,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     addManualMemory,
     removeMemory,
     updateMemory,
+    patchMemory,
     setMemoryEnabled,
     clearTodayDailyMemory,
     updateDailyEntry,
