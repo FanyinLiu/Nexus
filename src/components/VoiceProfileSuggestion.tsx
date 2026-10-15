@@ -4,7 +4,8 @@
  * The probe can be skipped and never gates the rest of the form.
  * Accepting a plan is the only write. That accept also asks the
  * existing model catalog to download SenseVoice (or MeloTTS) when
- * the file is not already present.
+ * the file is not already present. Engines that are not wired
+ * (Kokoro, Supertonic) stay in the selector and are not shown.
  */
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
@@ -73,9 +74,6 @@ export function VoiceProfileSuggestion({ draft, setDraft, mode }: VoiceProfileSu
     ?? migrateVoiceLanguageValue(draft.uiLanguage).canonical
     ?? 'zh-CN'
   const activePlan = probe.profile?.languages.find((item) => item.language === activeLanguage) ?? null
-  const showKokoro = probe.profile?.languages.some((item) => item.reasons.includes('kokoro-not-wired')) ?? false
-  const showCloud = probe.profile?.languages.some((item) => item.cloudFallback) ?? false
-  const showSupertonic = probe.profile?.languages.some((item) => item.laterEngine === 'supertonic') ?? false
   const tierLabel = probe.profile
     ? ti(`onboarding.voice.profile.tier_${probe.profile.tier}` as TranslationKey)
     : ''
@@ -120,10 +118,6 @@ export function VoiceProfileSuggestion({ draft, setDraft, mode }: VoiceProfileSu
               </li>
             ))}
           </ul>
-          {showKokoro ? <p className="onboarding-tip">{ti('onboarding.voice.profile.kokoro_pending')}</p> : null}
-          {showCloud ? <p className="onboarding-tip">{ti('onboarding.voice.profile.cloud_fallback')}</p> : null}
-          {showSupertonic ? <p className="onboarding-tip">{ti('onboarding.voice.profile.supertonic_later')}</p> : null}
-          <p className="onboarding-tip">{ti('onboarding.voice.profile.download_hint')}</p>
         </>
       ) : null}
       {downloadError ? <p className="settings-test-result is-error" role="alert">{downloadError}</p> : null}
