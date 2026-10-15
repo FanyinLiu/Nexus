@@ -331,6 +331,11 @@ interface PresenceSettings {
   typingAwarenessEnabled: boolean
   /** The first-enable explanation has been accepted. */
   typingAwarenessNoticeAccepted: boolean
+  /**
+   * Draw a rounded card behind the frameless companion. Default off, so the
+   * character stands on the desktop with no backdrop, border, or shadow.
+   */
+  companionBackdropEnabled: boolean
 }
 
 export interface McpServerConfig {

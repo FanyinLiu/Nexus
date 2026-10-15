@@ -19,6 +19,8 @@ export const zhCNSettingsWindow = {
   'settings.window.click_through_note': '开启点击穿透后，桌面伙伴不会拦截鼠标，更适合作为安静陪伴；需要再次调整时，可以从聊天面板或托盘菜单重新进入。',
   'settings.window.gaze_follow': '视线跟随光标',
   'settings.window.gaze_follow_hint': '伙伴会看向屏幕上的光标，即使光标不在宠物窗口里。光标停在宠物身上时，仍使用窗口内原来的跟随。',
+  'settings.window.companion_backdrop': '显示背景卡片',
+  'settings.window.companion_backdrop_hint': '在角色后面放一块柔和的卡片。默认关闭，角色直接站在桌面上，没有边框和阴影。',
   'settings.window.typing_awareness': '打字感知',
   'settings.window.typing_awareness_hint': '在其他应用里打字时，伙伴会跟着做出反应。默认关闭。不会记录或上传按了哪些键，只知道正在打字和大致速度。',
   'settings.window.typing_explain_title': '开启打字感知前',

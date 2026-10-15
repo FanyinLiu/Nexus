@@ -337,7 +337,7 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 12
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 13
 
 interface SettingsMigration {
   toVersion: number
@@ -483,6 +483,17 @@ const migrations: SettingsMigration[] = [
     toVersion: 12,
     description: 'Fall back when a removed bundled sprite pet is still selected',
     migrate: migrateRemovedBundledPetModels,
+  },
+  {
+    toVersion: 13,
+    description: 'Default the frameless companion backdrop off so the character stands on the desktop',
+    migrate: (raw) => {
+      const next = { ...raw }
+      if (typeof next.companionBackdropEnabled !== 'boolean') {
+        next.companionBackdropEnabled = false
+      }
+      return next
+    },
   },
 ]
 

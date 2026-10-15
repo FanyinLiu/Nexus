@@ -336,7 +336,7 @@ export function FramelessCompanionSurface({
 
   return (
     <section
-      className={`nexus-companion-v2 ${className}`.trim()}
+      className={`nexus-companion-v2${settings.companionBackdropEnabled ? ' is-backdrop' : ''} ${className ?? ''}`.trim()}
       data-phase={phase}
       data-gaze-x={pet.gazeTarget.x.toFixed(3)}
       data-gaze-y={pet.gazeTarget.y.toFixed(3)}
@@ -345,6 +345,9 @@ export function FramelessCompanionSurface({
       onPointerOverCapture={() => pet.setPetHotspotActive(true)}
       onPointerOutCapture={handleInteractivePointerOut}
     >
+      {settings.companionBackdropEnabled ? (
+        <div className="nexus-companion-v2__backdrop" aria-hidden="true" />
+      ) : null}
       <div
         ref={characterRef}
         className="nexus-companion-v2__character-hit nexus-v2-interactive"

@@ -21,6 +21,8 @@ export const jaSettingsWindow = {
   'settings.window.click_through_note': 'クリックスルーを有効にすると、デスクトップパートナーはマウス入力を受け付けず、静かな常駐に向きます。',
   'settings.window.gaze_follow': 'カーソルを目で追う',
   'settings.window.gaze_follow_hint': 'ペットウィンドウの外でも、画面上のカーソルの方向を見ます。ポインタがペットの上にあるときは、これまでどおりウィンドウ内の追従が優先されます。',
+  'settings.window.companion_backdrop': '背景カードを表示',
+  'settings.window.companion_backdrop_hint': 'コンパニオンの後ろにやわらかいカードを置きます。初期状態ではオフで、キャラクターは枠も影もなくデスクトップに直接立ちます。',
   'settings.window.typing_awareness': 'タイピング感知',
   'settings.window.typing_awareness_hint': 'ほかのアプリで入力しているあいだ、パートナーが反応します。初期状態ではオフです。どのキーを押したかは保存も送信もせず、入力の有無とおおよその速さだけを使います。',
   'settings.window.typing_explain_title': 'タイピング感知をオンにする前に',

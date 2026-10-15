@@ -21,6 +21,8 @@ export const enSettingsWindow = {
   'settings.window.click_through_note': 'When click-through is enabled, the desktop companion no longer intercepts mouse input, which works better for quiet presence.',
   'settings.window.gaze_follow': 'Follow the cursor',
   'settings.window.gaze_follow_hint': 'The companion looks toward the cursor anywhere on screen. While the pointer is over the pet, the existing in-window gaze stays in charge.',
+  'settings.window.companion_backdrop': 'Show a backdrop',
+  'settings.window.companion_backdrop_hint': 'Places a soft card behind the companion. Off by default, so the character stands on the desktop with no border or shadow.',
   'settings.window.typing_awareness': 'Typing awareness',
   'settings.window.typing_awareness_hint': 'The companion reacts while you type in other apps. Off by default. Key identities are never stored or sent — only that typing is happening, and how fast.',
   'settings.window.typing_explain_title': 'Before turning on typing awareness',

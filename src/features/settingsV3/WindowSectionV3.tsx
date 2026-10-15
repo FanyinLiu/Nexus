@@ -154,6 +154,17 @@ export const WindowSectionV3 = memo(function WindowSectionV3({
           />
         </SettingsV3Row>
         <SettingsV3Row
+          icon="image"
+          label={ti('settings.window.companion_backdrop')}
+          hint={ti('settings.window.companion_backdrop_hint')}
+        >
+          <SettingsV3Switch
+            label={ti('settings.window.companion_backdrop')}
+            checked={draft.companionBackdropEnabled === true}
+            onChange={(companionBackdropEnabled) => setSetting('companionBackdropEnabled', companionBackdropEnabled)}
+          />
+        </SettingsV3Row>
+        <SettingsV3Row
           icon="thought"
           label={ti('settings.window.typing_awareness')}
           hint={ti('settings.window.typing_awareness_hint')}

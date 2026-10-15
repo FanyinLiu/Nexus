@@ -47,6 +47,11 @@ function readPresenceScript() {
       height: Math.round(rect?.height ?? 0),
       hasOnboarding: Boolean(document.querySelector('.onboarding-backdrop, .onboarding-card')),
       hasErrorFallback: Boolean(document.querySelector('.app-error-fallback')),
+      hasBackdrop: Boolean(document.querySelector('.nexus-companion-v2__backdrop')),
+      triggerOpacity: Number(getComputedStyle(document.querySelector('.nexus-companion-v2__utility-trigger') || document.body).opacity),
+      voiceOpacity: Number(getComputedStyle(document.querySelector('.nexus-companion-v2__voice') || document.body).opacity),
+      surfacePointerEvents: getComputedStyle(surface || document.body).pointerEvents,
+      characterPointerEvents: getComputedStyle(document.querySelector('.nexus-companion-v2__character-hit') || document.body).pointerEvents,
       bodyText: document.body.innerText.slice(0, 240),
     }
   })()`
@@ -182,6 +187,14 @@ async function main() {
     }
     if (snapshot.width < 200 || snapshot.height < 300) {
       throw new Error(`v2 companion is unexpectedly small: ${snapshot.width}x${snapshot.height}`)
+    }
+
+    const resting = await readPresence(window)
+    if (resting.hasBackdrop || resting.triggerOpacity !== 0 || resting.voiceOpacity !== 0) {
+      throw new Error(`companion chrome is painted at rest: ${JSON.stringify(resting)}`)
+    }
+    if (resting.surfacePointerEvents !== 'none' || resting.characterPointerEvents !== 'auto') {
+      throw new Error(`companion hit testing changed: ${JSON.stringify(resting)}`)
     }
 
     const outsideRight = await sendGaze(window, OUTSIDE_RIGHT, 4)

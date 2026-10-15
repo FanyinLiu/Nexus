@@ -21,6 +21,8 @@ export const koSettingsWindow = {
   'settings.window.click_through_note': '클릭 통과를 켜면 데스크톱 파트너가 마우스 입력을 받지 않아 조용한 상주에 적합합니다.',
   'settings.window.gaze_follow': '커서를 따라보기',
   'settings.window.gaze_follow_hint': '펫 창 밖이어도 화면의 커서 방향을 봅니다. 포인터가 펫 위에 있을 때는 창 안의 기존 시선 추적이 우선합니다.',
+  'settings.window.companion_backdrop': '배경 카드 표시',
+  'settings.window.companion_backdrop_hint': '동료 뒤에 부드러운 카드를 둡니다. 기본값은 꺼짐이라 캐릭터가 테두리와 그림자 없이 바탕화면에 바로 섭니다.',
   'settings.window.typing_awareness': '타이핑 감지',
   'settings.window.typing_awareness_hint': '다른 앱에서 입력하는 동안 파트너가 반응합니다. 기본값은 꺼짐입니다. 어떤 키를 눌렀는지는 저장하거나 보내지 않고, 입력 여부와 대략적인 속도만 사용합니다.',
   'settings.window.typing_explain_title': '타이핑 감지를 켜기 전에',
