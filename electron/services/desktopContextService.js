@@ -555,20 +555,9 @@ export async function captureScreenshotContext() {
   return screenshotContextCache.pending
 }
 
-export function normalizeDesktopContextPolicy(policy) {
-  if (!policy || typeof policy !== 'object') {
-    return {
-      activeWindow: true,
-      clipboard: true,
-      screenshot: true,
-    }
-  }
-
-  return {
-    activeWindow: policy.activeWindow !== false,
-    clipboard: policy.clipboard !== false,
-    screenshot: policy.screenshot !== false,
-  }
-}
+export {
+  getSavedDesktopContextFlags,
+  normalizeDesktopContextPolicy,
+} from './desktopContextPolicy.js'
 
 export { clipboard }

@@ -17,6 +17,7 @@ import {
   summarizeWindowNavigationErrorForLog,
   summarizeWindowNavigationUrlForLog,
 } from './windowNavigation.js'
+import { bindWindowCapability, unbindWindowCapability } from './ipc/windowCapabilities.js'
 import {
   getPanelWindowCreationState,
   isPanelWindowTrackable,
@@ -108,20 +109,48 @@ function openExternalUrlFromWindow(url, label) {
 }
 
 function attachNavigationGuards(win, label, view) {
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  const viewKind = view === 'panel' ? 'panel' : 'pet'
+  const contents = win.webContents
+  bindWindowCapability(contents, viewKind)
+  contents.once('destroyed', () => {
+    unbindWindowCapability(contents)
+  })
+
+  contents.setWindowOpenHandler(({ url }) => {
     openExternalUrlFromWindow(url, label)
     return { action: 'deny' }
   })
 
-  // Prevent the renderer from navigating away from the app origin.
-  // If an attacker manages to redirect the webContents, the preload bridge
-  // would be exposed to an untrusted page.
-  win.webContents.on('will-navigate', (event, url) => {
-    const allowed = getRendererEntry(view)
-    if (!isAllowedRendererNavigation(url, allowed)) {
+  const leavesEntryRole = (url) => !isAllowedRendererNavigation(url, getRendererEntry(view))
+
+  // Prevent the renderer from navigating away from the app origin or into
+  // the other window's view role. If an attacker manages to redirect the
+  // webContents, the preload bridge would be exposed to an untrusted page.
+  contents.on('will-navigate', (event, url) => {
+    if (leavesEntryRole(url)) {
       console.warn(`[security] blocked ${label} navigation to`, summarizeWindowNavigationUrlForLog(url))
       event.preventDefault()
     }
+  })
+
+  // replaceState and hash edits do not emit will-navigate, but they do change
+  // the document URL. Privilege is already bound to this webContents; reverting
+  // the URL keeps the page from painting the other view role.
+  let restoringEntry = false
+  contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame === false || restoringEntry) return
+    if (!leavesEntryRole(url)) return
+    console.warn(`[security] blocked ${label} in-page view change to`, summarizeWindowNavigationUrlForLog(url))
+    restoringEntry = true
+    const entry = getRendererEntry(view)
+    contents.loadURL(entry).catch((err) => {
+      console.warn(
+        `[security] failed to restore ${label} entry URL:`,
+        summarizeWindowNavigationErrorForLog(err),
+      )
+    }).finally(() => {
+      restoringEntry = false
+    })
   })
 }
 

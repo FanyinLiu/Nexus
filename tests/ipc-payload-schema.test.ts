@@ -669,6 +669,37 @@ test('IPC external action policy schema accepts modes and active flags only', ()
     }),
     /payload\.policies\.telegram\.token is not allowed/,
   )
+
+  assert.deepEqual(
+    validateExternalActionPolicySyncPayload({
+      policies: {},
+      desktopContext: {
+        activeWindow: true,
+        clipboard: false,
+        screenshot: false,
+      },
+    }),
+    {
+      policies: {},
+      desktopContext: {
+        activeWindow: true,
+        clipboard: false,
+        screenshot: false,
+      },
+    },
+  )
+  assert.throws(
+    () => validateExternalActionPolicySyncPayload({
+      policies: {},
+      desktopContext: {
+        activeWindow: true,
+        clipboard: false,
+        screenshot: false,
+        captureAll: true,
+      },
+    }),
+    /payload\.desktopContext\.captureAll is not allowed/,
+  )
 })
 
 test('IPC local data onboarding mirror schema rejects unknown or oversized fields', () => {

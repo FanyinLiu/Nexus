@@ -11,10 +11,36 @@ import {
 describe('windowNavigation.isAllowedRendererNavigation', () => {
   const rendererEntry = 'http://127.0.0.1:47822/?view=pet'
 
-  test('allows the renderer origin and path with different app query params', () => {
+  test('allows the same view role with different app query params', () => {
+    assert.equal(
+      isAllowedRendererNavigation('http://127.0.0.1:47822/?view=pet&section=chat', rendererEntry),
+      true,
+    )
+    assert.equal(
+      isAllowedRendererNavigation(
+        'http://127.0.0.1:47822/?view=panel&section=settings&settingsSection=voice',
+        'http://127.0.0.1:47822/?view=panel&section=chat',
+      ),
+      true,
+    )
+  })
+
+  test('rejects query or hash edits that change the view role', () => {
     assert.equal(
       isAllowedRendererNavigation('http://127.0.0.1:47822/?view=panel&section=settings', rendererEntry),
+      false,
+    )
+    assert.equal(
+      isAllowedRendererNavigation('http://127.0.0.1:47822/?view=pet#view=panel', rendererEntry),
+      false,
+    )
+    assert.equal(
+      isAllowedRendererNavigation('http://127.0.0.1:47822/?view=pet#note', rendererEntry),
       true,
+    )
+    assert.equal(
+      isAllowedRendererNavigation('http://127.0.0.1:47822/', rendererEntry),
+      false,
     )
   })
 
@@ -32,12 +58,26 @@ describe('windowNavigation.isAllowedRendererNavigation', () => {
     )
   })
 
-  test('allows the same packaged file entry and blocks other file paths', () => {
+  test('allows the same packaged file entry and blocks other file paths or view roles', () => {
     const packagedEntry = 'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=pet'
+    assert.equal(
+      isAllowedRendererNavigation(
+        'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=pet',
+        packagedEntry,
+      ),
+      true,
+    )
     assert.equal(
       isAllowedRendererNavigation(
         'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=panel',
         packagedEntry,
+      ),
+      false,
+    )
+    assert.equal(
+      isAllowedRendererNavigation(
+        'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=panel&section=settings',
+        'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=panel&section=chat',
       ),
       true,
     )

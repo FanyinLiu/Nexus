@@ -4,6 +4,7 @@ import {
   getExternalActionPolicySnapshot,
   syncExternalActionPolicy,
 } from '../services/externalActionPolicy.js'
+import { saveDesktopContextFlags } from '../services/desktopContextPolicy.js'
 import { requireTrustedSender } from './validate.js'
 import { validateExternalActionPolicySyncPayload } from './payloadSchemas.js'
 
@@ -31,6 +32,11 @@ export function register() {
     requireTrustedSender(event)
     payload = validateExternalActionPolicySyncPayload(payload)
     audit('external-action-policy', 'sync-request', summarizePolicySyncPayload(payload))
+    // Panel-only channel. Persist the user's desktop-context flags here so
+    // desktop-context:get cannot honor a pet-supplied enablement.
+    if (payload?.desktopContext) {
+      saveDesktopContextFlags(payload.desktopContext)
+    }
     return syncExternalActionPolicy(payload)
   })
 }
