@@ -13,12 +13,18 @@ const TYPING_STATUS_MESSAGE_KEYS = [
   'settings.window.typing_status_off',
   'settings.window.typing_permission_denied',
   'settings.window.typing_unavailable',
+  'settings.window.typing_linux_wayland',
+  'settings.window.typing_linux_permission',
+  'settings.window.typing_linux_unavailable',
 ] as const satisfies readonly TranslationKey[]
 
 const TYPING_STATUS_RECOMMENDATION_KEYS = [
   'settings.window.typing_awareness_hint',
   'settings.window.typing_permission_denied_hint',
   'settings.window.typing_unavailable_hint',
+  'settings.window.typing_linux_wayland_hint',
+  'settings.window.typing_linux_permission_hint',
+  'settings.window.typing_linux_unavailable_hint',
 ] as const satisfies readonly TranslationKey[]
 
 export type DesktopTypingStatus = {

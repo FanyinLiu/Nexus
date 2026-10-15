@@ -66,7 +66,7 @@
     "pet:import": "node scripts/import-sprite-pet.mjs",
     "pet:import-gallery": "node scripts/import-codex-pet-gallery.mjs",
     "pet:preview": "node scripts/preview-sprite-pet.mjs",
-    "pet:presence-smoke": "npm run build && electron scripts/pet-presence-visual-smoke.cjs",
+    "pet:presence-smoke": "npm run build && electron --no-sandbox scripts/pet-presence-visual-smoke.cjs",
     "pet:scaffold": "node scripts/scaffold-sprite-pet.mjs",
     "pet:install-codex": "node scripts/install-codex-pet.mjs",
     "pet:export-runtime": "node scripts/export-sprite-pet-runtime.mjs",
@@ -221,6 +221,7 @@
       "!**/onnxruntime-web/dist/ort.webgl.*",
       "!**/onnxruntime-web/dist/ort.webgpu.*"
     ],
+    "afterPack": "scripts/strip-uiohook-prebuild-aliases.cjs",
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
       "node_modules/uiohook-napi/**/*",

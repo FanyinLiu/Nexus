@@ -338,6 +338,8 @@ export function FramelessCompanionSurface({
     <section
       className={`nexus-companion-v2 ${className}`.trim()}
       data-phase={phase}
+      data-gaze-x={pet.gazeTarget.x.toFixed(3)}
+      data-gaze-y={pet.gazeTarget.y.toFixed(3)}
       data-utility-open={utilityOpen ? 'true' : 'false'}
       aria-label={settings.companionName}
       onPointerOverCapture={() => pet.setPetHotspotActive(true)}

@@ -9,6 +9,13 @@ export type PublicTypingSignal = {
   keysPerSecond: number
 }
 
+export function classifyLinuxTypingHookFailure(input: {
+  sessionType?: string
+  hasWaylandDisplay?: boolean
+  hasX11Display?: boolean
+  errorMessage?: string
+}): 'wayland' | 'permission' | 'unknown'
+
 export function toPublicTypingSignal(snapshot: {
   phase?: string
   keysPerSecond?: number

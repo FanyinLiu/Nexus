@@ -17,6 +17,7 @@ import {
   toPublicGazeSample,
 } from '../../shared/gazeFollow.js'
 import {
+  classifyLinuxTypingHookFailure,
   createTypingActivityMachine,
   toPublicTypingSignal,
 } from '../../shared/typingActivity.js'
@@ -47,20 +48,23 @@ let pendingTyping = null
 /**
  * @param {'granted' | 'denied' | 'unavailable' | 'not-applicable'} permission
  * @param {boolean} running
+ * @param {{ messageKey?: string, recommendationKey?: string }} [copy]
  */
-function buildStatus(permission, running) {
-  const messageKey = permission === 'denied'
-    ? 'settings.window.typing_permission_denied'
-    : permission === 'unavailable'
-      ? 'settings.window.typing_unavailable'
-      : running
-        ? 'settings.window.typing_status_running'
-        : 'settings.window.typing_status_off'
-  const recommendationKey = permission === 'denied'
-    ? 'settings.window.typing_permission_denied_hint'
-    : permission === 'unavailable'
-      ? 'settings.window.typing_unavailable_hint'
-      : 'settings.window.typing_awareness_hint'
+function buildStatus(permission, running, copy = {}) {
+  const messageKey = copy.messageKey
+    ?? (permission === 'denied'
+      ? 'settings.window.typing_permission_denied'
+      : permission === 'unavailable'
+        ? 'settings.window.typing_unavailable'
+        : running
+          ? 'settings.window.typing_status_running'
+          : 'settings.window.typing_status_off')
+  const recommendationKey = copy.recommendationKey
+    ?? (permission === 'denied'
+      ? 'settings.window.typing_permission_denied_hint'
+      : permission === 'unavailable'
+        ? 'settings.window.typing_unavailable_hint'
+        : 'settings.window.typing_awareness_hint')
   return {
     running: running === true,
     permission,
@@ -189,6 +193,37 @@ async function loadHook() {
   }
 }
 
+/**
+ * Linux start failures name Wayland or input-device permissions when we can
+ * tell them apart. A missing module stays on the generic unavailable status.
+ * @param {unknown} error
+ */
+function linuxTypingStartFailureStatus(error) {
+  const errorMessage = error instanceof Error ? error.message : String(error ?? '')
+  const kind = classifyLinuxTypingHookFailure({
+    sessionType: process.env.XDG_SESSION_TYPE,
+    hasWaylandDisplay: Boolean(process.env.WAYLAND_DISPLAY),
+    hasX11Display: Boolean(process.env.DISPLAY),
+    errorMessage,
+  })
+  if (kind === 'wayland') {
+    return buildStatus('unavailable', false, {
+      messageKey: 'settings.window.typing_linux_wayland',
+      recommendationKey: 'settings.window.typing_linux_wayland_hint',
+    })
+  }
+  if (kind === 'permission') {
+    return buildStatus('unavailable', false, {
+      messageKey: 'settings.window.typing_linux_permission',
+      recommendationKey: 'settings.window.typing_linux_permission_hint',
+    })
+  }
+  return buildStatus('unavailable', false, {
+    messageKey: 'settings.window.typing_linux_unavailable',
+    recommendationKey: 'settings.window.typing_linux_unavailable_hint',
+  })
+}
+
 async function refreshTyping() {
   const generation = ++typingGeneration
   if (!preferences.typingAwarenessEnabled) {
@@ -232,6 +267,10 @@ async function refreshTyping() {
   } catch (error) {
     console.warn('[desktop-presence] typing hook start failed:', getRedactedErrorMessage(error))
     stopHook(false)
+    if (process.platform === 'linux') {
+      setStatus(linuxTypingStartFailureStatus(error))
+      return
+    }
     setStatus(buildStatus(process.platform === 'darwin' ? 'denied' : 'unavailable', false))
   }
 }

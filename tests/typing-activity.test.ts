@@ -4,10 +4,12 @@ import test from 'node:test'
 import {
   TYPING_IDLE_STOP_MS,
   TYPING_STUCK_KEY_MS,
+  classifyLinuxTypingHookFailure,
   createTypingActivityMachine,
   toPublicTypingSignal,
 } from '../shared/typingActivity.js'
 import {
+  readTypingStatus,
   shouldPublishTypingActivity,
   typingIntensityFromRate,
   typingPresenceOffset,
@@ -83,6 +85,33 @@ test('keys per second only count the trailing window', () => {
   machine.keyUp(KEY_A, 10)
   const later = machine.keyDown(KEY_B, 1_500)
   assert.equal(later.keysPerSecond, 1)
+})
+
+test('linux hook failures name Wayland or input-device permissions', () => {
+  assert.equal(classifyLinuxTypingHookFailure({
+    sessionType: 'wayland',
+    hasWaylandDisplay: true,
+    errorMessage: 'Failed to enable input hook',
+  }), 'wayland')
+  assert.equal(classifyLinuxTypingHookFailure({
+    sessionType: 'x11',
+    hasX11Display: true,
+    errorMessage: 'EACCES: permission denied, open \'/dev/input/event3\'',
+  }), 'permission')
+  assert.equal(classifyLinuxTypingHookFailure({
+    sessionType: 'x11',
+    hasX11Display: true,
+    errorMessage: 'hook_enable failed',
+  }), 'unknown')
+  const status = readTypingStatus({
+    running: false,
+    permission: 'unavailable',
+    platform: 'linux',
+    messageKey: 'settings.window.typing_linux_wayland',
+    recommendationKey: 'settings.window.typing_linux_wayland_hint',
+  })
+  assert.equal(status.messageKey, 'settings.window.typing_linux_wayland')
+  assert.equal(status.recommendationKey, 'settings.window.typing_linux_wayland_hint')
 })
 
 test('typing intensity and rig offsets scale and return to idle', () => {

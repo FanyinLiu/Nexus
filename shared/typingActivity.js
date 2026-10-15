@@ -20,6 +20,31 @@ function normalizeToken(token) {
 }
 
 /**
+ * Why a Linux keyboard hook failed to start. The message is for the settings
+ * screen; it never includes a key code. `unknown` is still Linux-specific
+ * copy, not the generic missing-module sentence.
+ * @param {{
+ *   sessionType?: string,
+ *   hasWaylandDisplay?: boolean,
+ *   hasX11Display?: boolean,
+ *   errorMessage?: string,
+ * }} input
+ * @returns {'wayland' | 'permission' | 'unknown'}
+ */
+export function classifyLinuxTypingHookFailure(input) {
+  const session = String(input?.sessionType || '').toLowerCase()
+  const message = String(input?.errorMessage || '').toLowerCase()
+  const permission = /eacces|eperm|permission denied|operation not permitted|\/dev\/input|input group/.test(message)
+  const mentionsWayland = /wayland|xwayland/.test(message)
+  const waylandSession = session === 'wayland'
+    || (session !== 'x11' && session !== 'tty' && input?.hasWaylandDisplay === true && input?.hasX11Display !== true)
+  if (permission && !mentionsWayland) return 'permission'
+  if (waylandSession || mentionsWayland) return 'wayland'
+  if (permission) return 'permission'
+  return 'unknown'
+}
+
+/**
  * @param {{ phase?: string, keysPerSecond?: number }} snapshot
  * @returns {{ phase: 'start' | 'update' | 'stop' | 'idle', keysPerSecond: number }}
  */

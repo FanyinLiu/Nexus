@@ -848,21 +848,27 @@ export function Live2DCanvas({
     }
   }, [gazeTarget.x, gazeTarget.y])
 
+  const typingActive = Boolean(typingActivity?.active)
+  const typingIntensity = typingActive
+    ? typingIntensityFromRate(typingActivity?.keysPerSecond ?? 0)
+    : 0
+
   useEffect(() => {
-    const active = Boolean(typingActivity?.active)
-    typingIntensityRef.current = active
-      ? typingIntensityFromRate(typingActivity?.keysPerSecond ?? 0)
-      : 0
+    typingIntensityRef.current = typingIntensity
     // Fire once at the start of a typing burst. Parameter offsets carry the
     // intensity after that; models without an interaction motion no-op.
-    if (active && !wasTypingRef.current && modelReady) {
+    if (typingActive && !wasTypingRef.current && modelReady) {
       triggerMotion('touchBody')
     }
-    if (modelReady || !active) wasTypingRef.current = active
-  }, [modelReady, triggerMotion, typingActivity?.active, typingActivity?.keysPerSecond])
+    if (modelReady || !typingActive) wasTypingRef.current = typingActive
+  }, [modelReady, triggerMotion, typingActive, typingIntensity])
 
   return (
-    <div className="live2d-shell">
+    <div
+      className="live2d-shell"
+      data-typing-active={typingActive ? 'true' : 'false'}
+      data-typing-intensity={typingIntensity.toFixed(3)}
+    >
       <div ref={containerRef} className={`live2d-canvas ${modelReady ? 'is-ready' : ''}`} />
       {error ? (
         <div
