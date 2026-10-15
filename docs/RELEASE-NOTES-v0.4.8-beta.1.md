@@ -71,6 +71,20 @@ for existing integrations; v8 already moved its previous default.
   README. The package may be `v0.4.8-beta.1` while that declaration stays on
   v0.4.7 and links the stable notes.
 
+### Production dependency advisories
+
+`npm audit --omit=dev` high findings are patched while
+`@huggingface/transformers` stays on 4.2.0:
+
+- `sharp` 0.35.5 (libheif / librsvg advisories; was 0.35.3)
+- `js-yaml` 4.3.2 (merge-key CPU use; `electron-updater` still on the 4.x API)
+- `adm-zip` 0.6.1 (zip extraction advisories via `onnxruntime-node`)
+- `@xmldom/xmldom` 0.8.15 (well-formedness advisories via pixi.js)
+
+`@huggingface/transformers` stays at 4.2.0. 4.3.1 would replace the app's
+ONNX Runtime Web/Node lines, and the 4.2.0 audit entry was only those
+vulnerable `sharp` and `adm-zip` dependencies.
+
 ## Known issues
 
 - No cross-platform physical-device evidence is claimed.
