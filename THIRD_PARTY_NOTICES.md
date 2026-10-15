@@ -25,3 +25,12 @@ Original sources:
 
 The Haru runtime manifest included with Nexus removes references to the sample
 voice files; those voice files are not bundled or used.
+
+## Typing awareness
+
+Global typing detection uses [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi)
+1.5.x (MIT). The package vendors [libuiohook](https://github.com/kwhat/libuiohook),
+which is LGPL-3.0-or-later. Nexus loads the N-API prebuild and does not
+statically relink it. The hook is optional: if the binary is missing or the
+operating system denies input monitoring, the rest of the app keeps running.
+Nexus never records or forwards which keys were pressed.

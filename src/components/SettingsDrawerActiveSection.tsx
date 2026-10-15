@@ -9,6 +9,7 @@ import type {
   SettingsSectionId,
 } from './settingsDrawerSupport.ts'
 import type { ConfirmFn } from './useConfirm.ts'
+import { useDesktopTypingStatus } from '../hooks/useDesktopTypingStatus.ts'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import type {
   PetModelDefinition,
@@ -178,6 +179,7 @@ export function SettingsDrawerActiveSection({
   const supportsPetCompanionV2 = !draft.vtsEnabled && !petModel.spriteAtlas && Boolean(petModel.modelPath)
   const supportsCompanionV2 = isPetView ? supportsPetCompanionV2 : supportsPanelCompanionV2
   const showLegacyEnvironmentControls = routeParams.get('uiV2') === '0' || !supportsCompanionV2
+  const typingStatus = useDesktopTypingStatus()
 
   const content = (() => {
     switch (activeSectionId) {
@@ -327,6 +329,8 @@ export function SettingsDrawerActiveSection({
           windowStatusMessage={windowState.windowStatusMessage}
           launchOnStartupSupported={platformProfile.startup.supported}
           showLegacyEnvironmentControls={showLegacyEnvironmentControls}
+          typingStatus={typingStatus.status}
+          onOpenTypingPermission={typingStatus.openTypingPermission}
         />
       )
     case 'integrations':
