@@ -1,5 +1,6 @@
 import { memo, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { appendIdToCsvList } from '../integrations/allowlists.ts'
+import { areGameCompanionRowsVisible, integrationStatusRows } from '../integrations/gameCompanion.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
@@ -37,6 +38,8 @@ type PairingRequest = { senderId: string; name: string; code: string; createdAt:
 
 export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ active, draft, setDraft, uiLanguage, confirm }: Props) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: Record<string, string>) => pickTranslatedUiText(uiLanguage, key, params)
+  const integrationRows = integrationStatusRows()
+  const showGameCompanion = areGameCompanionRowsVisible()
   const [inspection, setInspection] = useState<IntegrationInspectResponse | null>(null)
   const [inspectionLoading, setInspectionLoading] = useState(false)
   const [inspectionError, setInspectionError] = useState('')
@@ -61,11 +64,12 @@ export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ activ
       setInspectionError('')
       void window.desktopPet!.inspectIntegrations({
         mcpServers: draft.mcpServers,
-        minecraftIntegrationEnabled: draft.minecraftIntegrationEnabled,
+        // A saved "enabled" flag must not probe while the rows are hidden.
+        minecraftIntegrationEnabled: showGameCompanion && draft.minecraftIntegrationEnabled,
         minecraftServerAddress: draft.minecraftServerAddress,
         minecraftServerPort: draft.minecraftServerPort,
         minecraftUsername: draft.minecraftUsername,
-        factorioIntegrationEnabled: draft.factorioIntegrationEnabled,
+        factorioIntegrationEnabled: showGameCompanion && draft.factorioIntegrationEnabled,
         factorioServerAddress: draft.factorioServerAddress,
         factorioServerPort: draft.factorioServerPort,
         factorioUsername: draft.factorioUsername,
@@ -74,7 +78,7 @@ export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ activ
         .finally(() => { if (!cancelled) setInspectionLoading(false) })
     }, 180)
     return () => { cancelled = true; window.clearTimeout(timer) }
-  }, [active, draft.factorioIntegrationEnabled, draft.factorioServerAddress, draft.factorioServerPort, draft.factorioUsername, draft.mcpServers, draft.minecraftIntegrationEnabled, draft.minecraftServerAddress, draft.minecraftServerPort, draft.minecraftUsername])
+  }, [active, draft.factorioIntegrationEnabled, draft.factorioServerAddress, draft.factorioServerPort, draft.factorioUsername, draft.mcpServers, draft.minecraftIntegrationEnabled, draft.minecraftServerAddress, draft.minecraftServerPort, draft.minecraftUsername, showGameCompanion])
 
   if (!active) return null
 
@@ -229,11 +233,9 @@ export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ activ
 
       <SettingsV3Section title={ti('settings.integrations.title')} description={ti('settings.integrations.note')}>
         <div className="settings-v3-integration-status-list">
-          <SettingsV3Row label="MCP" hint={hint(runtime('mcp'))} meta={statusLabel(runtime('mcp')?.status)} />
-          <SettingsV3Row label="Minecraft" hint={hint(runtime('minecraft'))} meta={statusLabel(runtime('minecraft')?.status)} />
-          <SettingsV3Row label="Factorio" hint={hint(runtime('factorio'))} meta={statusLabel(runtime('factorio')?.status)} />
-          <SettingsV3Row label="Telegram" hint={hint(runtime('telegram'))} meta={statusLabel(runtime('telegram')?.status)} />
-          <SettingsV3Row label="Discord" hint={hint(runtime('discord'))} meta={statusLabel(runtime('discord')?.status)} />
+          {integrationRows.map((row) => (
+            <SettingsV3Row key={row.id} label={row.label} hint={hint(runtime(row.id))} meta={statusLabel(runtime(row.id)?.status)} />
+          ))}
         </div>
       </SettingsV3Section>
 
@@ -252,8 +254,8 @@ export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ activ
         {evidence('mcp')}
       </SettingsV3Disclosure>
 
-      {game('minecraft')}
-      {game('factorio')}
+      {showGameCompanion ? game('minecraft') : null}
+      {showGameCompanion ? game('factorio') : null}
       {messenger('telegram')}
       {messenger('discord')}
     </SettingsV3Page>
