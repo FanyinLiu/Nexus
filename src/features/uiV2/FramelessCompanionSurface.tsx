@@ -9,7 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon.tsx'
-import { clamp, pickTranslatedUiText } from '../../lib'
+import { pickTranslatedUiText } from '../../lib'
 import type {
   AppSettings,
   AssistantRuntimeActivity,
@@ -22,6 +22,7 @@ import type {
 } from '../../types'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
 import {
@@ -46,6 +47,7 @@ export type FramelessCompanionSurfaceProps = {
     petTouchZone: PetTouchZone | null
     gazeTarget: GazeTarget
     setGazeTarget: (target: GazeTarget) => void
+    typingActivity?: { active: boolean; keysPerSecond: number }
     setPetHotspotActive: (active: boolean) => void
     setMascotHovered: (hovered: boolean) => void
     markPresenceActivity: (options?: { dismissAmbient?: boolean }) => void
@@ -280,10 +282,12 @@ export function FramelessCompanionSurface({
   function updateGaze(event: ReactPointerEvent<HTMLDivElement>) {
     const bounds = characterRef.current?.getBoundingClientRect()
     if (!bounds) return
-    pet.setGazeTarget({
-      x: clamp((event.clientX - (bounds.left + bounds.width / 2)) / (bounds.width * 0.28), -1, 1),
-      y: clamp(((bounds.top + bounds.height * 0.42) - event.clientY) / (bounds.height * 0.24), -1, 1),
-    })
+    pet.setGazeTarget(mapRelativeCursorToGaze({
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+    }))
   }
 
   function handleCharacterPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -348,7 +352,9 @@ export function FramelessCompanionSurface({
         }}
         onPointerLeave={() => {
           pet.setMascotHovered(false)
-          pet.setGazeTarget({ x: 0, y: 0 })
+          // Global gaze takes over once the pointer leaves the pet. Zeroing
+          // here would snap the eyes to center for a frame.
+          if (settings.gazeFollowEnabled === false) pet.setGazeTarget({ x: 0, y: 0 })
           releaseCharacterPointer()
         }}
         onPointerDown={handleCharacterPointerDown}
@@ -366,6 +372,7 @@ export function FramelessCompanionSurface({
             isSpeaking={phase === 'speaking'}
             speechLevelSource={voice.speechLevelSource}
             gazeTarget={pet.gazeTarget}
+            typingActivity={pet.typingActivity}
             performanceCue={null}
             placement="pet-stage"
             paused={paused}

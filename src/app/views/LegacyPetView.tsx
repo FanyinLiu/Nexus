@@ -25,6 +25,7 @@ import {
 import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { useSpeechLevelSnapshot } from '../../hooks/voice/speechLevelPublishing.ts'
 import { clamp } from '../../lib'
+import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
 import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
@@ -364,12 +365,12 @@ export function LegacyPetView({
       return
     }
 
-    const centerX = bounds.left + bounds.width / 2
-    const centerY = bounds.top + bounds.height * 0.42
-    const nextTarget = {
-      x: clamp((clientX - centerX) / (bounds.width * 0.28), -1, 1),
-      y: clamp((centerY - clientY) / (bounds.height * 0.24), -1, 1),
-    }
+    const nextTarget = mapRelativeCursorToGaze({
+      x: clientX - bounds.left,
+      y: clientY - bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+    })
 
     pet.setGazeTarget((current) => (
       Math.abs(current.x - nextTarget.x) < 0.08 && Math.abs(current.y - nextTarget.y) < 0.08
@@ -403,7 +404,7 @@ export function LegacyPetView({
     pet.setPetHotspotActive(false)
     pet.setMascotHovered(false)
     pet.setPetTouchZone(null)
-    pet.setGazeTarget({ x: 0, y: 0 })
+    if (settings.gazeFollowEnabled === false) pet.setGazeTarget({ x: 0, y: 0 })
   }
 
   function handleInteractiveZonePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
@@ -719,6 +720,7 @@ export function LegacyPetView({
                       isSpeaking={companionActivity.isSpeaking}
                       speechLevelSource={voice.speechLevelSource}
                       gazeTarget={pet.gazeTarget}
+                      typingActivity={pet.typingActivity}
                       performanceCue={pet.petPerformanceCue}
                       placement="pet-stage"
                       paused={modalOpen}

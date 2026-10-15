@@ -10,7 +10,7 @@
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
-    "postinstall": "node scripts/setup-vendor.mjs && node scripts/typescript-classic-shim.mjs",
+    "postinstall": "node scripts/setup-vendor.mjs && node scripts/typescript-classic-shim.mjs && node scripts/ensure-uiohook-prebuild-names.mjs",
     "download-models": "node scripts/download-models.mjs",
     "download-models:lite": "node scripts/download-models.mjs --skip-asr",
     "doctor": "node scripts/nexus-doctor.mjs",
@@ -115,6 +115,7 @@
     "react-dom": "^19.2.5",
     "sherpa-onnx-node": "^1.12.39",
     "tesseract.js": "^7.0.0",
+    "uiohook-napi": "^1.5.5",
     "ws": "^8.21.0"
   },
   "devDependencies": {
@@ -222,6 +223,7 @@
     ],
     "asarUnpack": [
       "node_modules/sherpa-onnx-node/**",
+      "node_modules/uiohook-napi/**/*",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py",
       "scripts/send-message-webhook.mjs",

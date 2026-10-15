@@ -319,6 +319,18 @@ interface PresenceSettings {
    * skip the letter (or vice versa).
    */
   proactiveLetterEnabled: boolean
+  /**
+   * Look toward the global cursor, including when it is outside the pet
+   * window. Pointer tracking inside the pet still wins. Default on.
+   */
+  gazeFollowEnabled: boolean
+  /**
+   * React when the user types in other apps. Default off. The main process
+   * reports only an aggregate rate, never which keys were pressed.
+   */
+  typingAwarenessEnabled: boolean
+  /** The first-enable explanation has been accepted. */
+  typingAwarenessNoticeAccepted: boolean
 }
 
 export interface McpServerConfig {

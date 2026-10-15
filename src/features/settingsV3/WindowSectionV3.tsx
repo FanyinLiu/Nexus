@@ -1,4 +1,4 @@
-import { memo, type Dispatch, type SetStateAction } from 'react'
+import { memo, useState, type Dispatch, type SetStateAction } from 'react'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
@@ -16,7 +16,9 @@ import {
   SettingsV3Row,
   SettingsV3Section,
   SettingsV3Switch,
+  SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
+import type { DesktopTypingStatus } from '../desktopPresence/typingPresence.ts'
 
 const SCENE_OPTIONS: Array<{ id: PetSceneLocation; labelKey: TranslationKey }> = [
   { id: 'off', labelKey: 'settings.window.pet_scene.off' },
@@ -73,6 +75,8 @@ export type WindowSectionV3Props = {
   uiLanguage: UiLanguage
   updateWindowState: (partial: Partial<PetWindowState>) => Promise<void> | void
   windowStatusMessage: string | null
+  typingStatus?: DesktopTypingStatus | null
+  onOpenTypingPermission?: () => void
 }
 
 export const WindowSectionV3 = memo(function WindowSectionV3({
@@ -85,7 +89,10 @@ export const WindowSectionV3 = memo(function WindowSectionV3({
   uiLanguage,
   updateWindowState,
   windowStatusMessage,
+  typingStatus = null,
+  onOpenTypingPermission,
 }: WindowSectionV3Props) {
+  const [explainTyping, setExplainTyping] = useState(false)
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
 
   const setSetting = <TKey extends keyof AppSettings>(key: TKey, value: AppSettings[TKey]) => {
@@ -135,6 +142,81 @@ export const WindowSectionV3 = memo(function WindowSectionV3({
             onChange={(clickThrough) => void updateWindowState({ clickThrough })}
           />
         </SettingsV3Row>
+        <SettingsV3Row
+          icon="pointer"
+          label={ti('settings.window.gaze_follow')}
+          hint={ti('settings.window.gaze_follow_hint')}
+        >
+          <SettingsV3Switch
+            label={ti('settings.window.gaze_follow')}
+            checked={draft.gazeFollowEnabled !== false}
+            onChange={(gazeFollowEnabled) => setSetting('gazeFollowEnabled', gazeFollowEnabled)}
+          />
+        </SettingsV3Row>
+        <SettingsV3Row
+          icon="thought"
+          label={ti('settings.window.typing_awareness')}
+          hint={ti('settings.window.typing_awareness_hint')}
+        >
+          <SettingsV3Switch
+            label={ti('settings.window.typing_awareness')}
+            checked={draft.typingAwarenessEnabled === true}
+            onChange={(enabled) => {
+              if (!enabled) {
+                setExplainTyping(false)
+                setSetting('typingAwarenessEnabled', false)
+                return
+              }
+              if (!draft.typingAwarenessNoticeAccepted) {
+                setExplainTyping(true)
+                return
+              }
+              setSetting('typingAwarenessEnabled', true)
+            }}
+          />
+        </SettingsV3Row>
+        {explainTyping ? (
+          <>
+            <SettingsV3Notice tone="info" title={ti('settings.window.typing_explain_title')}>
+              {ti('settings.window.typing_explain_body')}
+            </SettingsV3Notice>
+            <SettingsV3Toolbar>
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft((current) => ({
+                    ...current,
+                    typingAwarenessNoticeAccepted: true,
+                    typingAwarenessEnabled: true,
+                  }))
+                  setExplainTyping(false)
+                }}
+              >
+                {ti('settings.window.typing_explain_confirm')}
+              </button>
+              <button type="button" onClick={() => setExplainTyping(false)}>
+                {ti('settings.window.typing_explain_cancel')}
+              </button>
+            </SettingsV3Toolbar>
+          </>
+        ) : null}
+        {draft.typingAwarenessEnabled && typingStatus && (typingStatus.permission === 'denied' || typingStatus.permission === 'unavailable') ? (
+          <>
+            <SettingsV3Notice
+              tone={typingStatus.permission === 'denied' ? 'warning' : 'info'}
+              title={ti(typingStatus.messageKey)}
+            >
+              {ti(typingStatus.recommendationKey)}
+            </SettingsV3Notice>
+            {typingStatus.permission === 'denied' && onOpenTypingPermission ? (
+              <SettingsV3Toolbar>
+                <button type="button" onClick={onOpenTypingPermission}>
+                  {ti('settings.window.typing_permission_open')}
+                </button>
+              </SettingsV3Toolbar>
+            ) : null}
+          </>
+        ) : null}
       </SettingsV3Section>
 
       {showLegacyEnvironmentControls ? (

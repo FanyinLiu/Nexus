@@ -933,6 +933,50 @@ declare global {
       getSystemIdleTime: () => Promise<number>
       subscribePowerEvents: (listener: (event: { kind: import('./types').PowerEventKind }) => void) => () => void
 
+      // Adaptive desktop presence. Gaze is relative to the receiving window.
+      // Typing signals never include key codes.
+      setDesktopPresencePreferences: (preferences: {
+        gazeFollowEnabled: boolean
+        typingAwarenessEnabled: boolean
+      }) => Promise<{
+        running: boolean
+        permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'
+        platform: string
+        messageKey: string
+        recommendationKey: string
+      }>
+      getDesktopTypingStatus: () => Promise<{
+        running: boolean
+        permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'
+        platform: string
+        messageKey: string
+        recommendationKey: string
+      }>
+      openDesktopTypingPermission: () => Promise<{
+        opened: boolean
+        messageKey: string
+        recommendationKey: string
+      }>
+      subscribeDesktopGaze: (listener: (sample: {
+        paused: boolean
+        x: number
+        y: number
+        width: number
+        height: number
+        inside: boolean
+      }) => void) => () => void
+      subscribeDesktopTyping: (listener: (signal: {
+        phase: 'start' | 'update' | 'stop' | 'idle'
+        keysPerSecond: number
+      }) => void) => () => void
+      subscribeDesktopTypingStatus: (listener: (status: {
+        running: boolean
+        permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'
+        platform: string
+        messageKey: string
+        recommendationKey: string
+      }) => void) => () => void
+
       // Autonomy: notification bridge
       getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
       getNotificationWebhookInfo: () => Promise<{

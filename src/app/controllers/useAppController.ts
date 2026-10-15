@@ -22,6 +22,7 @@ import { useDesktopContext } from '../../hooks/useDesktopContext.ts'
 import { useGameIntegration } from '../../hooks/useGameIntegration.ts'
 import { useMemory } from '../../hooks/useMemory.ts'
 import { useCompanionLocalDataAuthority } from '../../hooks/useCompanionLocalDataAuthority.ts'
+import { useDesktopPresence } from '../../hooks/useDesktopPresence.ts'
 import { usePetBehavior } from '../../hooks/usePetBehavior.ts'
 import { useVoice } from '../../hooks/useVoice.ts'
 import { useReminderController } from './useReminderController.ts'
@@ -152,6 +153,14 @@ export function useAppController() {
     messagesRef,
     memoriesRef: memory.memoriesRef,
     view,
+  })
+  useDesktopPresence({
+    gazeFollowEnabled: settings.gazeFollowEnabled !== false,
+    typingAwarenessEnabled: settings.typingAwarenessEnabled === true,
+    localHover: pet.mascotHovered,
+    currentGaze: pet.gazeTarget,
+    setGazeTarget: pet.setGazeTarget,
+    setTypingActivity: pet.setTypingActivity,
   })
 
   const panelCollapsed = panelWindowState.collapsed
