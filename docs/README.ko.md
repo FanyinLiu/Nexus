@@ -142,7 +142,7 @@ README에는 현재 안정 버전 v0.4.7과 이전 공개 버전 v0.4.6의 핵�
 
 | 용도 | 추천 제공자 | 추천 모델 | 설명 |
 |------|-----------|---------|------|
-| **일상 동반자 (추천)** | DeepSeek | `deepseek-v4-flash` | 가성비 최고, 한국어 대응 양호, 장시간 대화에 최적 |
+| **일상 동반자 (추천)** | DeepSeek | `deepseek-flash` | 가성비 최고, 한국어 대응 양호, 장시간 대화에 최적 |
 | **종합 최강** | OpenAI | `gpt-5.4` | 종합 성능이 높고 도구 호출이 안정적 |
 | **가성비** | OpenAI | `gpt-5.4-mini` | 빠르고 저렴, 한국어 표현도 자연스러움 |
 | **무료** | Google Gemini | `gemini-2.5-flash` | 무료 한도 넉넉, 한국어 대응 양호 |
@@ -153,8 +153,8 @@ README에는 현재 안정 버전 v0.4.7과 이전 공개 버전 v0.4.6의 핵�
 | 용도 | 추천 제공자 | 추천 모델 | 설명 |
 |------|-----------|---------|------|
 | **최고 정확도** | OpenAI | `whisper-large-v3` | 업계 표준, 한국어 인식 정확도 최고 수준 |
-| **가성비** | OpenAI | `gpt-4o-mini-transcribe` | 다국어 지원, 기존 OpenAI Key로 사용 가능 |
-| **고정밀 클라우드** | ElevenLabs Scribe | `scribe_v1` | 99개 언어 지원, 한국어 구두점 · 화자 감지 정확 |
+| **가성비** | OpenAI | `gpt-transcribe` | 다국어 지원, 기존 OpenAI Key로 사용 가능 |
+| **고정밀 클라우드** | ElevenLabs Scribe | `scribe_v2` | 99개 언어 지원, 한국어 구두점 · 화자 감지 정확 |
 | **로컬 스트리밍** | Paraformer | `paraformer-trilingual` | 말하면서 실시간 변환, 저지연 |
 | **로컬 고속** | SenseVoice | `sensevoice-zh-en` | Whisper 대비 15배 빠름, 오프라인 |
 

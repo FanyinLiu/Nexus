@@ -11,10 +11,10 @@ function languageBase(language) {
   return normalized.split(/[-_]/)[0].toLowerCase()
 }
 
-/** Official xAI STT formatting languages. Chinese is not on this list. */
+/** Official xAI STT languages. Mandarin (`zh`) is on the formatting list. */
 const XAI_STT_FORMAT_LANGUAGES = new Set([
   'ar', 'cs', 'da', 'nl', 'en', 'fil', 'fr', 'de', 'hi', 'id', 'it', 'ja', 'ko',
-  'mk', 'ms', 'fa', 'pl', 'pt', 'ro', 'ru', 'es', 'sv', 'th', 'tr', 'vi',
+  'mk', 'ms', 'fa', 'pl', 'pt', 'ro', 'ru', 'es', 'sv', 'th', 'tr', 'vi', 'zh',
 ])
 
 /** Official xAI TTS BCP-47 codes that we can pin from Nexus UI languages. */
@@ -35,8 +35,7 @@ export function mapLanguageToXaiTts(language) {
 /**
  * Map a Nexus UI language to an xAI STT formatting language.
  * Returns empty when the official list does not include that language
- * (notably Chinese) so we omit `language`/`format` instead of sending
- * an unsupported code.
+ * so we omit `language`/`format` instead of sending an unsupported code.
  */
 export function mapLanguageToXaiStt(language) {
   const code = languageBase(language)
@@ -63,12 +62,27 @@ export function buildXaiTtsRequestBody(payload, content, options = {}) {
   }
 }
 
+/** Official xAI batch STT model. The catalog used to store a placeholder id. */
+const XAI_STT_MODEL = 'grok-voice-transcribe-2.0'
+
+/**
+ * Resolve the model field for `POST /v1/stt`.
+ * Empty and the retired placeholder `grok-stt` map to the documented default
+ * so unmigrated settings still hit a real model.
+ */
+export function resolveXaiSttModel(model) {
+  const id = String(model ?? '').trim()
+  if (!id || id === 'grok-stt') return XAI_STT_MODEL
+  return id
+}
+
 /**
  * Multipart parts for official xAI STT (`POST /v1/stt`).
  * Option fields precede `file` — xAI ignores fields sent after the file.
  */
-export function buildXaiSttMultipartParts({ audioBuffer, fileName, mimeType, language }) {
+export function buildXaiSttMultipartParts({ audioBuffer, fileName, mimeType, language, model }) {
   const parts = []
+  parts.push({ type: 'field', name: 'model', value: resolveXaiSttModel(model) })
   const sttLanguage = mapLanguageToXaiStt(language)
   if (sttLanguage) {
     parts.push({ type: 'field', name: 'language', value: sttLanguage })

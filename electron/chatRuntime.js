@@ -1,5 +1,6 @@
 import {
   estimateModelContextWindowTokens,
+  modelRejectsChatCompletionsTools,
   modelSupportsSpeech,
   modelSupportsVision,
 } from '../shared/modelCapabilities.js'
@@ -311,12 +312,19 @@ function shouldOmitAnthropicTemperature(model) {
 function shouldDisableOpenAiCompatibleThinking(providerId, model) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const id = String(model ?? '').trim().toLowerCase()
-  return normalizedProviderId === 'deepseek' && /^deepseek-v4-(?:flash|pro)(?:\b|$)/u.test(id)
+  // deepseek-flash is the current V4.1 id. The legacy v4-flash name still
+  // routes there, so both keep thinking off for the same chat-compat reason.
+  return normalizedProviderId === 'deepseek' && (
+    id === 'deepseek-flash'
+    || /^deepseek-v4-(?:flash|pro)(?:\b|$)/u.test(id)
+  )
 }
 
 function shouldDisableAnthropicThinking(providerId, model) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const id = String(model ?? '').trim().toLowerCase()
+  // Exact M3 only. M3.1-Flash-Preview is a different model with tunable
+  // thinking, and a word-boundary after "m3" would also match that id.
   return (
     (
       normalizedProviderId === 'minimax'
@@ -324,8 +332,31 @@ function shouldDisableAnthropicThinking(providerId, model) {
       || normalizedProviderId === 'minimax-coding'
       || normalizedProviderId === 'minimax-coding-global'
     )
-    && /^minimax-m3(?:\b|$)/u.test(id)
+    && id === 'minimax-m3'
   )
+}
+
+/**
+ * GPT-6 Chat Completions sampling.
+ *
+ * Sol and Luna accept function tools only with reasoning_effort "none".
+ * Astra and 6.1 Sol reject "none"; their tools need the Responses API,
+ * which this client does not call. Any effort other than "none" rejects
+ * temperature, so those requests omit it.
+ */
+function openAiChatCompletionsSampling(providerId, model, hasTools) {
+  if (normalizeChatProviderId(providerId) !== 'openai') {
+    return { omitTemperature: false, reasoningEffort: undefined }
+  }
+  const id = String(model ?? '').trim().toLowerCase()
+  const toolsWithNone = id === 'gpt-6-sol' || id === 'gpt-6-luna'
+  if (hasTools && toolsWithNone) {
+    return { omitTemperature: false, reasoningEffort: 'none' }
+  }
+  if (toolsWithNone || id === 'gpt-6-astra' || id === 'gpt-6.1-sol') {
+    return { omitTemperature: true, reasoningEffort: undefined }
+  }
+  return { omitTemperature: false, reasoningEffort: undefined }
 }
 
 export function buildChatRequest(payload, options = {}) {
@@ -385,13 +416,18 @@ export function buildChatRequest(payload, options = {}) {
   const tools = Array.isArray(payload?.tools) && payload.tools.length > 0
     ? payload.tools
     : undefined
+  // Astra and 6.1 Sol reject function tools on this endpoint. Drop them so
+  // selecting either model still completes a normal chat turn.
+  const sendTools = Boolean(tools) && !modelRejectsChatCompletionsTools(payload?.model)
+  const sampling = openAiChatCompletionsSampling(providerId, payload?.model, sendTools)
   const openAiBody = {
     model: payload?.model,
     messages: payload?.messages,
-    temperature: payload?.temperature ?? 0.8,
+    ...(sampling.omitTemperature ? {} : { temperature: payload?.temperature ?? 0.8 }),
     max_tokens: payload?.maxTokens ?? 500,
     ...(stream ? { stream: true } : {}),
-    ...(tools ? { tools } : {}),
+    ...(sendTools ? { tools } : {}),
+    ...(sampling.reasoningEffort ? { reasoning_effort: sampling.reasoningEffort } : {}),
   }
 
   if (shouldDisableOpenAiCompatibleThinking(providerId, payload?.model)) {

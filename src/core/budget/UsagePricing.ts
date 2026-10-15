@@ -37,8 +37,8 @@ const DEFAULT_PRICING: UsagePricing[] = [
     providerId: 'openai',
     modelId: 'gpt-5.6-sol',
     tier: 'heavy',
-    inputPricePerMTokens: 5,
-    outputPricePerMTokens: 30,
+    inputPricePerMTokens: 4,
+    outputPricePerMTokens: 20,
   },
   {
     providerId: 'openai',
@@ -101,15 +101,15 @@ const DEFAULT_PRICING: UsagePricing[] = [
     providerId: 'deepseek',
     modelId: 'deepseek-v4-pro',
     tier: 'heavy',
-    inputPricePerMTokens: 0.145,
-    outputPricePerMTokens: 3.48,
+    inputPricePerMTokens: 1.32,
+    outputPricePerMTokens: 3.96,
   },
   {
     providerId: 'deepseek',
     modelId: 'deepseek-v4-flash',
     tier: 'cheap',
-    inputPricePerMTokens: 0.14,
-    outputPricePerMTokens: 0.28,
+    inputPricePerMTokens: 0.3,
+    outputPricePerMTokens: 1.2,
   },
 ]
 
@@ -119,11 +119,17 @@ const DEFAULT_PRICING: UsagePricing[] = [
 const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inputPricePerMTokens' | 'outputPricePerMTokens' | 'tier'> }> = [
   // Anthropic — ordered longest-first so fable/opus/sonnet/haiku don't clash
   { pattern: 'claude-fable',     price: { tier: 'heavy',    inputPricePerMTokens: 10,   outputPricePerMTokens: 50   } },
+  { pattern: 'claude-opus-5-5',  price: { tier: 'heavy',    inputPricePerMTokens: 4,    outputPricePerMTokens: 20   } },
   { pattern: 'claude-opus',      price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 25   } },
   { pattern: 'claude-sonnet',    price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
+  { pattern: 'claude-haiku-5-5', price: { tier: 'cheap',    inputPricePerMTokens: 0.1,  outputPricePerMTokens: 0.5  } },
   { pattern: 'claude-haiku',     price: { tier: 'cheap',    inputPricePerMTokens: 1,    outputPricePerMTokens: 5    } },
-  // OpenAI — longest-first so 5.6 / 5.5 / 5.4 variants don't collide with bare "gpt-5"
-  { pattern: 'gpt-5.6-sol',     price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 30   } },
+  // OpenAI — longest-first so GPT-6 and 5.6 variants don't collide with bare "gpt-5"
+  { pattern: 'gpt-6-astra',     price: { tier: 'heavy',    inputPricePerMTokens: 10,   outputPricePerMTokens: 50   } },
+  { pattern: 'gpt-6.1-sol',     price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
+  { pattern: 'gpt-6-sol',       price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
+  { pattern: 'gpt-6-luna',      price: { tier: 'cheap',    inputPricePerMTokens: 0.1,  outputPricePerMTokens: 0.5  } },
+  { pattern: 'gpt-5.6-sol',     price: { tier: 'heavy',    inputPricePerMTokens: 4,    outputPricePerMTokens: 20   } },
   { pattern: 'gpt-5.6-terra',   price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 12   } },
   { pattern: 'gpt-5.6-luna',    price: { tier: 'cheap',    inputPricePerMTokens: 0.2,  outputPricePerMTokens: 1.2  } },
   { pattern: 'gpt-5.6',         price: { tier: 'heavy',    inputPricePerMTokens: 5,    outputPricePerMTokens: 30   } },
@@ -136,12 +142,27 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   { pattern: 'gpt-4o',          price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 10   } },
   { pattern: 'gpt-4-turbo',     price: { tier: 'heavy',    inputPricePerMTokens: 10,   outputPricePerMTokens: 30   } },
   { pattern: 'gpt-3.5',         price: { tier: 'cheap',    inputPricePerMTokens: 0.5,  outputPricePerMTokens: 1.5  } },
-  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare deepseek-* fallback
-  { pattern: 'deepseek-v4-pro',   price: { tier: 'heavy',    inputPricePerMTokens: 0.145, outputPricePerMTokens: 3.48 } },
-  { pattern: 'deepseek-v4-flash', price: { tier: 'cheap',    inputPricePerMTokens: 0.14,  outputPricePerMTokens: 0.28 } },
+  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare deepseek-* fallback.
+  // Dotted v4.1 is the SiliconFlow / Together / NVIDIA id at SiliconFlow's
+  // flat published rate ($0.15 / $0.60). Hyphenated v4-1 is Venice's id at
+  // Venice's published rate. Direct deepseek-flash stays at DeepSeek's peak
+  // rate; off-peak on that API is half.
+  { pattern: 'deepseek-v4-pro',   price: { tier: 'heavy',    inputPricePerMTokens: 1.32, outputPricePerMTokens: 3.96 } },
+  { pattern: 'deepseek-v4.1',     price: { tier: 'cheap',    inputPricePerMTokens: 0.15, outputPricePerMTokens: 0.6  } },
+  { pattern: 'deepseek-v4-1',     price: { tier: 'cheap',    inputPricePerMTokens: 0.3,  outputPricePerMTokens: 1.2  } },
+  { pattern: 'deepseek-v4-flash', price: { tier: 'cheap',    inputPricePerMTokens: 0.3,  outputPricePerMTokens: 1.2  } },
+  { pattern: 'deepseek-flash',    price: { tier: 'cheap',    inputPricePerMTokens: 0.3,  outputPricePerMTokens: 1.2  } },
+  { pattern: 'grok-4.7',          price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 6    } },
+  { pattern: 'mistral-large-4',   price: { tier: 'standard', inputPricePerMTokens: 1.36, outputPricePerMTokens: 4.18 } },
   { pattern: 'deepseek-chat',   price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },
   { pattern: 'deepseek-reasoner', price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },
-  // Google Gemini
+  // Google Gemini — introductory paid rates as of 2026-10-15.
+  // gemini-3.5-flash-lite must stay longer than any bare gemini-3.5 pattern.
+  { pattern: 'gemini-4-argon',       price: { tier: 'heavy',    inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
+  { pattern: 'gemini-3.8-flash',     price: { tier: 'standard', inputPricePerMTokens: 0.75, outputPricePerMTokens: 3.75 } },
+  { pattern: 'gemini-3.6-flash',     price: { tier: 'standard', inputPricePerMTokens: 0.75, outputPricePerMTokens: 3.75 } },
+  { pattern: 'gemini-3.5-flash-lite', price: { tier: 'cheap',   inputPricePerMTokens: 0.30, outputPricePerMTokens: 2.50 } },
+  { pattern: 'gemini-3.1-pro',       price: { tier: 'heavy',    inputPricePerMTokens: 2,    outputPricePerMTokens: 12   } },
   { pattern: 'gemini-1.5-pro',  price: { tier: 'heavy',    inputPricePerMTokens: 3.5,  outputPricePerMTokens: 10.5 } },
   { pattern: 'gemini-1.5-flash', price: { tier: 'cheap',   inputPricePerMTokens: 0.075, outputPricePerMTokens: 0.30 } },
   { pattern: 'gemini-2.0-flash', price: { tier: 'cheap',   inputPricePerMTokens: 0.10, outputPricePerMTokens: 0.40 } },

@@ -119,7 +119,7 @@ test('onboarding still catches endpoint and model issues when a cloud API key is
   assert.match(issue?.message ?? '', /DeepSeek/)
   assert.deepEqual(issue?.repair?.patch, {
     apiBaseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 
@@ -137,7 +137,7 @@ test('applying onboarding repair reruns clean local preflight even without cloud
   const remainingIssue = getOnboardingStepIssue(repaired, 'text', 'zh-CN')
 
   assert.equal(repaired.apiBaseUrl, 'https://api.deepseek.com')
-  assert.equal(repaired.model, 'deepseek-v4-flash')
+  assert.equal(repaired.model, 'deepseek-flash')
   assert.equal(repaired.apiKey, '')
   assert.equal(remainingIssue, null)
 })
@@ -156,7 +156,7 @@ test('onboarding finish hint includes DeepSeek first-run repair path without blo
 
   assert.match(hint, /保存后仍可先体验/)
   assert.match(hint, /https:\/\/api\.deepseek\.com/)
-  assert.match(hint, /deepseek-v4-flash/)
+  assert.match(hint, /deepseek-flash/)
 })
 
 test('onboarding text step shows provider-aware missing model guidance', () => {

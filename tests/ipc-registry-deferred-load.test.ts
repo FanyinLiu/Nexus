@@ -52,10 +52,16 @@ test('loadDeferredModules logs a redacted error and retries after a failed impor
     // so the retry works identically on Node 22 and Node 24).
     ;(globalThis as Record<string, unknown>).__nexusTestSkillIpcFail = true
     registerIpc()
-    await waitFor(() => errors.calls.length > 0, 'deferred-load failure log')
+    // Node 22 prints the type-stripping ExperimentalWarning through console.error
+    // while the deferred import loads. Wait for the IPC line itself.
+    await waitFor(
+      () => errors.calls.some((line) => line.startsWith('[IPC] ')),
+      'deferred-load failure log',
+    )
 
-    assert.equal(errors.calls.length, 1)
-    const logLine = errors.calls[0]!
+    const ipcErrors = errors.calls.filter((line) => line.startsWith('[IPC] '))
+    assert.equal(ipcErrors.length, 1)
+    const logLine = ipcErrors[0]!
     assert.match(logLine, /^\[IPC\] /)
     // Root cause is logged, but redacted via getRedactedErrorMessage.
     assert.match(logLine, /simulated skillIpc import failure/)
@@ -69,7 +75,11 @@ test('loadDeferredModules logs a redacted error and retries after a failed impor
       () => infos.calls.includes('[IPC] Deferred modules loaded'),
       'deferred-load success log after retry',
     )
-    assert.equal(errors.calls.length, 1, 'retry must succeed without another failure')
+    assert.equal(
+      errors.calls.filter((line) => line.startsWith('[IPC] ')).length,
+      1,
+      'retry must succeed without another failure',
+    )
   } finally {
     ;(globalThis as Record<string, unknown>).__nexusTestSkillIpcFail = false
     errors.restore()

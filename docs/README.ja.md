@@ -142,7 +142,7 @@ README には現在の安定版 v0.4.7 と一つ前の公開版 v0.4.6 の要点
 
 | 用途 | プロバイダー | モデル | 備考 |
 |------|------------|--------|------|
-| **日常コンパニオン（おすすめ）** | DeepSeek | `deepseek-v4-flash` | コスパ最強、日本語対応も良好、長時間の会話に最適 |
+| **日常コンパニオン（おすすめ）** | DeepSeek | `deepseek-flash` | コスパ最強、日本語対応も良好、長時間の会話に最適 |
 | **総合最強** | OpenAI | `gpt-5.4` | 総合力が高く、ツール呼び出しも安定 |
 | **コスパ重視** | OpenAI | `gpt-5.4-mini` | 高速・低価格、日本語表現も自然 |
 | **無料枠** | Google Gemini | `gemini-2.5-flash` | 無料枠が大きく、日本語対応も良好 |
@@ -153,8 +153,8 @@ README には現在の安定版 v0.4.7 と一つ前の公開版 v0.4.6 の要点
 | 用途 | プロバイダー | モデル | 備考 |
 |------|------------|--------|------|
 | **最高精度** | OpenAI | `whisper-large-v3` | 業界標準、日本語認識精度が最高クラス |
-| **コスパ重視** | OpenAI | `gpt-4o-mini-transcribe` | 多言語対応、既存の OpenAI Key で利用可能 |
-| **高精度クラウド** | ElevenLabs Scribe | `scribe_v1` | 99 言語対応、日本語の句読点・話者検出も精度高 |
+| **コスパ重視** | OpenAI | `gpt-transcribe` | 多言語対応、既存の OpenAI Key で利用可能 |
+| **高精度クラウド** | ElevenLabs Scribe | `scribe_v2` | 99 言語対応、日本語の句読点・話者検出も精度高 |
 | **ローカルストリーミング** | Paraformer | `paraformer-trilingual` | 話しながらリアルタイム変換、低遅延 |
 | **ローカル高速** | SenseVoice | `sensevoice-zh-en` | Whisper の 15 倍高速、オフライン |
 

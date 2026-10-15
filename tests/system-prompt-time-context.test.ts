@@ -69,3 +69,48 @@ test('latest user message carries local date, weekday, time, and time-zone name'
   }
   assert.match(userContent, /现在几点？$/)
 })
+
+test('gpt-6 astra keeps tools in the prompt instead of the chat-completions tools field', async () => {
+  const currentTime = new Date(2026, 6, 13, 9, 7, 0, 0)
+  const history: ChatMessage[] = [{
+    id: 'user-tools',
+    role: 'user',
+    content: 'ping',
+    createdAt: currentTime.toISOString(),
+  }]
+  const mcpTools = [{
+    name: 'ping',
+    description: 'Ping a host',
+    serverId: 'builtin',
+    inputSchema: { type: 'object', properties: {} },
+  }]
+  const astra = await buildChatRequestPayload(
+    {
+      ...loadSettings(),
+      apiProviderId: 'openai',
+      apiBaseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-6-astra',
+    },
+    history,
+    memoryContext,
+    { currentTime, mcpTools },
+  )
+  const astraSystem = String(astra.messages[0]?.content ?? '')
+  assert.equal(astra.tools, undefined)
+  assert.match(astraSystem, /Prompt mode/)
+  assert.match(astraSystem, /ping/)
+
+  const sol = await buildChatRequestPayload(
+    {
+      ...loadSettings(),
+      apiProviderId: 'openai',
+      apiBaseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-6-sol',
+    },
+    history,
+    memoryContext,
+    { currentTime, mcpTools },
+  )
+  assert.equal(sol.tools?.length, 1)
+  assert.doesNotMatch(String(sol.messages[0]?.content ?? ''), /Prompt mode/)
+})

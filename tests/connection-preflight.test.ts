@@ -38,7 +38,7 @@ test('DeepSeek missing API key includes the first-run repair path', () => {
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'needs_key')
   assert.match(result?.recommendation ?? '', /https:\/\/api\.deepseek\.com/)
-  assert.match(result?.recommendation ?? '', /deepseek-v4-flash/)
+  assert.match(result?.recommendation ?? '', /deepseek-flash/)
 })
 
 test('skips API key check for provider that does not require one', () => {
@@ -132,7 +132,7 @@ test('DeepSeek preflight can keep checking endpoint/model while missing API key 
   assert.match(result?.recommendation ?? '', /https:\/\/api\.deepseek\.com/)
   assert.deepEqual(result?.repair, {
     apiBaseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 
@@ -149,7 +149,7 @@ test('text connection test preflight reports endpoint/model before missing API k
   assert.equal(result?.status, 'misconfigured')
   assert.deepEqual(result?.repair, {
     apiBaseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 
@@ -268,9 +268,9 @@ test('DeepSeek missing model recommends the first-success default', () => {
 
   assert.equal(result?.ok, false)
   assert.equal(result?.status, 'misconfigured')
-  assert.match(result?.recommendation ?? '', /deepseek-v4-flash/)
+  assert.match(result?.recommendation ?? '', /deepseek-flash/)
   assert.deepEqual(result?.repair, {
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 

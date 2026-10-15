@@ -30,6 +30,7 @@ import {
   createSilentWavBase64,
   extractMiniMaxVoiceOptions,
   mapLanguageToDashScopeType,
+  resolveDashScopeTtsModel,
   mapLanguageToMiniMaxBoost,
   resolveSpeechOutputBaseUrl,
   resolveSpeechOutputTimeoutMessage,
@@ -300,7 +301,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
   if (isDashScopeSpeechOutputProvider(payload.providerId)) {
     const endpoint = `${baseUrl}/services/aigc/multimodal-generation/generation`
     const requestBody = JSON.stringify({
-      model: payload.model || 'qwen3-tts-instruct-flash',
+      model: resolveDashScopeTtsModel(payload.model),
       input: {
         text: content,
         voice: payload.voice || 'Cherry',
@@ -395,4 +396,5 @@ export {
   createSilentWavBase64,
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
+  resolveDashScopeTtsModel,
 }

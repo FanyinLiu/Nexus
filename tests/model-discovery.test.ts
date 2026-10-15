@@ -68,7 +68,7 @@ test('resolveProviderConnectionRequest normalizes active draft values before IPC
     providerId: 'deepseek',
     baseUrl: 'https://api.deepseek.com',
     apiKey: 'current-key',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 
@@ -105,7 +105,7 @@ test('resolveProviderConnectionRequest normalizes stored provider profiles', () 
     providerId: 'openai',
     baseUrl: 'https://proxy.example.test/v1/',
     apiKey: 'stored-key',
-    model: 'gpt-5.6-sol',
+    model: 'gpt-6-sol',
   })
 })
 
@@ -118,7 +118,7 @@ test('resolveProviderConnectionRequest falls back to provider defaults without a
   assert.equal(request.providerId, 'anthropic')
   assert.equal(request.baseUrl, 'https://api.anthropic.com')
   assert.equal(request.apiKey, '')
-  assert.equal(request.model, 'claude-sonnet-5')
+  assert.equal(request.model, 'claude-sonnet-5-5')
 })
 
 test('resolveProviderCredentialStatus classifies current, available and missing-key providers', () => {

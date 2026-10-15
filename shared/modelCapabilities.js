@@ -23,6 +23,12 @@ const VISION_MODEL_PATTERNS = [
   /gpt-4-vision/i,
   /gpt-4-turbo/i,
   /gpt-5/i,
+  /gpt-6/i,
+  /deepseek-flash/i,
+  /deepseek-v4\.1/i,
+  /deepseek-v4-1/i,
+  /grok-4\./i,
+  /minimax-m3/i,
   /\bo3\b|\bo4\b/i,
   /claude-3/i,
   /claude-4/i,
@@ -60,6 +66,17 @@ export function modelSupportsSpeech(model) {
   return Boolean(id && /realtime|audio|voice|tts|transcribe|speech/.test(id))
 }
 
+/**
+ * GPT-6 Astra and GPT-6.1 Sol accept Chat Completions only when the request
+ * has no function tools. `reasoning_effort: "none"` is rejected on those two,
+ * and tools require the Responses API. Sol and Luna are the models that can
+ * keep native tools, and only with `reasoning_effort: "none"`.
+ */
+export function modelRejectsChatCompletionsTools(model) {
+  const id = String(model ?? '').trim().toLowerCase()
+  return id === 'gpt-6-astra' || id === 'gpt-6.1-sol'
+}
+
 export function estimateModelContextWindowTokens(model) {
   const id = String(model ?? '').trim().toLowerCase()
   if (!id) return null
@@ -67,10 +84,10 @@ export function estimateModelContextWindowTokens(model) {
   if (/gpt-5\.4-mini/.test(id)) return 400_000
   if (/gpt-5\.4-nano/.test(id)) return 128_000
   if (/qwen3\.6-max/.test(id)) return 256_000
-  if (/grok-4\.(5|6)/.test(id)) return 500_000
+  if (/grok-4\.(5|6|7)/.test(id)) return 500_000
   if (/qwen3\.8-27b/.test(id)) return 256_000
   if (/qwen3\.7-plus|qwen[.-]3[.-]7-plus/.test(id)) return 256_000
-  if (/1m|1000k|minimax-m3|grok-4\.3|grok-4\.20|gpt-5\.6|gpt-5\.5|gpt-5\.4|gemini-(3|2\.5)|deepseek-v4|qwen3\.8|qwen[.-]3[.-]8|qwen3\.7|qwen[.-]3[.-]7|qwen[.-]3[.-]6-(plus|flash)|qwen3\.6|qwen3\.5-(plus|flash)|qwen3-coder-(plus|flash)|claude-fable|claude-mythos|claude-opus-5|claude-sonnet-5|claude-opus-4-8|claude-opus-4-7|claude-sonnet-4-6|kimi-k3|glm-5[.-]3|glm-5[.-]2/.test(id)) return 1_000_000
+  if (/1m|1000k|minimax-m3|grok-4\.3|grok-4\.20|gpt-6|gpt-5\.6|gpt-5\.5|gpt-5\.4|gemini-4|gemini-(3|2\.5)|deepseek-flash|deepseek-v4|qwen3\.8|qwen[.-]3[.-]8|qwen3\.7|qwen[.-]3[.-]7|qwen[.-]3[.-]6-(plus|flash)|qwen3\.6|qwen3\.5-(plus|flash)|qwen3-coder-(plus|flash)|claude-fable|claude-mythos|claude-opus-5|claude-sonnet-5|claude-haiku-5|claude-opus-4-8|claude-opus-4-7|claude-sonnet-4-6|kimi-k3|glm-5[.-]3|glm-5[.-]2|mistral-large-4|doubao-seed-2-1|doubao-seed-evolving/.test(id)) return 1_000_000
   if (/260k|256k|250k|grok-build|qwen3-max|qwen3-coder-(next|480)|qwen3-(235b|next|32b|30b|14b|8b|6|5|4b|1\.7b|0\.6b)|qwen3\.5-\d|kimi-k2|moonshotai\/kimi-k2|doubao-seed-2|seed-2|dola-seed-2|mistral-(large|medium-3-5)|mistral-small-2603|magistral|devstral/.test(id)) return 256_000
   if (/200k|claude|sonnet|opus|haiku|minimax-m2|glm-5|glm-4\.7/.test(id)) return 200_000
   if (/128k|qwen3|max|gpt-5|gpt-4\.1|o3|o4|ernie-5|llama-3\.3|nemotron/.test(id)) return 128_000

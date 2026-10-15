@@ -37,6 +37,7 @@ import {
   formatVolcengineSpeechOutputCombo,
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
+  resolveDashScopeTtsModel,
 } from '../services/ttsService.js'
 import { synthesizeLocalTts } from '../services/localTts.js'
 import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
@@ -231,7 +232,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         multipartParts.push({
           type: 'field',
           name: 'model_id',
-          value: payload.model || 'scribe_v1',
+          value: payload.model || 'scribe_v2',
         })
 
         const languageCode = normalizeLanguageCode(payload.language)
@@ -250,13 +251,14 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
           fileName: createAudioFileName(payload.fileName, payload.mimeType),
           mimeType: payload.mimeType,
           language: payload.language,
+          model: payload.model,
         }))
       } else if (isOpenAiCompatibleSpeechInputProvider(payload.providerId)) {
         endpoint = `${baseUrl}/audio/transcriptions`
         multipartParts.push({
           type: 'field',
           name: 'model',
-          value: payload.model || 'gpt-4o-mini-transcribe',
+          value: payload.model || (payload.providerId === 'openai-stt' ? 'gpt-transcribe' : 'gpt-4o-mini-transcribe'),
         })
 
         const languageCode = normalizeLanguageCode(payload.language)
@@ -482,7 +484,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     } else if (isDashScopeSpeechOutputProvider(payload.providerId)) {
       endpoint = `${baseUrl}/services/aigc/multimodal-generation/generation`
       requestBody = JSON.stringify({
-        model: payload.model || 'qwen3-tts-instruct-flash',
+        model: resolveDashScopeTtsModel(payload.model),
         input: {
           text: content,
           voice: payload.voice || 'Cherry',

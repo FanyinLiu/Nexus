@@ -160,7 +160,7 @@ P0-P3 的执行原则：每个阶段只接入能完成闭环的能力，不接�
 
 - 默认宠物预设切到 `nexus-mini`，用静态头像先跑通陪伴感，Mao/Live2D 保留为可选能力。
 - 新安装的桌宠窗口默认使用更小的常驻尺寸，适合先放在桌面角落里运行；用户仍可拖拽调整。
-- 新安装默认使用 Ollama 文本链路：`http://127.0.0.1:11434/v1` 和 `qwen3:8b`；已有 DeepSeek API Key 时可切换到 DeepSeek + `deepseek-v4-flash`。
+- 新安装默认使用 Ollama 文本链路：`http://127.0.0.1:11434/v1` 和 `qwen3:8b`；已有 DeepSeek API Key 时可切换到 DeepSeek + `deepseek-flash`。
 - 设置首页收敛为常用、记录、进阶三组：模型、桌面、角色、自检、聊天记录、语音、记忆和工具；设定集合并进记忆，本地任务、集成和自治不再作为独立入口。
 - 模型选择默认走 DeepSeek、Ollama、OpenAI-compatible 和自定义接口主路径，其他 provider 保留在更深的来源筛选里。
 - 首次引导只保留文本模型和基础伙伴设置，不把连续语音作为 Phase 1 决策项。

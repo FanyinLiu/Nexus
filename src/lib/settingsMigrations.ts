@@ -87,7 +87,197 @@ const V7_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }> 
   'zai-global': { from: 'glm-5.2', to: 'glm-5.3' },
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 7
+/**
+ * Frozen snapshot of catalog defaults replaced in the 2026-10 refresh.
+ * v8 remaps a stored model only when it still equals that previous default.
+ */
+const V8_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }> = {
+  anthropic: { from: 'claude-sonnet-5', to: 'claude-sonnet-5-5' },
+  gemini: { from: 'gemini-3.7-flash', to: 'gemini-3.8-flash' },
+  xai: { from: 'grok-4.6', to: 'grok-4.7' },
+  deepseek: { from: 'deepseek-v4-flash', to: 'deepseek-flash' },
+  'minimax-coding': { from: 'MiniMax-M3', to: 'MiniMax-M3.1-Flash-Preview' },
+  'minimax-coding-global': { from: 'MiniMax-M3', to: 'MiniMax-M3.1-Flash-Preview' },
+  mistral: { from: 'mistral-medium-3-5', to: 'mistral-large-4' },
+  qianfan: { from: 'ernie-5.0', to: 'ernie-5.1' },
+  doubao: { from: 'doubao-seed-2-0-pro-260328', to: 'doubao-seed-2-1-pro-260915' },
+  together: { from: 'moonshotai/Kimi-K2.6', to: 'moonshotai/Kimi-K3' },
+  venice: { from: 'deepseek-v4-flash', to: 'deepseek-v4-1-flash' },
+}
+
+const V8_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: string }> = {
+  'grok-stt': { from: 'grok-stt', to: 'grok-voice-transcribe-2.0' },
+  'openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
+  'elevenlabs-stt': { from: 'scribe_v1', to: 'scribe_v2' },
+}
+
+function remapSpeechInputDefaults(
+  raw: Record<string, unknown>,
+  mapping: Record<string, { from: string; to: string }>,
+) {
+  const next = { ...raw }
+  const providerId = typeof next.speechInputProviderId === 'string' ? next.speechInputProviderId : ''
+  const model = typeof next.speechInputModel === 'string' ? next.speechInputModel : ''
+  if (providerId && model) {
+    next.speechInputModel = migrateCatalogDefault(mapping, providerId, model)
+  }
+
+  const profiles = next.speechInputProviderProfiles
+  if (profiles && typeof profiles === 'object' && !Array.isArray(profiles)) {
+    const nextProfiles: Record<string, unknown> = { ...profiles }
+    for (const [id, profile] of Object.entries(nextProfiles)) {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue
+      const profileModel = 'model' in profile && typeof profile.model === 'string' ? profile.model : ''
+      if (!profileModel) continue
+      const migrated = migrateCatalogDefault(mapping, id, profileModel)
+      if (migrated !== profileModel) {
+        nextProfiles[id] = { ...profile, model: migrated }
+      }
+    }
+    next.speechInputProviderProfiles = nextProfiles
+  }
+  return next
+}
+
+/**
+ * Model ids removed from the October 2026 catalog, plus the OpenAI default
+ * moving from gpt-5.6-sol to gpt-6-sol. Unlike v6–v8, every matching stored
+ * id is rewritten, not only the previous provider default.
+ */
+const V9_RETIRED_MODEL_IDS: Record<string, Record<string, string>> = {
+  openai: { 'gpt-5.6-sol': 'gpt-6-sol' },
+  together: {
+    'deepseek-ai/DeepSeek-V4-Flash-0731': 'deepseek-ai/DeepSeek-V4.1-Flash',
+    'Qwen/Qwen3.5-397B-A17B': 'Qwen/Qwen3.8-2.4T-A95B',
+    'MiniMaxAI/MiniMax-M2.7': 'MiniMaxAI/MiniMax-M3',
+    'meta-llama/Llama-3.3-70B-Instruct-Turbo': 'moonshotai/Kimi-K3',
+  },
+  siliconflow: {
+    'Qwen/Qwen3.8-Max': 'deepseek-ai/DeepSeek-V4-Flash',
+    'Qwen/Qwen3.8-27B': 'deepseek-ai/DeepSeek-V4-Flash',
+  },
+  'siliconflow-global': {
+    'Qwen/Qwen3.8-Max': 'deepseek-ai/DeepSeek-V4-Flash',
+    'Qwen/Qwen3.8-27B': 'deepseek-ai/DeepSeek-V4-Flash',
+  },
+  qianfan: {
+    'ernie-x1-turbo-32k': 'ernie-4.5-turbo-128k',
+    'ernie-x1-turbo-32k-preview': 'ernie-4.5-turbo-128k',
+  },
+  nvidia: {
+    'deepseek-ai/deepseek-r1': 'deepseek-ai/deepseek-v4-flash',
+  },
+  mistral: {
+    'devstral-medium-latest': 'mistral-medium-3-5',
+    'devstral-small-latest': 'mistral-small-2603',
+  },
+}
+
+const V9_RETIRED_SPEECH_OUTPUT_IDS: Record<string, Record<string, string>> = {
+  'dashscope-tts': { 'qwen3-tts-instruct-flash': 'qwen3-tts-flash' },
+  'elevenlabs-tts': {
+    'eleven_turbo_v2_5': 'eleven_flash_v2_5',
+    'eleven_v4': 'eleven_multilingual_v2',
+    'eleven_v4_turbo': 'eleven_multilingual_v2',
+  },
+}
+
+function remapStoredModelIds(
+  raw: Record<string, unknown>,
+  mapping: Record<string, Record<string, string>>,
+) {
+  const next = { ...raw }
+  const storedProviderId = typeof next.apiProviderId === 'string' ? next.apiProviderId : ''
+  const storedBaseUrl = typeof next.apiBaseUrl === 'string' ? next.apiBaseUrl : ''
+  const storedModel = typeof next.model === 'string' ? next.model : ''
+  const providerId = storedProviderId || inferApiProviderId(storedBaseUrl, storedModel)
+  const rootMap = providerId ? mapping[providerId] : undefined
+  if (storedModel && rootMap && rootMap[storedModel]) {
+    next.model = rootMap[storedModel]
+  }
+
+  const profiles = next.textProviderProfiles
+  if (profiles && typeof profiles === 'object' && !Array.isArray(profiles)) {
+    const nextProfiles: Record<string, unknown> = { ...profiles }
+    for (const [id, profile] of Object.entries(nextProfiles)) {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue
+      const model = 'model' in profile && typeof profile.model === 'string' ? profile.model : ''
+      const providerMap = mapping[id]
+      if (!model || !providerMap || !providerMap[model]) continue
+      nextProfiles[id] = { ...profile, model: providerMap[model] }
+    }
+    next.textProviderProfiles = nextProfiles
+  }
+  return next
+}
+
+function remapSpeechOutputModelIds(
+  raw: Record<string, unknown>,
+  mapping: Record<string, Record<string, string>>,
+) {
+  const next = { ...raw }
+  const providerId = typeof next.speechOutputProviderId === 'string' ? next.speechOutputProviderId : ''
+  const model = typeof next.speechOutputModel === 'string' ? next.speechOutputModel : ''
+  const rootMap = providerId ? mapping[providerId] : undefined
+  if (model && rootMap && rootMap[model]) {
+    next.speechOutputModel = rootMap[model]
+  }
+
+  const profiles = next.speechOutputProviderProfiles
+  if (profiles && typeof profiles === 'object' && !Array.isArray(profiles)) {
+    const nextProfiles: Record<string, unknown> = { ...profiles }
+    for (const [id, profile] of Object.entries(nextProfiles)) {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue
+      const profileModel = 'model' in profile && typeof profile.model === 'string' ? profile.model : ''
+      const providerMap = mapping[id]
+      if (!profileModel || !providerMap || !providerMap[profileModel]) continue
+      nextProfiles[id] = { ...profile, model: providerMap[profileModel] }
+    }
+    next.speechOutputProviderProfiles = nextProfiles
+  }
+  return next
+}
+
+/**
+ * Previous catalog defaults promoted after the October 2026 audit.
+ * Only a stored model that still equals that previous default is rewritten.
+ * Coding-plan presets stay on MiniMax-M3.1-Flash-Preview.
+ */
+const V10_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }> = {
+  siliconflow: { from: 'deepseek-ai/DeepSeek-V4-Flash', to: 'deepseek-ai/DeepSeek-V4.1-Flash' },
+  'siliconflow-global': { from: 'deepseek-ai/DeepSeek-V4-Flash', to: 'deepseek-ai/DeepSeek-V4.1-Flash' },
+  nvidia: { from: 'deepseek-ai/deepseek-v4-flash', to: 'deepseek-ai/deepseek-v4.1-flash' },
+  minimax: { from: 'MiniMax-M2.7', to: 'MiniMax-M3' },
+  'minimax-global': { from: 'MiniMax-M2.7', to: 'MiniMax-M3' },
+}
+
+/**
+ * Remember the provider inferred from the pre-migration model.
+ * MiniMax PAYG and Token Plan share a host and are told apart by model id,
+ * so the id has to be written down before that model string changes.
+ * A bare Token Plan default (MiniMax-M3) must stay coding when v8 promotes
+ * it, and a bare PAYG default (MiniMax-M2.7) must stay PAYG when v10
+ * promotes it to MiniMax-M3. An explicit PAYG provider id is left alone,
+ * so a PAYG user who picked MiniMax-M3 is not sent to the coding preview.
+ */
+function pinProviderIdForDefaultRemap(
+  raw: Record<string, unknown>,
+  mapping: Record<string, { from: string; to: string }>,
+) {
+  const next = { ...raw }
+  if (typeof next.apiProviderId === 'string' && next.apiProviderId.trim()) return next
+  const storedBaseUrl = typeof next.apiBaseUrl === 'string' ? next.apiBaseUrl : ''
+  const storedModel = typeof next.model === 'string' ? next.model : ''
+  if (!storedModel) return next
+  const providerId = inferApiProviderId(storedBaseUrl, storedModel)
+  const entry = mapping[providerId]
+  if (entry && storedModel === entry.from) {
+    next.apiProviderId = providerId
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 10
 
 interface SettingsMigration {
   toVersion: number
@@ -190,6 +380,33 @@ const migrations: SettingsMigration[] = [
     toVersion: 7,
     description: 'Promote stored Qwen 3.7-plus / GLM-5.2 defaults to Qwen 3.8-max / GLM-5.3',
     migrate: (raw) => remapStoredCatalogDefaults(raw, V7_RETIRED_CATALOG_DEFAULTS),
+  },
+  {
+    toVersion: 8,
+    description: 'Promote stored October 2026 catalog defaults',
+    migrate: (raw) => remapSpeechInputDefaults(
+      remapStoredCatalogDefaults(
+        pinProviderIdForDefaultRemap(raw, V8_RETIRED_CATALOG_DEFAULTS),
+        V8_RETIRED_CATALOG_DEFAULTS,
+      ),
+      V8_RETIRED_SPEECH_INPUT_DEFAULTS,
+    ),
+  },
+  {
+    toVersion: 9,
+    description: 'Move stored OpenAI defaults to gpt-6-sol and rewrite catalog ids that left the official lists',
+    migrate: (raw) => remapSpeechOutputModelIds(
+      remapStoredModelIds(raw, V9_RETIRED_MODEL_IDS),
+      V9_RETIRED_SPEECH_OUTPUT_IDS,
+    ),
+  },
+  {
+    toVersion: 10,
+    description: 'Promote SiliconFlow, NVIDIA, and MiniMax PAYG defaults',
+    migrate: (raw) => remapStoredCatalogDefaults(
+      pinProviderIdForDefaultRemap(raw, V10_RETIRED_CATALOG_DEFAULTS),
+      V10_RETIRED_CATALOG_DEFAULTS,
+    ),
   },
 ]
 

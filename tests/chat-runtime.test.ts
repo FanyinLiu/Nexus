@@ -99,6 +99,15 @@ test('coding-plan anthropic-compatible providers use Anthropic messages protocol
   assert.equal(minimaxRequest.protocol, 'anthropic')
   assert.equal(minimaxRequest.endpoint, 'https://api.minimaxi.com/anthropic/v1/messages')
   assert.deepEqual(JSON.parse(minimaxRequest.body).thinking, { type: 'disabled' })
+
+  const previewRequest = buildChatRequest({
+    providerId: 'minimax-coding',
+    baseUrl: 'https://api.minimaxi.com/anthropic',
+    apiKey: 'test-key',
+    model: 'MiniMax-M3.1-Flash-Preview',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+  assert.equal(Object.hasOwn(JSON.parse(previewRequest.body), 'thinking'), false)
   assert.equal(kimiRequest.protocol, 'anthropic')
   assert.equal(kimiRequest.endpoint, 'https://api.moonshot.ai/anthropic/v1/messages')
 })
@@ -149,15 +158,89 @@ test('anthropic-compatible base URL infers messages protocol for custom provider
 })
 
 test('deepseek v4 requests disable default thinking for chat compatibility', () => {
-  const request = buildChatRequest({
+  const legacy = buildChatRequest({
     providerId: 'deepseek',
     baseUrl: 'https://api.deepseek.com',
     apiKey: 'test-key',
     model: 'deepseek-v4-flash',
     messages: [{ role: 'user', content: 'Ping' }],
   })
+  const current = buildChatRequest({
+    providerId: 'deepseek',
+    baseUrl: 'https://api.deepseek.com',
+    apiKey: 'test-key',
+    model: 'deepseek-flash',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
 
-  assert.deepEqual(JSON.parse(request.body).thinking, { type: 'disabled' })
+  assert.deepEqual(JSON.parse(legacy.body).thinking, { type: 'disabled' })
+  assert.deepEqual(JSON.parse(current.body).thinking, { type: 'disabled' })
+})
+
+test('gpt-6-sol sends reasoning_effort none only when tools are attached', () => {
+  const plain = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6-sol',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+  const plainBody = JSON.parse(plain.body)
+  assert.equal(Object.hasOwn(plainBody, 'temperature'), false)
+  assert.equal(Object.hasOwn(plainBody, 'reasoning_effort'), false)
+
+  const withTools = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6-luna',
+    messages: [{ role: 'user', content: 'Ping' }],
+    tools: [{ type: 'function', function: { name: 'ping', parameters: { type: 'object' } } }],
+  })
+  const toolBody = JSON.parse(withTools.body)
+  assert.equal(toolBody.reasoning_effort, 'none')
+  assert.equal(toolBody.temperature, 0.8)
+
+  const astra = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6-astra',
+    messages: [{ role: 'user', content: 'Ping' }],
+    tools: [{ type: 'function', function: { name: 'ping', parameters: { type: 'object' } } }],
+  })
+  const astraBody = JSON.parse(astra.body)
+  assert.equal(astraBody.model, 'gpt-6-astra')
+  assert.equal(astraBody.messages[0].content, 'Ping')
+  assert.equal(Object.hasOwn(astraBody, 'tools'), false)
+  assert.equal(Object.hasOwn(astraBody, 'reasoning_effort'), false)
+  assert.equal(Object.hasOwn(astraBody, 'temperature'), false)
+
+  const solWithoutTools = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6.1-sol',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+  const solPlainBody = JSON.parse(solWithoutTools.body)
+  assert.equal(solPlainBody.model, 'gpt-6.1-sol')
+  assert.equal(Object.hasOwn(solPlainBody, 'tools'), false)
+  assert.equal(Object.hasOwn(solPlainBody, 'reasoning_effort'), false)
+  assert.equal(Object.hasOwn(solPlainBody, 'temperature'), false)
+
+  const solWithTools = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6.1-sol',
+    messages: [{ role: 'user', content: 'Ping' }],
+    tools: [{ type: 'function', function: { name: 'ping', parameters: { type: 'object' } } }],
+  })
+  const solToolBody = JSON.parse(solWithTools.body)
+  assert.equal(Object.hasOwn(solToolBody, 'tools'), false)
+  assert.equal(Object.hasOwn(solToolBody, 'reasoning_effort'), false)
+  assert.equal(Object.hasOwn(solToolBody, 'temperature'), false)
 })
 
 test('claude opus 4.8 requests omit non-default sampling parameters', () => {

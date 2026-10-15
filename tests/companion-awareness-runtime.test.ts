@@ -55,14 +55,18 @@ test('companion awareness runtime disables check-in decisions without active-win
 })
 
 test('companion awareness runtime can produce eligible local check-ins from coarse segments only', () => {
+  // Quiet hours use the local hour. A fixed UTC clock lands inside 23:00–08:00
+  // in UTC+8, so build the one-hour gap from local noon instead.
+  const now = new Date(2026, 5, 21, 12, 0, 0, 0)
+  const opened = new Date(now.getTime() - 60 * 60 * 1000)
   const state = resolveCompanionAwarenessRuntime({
     contextAwarenessEnabled: true,
     companionAwarenessPaused: false,
     activeWindowContextEnabled: true,
     isActiveChatSession: false,
-    nexusOpenSince: '2026-06-21T17:00:00.000Z',
-    lastNexusInteractionAt: '2026-06-21T17:00:00.000Z',
-    now: '2026-06-21T18:00:00.000Z',
+    nexusOpenSince: opened.toISOString(),
+    lastNexusInteractionAt: opened.toISOString(),
+    now: now.toISOString(),
     activeWindowTitle: 'Private Research Thread - Chrome',
     uiLanguage: 'en-US',
   })

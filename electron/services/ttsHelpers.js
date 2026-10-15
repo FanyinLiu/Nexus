@@ -184,6 +184,17 @@ export function mapLanguageToMiniMaxBoost(language) {
   }
 }
 
+/**
+ * Resolve a DashScope TTS model for the multimodal generation endpoint.
+ * The retired instruct-flash id still appears in unmigrated settings; the
+ * undated qwen3-tts-flash model uses this same request body and Cherry.
+ */
+export function resolveDashScopeTtsModel(model) {
+  const id = String(model ?? '').trim()
+  if (!id || id === 'qwen3-tts-instruct-flash') return 'qwen3-tts-flash'
+  return id
+}
+
 export function mapLanguageToDashScopeType(language) {
   switch (normalizeLanguageCode(language)) {
     case 'zh':

@@ -6,6 +6,7 @@ import {
   buildXaiTtsRequestBody,
   mapLanguageToXaiStt,
   mapLanguageToXaiTts,
+  resolveXaiSttModel,
 } from '../electron/services/xaiSpeech.js'
 import { getSpeechOutputProviderPreset } from '../src/lib/audioProviders.ts'
 
@@ -17,12 +18,12 @@ test('xAI TTS language mapping pins official codes and otherwise uses auto', () 
   assert.equal(mapLanguageToXaiTts('sv'), 'auto')
 })
 
-test('xAI STT language mapping omits Chinese because it is not on the official format list', () => {
+test('xAI STT language mapping includes Mandarin formatting', () => {
   assert.equal(mapLanguageToXaiStt('en-US'), 'en')
   assert.equal(mapLanguageToXaiStt('ja'), 'ja')
   assert.equal(mapLanguageToXaiStt('ko'), 'ko')
-  assert.equal(mapLanguageToXaiStt('zh-CN'), '')
-  assert.equal(mapLanguageToXaiStt('zh-TW'), '')
+  assert.equal(mapLanguageToXaiStt('zh-CN'), 'zh')
+  assert.equal(mapLanguageToXaiStt('zh-TW'), 'zh')
   assert.equal(mapLanguageToXaiStt(''), '')
 })
 
@@ -49,7 +50,8 @@ test('xAI STT multipart puts option fields before the file', () => {
     mimeType: 'audio/wav',
     language: 'en-US',
   })
-  assert.deepEqual(withLanguage.map((part) => part.name), ['language', 'format', 'file'])
+  assert.deepEqual(withLanguage.map((part) => part.name), ['model', 'language', 'format', 'file'])
+  assert.equal(withLanguage[0]?.value, 'grok-voice-transcribe-2.0')
 
   const chinese = buildXaiSttMultipartParts({
     audioBuffer: Buffer.from('wav'),
@@ -57,7 +59,11 @@ test('xAI STT multipart puts option fields before the file', () => {
     mimeType: 'audio/wav',
     language: 'zh-CN',
   })
-  assert.deepEqual(chinese.map((part) => part.name), ['file'])
+  assert.deepEqual(chinese.map((part) => part.name), ['model', 'language', 'format', 'file'])
+  assert.equal(chinese[1]?.value, 'zh')
+  assert.equal(resolveXaiSttModel('grok-stt'), 'grok-voice-transcribe-2.0')
+  assert.equal(resolveXaiSttModel(''), 'grok-voice-transcribe-2.0')
+  assert.equal(resolveXaiSttModel('custom-stt'), 'custom-stt')
 })
 
 test('Grok speech presets point at the official xAI API host', () => {

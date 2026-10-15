@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
 
-import { loadSettings, SETTINGS_STORAGE_KEY } from '../src/lib/storage.ts'
+import { loadSettings, saveSettings, SETTINGS_STORAGE_KEY } from '../src/lib/storage.ts'
 import { commitSettingsUpdate } from '../src/app/store/commitSettingsUpdate.ts'
-import { CURRENT_SETTINGS_SCHEMA_VERSION } from '../src/lib/settingsMigrations.ts'
+import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
+import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
+import { getSpeechOutputProvider } from '../src/lib/speechProviderCatalog.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -258,7 +260,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 7)
+    assert.equal(settings.settingsSchemaVersion, 10)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -310,9 +312,9 @@ test('migrates a stored previous catalog default to the current flagship', () =>
 
   const settings = loadSettings()
 
-  assert.equal(settings.model, 'gpt-5.6-sol')
-  assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-5.6-sol')
-  assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5')
+  assert.equal(settings.model, 'gpt-6-sol')
+  assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-6-sol')
+  assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5-5')
   assert.equal(settings.textProviderProfiles.xai?.model, 'grok-4.20')
 })
 
@@ -347,6 +349,472 @@ test('migrates stored Qwen 3.7-plus and GLM-5.2 defaults to the 3.8 / 5.3 flagsh
   assert.equal(settings.textProviderProfiles.dashscope?.model, 'qwen3.8-max')
   assert.equal(settings.textProviderProfiles.zai?.model, 'glm-5.3')
   assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-5.4-mini')
+})
+
+test('migrates stored October 2026 catalog defaults without touching custom ids', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 7,
+      apiProviderId: 'deepseek',
+      apiBaseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-v4-flash',
+      speechInputProviderId: 'grok-stt',
+      speechInputModel: 'grok-stt',
+      textProviderProfiles: {
+        anthropic: { apiBaseUrl: 'https://api.anthropic.com', apiKey: '', model: 'claude-sonnet-5' },
+        xai: { apiBaseUrl: 'https://api.x.ai/v1', apiKey: '', model: 'grok-4.20' },
+        venice: { apiBaseUrl: 'https://api.venice.ai/api/v1', apiKey: '', model: 'deepseek-v4-flash' },
+      },
+      speechInputProviderProfiles: {
+        'openai-stt': { model: 'gpt-4o-mini-transcribe' },
+        'elevenlabs-stt': { model: 'scribe_v2' },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.model, 'deepseek-flash')
+  assert.equal(settings.speechInputModel, 'grok-voice-transcribe-2.0')
+  assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5-5')
+  assert.equal(settings.textProviderProfiles.xai?.model, 'grok-4.20')
+  assert.equal(settings.textProviderProfiles.venice?.model, 'deepseek-v4-1-flash')
+  assert.equal(settings.speechInputProviderProfiles['openai-stt']?.model, 'gpt-transcribe')
+  assert.equal(settings.speechInputProviderProfiles['elevenlabs-stt']?.model, 'scribe_v2')
+})
+
+test('migrates removed October 2026 catalog and speech ids', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 8,
+      apiProviderId: 'openai',
+      apiBaseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-5.6-sol',
+      speechOutputProviderId: 'dashscope-tts',
+      speechOutputModel: 'qwen3-tts-instruct-flash',
+      textProviderProfiles: {
+        together: {
+          apiBaseUrl: 'https://api.together.xyz/v1',
+          apiKey: '',
+          model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+        },
+        mistral: { apiBaseUrl: 'https://api.mistral.ai/v1', apiKey: '', model: 'devstral-small-latest' },
+        qianfan: { apiBaseUrl: 'https://qianfan.baidubce.com/v2', apiKey: '', model: 'ernie-x1-turbo-32k' },
+        nvidia: { apiBaseUrl: 'https://integrate.api.nvidia.com/v1', apiKey: '', model: 'deepseek-ai/deepseek-r1' },
+        siliconflow: {
+          apiBaseUrl: 'https://api.siliconflow.cn/v1',
+          apiKey: '',
+          model: 'Qwen/Qwen3.8-Max',
+        },
+        moonshot: { apiBaseUrl: 'https://api.moonshot.cn/v1', apiKey: '', model: 'kimi-k2.6' },
+      },
+      speechOutputProviderProfiles: {
+        'elevenlabs-tts': { model: 'eleven_v4' },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.model, 'gpt-6-sol')
+  assert.equal(settings.speechOutputModel, 'qwen3-tts-flash')
+  assert.equal(settings.textProviderProfiles.together?.model, 'moonshotai/Kimi-K3')
+  assert.equal(settings.textProviderProfiles.mistral?.model, 'mistral-small-2603')
+  assert.equal(settings.textProviderProfiles.qianfan?.model, 'ernie-4.5-turbo-128k')
+  assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4.1-flash')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4.1-Flash')
+  assert.equal(settings.textProviderProfiles.moonshot?.model, 'kimi-k2.6')
+  assert.equal(settings.speechOutputProviderProfiles['elevenlabs-tts']?.model, 'eleven_multilingual_v2')
+})
+
+test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults without moving coding plans', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 9,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M2.7',
+      textProviderProfiles: {
+        siliconflow: {
+          apiBaseUrl: 'https://api.siliconflow.cn/v1',
+          apiKey: '',
+          model: 'deepseek-ai/DeepSeek-V4-Flash',
+        },
+        'siliconflow-global': {
+          apiBaseUrl: 'https://api.siliconflow.com/v1',
+          apiKey: '',
+          model: 'deepseek-ai/DeepSeek-V4-Pro',
+        },
+        nvidia: {
+          apiBaseUrl: 'https://integrate.api.nvidia.com/v1',
+          apiKey: '',
+          model: 'deepseek-ai/deepseek-v4-flash',
+        },
+        'minimax-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.7',
+        },
+        'minimax-coding': {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3.1-Flash-Preview',
+        },
+        'minimax-coding-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.7',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax')
+  assert.equal(settings.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4.1-Flash')
+  assert.equal(settings.textProviderProfiles['siliconflow-global']?.model, 'deepseek-ai/DeepSeek-V4-Pro')
+  assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4.1-flash')
+  assert.equal(settings.textProviderProfiles['minimax-global']?.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles['minimax-coding']?.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M2.7')
+})
+
+test('schema below 8 pins a bare MiniMax-M3 Token Plan user before promoting the coding default', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 7,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M3',
+      textProviderProfiles: {
+        minimax: {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3',
+        },
+        'minimax-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3',
+        },
+        'minimax-coding-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax-coding')
+  assert.equal(settings.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles['minimax-global']?.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M3.1-Flash-Preview')
+})
+
+test('schema below 8 keeps an explicit PAYG MiniMax-M3 selection off the coding preview', () => {
+  const cases = [
+    {
+      apiProviderId: 'minimax',
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+    },
+    {
+      apiProviderId: 'minimax-global',
+      apiBaseUrl: 'https://api.minimax.io/anthropic',
+    },
+  ]
+
+  for (const stored of cases) {
+    const localStorage = createLocalStorageMock({
+      [SETTINGS_STORAGE_KEY]: JSON.stringify({
+        settingsSchemaVersion: 7,
+        ...stored,
+        model: 'MiniMax-M3',
+      }),
+    })
+
+    Object.defineProperty(globalThis, 'window', {
+      value: { localStorage },
+      configurable: true,
+      writable: true,
+    })
+
+    const settings = loadSettings()
+
+    assert.equal(settings.apiProviderId, stored.apiProviderId)
+    assert.equal(settings.model, 'MiniMax-M3')
+  }
+})
+
+test('schema below 8 promotes a bare global Token Plan default and leaves a PAYG non-default', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 5,
+      apiBaseUrl: 'https://api.minimax.io/anthropic',
+      model: 'MiniMax-M3',
+      textProviderProfiles: {
+        minimax: {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.5',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax-coding-global')
+  assert.equal(settings.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M2.5')
+})
+
+test('schema below 8 promotes a bare PAYG MiniMax default to MiniMax-M3 without the coding preview', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 7,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M2.7',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax')
+  assert.equal(settings.model, 'MiniMax-M3')
+})
+
+test('a preview model without a provider id still resolves as Token Plan', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 10,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M3.1-Flash-Preview',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax-coding')
+  assert.equal(settings.model, 'MiniMax-M3.1-Flash-Preview')
+})
+
+test('v9 retired ids land on a model that provider still lists', () => {
+  const cases: Array<[string, string]> = [
+    ['openai', 'gpt-5.6-sol'],
+    ['together', 'deepseek-ai/DeepSeek-V4-Flash-0731'],
+    ['together', 'Qwen/Qwen3.5-397B-A17B'],
+    ['together', 'MiniMaxAI/MiniMax-M2.7'],
+    ['together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
+    ['siliconflow', 'Qwen/Qwen3.8-Max'],
+    ['siliconflow-global', 'Qwen/Qwen3.8-27B'],
+    ['qianfan', 'ernie-x1-turbo-32k'],
+    ['qianfan', 'ernie-x1-turbo-32k-preview'],
+    ['nvidia', 'deepseek-ai/deepseek-r1'],
+    ['mistral', 'devstral-medium-latest'],
+    ['mistral', 'devstral-small-latest'],
+  ]
+
+  for (const [providerId, model] of cases) {
+    const migrated = migrateSettings({
+      settingsSchemaVersion: 8,
+      apiProviderId: providerId,
+      model,
+    }, 8)
+    const nextModel = typeof migrated.model === 'string' ? migrated.model : ''
+    const preset = getApiProviderPreset(providerId)
+    assert.ok(
+      preset.models.includes(nextModel),
+      `${providerId} ${model} migrated to ${nextModel}, which is not in the catalog`,
+    )
+  }
+
+  const speechCases: Array<[string, string]> = [
+    ['dashscope-tts', 'qwen3-tts-instruct-flash'],
+    ['elevenlabs-tts', 'eleven_turbo_v2_5'],
+    ['elevenlabs-tts', 'eleven_v4'],
+    ['elevenlabs-tts', 'eleven_v4_turbo'],
+  ]
+  for (const [providerId, model] of speechCases) {
+    const migrated = migrateSettings({
+      settingsSchemaVersion: 8,
+      speechOutputProviderId: providerId,
+      speechOutputModel: model,
+    }, 8)
+    const nextModel = typeof migrated.speechOutputModel === 'string' ? migrated.speechOutputModel : ''
+    const preset = getSpeechOutputProvider(providerId)
+    assert.ok(
+      preset.modelOptions.some((entry) => entry.value === nextModel),
+      `${providerId} ${model} migrated to ${nextModel}, which is not a speech option`,
+    )
+  }
+})
+
+test('re-applying v9 and v10 does not move a manual non-default again', () => {
+  const raw = {
+    settingsSchemaVersion: 8,
+    apiProviderId: 'openai',
+    apiBaseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5.6-terra',
+    textProviderProfiles: {
+      siliconflow: {
+        apiBaseUrl: 'https://api.siliconflow.cn/v1',
+        apiKey: '',
+        model: 'deepseek-ai/DeepSeek-V4-Pro',
+      },
+      openai: {
+        apiBaseUrl: 'https://api.openai.com/v1',
+        apiKey: '',
+        model: 'gpt-5.6-luna',
+      },
+    },
+  }
+  const once = migrateSettings(raw, 8)
+  const twice = migrateSettings(once, 8)
+  assert.equal(once.model, 'gpt-5.6-terra')
+  assert.equal(twice.model, 'gpt-5.6-terra')
+  assert.equal(
+    (twice.textProviderProfiles as { siliconflow: { model: string } }).siliconflow.model,
+    'deepseek-ai/DeepSeek-V4-Pro',
+  )
+  assert.equal(
+    (twice.textProviderProfiles as { openai: { model: string } }).openai.model,
+    'gpt-5.6-luna',
+  )
+  assert.equal(migrateSettings(once, 10).model, 'gpt-5.6-terra')
+})
+
+test('a schema 10 store keeps a model the user selected after the default promotion', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 10,
+      apiProviderId: 'siliconflow',
+      apiBaseUrl: 'https://api.siliconflow.cn/v1',
+      model: 'deepseek-ai/DeepSeek-V4-Flash',
+      textProviderProfiles: {
+        minimax: {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.7',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.settingsSchemaVersion, 10)
+  assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M2.7')
+})
+
+test('missing apiProviderId does not promote a non-default MiniMax or SiliconFlow model', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 9,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M2.5',
+      textProviderProfiles: {
+        siliconflow: {
+          apiBaseUrl: 'https://api.siliconflow.cn/v1',
+          apiKey: '',
+          model: 'deepseek-ai/DeepSeek-V4-Pro',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax')
+  assert.equal(settings.model, 'MiniMax-M2.5')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4-Pro')
+})
+
+test('a newer schema version is left untouched and stays newer after save', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 11,
+      apiProviderId: 'siliconflow',
+      apiBaseUrl: 'https://api.siliconflow.cn/v1',
+      model: 'deepseek-ai/DeepSeek-V4-Flash',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+  assert.equal(settings.settingsSchemaVersion, 11)
+  assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
+
+  saveSettings(settings, { silent: true })
+  const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as {
+    settingsSchemaVersion?: number
+    model?: string
+  }
+  assert.equal(saved.settingsSchemaVersion, 11)
+  assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 
 test('preserves an explicit older model that was not the previous default', () => {

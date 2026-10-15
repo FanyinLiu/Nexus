@@ -108,13 +108,13 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 
 - 主面板以用户选择的内置 Live2D 伙伴为视觉中心，当前默认体验包含全身待机、基础表情和说话状态；模型创作与复杂换装仍属于后续能力。
 - 新安装的桌宠窗口默认使用更小的常驻尺寸，适合先放在桌面角落里运行；用户仍可拖拽调整。
-- 新安装默认走 Ollama 文本链路：`http://127.0.0.1:11434/v1` + `qwen3:8b`；如果已有 DeepSeek API Key，可以直接切换到 DeepSeek + `deepseek-v4-flash`。
+- 新安装默认走 Ollama 文本链路：`http://127.0.0.1:11434/v1` + `qwen3:8b`；如果已有 DeepSeek API Key，可以直接切换到 DeepSeek + `deepseek-flash`。
 - 设置首页按外观体验、伙伴行为、记忆上下文、模型连接和维护诊断分组；模型、连接、工具、主动陪伴等仍保留独立入口，设定集以“背景与常用表达”呈现。
 - 模型选择默认走主路径：DeepSeek、Ollama、OpenAI-compatible 和自定义接口；其他 provider 仍保留在更深的模型来源里。
 - Onboarding 只引导文字模型和基础伙伴设置，不再把完整语音系统放进第一阶段入口。
 - 默认聊天和小窗入口以文字对话为主；语音按钮只在进阶设置开启语音输入或已有语音会话时出现。
 - Ollama、DeepSeek 和 OpenAI-compatible 连接测试会让当前模型执行一次最小回复，而不是只检查 `/models`；只有服务返回有效模型响应才会显示已就绪。缺模型、缺 API Key、模型名错误和不可达状态会分别提示；如果本机 Ollama 未启动或端口无响应，会提示启动 Ollama、检查 `http://127.0.0.1:11434/v1`，并在需要时运行 `ollama pull qwen3:8b`。
-- 连接测试会先做本地预检：Ollama 会提示 `http://127.0.0.1:11434/v1`、`qwen3:8b` 和 `ollama pull qwen3:8b`，DeepSeek 会提示 `https://api.deepseek.com` 与 `deepseek-v4-flash`，自定义接口会提示需要完整的 OpenAI-compatible Base URL 和模型 ID。
+- 连接测试会先做本地预检：Ollama 会提示 `http://127.0.0.1:11434/v1`、`qwen3:8b` 和 `ollama pull qwen3:8b`，DeepSeek 会提示 `https://api.deepseek.com` 与 `deepseek-flash`，自定义接口会提示需要完整的 OpenAI-compatible Base URL 和模型 ID。
 - 首次启动向导的文本模型步骤也会复用这套本地预检，并把问题和修复建议分开显示；对于 Ollama/DeepSeek 等内置 provider，可一键填入推荐 Base URL 和模型名。填入后旧结果会立即失效，并明确要求重新做真实连接测试，不会把“已填推荐值”误显示成连接成功。修复只会改 Base URL/模型名，不会代填或改写 API Key。缺云端 API Key 仍允许先保存并体验常驻窗口，但不会遮蔽 Base URL 或模型名缺失。
 - 向导最后一步会显示“5 分钟内完成首次对话”的目标状态：只有当前文本模型通过连接测试后才显示已就绪；字段完整但未测试会显示为可开始但需先测试，缺少关键字段则需要补齐。
 - 连接状态按证据分级：文本必须拿到有效回复，并在协议返回模型身份时与请求目标一致；响应缺少模型身份时只显示“部分验证”，不会把请求模型名当成观察证据。语音必须拿到有效音频或本地运行时证明；旧版本结果、空响应和只有端点响应的结果不会显示绿色。成功结果超过 10 分钟会变成中性状态并要求重新检测，修改语音开关、provider、模型、音色或地址也会立即让旧结果失效。local TTS 会直接运行本地合成探测；Paraformer 与 Tencent ASR 当前明确标记为不支持独立连接测试，不会误报缺少 Base URL。

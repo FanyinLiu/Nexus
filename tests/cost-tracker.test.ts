@@ -229,6 +229,20 @@ test('cost entry storage caps oversized legacy snapshots on read', () => {
   assert.deepEqual(compacted, loaded)
 })
 
+test('fallback pricing covers gpt-6-sol and current Gemini models', () => {
+  const pricing = new UsagePricingTable()
+  assert.equal(pricing.computeCost('openai', 'gpt-6-sol', 1_000_000, 1_000_000), 12)
+  assert.equal(pricing.computeCost('gemini', 'gemini-4-argon', 1_000_000, 0), 2)
+  assert.equal(pricing.computeCost('gemini', 'gemini-3.8-flash', 1_000_000, 0), 0.75)
+  assert.equal(pricing.computeCost('gemini', 'gemini-3.6-flash', 1_000_000, 0), 0.75)
+  assert.equal(pricing.computeCost('gemini', 'gemini-3.5-flash-lite', 1_000_000, 0), 0.3)
+  assert.equal(pricing.computeCost('gemini', 'gemini-3.1-pro-preview', 1_000_000, 0), 2)
+  assert.equal(pricing.computeCost('nvidia', 'deepseek-ai/deepseek-v4.1-flash', 1_000_000, 0), 0.15)
+  assert.equal(pricing.computeCost('siliconflow', 'deepseek-ai/DeepSeek-V4.1-Flash', 1_000_000, 1_000_000), 0.75)
+  assert.equal(pricing.computeCost('venice', 'deepseek-v4-1-flash', 1_000_000, 0), 0.3)
+  assert.equal(pricing.computeCost('deepseek', 'deepseek-flash', 1_000_000, 0), 0.3)
+})
+
 test('UsagePricingTable returns immutable pricing snapshots and clamps token counts', () => {
   const pricing = new UsagePricingTable([{
     providerId: ' openai ',

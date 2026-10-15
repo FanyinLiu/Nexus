@@ -576,7 +576,7 @@ Make the smallest usable Nexus experience work end to end.
 - Launch a small always-on desktop companion window.
 - Use the default `nexus-mini` static avatar; keep full Live2D optional.
 - Support Ollama (`http://127.0.0.1:11434/v1`, `qwen3:8b`) and DeepSeek
-  (`deepseek-v4-flash`) for simple text chat.
+  (`deepseek-flash`) for simple text chat.
 - Keep onboarding focused on text model, identity, and window basics.
 - Provide a startup self-check panel and `npm run doctor` so startup, preview,
   model, and API mistakes are visible without digging through logs.
