@@ -196,9 +196,9 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
         draft.mcpServers.length
           ? ti('settings.preview.integrations.mcp_count', { count: draft.mcpServers.length })
           : ti('settings.preview.integrations.mcp_pending'),
-        // Game-module status preview removed — minecraft / factorio are
-        // hidden in v0.3.x (see registry.ts hidden flag). When games come
-        // back, restore the `games_enabled` / `games_idle` preview line.
+        // Game status stays off this card while the companion flag is off.
+        // The modules are not a working Java / RCON login yet. When that
+        // companion ships, restore the `games_enabled` / `games_idle` line.
       ],
     },
     tools: {
