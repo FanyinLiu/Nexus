@@ -423,9 +423,13 @@ Required boundaries:
 - The shared preload bridge is compatibility-only: high-impact file, vault,
   plugin/MCP, external-action, persona/skill, pet-artifact, and local-data
   write/read channels require a panel renderer. The exact-origin and top-level
-  sender check is followed by this window capability matrix; future high-risk
-  channels must be explicitly classified as panel-only or an intentional shared
-  exception before the IPC audit passes.
+  sender check is followed by this window capability matrix. The matrix is
+  applied to the capability bound to the webContents when its BrowserWindow is
+  created, not to the live `?view=` query. Future high-risk channels must be
+  explicitly classified as panel-only or an intentional shared exception before
+  the IPC audit passes. Desktop-context capture is shared with the pet window
+  and is limited to the flags the panel has saved; omitted renderer flags do
+  not turn capture on.
 - Storage migrations must be versioned, idempotent, test-covered, and reversible
   through retained legacy snapshots or explicit export.
 - High-risk tools must run through a task state machine: plan, preview,
