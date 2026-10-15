@@ -498,6 +498,152 @@ test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults without moving cod
   assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M2.7')
 })
 
+test('schema below 8 pins a bare MiniMax-M3 Token Plan user before promoting the coding default', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 7,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M3',
+      textProviderProfiles: {
+        minimax: {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3',
+        },
+        'minimax-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3',
+        },
+        'minimax-coding-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax-coding')
+  assert.equal(settings.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles['minimax-global']?.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M3.1-Flash-Preview')
+})
+
+test('schema below 8 keeps an explicit PAYG MiniMax-M3 selection off the coding preview', () => {
+  const cases = [
+    {
+      apiProviderId: 'minimax',
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+    },
+    {
+      apiProviderId: 'minimax-global',
+      apiBaseUrl: 'https://api.minimax.io/anthropic',
+    },
+  ]
+
+  for (const stored of cases) {
+    const localStorage = createLocalStorageMock({
+      [SETTINGS_STORAGE_KEY]: JSON.stringify({
+        settingsSchemaVersion: 7,
+        ...stored,
+        model: 'MiniMax-M3',
+      }),
+    })
+
+    Object.defineProperty(globalThis, 'window', {
+      value: { localStorage },
+      configurable: true,
+      writable: true,
+    })
+
+    const settings = loadSettings()
+
+    assert.equal(settings.apiProviderId, stored.apiProviderId)
+    assert.equal(settings.model, 'MiniMax-M3')
+  }
+})
+
+test('schema below 8 promotes a bare global Token Plan default and leaves a PAYG non-default', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 5,
+      apiBaseUrl: 'https://api.minimax.io/anthropic',
+      model: 'MiniMax-M3',
+      textProviderProfiles: {
+        minimax: {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.5',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax-coding-global')
+  assert.equal(settings.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M2.5')
+})
+
+test('schema below 8 promotes a bare PAYG MiniMax default to MiniMax-M3 without the coding preview', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 7,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M2.7',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax')
+  assert.equal(settings.model, 'MiniMax-M3')
+})
+
+test('a preview model without a provider id still resolves as Token Plan', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 10,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M3.1-Flash-Preview',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax-coding')
+  assert.equal(settings.model, 'MiniMax-M3.1-Flash-Preview')
+})
+
 test('v9 retired ids land on a model that provider still lists', () => {
   const cases: Array<[string, string]> = [
     ['openai', 'gpt-5.6-sol'],

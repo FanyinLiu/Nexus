@@ -9,17 +9,25 @@
  * Table rows are [hostNeedle, providerId, modelOverride?]. First substring
  * match wins, so more specific paths (/anthropic, /api/coding) must precede
  * their parent hosts. modelOverride upgrades the inferred id when the
- * requested model matches exactly (case-insensitive) — the MiniMax Token
- * Plan (minimax-coding*) shares the PAYG /anthropic hosts and is told apart
- * by the model id alone. The table itself stays module-private; the contract
- * test pins its literals at source level.
+ * requested model matches exactly (case-insensitive). The MiniMax Token
+ * Plan shares the PAYG /anthropic hosts and is told apart by the model id:
+ * MiniMax-M3 is the historical coding default, and MiniMax-M3.1-Flash-Preview
+ * is the current one. A PAYG selection of any other id, including an
+ * explicit MiniMax-M3 stored with the PAYG provider id, stays PAYG.
+ * The table itself stays module-private; the contract test pins its
+ * literals at source level.
  */
+const MINIMAX_CODING_MODEL_IDS = Object.freeze([
+  'minimax-m3',
+  'minimax-m3.1-flash-preview',
+])
+
 const PROVIDER_HOST_INFERENCE_TABLE = Object.freeze([
   ['api.openai.com', 'openai'],
   ['api.anthropic.com', 'anthropic'],
   ['generativelanguage.googleapis.com', 'gemini'],
-  ['api.minimax.io/anthropic', 'minimax-global', { model: 'minimax-m3', providerId: 'minimax-coding-global' }],
-  ['api.minimaxi.com/anthropic', 'minimax', { model: 'minimax-m3', providerId: 'minimax-coding' }],
+  ['api.minimax.io/anthropic', 'minimax-global', { models: MINIMAX_CODING_MODEL_IDS, providerId: 'minimax-coding-global' }],
+  ['api.minimaxi.com/anthropic', 'minimax', { models: MINIMAX_CODING_MODEL_IDS, providerId: 'minimax-coding' }],
   ['api.minimax.io', 'minimax-global'],
   ['api.minimaxi.com', 'minimax'],
   ['api.moonshot.ai/anthropic', 'kimi-coding-global'],
@@ -51,6 +59,22 @@ const PROVIDER_HOST_INFERENCE_TABLE = Object.freeze([
 ])
 
 /**
+ * True when the requested model is one of the exact ids that select the
+ * override provider. Matching is exact so a longer PAYG id cannot inherit
+ * the Token Plan route from a shared prefix.
+ *
+ * @param {{ model?: string, models?: readonly string[], providerId: string } | undefined} modelOverride
+ * @param {string} normalizedModel
+ */
+function modelOverrideMatches(modelOverride, normalizedModel) {
+  if (!modelOverride || !normalizedModel) return false
+  const models = Array.isArray(modelOverride.models)
+    ? modelOverride.models
+    : (modelOverride.model ? [modelOverride.model] : [])
+  return models.includes(normalizedModel)
+}
+
+/**
  * Infer a chat provider id from a base URL host. Returns null when nothing
  * matches — each caller applies its own fallback id ('openai' in the main
  * process, 'custom' in the renderer).
@@ -62,7 +86,7 @@ export function inferProviderIdFromHost(host, model) {
 
   for (const [needle, providerId, modelOverride] of PROVIDER_HOST_INFERENCE_TABLE) {
     if (!normalized.includes(needle)) continue
-    if (modelOverride && normalizedModel && normalizedModel === modelOverride.model) {
+    if (modelOverrideMatches(modelOverride, normalizedModel)) {
       return modelOverride.providerId
     }
     return providerId

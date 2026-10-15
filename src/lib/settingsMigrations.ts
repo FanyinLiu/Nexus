@@ -253,8 +253,12 @@ const V10_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }>
 
 /**
  * Remember the provider inferred from the pre-migration model.
- * MiniMax-M3 is also the Token Plan disambiguator, so a bare PAYG default
- * must keep its provider id before the model string changes.
+ * MiniMax PAYG and Token Plan share a host and are told apart by model id,
+ * so the id has to be written down before that model string changes.
+ * A bare Token Plan default (MiniMax-M3) must stay coding when v8 promotes
+ * it, and a bare PAYG default (MiniMax-M2.7) must stay PAYG when v10
+ * promotes it to MiniMax-M3. An explicit PAYG provider id is left alone,
+ * so a PAYG user who picked MiniMax-M3 is not sent to the coding preview.
  */
 function pinProviderIdForDefaultRemap(
   raw: Record<string, unknown>,
@@ -381,7 +385,10 @@ const migrations: SettingsMigration[] = [
     toVersion: 8,
     description: 'Promote stored October 2026 catalog defaults',
     migrate: (raw) => remapSpeechInputDefaults(
-      remapStoredCatalogDefaults(raw, V8_RETIRED_CATALOG_DEFAULTS),
+      remapStoredCatalogDefaults(
+        pinProviderIdForDefaultRemap(raw, V8_RETIRED_CATALOG_DEFAULTS),
+        V8_RETIRED_CATALOG_DEFAULTS,
+      ),
       V8_RETIRED_SPEECH_INPUT_DEFAULTS,
     ),
   },
