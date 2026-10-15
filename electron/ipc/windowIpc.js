@@ -34,6 +34,7 @@ import { invokeRegisteredTool } from '../tools/toolRegistry.js'
 import {
   captureActiveWindowContext,
   captureScreenshotContext,
+  getSavedDesktopContextFlags,
   normalizeDesktopContextPolicy,
   clipboard,
 } from '../services/desktopContextService.js'
@@ -385,7 +386,7 @@ export function register() {
   ipcMain.handle('desktop-context:get', async (event, request = {}) => {
     requireTrustedSender(event)
     request = validateDesktopContextRequestPayload(request)
-    const contextPolicy = normalizeDesktopContextPolicy(request?.policy)
+    const contextPolicy = normalizeDesktopContextPolicy(request?.policy, getSavedDesktopContextFlags())
     audit('desktop-context', 'capture-request', summarizeDesktopContextRequest(request, contextPolicy))
     const snapshot = {
       capturedAt: new Date().toISOString(),

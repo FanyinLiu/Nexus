@@ -626,6 +626,11 @@ declare global {
           mode: 'read-only' | 'confirm' | 'auto'
           active?: boolean
         }>
+        desktopContext?: {
+          activeWindow: boolean
+          clipboard: boolean
+          screenshot: boolean
+        }
       }) => Promise<{
         policy: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>
         changes: Array<{ integration: string; from: string; to: string; active: boolean }>

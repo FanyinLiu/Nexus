@@ -7,6 +7,11 @@ export type ExternalActionPolicySyncPayload = {
     mode: IntegrationPermissionMode
     active: boolean
   }>
+  desktopContext: {
+    activeWindow: boolean
+    clipboard: boolean
+    screenshot: boolean
+  }
 }
 
 function hasText(value: string | undefined): boolean {
@@ -14,7 +19,13 @@ function hasText(value: string | undefined): boolean {
 }
 
 export function buildExternalActionPolicySyncPayload(settings: AppSettings): ExternalActionPolicySyncPayload {
+  const contextAwarenessEnabled = settings.contextAwarenessEnabled === true
   return {
+    desktopContext: {
+      activeWindow: contextAwarenessEnabled && settings.activeWindowContextEnabled === true,
+      clipboard: contextAwarenessEnabled && settings.clipboardContextEnabled === true,
+      screenshot: contextAwarenessEnabled && settings.screenContextEnabled === true,
+    },
     policies: {
       telegram: {
         mode: settings.telegramPermissionMode,

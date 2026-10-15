@@ -4,7 +4,7 @@ import {
   isTrustedRendererFrameUrl,
 } from './trustedSenderPolicy.js'
 import {
-  getRendererViewKind,
+  getBoundWindowCapability,
   getRequiredWindowCapability,
   isWindowChannelAllowed,
 } from './windowCapabilities.js'
@@ -54,13 +54,15 @@ export function requireTrustedSender(event, channel) {
     throw new Error('IPC rejected: sender frame is not the trusted renderer')
   }
 
-  const viewKind = getRendererViewKind(ownerUrl)
   const resolvedChannel = typeof channel === 'string' && channel
     ? channel
     : Reflect.get(event ?? {}, 'channel')
   if (typeof resolvedChannel !== 'string' || !resolvedChannel) {
     throw new Error('IPC rejected: channel capability is unavailable')
   }
+  // Bound at BrowserWindow creation. The frame URL checked above is not a
+  // privilege bit, so a rewritten ?view= cannot widen this sender.
+  const viewKind = getBoundWindowCapability(sender)
   if (!isWindowChannelAllowed(resolvedChannel, viewKind)) {
     const capability = getRequiredWindowCapability(resolvedChannel)
     throw new Error(`IPC rejected: ${capability} capability is unavailable to ${viewKind} window`)

@@ -90,6 +90,17 @@ const discordSendVoiceSchema = {
   },
 }
 
+const desktopContextFlagsSchema = {
+  type: 'object',
+  optional: true,
+  unknown: 'reject',
+  fields: {
+    activeWindow: { type: 'boolean' },
+    clipboard: { type: 'boolean' },
+    screenshot: { type: 'boolean' },
+  },
+}
+
 const externalActionPolicySyncSchema = {
   type: 'object',
   unknown: 'reject',
@@ -105,6 +116,7 @@ const externalActionPolicySyncSchema = {
         mcp: externalActionPolicyItemSchema,
       },
     },
+    desktopContext: desktopContextFlagsSchema,
   },
 }
 

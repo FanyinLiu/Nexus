@@ -5,6 +5,10 @@
  * operations are only meaningful from the panel/settings surface. Unknown
  * channels stay shared until they are explicitly classified here so adding a
  * low-risk channel does not silently become a breaking change.
+ *
+ * The privilege bit is the capability bound to a webContents when its
+ * BrowserWindow is created. The live URL is not a capability source:
+ * `history.replaceState(?view=panel)` must not promote a pet window.
  */
 
 const PANEL_ONLY_PATTERNS = Object.freeze([
@@ -36,7 +40,86 @@ const EXPLICIT_SHARED_HIGH_IMPACT_CHANNELS = Object.freeze(new Set([
   'desktop-context:get',
 ]))
 
-/** @param {unknown} ownerUrl @returns {'panel'|'pet'|'unknown'} */
+// WeakMap keys have to be objects, so the webContents object is the identity
+// key. The id map covers lookups that only have the numeric id and is cleared
+// with the object entry on destroy (ids are not a valid WeakMap key).
+const capabilitiesByContents = new WeakMap()
+const capabilitiesById = new Map()
+
+/** @param {unknown} viewKind @returns {'panel'|'pet'|'unknown'} */
+function normalizeBoundViewKind(viewKind) {
+  if (viewKind === 'panel' || viewKind === 'pet') return viewKind
+  return 'unknown'
+}
+
+/** @param {object} webContents @returns {number | null} */
+function webContentsId(webContents) {
+  const id = /** @type {{ id?: unknown }} */ (webContents).id
+  return typeof id === 'number' ? id : null
+}
+
+/**
+ * Record the privilege of a BrowserWindow's webContents at creation time.
+ * Later URL edits do not change it.
+ * @param {object | null | undefined} webContents
+ * @param {unknown} viewKind
+ */
+export function bindWindowCapability(webContents, viewKind) {
+  if (!webContents || typeof webContents !== 'object') return
+  const kind = normalizeBoundViewKind(viewKind)
+  const id = webContentsId(webContents)
+  capabilitiesByContents.set(webContents, { kind, id })
+  if (id !== null) capabilitiesById.set(id, kind)
+}
+
+/**
+ * Drop a creation-time binding. Safe to call after the webContents is destroyed
+ * because the id was stored on bind and is not read back from the object.
+ * @param {object | null | undefined} webContents
+ */
+export function unbindWindowCapability(webContents) {
+  if (!webContents || typeof webContents !== 'object') return
+  const bound = capabilitiesByContents.get(webContents)
+  capabilitiesByContents.delete(webContents)
+  if (bound && typeof bound.id === 'number') capabilitiesById.delete(bound.id)
+}
+
+/**
+ * @param {object | null | undefined} webContents
+ * @returns {'panel'|'pet'|'unknown'}
+ */
+export function getBoundWindowCapability(webContents) {
+  if (!webContents || typeof webContents !== 'object') return 'unknown'
+  const bound = capabilitiesByContents.get(webContents)
+  if (bound) return bound.kind
+  const id = webContentsId(webContents)
+  if (id !== null && capabilitiesById.has(id)) {
+    return capabilitiesById.get(id)
+  }
+  return 'unknown'
+}
+
+/**
+ * Reject a channel the bound window is not allowed to call.
+ * The decision reads the creation-time binding only, so a rewritten `?view=`
+ * on the live document URL cannot widen it.
+ * @param {object | null | undefined} webContents
+ * @param {unknown} channel
+ */
+export function assertBoundWindowChannelAllowed(webContents, channel) {
+  const viewKind = getBoundWindowCapability(webContents)
+  if (!isWindowChannelAllowed(channel, viewKind)) {
+    const capability = getRequiredWindowCapability(channel)
+    throw new Error(`IPC rejected: ${capability} capability is unavailable to ${viewKind} window`)
+  }
+}
+
+/**
+ * Classify a URL's `view` token. This is not the privilege bit; callers that
+ * decide IPC access must use the creation-time binding.
+ * @param {unknown} ownerUrl
+ * @returns {'panel'|'pet'|'unknown'}
+ */
 export function getRendererViewKind(ownerUrl) {
   try {
     const url = new URL(String(ownerUrl ?? ''))
@@ -68,8 +151,10 @@ export function isWindowCapabilityClassified(channel) {
  */
 export function isWindowChannelAllowed(channel, viewKind) {
   const required = getRequiredWindowCapability(channel)
-  if (required === 'shared') return true
-  return viewKind === required
+  const kind = viewKind === 'panel' || viewKind === 'pet' || viewKind === 'unknown'
+    ? viewKind
+    : 'unknown'
+  return WINDOW_CAPABILITY_MATRIX[kind][required] === true
 }
 
 export const WINDOW_CAPABILITY_MATRIX = Object.freeze({

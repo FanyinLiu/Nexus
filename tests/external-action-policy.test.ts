@@ -152,6 +152,11 @@ test('external action channel descriptors map send execute and configure actions
 test('renderer policy sync payload omits tokens target IDs commands and args', () => {
   const payload = buildExternalActionPolicySyncPayload(settings())
   assert.deepEqual(payload, {
+    desktopContext: {
+      activeWindow: false,
+      clipboard: false,
+      screenshot: false,
+    },
     policies: {
       telegram: { mode: 'auto', active: true },
       discord: { mode: 'confirm', active: true },
