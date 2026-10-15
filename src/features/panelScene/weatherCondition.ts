@@ -36,15 +36,6 @@ export type WeatherCondition =
 
 export type TimeOfDayBand = 'day' | 'dusk' | 'night'
 
-export const ALL_WEATHER_CONDITIONS: readonly WeatherCondition[] = [
-  'clear', 'partly_cloudy', 'overcast',
-  'drizzle', 'rain', 'heavy_rain',
-  'thunder', 'storm',
-  'light_snow', 'snow', 'heavy_snow',
-  'fog',
-  'breeze', 'gale',
-] as const
-
 const BREEZE_THRESHOLD_KMH = 20
 const GALE_THRESHOLD_KMH = 40
 

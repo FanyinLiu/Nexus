@@ -571,10 +571,6 @@ export function deformPortraitPuppetPoint(
   return { x, y }
 }
 
-export function isPortraitPuppetModel(model: { portraitPuppet?: PortraitPuppetDefinition | null }) {
-  return Boolean(model.portraitPuppet?.imagePath)
-}
-
 /** Pick the authored whole-image layer for the current expression. */
 export function resolvePortraitPuppetFaceImage(
   puppet: PortraitPuppetDefinition,

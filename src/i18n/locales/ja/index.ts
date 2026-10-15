@@ -19,7 +19,6 @@ import { jaVoice } from './voice.ts'
 import { jaChat } from './chat.ts'
 import { jaOnboarding } from './onboarding.ts'
 import { jaPanel } from './panel.ts'
-import { jaIntegration } from './integration.ts'
 
 export const jaMessages = {
   ...jaCore,
@@ -37,5 +36,4 @@ export const jaMessages = {
   ...jaChat,
   ...jaOnboarding,
   ...jaPanel,
-  ...jaIntegration,
 } satisfies TranslationDictionary

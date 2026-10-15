@@ -18,7 +18,6 @@ import { zhCNVoice } from './voice.ts'
 import { zhCNChat } from './chat.ts'
 import { zhCNOnboarding } from './onboarding.ts'
 import { zhCNPanel } from './panel.ts'
-import { zhCNIntegration } from './integration.ts'
 
 export const zhCNMessages = {
   ...zhCNCore,
@@ -36,5 +35,4 @@ export const zhCNMessages = {
   ...zhCNChat,
   ...zhCNOnboarding,
   ...zhCNPanel,
-  ...zhCNIntegration,
 } satisfies Record<string, string>

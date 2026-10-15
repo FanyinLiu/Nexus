@@ -19,7 +19,6 @@ import { koVoice } from './voice.ts'
 import { koChat } from './chat.ts'
 import { koOnboarding } from './onboarding.ts'
 import { koPanel } from './panel.ts'
-import { koIntegration } from './integration.ts'
 
 export const koMessages = {
   ...koCore,
@@ -37,5 +36,4 @@ export const koMessages = {
   ...koChat,
   ...koOnboarding,
   ...koPanel,
-  ...koIntegration,
 } satisfies TranslationDictionary

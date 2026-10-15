@@ -19,7 +19,6 @@ import { enVoice } from './voice.ts'
 import { enChat } from './chat.ts'
 import { enOnboarding } from './onboarding.ts'
 import { enPanel } from './panel.ts'
-import { enIntegration } from './integration.ts'
 
 export const enMessages = {
   ...enCore,
@@ -37,5 +36,4 @@ export const enMessages = {
   ...enChat,
   ...enOnboarding,
   ...enPanel,
-  ...enIntegration,
 } satisfies TranslationDictionary
