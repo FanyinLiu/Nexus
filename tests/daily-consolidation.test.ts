@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
+import { syncProactiveAgenda } from '../src/features/autonomy/proactiveAgenda.ts'
 import {
   CONSOLIDATION_IDLE_SECONDS,
   consolidateDailyMemory,
   decideDailyConsolidation,
   memoryListReplaced,
 } from '../src/features/memory/dailyConsolidation.ts'
+import { resolveFirstUseGuideHost } from '../src/features/onboarding/firstUseGuideHost.ts'
+import {
+  CHAT_STORAGE_KEY,
+  DAILY_MEMORY_STORAGE_KEY,
+  MEMORY_STORAGE_KEY,
+  SETTINGS_STORAGE_KEY,
+} from '../src/lib/storage/core.ts'
+import { loadChatMessages } from '../src/lib/storage/chat.ts'
+import {
+  loadDailyMemories,
+  loadMemories,
+  saveMemories,
+} from '../src/lib/storage/memory.ts'
+import { loadOnboardingCompleted } from '../src/lib/storage/onboarding.ts'
+import { saveProactiveAgenda } from '../src/lib/storage/proactiveAgenda.ts'
+import { loadSettings } from '../src/lib/storage/settings.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../src/types/memory.ts'
 
 function atLocal(year: number, month: number, day: number, hour = 10): number {
@@ -100,6 +117,56 @@ test('a missing or failing model never throws and leaves the store readable', as
   assert.deepEqual(empty.memories, [])
   assert.equal(empty.ops.length, 0)
   assert.equal(memoryListReplaced(existing, empty.memories), false)
+})
+
+test('a fresh profile plus a no-op consolidation still shows the first-use guide', async () => {
+  const store = new Map<string, string>()
+  Object.defineProperty(globalThis, 'window', {
+    value: {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => { store.set(key, String(value)) },
+        removeItem: (key: string) => { store.delete(key) },
+        clear: () => { store.clear() },
+      },
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    },
+    configurable: true,
+    writable: true,
+  })
+
+  const memories = loadMemories()
+  loadDailyMemories()
+  loadChatMessages()
+  loadSettings()
+
+  const result = await consolidateDailyMemory({
+    memories,
+    diaryEntries: [],
+    sinceMs: null,
+    now: '2026-10-15T12:00:00.000Z',
+  })
+  assert.equal(memoryListReplaced(memories, result.memories), false)
+  saveMemories(result.memories)
+  const nowMs = Date.parse('2026-10-15T12:00:00.000Z')
+  saveProactiveAgenda({
+    ...syncProactiveAgenda(result.memories, nowMs),
+    lastConsolidationAt: new Date(nowMs).toISOString(),
+  })
+
+  assert.equal(loadOnboardingCompleted(), false)
+  assert.equal(resolveFirstUseGuideHost({
+    pending: !loadOnboardingCompleted(),
+    view: 'panel',
+    canOpenPanel: true,
+  }), 'local')
+  assert.equal(store.get(MEMORY_STORAGE_KEY), undefined)
+  assert.equal(store.get(DAILY_MEMORY_STORAGE_KEY), undefined)
+  assert.equal(store.get(CHAT_STORAGE_KEY), undefined)
+  assert.equal(store.get(SETTINGS_STORAGE_KEY), undefined)
 })
 
 test('a copied memory list is not a replacement, and a new row is', () => {
