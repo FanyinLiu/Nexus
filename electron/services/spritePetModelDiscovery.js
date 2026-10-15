@@ -95,60 +95,14 @@ export async function listSpritePetModelsFromRoot({
         expressionMap: {},
         mouthParams: {},
       }
-      if (manifest.kind === 'portrait-puppet') {
-        const relativePortraitPath = normalizeSpritePetAssetRelativePath(rootPath, manifest.sourcePortraitPath)
-        const layers = {}
-        for (const [key, layerPath] of Object.entries(manifest.sourceLayerPaths ?? {})) {
-          layers[key] = imagePathBuilder(normalizeSpritePetAssetRelativePath(rootPath, layerPath))
-        }
-        model.portraitPuppet = {
-          imagePath: imagePathBuilder(relativePortraitPath),
-          formatVersion: manifest.formatVersion ?? 1,
-          ...(manifest.renderMode ? { renderMode: manifest.renderMode } : {}),
-          ...(manifest.formatVersion === 4 && manifest.renderMode === 'layered-artmesh-v1'
-            ? {
-              layeredRig: {
-                id: manifest.id,
-                displayName: manifest.displayName,
-                description: manifest.description,
-                kind: manifest.kind,
-                formatVersion: manifest.formatVersion,
-                renderMode: manifest.renderMode,
-                qualityTier: manifest.qualityTier,
-                portraitPath: imagePathBuilder(relativePortraitPath),
-                canvas: manifest.canvas,
-                parameters: manifest.parameters,
-                parts: manifest.parts.map((part) => ({
-                  ...part,
-                  path: imagePathBuilder(normalizeSpritePetAssetRelativePath(
-                    rootPath,
-                    manifest.sourcePartPaths[part.id],
-                  )),
-                })),
-                masks: manifest.masks.map((mask) => ({
-                  ...mask,
-                  path: imagePathBuilder(normalizeSpritePetAssetRelativePath(
-                    rootPath,
-                    manifest.sourceMaskPaths[mask.id],
-                  )),
-                })),
-                physics: manifest.physics,
-              },
-            }
-            : {}),
-          ...(Object.keys(layers).length ? { layers } : {}),
-          ...(manifest.rig ? { rig: manifest.rig } : {}),
-        }
-      } else {
-        const relativeSpritePath = normalizeSpritePetAssetRelativePath(rootPath, manifest.sourceSpritePath)
-        model.spriteAtlas = {
-          imagePath: imagePathBuilder(relativeSpritePath),
-          columns: SPRITE_PET_COLUMNS,
-          rows: manifest.rows ?? SPRITE_PET_ROWS,
-          cellWidth: SPRITE_PET_CELL_WIDTH,
-          cellHeight: SPRITE_PET_CELL_HEIGHT,
-          imageRendering: 'pixelated',
-        }
+      const relativeSpritePath = normalizeSpritePetAssetRelativePath(rootPath, manifest.sourceSpritePath)
+      model.spriteAtlas = {
+        imagePath: imagePathBuilder(relativeSpritePath),
+        columns: SPRITE_PET_COLUMNS,
+        rows: manifest.rows ?? SPRITE_PET_ROWS,
+        cellWidth: SPRITE_PET_CELL_WIDTH,
+        cellHeight: SPRITE_PET_CELL_HEIGHT,
+        imageRendering: 'pixelated',
       }
       discoveredModels.push(model)
     } catch (error) {

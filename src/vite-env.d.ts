@@ -4,7 +4,6 @@ import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
   PetModelImportResult,
-  SpritePetCreatorKitInspection,
 } from './features/pet'
 import type { VoiceEmotionLabel } from './types'
 import type {
@@ -530,72 +529,6 @@ declare global {
         message: string
       }>
       listCodexPetGallery: (payload?: { query?: string; limit?: number }) => Promise<CodexPetGalleryCatalogResult>
-      createCodexPetCreatorKit: (payload: {
-        id?: string
-        displayName?: string
-        description?: string
-        concept?: string
-        styleNotes?: string
-      }) => Promise<{
-        id: string
-        displayName: string
-        directoryPath: string
-        directoryPathDisplay?: string
-        sourceRowsDirectory?: string
-        sourceRowsDirectoryDisplay?: string
-        message: string
-      }>
-      inspectCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
-      assembleCodexPetCreatorKit: (payload?: { kitDirectory?: string }) => Promise<{
-        model: PetModelDefinition
-        message: string
-        packageDirectory?: string
-        packageDirectoryDisplay?: string
-        manifestPath?: string
-        manifestPathDisplay?: string
-        spritesheetPath?: string
-        spritesheetPathDisplay?: string
-        reportPath?: string
-        reportPathDisplay?: string
-        visualAuditPath?: string
-        visualAuditPathDisplay?: string
-        archivePath?: string
-        archivePathDisplay?: string
-      } | null>
-      installCodexPetCreatorKitToCodex: (payload: {
-        kitDirectory: string
-        manifestPath: string
-      }) => Promise<{
-        ok: boolean
-        id: string
-        directoryPath: string
-        directoryPathDisplay?: string
-        manifestPath: string
-        manifestPathDisplay?: string
-        message: string
-      }>
-      openCodexPetCreatorKitPath: (payload: {
-        kitDirectory: string
-        targetPath: string
-        mode?: 'open' | 'reveal'
-      }) => Promise<{
-        ok: boolean
-        message: string
-      }>
-      createSpritePetFromImage: () => Promise<{
-        model: PetModelDefinition
-        message: string
-        packageDirectory?: string
-        packageDirectoryDisplay?: string
-        manifestPath?: string
-        manifestPathDisplay?: string
-        spritesheetPath?: string
-        spritesheetPathDisplay?: string
-        visualAuditPath?: string
-        visualAuditPathDisplay?: string
-        archivePath?: string
-        archivePathDisplay?: string
-      } | null>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>
@@ -939,7 +872,7 @@ declare global {
       pythonRuntimeStatus: () => Promise<PythonRuntimeStatus>
 
       // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
-      sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>
+      sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; installState?: 'installed' | 'not-installed' | 'engine-missing'; modelsDir: string; currentModelId: string | null }>
       sensevoiceStart: () => Promise<{ ok: boolean; sampleRate: number }>
       sensevoiceFeed: (
         payload: { samples: number[] | Float32Array },

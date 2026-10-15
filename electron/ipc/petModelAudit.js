@@ -2,17 +2,6 @@ function textLength(value) {
   return typeof value === 'string' ? value.length : 0
 }
 
-function hasText(value) {
-  return textLength(value) > 0
-}
-
-function pathSummary(value) {
-  return {
-    present: hasText(value),
-    length: textLength(value),
-  }
-}
-
 function resultPathSummary(result = {}) {
   return {
     packageDirectoryLength: textLength(result?.packageDirectory ?? result?.directoryPath),
@@ -39,34 +28,6 @@ export function summarizePetModelRequest(channel, payload = {}) {
         queryLength: textLength(payload?.query),
         limitPresent: typeof payload?.limit === 'number',
       }
-    case 'pet-model:create-creator-kit':
-      return {
-        channel,
-        displayNameLength: textLength(payload?.displayName),
-        conceptLength: textLength(payload?.concept),
-        descriptionLength: textLength(payload?.description),
-        styleNotesLength: textLength(payload?.styleNotes),
-      }
-    case 'pet-model:inspect-creator-kit':
-    case 'pet-model:assemble-creator-kit':
-      return {
-        channel,
-        kitDirectory: pathSummary(payload?.kitDirectory),
-        dialogBacked: !hasText(payload?.kitDirectory),
-      }
-    case 'pet-model:install-creator-kit-codex':
-      return {
-        channel,
-        kitDirectory: pathSummary(payload?.kitDirectory),
-        manifestPath: pathSummary(payload?.manifestPath),
-      }
-    case 'pet-model:open-creator-kit-path':
-      return {
-        channel,
-        kitDirectory: pathSummary(payload?.kitDirectory),
-        targetPath: pathSummary(payload?.targetPath),
-        mode: payload?.mode === 'reveal' ? 'reveal' : 'open',
-      }
     default:
       return { channel }
   }
@@ -88,16 +49,10 @@ export function summarizePetModelResult(channel, result = {}, error = null) {
   }
 }
 
-export function petModelActionNeedsConfirmation(channel, payload = {}) {
+export function petModelActionNeedsConfirmation(channel) {
   switch (channel) {
     case 'pet-model:import-codex-gallery':
-    case 'pet-model:create-creator-kit':
-    case 'pet-model:install-creator-kit-codex':
-    case 'pet-model:open-creator-kit-path':
       return true
-    case 'pet-model:inspect-creator-kit':
-    case 'pet-model:assemble-creator-kit':
-      return hasText(payload?.kitDirectory)
     default:
       return false
   }

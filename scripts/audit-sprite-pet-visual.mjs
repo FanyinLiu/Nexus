@@ -4,7 +4,7 @@ import {
   DEFAULT_SPRITE_PET_VISUAL_AUDIT_OPTIONS,
   auditSpritePetPackage,
   resolveSpritePetManifestPath,
-} from '../electron/services/spritePetVisualAudit.js'
+} from './lib/sprite-pet-visual-audit.mjs'
 
 function printUsage() {
   console.error([

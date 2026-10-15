@@ -88,7 +88,6 @@ const PET_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
   [PET_IPC_ERROR_CODES.UNSUPPORTED_FILE]: { key: 'settings.pet.error.unsupported_file' },
   [PET_IPC_ERROR_CODES.GALLERY_INPUT]: { key: 'settings.pet.error.gallery_input' },
   [PET_IPC_ERROR_CODES.GALLERY_FAILED]: { key: 'settings.pet.error.gallery_failed' },
-  [PET_IPC_ERROR_CODES.KIT_PATH]: { key: 'settings.pet.error.kit_path' },
   [PET_IPC_ERROR_CODES.NETWORK]: { key: 'settings.pet.error.network' },
 }
 

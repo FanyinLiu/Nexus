@@ -6,7 +6,6 @@ import type {
 } from '../../../shared/live2dModelResources.js'
 import type { PetImportMessageKey } from '../../../shared/petErrorCodes.js'
 import type { PetExpressionSlot, SpritePetAtlasDefinition } from './types.ts'
-import type { PortraitPuppetDefinition } from './portraitPuppet.ts'
 
 /** @deprecated Import from `./types` — re-exported for backward compatibility. */
 export type { PetExpressionSlot } from './types.ts'
@@ -57,7 +56,6 @@ export interface PetModelDefinition {
   modelPath: string
   fallbackImagePath: string
   spriteAtlas?: SpritePetAtlasDefinition
-  portraitPuppet?: PortraitPuppetDefinition
   motionGroups: {
     idle?: string
     interaction?: string
@@ -234,7 +232,8 @@ const DEFAULT_RIG_PARAMS = {
 } as const
 
 // Live2D 星绘 (mao) is the default face of the companion — the soul and the
-// model match. Sprite pets (codex/qiyi) stay as the lightweight option.
+// model match. Haru and Hiyori are the other official Live2D samples.
+// Bundled sprite pets are not shipped; imported sprite packages still play.
 export const DEFAULT_PET_MODEL_ID = 'mao'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
@@ -428,82 +427,6 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       yOffsetPx: 12,
     },
   },
-  {
-    id: 'codex',
-    label: 'pet.model.codex.label' satisfies TranslationKey,
-    description: 'pet.model.codex.description' satisfies TranslationKey,
-    modelPath: '',
-    fallbackImagePath: '',
-    spriteAtlas: {
-      imagePath: './pets/codex/spritesheet.webp',
-      imageRendering: 'pixelated',
-      stageSize: 'clamp(88px, 15vmin, 126px)',
-      stageMinSize: '88px',
-      stageMaxSize: '126px',
-      stageMarginBottom: 'clamp(52px, 9vh, 80px)',
-      previewSize: '6.2rem',
-      previewMinSize: '6.2rem',
-    },
-    motionGroups: {},
-    expressionMap: {
-      idle: 'idle',
-      listening: 'listening',
-      thinking: 'thinking',
-      sleepy: 'sleepy',
-      speaking: 'speaking',
-      happy: 'happy',
-      surprised: 'surprised',
-      confused: 'confused',
-      embarrassed: 'embarrassed',
-      touchBody: 'happy',
-      touchFace: 'embarrassed',
-      touchHead: 'surprised',
-    },
-    layout: {
-      widthRatio: 0.6,
-      heightRatio: 0.68,
-      minWidth: 140,
-      minHeight: 190,
-      anchorX: 0.5,
-      anchorY: 0,
-      yOffsetRatio: 0.02,
-    },
-  },
-  {
-    id: 'qiyi',
-    label: 'pet.model.qiyi.label' satisfies TranslationKey,
-    description: 'pet.model.qiyi.description' satisfies TranslationKey,
-    modelPath: '',
-    fallbackImagePath: '',
-    spriteAtlas: {
-      imagePath: './pets/qiyi/spritesheet.webp',
-      imageRendering: 'auto',
-    },
-    motionGroups: {},
-    expressionMap: {
-      idle: 'idle',
-      listening: 'listening',
-      thinking: 'thinking',
-      sleepy: 'sleepy',
-      speaking: 'speaking',
-      happy: 'happy',
-      surprised: 'surprised',
-      confused: 'confused',
-      embarrassed: 'embarrassed',
-      touchBody: 'happy',
-      touchFace: 'embarrassed',
-      touchHead: 'surprised',
-    },
-    layout: {
-      widthRatio: 0.68,
-      heightRatio: 0.76,
-      minWidth: 180,
-      minHeight: 240,
-      anchorX: 0.5,
-      anchorY: 0,
-      yOffsetRatio: 0.02,
-    },
-  },
 ]
 
 export function getPetModelPresets(additionalModels: PetModelDefinition[] = []) {
@@ -564,6 +487,37 @@ export function shouldRepairPetModelSelection(
   return status === 'ready'
     && presets.length > 0
     && !presets.some((preset) => preset.id === modelId)
+}
+
+/**
+ * Point a missing companion selection at Mao after discovery.
+ * Imported models that are still in the library are left alone. Portrait
+ * packages and assembler-marked sprite pets are not discovered, so they
+ * land here together with the removed bundled sprite ids.
+ */
+export function repairDiscoveredPetModelSelection<T extends {
+  petModelId: string
+  characterProfiles: readonly { petModelId: string }[]
+}>(
+  settings: T,
+  status: PetModelDiscoveryStatus,
+  presets: readonly Pick<PetModelDefinition, 'id'>[],
+): T {
+  if (status !== 'ready' || presets.length === 0) return settings
+  const known = new Set(presets.map((preset) => preset.id))
+  const petModelId = known.has(settings.petModelId) ? settings.petModelId : DEFAULT_PET_MODEL_ID
+  let profilesChanged = false
+  const characterProfiles = settings.characterProfiles.map((profile) => {
+    if (known.has(profile.petModelId)) return profile
+    profilesChanged = true
+    return { ...profile, petModelId: DEFAULT_PET_MODEL_ID }
+  })
+  if (petModelId === settings.petModelId && !profilesChanged) return settings
+  return {
+    ...settings,
+    petModelId,
+    characterProfiles: profilesChanged ? characterProfiles : settings.characterProfiles,
+  }
 }
 
 export function buildRuntimePetModelDefinition(

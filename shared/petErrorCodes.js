@@ -10,7 +10,6 @@ export const PET_IPC_ERROR_CODES = Object.freeze({
   UNSUPPORTED_FILE: 'NEXUS_ERR_PET_UNSUPPORTED_FILE',
   GALLERY_INPUT: 'NEXUS_ERR_PET_GALLERY_INPUT',
   GALLERY_FAILED: 'NEXUS_ERR_PET_GALLERY_FAILED',
-  KIT_PATH: 'NEXUS_ERR_PET_KIT_PATH',
   NETWORK: 'NEXUS_ERR_PET_NETWORK',
 })
 
@@ -18,24 +17,6 @@ export const PET_IPC_ERROR_CODES = Object.freeze({
 export const PET_IMPORT_MESSAGE_KEYS = Object.freeze({
   imported: 'settings.pet.success.imported',
   importedFrom: 'settings.pet.success.imported_from',
-  sprite: 'settings.pet.success.sprite',
-  portrait: 'settings.pet.success.portrait',
-  layered: 'settings.pet.success.layered',
-  kitCreated: 'settings.pet.success.kit_created',
-  kitReady: 'settings.pet.success.kit_ready',
-  kitReadyWarn: 'settings.pet.success.kit_ready_warn',
-  kitIncomplete: 'settings.pet.success.kit_incomplete',
-  assembled: 'settings.pet.success.assembled',
-  kitInstalled: 'settings.pet.success.kit_installed',
-  kitOpenedDir: 'settings.pet.success.kit_opened_dir',
-  kitOpenedFile: 'settings.pet.success.kit_opened_file',
-  actionImage: 'settings.pet.success.action.image',
-  actionPortrait: 'settings.pet.success.action.portrait',
-  actionLayered: 'settings.pet.success.action.layered',
-  actionAtlas: 'settings.pet.success.action.atlas',
-  actionAtlasNative: 'settings.pet.success.action.atlas_native',
-  auditOk: 'settings.pet.success.audit.ok',
-  auditWarn: 'settings.pet.success.audit.warn',
   sourceCommunityZip: 'settings.pet.success.source.community_zip',
 })
 

@@ -3,7 +3,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 /** ko messages — namespace `provider`. */
 export const koProvider = {
   'provider.stt.local-sensevoice.label': '[로컬] SenseVoice 고정밀 인식',
-  'provider.stt.local-sensevoice.notes': '알리바바 SenseVoice-Small 오프라인 인식. 10초 오디오를 약 70ms에 처리(Whisper 대비 약 15배 빠름), 중국어 정확도가 매우 높음. sherpa-models 디렉터리에 모델을 먼저 다운로드하세요.',
+  'provider.stt.local-sensevoice.notes': '알리바바 SenseVoice-Small 오프라인 인식. 10초 오디오를 약 70ms에 처리합니다. int8 모델(약 239 MB)은 로컬 음성 인식을 켤 때 받으며 설치 파일에는 포함되지 않습니다.',
   'provider.stt.local-sensevoice.model.sensevoice-zh-en.label': 'SenseVoice 중영 이중언어(권장)',
   'provider.stt.local-paraformer.label': '[로컬] Paraformer 스트리밍 인식',
   'provider.stt.local-paraformer.notes': '알리바바 Paraformer 스트리밍 인식. 말하면서 바로 전사하며 인식 결과를 실시간으로 표시합니다. 중국어·영어·광둥어 지원. sherpa-models 디렉터리에 모델을 먼저 다운로드하세요.',

@@ -47,8 +47,8 @@
 | 记忆向量 Transformers | `@huggingface/transformers` | `src/features/memory/vectorSearchRuntime.ts` 动态导入。 | 仅向量召回使用时加载；不能回到 renderer 静态导入。 |
 | OCR/Tesseract | `tesseract.js` | `src/features/vision/ocrWorker.ts` 动态导入。 | 只在用户启用屏幕 OCR 时加载。 |
 | 浏览器 VAD | `@ricky0123/vad-web` | `src/features/hearing/browserVad.ts` 动态导入。 | 只在语音活动检测开始时加载。 |
-| Sherpa 必需语音模型 | `electron/services/modelDefinitions.js` + `sherpa-models/` | `prepackage:*` 当前运行 `download-models.mjs --skip-asr`，会下载 required 模型并由 `extraResources` 纳入打包资源。 | 下一阶段评估是否从安装包改为首次运行下载；改动前必须保留离线语音不可用时的清楚降级。 |
-| Sherpa 可选 ASR/TTS 模型 | `MODEL_CATALOG` 中 `required: false` | `download-models:lite` / `--skip-asr` 跳过。 | 继续保持用户选择后下载，不能进入默认打包路径。 |
+| Sherpa 必需语音模型 | `electron/services/modelDefinitions.js` + `sherpa-models/` | `prepackage:*` 当前运行 `download-models.mjs --skip-asr`，会下载 required 模型（唤醒词与 VAD）并由 `extraResources` 纳入打包资源。SenseVoice int8 已改为 `required: false`，安装包用 `!**/sherpa-onnx-sense-voice-*/**` 排除。 | 唤醒词保持随包。SenseVoice 在打开本地识别时首次运行下载，缺模型时降级到已配置的云端识别，否则关闭语音输入。 |
+| Sherpa 可选 ASR/TTS 模型 | `MODEL_CATALOG` 中 `required: false` | `download-models:lite` / `--skip-asr` 跳过。包含 Paraformer、MeloTTS，以及按需的 SenseVoice int8（约 239 MB）。 | 继续保持用户选择后下载，不能进入默认打包路径。 |
 | Silero VAD standalone | `public/vendor/vad/silero_vad_v5.onnx` | `extraResources` 复制为 `silero_vad_v5.onnx`，也支持运行时下载到 userData。 | 若改为全量运行时下载，需要保留旧 bundled 路径探测兼容。 |
 
 ## 启动路径边界

@@ -3,7 +3,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 /** zh-TW messages — namespace `provider`. */
 export const zhTWProvider = {
   'provider.stt.local-sensevoice.label': '[本地] SenseVoice 高精度識別',
-  'provider.stt.local-sensevoice.notes': '阿里 SenseVoice-Small 離線識別，10 秒音訊僅需 70ms 處理（比 Whisper 快 15 倍），中文準確率極高。需先下載模型到 sherpa-models 目錄。',
+  'provider.stt.local-sensevoice.notes': '阿里 SenseVoice-Small 離線識別，10 秒音訊約 70ms。int8 模型（約 239 MB）在你打開本機語音辨識時下載，不隨安裝包附帶。',
   'provider.stt.local-sensevoice.model.sensevoice-zh-en.label': 'SenseVoice 中英雙語（推薦）',
   'provider.stt.local-paraformer.label': '[本地] Paraformer 串流識別',
   'provider.stt.local-paraformer.notes': '阿里 Paraformer 串流識別，邊說邊轉寫，即時顯示識別內容。支援中英粵三語。需先下載模型到 sherpa-models 目錄。',

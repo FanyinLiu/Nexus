@@ -51,10 +51,6 @@ export function getImportedSpritePetModelsRoot() {
   return path.join(app.getPath('userData'), IMPORTED_SPRITE_PET_MODELS_DIRECTORY)
 }
 
-export function getSpritePetCreatorKitsRoot() {
-  return path.join(app.getPath('documents'), 'Nexus Pet Creator Kits')
-}
-
 function expandHomePath(value) {
   const rawPath = String(value ?? '').trim()
   if (!rawPath) {
@@ -105,7 +101,6 @@ export function getLocalFileDisplayPath(targetPath) {
   const resolvedTarget = path.resolve(rawPath)
   const knownRootDisplays = [
     [app.getPath('userData'), USER_DATA_DISPLAY_ROOT],
-    [getSpritePetCreatorKitsRoot(), `${DOCUMENTS_DISPLAY_ROOT}/Nexus Pet Creator Kits`],
     [getCodexCustomSpritePetModelsRoot(), `${CODEX_HOME_DISPLAY_ROOT}/pets`],
     [app.getPath('documents'), DOCUMENTS_DISPLAY_ROOT],
     [app.getPath('home'), '~'],

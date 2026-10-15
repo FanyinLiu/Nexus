@@ -48,7 +48,7 @@ export function PanelView({
   }, [visionEnabled, pendingImage, setPendingImage])
 
   const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
-    && (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.portraitPuppet) || Boolean(petModel.modelPath))
+    && (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath))
 
   if (useCompanionV2) {
     return (

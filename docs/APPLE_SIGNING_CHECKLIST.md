@@ -25,7 +25,7 @@
    - 删 `CSC_IDENTITY_AUTO_DISCOVERY: false`
    - env 注入上面 5 个 secrets
 4. entitlements（`build/entitlements.mac.plist`）按 hardened runtime 复核（现有文件为 ad-hoc 写的，可能需去掉
-   `disable-library-validation` 试打包；sherpa/sharp 原生模块若加载失败再加回并记录原因）
+   `disable-library-validation` 试打包；sherpa 原生模块若加载失败再加回并记录原因）
 
 ## 3. 验证（一个 beta 周期）
 1. 出一个 beta tag → CI 构建 → `spctl -a -vv Nexus.app` 验证签名 + 公证

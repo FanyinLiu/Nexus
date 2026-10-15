@@ -143,23 +143,19 @@ test('Live2D import presentation formats limited and ready compatibility evidenc
   }])
 })
 
-test('keyed pet import success messages localize nested action and audit fragments', () => {
+test('keyed pet import success messages localize a nested source fragment', () => {
   const { calls, translate } = createRecordingTranslator()
   assert.equal(formatPetModelImportPresentation({
-    message: 'settings.pet.success.sprite',
-    messageKey: 'settings.pet.success.sprite',
+    message: 'settings.pet.success.imported_from',
+    messageKey: 'settings.pet.success.imported_from',
     messageParams: {
       name: 'Mini',
-      archive: '/tmp/mini.zip',
-      actionKey: 'settings.pet.success.action.image',
-      auditKey: 'settings.pet.success.audit.warn',
-      count: 2,
+      sourceKey: 'settings.pet.success.source.community_zip',
     },
-  }, translate).message, 'translated:settings.pet.success.sprite')
+  }, translate).message, 'translated:settings.pet.success.imported_from')
   assert.deepEqual(calls.map((call) => call.key), [
-    'settings.pet.success.action.image',
-    'settings.pet.success.audit.warn',
-    'settings.pet.success.sprite',
+    'settings.pet.success.source.community_zip',
+    'settings.pet.success.imported_from',
   ])
 })
 

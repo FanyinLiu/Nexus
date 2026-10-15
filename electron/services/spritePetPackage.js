@@ -19,20 +19,9 @@ import {
   detectSpritePetAtlasEdition,
 } from '../../shared/spritePetWearContract.js'
 import {
-  PORTRAIT_PUPPET_FORMAT_VERSION,
-  PORTRAIT_PUPPET_PROCEDURAL_RENDER_MODE,
-  isPortraitPuppetManifest,
-  normalizePortraitPuppetRig,
-} from '../../shared/portraitPuppetContract.js'
-import { isPortraitPuppetV4Manifest } from '../../shared/portraitPuppetV4Contract.js'
-import {
   PET_IPC_ERROR_CODES,
   buildPetIpcError,
 } from '../../shared/petErrorCodes.js'
-import {
-  resolvePortraitPuppetV4Package,
-  validatePortraitPuppetV4Assets,
-} from './portraitPuppetV4Package.js'
 
 // Re-exported so the other electron spritePet*.js services keep importing the
 // atlas contract through this module; the single source is
@@ -766,10 +755,23 @@ async function readImageDimensions(imagePath) {
   throw new Error('Sprite 宠物只支持 PNG 或 WebP spritesheet。')
 }
 
+const ASSEMBLED_SPRITE_PET_DESCRIPTION_PREFIX = 'Assembled Codex-compatible sprite pet package'
+
+/**
+ * Portrait packages and assembler output are no longer loadable. Community
+ * sprite packages keep a spritesheet and do not use this description prefix.
+ */
+function isRetiredImageToPetManifest(manifest) {
+  const description = typeof manifest.description === 'string' ? manifest.description.trim() : ''
+  return String(manifest.kind ?? '').trim() === 'portrait-puppet'
+    || String(manifest.renderMode ?? '').trim() === 'layered-artmesh-v1'
+    || String(manifest.portraitPath ?? '').trim().length > 0
+    || (Array.isArray(manifest.parts) && manifest.parts.length > 0)
+    || description.startsWith(ASSEMBLED_SPRITE_PET_DESCRIPTION_PREFIX)
+}
+
 export function isSpritePetManifest(value) {
-  return Boolean(value && typeof value === 'object' && (
-    'spritesheetPath' in value || isPortraitPuppetManifest(value)
-  ))
+  return Boolean(value && typeof value === 'object' && 'spritesheetPath' in value && !isRetiredImageToPetManifest(value))
 }
 
 const PRIVATE_CODEX_APP_PATH_PATTERNS = [
@@ -827,57 +829,8 @@ export function normalizeSpritePetManifest(manifest, manifestPath) {
     ? manifest.description.trim()
     : ''
 
-  const formatVersionHint = Number(manifest.formatVersion)
-  const looksLikeV4 = isPortraitPuppetV4Manifest(manifest)
-    || formatVersionHint === 4
-    || (Array.isArray(manifest.parts) && manifest.parts.length > 0)
-    || manifest.renderMode === 'layered-artmesh-v1'
-  if (looksLikeV4) {
-    if (!isPortraitPuppetV4Manifest(manifest)) {
-      throw buildPetIpcError(PET_IPC_ERROR_CODES.UNSUPPORTED_FILE)
-    }
-    return resolvePortraitPuppetV4Package(manifest, manifestPath)
-  }
-
-  if (isPortraitPuppetManifest(manifest)) {
-    const rawPortraitPath = String(manifest.portraitPath ?? 'portrait.png').trim()
-    if (!rawPortraitPath) {
-      throw new Error('pet.json 缺少 portraitPath。')
-    }
-    const sourcePortraitPath = path.resolve(sourceDirectory, rawPortraitPath)
-    if (!isPathInsideRoot(sourceDirectory, sourcePortraitPath)) {
-      throw new Error('portraitPath 不能指向 pet.json 所在目录之外。')
-    }
-    const sourceLayerPaths = {}
-    const rawLayers = manifest.layers && typeof manifest.layers === 'object' ? manifest.layers : {}
-    for (const [key, relativePath] of Object.entries(rawLayers)) {
-      const layerPath = path.resolve(sourceDirectory, String(relativePath ?? '').trim())
-      if (!String(relativePath ?? '').trim() || !isPathInsideRoot(sourceDirectory, layerPath)) {
-        continue
-      }
-      sourceLayerPaths[key] = layerPath
-    }
-    const formatVersion = Math.min(
-      PORTRAIT_PUPPET_FORMAT_VERSION,
-      Math.max(1, Math.floor(Number(manifest.formatVersion) || 1)),
-    )
-    return {
-      id: rawId,
-      displayName,
-      description,
-      kind: 'portrait-puppet',
-      formatVersion,
-      ...(formatVersion >= 3
-        ? {
-          renderMode: manifest.renderMode === PORTRAIT_PUPPET_PROCEDURAL_RENDER_MODE
-            ? manifest.renderMode
-            : PORTRAIT_PUPPET_PROCEDURAL_RENDER_MODE,
-        }
-        : {}),
-      sourcePortraitPath,
-      sourceLayerPaths,
-      rig: normalizePortraitPuppetRig(manifest.rig),
-    }
+  if (isRetiredImageToPetManifest(manifest)) {
+    throw buildPetIpcError(PET_IPC_ERROR_CODES.UNSUPPORTED_FILE)
   }
 
   const rawSpritePath = String(manifest.spritesheetPath ?? 'spritesheet.webp').trim()
@@ -938,25 +891,6 @@ export async function readSpritePetPackage(manifestPath) {
     await readJsonFile(manifestPath),
     manifestPath,
   )
-  if (manifest.kind === 'portrait-puppet') {
-    if (manifest.formatVersion === 4 && manifest.renderMode === 'layered-artmesh-v1') {
-      await validatePortraitPuppetV4Assets(manifest)
-      return manifest
-    }
-    const extension = path.extname(manifest.sourcePortraitPath).toLowerCase()
-    if (extension !== '.png' && extension !== '.webp') {
-      throw new Error('立绘傀儡只支持 PNG 或 WebP。')
-    }
-    const stats = await fs.stat(manifest.sourcePortraitPath)
-    if (!stats.isFile()) {
-      throw new Error('portraitPath 必须指向一个文件。')
-    }
-    if (stats.size > SPRITE_PET_MAX_BYTES) {
-      throw new Error('立绘文件不能超过 20MB。')
-    }
-    return manifest
-  }
-
   await validateSpritePetAsset(manifest.sourceSpritePath)
   const dimensions = await readImageDimensions(manifest.sourceSpritePath)
   const edition = detectSpritePetAtlasEdition(dimensions.width, dimensions.height)

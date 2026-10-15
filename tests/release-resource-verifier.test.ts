@@ -66,7 +66,7 @@ test('packaged resource verifier requires app.asar, all voice models, and both V
   const result = verifyPackagedResources('/release/resources', validOptions())
 
   assert.equal(result.ok, true)
-  assert.deepEqual(result.requiredResources, ['app-asar', 'kws-en', 'kws-zh', 'sensevoice', 'vad'])
+  assert.deepEqual(result.requiredResources, ['app-asar', 'kws-en', 'kws-zh', 'vad'])
   assert.equal(result.browserVadPath, 'dist/vendor/vad/silero_vad_v5.onnx')
   assert.equal(result.browserVadWorkletPath, 'dist/vendor/vad/vad.worklet.bundle.min.js')
   assert.deepEqual(result.browserOrtPaths, BROWSER_ORT_ASAR_PATHS)
@@ -75,10 +75,10 @@ test('packaged resource verifier requires app.asar, all voice models, and both V
 test('packaged resource verifier rejects missing model and tampered external VAD', () => {
   const missing = verifyPackagedResources('/release/resources', {
     ...validOptions(),
-    pathExists: (path: string) => !path.includes('sherpa-onnx-sense-voice'),
+    pathExists: (path: string) => !path.includes('sherpa-onnx-kws-zipformer-gigaspeech'),
   })
   assert.equal(missing.ok, false)
-  assert.match(missing.errors.join('\n'), /required packaged resource is missing: sensevoice/)
+  assert.match(missing.errors.join('\n'), /required packaged resource is missing: kws-en/)
 
   const tampered = verifyPackagedResources('/release/resources', {
     ...validOptions(),

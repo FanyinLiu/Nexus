@@ -170,23 +170,22 @@ test('mac release verifier requires app.asar and every required voice runtime re
     'app-asar',
     'kws-en',
     'kws-zh',
-    'sensevoice',
     'vad',
   ])
 
-  const missingSenseVoice = verifyMacRelease('/release/mac-arm64/Nexus.app', {
+  const missingWakeWord = verifyMacRelease('/release/mac-arm64/Nexus.app', {
     expectUnsigned: true,
     expectedVersion: '0.4.3',
     pathExists: () => true,
     fileSize: () => 1,
     resourceVerifier: () => ({
       ok: false,
-      errors: ['required packaged resource is missing: sensevoice'],
+      errors: ['required packaged resource is missing: kws-en'],
     }),
     runCommand: makeRunner(),
   })
-  assert.equal(missingSenseVoice.ok, false)
-  assert.match(missingSenseVoice.errors.join('\n'), /required packaged resource is missing: sensevoice/)
+  assert.equal(missingWakeWord.ok, false)
+  assert.match(missingWakeWord.errors.join('\n'), /required packaged resource is missing: kws-en/)
 
   const emptyVad = verifyMacRelease('/release/mac-arm64/Nexus.app', {
     expectUnsigned: true,

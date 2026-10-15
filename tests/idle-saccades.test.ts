@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import { createSaccadeState, stepIdleSaccade } from '../src/features/pet/idleSaccades.ts'
-import { resolvePortraitPuppetExpression } from '../src/features/pet/portraitPuppet.ts'
 
 test('idle saccades stay parked until the first hop, then hold', () => {
   const state = createSaccadeState()
@@ -22,15 +21,4 @@ test('disabled saccades reset to center', () => {
   stepIdleSaccade(state, state.nextAt, true)
   const quiet = stepIdleSaccade(state, state.nextAt + 8, false)
   assert.deepEqual(quiet, { x: 0, y: 0, nextAt: state.nextAt })
-})
-
-test('portrait expression prefers Live2D touch zones over idle mood', () => {
-  assert.equal(
-    resolvePortraitPuppetExpression({ mood: 'idle', touchZone: 'head' }),
-    'touchHead',
-  )
-  assert.equal(
-    resolvePortraitPuppetExpression({ mood: 'happy', isSpeaking: true, touchZone: 'face' }),
-    'speaking',
-  )
 })

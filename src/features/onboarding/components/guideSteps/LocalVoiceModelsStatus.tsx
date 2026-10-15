@@ -25,9 +25,10 @@ type ModelInventoryLike = {
  * Onboarding inline panel that surfaces the state of the local sherpa
  * voice models (wake-word cn/en, SenseVoice offline STT, Silero VAD).
  *
- * Bundled installers (Windows NSIS, Mac dmg/zip, Linux AppImage/deb) now
- * ship these models via electron-builder's extraResources, so on a fresh
- * install `inventory.ready` should be true and the strip stays as a
+ * Bundled installers ship the required wake-word and VAD models via
+ * electron-builder extraResources. SenseVoice is a separate download when
+ * local speech recognition is turned on. On a fresh install
+ * `inventory.ready` should be true and the strip stays as a
  * single-line confirmation. The download CTA is the fallback path for:
  *   - Upgrades from a build that pre-dates the Mac/Linux bundling
  *   - Manual sideloads / sandbox wipes

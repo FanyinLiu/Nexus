@@ -1,7 +1,7 @@
 /** zh-CN messages — namespace `provider`. */
 export const zhCNProvider = {
   'provider.stt.local-sensevoice.label': '[本地] SenseVoice 高精度识别',
-  'provider.stt.local-sensevoice.notes': '阿里 SenseVoice-Small 离线识别，10 秒音频仅需 70ms 处理（比 Whisper 快 15 倍），中文准确率极高。需先下载模型到 sherpa-models 目录。',
+  'provider.stt.local-sensevoice.notes': '阿里 SenseVoice-Small 离线识别，10 秒音频约 70ms。int8 模型（约 239 MB）在你打开本地语音识别时下载，不随安装包附带。',
   'provider.stt.local-sensevoice.model.sensevoice-zh-en.label': 'SenseVoice 中英双语（推荐）',
   'provider.stt.local-paraformer.label': '[本地] Paraformer 流式识别',
   'provider.stt.local-paraformer.notes': '阿里 Paraformer 流式识别，边说边转写，实时显示识别内容。支持中英粤三语。需先下载模型到 sherpa-models 目录。',

@@ -541,7 +541,7 @@ export const UNSAFE_PATTERNS = [
     id: 'pet-model-import-raw-error-message',
     file: 'src/components/settingsDrawerHooks/usePetModelImport.ts',
     pattern: /message:\s*error\s+instanceof\s+Error\s*\?\s*error\.message\s*:\s*t\('settings\.pet\.import_error'\)/,
-    message: 'pet model import and creator-kit feedback must redact file and tooling errors before rendering them',
+    message: 'pet model import feedback must redact file and tooling errors before rendering them',
   },
   {
     id: 'letter-export-raw-error-log',

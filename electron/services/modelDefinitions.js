@@ -62,19 +62,29 @@ export const MODEL_CATALOG = [
   {
     id: 'sensevoice',
     label: 'SenseVoice 离线语音识别',
-    sizeLabel: '~1.0 GB',
-    required: true,
-    kind: 'archive',
+    // Decimal megabytes of model.int8.onnx. The full fp32 archive stays off
+    // the installer; this int8 pair is fetched when local STT is turned on.
+    sizeLabel: '~239 MB',
+    required: false,
+    kind: 'files',
     directory: 'sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17',
     checkFile: 'model.int8.onnx',
-    githubArchive: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2',
+    hfRepo: 'csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17',
+    revision: '2365baeacb507f821a0c8120fcee3d484dba7a07',
+    files: ['model.int8.onnx', 'tokens.txt'],
     integrity: {
-      archive: {
-        sizeBytes: 1047870769,
-        sha256: 'f6b2a72ebcb1ac7a764d4cfccd886e6bcb2a95c4657c2199d0ba95ed4b9ea71a',
+      files: {
+        'model.int8.onnx': {
+          sizeBytes: 239233841,
+          sha256: 'c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51',
+        },
+        'tokens.txt': {
+          sizeBytes: 315894,
+          sha256: 'f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc',
+        },
       },
     },
-    purpose: '多语言语音转文字，默认 STT 引擎',
+    purpose: '多语言语音转文字。不随安装包附带，打开本地识别时再下载 int8 模型',
   },
   {
     id: 'vad',

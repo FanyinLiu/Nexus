@@ -1,5 +1,5 @@
 /**
- * Quiet idle eye hops shared by Live2D and Portrait Puppet v4.
+ * Quiet idle eye hops for Live2D.
  * Holds an off-center rest, then jumps — not a continuous sine.
  */
 

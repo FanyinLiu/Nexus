@@ -12,7 +12,7 @@ import {
   SPRITE_PET_CELL_WIDTH,
   SPRITE_PET_ROW_CONTRACT,
 } from '../electron/services/spritePetPackage.js'
-import { auditSpritePetPackage } from '../electron/services/spritePetVisualAudit.js'
+import { auditSpritePetPackage } from '../scripts/lib/sprite-pet-visual-audit.mjs'
 
 async function withTempDirectory<T>(body: (directoryPath: string) => Promise<T>) {
   const directoryPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-sprite-pet-visual-audit-'))

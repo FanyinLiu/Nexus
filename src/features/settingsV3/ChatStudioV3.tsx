@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { applyCharacterProfile, createCharacterProfile, removeCharacterProfile, syncCurrentToProfile, updateCharacterProfile } from '../character/profiles.ts'
-import { buildCodexPetCreatorPrompt } from '../pet'
 import { syncWakeWordWithCompanionNameChange } from '../hearing/companionWakeWordSync.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks.ts'
@@ -23,42 +22,6 @@ const COMMUNITY_SOURCES = [
 ] as const
 
 type StatusMessage = { ok: boolean; message: string } | null
-type PackageOutput = NonNullable<ChatSectionV3Props['assembledCreatorKitPackage']>
-
-function joinKitPath(base: string, relative: string) {
-  const separator = base.includes('\\') ? '\\' : '/'
-  return `${base.replace(/[\\/]+$/u, '')}${separator}${relative.split('/').join(separator)}`
-}
-
-type TiFn = (
-  key: Parameters<typeof pickTranslatedUiText>[1],
-  params?: Parameters<typeof pickTranslatedUiText>[2],
-) => ReturnType<typeof pickTranslatedUiText>
-
-// Module-level on purpose: defining this inside ChatStudioV3 created a new
-// component type every render (react-hooks: "Cannot create components during
-// render"), remounting the output block on each parent render.
-function PackageResult({ output, generated = false, onOpenPath, onInstallGenerated, onInstallKit, ti }: {
-  output: PackageOutput
-  generated?: boolean
-  onOpenPath: ChatSectionV3Props['onOpenCodexPetCreatorKitPath']
-  onInstallGenerated: ChatSectionV3Props['onInstallGeneratedSpritePetPackageToCodex']
-  onInstallKit: ChatSectionV3Props['onInstallCodexPetCreatorKitToCodex']
-  ti: TiFn
-}) {
-  const open = (targetPath: string, mode: 'open' | 'reveal' = 'open') => onOpenPath({ kitDirectory: output.packageDirectory, targetPath, mode })
-  return (
-    <div className="settings-v3-studio-output" role="status" aria-live="polite">
-      <strong>{ti('settings.chat.codex_pet_creator_final_package')}</strong>
-      <code>{output.packageDirectoryDisplay ?? output.packageDirectory}</code>
-      <SettingsV3Toolbar>
-        <button type="button" onClick={() => open(output.packageDirectory)}>{ti('settings.chat.codex_pet_creator_open_final_package')}</button>
-        {output.archivePath ? <button type="button" onClick={() => open(output.archivePath ?? '', 'reveal')}>{ti('settings.chat.codex_pet_creator_open_archive')}</button> : null}
-        <button type="button" onClick={generated ? onInstallGenerated : onInstallKit}>{ti('settings.chat.codex_pet_creator_install_codex')}</button>
-      </SettingsV3Toolbar>
-    </div>
-  )
-}
 
 export function ChatStudioV3(props: ChatSectionV3Props) {
   const { draft, setDraft } = props
@@ -67,12 +30,7 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
   const [cardStatus, setCardStatus] = useState<StatusMessage>(null)
   const [galleryInput, setGalleryInput] = useState('')
   const [galleryQuery, setGalleryQuery] = useState('')
-  const [kitName, setKitName] = useState('')
-  const [kitConcept, setKitConcept] = useState('')
-  const [prompt, setPrompt] = useState('')
-  const [promptCopied, setPromptCopied] = useState(false)
   const activeProfile = draft.characterProfiles.find((profile) => profile.id === draft.activeCharacterProfileId)
-  const generatedPrompt = useMemo(() => buildCodexPetCreatorPrompt({ displayName: kitName.trim(), concept: kitConcept.trim() }), [kitConcept, kitName])
 
   function createProfile() {
     const profile = createCharacterProfile(draft, draft.companionName)
@@ -126,18 +84,6 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
     }
   }
 
-  async function copyPrompt() {
-    const value = prompt || generatedPrompt
-    setPrompt(value)
-    setPromptCopied(false)
-    try {
-      await navigator.clipboard?.writeText(value)
-      setPromptCopied(true)
-    } catch {
-      setPromptCopied(false)
-    }
-  }
-
   return (
     <div className="settings-v3-studio">
       <div className="settings-v3-studio__head">
@@ -183,12 +129,9 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
         <SettingsV3Toolbar>
           <button type="button" onClick={() => void importCharacterCard()} disabled={importingCard}>{importingCard ? ti('settings.chat.importing_card') : ti('settings.chat.import_card')}</button>
           <button type="button" onClick={props.onImportPetModel} disabled={props.importingPetModel}>{props.importingPetModel ? ti('settings.chat.importing_model') : ti('settings.chat.import_model')}</button>
-          <button type="button" onClick={props.onCreateSpritePetFromImage} disabled={props.importingPetModel}>{ti('settings.chat.create_sprite_pet_from_image')}</button>
         </SettingsV3Toolbar>
         {cardStatus ? <SettingsV3Notice tone={cardStatus.ok ? 'success' : 'error'} title={cardStatus.message} announce /> : null}
       </div>
-
-      {props.generatedSpritePetPackage ? <PackageResult output={props.generatedSpritePetPackage} generated onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallGenerated={props.onInstallGeneratedSpritePetPackageToCodex} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
 
       <section className="settings-v3-studio-pane" aria-labelledby="settings-v3-gallery-title">
         <header><strong id="settings-v3-gallery-title">{ti('settings.chat.codex_pet_import')}</strong><span>{ti('settings.chat.codex_pet_import_hint')}</span></header>
@@ -214,43 +157,6 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
             ))}
           </ul>
         ) : props.codexPetCatalog ? <SettingsV3Empty title={ti('settings.chat.codex_pet_catalog_empty')} /> : null}
-      </section>
-
-      <section className="settings-v3-studio-pane" aria-labelledby="settings-v3-creator-title">
-        <header><strong id="settings-v3-creator-title">{ti('settings.chat.codex_pet_creator')}</strong><span>{ti('settings.chat.codex_pet_creator_hint')}</span></header>
-        <div className="settings-v3-editor settings-v3-studio__kit-fields">
-          <SettingsV3Field label={ti('settings.chat.codex_pet_creator_name_label')}><input value={kitName} placeholder={ti('settings.chat.codex_pet_creator_name_placeholder')} onChange={(event) => setKitName(event.target.value)} /></SettingsV3Field>
-          <SettingsV3Field label={ti('settings.chat.codex_pet_creator_concept_label')}><input value={kitConcept} placeholder={ti('settings.chat.codex_pet_creator_concept_placeholder')} onChange={(event) => setKitConcept(event.target.value)} /></SettingsV3Field>
-        </div>
-        <SettingsV3Toolbar>
-          <button type="button" disabled={!kitName.trim() && !kitConcept.trim()} onClick={() => { setPrompt(generatedPrompt); setPromptCopied(false) }}>{ti('settings.chat.codex_pet_creator_prompt')}</button>
-          <button type="button" disabled={props.creatingCreatorKit || (!kitName.trim() && !kitConcept.trim())} onClick={() => props.onCreateCodexPetCreatorKit({ displayName: kitName.trim(), concept: kitConcept.trim() })}>{props.creatingCreatorKit ? ti('settings.chat.codex_pet_creator_creating') : ti('settings.chat.codex_pet_creator_create')}</button>
-          <button type="button" disabled={props.inspectingCreatorKit} onClick={props.onInspectCodexPetCreatorKit}>{props.inspectingCreatorKit ? ti('settings.chat.codex_pet_creator_checking') : ti('settings.chat.codex_pet_creator_check')}</button>
-          <button type="button" disabled={props.assemblingCreatorKit} onClick={props.onAssembleCodexPetCreatorKit}>{props.assemblingCreatorKit ? ti('settings.chat.codex_pet_creator_assembling') : ti('settings.chat.codex_pet_creator_assemble')}</button>
-        </SettingsV3Toolbar>
-        {prompt ? <SettingsV3Field label={ti('settings.chat.codex_pet_creator_prompt')}><textarea readOnly value={prompt} /><button type="button" className="settings-v3-action" onClick={() => void copyPrompt()}>{promptCopied ? ti('settings.chat.codex_pet_creator_copied') : ti('settings.chat.codex_pet_creator_copy_prompt')}</button></SettingsV3Field> : null}
-        {props.lastCreatorKitDirectory ? (
-          <div className="settings-v3-studio-output">
-            <code>{props.lastCreatorKitDirectoryDisplay || props.lastCreatorKitDirectory}</code>
-            <SettingsV3Toolbar>
-              <button type="button" onClick={() => props.onOpenCodexPetCreatorKitPath({ kitDirectory: props.lastCreatorKitDirectory, targetPath: props.lastCreatorKitDirectory, mode: 'open' })}>{ti('settings.chat.codex_pet_creator_open_kit')}</button>
-              <button type="button" onClick={() => props.onOpenCodexPetCreatorKitPath({ kitDirectory: props.lastCreatorKitDirectory, targetPath: joinKitPath(props.lastCreatorKitDirectory, 'references/style-samples.md'), mode: 'open' })}>{ti('settings.chat.codex_pet_creator_open_style_samples')}</button>
-              {props.lastCreatorKitSourceRowsDirectory ? <button type="button" onClick={() => props.onOpenCodexPetCreatorKitPath({ kitDirectory: props.lastCreatorKitDirectory, targetPath: props.lastCreatorKitSourceRowsDirectory, mode: 'open' })}>{ti('settings.chat.codex_pet_creator_open_source_rows')}</button> : null}
-            </SettingsV3Toolbar>
-          </div>
-        ) : null}
-        {props.assembledCreatorKitPackage ? <PackageResult output={props.assembledCreatorKitPackage} onOpenPath={props.onOpenCodexPetCreatorKitPath} onInstallGenerated={props.onInstallGeneratedSpritePetPackageToCodex} onInstallKit={props.onInstallCodexPetCreatorKitToCodex} ti={ti} /> : null}
-        {props.creatorKitInspection ? (
-          <div className="settings-v3-studio-output" role="status">
-            <strong>{props.creatorKitInspection.displayName}</strong>
-            <span>{props.creatorKitInspection.ready ? ti('settings.chat.codex_pet_creator_ready') : ti('settings.chat.codex_pet_creator_missing_count', { ready: props.creatorKitInspection.readyCount, total: props.creatorKitInspection.rows.length })}</span>
-            <div className="settings-v3-chip-line">{props.creatorKitInspection.rows.map((row) => <span key={`${row.row}-${row.state}`} data-warning={!row.ready || row.warnings?.length ? 'true' : undefined}>{row.row} {row.state}{row.warnings?.length ? ' !' : ''}</span>)}</div>
-            <SettingsV3Toolbar>
-              {props.creatorKitInspection.contactSheetPath ? <button type="button" onClick={() => props.onOpenCodexPetCreatorKitPath({ kitDirectory: props.creatorKitInspection?.kitDirectory ?? '', targetPath: props.creatorKitInspection?.contactSheetPath ?? '', mode: 'reveal' })}>{ti('settings.chat.codex_pet_creator_show_qa')}</button> : null}
-              {props.creatorKitInspection.motionPreviewPath ? <button type="button" onClick={() => props.onOpenCodexPetCreatorKitPath({ kitDirectory: props.creatorKitInspection?.kitDirectory ?? '', targetPath: props.creatorKitInspection?.motionPreviewPath ?? '', mode: 'open' })}>{ti('settings.chat.codex_pet_creator_open_preview')}</button> : null}
-            </SettingsV3Toolbar>
-          </div>
-        ) : null}
       </section>
     </div>
   )

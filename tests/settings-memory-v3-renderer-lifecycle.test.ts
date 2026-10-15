@@ -77,7 +77,10 @@ async function launchRendererBrowser(): Promise<Browser> {
   }
 }
 
-test('active Memory V3 preserves paused recent state and clears it explicitly', { timeout: 45_000 }, async (t) => {
+// Vite cold start plus Chromium launch on a Windows runner can spend most of
+// a 45s budget before the first locator resolves. The assertions below are
+// unchanged; only the suite ceiling moved.
+test('active Memory V3 preserves paused recent state and clears it explicitly', { timeout: 90_000 }, async (t) => {
   const port = await reservePort()
   const baseUrl = `http://${HOST}:${port}`
   const vite = spawn(
@@ -121,7 +124,10 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   }
   page.on('request', (request) => captureStoreUrl(request.url()))
   page.on('response', (response) => captureStoreUrl(response.url()))
-  await page.goto(`${baseUrl}/?view=panel&section=settings&settingsSection=memory`, { waitUntil: 'networkidle' })
+  // Vite's HMR socket keeps Playwright networkidle from settling, so the
+  // navigation wait itself can consume the whole test budget. The memory
+  // section locator below is the readiness check.
+  await page.goto(`${baseUrl}/?view=panel&section=settings&settingsSection=memory`, { waitUntil: 'load' })
   await page.locator('.settings-v3-memory:not(.is-hidden)').waitFor({ state: 'visible' })
   assert.ok(observedStoreUrl, 'The active renderer must request companionSummaryStore before the lifecycle proof.')
   const storeUrl = observedStoreUrl

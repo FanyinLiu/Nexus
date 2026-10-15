@@ -36,7 +36,6 @@ import { resolveExpressionSlot } from '../../features/pet/components/live2d/expr
 import {
   SpritePetCanvas,
 } from '../../features/pet/components/SpritePetCanvas.tsx'
-import { PortraitPuppetCanvas } from '../../features/pet/components/PortraitPuppetCanvas.tsx'
 import {
   getSpritePetDebugImagePathFromSearch,
   getSpritePetDebugStateFromSearch,
@@ -691,20 +690,6 @@ export function LegacyPetView({
                   <div className="pet-window__vts-indicator">
                     VTS: {vtsBridge.modelName || ti('pet.vts.connected')}
                   </div>
-                ) : petModel.portraitPuppet ? (
-                  <PortraitPuppetCanvas
-                    puppet={petModel.portraitPuppet}
-                    mood={pet.mood}
-                    touchZone={pet.petTapActive ? pet.petTouchZone : null}
-                    isListening={companionActivity.isListening}
-                    isSpeaking={companionActivity.isSpeaking}
-                    isBusy={companionActivity.isThinking || companionActivity.isWaiting}
-                    speechLevelSource={voice.speechLevelSource}
-                    gazeTarget={pet.gazeTarget}
-                    performanceCue={pet.petPerformanceCue}
-                    placement="pet-stage"
-                    label={spritePetLabel}
-                  />
                 ) : petModel.spriteAtlas ? (
                   <SpritePetCanvas
                     atlas={

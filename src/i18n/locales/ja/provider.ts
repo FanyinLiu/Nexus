@@ -3,7 +3,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 /** ja messages — namespace `provider`. */
 export const jaProvider = {
   'provider.stt.local-sensevoice.label': '[ローカル] SenseVoice 高精度認識',
-  'provider.stt.local-sensevoice.notes': 'アリババ SenseVoice-Small によるオフライン認識。10 秒の音声を約 70ms で処理（Whisper の約 15 倍速）、中国語の精度が非常に高い。sherpa-models ディレクトリにモデルを事前にダウンロードしてください。',
+  'provider.stt.local-sensevoice.notes': 'アリババ SenseVoice-Small のオフライン認識。10 秒の音声を約 70ms で処理します。int8 モデル（約 239 MB）はローカル音声認識をオンにしたときにダウンロードされ、インストーラには含まれません。',
   'provider.stt.local-sensevoice.model.sensevoice-zh-en.label': 'SenseVoice 中英バイリンガル（推奨）',
   'provider.stt.local-paraformer.label': '[ローカル] Paraformer ストリーミング認識',
   'provider.stt.local-paraformer.notes': 'アリババ Paraformer によるストリーミング認識。話しながら逐次転写し、結果をリアルタイムに表示します。中国語・英語・広東語に対応。sherpa-models ディレクトリにモデルを事前にダウンロードしてください。',

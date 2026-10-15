@@ -13,6 +13,7 @@ import {
   SPRITE_PET_COLUMNS,
   SPRITE_PET_ROWS,
   extractSpritePetZipArchive,
+  isSpritePetManifest,
   normalizeSpritePetManifest,
   readSpritePetPackage,
   readWebpDimensions,
@@ -234,6 +235,44 @@ test('readSpritePetPackage accepts and normalizes a valid clean-room package', a
     assert.equal(manifest.description, 'Clean-room sprite pet.')
     assert.equal(manifest.sourceSpritePath, path.join(directoryPath, 'spritesheet.png'))
   })
+})
+
+test('normalizeSpritePetManifest rejects portrait and assembler packages', () => {
+  assert.throws(
+    () => normalizeSpritePetManifest({
+      id: 'portrait',
+      kind: 'portrait-puppet',
+      portraitPath: 'portrait.png',
+    }, '/tmp/pet.json'),
+    /NEXUS_ERR_PET_UNSUPPORTED_FILE/,
+  )
+  assert.throws(
+    () => normalizeSpritePetManifest({
+      id: 'layered',
+      renderMode: 'layered-artmesh-v1',
+      parts: [{ id: 'eye' }],
+      spritesheetPath: 'spritesheet.webp',
+    }, '/tmp/pet.json'),
+    /NEXUS_ERR_PET_UNSUPPORTED_FILE/,
+  )
+  assert.throws(
+    () => normalizeSpritePetManifest({
+      id: 'assembled',
+      description: 'Assembled Codex-compatible sprite pet package for Tiny',
+      spritesheetPath: 'spritesheet.webp',
+    }, '/tmp/pet.json'),
+    /NEXUS_ERR_PET_UNSUPPORTED_FILE/,
+  )
+  assert.equal(isSpritePetManifest({
+    id: 'community',
+    spritesheetPath: 'spritesheet.webp',
+    description: 'A community sprite pet.',
+  }), true)
+  assert.equal(isSpritePetManifest({
+    id: 'portrait',
+    kind: 'portrait-puppet',
+    spritesheetPath: 'spritesheet.webp',
+  }), false)
 })
 
 test('normalizeSpritePetManifest derives a readable display name from the id', async () => {

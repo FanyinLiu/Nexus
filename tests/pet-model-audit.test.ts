@@ -27,23 +27,7 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
     looksLikeUrl: true,
   })
 
-  const install = summarizePetModelRequest('pet-model:install-creator-kit-codex', {
-    kitDirectory: '/Users/me/Documents/private-kit',
-    manifestPath: '/Users/me/Documents/private-kit/pet.json',
-  })
-  assert.deepEqual(install, {
-    channel: 'pet-model:install-creator-kit-codex',
-    kitDirectory: {
-      present: true,
-      length: 31,
-    },
-    manifestPath: {
-      present: true,
-      length: 40,
-    },
-  })
-
-  const result = summarizePetModelResult('pet-model:assemble-creator-kit', {
+  const result = summarizePetModelResult('pet-model:import', {
     model: { id: 'private-model', label: 'Private Model' },
     message: 'Imported Private Model',
     packageDirectory: '/Users/me/Documents/private-kit/final-package',
@@ -63,7 +47,7 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
   assert.equal(result.visualAuditPathLength, 59)
   assert.equal(result.archivePathLength, 57)
 
-  const serialized = JSON.stringify({ gallery, install, result })
+  const serialized = JSON.stringify({ gallery, result })
   for (const privateValue of [
     'codex-pet.example',
     'private-pet',
@@ -79,32 +63,24 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
   }
 })
 
-test('pet model creator-kit UI renders display paths instead of raw artifact paths', () => {
+test('pet model import keeps display-path redaction and does not embed raw artifact paths', () => {
   const pathSource = readSource('electron/services/petModelPaths.js')
   const serviceSource = readSource('electron/services/petModelService.js')
-  const chatStudioSource = readSource('src/features/settingsV3/ChatStudioV3.tsx')
 
   assert.match(pathSource, /USER_DATA_DISPLAY_ROOT = 'app-user-data'/)
   assert.match(pathSource, /CODEX_HOME_DISPLAY_ROOT = 'codex-home'/)
+  assert.match(pathSource, /export function getPetArtifactDisplayPath\(targetPath\)/)
   assert.match(pathSource, /return `\.\.\.\/\$\{path\.basename\(resolvedTarget\) \|\| 'path'\}`/)
 
-  assert.match(serviceSource, /getPetArtifactDisplayPath/)
-  assert.match(serviceSource, /packageDirectoryDisplay/)
-  assert.match(serviceSource, /archivePathDisplay/)
   assert.doesNotMatch(serviceSource, /制作包输出：\$\{assembled\.packageDirectory\}/)
   assert.doesNotMatch(serviceSource, /可分享 ZIP：\$\{archivePath\}/)
   assert.doesNotMatch(serviceSource, /已打开制作包文件夹：\$\{targetRealPath\}/)
   assert.doesNotMatch(serviceSource, /已打开制作包文件：\$\{targetRealPath\}/)
-
-  assert.match(
-    chatStudioSource,
-    /output\.packageDirectoryDisplay \?\? output\.packageDirectory/,
-  )
 })
 
 test('pet model error summaries omit private error messages', () => {
   const summary = summarizePetModelResult(
-    'pet-model:open-creator-kit-path',
+    'pet-model:import',
     {},
     new Error('failed to open /Users/me/private-kit/pet.json'),
   )
@@ -116,15 +92,6 @@ test('pet model error summaries omit private error messages', () => {
 })
 
 test('pet model confirmation policy distinguishes dialog-backed and direct actions', () => {
-  assert.equal(petModelActionNeedsConfirmation('pet-model:import', {}), false)
-  assert.equal(petModelActionNeedsConfirmation('pet-model:inspect-creator-kit', {}), false)
-  assert.equal(
-    petModelActionNeedsConfirmation('pet-model:inspect-creator-kit', { kitDirectory: '/tmp/private-kit' }),
-    true,
-  )
-  assert.equal(petModelActionNeedsConfirmation('pet-model:import-codex-gallery', 'private-slug'), true)
-  assert.equal(petModelActionNeedsConfirmation('pet-model:open-creator-kit-path', {
-    kitDirectory: '/tmp/private-kit',
-    targetPath: '/tmp/private-kit/pet.json',
-  }), true)
+  assert.equal(petModelActionNeedsConfirmation('pet-model:import'), false)
+  assert.equal(petModelActionNeedsConfirmation('pet-model:import-codex-gallery'), true)
 })

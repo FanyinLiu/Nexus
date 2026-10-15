@@ -25,6 +25,7 @@ import {
 } from '../src/features/pet/spriteRuntime.ts'
 import {
   getPetModelPresets,
+  repairDiscoveredPetModelSelection,
   type PetModelDefinition,
 } from '../src/features/pet/models.ts'
 import { resolveCompanionActivityState } from '../src/features/pet/activityState.ts'
@@ -338,17 +339,15 @@ test('sprite pet state mapper follows voice, work, and touch signals', () => {
   )
 })
 
-test('discovered bundled sprite packages merge without duplicating built-in presets', () => {
-  // The merge-dedup semantics under test concern sprite built-ins; use the
-  // codex preset explicitly (the default model is Live2D now).
-  const discoveredDefault: PetModelDefinition = {
-    id: 'codex',
-    label: 'Nexus Mini',
-    description: 'Discovered from public/pets/nexus-mini/pet.json',
+test('discovered sprite packages merge without duplicating Live2D presets', () => {
+  const discoveredMao: PetModelDefinition = {
+    id: 'mao',
+    label: 'Discovered Mao',
+    description: 'A sprite package that reuses a built-in id.',
     modelPath: '',
     fallbackImagePath: '',
     spriteAtlas: {
-      imagePath: './pets/nexus-mini/spritesheet.png',
+      imagePath: './pets/mao/spritesheet.png',
     },
     motionGroups: {},
     expressionMap: {},
@@ -356,7 +355,7 @@ test('discovered bundled sprite packages merge without duplicating built-in pres
   const discoveredExtra: PetModelDefinition = {
     id: 'sprite-extra',
     label: 'Sprite Extra',
-    description: 'Discovered from public/pets/sprite-extra/pet.json',
+    description: 'Discovered from an imported pet.json',
     modelPath: '',
     fallbackImagePath: '',
     spriteAtlas: {
@@ -366,16 +365,46 @@ test('discovered bundled sprite packages merge without duplicating built-in pres
     expressionMap: {},
   }
 
-  const presets = getPetModelPresets([discoveredDefault, discoveredExtra])
+  const presets = getPetModelPresets([discoveredMao, discoveredExtra])
 
-  assert.equal(presets.filter((preset) => preset.id === 'codex').length, 1)
-  assert.equal(
-    presets.find((preset) => preset.id === 'codex')?.spriteAtlas?.stageMaxSize,
-    '126px',
-  )
+  assert.equal(presets.filter((preset) => preset.id === 'mao').length, 1)
+  assert.equal(presets.find((preset) => preset.id === 'mao')?.modelPath, './live2d/mao/Mao.model3.json')
   assert.equal(presets.some((preset) => preset.id === 'sprite-extra'), true)
-  assert.equal(
-    presets.find((preset) => preset.id === 'qiyi')?.spriteAtlas?.imageRendering,
-    'auto',
-  )
+  assert.equal(presets.some((preset) => preset.id === 'haru'), true)
+  assert.equal(presets.some((preset) => preset.id === 'hiyori'), true)
+  assert.equal(presets.some((preset) => preset.id === 'codex'), false)
+  assert.equal(presets.some((preset) => preset.id === 'qiyi'), false)
+})
+
+test('repairDiscoveredPetModelSelection maps absent selections to Mao', () => {
+  const library = [
+    { id: 'mao' },
+    { id: 'haru' },
+    { id: 'hiyori' },
+    { id: 'imported-custom' },
+  ]
+  const settings = {
+    petModelId: 'codex',
+    characterProfiles: [
+      { petModelId: 'qiyi' },
+      { petModelId: 'imported-custom' },
+      { petModelId: 'haru' },
+    ],
+  }
+
+  const repaired = repairDiscoveredPetModelSelection(settings, 'ready', library)
+  assert.equal(repaired.petModelId, 'mao')
+  assert.deepEqual(repaired.characterProfiles.map((profile) => profile.petModelId), [
+    'mao',
+    'imported-custom',
+    'haru',
+  ])
+  assert.equal(repairDiscoveredPetModelSelection(settings, 'pending', library), settings)
+  assert.equal(repairDiscoveredPetModelSelection(settings, 'ready', []), settings)
+
+  const kept = {
+    petModelId: 'imported-custom',
+    characterProfiles: [{ petModelId: 'hiyori' }],
+  }
+  assert.equal(repairDiscoveredPetModelSelection(kept, 'ready', library), kept)
 })

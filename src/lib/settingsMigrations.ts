@@ -309,7 +309,35 @@ const V11_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: stri
   'custom-openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 11
+const REMOVED_BUNDLED_SPRITE_PET_IDS = new Set(['codex', 'qiyi'])
+
+/**
+ * Bundled sprite pets are no longer shipped. Official Live2D samples
+ * (mao, haru, hiyori) stay. Any other id is treated as a user import.
+ */
+function remapRemovedBundledPetModelId(modelId: unknown): unknown {
+  if (typeof modelId !== 'string') return modelId
+  if (REMOVED_BUNDLED_SPRITE_PET_IDS.has(modelId)) return 'mao'
+  return modelId
+}
+
+function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
+  const next = { ...raw }
+  if ('petModelId' in next) {
+    next.petModelId = remapRemovedBundledPetModelId(next.petModelId)
+  }
+  if (Array.isArray(next.characterProfiles)) {
+    next.characterProfiles = next.characterProfiles.map((profile) => {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return profile
+      if (!('petModelId' in profile)) return profile
+      const petModelId = remapRemovedBundledPetModelId(profile.petModelId)
+      return petModelId === profile.petModelId ? profile : { ...profile, petModelId }
+    })
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 12
 
 interface SettingsMigration {
   toVersion: number
@@ -450,6 +478,11 @@ const migrations: SettingsMigration[] = [
       ),
       V11_RETIRED_SPEECH_INPUT_DEFAULTS,
     ),
+  },
+  {
+    toVersion: 12,
+    description: 'Fall back when a removed bundled sprite pet is still selected',
+    migrate: migrateRemovedBundledPetModels,
   },
 ]
 

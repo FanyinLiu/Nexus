@@ -1,3 +1,7 @@
+/**
+ * Pixel audit for a finished sprite-pet atlas.
+ * Used by `npm run pet:audit`. The app does not run this at import time.
+ */
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
@@ -7,9 +11,10 @@ import {
   SPRITE_PET_COLUMNS,
   SPRITE_PET_ROW_CONTRACT,
   readSpritePetPackage,
-} from './spritePetPackage.js'
+} from '../../electron/services/spritePetPackage.js'
 
 const CELL_PIXEL_COUNT = SPRITE_PET_CELL_WIDTH * SPRITE_PET_CELL_HEIGHT
+/** Default thresholds for chroma, motion, coverage, and palette checks. */
 const DEFAULT_SPRITE_PET_VISUAL_AUDIT_OPTIONS = {
   chromaRatioLimit: 0.001,
   frameDiffLimit: 4,
@@ -33,6 +38,7 @@ function normalizeAuditOptions(options = {}) {
   }
 }
 
+/** Resolve a package folder or pet.json path to the manifest file. */
 async function resolveSpritePetManifestPath(inputPath, cwd = process.cwd()) {
   const targetPath = path.resolve(cwd, inputPath)
   const stats = await fs.stat(targetPath)
@@ -384,6 +390,7 @@ function auditPixels({ data, width, options = {} }) {
   }
 }
 
+/** Audit one spritesheet and return package metadata plus visual findings. */
 async function auditSpritePetPackage(manifestPath, options = {}) {
   const spritePetPackage = await readSpritePetPackage(manifestPath)
   const raw = await sharp(spritePetPackage.sourceSpritePath)

@@ -50,12 +50,6 @@ function translateMappedKeys<T extends string>(
 function resolveMessageParams(params: TranslationParams | undefined, translate: Translator) {
   if (!params) return undefined
   const next = { ...params }
-  if (typeof next.actionKey === 'string') {
-    next.action = translate(next.actionKey as TranslationKey)
-  }
-  if (typeof next.auditKey === 'string') {
-    next.audit = translate(next.auditKey as TranslationKey, { count: next.count })
-  }
   if (typeof next.sourceKey === 'string') {
     next.source = translate(next.sourceKey as TranslationKey)
   }

@@ -1,5 +1,5 @@
 /**
- * Shared eyelid timeline for Live2D and Portrait Puppet v4.
+ * Eyelid timeline for Live2D.
  * idle → closing → holding → opening. Returns eye-open in [0, 1].
  */
 

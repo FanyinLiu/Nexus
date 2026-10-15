@@ -1,5 +1,5 @@
 /**
- * Speech mouth-channel mix shared by Live2D and Portrait Puppet v4.
+ * Speech mouth-channel mix for Live2D.
  * Open stays the jaw; round and narrow phase-offset so the mouth is not a
  * frozen A-shape while speaking.
  */

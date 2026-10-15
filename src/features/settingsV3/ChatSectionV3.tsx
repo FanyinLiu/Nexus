@@ -1,13 +1,10 @@
 import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
-import { PORTRAIT_PUPPET_IMAGE_GENERATION_PROMPT } from '../../../shared/portraitPuppetContract.js'
-import { PORTRAIT_PUPPET_V4_IMAGE_GENERATION_PROMPT } from '../../../shared/portraitPuppetV4Contract.js'
 import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes.ts'
 import { ChatStudioV3 } from './ChatStudioV3.tsx'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
-  SpritePetCreatorKitInspection,
 } from '../pet'
 import { pickTranslatedUiText, pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
 import { setCompanionNameWithWakeWordSync } from '../hearing/companionWakeWordSync.ts'
@@ -21,7 +18,6 @@ import {
   SettingsV3Row,
   SettingsV3Section,
   SettingsV3Switch,
-  SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 import './settings-v3-collection.css'
 import './chat-section-v3.css'
@@ -43,48 +39,9 @@ export type ChatSectionV3Props = {
   codexPetCatalog: CodexPetGalleryCatalogResult | null
   codexPetCatalogLoading: boolean
   codexPetCatalogStatus: StatusMessage
-  creatingCreatorKit: boolean
-  inspectingCreatorKit: boolean
-  creatorKitInspection: SpritePetCreatorKitInspection | null
-  assemblingCreatorKit: boolean
-  lastCreatorKitDirectory: string
-  lastCreatorKitDirectoryDisplay: string
-  lastCreatorKitSourceRowsDirectory: string
-  lastCreatorKitSourceRowsDirectoryDisplay: string
-  assembledCreatorKitPackage: {
-    packageDirectory: string
-    packageDirectoryDisplay?: string
-    manifestPath: string
-    manifestPathDisplay?: string
-    visualAuditPath?: string
-    visualAuditPathDisplay?: string
-    archivePath?: string
-    archivePathDisplay?: string
-  } | null
-  generatedSpritePetPackage: {
-    packageDirectory: string
-    packageDirectoryDisplay?: string
-    manifestPath: string
-    manifestPathDisplay?: string
-    visualAuditPath?: string
-    visualAuditPathDisplay?: string
-    archivePath?: string
-    archivePathDisplay?: string
-  } | null
   onImportPetModel: () => void
   onImportCodexPetGallery: (input: string) => void
   onLoadCodexPetGallery: (query?: string) => void
-  onCreateCodexPetCreatorKit: (payload: { displayName?: string; concept?: string }) => void
-  onInspectCodexPetCreatorKit: () => void
-  onAssembleCodexPetCreatorKit: () => void
-  onInstallCodexPetCreatorKitToCodex: () => void
-  onInstallGeneratedSpritePetPackageToCodex: () => void
-  onOpenCodexPetCreatorKitPath: (payload: {
-    kitDirectory: string
-    targetPath: string
-    mode?: 'open' | 'reveal'
-  }) => void
-  onCreateSpritePetFromImage: () => void
 }
 
 export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Props) {
@@ -162,68 +119,6 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
             {props.importingPetModel ? ti('settings.chat.importing_model') : ti('settings.chat.import_model')}
           </button>
         </SettingsV3Row>
-        <SettingsV3Row
-          icon="image"
-          label={ti('settings.chat.create_sprite_pet_from_image')}
-          hint={ti('settings.chat.create_sprite_pet_from_image_hint')}
-        >
-          <button
-            type="button"
-            className="settings-v3-action"
-            disabled={props.importingPetModel}
-            onClick={props.onCreateSpritePetFromImage}
-          >
-            {props.importingPetModel ? ti('settings.chat.importing_model') : ti('settings.chat.create_sprite_pet_from_image')}
-          </button>
-        </SettingsV3Row>
-        <SettingsV3Disclosure
-          title={ti('settings.chat.portrait_layered_prompt_title')}
-          description={ti('settings.chat.portrait_layered_prompt_hint')}
-        >
-          <SettingsV3Notice
-            tone="info"
-            title={ti('settings.chat.portrait_layered_prompt_notice')}
-          />
-          <SettingsV3Field label={ti('settings.chat.portrait_layered_prompt_title')}>
-            <textarea
-              readOnly
-              rows={18}
-              spellCheck={false}
-              value={PORTRAIT_PUPPET_V4_IMAGE_GENERATION_PROMPT}
-              onFocus={(event) => event.currentTarget.select()}
-            />
-          </SettingsV3Field>
-          <SettingsV3Toolbar>
-            <button
-              type="button"
-              onClick={() => void navigator.clipboard?.writeText(PORTRAIT_PUPPET_V4_IMAGE_GENERATION_PROMPT)}
-            >
-              {ti('settings.chat.portrait_image_prompt_copy')}
-            </button>
-          </SettingsV3Toolbar>
-        </SettingsV3Disclosure>
-        <SettingsV3Disclosure
-          title={ti('settings.chat.portrait_image_prompt_title')}
-          description={ti('settings.chat.portrait_image_prompt_hint')}
-        >
-          <SettingsV3Field label={ti('settings.chat.portrait_image_prompt_title')}>
-            <textarea
-              readOnly
-              rows={9}
-              spellCheck={false}
-              value={PORTRAIT_PUPPET_IMAGE_GENERATION_PROMPT}
-              onFocus={(event) => event.currentTarget.select()}
-            />
-          </SettingsV3Field>
-          <SettingsV3Toolbar>
-            <button
-              type="button"
-              onClick={() => void navigator.clipboard?.writeText(PORTRAIT_PUPPET_IMAGE_GENERATION_PROMPT)}
-            >
-              {ti('settings.chat.portrait_image_prompt_copy')}
-            </button>
-          </SettingsV3Toolbar>
-        </SettingsV3Disclosure>
       </SettingsV3Section>
 
       <SettingsV3Section

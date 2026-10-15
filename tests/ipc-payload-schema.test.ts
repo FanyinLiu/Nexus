@@ -31,10 +31,6 @@ import {
   validatePluginBusTopicPayload,
   validatePluginIdPayload,
   validatePetWindowStatePayload,
-  validatePetModelCreatorKitCreatePayload,
-  validatePetModelCreatorKitInstallPayload,
-  validatePetModelCreatorKitOpenPathPayload,
-  validatePetModelCreatorKitOptionalPathPayload,
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
   validateRuntimeHeartbeatPayload,
@@ -961,67 +957,6 @@ test('IPC pet model schemas bound local artifact payloads', () => {
       limit: 12,
     },
   )
-  assert.deepEqual(
-    validatePetModelCreatorKitCreatePayload({
-      id: ' pet-1 ',
-      displayName: '  Private Pet  ',
-      concept: '  tiny helper  ',
-    }),
-    {
-      id: 'pet-1',
-      displayName: 'Private Pet',
-      concept: 'tiny helper',
-    },
-  )
-  assert.throws(
-    () => validatePetModelCreatorKitCreatePayload({ displayName: 'Pet', rogue: true }),
-    /payload\.rogue is not allowed/,
-  )
-  assert.throws(
-    () => validatePetModelCreatorKitOptionalPathPayload('pet-model:inspect-creator-kit', {
-      kitDirectory: '/Users/me/private-kit',
-      rogue: true,
-    }),
-    /payload\.rogue is not allowed/,
-  )
-  assert.throws(
-    () => validatePetModelCreatorKitOptionalPathPayload('pet-model:assemble-creator-kit', {
-      kitDirectory: '/Users/me/private-kit',
-      rogue: true,
-    }),
-    /payload\.rogue is not allowed/,
-  )
-  assert.deepEqual(
-    validatePetModelCreatorKitOptionalPathPayload('pet-model:inspect-creator-kit', {
-      kitDirectory: '  /Users/me/private-kit  ',
-    }),
-    {
-      kitDirectory: '/Users/me/private-kit',
-    },
-  )
-  assert.deepEqual(
-    validatePetModelCreatorKitInstallPayload({
-      kitDirectory: ' /Users/me/private-kit ',
-      manifestPath: ' /Users/me/private-kit/pet.json ',
-    }),
-    {
-      kitDirectory: '/Users/me/private-kit',
-      manifestPath: '/Users/me/private-kit/pet.json',
-    },
-  )
-  assert.deepEqual(
-    validatePetModelCreatorKitOpenPathPayload({
-      kitDirectory: '/Users/me/private-kit',
-      targetPath: '/Users/me/private-kit/pet.json',
-      mode: 'reveal',
-    }),
-    {
-      kitDirectory: '/Users/me/private-kit',
-      targetPath: '/Users/me/private-kit/pet.json',
-      mode: 'reveal',
-    },
-  )
-
   assert.throws(
     () => validatePetModelGalleryImportPayload(''),
     /payload must be a non-empty string/,
@@ -1029,30 +964,6 @@ test('IPC pet model schemas bound local artifact payloads', () => {
   assert.throws(
     () => validatePetModelGalleryListPayload({ limit: 0 }),
     /payload\.limit must be >= 1/,
-  )
-  assert.throws(
-    () => validatePetModelCreatorKitInstallPayload({
-      kitDirectory: '/Users/me/private-kit',
-      manifestPath: '/Users/me/private-kit/pet.json',
-      rogue: true,
-    }),
-    /payload\.rogue is not allowed/,
-  )
-  assert.throws(
-    () => validatePetModelCreatorKitOpenPathPayload({
-      kitDirectory: '/Users/me/private-kit',
-      targetPath: '/Users/me/private-kit/pet.json',
-      mode: 'launch',
-    }),
-    /payload\.mode must be one of: open, reveal/,
-  )
-  assert.throws(
-    () => validatePetModelCreatorKitOpenPathPayload({
-      kitDirectory: '/Users/me/private-kit',
-      targetPath: '/Users/me/private-kit/pet.json',
-      rogue: true,
-    }),
-    /payload\.rogue is not allowed/,
   )
 })
 
@@ -1356,7 +1267,7 @@ test('IPC high-risk schemas reject unknown top-level fields', () => {
     ['vault:retrieve-many', () => validateVaultRetrieveManyPayload({ slots: [], rogue: true })],
     ['mcp:call-tool', () => validateMcpCallToolPayload({ name: 'search', rogue: true })],
     ['mcp:sync-servers', () => validateMcpSyncServersPayload({ servers: [], rogue: true })],
-    // 第二批：external-action-policy / tool / desktop-context / pet-model creator-kit
+    // 第二批：external-action-policy / tool / desktop-context
     ['external-action-policy:sync', () => validateExternalActionPolicySyncPayload({
       policies: {},
       rogue: true,
@@ -1367,26 +1278,6 @@ test('IPC high-risk schemas reject unknown top-level fields', () => {
     })],
     ['desktop-context:get', () => validateDesktopContextRequestPayload({
       includeActiveWindow: true,
-      rogue: true,
-    })],
-    ['pet-model:create-creator-kit', () => validatePetModelCreatorKitCreatePayload({ rogue: true })],
-    // inspect/assemble 共用 petModelCreatorKitOptionalPathSchema
-    ['pet-model:inspect-creator-kit', () => validatePetModelCreatorKitOptionalPathPayload(
-      'pet-model:inspect-creator-kit',
-      { rogue: true },
-    )],
-    ['pet-model:assemble-creator-kit', () => validatePetModelCreatorKitOptionalPathPayload(
-      'pet-model:assemble-creator-kit',
-      { rogue: true },
-    )],
-    ['pet-model:install-creator-kit-codex', () => validatePetModelCreatorKitInstallPayload({
-      kitDirectory: '/tmp/kit',
-      manifestPath: '/tmp/kit/pet.json',
-      rogue: true,
-    })],
-    ['pet-model:open-creator-kit-path', () => validatePetModelCreatorKitOpenPathPayload({
-      kitDirectory: '/tmp/kit',
-      targetPath: '/tmp/kit/pet.json',
       rogue: true,
     })],
   ]

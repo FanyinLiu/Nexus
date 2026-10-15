@@ -20,8 +20,8 @@ const FILE_BUDGETS = {
   'src/app/styles/settings-chat-final.css': 2600,
   'tests/settings-surface-audit.test.ts': 1300,
   // IPC payload schema suite keeps one test per domain plus the high-risk
-  // unknown-field rejection gate; batch 2 of the rollout (external-action-policy /
-  // tool / desktop-context / pet-model creator-kit) pushed it past 1300.
+  // unknown-field rejection gate. The suite is one test per domain and stays
+  // above the default 1200-line budget.
   'tests/ipc-payload-schema.test.ts': 1400,
 }
 

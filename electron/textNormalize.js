@@ -54,7 +54,7 @@ export function stripHtml(html) {
 
 /**
  * Escape text for XML / SVG attribute and text nodes.
- * Sprite-pet assembler and creator-kit share this so entity encoding cannot drift.
+ * Edge TTS SSML uses this so markup-sensitive voice text cannot drift.
  */
 export function escapeXml(value) {
   return String(value ?? '')

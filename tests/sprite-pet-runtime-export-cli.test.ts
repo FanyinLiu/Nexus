@@ -15,6 +15,43 @@ async function runExporter(args: string[]) {
   })
 }
 
+function writeUint24LE(buffer: Buffer, offset: number, value: number) {
+  buffer[offset] = value & 0xff
+  buffer[offset + 1] = (value >> 8) & 0xff
+  buffer[offset + 2] = (value >> 16) & 0xff
+}
+
+/** Minimal VP8X WebP header the sprite package parser accepts as 1536x1872 with alpha. */
+function makeAtlasWebp() {
+  const width = 1536
+  const height = 1872
+  const alphChunk = Buffer.concat([
+    Buffer.from('ALPH', 'ascii'),
+    Buffer.from([1, 0, 0, 0]),
+    Buffer.from([0]),
+    Buffer.from([0]),
+  ])
+  const vp8Chunk = Buffer.alloc(18)
+  vp8Chunk.write('VP8 ', 0, 'ascii')
+  vp8Chunk.writeUInt32LE(10, 4)
+  vp8Chunk[11] = 0x9d
+  vp8Chunk[12] = 0x01
+  vp8Chunk[13] = 0x2a
+  vp8Chunk.writeUInt16LE(width, 14)
+  vp8Chunk.writeUInt16LE(height, 16)
+
+  const buffer = Buffer.alloc(30)
+  buffer.write('RIFF', 0, 'ascii')
+  buffer.writeUInt32LE(buffer.length + alphChunk.length + vp8Chunk.length - 8, 4)
+  buffer.write('WEBP', 8, 'ascii')
+  buffer.write('VP8X', 12, 'ascii')
+  buffer.writeUInt32LE(10, 16)
+  buffer[20] = 0x10
+  writeUint24LE(buffer, 24, width - 1)
+  writeUint24LE(buffer, 27, height - 1)
+  return Buffer.concat([buffer, alphChunk, vp8Chunk])
+}
+
 async function withTempDirectory<T>(body: (directoryPath: string) => Promise<T>) {
   const directoryPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-sprite-pet-runtime-export-'))
   try {
@@ -178,18 +215,28 @@ test('pet:export-runtime writes a standalone clean-room runtime bundle', async (
 
 test('pet:export-runtime can include a validated user pet package in the demo', async () => {
   await withTempDirectory(async (directoryPath) => {
+    const packageDir = path.join(directoryPath, 'sample-pet')
+    await fs.mkdir(packageDir)
+    await fs.writeFile(path.join(packageDir, 'spritesheet.webp'), makeAtlasWebp())
+    await fs.writeFile(path.join(packageDir, 'pet.json'), `${JSON.stringify({
+      id: 'sample-pet',
+      displayName: 'Sample Pet',
+      description: 'A user-provided sprite package.',
+      spritesheetPath: 'spritesheet.webp',
+    }, null, 2)}\n`)
+
     const outputDir = path.join(directoryPath, 'runtime')
     const { stdout } = await runExporter([
       '--output-dir',
       outputDir,
       '--package',
-      'public/pets/qiyi',
+      packageDir,
     ])
 
-    assert.match(stdout, /demo package: pets\/qiyi/)
+    assert.match(stdout, /demo package: pets\/sample-pet/)
 
     const includedManifest = JSON.parse(
-      await fs.readFile(path.join(outputDir, 'pets', 'qiyi', 'pet.json'), 'utf8'),
+      await fs.readFile(path.join(outputDir, 'pets', 'sample-pet', 'pet.json'), 'utf8'),
     ) as {
       id?: string
       displayName?: string
@@ -211,20 +258,20 @@ test('pet:export-runtime can include a validated user pet package in the demo', 
         path?: string
       }>
     }
-    const sprite = await fs.readFile(path.join(outputDir, 'pets', 'qiyi', 'spritesheet.webp'))
+    const sprite = await fs.readFile(path.join(outputDir, 'pets', 'sample-pet', 'spritesheet.webp'))
 
-    assert.equal(includedManifest.id, 'qiyi')
-    assert.equal(includedManifest.displayName, '七一')
+    assert.equal(includedManifest.id, 'sample-pet')
+    assert.equal(includedManifest.displayName, 'Sample Pet')
     assert.equal(includedManifest.spritesheetPath, 'spritesheet.webp')
-    assert.match(demo, /\.\/pets\/qiyi\/spritesheet\.webp/)
-    assert.equal(manifest.includedPetPackage?.id, 'qiyi')
+    assert.match(demo, /\.\/pets\/sample-pet\/spritesheet\.webp/)
+    assert.equal(manifest.includedPetPackage?.id, 'sample-pet')
     assert.equal(manifest.includedPetPackage?.source, 'user-provided --package input')
-    assert.equal(manifest.includedPetPackage?.targetDirectory, 'pets/qiyi')
-    assert.equal(manifest.includedPetPackage?.demoSpritePath, './pets/qiyi/spritesheet.webp')
+    assert.equal(manifest.includedPetPackage?.targetDirectory, 'pets/sample-pet')
+    assert.equal(manifest.includedPetPackage?.demoSpritePath, './pets/sample-pet/spritesheet.webp')
     assert.equal(path.basename(manifest.includedPetPackage?.sourceManifestPath ?? ''), 'pet.json')
     assert.equal(path.basename(manifest.includedPetPackage?.sourceSpritePath ?? ''), 'spritesheet.webp')
-    assert.ok(manifest.files?.some((file) => file.path === 'pets/qiyi/pet.json'))
-    assert.ok(manifest.files?.some((file) => file.path === 'pets/qiyi/spritesheet.webp'))
+    assert.ok(manifest.files?.some((file) => file.path === 'pets/sample-pet/pet.json'))
+    assert.ok(manifest.files?.some((file) => file.path === 'pets/sample-pet/spritesheet.webp'))
     assert.equal(sprite.toString('ascii', 0, 4), 'RIFF')
     assert.equal(sprite.toString('ascii', 8, 12), 'WEBP')
   })
