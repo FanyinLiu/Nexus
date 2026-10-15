@@ -429,7 +429,11 @@ export function loadSettings(): AppSettings {
     systemPrompt:
       stored.systemPrompt
       ?? (isFreshInstall ? getDefaultSystemPrompt(resolvedUiLanguage) : defaultSettings.systemPrompt),
-    settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+    // A store written by a newer app must keep its schema number. Rewriting it
+    // down to this build would make the newer migration run again after upgrade.
+    settingsSchemaVersion: storedVersion > CURRENT_SETTINGS_SCHEMA_VERSION
+      ? storedVersion
+      : CURRENT_SETTINGS_SCHEMA_VERSION,
     uiLanguage: resolvedUiLanguage,
     themeId: resolveThemeId(stored.themeId),
     ambientWeatherEnabled: stored.ambientWeatherEnabled === true,
@@ -626,7 +630,9 @@ export function saveSettings(settings: AppSettings, options?: { silent?: boolean
 
   const persistedSettings = {
     ...nextSettings,
-    settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+    settingsSchemaVersion: nextSettings.settingsSchemaVersion > CURRENT_SETTINGS_SCHEMA_VERSION
+      ? nextSettings.settingsSchemaVersion
+      : CURRENT_SETTINGS_SCHEMA_VERSION,
     apiKey: normalizeTextProviderApiKey(nextSettings.apiKey),
     speechOutputApiBaseUrl: normalizeSpeechOutputApiBaseUrl(
       nextSettings.speechOutputProviderId,

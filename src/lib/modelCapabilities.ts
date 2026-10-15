@@ -3,6 +3,7 @@
 // renderer import sites (providerCatalog, panel views, tests) stay put.
 export {
   estimateModelContextWindowTokens,
+  modelRejectsChatCompletionsTools,
   modelSupportsSpeech,
   modelSupportsVision,
 } from '../../shared/modelCapabilities.js'

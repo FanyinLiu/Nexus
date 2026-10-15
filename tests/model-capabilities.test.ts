@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   estimateModelContextWindowTokens,
+  modelRejectsChatCompletionsTools,
   modelSupportsSpeech,
   modelSupportsVision,
 } from '../src/lib/modelCapabilities.ts'
@@ -129,4 +130,8 @@ test('estimateModelContextWindowTokens: returns useful coarse buckets', () => {
   assert.equal(estimateModelContextWindowTokens('zai-org-glm-5-1'), 200_000)
   assert.equal(estimateModelContextWindowTokens('ernie-x1.1'), 64_000)
   assert.equal(estimateModelContextWindowTokens('unknown-model'), null)
+  assert.equal(modelRejectsChatCompletionsTools('gpt-6-astra'), true)
+  assert.equal(modelRejectsChatCompletionsTools('GPT-6.1-Sol'), true)
+  assert.equal(modelRejectsChatCompletionsTools('gpt-6-sol'), false)
+  assert.equal(modelRejectsChatCompletionsTools('gpt-6-luna'), false)
 })

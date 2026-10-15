@@ -237,8 +237,10 @@ test('fallback pricing covers gpt-6-sol and current Gemini models', () => {
   assert.equal(pricing.computeCost('gemini', 'gemini-3.6-flash', 1_000_000, 0), 0.75)
   assert.equal(pricing.computeCost('gemini', 'gemini-3.5-flash-lite', 1_000_000, 0), 0.3)
   assert.equal(pricing.computeCost('gemini', 'gemini-3.1-pro-preview', 1_000_000, 0), 2)
-  assert.equal(pricing.computeCost('nvidia', 'deepseek-ai/deepseek-v4.1-flash', 1_000_000, 0), 0.3)
-  assert.equal(pricing.computeCost('siliconflow', 'deepseek-ai/DeepSeek-V4.1-Flash', 1_000_000, 0), 0.3)
+  assert.equal(pricing.computeCost('nvidia', 'deepseek-ai/deepseek-v4.1-flash', 1_000_000, 0), 0.15)
+  assert.equal(pricing.computeCost('siliconflow', 'deepseek-ai/DeepSeek-V4.1-Flash', 1_000_000, 1_000_000), 0.75)
+  assert.equal(pricing.computeCost('venice', 'deepseek-v4-1-flash', 1_000_000, 0), 0.3)
+  assert.equal(pricing.computeCost('deepseek', 'deepseek-flash', 1_000_000, 0), 0.3)
 })
 
 test('UsagePricingTable returns immutable pricing snapshots and clamps token counts', () => {

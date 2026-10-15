@@ -76,9 +76,12 @@ interface ModelPrice {
 }
 
 const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
-  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare chat fallback
+  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare chat fallback.
+  // Dotted v4.1 follows SiliconFlow's flat $0.15 / $0.60. Hyphenated v4-1
+  // follows Venice. deepseek-flash stays at DeepSeek's published peak rate.
   { pattern: 'deepseek-v4-pro',      price: { inputPerM: 1.32,  outputPerM: 3.96  } },
-  { pattern: 'deepseek-v4.1',        price: { inputPerM: 0.30,  outputPerM: 1.20  } },
+  { pattern: 'deepseek-v4.1',        price: { inputPerM: 0.15,  outputPerM: 0.60  } },
+  { pattern: 'deepseek-v4-1',        price: { inputPerM: 0.30,  outputPerM: 1.20  } },
   { pattern: 'deepseek-v4-flash',    price: { inputPerM: 0.30,  outputPerM: 1.20  } },
   { pattern: 'deepseek-flash',       price: { inputPerM: 0.30,  outputPerM: 1.20  } },
   { pattern: 'deepseek-chat',        price: { inputPerM: 0.14,  outputPerM: 0.28  } },

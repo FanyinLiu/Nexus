@@ -1,5 +1,6 @@
 import {
   estimateModelContextWindowTokens,
+  modelRejectsChatCompletionsTools,
   modelSupportsSpeech,
   modelSupportsVision,
 } from '../shared/modelCapabilities.js'
@@ -311,12 +312,19 @@ function shouldOmitAnthropicTemperature(model) {
 function shouldDisableOpenAiCompatibleThinking(providerId, model) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const id = String(model ?? '').trim().toLowerCase()
-  return normalizedProviderId === 'deepseek' && /^deepseek-v4-(?:flash|pro)(?:\b|$)/u.test(id)
+  // deepseek-flash is the current V4.1 id. The legacy v4-flash name still
+  // routes there, so both keep thinking off for the same chat-compat reason.
+  return normalizedProviderId === 'deepseek' && (
+    id === 'deepseek-flash'
+    || /^deepseek-v4-(?:flash|pro)(?:\b|$)/u.test(id)
+  )
 }
 
 function shouldDisableAnthropicThinking(providerId, model) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const id = String(model ?? '').trim().toLowerCase()
+  // Exact M3 only. M3.1-Flash-Preview is a different model with tunable
+  // thinking, and a word-boundary after "m3" would also match that id.
   return (
     (
       normalizedProviderId === 'minimax'
@@ -324,7 +332,7 @@ function shouldDisableAnthropicThinking(providerId, model) {
       || normalizedProviderId === 'minimax-coding'
       || normalizedProviderId === 'minimax-coding-global'
     )
-    && /^minimax-m3(?:\b|$)/u.test(id)
+    && id === 'minimax-m3'
   )
 }
 
@@ -408,14 +416,17 @@ export function buildChatRequest(payload, options = {}) {
   const tools = Array.isArray(payload?.tools) && payload.tools.length > 0
     ? payload.tools
     : undefined
-  const sampling = openAiChatCompletionsSampling(providerId, payload?.model, Boolean(tools))
+  // Astra and 6.1 Sol reject function tools on this endpoint. Drop them so
+  // selecting either model still completes a normal chat turn.
+  const sendTools = Boolean(tools) && !modelRejectsChatCompletionsTools(payload?.model)
+  const sampling = openAiChatCompletionsSampling(providerId, payload?.model, sendTools)
   const openAiBody = {
     model: payload?.model,
     messages: payload?.messages,
     ...(sampling.omitTemperature ? {} : { temperature: payload?.temperature ?? 0.8 }),
     max_tokens: payload?.maxTokens ?? 500,
     ...(stream ? { stream: true } : {}),
-    ...(tools ? { tools } : {}),
+    ...(sendTools ? { tools } : {}),
     ...(sampling.reasoningEffort ? { reasoning_effort: sampling.reasoningEffort } : {}),
   }
 

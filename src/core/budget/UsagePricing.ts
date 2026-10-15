@@ -142,11 +142,16 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   { pattern: 'gpt-4o',          price: { tier: 'heavy',    inputPricePerMTokens: 2.5,  outputPricePerMTokens: 10   } },
   { pattern: 'gpt-4-turbo',     price: { tier: 'heavy',    inputPricePerMTokens: 10,   outputPricePerMTokens: 30   } },
   { pattern: 'gpt-3.5',         price: { tier: 'cheap',    inputPricePerMTokens: 0.5,  outputPricePerMTokens: 1.5  } },
-  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare deepseek-* fallback
+  // DeepSeek — longest-first so v4-pro / v4-flash beat the bare deepseek-* fallback.
+  // Dotted v4.1 is the SiliconFlow / Together / NVIDIA id at SiliconFlow's
+  // flat published rate ($0.15 / $0.60). Hyphenated v4-1 is Venice's id at
+  // Venice's published rate. Direct deepseek-flash stays at DeepSeek's peak
+  // rate; off-peak on that API is half.
   { pattern: 'deepseek-v4-pro',   price: { tier: 'heavy',    inputPricePerMTokens: 1.32, outputPricePerMTokens: 3.96 } },
-  { pattern: 'deepseek-v4.1',     price: { tier: 'cheap',    inputPricePerMTokens: 0.3,   outputPricePerMTokens: 1.2  } },
-  { pattern: 'deepseek-v4-flash', price: { tier: 'cheap',    inputPricePerMTokens: 0.3,   outputPricePerMTokens: 1.2  } },
-  { pattern: 'deepseek-flash',    price: { tier: 'cheap',    inputPricePerMTokens: 0.3,   outputPricePerMTokens: 1.2  } },
+  { pattern: 'deepseek-v4.1',     price: { tier: 'cheap',    inputPricePerMTokens: 0.15, outputPricePerMTokens: 0.6  } },
+  { pattern: 'deepseek-v4-1',     price: { tier: 'cheap',    inputPricePerMTokens: 0.3,  outputPricePerMTokens: 1.2  } },
+  { pattern: 'deepseek-v4-flash', price: { tier: 'cheap',    inputPricePerMTokens: 0.3,  outputPricePerMTokens: 1.2  } },
+  { pattern: 'deepseek-flash',    price: { tier: 'cheap',    inputPricePerMTokens: 0.3,  outputPricePerMTokens: 1.2  } },
   { pattern: 'grok-4.7',          price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 6    } },
   { pattern: 'mistral-large-4',   price: { tier: 'standard', inputPricePerMTokens: 1.36, outputPricePerMTokens: 4.18 } },
   { pattern: 'deepseek-chat',   price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },

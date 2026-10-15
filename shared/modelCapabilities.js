@@ -64,6 +64,17 @@ export function modelSupportsSpeech(model) {
   return Boolean(id && /realtime|audio|voice|tts|transcribe|speech/.test(id))
 }
 
+/**
+ * GPT-6 Astra and GPT-6.1 Sol accept Chat Completions only when the request
+ * has no function tools. `reasoning_effort: "none"` is rejected on those two,
+ * and tools require the Responses API. Sol and Luna are the models that can
+ * keep native tools, and only with `reasoning_effort: "none"`.
+ */
+export function modelRejectsChatCompletionsTools(model) {
+  const id = String(model ?? '').trim().toLowerCase()
+  return id === 'gpt-6-astra' || id === 'gpt-6.1-sol'
+}
+
 export function estimateModelContextWindowTokens(model) {
   const id = String(model ?? '').trim().toLowerCase()
   if (!id) return null

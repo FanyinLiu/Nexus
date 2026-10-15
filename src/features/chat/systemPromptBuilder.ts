@@ -41,6 +41,7 @@ import {
 } from './contextCompaction.ts'
 import { buildHotTierMemorySections, buildSemanticMemorySection } from './memoryInjection.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { modelRejectsChatCompletionsTools } from '../../lib/modelCapabilities.ts'
 import { buildPromptModeInstructions } from './promptModeMcp.ts'
 import {
   buildToolDefinitions,
@@ -52,14 +53,17 @@ import {
  * Tool delivery mode policy:
  * 1. If the user explicitly turned on `mcpPromptModeEnabled`, force prompt mode
  *    (escape hatch for testing or for providers we know are broken).
- * 2. Otherwise, if the provider preset declares `supportsToolsApi: false`,
+ * 2. GPT-6 Astra and GPT-6.1 Sol reject function tools on Chat Completions.
+ *    Prompt mode keeps the tool catalog in text so the chat request stays valid.
+ * 3. Otherwise, if the provider preset declares `supportsToolsApi: false`,
  *    fall back to prompt mode automatically.
- * 3. Otherwise default to native function calling.
+ * 4. Otherwise default to native function calling.
  *
  * Native is the default — prompt mode is fallback only.
  */
 export function selectToolDeliveryMode(settings: AppSettings): 'native' | 'prompt' {
   if (settings.mcpPromptModeEnabled) return 'prompt'
+  if (modelRejectsChatCompletionsTools(settings.model)) return 'prompt'
   const preset = getApiProviderPreset(settings.apiProviderId)
   if (preset && preset.supportsToolsApi === false) return 'prompt'
   return 'native'

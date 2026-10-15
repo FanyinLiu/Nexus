@@ -124,6 +124,21 @@ describe('byModel accumulation', () => {
     assert.ok(byModel['gpt-6-sol'].costUsd > 0)
   })
 
+  test('prices SiliconFlow V4.1-Flash at half the DeepSeek peak flash rate', () => {
+    const prompt = 'hello world'
+    const reply = 'reply'
+    meter.recordUsage('chat', prompt, reply, { modelId: 'deepseek-ai/DeepSeek-V4.1-Flash' })
+    meter.recordUsage('chat', prompt, reply, { modelId: 'deepseek-v4-flash' })
+    meter.recordUsage('chat', prompt, reply, { modelId: 'deepseek-v4-1-flash' })
+    const byModel = meter.getMeterSnapshot().daily.byModel ?? {}
+    const siliconFlow = byModel['deepseek-ai/DeepSeek-V4.1-Flash'].costUsd
+    const peakFlash = byModel['deepseek-v4-flash'].costUsd
+    const venice = byModel['deepseek-v4-1-flash'].costUsd
+    assert.ok(siliconFlow > 0)
+    assert.ok(Math.abs(siliconFlow * 2 - peakFlash) < 1e-9)
+    assert.ok(Math.abs(venice - peakFlash) < 1e-9)
+  })
+
   test('does not create byModel entry when modelId omitted', () => {
     meter.recordUsage('tool', 'input', 'output')
     const snapshot = meter.getMeterSnapshot()

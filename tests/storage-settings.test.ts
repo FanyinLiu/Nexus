@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
 
-import { loadSettings, SETTINGS_STORAGE_KEY } from '../src/lib/storage.ts'
+import { loadSettings, saveSettings, SETTINGS_STORAGE_KEY } from '../src/lib/storage.ts'
 import { commitSettingsUpdate } from '../src/app/store/commitSettingsUpdate.ts'
-import { CURRENT_SETTINGS_SCHEMA_VERSION } from '../src/lib/settingsMigrations.ts'
+import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
+import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
+import { getSpeechOutputProvider } from '../src/lib/speechProviderCatalog.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -494,6 +496,179 @@ test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults without moving cod
   assert.equal(settings.textProviderProfiles['minimax-global']?.model, 'MiniMax-M3')
   assert.equal(settings.textProviderProfiles['minimax-coding']?.model, 'MiniMax-M3.1-Flash-Preview')
   assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M2.7')
+})
+
+test('v9 retired ids land on a model that provider still lists', () => {
+  const cases: Array<[string, string]> = [
+    ['openai', 'gpt-5.6-sol'],
+    ['together', 'deepseek-ai/DeepSeek-V4-Flash-0731'],
+    ['together', 'Qwen/Qwen3.5-397B-A17B'],
+    ['together', 'MiniMaxAI/MiniMax-M2.7'],
+    ['together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
+    ['siliconflow', 'Qwen/Qwen3.8-Max'],
+    ['siliconflow-global', 'Qwen/Qwen3.8-27B'],
+    ['qianfan', 'ernie-x1-turbo-32k'],
+    ['qianfan', 'ernie-x1-turbo-32k-preview'],
+    ['nvidia', 'deepseek-ai/deepseek-r1'],
+    ['mistral', 'devstral-medium-latest'],
+    ['mistral', 'devstral-small-latest'],
+  ]
+
+  for (const [providerId, model] of cases) {
+    const migrated = migrateSettings({
+      settingsSchemaVersion: 8,
+      apiProviderId: providerId,
+      model,
+    }, 8)
+    const nextModel = typeof migrated.model === 'string' ? migrated.model : ''
+    const preset = getApiProviderPreset(providerId)
+    assert.ok(
+      preset.models.includes(nextModel),
+      `${providerId} ${model} migrated to ${nextModel}, which is not in the catalog`,
+    )
+  }
+
+  const speechCases: Array<[string, string]> = [
+    ['dashscope-tts', 'qwen3-tts-instruct-flash'],
+    ['elevenlabs-tts', 'eleven_turbo_v2_5'],
+    ['elevenlabs-tts', 'eleven_v4'],
+    ['elevenlabs-tts', 'eleven_v4_turbo'],
+  ]
+  for (const [providerId, model] of speechCases) {
+    const migrated = migrateSettings({
+      settingsSchemaVersion: 8,
+      speechOutputProviderId: providerId,
+      speechOutputModel: model,
+    }, 8)
+    const nextModel = typeof migrated.speechOutputModel === 'string' ? migrated.speechOutputModel : ''
+    const preset = getSpeechOutputProvider(providerId)
+    assert.ok(
+      preset.modelOptions.some((entry) => entry.value === nextModel),
+      `${providerId} ${model} migrated to ${nextModel}, which is not a speech option`,
+    )
+  }
+})
+
+test('re-applying v9 and v10 does not move a manual non-default again', () => {
+  const raw = {
+    settingsSchemaVersion: 8,
+    apiProviderId: 'openai',
+    apiBaseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5.6-terra',
+    textProviderProfiles: {
+      siliconflow: {
+        apiBaseUrl: 'https://api.siliconflow.cn/v1',
+        apiKey: '',
+        model: 'deepseek-ai/DeepSeek-V4-Pro',
+      },
+      openai: {
+        apiBaseUrl: 'https://api.openai.com/v1',
+        apiKey: '',
+        model: 'gpt-5.6-luna',
+      },
+    },
+  }
+  const once = migrateSettings(raw, 8)
+  const twice = migrateSettings(once, 8)
+  assert.equal(once.model, 'gpt-5.6-terra')
+  assert.equal(twice.model, 'gpt-5.6-terra')
+  assert.equal(
+    (twice.textProviderProfiles as { siliconflow: { model: string } }).siliconflow.model,
+    'deepseek-ai/DeepSeek-V4-Pro',
+  )
+  assert.equal(
+    (twice.textProviderProfiles as { openai: { model: string } }).openai.model,
+    'gpt-5.6-luna',
+  )
+  assert.equal(migrateSettings(once, 10).model, 'gpt-5.6-terra')
+})
+
+test('a schema 10 store keeps a model the user selected after the default promotion', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 10,
+      apiProviderId: 'siliconflow',
+      apiBaseUrl: 'https://api.siliconflow.cn/v1',
+      model: 'deepseek-ai/DeepSeek-V4-Flash',
+      textProviderProfiles: {
+        minimax: {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.7',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.settingsSchemaVersion, 10)
+  assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M2.7')
+})
+
+test('missing apiProviderId does not promote a non-default MiniMax or SiliconFlow model', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 9,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M2.5',
+      textProviderProfiles: {
+        siliconflow: {
+          apiBaseUrl: 'https://api.siliconflow.cn/v1',
+          apiKey: '',
+          model: 'deepseek-ai/DeepSeek-V4-Pro',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax')
+  assert.equal(settings.model, 'MiniMax-M2.5')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4-Pro')
+})
+
+test('a newer schema version is left untouched and stays newer after save', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 11,
+      apiProviderId: 'siliconflow',
+      apiBaseUrl: 'https://api.siliconflow.cn/v1',
+      model: 'deepseek-ai/DeepSeek-V4-Flash',
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+  assert.equal(settings.settingsSchemaVersion, 11)
+  assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
+
+  saveSettings(settings, { silent: true })
+  const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as {
+    settingsSchemaVersion?: number
+    model?: string
+  }
+  assert.equal(saved.settingsSchemaVersion, 11)
+  assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 
 test('preserves an explicit older model that was not the previous default', () => {
