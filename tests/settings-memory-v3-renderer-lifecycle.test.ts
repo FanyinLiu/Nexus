@@ -64,23 +64,39 @@ async function rowText(page: Page, label: string): Promise<string> {
   return (await row.textContent())?.replace(/\s+/g, ' ').trim() ?? ''
 }
 
+function launchBrowser(options: Parameters<typeof chromium.launch>[0]): Promise<Browser> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('renderer browser launch timed out')), 30_000)
+    chromium.launch(options).then(
+      (browser) => {
+        clearTimeout(timer)
+        resolve(browser)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 async function launchRendererBrowser(): Promise<Browser> {
   const launchOptions = { headless: true, args: ['--disable-gpu'] }
   try {
-    return await chromium.launch(launchOptions)
+    return await launchBrowser(launchOptions)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (!message.includes('Executable doesn') && !message.includes('Playwright was just installed')) {
-      throw error
-    }
-    return await chromium.launch({ ...launchOptions, channel: 'chrome' })
+    const missingBrowser = message.includes('Executable doesn') || message.includes('Playwright was just installed')
+    const timedOut = message.includes('renderer browser launch timed out')
+    if (!missingBrowser && !timedOut) throw error
+    return await launchBrowser({ ...launchOptions, channel: 'chrome' })
   }
 }
 
-// Vite cold start plus Chromium launch on a Windows runner can spend most of
-// a 45s budget before the first locator resolves. The assertions below are
-// unchanged; only the suite ceiling moved.
-test('active Memory V3 preserves paused recent state and clears it explicitly', { timeout: 90_000 }, async (t) => {
+// Vite cold start plus Chromium launch on a Windows runner can use the whole
+// previous ceiling before the first locator resolves. A hung bundled-browser
+// launch falls back to Chrome. The assertions below are unchanged.
+test('active Memory V3 preserves paused recent state and clears it explicitly', { timeout: 150_000 }, async (t) => {
   const port = await reservePort()
   const baseUrl = `http://${HOST}:${port}`
   const vite = spawn(
