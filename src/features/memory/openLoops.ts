@@ -29,7 +29,7 @@ const STOP_WORDS = new Set([
   '我', '你', '的', '了', '在', '把', '会', '要', '去', '是', '不', '也', '就', '还',
 ])
 
-const COMPLETION = /(?:已经|完成了|做完了|发出去了|搞定了|不用了|取消了|结束了|\b(?:sent|finished|done|completed|submitted|cancelled|canceled)\b|終わった|送った|済んだ|終わらせた|끝냈|보냈|끝났|취소했)/iu
+const COMPLETION = /(?:已经|完成了|做完了|发出去了|发了|搞定了|不用了|取消了|结束了|\b(?:sent|finished|done|completed|submitted|cancelled|canceled)\b|終わった|送った|電話した|済んだ|終わらせた|끝냈|보냈|끝났|취소했)/iu
 const DISMISS = /(?:don'?t remind me|do not remind me|别再?提醒|別再?提醒|不用提醒|不要提醒|提醒しないで|リマインドしない|그만\s*알려|알리지\s*마)/iu
 const BARE_DONE = /^(?:done|finished|all done|完成了|做完了|搞定了|終わった|終わったよ|끝냈어|완료)[.!?。]?$/iu
 const BARE_SNOOZE = /^(?:later|not now|snooze|稍后|等会|等一下|晚点|あとで|後で|나중에|잠시만)[.!?。]?$/iu
@@ -129,10 +129,10 @@ function splitSegments(content: string): string[] {
 
 function looksLikeCommitment(text: string): boolean {
   if (COMPLETION.test(text) || DISMISS.test(text)) return false
-  const commitment = /(?:\b(?:i'll|i will|i'm going to|i am going to|i need to|i have to|i gotta|i should|i plan to)\b|我(?:要|得|会|将|准备|打算)|しなきゃ|する予定|やらなきゃ|해야\s*해|해야지|보낼\s*게|할\s*예정)/iu.test(text)
-  const timed = /(?:\b(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week)\b|今天|今晚|明天|后天|下周|周[一二三四五六日天]|星期[一二三四五六日天]|今日|明日|来週|月曜|火曜|水曜|木曜|金曜|土曜|日曜|오늘|내일|모레|다음\s*주|[월화수목금토일]요일)/iu.test(text)
+  const commitment = /(?:\b(?:i'll|i will|i'm going to|i am going to|i need to|i have to|i gotta|i should|i plan to)\b|我(?:要|得|会|将|准备|打算)|回头(?:我)?|提醒我|しなきゃ|する予定|やらなきゃ|해야\s*해|해야지|보낼\s*게|할\s*예정)/iu.test(text)
+  const timed = /(?:\b(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week)\b|今天|今晚|明天|后天|下周|周[一二三四五六日天]|星期[一二三四五六日天]|回头|今日|明日|来週|月曜|火曜|水曜|木曜|金曜|土曜|日曜|あとで|後で|오늘|내일|모레|다음\s*주|[월화수목금토일]요일)/iu.test(text)
   const event = /(?:interview|meeting|deadline|appointment|面试|会面|截止|会議|面談|面接|면접|회의|마감)/iu.test(text)
-  const task = /(?:\b(?:send|finish|submit|email|book|pay|write)\b|发给|发出|提交|交报告|写完|面接|보내|제출)/iu.test(text)
+  const task = /(?:\b(?:send|finish|submit|email|book|pay|write)\b|发给|发出|发你|提交|交报告|写完|打电话|看一下|送る|電話|見ておく|面接|보내|제출)/iu.test(text)
   return (commitment && (timed || event || task)) || (event && timed) || (task && timed)
 }
 

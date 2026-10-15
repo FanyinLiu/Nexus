@@ -192,11 +192,8 @@ export function useProactiveAgenda(options: {
       const text = item.kind === 'message_follow_up'
         ? current.t('proactive.bubble.follow_up', { summary: item.summary })
         : current.t('proactive.bubble.loop', { summary: item.summary })
-      await current.pushCompanionNotice({
-        chatContent: text,
-        bubbleContent: text,
-        dedupeKey: `agenda:${item.id}:${localDayKey(nowMs)}`,
-      })
+      // Claim the slot before the bubble. The in-memory notice dedupe does not
+      // survive a restart or update, so a crash after the bubble would send it again.
       saveProactiveAgenda(markAgendaFired(state, item.id, nowMs))
       if (item.kind === 'message_follow_up') settleMessageFollowUp(item.sourceId, nowMs)
       if (item.kind === 'open_loop') {
@@ -204,6 +201,11 @@ export function useProactiveAgenda(options: {
         current.memoriesRef.current = next
         current.setMemories(next)
       }
+      await current.pushCompanionNotice({
+        chatContent: text,
+        bubbleContent: text,
+        dedupeKey: `agenda:${item.id}:${localDayKey(nowMs)}`,
+      })
     } catch (error) {
       current.onLog('Proactive agenda skipped', getRedactedLogErrorMessage(error))
     }

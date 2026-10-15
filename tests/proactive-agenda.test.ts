@@ -6,11 +6,13 @@ import {
   buildAgendaPrompt,
   emptyAgendaState,
   followUpKeyToSettle,
+  markAgendaFired,
   projectAgenda,
   selectAgendaItem,
   syncProactiveAgenda,
   type AgendaItem,
 } from '../src/features/autonomy/proactiveAgenda.ts'
+import { evaluateProactiveEtiquette } from '../src/features/autonomy/proactiveBudget.ts'
 import {
   loadMessageFollowUps,
   recordMessageFollowUp,
@@ -20,6 +22,7 @@ import {
 import {
   loadProactiveAgenda,
   normalizeProactiveAgenda,
+  saveProactiveAgenda,
 } from '../src/lib/storage/proactiveAgenda.ts'
 import type { MemoryItem } from '../src/types/memory.ts'
 import type { ProactiveAgendaState } from '../src/types/proactive.ts'
@@ -158,6 +161,61 @@ test('legacy follow-ups migrate once, fired rows stay done, and dismiss retires 
   assert.equal(rebuilt.items.find((item) => item.sourceId === 'wechat:ada')?.state, 'dismissed')
   assert.equal(consumeMessageFollowUpPromptText(NOW + 1000), '')
   assert.equal(loadProactiveAgenda().items.length, migrated.items.length)
+})
+
+test('a claimed delivery and user actions survive a reload without sending twice', () => {
+  const dueAt = new Date(NOW - HOUR).toISOString()
+  const createdAt = new Date(NOW - 2 * DAY).toISOString()
+  const memories = [
+    loop({ id: 'report', content: '我周五把报告发你', createdAt, loopDueAt: dueAt }),
+    loop({ id: 'call', content: '明天提醒我给妈妈打电话', createdAt, loopDueAt: dueAt }),
+    loop({ id: 'look', content: '回头我看一下', createdAt, loopDueAt: dueAt }),
+  ]
+  const projected = syncProactiveAgenda(memories, NOW)
+  const claimed = selectAgendaItem(projected.items, NOW, 'return')
+  assert.ok(claimed)
+  saveProactiveAgenda(markAgendaFired(projected, claimed.id, NOW))
+
+  const restarted = syncProactiveAgenda(memories, NOW + 1000)
+  assert.notEqual(selectAgendaItem(restarted.items, NOW + 1000, 'return')?.id, claimed.id)
+  assert.notEqual(selectAgendaItem(restarted.items, NOW + 2 * HOUR, 'next_turn')?.id, claimed.id)
+  assert.equal(restarted.items.find((item) => item.id === claimed.id)?.firedAt, NOW)
+  assert.deepEqual(restarted.firedAt, [NOW])
+  assert.equal(evaluateProactiveEtiquette({
+    nowMs: NOW + 1000,
+    enabled: true,
+    preset: 'normal',
+    quietStart: 23,
+    quietEnd: 8,
+    firedAt: restarted.firedAt,
+    userTyping: false,
+    fullscreen: false,
+    focusState: 'active',
+    channel: 'return',
+    resumedAtMs: NOW - 60_000,
+  }).reason, 'gap')
+
+  const normalized = normalizeProactiveAgenda(JSON.parse(JSON.stringify(restarted)))
+  assert.equal(normalized.items.find((item) => item.sourceId === 'report')?.firedAt, NOW)
+  assert.equal(normalized.firedAt.length, 1)
+
+  let state = syncProactiveAgenda(memories, NOW + 2 * HOUR)
+  let nextMemories = memories
+  for (const action of ['snooze', 'done', 'dismiss'] as const) {
+    const sourceId = action === 'snooze' ? 'call' : action === 'done' ? 'look' : 'report'
+    const item = state.items.find((candidate) => candidate.sourceId === sourceId)
+    assert.ok(item, action)
+    const result = applyAgendaUserAction(state, nextMemories, item.id, action, NOW + 2 * HOUR)
+    nextMemories = result.memories
+    saveProactiveAgenda(result.state)
+    state = loadProactiveAgenda()
+  }
+  const afterRestart = syncProactiveAgenda(nextMemories, NOW + 2 * HOUR + 1000)
+  assert.equal(afterRestart.items.find((item) => item.sourceId === 'call')?.state, 'snoozed')
+  assert.equal(afterRestart.items.find((item) => item.sourceId === 'look')?.state, 'done')
+  assert.equal(afterRestart.items.find((item) => item.sourceId === 'report')?.state, 'dismissed')
+  assert.equal(selectAgendaItem(afterRestart.items, NOW + 2 * HOUR + 1000, 'return'), null)
+  assert.equal(selectAgendaItem(afterRestart.items, NOW + 2 * HOUR + 1000, 'next_turn'), null)
 })
 
 test('a corrupt agenda blob becomes an empty queue without duplicate ids', () => {

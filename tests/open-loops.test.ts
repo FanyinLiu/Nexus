@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
+import { consolidateDailyMemory } from '../src/features/memory/dailyConsolidation.ts'
 import { extractMemoriesFromMessage } from '../src/features/memory/memory.ts'
 import {
   extractOpenLoopItems,
@@ -10,7 +11,7 @@ import { planTurnMemoryWrite } from '../src/features/memory/reconcile.ts'
 import { applyLongTermMemoryCap } from '../src/lib/storage/memoryCap.ts'
 import { normalizeMemoryItem } from '../src/lib/storage/memory.ts'
 import { normalizeMemoryMigrationItem } from '../electron/services/localDataMemoryMigration.js'
-import type { MemoryItem } from '../src/types/memory.ts'
+import type { DailyMemoryEntry, MemoryItem } from '../src/types/memory.ts'
 
 function atLocal(year: number, month: number, day: number, hour = 10): Date {
   return new Date(year, month - 1, day, hour, 0, 0, 0)
@@ -64,6 +65,82 @@ test('interview next Tuesday lands on the following Tuesday, not today', () => {
   assert.equal(due.getDate(), 20)
   assert.equal(due.getDay(), 2)
   assert.equal(due.getHours(), 18)
+})
+
+test('no-model fallback catches colloquial Chinese and Japanese commitments', async () => {
+  const createdAt = atLocal(2026, 10, 15, 10).toISOString()
+  const phrases = [
+    { content: '我周五把报告发你', dueDay: 16, dueText: '周五' },
+    { content: '明天提醒我给妈妈打电话', dueDay: 16, dueText: '明天' },
+    { content: '回头我看一下', dueDay: null, dueText: null },
+    { content: '金曜に報告書を送る', dueDay: 16, dueText: '金曜' },
+    { content: '明日ママに電話する', dueDay: 16, dueText: '明日' },
+    { content: 'あとで見ておく', dueDay: null, dueText: null },
+  ]
+  const diary: DailyMemoryEntry[] = phrases.map((sample, index) => ({
+    id: `daily-colloquial-${index}`,
+    day: '2026-10-15',
+    role: 'user',
+    content: sample.content,
+    source: 'chat',
+    createdAt,
+  }))
+  const added = await consolidateDailyMemory({
+    memories: [],
+    diaryEntries: diary,
+    sinceMs: null,
+    now: createdAt,
+  })
+  assert.equal(added.decisionSource, 'fallback')
+  assert.equal(added.fallbackReason, 'no-model')
+  for (const sample of phrases) {
+    const loop = added.memories.find((memory) => memory.content === sample.content)
+    assert.ok(loop, sample.content)
+    assert.equal(loop.kind, 'open_loop')
+    assert.equal(loop.loopStatus, 'open')
+    if (sample.dueDay == null) {
+      assert.equal(loop.loopDueAt, undefined)
+    } else {
+      const due = new Date(loop.loopDueAt ?? '')
+      assert.equal(due.getDate(), sample.dueDay)
+      assert.equal(due.getHours(), 18)
+      assert.equal(loop.loopDueText, sample.dueText)
+    }
+  }
+
+  const later = atLocal(2026, 10, 16, 12).toISOString()
+  const closed = await consolidateDailyMemory({
+    memories: added.memories,
+    diaryEntries: [{
+      id: 'daily-report-sent',
+      day: '2026-10-16',
+      role: 'user',
+      content: '报告发了',
+      source: 'chat',
+      createdAt: atLocal(2026, 10, 16, 11).toISOString(),
+    }],
+    sinceMs: atLocal(2026, 10, 15, 10),
+    now: later,
+  })
+  assert.equal(closed.memories.find((memory) => memory.content === '我周五把报告发你')?.loopStatus, 'done')
+  assert.equal(closed.memories.find((memory) => memory.content === '明天提醒我给妈妈打电话')?.loopStatus, 'open')
+  assert.equal(closed.memories.find((memory) => memory.content === '回头我看一下')?.loopStatus, 'open')
+
+  const jaClosed = await consolidateDailyMemory({
+    memories: added.memories,
+    diaryEntries: [{
+      id: 'daily-ja-sent',
+      day: '2026-10-16',
+      role: 'user',
+      content: '報告書を送った',
+      source: 'chat',
+      createdAt: atLocal(2026, 10, 16, 11).toISOString(),
+    }],
+    sinceMs: atLocal(2026, 10, 15, 10),
+    now: later,
+  })
+  assert.equal(jaClosed.memories.find((memory) => memory.content === '金曜に報告書を送る')?.loopStatus, 'done')
+  assert.equal(jaClosed.memories.find((memory) => memory.content === '明日ママに電話する')?.loopStatus, 'open')
 })
 
 test('a completion line is not stored as a new loop', () => {
