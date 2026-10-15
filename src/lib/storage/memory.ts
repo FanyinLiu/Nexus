@@ -336,8 +336,15 @@ export function loadMemories(): MemoryItem[] {
   return legacy
 }
 
+/**
+ * Persist long-term memories. An empty list does not create the key: startup
+ * consolidation copies the loaded list, and a newly created key makes the
+ * onboarding backfill treat a fresh install as an upgrade.
+ */
 export function saveMemories(memories: MemoryItem[]) {
-  writeJsonDebounced(MEMORY_STORAGE_KEY, normalizeMemoryItemsForStorage(memories))
+  const normalized = normalizeMemoryItemsForStorage(memories)
+  if (!normalized.length && readStorageText(MEMORY_STORAGE_KEY) === null) return
+  writeJsonDebounced(MEMORY_STORAGE_KEY, normalized)
 }
 
 export function loadDailyMemories(): DailyMemoryStore {

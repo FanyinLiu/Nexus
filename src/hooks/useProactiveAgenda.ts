@@ -23,7 +23,11 @@ import {
   syncProactiveAgenda,
 } from '../features/autonomy/proactiveAgenda.ts'
 import { isUserTyping } from '../features/autonomy/userTyping.ts'
-import { consolidateDailyMemory, decideDailyConsolidation } from '../features/memory/dailyConsolidation.ts'
+import {
+  consolidateDailyMemory,
+  decideDailyConsolidation,
+  memoryListReplaced,
+} from '../features/memory/dailyConsolidation.ts'
 import type { Translator } from '../types/i18n.ts'
 import { getMemoryReconcileRevision } from './chat/memoryReconcile.ts'
 import { localDayKey } from '../lib/localDate.ts'
@@ -146,8 +150,10 @@ export function useProactiveAgenda(options: {
         current.onLog('Daily consolidation skipped', 'chat moved on')
         return
       }
-      current.memoriesRef.current = result.memories
-      current.setMemories(result.memories)
+      if (memoryListReplaced(current.memoriesRef.current, result.memories)) {
+        current.memoriesRef.current = result.memories
+        current.setMemories(result.memories)
+      }
       const persisted = result.ops.filter((op) => op.op !== 'NOOP')
       if (persisted.length) appendMemoryOpLog(persisted)
       const nowMs = Date.now()

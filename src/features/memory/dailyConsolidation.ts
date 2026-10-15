@@ -48,6 +48,18 @@ export function decideDailyConsolidation(input: {
   return { run: false, trigger: null, reason: 'waiting' }
 }
 
+/**
+ * A no-op pass copies the list. Callers must not persist that copy: a brand
+ * new empty key is read as prior user data and skips the first-use guide.
+ */
+export function memoryListReplaced(previous: readonly MemoryItem[], next: readonly MemoryItem[]): boolean {
+  if (previous.length !== next.length) return true
+  for (let index = 0; index < previous.length; index += 1) {
+    if (previous[index] !== next[index]) return true
+  }
+  return false
+}
+
 function diaryCandidates(entries: readonly DailyMemoryEntry[], sinceMs: number | null): MemoryItem[] {
   const fresh = entries.filter((entry) => {
     if (entry.role !== 'user') return false

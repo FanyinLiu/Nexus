@@ -5,6 +5,7 @@ import {
   CONSOLIDATION_IDLE_SECONDS,
   consolidateDailyMemory,
   decideDailyConsolidation,
+  memoryListReplaced,
 } from '../src/features/memory/dailyConsolidation.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../src/types/memory.ts'
 
@@ -98,4 +99,17 @@ test('a missing or failing model never throws and leaves the store readable', as
   })
   assert.deepEqual(empty.memories, [])
   assert.equal(empty.ops.length, 0)
+  assert.equal(memoryListReplaced(existing, empty.memories), false)
+})
+
+test('a copied memory list is not a replacement, and a new row is', () => {
+  const existing: MemoryItem[] = []
+  assert.equal(memoryListReplaced(existing, [...existing]), false)
+  assert.equal(memoryListReplaced(existing, [{
+    id: 'loop-1',
+    content: 'send the report',
+    category: 'goal',
+    source: 'chat',
+    createdAt: '2026-10-15T10:00:00.000Z',
+  }]), true)
 })
