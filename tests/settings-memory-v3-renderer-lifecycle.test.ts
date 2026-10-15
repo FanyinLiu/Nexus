@@ -64,32 +64,20 @@ async function rowText(page: Page, label: string): Promise<string> {
   return (await row.textContent())?.replace(/\s+/g, ' ').trim() ?? ''
 }
 
-function launchBrowser(options: Parameters<typeof chromium.launch>[0]): Promise<Browser> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('renderer browser launch timed out')), 30_000)
-    chromium.launch(options).then(
-      (browser) => {
-        clearTimeout(timer)
-        resolve(browser)
-      },
-      (error: unknown) => {
-        clearTimeout(timer)
-        reject(error)
-      },
-    )
-  })
-}
-
 async function launchRendererBrowser(): Promise<Browser> {
-  const launchOptions = { headless: true, args: ['--disable-gpu'] }
+  // Playwright's default launch timeout is 3 minutes, longer than this test's
+  // ceiling, and a raced timeout leaves that launch running. Pass a timeout
+  // Playwright itself enforces so a stuck bundled browser is torn down before
+  // the Chrome fallback.
+  const launchOptions = { headless: true, args: ['--disable-gpu'], timeout: 45_000 }
   try {
-    return await launchBrowser(launchOptions)
+    return await chromium.launch(launchOptions)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const missingBrowser = message.includes('Executable doesn') || message.includes('Playwright was just installed')
-    const timedOut = message.includes('renderer browser launch timed out')
+    const timedOut = message.includes('Timeout')
     if (!missingBrowser && !timedOut) throw error
-    return await launchBrowser({ ...launchOptions, channel: 'chrome' })
+    return await chromium.launch({ ...launchOptions, channel: 'chrome' })
   }
 }
 
