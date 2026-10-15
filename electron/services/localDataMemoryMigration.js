@@ -124,6 +124,11 @@ export function normalizeMemoryMigrationItem(value, index = 0) {
     ['lastUsedAt', 64],
     ['lastRecalledAt', 64],
     ['reflectionTopic', 120],
+    ['supersededBy', 120],
+    ['statusReason', 240],
+    ['updatedAt', 64],
+    ['decayedAt', 64],
+    ['supersededAt', 64],
   ]
   for (const [field, maxLength] of optionalStrings) {
     const valueForField = normalizeOptionalString(value[field], `memory ${index} ${field}`, maxLength)
@@ -146,6 +151,22 @@ export function normalizeMemoryMigrationItem(value, index = 0) {
   if (recallCount !== undefined) memory.recallCount = recallCount
   if (relatedIds !== undefined) memory.relatedIds = relatedIds
   if (emotionSnapshot !== undefined) memory.emotionSnapshot = emotionSnapshot
+
+  // v2 fields ride along so a SQLite copy does not drop lifecycle or confirmation.
+  // Missing values are filled the same way the renderer normalizer does, so a
+  // v1 package stays readable and a second pass is stable.
+  memory.schemaVersion = 2
+  const explicitStatus = value.status === 'active' || value.status === 'superseded' || value.status === 'archived'
+    ? value.status
+    : null
+  memory.status = explicitStatus
+    ?? (memory.supersededBy && value.supersededPending !== true ? 'superseded' : 'active')
+  if (!memory.updatedAt) memory.updatedAt = memory.createdAt
+  if (value.supersededPending === true) memory.supersededPending = true
+  else if (value.supersededPending === false) memory.supersededPending = false
+  if (value.userConfirmed === true || memory.source === 'manual') memory.userConfirmed = true
+  const mergedFrom = normalizeRelatedIds(value.mergedFrom, `memory ${index} mergedFrom`)
+  if (mergedFrom !== undefined) memory.mergedFrom = mergedFrom
   return memory
 }
 

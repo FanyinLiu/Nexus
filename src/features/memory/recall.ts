@@ -385,7 +385,11 @@ export async function buildMemoryRecallContext({
   retentionDays,
   currentEmotion,
 }: BuildMemoryRecallContextParams): Promise<MemoryRecallContext> {
-  const activeLongTermMemories = longTermMemories.filter((memory) => memory.enabled !== false)
+  const activeLongTermMemories = longTermMemories.filter((memory) => (
+    memory.enabled !== false
+    && memory.status !== 'superseded'
+    && memory.status !== 'archived'
+  ))
   const keywordLongTerm = rankMemories(activeLongTermMemories, query)
   const recentDaily = getRecentDailyEntries(dailyMemories, retentionDays).slice(0, 24)
   const keywordDaily = rankDailyEntries(recentDaily, query)

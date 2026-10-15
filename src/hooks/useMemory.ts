@@ -9,8 +9,10 @@ import {
   serializeMemoryArchive,
   warmupMemoryVectorModel,
 } from '../features/memory/index.ts'
+import { commitLongTermMemoryCap } from '../features/memory/memoryCapCommit.ts'
 import { formatMemoriesForPersonaFile } from '../features/memory/memoryPersistence.ts'
 import {
+  applyLongTermMemoryCap,
   loadDailyMemories,
   loadMemories,
   openTextFileWithFallback,
@@ -36,7 +38,7 @@ type UseMemoryParams = {
 
 export function useMemory({ settings }: UseMemoryParams) {
   const { t } = useTranslation()
-  const [memories, setMemories] = useState<MemoryItem[]>(() => loadMemories())
+  const [memories, setMemories] = useState<MemoryItem[]>(() => applyLongTermMemoryCap(loadMemories()).kept)
   const [dailyMemories, setDailyMemories] = useState<DailyMemoryStore>(() => loadDailyMemories())
   const [memoryAuthorityActive, setMemoryAuthorityActive] = useState(() => isMemoryLocalDataAuthorityActive())
   const memoryAuthorityHydratedRef = useRef(!memoryAuthorityActive)
@@ -48,7 +50,21 @@ export function useMemory({ settings }: UseMemoryParams) {
     return () => window.removeEventListener(MEMORY_LOCAL_DATA_AUTHORITY_CHANGED_EVENT, handleAuthorityChange)
   }, [])
   const memoriesRef = useRef(memories)
+  const capEnforcedRef = useRef(false)
   const dailyMemoriesRef = useRef(dailyMemories)
+
+  useEffect(() => {
+    if (capEnforcedRef.current) return
+    capEnforcedRef.current = true
+    const loaded = loadMemories()
+    const { kept, evicted } = commitLongTermMemoryCap(loaded)
+    if (!evicted.length) return
+    // Initial state is already the capped list. The save effect skips that
+    // first value, so write the survivors here or the over-cap blob stays
+    // on disk until the next edit.
+    memoriesRef.current = kept
+    saveMemories(kept)
+  }, [])
   const settingsRef = useRef(settings)
 
   useEffect(() => {

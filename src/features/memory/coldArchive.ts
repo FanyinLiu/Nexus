@@ -7,6 +7,7 @@
  */
 
 import type { ArchivedMemory, MemoryCategory, MemoryImportance, MemoryItem } from '../../types/memory.ts'
+import { isProtectedMemory } from '../../lib/storage/memoryCap.ts'
 import { getDecayedScore } from './decay.ts'
 import { isValidIsoTimestamp } from '../../lib/localDate.ts'
 import { normalizeText } from '../../lib/normalize.ts'
@@ -126,7 +127,7 @@ export function saveArchive(archive: ArchivedMemory[]): void {
 export function identifyArchiveCandidates(memories: MemoryItem[]): MemoryItem[] {
   const now = Date.now()
   return memories.filter((m) => {
-    if (m.importance === 'pinned' || m.importance === 'high') return false
+    if (isProtectedMemory(m) || m.importance === 'high') return false
     return getDecayedScore(m, now) < ARCHIVE_SCORE_THRESHOLD
   })
 }

@@ -85,6 +85,9 @@ test('normalizeMemoryItemsForStorage sanitizes rich memory metadata and dedupes 
     significance: 1,
     reflectionTopic: 'topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic topic',
     reflectionConfidence: 0,
+    schemaVersion: 2,
+    status: 'active',
+    updatedAt: '2026-06-04T00:00:00.000Z',
   })
 })
 
@@ -105,6 +108,9 @@ test('loadMemories compacts current store and writes normalized values back', ()
     source: 'chat',
     enabled: true,
     createdAt: '2026-06-04T00:00:00.000Z',
+    schemaVersion: 2,
+    status: 'active',
+    updatedAt: '2026-06-04T00:00:00.000Z',
   }])
   assert.deepEqual(JSON.parse(storage.getItem(MEMORY_STORAGE_KEY) ?? '[]'), memories)
 })

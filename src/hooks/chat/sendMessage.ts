@@ -9,8 +9,10 @@ import { noteUserMessageAndCheckReminder } from '../../features/safety/disclosur
 import {
   createDailyMemoryEntry,
   extractMemoriesFromMessage,
-  mergeMemories,
 } from '../../features/memory/index.ts'
+import { archiveEvictedMemories } from '../../features/memory/memoryCapCommit.ts'
+import { planTurnMemoryWrite } from '../../features/memory/reconcile.ts'
+import { appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { formatTraceLabel, logVoiceEvent } from '../../features/voice/index.ts'
 import { createId, shorten } from '../../lib/index.ts'
 import type { Translator } from '../../types/i18n.ts'
@@ -28,6 +30,7 @@ import {
   shouldClearSubmittedInput,
   tryAcquireChatSubmission,
 } from './submissionGuard.ts'
+import { bumpMemoryReconcileRevision, scheduleMemoryReconcile } from './memoryReconcile.ts'
 import { executeAssistantTurn } from './turnExecution.ts'
 import type { PendingReminderDraft, UseChatContext } from './types.ts'
 
@@ -221,16 +224,65 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
       }
 
       const nextMessages = [...messagesRef.current, userMessage]
-      const nextMemories = mergeMemories(ctx.memoriesRef.current, extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.()))
-      const nextDailyMemories = ctx.appendDailyMemoryEntries(
-        [createDailyMemoryEntry(userMessage, fromVoice ? 'voice' : 'chat')].filter(
-          (entry): entry is DailyMemoryEntry => Boolean(entry),
-        ),
-      )
+      const memoryRevision = bumpMemoryReconcileRevision()
+      const memoryPaused = currentSettings.memoryPaused === true
+      const candidates = memoryPaused
+        ? []
+        : extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.())
+      const plan = planTurnMemoryWrite({
+        memoryPaused,
+        existing: ctx.memoriesRef.current,
+        candidates,
+        now: userMessage.createdAt,
+      })
+      let nextMemories = plan.memories
+      let nextDailyMemories = ctx.dailyMemoriesRef.current
+      if (!plan.paused) {
+        if (plan.evicted.length) {
+          archiveEvictedMemories(plan.evicted)
+          ctx.appendDebugConsoleEvent({
+            source: 'system',
+            title: 'Memory cap eviction',
+            detail: `evicted=${plan.evicted.length}`,
+            tone: 'warning',
+          })
+        }
+        const persistedOps = plan.ops.filter((op) => op.op !== 'NOOP' || op.reason === 'protected')
+        if (persistedOps.length) appendMemoryOpLog(persistedOps)
+        nextMemories = plan.memories
+        ctx.memoriesRef.current = plan.memories
+        ctx.setMemories(plan.memories)
+        nextDailyMemories = ctx.appendDailyMemoryEntries(
+          [createDailyMemoryEntry(userMessage, fromVoice ? 'voice' : 'chat')].filter(
+            (entry): entry is DailyMemoryEntry => Boolean(entry),
+          ),
+        )
+        const completeChat = window.desktopPet?.completeChat
+        if (candidates.length && completeChat) {
+          scheduleMemoryReconcile({
+            revision: memoryRevision,
+            settings: {
+              providerId: currentSettings.apiProviderId,
+              baseUrl: currentSettings.apiBaseUrl,
+              apiKey: currentSettings.apiKey,
+              model: currentSettings.model,
+            },
+            existing: plan.memories,
+            candidates,
+            now: userMessage.createdAt,
+            completeChat,
+            applyMemories: (memories) => {
+              ctx.memoriesRef.current = memories
+              ctx.setMemories(memories)
+            },
+            onLog: (title, detail) => {
+              ctx.appendDebugConsoleEvent({ source: 'system', title, detail })
+            },
+          })
+        }
+      }
 
       messagesRef.current = nextMessages
-      ctx.memoriesRef.current = nextMemories
-      ctx.setMemories(nextMemories)
       setMessages(nextMessages)
 
       // Periodic AI-disclosure reminder (Tier 1.1 chunk E). Fires every
