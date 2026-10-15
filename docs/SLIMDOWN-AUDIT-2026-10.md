@@ -235,3 +235,17 @@ These are not in the PR.
 code deletion is unused copy and unreferenced binaries rather than a
 large dead-module drop. `verify:pr` still has to pass after the i18n
 key removal because `TranslationKey` is derived from the zh-CN dictionary.
+
+## Follow-up (owner-approved)
+
+The GitHub release `portrait-models-v1` is deleted. The git tag of the same
+name is kept. Nothing on `main` downloaded those weights; this audit was the
+only in-repo mention.
+
+The 37 unlinked docs listed above, plus `PROJECT_AUDIT_AND_ROADMAP_2026.md`,
+are removed in the follow-up after a fresh check that no README, doc, source
+file, or script names them. Bundled Haru, Hiyori, and Qiyi are removed.
+Mao stays the default Live2D model and Pip (`codex`) stays the bundled sample
+sprite pet. Settings schema 12 rewrites a stored `haru` or `hiyori` selection
+to `mao`, and a stored `qiyi` selection to `codex`, including character
+profiles. Imported model ids are unchanged.

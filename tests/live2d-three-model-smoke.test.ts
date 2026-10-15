@@ -56,15 +56,15 @@ const READY_SNAPSHOT = {
   expressionCount: '8',
 }
 
-test('three-model catalog and same-page sequence are exact', () => {
-  assert.deepEqual(LIVE2D_SMOKE_MODEL_IDS, ['mao', 'haru', 'hiyori'])
-  assert.deepEqual(LIVE2D_SMOKE_SWITCH_SEQUENCE, ['mao', 'haru', 'hiyori', 'mao'])
-  assert.deepEqual(LIVE2D_SMOKE_RESOURCE_PROFILES.hiyori, {
-    status: 'limited',
+test('bundled Live2D smoke catalog is the default model', () => {
+  assert.deepEqual(LIVE2D_SMOKE_MODEL_IDS, ['mao'])
+  assert.deepEqual(LIVE2D_SMOKE_SWITCH_SEQUENCE, ['mao'])
+  assert.deepEqual(LIVE2D_SMOKE_RESOURCE_PROFILES.mao, {
+    status: 'ready',
     mocDeclared: '1',
-    textures: 2,
-    motions: 10,
-    expressions: 0,
+    textures: 1,
+    motions: 8,
+    expressions: 8,
   })
 })
 
@@ -290,7 +290,7 @@ test('dev harness source keeps cold contexts isolated and switches without reloa
   assert.match(source, /for \(let attempt = 1; attempt <= 3; attempt \+= 1\)/)
   assert.match(source, /await page\.waitForTimeout\(160\)/)
   assert.match(source, /screenshot background compositor holes after 3 attempts/)
-  assert.match(source, /screenshotCount !== 7/)
+  assert.match(source, /screenshotCount !== 2/)
 })
 
 test('Live2D smoke owns a dynamic Vite server but never closes external mode', async () => {

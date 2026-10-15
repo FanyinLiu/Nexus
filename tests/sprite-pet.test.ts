@@ -374,8 +374,5 @@ test('discovered bundled sprite packages merge without duplicating built-in pres
     '126px',
   )
   assert.equal(presets.some((preset) => preset.id === 'sprite-extra'), true)
-  assert.equal(
-    presets.find((preset) => preset.id === 'qiyi')?.spriteAtlas?.imageRendering,
-    'auto',
-  )
+  assert.equal(presets.some((preset) => preset.id === 'qiyi'), false)
 })

@@ -925,8 +925,8 @@ export async function runLive2DSmoke(argv = process.argv.slice(2)) {
     report.coldStarts = await runColdStarts(browser, report.baseUrl, outDir, completeSettings)
     report.switchSequence = await runSwitchSequence(browser, report.baseUrl, outDir, completeSettings)
     report.screenshotCount = report.coldStarts.length + report.switchSequence.steps.length
-    if (report.screenshotCount !== 7) {
-      throw new Error(`Expected 7 screenshots, received ${report.screenshotCount}.`)
+    if (report.screenshotCount !== 2) {
+      throw new Error(`Expected 2 screenshots, received ${report.screenshotCount}.`)
     }
     report.ok = true
   } catch (error) {

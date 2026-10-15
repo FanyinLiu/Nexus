@@ -309,7 +309,38 @@ const V11_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: stri
   'custom-openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 11
+const REMOVED_LIVE2D_MODEL_IDS = new Set(['haru', 'hiyori'])
+const REMOVED_SPRITE_PET_IDS = new Set(['qiyi'])
+
+/**
+ * Map a stored companion id onto a model this build still ships.
+ * Removed Live2D samples return to Mao. The removed sprite pet returns to
+ * Pip, the bundled sample sprite pet. Imported ids are left alone.
+ */
+function remapRemovedBundledPetModelId(modelId: unknown): unknown {
+  if (typeof modelId !== 'string') return modelId
+  if (REMOVED_LIVE2D_MODEL_IDS.has(modelId)) return 'mao'
+  if (REMOVED_SPRITE_PET_IDS.has(modelId)) return 'codex'
+  return modelId
+}
+
+function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
+  const next = { ...raw }
+  if ('petModelId' in next) {
+    next.petModelId = remapRemovedBundledPetModelId(next.petModelId)
+  }
+  if (Array.isArray(next.characterProfiles)) {
+    next.characterProfiles = next.characterProfiles.map((profile) => {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return profile
+      if (!('petModelId' in profile)) return profile
+      const petModelId = remapRemovedBundledPetModelId(profile.petModelId)
+      return petModelId === profile.petModelId ? profile : { ...profile, petModelId }
+    })
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 12
 
 interface SettingsMigration {
   toVersion: number
@@ -450,6 +481,11 @@ const migrations: SettingsMigration[] = [
       ),
       V11_RETIRED_SPEECH_INPUT_DEFAULTS,
     ),
+  },
+  {
+    toVersion: 12,
+    description: 'Fall back when a removed bundled Live2D model or sprite pet is still selected',
+    migrate: migrateRemovedBundledPetModels,
   },
 ]
 

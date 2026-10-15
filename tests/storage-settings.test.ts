@@ -260,7 +260,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 11)
+    assert.equal(settings.settingsSchemaVersion, 12)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -287,6 +287,34 @@ test('migrates the old qiyi default pet to the Codex sprite pet', () => {
   const settings = loadSettings()
 
   assert.equal(settings.petModelId, 'codex')
+})
+
+test('migrates a removed bundled model back to the shipped default', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 11,
+      petModelId: 'haru',
+      characterProfiles: [
+        { id: 'char-hiyori', companionName: 'Hiyori', petModelId: 'hiyori' },
+        { id: 'char-qiyi', companionName: 'Qiyi', petModelId: 'qiyi' },
+        { id: 'char-imported', companionName: 'Imported', petModelId: 'imported-custom' },
+      ],
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.petModelId, 'mao')
+  assert.equal(settings.settingsSchemaVersion, 12)
+  assert.equal(settings.characterProfiles[0]?.petModelId, 'mao')
+  assert.equal(settings.characterProfiles[1]?.petModelId, 'codex')
+  assert.equal(settings.characterProfiles[2]?.petModelId, 'imported-custom')
 })
 
 test('migrates a stored previous catalog default to the current flagship', () => {
@@ -754,7 +782,7 @@ test('a schema 10 store keeps a non-retired manual selection and retires MiniMax
 
   const settings = loadSettings()
 
-  assert.equal(settings.settingsSchemaVersion, 11)
+  assert.equal(settings.settingsSchemaVersion, 12)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
   assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M3')
 })
@@ -863,7 +891,7 @@ test('missing apiProviderId does not promote a non-default MiniMax or SiliconFlo
 test('a newer schema version is left untouched and stays newer after save', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      settingsSchemaVersion: 12,
+      settingsSchemaVersion: 13,
       apiProviderId: 'siliconflow',
       apiBaseUrl: 'https://api.siliconflow.cn/v1',
       model: 'deepseek-ai/DeepSeek-V4-Flash',
@@ -877,7 +905,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
   })
 
   const settings = loadSettings()
-  assert.equal(settings.settingsSchemaVersion, 12)
+  assert.equal(settings.settingsSchemaVersion, 13)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
 
   saveSettings(settings, { silent: true })
@@ -885,7 +913,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
     settingsSchemaVersion?: number
     model?: string
   }
-  assert.equal(saved.settingsSchemaVersion, 12)
+  assert.equal(saved.settingsSchemaVersion, 13)
   assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 

@@ -183,13 +183,13 @@ test('pet:export-runtime can include a validated user pet package in the demo', 
       '--output-dir',
       outputDir,
       '--package',
-      'public/pets/qiyi',
+      'public/pets/codex',
     ])
 
-    assert.match(stdout, /demo package: pets\/qiyi/)
+    assert.match(stdout, /demo package: pets\/codex/)
 
     const includedManifest = JSON.parse(
-      await fs.readFile(path.join(outputDir, 'pets', 'qiyi', 'pet.json'), 'utf8'),
+      await fs.readFile(path.join(outputDir, 'pets', 'codex', 'pet.json'), 'utf8'),
     ) as {
       id?: string
       displayName?: string
@@ -211,20 +211,20 @@ test('pet:export-runtime can include a validated user pet package in the demo', 
         path?: string
       }>
     }
-    const sprite = await fs.readFile(path.join(outputDir, 'pets', 'qiyi', 'spritesheet.webp'))
+    const sprite = await fs.readFile(path.join(outputDir, 'pets', 'codex', 'spritesheet.webp'))
 
-    assert.equal(includedManifest.id, 'qiyi')
-    assert.equal(includedManifest.displayName, '七一')
+    assert.equal(includedManifest.id, 'codex')
+    assert.equal(includedManifest.displayName, 'Pip')
     assert.equal(includedManifest.spritesheetPath, 'spritesheet.webp')
-    assert.match(demo, /\.\/pets\/qiyi\/spritesheet\.webp/)
-    assert.equal(manifest.includedPetPackage?.id, 'qiyi')
+    assert.match(demo, /\.\/pets\/codex\/spritesheet\.webp/)
+    assert.equal(manifest.includedPetPackage?.id, 'codex')
     assert.equal(manifest.includedPetPackage?.source, 'user-provided --package input')
-    assert.equal(manifest.includedPetPackage?.targetDirectory, 'pets/qiyi')
-    assert.equal(manifest.includedPetPackage?.demoSpritePath, './pets/qiyi/spritesheet.webp')
+    assert.equal(manifest.includedPetPackage?.targetDirectory, 'pets/codex')
+    assert.equal(manifest.includedPetPackage?.demoSpritePath, './pets/codex/spritesheet.webp')
     assert.equal(path.basename(manifest.includedPetPackage?.sourceManifestPath ?? ''), 'pet.json')
     assert.equal(path.basename(manifest.includedPetPackage?.sourceSpritePath ?? ''), 'spritesheet.webp')
-    assert.ok(manifest.files?.some((file) => file.path === 'pets/qiyi/pet.json'))
-    assert.ok(manifest.files?.some((file) => file.path === 'pets/qiyi/spritesheet.webp'))
+    assert.ok(manifest.files?.some((file) => file.path === 'pets/codex/pet.json'))
+    assert.ok(manifest.files?.some((file) => file.path === 'pets/codex/spritesheet.webp'))
     assert.equal(sprite.toString('ascii', 0, 4), 'RIFF')
     assert.equal(sprite.toString('ascii', 8, 12), 'WEBP')
   })

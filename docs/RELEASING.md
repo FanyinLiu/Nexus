@@ -460,10 +460,10 @@ Flags:
    goes one step deeper by loading the panel, opening Settings, and reaching
    the model configuration path without real microphone or provider calls.
 3. `node scripts/live2d-three-model-smoke.mjs` — start an owned local Vite
-   server when no `--url` is supplied, run three-model cold starts and
-   same-page switches, and require seven screenshot evidence files. An
-   explicit `--url` is an external reachability check and is never closed by
-   the smoke harness.
+   server when no `--url` is supplied, cold-start the bundled Live2D model
+   (Mao), run the same-page recovery probe, and require two screenshot
+   evidence files. An explicit `--url` is an external reachability check and
+   is never closed by the smoke harness.
 4. `npm run package:dir:smoke` — package an unpacked app and launch it with
    the packaged smoke runner.
 5. `npm run runtime:packaged-sustained` — run only after packaged smoke has
