@@ -488,7 +488,7 @@ Flags:
 1. `npm audit --omit=dev`: 0 critical + 0 high.
 2. `electron/windowManager.js` enforces `contextIsolation: true`,
    `sandbox: true`, `nodeIntegration: false`, `webSecurity: true`.
-3. Electron version ≥ 43.2 (current stable; bump floor with new security minor).
+3. Electron version ≥ 43.5 (43.x security floor; bump with a new security minor).
 4. `electron-updater` ≥ 6.6.
 5. No API-key / token patterns committed (OpenAI, Google, AWS, Slack, GitHub).
 6. CSP header injected in `electron/rendererServer.js`.
