@@ -19,7 +19,6 @@ import { zhTWVoice } from './voice.ts'
 import { zhTWChat } from './chat.ts'
 import { zhTWOnboarding } from './onboarding.ts'
 import { zhTWPanel } from './panel.ts'
-import { zhTWIntegration } from './integration.ts'
 
 export const zhTWMessages = {
   ...zhTWCore,
@@ -37,5 +36,4 @@ export const zhTWMessages = {
   ...zhTWChat,
   ...zhTWOnboarding,
   ...zhTWPanel,
-  ...zhTWIntegration,
 } satisfies TranslationDictionary

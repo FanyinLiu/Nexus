@@ -77,10 +77,6 @@ export function syncPetInstance(inst) {
   }
 }
 
-export function syncPetWindowInstances() {
-  for (const inst of petInstances.values()) syncPetInstance(inst)
-}
-
 function applyPetInstance(inst) {
   const { win, state } = inst
   if (!win || win.isDestroyed()) return
