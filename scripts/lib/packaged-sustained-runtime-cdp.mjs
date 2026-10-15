@@ -207,13 +207,28 @@ export async function snapshotLive2D(pages) {
   return snapshots
 }
 
+/**
+ * Choose the page the sustained runtime should drive.
+ *
+ * Native pause/resume hides the pet BrowserWindow, so a ready panel canvas
+ * must not win just because CDP enumerated it first. Remounts on a hidden
+ * panel also stall in `booting` because animation frames do not advance.
+ */
 export function pickLive2DPage(pages, snapshots) {
-  for (let index = 0; index < snapshots.length; index += 1) {
+  const withSurface = []
+  for (let index = 0; index < pages.length; index += 1) {
     const snap = snapshots[index]
     if (snap?.ready || (snap?.canvasCount ?? 0) > 0 || snap?.phase) {
-      return pages[index]
+      withSurface.push(pages[index])
     }
   }
+
+  const petWithSurface = withSurface.find((page) => isViewPage(page, 'pet'))
+  if (petWithSurface) return petWithSurface
+  if (withSurface.length > 0) return withSurface[0]
+
+  const petPage = pages.find((page) => isViewPage(page, 'pet'))
+  if (petPage) return petPage
   for (const page of pages) {
     const url = page.url()
     if (/view=panel|view=pet/i.test(url)) return page
