@@ -160,6 +160,43 @@ test('deepseek v4 requests disable default thinking for chat compatibility', () 
   assert.deepEqual(JSON.parse(request.body).thinking, { type: 'disabled' })
 })
 
+test('gpt-6-sol sends reasoning_effort none only when tools are attached', () => {
+  const plain = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6-sol',
+    messages: [{ role: 'user', content: 'Ping' }],
+  })
+  const plainBody = JSON.parse(plain.body)
+  assert.equal(Object.hasOwn(plainBody, 'temperature'), false)
+  assert.equal(Object.hasOwn(plainBody, 'reasoning_effort'), false)
+
+  const withTools = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6-luna',
+    messages: [{ role: 'user', content: 'Ping' }],
+    tools: [{ type: 'function', function: { name: 'ping', parameters: { type: 'object' } } }],
+  })
+  const toolBody = JSON.parse(withTools.body)
+  assert.equal(toolBody.reasoning_effort, 'none')
+  assert.equal(toolBody.temperature, 0.8)
+
+  const astra = buildChatRequest({
+    providerId: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'test-key',
+    model: 'gpt-6-astra',
+    messages: [{ role: 'user', content: 'Ping' }],
+    tools: [{ type: 'function', function: { name: 'ping', parameters: { type: 'object' } } }],
+  })
+  const astraBody = JSON.parse(astra.body)
+  assert.equal(Object.hasOwn(astraBody, 'reasoning_effort'), false)
+  assert.equal(Object.hasOwn(astraBody, 'temperature'), false)
+})
+
 test('claude opus 4.8 requests omit non-default sampling parameters', () => {
   const request = buildChatRequest({
     providerId: 'anthropic',

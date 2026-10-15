@@ -105,7 +105,7 @@ test('resolveProviderConnectionRequest normalizes stored provider profiles', () 
     providerId: 'openai',
     baseUrl: 'https://proxy.example.test/v1/',
     apiKey: 'stored-key',
-    model: 'gpt-5.6-sol',
+    model: 'gpt-6-sol',
   })
 })
 

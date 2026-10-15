@@ -85,6 +85,7 @@ const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   // OpenAI — longest-first; 5.6 / 5.5 / 5.4 distinct rates, bare gpt-5 falls back to 5.4 cost
   { pattern: 'gpt-6-astra',         price: { inputPerM: 10.00, outputPerM: 50.00 } },
   { pattern: 'gpt-6.1-sol',         price: { inputPerM: 2.00,  outputPerM: 10.00 } },
+  { pattern: 'gpt-6-sol',           price: { inputPerM: 2.00,  outputPerM: 10.00 } },
   { pattern: 'gpt-6-luna',          price: { inputPerM: 0.10,  outputPerM: 0.50  } },
   { pattern: 'gpt-5.6-sol',         price: { inputPerM: 4.00,  outputPerM: 20.00  } },
   { pattern: 'gpt-5.6-terra',       price: { inputPerM: 2.00,  outputPerM: 12.00  } },
@@ -108,7 +109,12 @@ const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   { pattern: 'claude-haiku',        price: { inputPerM: 1.00,  outputPerM: 5.00  } },
   { pattern: 'grok-4.7',            price: { inputPerM: 2.00,  outputPerM: 6.00  } },
   { pattern: 'mistral-large-4',     price: { inputPerM: 1.36,  outputPerM: 4.18  } },
-  // Google Gemini
+  // Google Gemini — introductory paid rates as of 2026-10-15.
+  { pattern: 'gemini-4-argon',      price: { inputPerM: 2.00,  outputPerM: 10.00 } },
+  { pattern: 'gemini-3.8-flash',    price: { inputPerM: 0.75,  outputPerM: 3.75  } },
+  { pattern: 'gemini-3.6-flash',    price: { inputPerM: 0.75,  outputPerM: 3.75  } },
+  { pattern: 'gemini-3.5-flash-lite', price: { inputPerM: 0.30, outputPerM: 2.50 } },
+  { pattern: 'gemini-3.1-pro',      price: { inputPerM: 2.00,  outputPerM: 12.00 } },
   { pattern: 'gemini-1.5-pro',      price: { inputPerM: 3.50,  outputPerM: 10.50 } },
   { pattern: 'gemini-1.5-flash',    price: { inputPerM: 0.075, outputPerM: 0.30  } },
   { pattern: 'gemini-2.0-flash',    price: { inputPerM: 0.10,  outputPerM: 0.40  } },

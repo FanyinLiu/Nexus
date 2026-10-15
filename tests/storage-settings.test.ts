@@ -258,7 +258,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 8)
+    assert.equal(settings.settingsSchemaVersion, 9)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -310,8 +310,8 @@ test('migrates a stored previous catalog default to the current flagship', () =>
 
   const settings = loadSettings()
 
-  assert.equal(settings.model, 'gpt-5.6-sol')
-  assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-5.6-sol')
+  assert.equal(settings.model, 'gpt-6-sol')
+  assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-6-sol')
   assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5-5')
   assert.equal(settings.textProviderProfiles.xai?.model, 'grok-4.20')
 })
@@ -385,6 +385,56 @@ test('migrates stored October 2026 catalog defaults without touching custom ids'
   assert.equal(settings.textProviderProfiles.venice?.model, 'deepseek-v4-1-flash')
   assert.equal(settings.speechInputProviderProfiles['openai-stt']?.model, 'gpt-transcribe')
   assert.equal(settings.speechInputProviderProfiles['elevenlabs-stt']?.model, 'scribe_v2')
+})
+
+test('migrates removed October 2026 catalog and speech ids', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 8,
+      apiProviderId: 'openai',
+      apiBaseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-5.6-sol',
+      speechOutputProviderId: 'dashscope-tts',
+      speechOutputModel: 'qwen3-tts-instruct-flash',
+      textProviderProfiles: {
+        together: {
+          apiBaseUrl: 'https://api.together.xyz/v1',
+          apiKey: '',
+          model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+        },
+        mistral: { apiBaseUrl: 'https://api.mistral.ai/v1', apiKey: '', model: 'devstral-small-latest' },
+        qianfan: { apiBaseUrl: 'https://qianfan.baidubce.com/v2', apiKey: '', model: 'ernie-x1-turbo-32k' },
+        nvidia: { apiBaseUrl: 'https://integrate.api.nvidia.com/v1', apiKey: '', model: 'deepseek-ai/deepseek-r1' },
+        siliconflow: {
+          apiBaseUrl: 'https://api.siliconflow.cn/v1',
+          apiKey: '',
+          model: 'Qwen/Qwen3.8-Max',
+        },
+        moonshot: { apiBaseUrl: 'https://api.moonshot.cn/v1', apiKey: '', model: 'kimi-k2.6' },
+      },
+      speechOutputProviderProfiles: {
+        'elevenlabs-tts': { model: 'eleven_v4' },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.model, 'gpt-6-sol')
+  assert.equal(settings.speechOutputModel, 'qwen3-tts-flash')
+  assert.equal(settings.textProviderProfiles.together?.model, 'moonshotai/Kimi-K3')
+  assert.equal(settings.textProviderProfiles.mistral?.model, 'mistral-small-2603')
+  assert.equal(settings.textProviderProfiles.qianfan?.model, 'ernie-4.5-turbo-128k')
+  assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4-flash')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4-Flash')
+  assert.equal(settings.textProviderProfiles.moonshot?.model, 'kimi-k2.6')
+  assert.equal(settings.speechOutputProviderProfiles['elevenlabs-tts']?.model, 'eleven_multilingual_v2')
 })
 
 test('preserves an explicit older model that was not the previous default', () => {

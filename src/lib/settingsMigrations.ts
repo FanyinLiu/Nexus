@@ -139,7 +139,106 @@ function remapSpeechInputDefaults(
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 8
+/**
+ * Model ids removed from the October 2026 catalog, plus the OpenAI default
+ * moving from gpt-5.6-sol to gpt-6-sol. Unlike v6–v8, every matching stored
+ * id is rewritten, not only the previous provider default.
+ */
+const V9_RETIRED_MODEL_IDS: Record<string, Record<string, string>> = {
+  openai: { 'gpt-5.6-sol': 'gpt-6-sol' },
+  together: {
+    'deepseek-ai/DeepSeek-V4-Flash-0731': 'deepseek-ai/DeepSeek-V4.1-Flash',
+    'Qwen/Qwen3.5-397B-A17B': 'Qwen/Qwen3.8-2.4T-A95B',
+    'MiniMaxAI/MiniMax-M2.7': 'MiniMaxAI/MiniMax-M3',
+    'meta-llama/Llama-3.3-70B-Instruct-Turbo': 'moonshotai/Kimi-K3',
+  },
+  siliconflow: {
+    'Qwen/Qwen3.8-Max': 'deepseek-ai/DeepSeek-V4-Flash',
+    'Qwen/Qwen3.8-27B': 'deepseek-ai/DeepSeek-V4-Flash',
+  },
+  'siliconflow-global': {
+    'Qwen/Qwen3.8-Max': 'deepseek-ai/DeepSeek-V4-Flash',
+    'Qwen/Qwen3.8-27B': 'deepseek-ai/DeepSeek-V4-Flash',
+  },
+  qianfan: {
+    'ernie-x1-turbo-32k': 'ernie-4.5-turbo-128k',
+    'ernie-x1-turbo-32k-preview': 'ernie-4.5-turbo-128k',
+  },
+  nvidia: {
+    'deepseek-ai/deepseek-r1': 'deepseek-ai/deepseek-v4-flash',
+  },
+  mistral: {
+    'devstral-medium-latest': 'mistral-medium-3-5',
+    'devstral-small-latest': 'mistral-small-2603',
+  },
+}
+
+const V9_RETIRED_SPEECH_OUTPUT_IDS: Record<string, Record<string, string>> = {
+  'dashscope-tts': { 'qwen3-tts-instruct-flash': 'qwen3-tts-flash' },
+  'elevenlabs-tts': {
+    'eleven_turbo_v2_5': 'eleven_flash_v2_5',
+    'eleven_v4': 'eleven_multilingual_v2',
+    'eleven_v4_turbo': 'eleven_multilingual_v2',
+  },
+}
+
+function remapStoredModelIds(
+  raw: Record<string, unknown>,
+  mapping: Record<string, Record<string, string>>,
+) {
+  const next = { ...raw }
+  const storedProviderId = typeof next.apiProviderId === 'string' ? next.apiProviderId : ''
+  const storedBaseUrl = typeof next.apiBaseUrl === 'string' ? next.apiBaseUrl : ''
+  const storedModel = typeof next.model === 'string' ? next.model : ''
+  const providerId = storedProviderId || inferApiProviderId(storedBaseUrl, storedModel)
+  const rootMap = providerId ? mapping[providerId] : undefined
+  if (storedModel && rootMap && rootMap[storedModel]) {
+    next.model = rootMap[storedModel]
+  }
+
+  const profiles = next.textProviderProfiles
+  if (profiles && typeof profiles === 'object' && !Array.isArray(profiles)) {
+    const nextProfiles: Record<string, unknown> = { ...profiles }
+    for (const [id, profile] of Object.entries(nextProfiles)) {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue
+      const model = 'model' in profile && typeof profile.model === 'string' ? profile.model : ''
+      const providerMap = mapping[id]
+      if (!model || !providerMap || !providerMap[model]) continue
+      nextProfiles[id] = { ...profile, model: providerMap[model] }
+    }
+    next.textProviderProfiles = nextProfiles
+  }
+  return next
+}
+
+function remapSpeechOutputModelIds(
+  raw: Record<string, unknown>,
+  mapping: Record<string, Record<string, string>>,
+) {
+  const next = { ...raw }
+  const providerId = typeof next.speechOutputProviderId === 'string' ? next.speechOutputProviderId : ''
+  const model = typeof next.speechOutputModel === 'string' ? next.speechOutputModel : ''
+  const rootMap = providerId ? mapping[providerId] : undefined
+  if (model && rootMap && rootMap[model]) {
+    next.speechOutputModel = rootMap[model]
+  }
+
+  const profiles = next.speechOutputProviderProfiles
+  if (profiles && typeof profiles === 'object' && !Array.isArray(profiles)) {
+    const nextProfiles: Record<string, unknown> = { ...profiles }
+    for (const [id, profile] of Object.entries(nextProfiles)) {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue
+      const profileModel = 'model' in profile && typeof profile.model === 'string' ? profile.model : ''
+      const providerMap = mapping[id]
+      if (!profileModel || !providerMap || !providerMap[profileModel]) continue
+      nextProfiles[id] = { ...profile, model: providerMap[profileModel] }
+    }
+    next.speechOutputProviderProfiles = nextProfiles
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 9
 
 interface SettingsMigration {
   toVersion: number
@@ -249,6 +348,14 @@ const migrations: SettingsMigration[] = [
     migrate: (raw) => remapSpeechInputDefaults(
       remapStoredCatalogDefaults(raw, V8_RETIRED_CATALOG_DEFAULTS),
       V8_RETIRED_SPEECH_INPUT_DEFAULTS,
+    ),
+  },
+  {
+    toVersion: 9,
+    description: 'Move stored OpenAI defaults to gpt-6-sol and rewrite catalog ids that left the official lists',
+    migrate: (raw) => remapSpeechOutputModelIds(
+      remapStoredModelIds(raw, V9_RETIRED_MODEL_IDS),
+      V9_RETIRED_SPEECH_OUTPUT_IDS,
     ),
   },
 ]

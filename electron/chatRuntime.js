@@ -328,6 +328,29 @@ function shouldDisableAnthropicThinking(providerId, model) {
   )
 }
 
+/**
+ * GPT-6 Chat Completions sampling.
+ *
+ * Sol and Luna accept function tools only with reasoning_effort "none".
+ * Astra and 6.1 Sol reject "none"; their tools need the Responses API,
+ * which this client does not call. Any effort other than "none" rejects
+ * temperature, so those requests omit it.
+ */
+function openAiChatCompletionsSampling(providerId, model, hasTools) {
+  if (normalizeChatProviderId(providerId) !== 'openai') {
+    return { omitTemperature: false, reasoningEffort: undefined }
+  }
+  const id = String(model ?? '').trim().toLowerCase()
+  const toolsWithNone = id === 'gpt-6-sol' || id === 'gpt-6-luna'
+  if (hasTools && toolsWithNone) {
+    return { omitTemperature: false, reasoningEffort: 'none' }
+  }
+  if (toolsWithNone || id === 'gpt-6-astra' || id === 'gpt-6.1-sol') {
+    return { omitTemperature: true, reasoningEffort: undefined }
+  }
+  return { omitTemperature: false, reasoningEffort: undefined }
+}
+
 export function buildChatRequest(payload, options = {}) {
   const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
@@ -385,13 +408,15 @@ export function buildChatRequest(payload, options = {}) {
   const tools = Array.isArray(payload?.tools) && payload.tools.length > 0
     ? payload.tools
     : undefined
+  const sampling = openAiChatCompletionsSampling(providerId, payload?.model, Boolean(tools))
   const openAiBody = {
     model: payload?.model,
     messages: payload?.messages,
-    temperature: payload?.temperature ?? 0.8,
+    ...(sampling.omitTemperature ? {} : { temperature: payload?.temperature ?? 0.8 }),
     max_tokens: payload?.maxTokens ?? 500,
     ...(stream ? { stream: true } : {}),
     ...(tools ? { tools } : {}),
+    ...(sampling.reasoningEffort ? { reasoning_effort: sampling.reasoningEffort } : {}),
   }
 
   if (shouldDisableOpenAiCompatibleThinking(providerId, payload?.model)) {

@@ -37,6 +37,7 @@ import {
   formatVolcengineSpeechOutputCombo,
   mapLanguageToMiniMaxBoost,
   mapLanguageToDashScopeType,
+  resolveDashScopeTtsModel,
 } from '../services/ttsService.js'
 import { synthesizeLocalTts } from '../services/localTts.js'
 import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
@@ -483,7 +484,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     } else if (isDashScopeSpeechOutputProvider(payload.providerId)) {
       endpoint = `${baseUrl}/services/aigc/multimodal-generation/generation`
       requestBody = JSON.stringify({
-        model: payload.model || 'qwen3-tts-instruct-flash',
+        model: resolveDashScopeTtsModel(payload.model),
         input: {
           text: content,
           voice: payload.voice || 'Cherry',

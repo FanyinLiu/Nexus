@@ -424,7 +424,7 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
     id: 'dashscope-tts',
     label: 'provider.tts.dashscope-tts.label',
     baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
-    defaultModel: 'qwen3-tts-instruct-flash',
+    defaultModel: 'qwen3-tts-flash',
     defaultVoice: 'Cherry',
     notes: 'provider.tts.dashscope-tts.notes',
     protocol: 'dashscope',
@@ -433,7 +433,6 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
     supportsStreaming: true,
     supportsCustomVoiceId: true,
     modelOptions: [
-      { value: 'qwen3-tts-instruct-flash', label: 'provider.tts.dashscope-tts.model.qwen3-tts-instruct-flash.label' },
       { value: 'qwen3-tts-flash', label: 'provider.tts.dashscope-tts.model.qwen3-tts-flash.label' },
     ],
     fallbackVoiceOptions: DASHSCOPE_VOICE_OPTIONS,
@@ -455,9 +454,6 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
     modelOptions: [
       { value: 'eleven_multilingual_v2', label: 'provider.tts.elevenlabs-tts.model.eleven_multilingual_v2.label' },
       { value: 'eleven_v3', label: 'provider.tts.elevenlabs-tts.model.eleven_v3.label' },
-      { value: 'eleven_v4', label: 'provider.tts.elevenlabs-tts.model.eleven_v4.label' },
-      { value: 'eleven_v4_turbo', label: 'provider.tts.elevenlabs-tts.model.eleven_v4_turbo.label' },
-      { value: 'eleven_turbo_v2_5', label: 'provider.tts.elevenlabs-tts.model.eleven_turbo_v2_5.label' },
       { value: 'eleven_flash_v2_5', label: 'provider.tts.elevenlabs-tts.model.eleven_flash_v2_5.label' },
     ],
     fallbackVoiceOptions: ELEVENLABS_PRESET_VOICE_OPTIONS,

@@ -11,10 +11,10 @@ function languageBase(language) {
   return normalized.split(/[-_]/)[0].toLowerCase()
 }
 
-/** Official xAI STT formatting languages. Chinese is not on this list. */
+/** Official xAI STT languages. Mandarin (`zh`) is on the formatting list. */
 const XAI_STT_FORMAT_LANGUAGES = new Set([
   'ar', 'cs', 'da', 'nl', 'en', 'fil', 'fr', 'de', 'hi', 'id', 'it', 'ja', 'ko',
-  'mk', 'ms', 'fa', 'pl', 'pt', 'ro', 'ru', 'es', 'sv', 'th', 'tr', 'vi',
+  'mk', 'ms', 'fa', 'pl', 'pt', 'ro', 'ru', 'es', 'sv', 'th', 'tr', 'vi', 'zh',
 ])
 
 /** Official xAI TTS BCP-47 codes that we can pin from Nexus UI languages. */
@@ -35,8 +35,7 @@ export function mapLanguageToXaiTts(language) {
 /**
  * Map a Nexus UI language to an xAI STT formatting language.
  * Returns empty when the official list does not include that language
- * (notably Chinese) so we omit `language`/`format` instead of sending
- * an unsupported code.
+ * so we omit `language`/`format` instead of sending an unsupported code.
  */
 export function mapLanguageToXaiStt(language) {
   const code = languageBase(language)

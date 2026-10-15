@@ -127,6 +127,7 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   // OpenAI — longest-first so GPT-6 and 5.6 variants don't collide with bare "gpt-5"
   { pattern: 'gpt-6-astra',     price: { tier: 'heavy',    inputPricePerMTokens: 10,   outputPricePerMTokens: 50   } },
   { pattern: 'gpt-6.1-sol',     price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
+  { pattern: 'gpt-6-sol',       price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
   { pattern: 'gpt-6-luna',      price: { tier: 'cheap',    inputPricePerMTokens: 0.1,  outputPricePerMTokens: 0.5  } },
   { pattern: 'gpt-5.6-sol',     price: { tier: 'heavy',    inputPricePerMTokens: 4,    outputPricePerMTokens: 20   } },
   { pattern: 'gpt-5.6-terra',   price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 12   } },
@@ -149,7 +150,13 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   { pattern: 'mistral-large-4',   price: { tier: 'standard', inputPricePerMTokens: 1.36, outputPricePerMTokens: 4.18 } },
   { pattern: 'deepseek-chat',   price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },
   { pattern: 'deepseek-reasoner', price: { tier: 'cheap',    inputPricePerMTokens: 0.14, outputPricePerMTokens: 0.28 } },
-  // Google Gemini
+  // Google Gemini — introductory paid rates as of 2026-10-15.
+  // gemini-3.5-flash-lite must stay longer than any bare gemini-3.5 pattern.
+  { pattern: 'gemini-4-argon',       price: { tier: 'heavy',    inputPricePerMTokens: 2,    outputPricePerMTokens: 10   } },
+  { pattern: 'gemini-3.8-flash',     price: { tier: 'standard', inputPricePerMTokens: 0.75, outputPricePerMTokens: 3.75 } },
+  { pattern: 'gemini-3.6-flash',     price: { tier: 'standard', inputPricePerMTokens: 0.75, outputPricePerMTokens: 3.75 } },
+  { pattern: 'gemini-3.5-flash-lite', price: { tier: 'cheap',   inputPricePerMTokens: 0.30, outputPricePerMTokens: 2.50 } },
+  { pattern: 'gemini-3.1-pro',       price: { tier: 'heavy',    inputPricePerMTokens: 2,    outputPricePerMTokens: 12   } },
   { pattern: 'gemini-1.5-pro',  price: { tier: 'heavy',    inputPricePerMTokens: 3.5,  outputPricePerMTokens: 10.5 } },
   { pattern: 'gemini-1.5-flash', price: { tier: 'cheap',   inputPricePerMTokens: 0.075, outputPricePerMTokens: 0.30 } },
   { pattern: 'gemini-2.0-flash', price: { tier: 'cheap',   inputPricePerMTokens: 0.10, outputPricePerMTokens: 0.40 } },

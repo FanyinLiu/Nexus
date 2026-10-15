@@ -115,6 +115,15 @@ describe('byModel accumulation', () => {
     assert.equal(byModel['claude-sonnet-4-6'].calls, 1)
   })
 
+  test('prices Gemini 4 Argon and gpt-6-sol instead of treating them as free', () => {
+    meter.recordUsage('chat', 'hello world', 'reply', { modelId: 'gemini-4-argon' })
+    meter.recordUsage('chat', 'hello world', 'reply', { modelId: 'gpt-6-sol' })
+    const snapshot = meter.getMeterSnapshot()
+    const byModel = snapshot.daily.byModel ?? {}
+    assert.ok(byModel['gemini-4-argon'].costUsd > 0)
+    assert.ok(byModel['gpt-6-sol'].costUsd > 0)
+  })
+
   test('does not create byModel entry when modelId omitted', () => {
     meter.recordUsage('tool', 'input', 'output')
     const snapshot = meter.getMeterSnapshot()
