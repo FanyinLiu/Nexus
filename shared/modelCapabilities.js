@@ -25,6 +25,8 @@ const VISION_MODEL_PATTERNS = [
   /gpt-5/i,
   /gpt-6/i,
   /deepseek-flash/i,
+  /deepseek-v4\.1/i,
+  /deepseek-v4-1/i,
   /grok-4\./i,
   /minimax-m3/i,
   /\bo3\b|\bo4\b/i,
