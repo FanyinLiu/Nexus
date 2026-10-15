@@ -23,9 +23,12 @@ v0.4.7 remains the current stable release. Full detail in
 - Custom OpenAI-compatible STT defaults to `gpt-transcribe`, OpenAI's current
   file-transcription model. A stored `custom-openai-stt` model that is still
   `gpt-4o-mini-transcribe` moves with it.
-- Pending, and not part of this candidate until they merge: #137 (first-use
-  setup and settings recovery) and #133 (guard against moving the README
-  stable link too early). Add both to this section once they land.
+- First-use setup (#137): Electron opens the guide in the panel, settings can
+  reopen onboarding, and a failed model save shows an error. The first-use
+  smoke covers setup chat and restart.
+- Stable README link (#133): onboarding message-action demo styles are
+  restored, and the distribution audit keeps the introductory stable entry on
+  the public stable release.
 
 ## [0.4.7] - 2026-08-27
 

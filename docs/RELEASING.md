@@ -132,8 +132,7 @@ entry stays there. This record only prepares `v0.4.8-beta.1`: the package
 version, changelog, and release notes. It does not create a tag, a draft,
 or a GitHub Release. The owner pushes the tag only after this commit is on
 `main`, CI is green, and `npm run prerelease-check -- v0.4.8-beta.1` passes.
-#137 and #133 were still open when this candidate was prepared. If they
-should ship in beta.1, merge them and add them to the notes before the tag.
+#137 and #133 are on `main` and are listed in this candidate.
 
 This doc is the source of truth for every release. The short version:
 

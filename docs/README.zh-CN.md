@@ -32,7 +32,7 @@
 
 ## 本次 beta 候选 — v0.4.8-beta.1
 
-> **尚未打 tag，不是稳定版。** 当前稳定入口仍是 v0.4.7。详见 [English release notes](RELEASE-NOTES-v0.4.8-beta.1.md)。#137 与 #133 仍未合并，合并后再写入候选说明。
+> **尚未打 tag，不是稳定版。** 当前稳定入口仍是 v0.4.7。#137 与 #133 已包含在本候选中。详见 [English release notes](RELEASE-NOTES-v0.4.8-beta.1.md)。
 
 ## 本次稳定更新 — v0.4.7
 

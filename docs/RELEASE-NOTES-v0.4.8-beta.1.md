@@ -7,7 +7,7 @@ stays on v0.4.7. This document does not publish the beta.
 The candidate carries the October 2026 provider catalog that landed in #139,
 then removes `MiniMax-M2.7` before its 2026-11-18 retirement and points the
 custom OpenAI-compatible speech-to-text default at OpenAI's current file
-transcription model.
+transcription model. #137 and #133 are included.
 
 ## What Changed
 
@@ -55,11 +55,24 @@ exactly `gpt-4o-mini-transcribe`. A model name typed for a private proxy is
 left alone. The official `openai-stt` picker still lists the deprecated ids
 for existing integrations; v8 already moved its previous default.
 
+### First-use setup (#137)
+
+- In Electron, a pending first-use guide opens in the panel. Only that window
+  can use the settings vault. The handoff does not carry a settings draft and
+  does not mark onboarding complete.
+- Settings can reopen the onboarding guide.
+- A failed model save shows an error notice.
+- CI runs the first-use smoke for setup chat and restart.
+
+### Stable release link (#133)
+
+- Onboarding message-action demo styles are restored.
+- The distribution audit checks the introductory stable declaration in each
+  README. The package may be `v0.4.8-beta.1` while that declaration stays on
+  v0.4.7 and links the stable notes.
+
 ## Known issues
 
-- #137 (first-use setup and settings recovery) and #133 (README stable-link
-  guard) are still open. They are not in this candidate. Add them to these
-  notes after they merge, before the tag, if beta.1 should include them.
 - No cross-platform physical-device evidence is claimed.
 
 ## Beta validation boundary
