@@ -194,7 +194,7 @@ export const SPEECH_INPUT_PROVIDERS: SpeechInputProviderEntry[] = [
     id: 'custom-openai-stt',
     label: 'provider.stt.custom-openai-stt.label',
     baseUrl: '',
-    defaultModel: 'gpt-4o-mini-transcribe',
+    defaultModel: 'gpt-transcribe',
     notes: 'provider.stt.custom-openai-stt.notes',
     protocol: 'openai-compatible',
     kind: 'remote',

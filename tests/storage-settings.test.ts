@@ -5,7 +5,7 @@ import { loadSettings, saveSettings, SETTINGS_STORAGE_KEY } from '../src/lib/sto
 import { commitSettingsUpdate } from '../src/app/store/commitSettingsUpdate.ts'
 import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
 import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
-import { getSpeechOutputProvider } from '../src/lib/speechProviderCatalog.ts'
+import { getSpeechInputProvider, getSpeechOutputProvider } from '../src/lib/speechProviderCatalog.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -260,7 +260,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 10)
+    assert.equal(settings.settingsSchemaVersion, 11)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -439,7 +439,7 @@ test('migrates removed October 2026 catalog and speech ids', () => {
   assert.equal(settings.speechOutputProviderProfiles['elevenlabs-tts']?.model, 'eleven_multilingual_v2')
 })
 
-test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults without moving coding plans', () => {
+test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults, then retires a leftover MiniMax-M2.7', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
       settingsSchemaVersion: 9,
@@ -495,7 +495,7 @@ test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults without moving cod
   assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4.1-flash')
   assert.equal(settings.textProviderProfiles['minimax-global']?.model, 'MiniMax-M3')
   assert.equal(settings.textProviderProfiles['minimax-coding']?.model, 'MiniMax-M3.1-Flash-Preview')
-  assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M2.7')
+  assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M3.1-Flash-Preview')
 })
 
 test('schema below 8 pins a bare MiniMax-M3 Token Plan user before promoting the coding default', () => {
@@ -729,7 +729,7 @@ test('re-applying v9 and v10 does not move a manual non-default again', () => {
   assert.equal(migrateSettings(once, 10).model, 'gpt-5.6-terra')
 })
 
-test('a schema 10 store keeps a model the user selected after the default promotion', () => {
+test('a schema 10 store keeps a non-retired manual selection and retires MiniMax-M2.7', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
       settingsSchemaVersion: 10,
@@ -754,9 +754,81 @@ test('a schema 10 store keeps a model the user selected after the default promot
 
   const settings = loadSettings()
 
-  assert.equal(settings.settingsSchemaVersion, 10)
+  assert.equal(settings.settingsSchemaVersion, 11)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
-  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M2.7')
+  assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M3')
+})
+
+test('schema 11 retires a selected MiniMax-M2.7 and the custom OpenAI STT default', () => {
+  const china = migrateSettings({
+    settingsSchemaVersion: 10,
+    apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+    model: 'MiniMax-M2.7',
+  }, 10)
+  assert.equal(china.apiProviderId, 'minimax')
+  assert.equal(china.model, 'MiniMax-M3')
+
+  const globalPayg = migrateSettings({
+    settingsSchemaVersion: 10,
+    apiBaseUrl: 'https://api.minimax.io/anthropic',
+    model: 'MiniMax-M2.7',
+  }, 10)
+  assert.equal(globalPayg.apiProviderId, 'minimax-global')
+  assert.equal(globalPayg.model, 'MiniMax-M3')
+
+  const coding = migrateSettings({
+    settingsSchemaVersion: 10,
+    apiProviderId: 'minimax-coding',
+    apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+    model: 'MiniMax-M2.7',
+    textProviderProfiles: {
+      'minimax-coding-global': {
+        apiBaseUrl: 'https://api.minimax.io/anthropic',
+        apiKey: '',
+        model: 'MiniMax-M2.7',
+      },
+      minimax: {
+        apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+        apiKey: '',
+        model: 'MiniMax-M2.7-highspeed',
+      },
+      'minimax-global': {
+        apiBaseUrl: 'https://api.minimax.io/anthropic',
+        apiKey: '',
+        model: 'MiniMax-M2.5',
+      },
+    },
+    speechInputProviderId: 'custom-openai-stt',
+    speechInputModel: 'gpt-4o-mini-transcribe',
+    speechInputProviderProfiles: {
+      'custom-openai-stt': { model: 'my-proxy-model' },
+      'openai-stt': { model: 'gpt-4o-mini-transcribe' },
+    },
+  }, 10)
+
+  assert.equal(coding.apiProviderId, 'minimax-coding')
+  assert.equal(coding.model, 'MiniMax-M3.1-Flash-Preview')
+  const profiles = coding.textProviderProfiles as Record<string, { model: string }>
+  assert.equal(profiles['minimax-coding-global']?.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(profiles.minimax?.model, 'MiniMax-M2.7-highspeed')
+  assert.equal(profiles['minimax-global']?.model, 'MiniMax-M2.5')
+  assert.equal(coding.speechInputModel, 'gpt-transcribe')
+  const speechProfiles = coding.speechInputProviderProfiles as Record<string, { model: string }>
+  assert.equal(speechProfiles['custom-openai-stt']?.model, 'my-proxy-model')
+  assert.equal(speechProfiles['openai-stt']?.model, 'gpt-4o-mini-transcribe')
+
+  const storedDefault = migrateSettings({
+    settingsSchemaVersion: 10,
+    speechInputProviderProfiles: {
+      'custom-openai-stt': { model: 'gpt-4o-mini-transcribe' },
+    },
+  }, 10)
+  const storedSpeech = storedDefault.speechInputProviderProfiles as Record<string, { model: string }>
+  assert.equal(storedSpeech['custom-openai-stt']?.model, 'gpt-transcribe')
+  assert.equal(getSpeechInputProvider('custom-openai-stt').defaultModel, 'gpt-transcribe')
+  for (const providerId of ['minimax', 'minimax-global', 'minimax-coding', 'minimax-coding-global']) {
+    assert.ok(!getApiProviderPreset(providerId).models.includes('MiniMax-M2.7'))
+  }
 })
 
 test('missing apiProviderId does not promote a non-default MiniMax or SiliconFlow model', () => {
@@ -791,7 +863,7 @@ test('missing apiProviderId does not promote a non-default MiniMax or SiliconFlo
 test('a newer schema version is left untouched and stays newer after save', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      settingsSchemaVersion: 11,
+      settingsSchemaVersion: 12,
       apiProviderId: 'siliconflow',
       apiBaseUrl: 'https://api.siliconflow.cn/v1',
       model: 'deepseek-ai/DeepSeek-V4-Flash',
@@ -805,7 +877,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
   })
 
   const settings = loadSettings()
-  assert.equal(settings.settingsSchemaVersion, 11)
+  assert.equal(settings.settingsSchemaVersion, 12)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
 
   saveSettings(settings, { silent: true })
@@ -813,7 +885,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
     settingsSchemaVersion?: number
     model?: string
   }
-  assert.equal(saved.settingsSchemaVersion, 11)
+  assert.equal(saved.settingsSchemaVersion, 12)
   assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 

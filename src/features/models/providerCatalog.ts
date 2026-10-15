@@ -210,7 +210,6 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
     models: [
       'MiniMax-M3.1-Flash-Preview',
       'MiniMax-M3',
-      'MiniMax-M2.7',
       'MiniMax-M2.7-highspeed',
       'MiniMax-M2.5',
       'MiniMax-M2.5-highspeed',
@@ -231,7 +230,6 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
     models: [
       'MiniMax-M3.1-Flash-Preview',
       'MiniMax-M3',
-      'MiniMax-M2.7',
       'MiniMax-M2.7-highspeed',
       'MiniMax-M2.5',
       'MiniMax-M2.5-highspeed',
@@ -252,7 +250,6 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
     models: [
       'MiniMax-M3.1-Flash-Preview',
       'MiniMax-M3',
-      'MiniMax-M2.7',
       'MiniMax-M2.7-highspeed',
       'MiniMax-M2.5',
       'MiniMax-M2.5-highspeed',
@@ -273,7 +270,6 @@ export const API_PROVIDER_PRESETS: ApiProviderPreset[] = [
     models: [
       'MiniMax-M3.1-Flash-Preview',
       'MiniMax-M3',
-      'MiniMax-M2.7',
       'MiniMax-M2.7-highspeed',
       'MiniMax-M2.5',
       'MiniMax-M2.5-highspeed',

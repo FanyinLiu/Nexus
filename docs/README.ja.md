@@ -30,6 +30,10 @@
 
 ---
 
+## 今回の beta 候補 — v0.4.8-beta.1
+
+> **タグも公開リリースもまだありません。** 現在の安定版は v0.4.7 のままです。詳細は [English release notes](RELEASE-NOTES-v0.4.8-beta.1.md)。#137 と #133 は未マージです。
+
 ## 今回の安定更新 — v0.4.7
 
 > **テーマ：互換性、立絵 v4、モデルカタログ。** Cubism リソースを有効化前に検査し、Portrait Puppet v4 を正式採用。Grok 音声と Qwen 3.8 / GLM-5.3 を既定カタログに追加。詳しくは [English release notes](RELEASE-NOTES-v0.4.7.md)。

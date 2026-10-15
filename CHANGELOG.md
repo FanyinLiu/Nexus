@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+### [0.4.8-beta.1] - 2026-10-15
+
+Beta candidate prepared on top of stable v0.4.7. Not tagged and not published.
+v0.4.7 remains the current stable release. Full detail in
+[`docs/RELEASE-NOTES-v0.4.8-beta.1.md`](docs/RELEASE-NOTES-v0.4.8-beta.1.md).
+
+- October 2026 provider catalog (#139): settings schema v10, migrations
+  v8–v10, and the refreshed defaults (`gpt-6-sol`, MiniMax PAYG `MiniMax-M3`,
+  Token Plan `MiniMax-M3.1-Flash-Preview`, SiliconFlow and NVIDIA DeepSeek
+  V4.1 Flash, and the rest of that catalog pass).
+- `MiniMax-M2.7` leaves the picker before its 2026-11-18 retirement. Schema
+  v11 moves a stored selection to `MiniMax-M3` on PAYG and to
+  `MiniMax-M3.1-Flash-Preview` on Token Plan. `MiniMax-M2.7-highspeed` and
+  `MiniMax-M2.5` stay listed.
+- Custom OpenAI-compatible STT defaults to `gpt-transcribe`, OpenAI's current
+  file-transcription model. A stored `custom-openai-stt` model that is still
+  `gpt-4o-mini-transcribe` moves with it.
+- Pending, and not part of this candidate until they merge: #137 (first-use
+  setup and settings recovery) and #133 (guard against moving the README
+  stable link too early). Add both to this section once they land.
+
 ## [0.4.7] - 2026-08-27
 
 v0.4.7 is the current stable companion-avatar and catalog release. Full detail
