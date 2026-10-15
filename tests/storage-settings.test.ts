@@ -258,7 +258,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 7)
+    assert.equal(settings.settingsSchemaVersion, 8)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -312,7 +312,7 @@ test('migrates a stored previous catalog default to the current flagship', () =>
 
   assert.equal(settings.model, 'gpt-5.6-sol')
   assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-5.6-sol')
-  assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5')
+  assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5-5')
   assert.equal(settings.textProviderProfiles.xai?.model, 'grok-4.20')
 })
 
@@ -347,6 +347,44 @@ test('migrates stored Qwen 3.7-plus and GLM-5.2 defaults to the 3.8 / 5.3 flagsh
   assert.equal(settings.textProviderProfiles.dashscope?.model, 'qwen3.8-max')
   assert.equal(settings.textProviderProfiles.zai?.model, 'glm-5.3')
   assert.equal(settings.textProviderProfiles.openai?.model, 'gpt-5.4-mini')
+})
+
+test('migrates stored October 2026 catalog defaults without touching custom ids', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 7,
+      apiProviderId: 'deepseek',
+      apiBaseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-v4-flash',
+      speechInputProviderId: 'grok-stt',
+      speechInputModel: 'grok-stt',
+      textProviderProfiles: {
+        anthropic: { apiBaseUrl: 'https://api.anthropic.com', apiKey: '', model: 'claude-sonnet-5' },
+        xai: { apiBaseUrl: 'https://api.x.ai/v1', apiKey: '', model: 'grok-4.20' },
+        venice: { apiBaseUrl: 'https://api.venice.ai/api/v1', apiKey: '', model: 'deepseek-v4-flash' },
+      },
+      speechInputProviderProfiles: {
+        'openai-stt': { model: 'gpt-4o-mini-transcribe' },
+        'elevenlabs-stt': { model: 'scribe_v2' },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.model, 'deepseek-flash')
+  assert.equal(settings.speechInputModel, 'grok-voice-transcribe-2.0')
+  assert.equal(settings.textProviderProfiles.anthropic?.model, 'claude-sonnet-5-5')
+  assert.equal(settings.textProviderProfiles.xai?.model, 'grok-4.20')
+  assert.equal(settings.textProviderProfiles.venice?.model, 'deepseek-v4-1-flash')
+  assert.equal(settings.speechInputProviderProfiles['openai-stt']?.model, 'gpt-transcribe')
+  assert.equal(settings.speechInputProviderProfiles['elevenlabs-stt']?.model, 'scribe_v2')
 })
 
 test('preserves an explicit older model that was not the previous default', () => {

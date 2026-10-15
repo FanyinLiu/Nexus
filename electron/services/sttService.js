@@ -81,6 +81,7 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
           fileName: 'nexus-connection-test.wav',
           mimeType: 'audio/wav',
           language: payload.language,
+          model: payload.model,
         })
       : [
           {
@@ -97,7 +98,7 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
       multipartParts.push({
         type: 'field',
         name: 'model_id',
-        value: payload.model || 'scribe_v1',
+        value: payload.model || 'scribe_v2',
       })
 
       const languageCode = normalizeLanguageCode(payload.language)
@@ -115,7 +116,7 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
       multipartParts.push({
         type: 'field',
         name: 'model',
-        value: payload.model || 'gpt-4o-mini-transcribe',
+        value: payload.model || (payload.providerId === 'openai-stt' ? 'gpt-transcribe' : 'gpt-4o-mini-transcribe'),
       })
 
       const languageCode = normalizeLanguageCode(payload.language)

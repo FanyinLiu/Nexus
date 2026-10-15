@@ -77,12 +77,16 @@ interface ModelPrice {
 
 const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   // DeepSeek — longest-first so v4-pro / v4-flash beat the bare chat fallback
-  { pattern: 'deepseek-v4-pro',      price: { inputPerM: 0.145, outputPerM: 3.48  } },
-  { pattern: 'deepseek-v4-flash',    price: { inputPerM: 0.14,  outputPerM: 0.28  } },
+  { pattern: 'deepseek-v4-pro',      price: { inputPerM: 1.32,  outputPerM: 3.96  } },
+  { pattern: 'deepseek-v4-flash',    price: { inputPerM: 0.30,  outputPerM: 1.20  } },
+  { pattern: 'deepseek-flash',       price: { inputPerM: 0.30,  outputPerM: 1.20  } },
   { pattern: 'deepseek-chat',        price: { inputPerM: 0.14,  outputPerM: 0.28  } },
   { pattern: 'deepseek-reasoner',    price: { inputPerM: 0.14,  outputPerM: 0.28  } },
   // OpenAI — longest-first; 5.6 / 5.5 / 5.4 distinct rates, bare gpt-5 falls back to 5.4 cost
-  { pattern: 'gpt-5.6-sol',         price: { inputPerM: 5.00,  outputPerM: 30.00  } },
+  { pattern: 'gpt-6-astra',         price: { inputPerM: 10.00, outputPerM: 50.00 } },
+  { pattern: 'gpt-6.1-sol',         price: { inputPerM: 2.00,  outputPerM: 10.00 } },
+  { pattern: 'gpt-6-luna',          price: { inputPerM: 0.10,  outputPerM: 0.50  } },
+  { pattern: 'gpt-5.6-sol',         price: { inputPerM: 4.00,  outputPerM: 20.00  } },
   { pattern: 'gpt-5.6-terra',       price: { inputPerM: 2.00,  outputPerM: 12.00  } },
   { pattern: 'gpt-5.6-luna',        price: { inputPerM: 0.20,  outputPerM: 1.20  } },
   { pattern: 'gpt-5.6',             price: { inputPerM: 5.00,  outputPerM: 30.00  } },
@@ -97,9 +101,13 @@ const PRICING_TABLE: Array<{ pattern: string; price: ModelPrice }> = [
   { pattern: 'gpt-3.5',             price: { inputPerM: 0.50,  outputPerM: 1.50  } },
   // Anthropic model family pricing.
   { pattern: 'claude-fable',        price: { inputPerM: 10.00, outputPerM: 50.00 } },
+  { pattern: 'claude-opus-5-5',     price: { inputPerM: 4.00,  outputPerM: 20.00 } },
   { pattern: 'claude-opus',         price: { inputPerM: 5.00,  outputPerM: 25.00 } },
   { pattern: 'claude-sonnet',       price: { inputPerM: 2.00,  outputPerM: 10.00 } },
+  { pattern: 'claude-haiku-5-5',    price: { inputPerM: 0.10,  outputPerM: 0.50  } },
   { pattern: 'claude-haiku',        price: { inputPerM: 1.00,  outputPerM: 5.00  } },
+  { pattern: 'grok-4.7',            price: { inputPerM: 2.00,  outputPerM: 6.00  } },
+  { pattern: 'mistral-large-4',     price: { inputPerM: 1.36,  outputPerM: 4.18  } },
   // Google Gemini
   { pattern: 'gemini-1.5-pro',      price: { inputPerM: 3.50,  outputPerM: 10.50 } },
   { pattern: 'gemini-1.5-flash',    price: { inputPerM: 0.075, outputPerM: 0.30  } },

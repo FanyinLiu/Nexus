@@ -87,7 +87,59 @@ const V7_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }> 
   'zai-global': { from: 'glm-5.2', to: 'glm-5.3' },
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 7
+/**
+ * Frozen snapshot of catalog defaults replaced in the 2026-10 refresh.
+ * v8 remaps a stored model only when it still equals that previous default.
+ */
+const V8_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }> = {
+  anthropic: { from: 'claude-sonnet-5', to: 'claude-sonnet-5-5' },
+  gemini: { from: 'gemini-3.7-flash', to: 'gemini-3.8-flash' },
+  xai: { from: 'grok-4.6', to: 'grok-4.7' },
+  deepseek: { from: 'deepseek-v4-flash', to: 'deepseek-flash' },
+  'minimax-coding': { from: 'MiniMax-M3', to: 'MiniMax-M3.1-Flash-Preview' },
+  'minimax-coding-global': { from: 'MiniMax-M3', to: 'MiniMax-M3.1-Flash-Preview' },
+  mistral: { from: 'mistral-medium-3-5', to: 'mistral-large-4' },
+  qianfan: { from: 'ernie-5.0', to: 'ernie-5.1' },
+  doubao: { from: 'doubao-seed-2-0-pro-260328', to: 'doubao-seed-2-1-pro-260915' },
+  together: { from: 'moonshotai/Kimi-K2.6', to: 'moonshotai/Kimi-K3' },
+  venice: { from: 'deepseek-v4-flash', to: 'deepseek-v4-1-flash' },
+}
+
+const V8_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: string }> = {
+  'grok-stt': { from: 'grok-stt', to: 'grok-voice-transcribe-2.0' },
+  'openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
+  'elevenlabs-stt': { from: 'scribe_v1', to: 'scribe_v2' },
+}
+
+function remapSpeechInputDefaults(
+  raw: Record<string, unknown>,
+  mapping: Record<string, { from: string; to: string }>,
+) {
+  const next = { ...raw }
+  const providerId = typeof next.speechInputProviderId === 'string' ? next.speechInputProviderId : ''
+  const model = typeof next.speechInputModel === 'string' ? next.speechInputModel : ''
+  if (providerId && model) {
+    next.speechInputModel = migrateCatalogDefault(mapping, providerId, model)
+  }
+
+  const profiles = next.speechInputProviderProfiles
+  if (profiles && typeof profiles === 'object' && !Array.isArray(profiles)) {
+    const nextProfiles: Record<string, unknown> = { ...profiles }
+    for (const [id, profile] of Object.entries(nextProfiles)) {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue
+      const profileModel = 'model' in profile && typeof profile.model === 'string' ? profile.model : ''
+      if (!profileModel) continue
+      const migrated = migrateCatalogDefault(mapping, id, profileModel)
+      if (migrated !== profileModel) {
+        nextProfiles[id] = { ...profile, model: migrated }
+      }
+    }
+    next.speechInputProviderProfiles = nextProfiles
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 8
 
 interface SettingsMigration {
   toVersion: number
@@ -190,6 +242,14 @@ const migrations: SettingsMigration[] = [
     toVersion: 7,
     description: 'Promote stored Qwen 3.7-plus / GLM-5.2 defaults to Qwen 3.8-max / GLM-5.3',
     migrate: (raw) => remapStoredCatalogDefaults(raw, V7_RETIRED_CATALOG_DEFAULTS),
+  },
+  {
+    toVersion: 8,
+    description: 'Promote stored October 2026 catalog defaults',
+    migrate: (raw) => remapSpeechInputDefaults(
+      remapStoredCatalogDefaults(raw, V8_RETIRED_CATALOG_DEFAULTS),
+      V8_RETIRED_SPEECH_INPUT_DEFAULTS,
+    ),
   },
 ]
 

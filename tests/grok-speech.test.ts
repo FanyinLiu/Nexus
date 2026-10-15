@@ -6,6 +6,7 @@ import {
   buildXaiTtsRequestBody,
   mapLanguageToXaiStt,
   mapLanguageToXaiTts,
+  resolveXaiSttModel,
 } from '../electron/services/xaiSpeech.js'
 import { getSpeechOutputProviderPreset } from '../src/lib/audioProviders.ts'
 
@@ -49,7 +50,8 @@ test('xAI STT multipart puts option fields before the file', () => {
     mimeType: 'audio/wav',
     language: 'en-US',
   })
-  assert.deepEqual(withLanguage.map((part) => part.name), ['language', 'format', 'file'])
+  assert.deepEqual(withLanguage.map((part) => part.name), ['model', 'language', 'format', 'file'])
+  assert.equal(withLanguage[0]?.value, 'grok-voice-transcribe-2.0')
 
   const chinese = buildXaiSttMultipartParts({
     audioBuffer: Buffer.from('wav'),
@@ -57,7 +59,10 @@ test('xAI STT multipart puts option fields before the file', () => {
     mimeType: 'audio/wav',
     language: 'zh-CN',
   })
-  assert.deepEqual(chinese.map((part) => part.name), ['file'])
+  assert.deepEqual(chinese.map((part) => part.name), ['model', 'file'])
+  assert.equal(resolveXaiSttModel('grok-stt'), 'grok-voice-transcribe-2.0')
+  assert.equal(resolveXaiSttModel(''), 'grok-voice-transcribe-2.0')
+  assert.equal(resolveXaiSttModel('custom-stt'), 'custom-stt')
 })
 
 test('Grok speech presets point at the official xAI API host', () => {

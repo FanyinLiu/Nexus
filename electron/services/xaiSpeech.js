@@ -63,12 +63,27 @@ export function buildXaiTtsRequestBody(payload, content, options = {}) {
   }
 }
 
+/** Official xAI batch STT model. The catalog used to store a placeholder id. */
+const XAI_STT_MODEL = 'grok-voice-transcribe-2.0'
+
+/**
+ * Resolve the model field for `POST /v1/stt`.
+ * Empty and the retired placeholder `grok-stt` map to the documented default
+ * so unmigrated settings still hit a real model.
+ */
+export function resolveXaiSttModel(model) {
+  const id = String(model ?? '').trim()
+  if (!id || id === 'grok-stt') return XAI_STT_MODEL
+  return id
+}
+
 /**
  * Multipart parts for official xAI STT (`POST /v1/stt`).
  * Option fields precede `file` — xAI ignores fields sent after the file.
  */
-export function buildXaiSttMultipartParts({ audioBuffer, fileName, mimeType, language }) {
+export function buildXaiSttMultipartParts({ audioBuffer, fileName, mimeType, language, model }) {
   const parts = []
+  parts.push({ type: 'field', name: 'model', value: resolveXaiSttModel(model) })
   const sttLanguage = mapLanguageToXaiStt(language)
   if (sttLanguage) {
     parts.push({ type: 'field', name: 'language', value: sttLanguage })

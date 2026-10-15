@@ -49,7 +49,7 @@ test('DeepSeek post-test model mismatch can repair to the recommended default mo
   })
 
   assert.deepEqual(action?.patch, {
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 
@@ -61,7 +61,7 @@ test('DeepSeek post-test misconfiguration repairs both endpoint and model when b
 
   assert.deepEqual(action?.patch, {
     apiBaseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
   })
 })
 
