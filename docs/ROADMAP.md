@@ -42,7 +42,10 @@ The larger product steps are:
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
   `v0.4.7` until a later release is explicitly prepared. The v0.4.7 stable
-  promotion is the current release boundary.
+  promotion is the current release boundary. `v0.4.8-beta.1` is the prepared
+  package candidate for the October 2026 catalog follow-up. It does not move
+  the README stable entry, tag, or GitHub Release; v0.4.7 stays the public
+  stable release until the beta validation window closes.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
   fallback, and prove Mao/Haru/Hiyori cold start, switching, and recovery in

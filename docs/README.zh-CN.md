@@ -30,6 +30,10 @@
 
 ---
 
+## 本次 beta 候选 — v0.4.8-beta.1
+
+> **尚未打 tag，不是稳定版。** 当前稳定入口仍是 v0.4.7。#137 与 #133 已包含在本候选中。详见 [English release notes](RELEASE-NOTES-v0.4.8-beta.1.md)。
+
 ## 本次稳定更新 — v0.4.7
 
 > **主题：形象兼容、立绘 v4 与模型目录。** 导入前检查 Cubism 资源；分层立绘 v4 进入正式版；Grok 语音与 Qwen 3.8 / GLM-5.3 进入默认目录。详见 [中文发行说明](RELEASE-NOTES-v0.4.7.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.4.7.md)。

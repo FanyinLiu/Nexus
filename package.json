@@ -1,7 +1,7 @@
 {
   "name": "nexus",
   "private": true,
-  "version": "0.4.7",
+  "version": "0.4.8-beta.1",
   "description": "Local-first desktop AI companion with Live2D or Portrait Puppet, memory, voice, and light tools.",
   "author": {
     "name": "FanyinLiu",

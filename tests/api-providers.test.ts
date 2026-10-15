@@ -178,6 +178,10 @@ test('advanced provider presets use current documented flagship routes', () => {
   assert.equal(getApiProviderPreset('siliconflow-global')?.defaultModel, 'deepseek-ai/DeepSeek-V4.1-Flash')
   assert.equal(getApiProviderPreset('minimax')?.defaultModel, 'MiniMax-M3')
   assert.equal(getApiProviderPreset('minimax-global')?.defaultModel, 'MiniMax-M3')
+  for (const providerId of ['minimax', 'minimax-global', 'minimax-coding', 'minimax-coding-global']) {
+    assert.ok(!getApiProviderPreset(providerId)?.models.includes('MiniMax-M2.7'), providerId)
+    assert.ok(getApiProviderPreset(providerId)?.models.includes('MiniMax-M2.7-highspeed'), providerId)
+  }
   assert.equal(getApiProviderPreset('siliconflow-global')?.baseUrl, 'https://api.siliconflow.com/v1')
   assert.equal(getApiProviderPreset('together')?.defaultModel, 'moonshotai/Kimi-K3')
   assert.ok(getApiProviderPreset('together')?.models.includes('Qwen/Qwen3.8-2.4T-A95B'))

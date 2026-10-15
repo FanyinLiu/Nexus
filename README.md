@@ -123,6 +123,15 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
+## 本次 beta 候选 — v0.4.8-beta.1
+
+> **尚未打 tag，不是稳定版。** 当前稳定入口仍是 v0.4.7。候选说明见 [English release notes](docs/RELEASE-NOTES-v0.4.8-beta.1.md)。
+
+- #139 的 2026 年 10 月目录刷新已经在 main 上：设置 schema v10，以及 v8–v10 迁移和新的模型默认值。
+- `MiniMax-M2.7` 在 2026-11-18 退役前移出选择列表。已保存的选择会迁到 PAYG 的 `MiniMax-M3`，或 Token Plan 的 `MiniMax-M3.1-Flash-Preview`。
+- 自定义 OpenAI 兼容 STT 的默认模型改为 `gpt-transcribe`。
+- #137 已包含：桌面端首次使用在面板里打开引导，设置可以重新打开引导，模型保存失败会显示错误。#133 已包含：恢复引导里的消息操作示例样式，发行审计保持 README 稳定入口停在公开稳定版。
+
 ## 本次稳定更新 — v0.4.7
 
 > **主题：形象兼容、立绘 v4 与模型目录。** 导入 Cubism 模型会在激活前检查资源；分层立绘 v4、Live2D 导入提示和配件穿戴进入正式版；Qwen 3.8-max / GLM-5.3 / Grok 语音进入默认目录。详见 [中文发行说明](docs/RELEASE-NOTES-v0.4.7.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.7.md)。

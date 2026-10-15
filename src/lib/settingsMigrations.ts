@@ -277,7 +277,39 @@ function pinProviderIdForDefaultRemap(
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 10
+/**
+ * MiniMax-M2.7 leaves the picker on 2026-11-18. v10 only rewrote the PAYG
+ * default, so a schema 10 store can still have this id selected, including
+ * on a Token Plan preset. Every remaining copy is rewritten. PAYG goes to
+ * MiniMax-M3; Token Plan goes to MiniMax-M3.1-Flash-Preview, which is where
+ * MiniMax routes those plan requests. MiniMax-M2.7-highspeed and MiniMax-M2.5
+ * stay listed and are not rewritten.
+ *
+ * A bare PAYG id is pinned before the model becomes MiniMax-M3, because host
+ * inference treats MiniMax-M3 as Token Plan when no provider id is stored.
+ */
+const V11_PAYG_M27_PIN: Record<string, { from: string; to: string }> = {
+  minimax: { from: 'MiniMax-M2.7', to: 'MiniMax-M3' },
+  'minimax-global': { from: 'MiniMax-M2.7', to: 'MiniMax-M3' },
+}
+
+const V11_RETIRED_MODEL_IDS: Record<string, Record<string, string>> = {
+  minimax: { 'MiniMax-M2.7': 'MiniMax-M3' },
+  'minimax-global': { 'MiniMax-M2.7': 'MiniMax-M3' },
+  'minimax-coding': { 'MiniMax-M2.7': 'MiniMax-M3.1-Flash-Preview' },
+  'minimax-coding-global': { 'MiniMax-M2.7': 'MiniMax-M3.1-Flash-Preview' },
+}
+
+/**
+ * custom-openai-stt used the deprecated file-transcription default.
+ * Only that exact stored default moves to gpt-transcribe. A name the user
+ * typed for their own proxy stays.
+ */
+const V11_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: string }> = {
+  'custom-openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 11
 
 interface SettingsMigration {
   toVersion: number
@@ -406,6 +438,17 @@ const migrations: SettingsMigration[] = [
     migrate: (raw) => remapStoredCatalogDefaults(
       pinProviderIdForDefaultRemap(raw, V10_RETIRED_CATALOG_DEFAULTS),
       V10_RETIRED_CATALOG_DEFAULTS,
+    ),
+  },
+  {
+    toVersion: 11,
+    description: 'Retire MiniMax-M2.7 and the custom OpenAI STT default',
+    migrate: (raw) => remapSpeechInputDefaults(
+      remapStoredModelIds(
+        pinProviderIdForDefaultRemap(raw, V11_PAYG_M27_PIN),
+        V11_RETIRED_MODEL_IDS,
+      ),
+      V11_RETIRED_SPEECH_INPUT_DEFAULTS,
     ),
   },
 ]

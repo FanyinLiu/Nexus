@@ -30,6 +30,10 @@
 
 ---
 
+## 이번 beta 후보 — v0.4.8-beta.1
+
+> **태그와 공개 릴리스는 아직 없습니다.** 현재 안정 버전은 v0.4.7입니다. #137과 #133은 이 후보에 포함됩니다. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.4.8-beta.1.md).
+
 ## 이번 안정 업데이트 — v0.4.7
 
 > **주제: 호환성, 일러스트 v4, 모델 카탈로그.** Cubism 리소스를 활성화 전에 검사하고 Portrait Puppet v4를 정식 채택합니다. Grok 음성과 Qwen 3.8 / GLM-5.3이 기본 카탈로그에 들어갑니다. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.4.7.md).

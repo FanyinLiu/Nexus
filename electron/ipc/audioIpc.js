@@ -258,7 +258,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         multipartParts.push({
           type: 'field',
           name: 'model',
-          value: payload.model || (payload.providerId === 'openai-stt' ? 'gpt-transcribe' : 'gpt-4o-mini-transcribe'),
+          value: payload.model || (payload.providerId === 'openai-stt' || payload.providerId === 'custom-openai-stt' ? 'gpt-transcribe' : 'gpt-4o-mini-transcribe'),
         })
 
         const languageCode = normalizeLanguageCode(payload.language)

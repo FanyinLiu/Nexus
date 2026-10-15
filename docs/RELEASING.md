@@ -124,6 +124,16 @@ stable handoff lives in `RELEASE-CANDIDATE-v0.4.7-HANDOFF.md`. Official
 binaries must still be rebuilt from the release commit by the protected
 workflow; no physical-device evidence is claimed.
 
+### v0.4.8-beta.1 preparation record — 2026-10-15
+
+v0.4.8 returns to the standard beta flow with no maintainer exception.
+v0.4.7 remains the current public stable release, and the README stable
+entry stays there. This record only prepares `v0.4.8-beta.1`: the package
+version, changelog, and release notes. It does not create a tag, a draft,
+or a GitHub Release. The owner pushes the tag only after this commit is on
+`main`, CI is green, and `npm run prerelease-check -- v0.4.8-beta.1` passes.
+#137 and #133 are on `main` and are listed in this candidate.
+
 This doc is the source of truth for every release. The short version:
 
 ```
