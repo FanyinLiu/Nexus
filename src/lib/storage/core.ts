@@ -16,6 +16,10 @@ export const LOREBOOK_ENTRIES_STORAGE_KEY = 'nexus:lorebooks'
 export const LEGACY_MEMORY_STORAGE_KEY = 'nexus:memory'
 export const MEMORY_STORAGE_KEY = 'nexus:memory:long-term'
 export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'
+/** One-shot raw copy of pre-v2 long-term memories. Never overwritten. */
+export const MEMORY_V1_BACKUP_STORAGE_KEY = 'nexus:memory:v1-backup'
+/** Append-only reconcile and cap decisions. */
+export const MEMORY_OP_LOG_STORAGE_KEY = 'nexus:memory:op-log'
 export const MEMORY_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:memory:local-data-authority-consent'
 export const COMPANION_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:companion:local-data-authority-consent'
 export const SETTINGS_STORAGE_KEY = 'nexus:settings'

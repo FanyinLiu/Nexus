@@ -5,6 +5,8 @@ import type {
   MemoryDreamResult,
   MemoryItem,
 } from '../../types'
+import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
+import { isProtectedMemory } from '../../lib/storage/memoryCap.ts'
 import { getDefaultCompanionName } from '../../lib/uiLanguage.ts'
 
 // ── Gate: should we dream now? ────────────────────────────────────────────────
@@ -41,7 +43,7 @@ export function buildDreamPrompt(
   const companionName = settings.companionName || getDefaultCompanionName(settings.uiLanguage)
 
   const existingSection = existingMemories.length > 0
-    ? `\n## Existing long-term memories\n${existingMemories.map((m) => `- [${m.category}] ${m.content}`).join('\n')}\n`
+    ? `\n## Existing long-term memories\n${existingMemories.map((m) => `- id=${m.id} [${m.category}] ${m.content}`).join('\n')}\n`
     : '\n## Existing long-term memories\n(none)\n'
 
   const dailySection = dailyEntries.length > 0
@@ -65,6 +67,8 @@ Rules:
 - Only extract certain facts; do not speculate
 - Summarize each memory in one sentence
 - Do not duplicate existing memories
+- update.id and prune ids must be copied exactly from the id= values above. Never invent an id
+- Do not update or prune pinned or user-confirmed memories
 - If there is nothing to change, return {"new": [], "update": [], "prune": []}`
 
   const user = `Please consolidate the following memories:${existingSection}${dailySection}`
@@ -124,6 +128,57 @@ export function parseDreamResponse(responseContent: string): DreamOperations {
   } catch {
     return { newMemories: [], updates: [], pruneIds: [] }
   }
+}
+
+/**
+ * Apply dream update/prune ops without dropping rows.
+ * Prune archives the row and records a reason. Protected rows are left as they are.
+ * Unknown ids are ignored, which is what used to happen when the prompt hid ids.
+ */
+export function applyDreamEdits(
+  memories: readonly MemoryItem[],
+  ops: Pick<DreamOperations, 'updates' | 'pruneIds'>,
+  now: string,
+): { memories: MemoryItem[]; archivedIds: string[] } {
+  const archivedIds = ops.pruneIds.filter((id) => {
+    const memory = memories.find((item) => item.id === id)
+    return Boolean(memory) && !isProtectedMemory(memory!)
+  })
+  const archived = new Set(archivedIds)
+  let next = memories.map((memory) => (
+    archived.has(memory.id)
+      ? {
+          ...memory,
+          schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
+          status: 'archived' as const,
+          statusReason: 'dream-prune',
+          updatedAt: now,
+        }
+      : memory
+  ))
+
+  for (const update of ops.updates) {
+    const index = next.findIndex((memory) => memory.id === update.id)
+    if (index < 0) continue
+    const existing = next[index]!
+    if (isProtectedMemory(existing)) continue
+    const mergedRelated = [...new Set([...(existing.relatedIds ?? []), ...archivedIds])]
+    next = next.map((memory, memoryIndex) => (
+      memoryIndex === index
+        ? {
+            ...existing,
+            content: update.content,
+            lastUsedAt: now,
+            updatedAt: now,
+            schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
+            status: existing.status === 'archived' ? 'archived' as const : (existing.status ?? 'active'),
+            relatedIds: mergedRelated.length ? mergedRelated : undefined,
+          }
+        : memory
+    ))
+  }
+
+  return { memories: next, archivedIds }
 }
 
 // ── Dream log helpers ─────────────────────────────────────────────────────────
