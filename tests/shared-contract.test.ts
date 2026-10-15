@@ -99,6 +99,22 @@ const SINGLE_SOURCE_CONTRACTS: Array<{ name: string; canonicalFile: string; lite
     canonicalFile: 'shared/time.js',
     literals: ['now instanceof Date ? now.toISOString()'],
   },
+  {
+    name: 'update install error codes',
+    canonicalFile: 'shared/updateErrorCodes.js',
+    literals: [
+      `'NEXUS_ERR_UPDATE_INSTALL_PREP_FAILED'`,
+      `'NEXUS_ERR_UPDATE_INSTALL_SNAPSHOT_FAILED'`,
+    ],
+  },
+  {
+    name: 'durable update flush handshake',
+    canonicalFile: 'shared/durableUpdateFlush.js',
+    literals: [
+      `'nexus:flush-durable-storage'`,
+      `'__nexusDurableUpdateSnapshot'`,
+    ],
+  },
 ]
 
 function walkSourceFiles(directory: string): string[] {

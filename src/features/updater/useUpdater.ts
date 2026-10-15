@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { captureDurableUpdateSnapshot } from '../../lib/storage/core.ts'
 import {
   applyUpdaterStatus,
   createInitialUpdaterState,
@@ -73,6 +74,14 @@ export function useUpdater(): UpdaterState & {
   }, [t])
 
   const installAndRestart = useCallback(async () => {
+    // Flush this window before IPC. Main repeats the flush across every
+    // renderer and aborts install if that still fails. A renderer failure
+    // must not block the unsigned macOS release-page path.
+    try {
+      captureDurableUpdateSnapshot()
+    } catch {
+      // The main process reports the durable-flush error on the install path.
+    }
     if (!window.desktopPet?.updaterInstall) return
     await window.desktopPet.updaterInstall()
   }, [])

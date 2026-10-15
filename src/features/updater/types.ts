@@ -15,4 +15,10 @@ export type UpdaterEvent =
       bytesPerSecond: number
     }
   | { type: 'downloaded'; version: string | null; releaseNotes: string | null }
-  | { type: 'error'; message: string }
+  | {
+      type: 'error'
+      message: string
+      code?: string
+      messageKey?: string
+      recommendationKey?: string
+    }

@@ -115,6 +115,18 @@ function normalizeOptionalVersion(value: unknown): string | null {
   return normalizeText(value, MAX_VERSION_CHARS)
 }
 
+function normalizeUpdaterCopyKey(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return /^(?:updater\.error|settings\.updater)\.[a-z0-9_]+$/.test(trimmed) ? trimmed : undefined
+}
+
+function normalizeUpdaterErrorCode(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return /^NEXUS_ERR_[A-Z0-9_]+$/.test(trimmed) ? trimmed : undefined
+}
+
 function normalizeRequiredVersion(value: unknown, fallback: string | null): string {
   return normalizeText(value, MAX_VERSION_CHARS)
     ?? normalizeText(fallback, MAX_VERSION_CHARS)
@@ -168,7 +180,10 @@ export function normalizeUpdaterEvent(
         version: normalizeOptionalVersion(event.version),
         releaseNotes: normalizeText(event.releaseNotes, MAX_RELEASE_NOTES_CHARS),
       }
-    case 'error':
+    case 'error': {
+      const messageKey = normalizeUpdaterCopyKey(event.messageKey)
+      const recommendationKey = normalizeUpdaterCopyKey(event.recommendationKey)
+      const code = normalizeUpdaterErrorCode(event.code)
       return {
         type: 'error',
         message: normalizeRequiredText(
@@ -176,7 +191,11 @@ export function normalizeUpdaterEvent(
           options.fallbackErrorMessage ?? INVALID_UPDATER_EVENT_MESSAGE,
           MAX_ERROR_MESSAGE_CHARS,
         ),
+        ...(code ? { code } : {}),
+        ...(messageKey ? { messageKey } : {}),
+        ...(recommendationKey ? { recommendationKey } : {}),
       }
+    }
     default:
       return fallback
   }

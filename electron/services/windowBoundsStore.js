@@ -45,6 +45,14 @@ function saveBounds(key, bounds) {
   store.persistDebounced()
 }
 
+/**
+ * Persist any debounced window bounds before an update install.
+ * False means the write failed and install must abort.
+ */
+export function flushWindowBoundsStore() {
+  return store.flushPending()
+}
+
 // Wire up resize/move listeners on a BrowserWindow so its bounds get saved
 // under the given key. Skips saves while the window is collapsed/minimized.
 export function trackWindow(win, key, opts = {}) {

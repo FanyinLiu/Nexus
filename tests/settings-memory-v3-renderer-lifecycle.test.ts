@@ -65,22 +65,26 @@ async function rowText(page: Page, label: string): Promise<string> {
 }
 
 async function launchRendererBrowser(): Promise<Browser> {
-  const launchOptions = { headless: true, args: ['--disable-gpu'] }
+  // Playwright's default launch timeout is 3 minutes, longer than this test's
+  // ceiling, and a raced timeout leaves that launch running. Pass a timeout
+  // Playwright itself enforces so a stuck bundled browser is torn down before
+  // the Chrome fallback.
+  const launchOptions = { headless: true, args: ['--disable-gpu'], timeout: 45_000 }
   try {
     return await chromium.launch(launchOptions)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (!message.includes('Executable doesn') && !message.includes('Playwright was just installed')) {
-      throw error
-    }
+    const missingBrowser = message.includes('Executable doesn') || message.includes('Playwright was just installed')
+    const timedOut = message.includes('Timeout')
+    if (!missingBrowser && !timedOut) throw error
     return await chromium.launch({ ...launchOptions, channel: 'chrome' })
   }
 }
 
-// Vite cold start plus Chromium launch on a Windows runner can spend most of
-// a 45s budget before the first locator resolves. The assertions below are
-// unchanged; only the suite ceiling moved.
-test('active Memory V3 preserves paused recent state and clears it explicitly', { timeout: 90_000 }, async (t) => {
+// Vite cold start plus Chromium launch on a Windows runner can use the whole
+// previous ceiling before the first locator resolves. A hung bundled-browser
+// launch falls back to Chrome. The assertions below are unchanged.
+test('active Memory V3 preserves paused recent state and clears it explicitly', { timeout: 150_000 }, async (t) => {
   const port = await reservePort()
   const baseUrl = `http://${HOST}:${port}`
   const vite = spawn(

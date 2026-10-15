@@ -430,17 +430,30 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
       : 'package publish config or electron-updater dependency is missing',
   )
 
+  const updateInstallPrepPath = join(root, 'electron/services/updateInstallPrep.js')
+  const updateInstallPrep = existsSync(updateInstallPrepPath)
+    ? readText(root, 'electron/services/updateInstallPrep.js')
+    : updaterService
   const updaterRuntime =
-    updaterService.includes('autoUpdater.autoDownload = true') &&
-    updaterService.includes('autoUpdater.allowDowngrade = false') &&
-    updaterService.includes('!app.isPackaged')
+    updateInstallPrep.includes('autoUpdater.autoDownload = true') &&
+    updateInstallPrep.includes('autoUpdater.autoInstallOnAppQuit = false') &&
+    !updateInstallPrep.includes('autoUpdater.autoInstallOnAppQuit = true') &&
+    updateInstallPrep.includes('autoUpdater.allowDowngrade = false') &&
+    updaterService.includes('!app.isPackaged') &&
+    (
+      !existsSync(updateInstallPrepPath)
+      || (
+        updaterService.includes('applyAutoUpdaterInstallPolicy')
+        && updaterService.includes('prepareForUpdateInstall')
+      )
+    )
   addCheck(
     checks,
     'release.updater-runtime',
     'Updater runtime keeps safe defaults',
     updaterRuntime ? 'ok' : 'error',
     updaterRuntime
-      ? 'background download, downgrade block, and dev-mode skip are wired'
+      ? 'background download, explicit restart install, downgrade block, and dev-mode skip are wired'
       : 'updater runtime lost a required safety default',
   )
 

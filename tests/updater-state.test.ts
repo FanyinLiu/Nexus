@@ -112,6 +112,32 @@ test('normalizeUpdaterEvent derives progress percent from bytes when percent is 
   })
 })
 
+test('normalizeUpdaterEvent keeps stable install-prep copy keys and drops unsafe ones', () => {
+  assert.deepEqual(normalizeUpdaterEvent({
+    type: 'error',
+    message: 'NEXUS_ERR_UPDATE_INSTALL_SNAPSHOT_FAILED',
+    code: 'NEXUS_ERR_UPDATE_INSTALL_SNAPSHOT_FAILED',
+    messageKey: 'updater.error.snapshot_failed',
+    recommendationKey: 'updater.error.snapshot_failed_rec',
+  }), {
+    type: 'error',
+    message: 'NEXUS_ERR_UPDATE_INSTALL_SNAPSHOT_FAILED',
+    code: 'NEXUS_ERR_UPDATE_INSTALL_SNAPSHOT_FAILED',
+    messageKey: 'updater.error.snapshot_failed',
+    recommendationKey: 'updater.error.snapshot_failed_rec',
+  })
+
+  assert.deepEqual(normalizeUpdaterEvent({
+    type: 'error',
+    message: 'plain',
+    messageKey: 'https://example.invalid/phish',
+    code: 'not a code',
+  }), {
+    type: 'error',
+    message: 'plain',
+  })
+})
+
 test('reduceUpdaterEvent turns malformed live events into terminal errors', () => {
   const busy = reduceUpdaterEvent(createInitialUpdaterState(), { type: 'checking' })
   const state = reduceUpdaterEvent(busy, { type: 'unexpected' })

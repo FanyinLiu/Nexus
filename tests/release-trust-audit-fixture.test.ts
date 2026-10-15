@@ -104,6 +104,7 @@ const BASELINE_FILES: Record<string, string> = {
   'electron/services/updaterService.js': `
 // check-only release downloads
 autoUpdater.autoDownload = true
+autoUpdater.autoInstallOnAppQuit = false
 autoUpdater.allowDowngrade = false
 if (!app.isPackaged) {
   throw new Error('skip updater in dev')

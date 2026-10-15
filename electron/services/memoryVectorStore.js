@@ -314,10 +314,12 @@ async function compactSnapshot() {
       // Snapshot did not durably land. Put the taken log back so the
       // mutations it captured aren't stranded across a restart — replay
       // on next load reapplies them on top of whatever snapshot was
-      // already on disk.
+      // already on disk. Rethrow so update install can abort instead of
+      // quitting on a vector store that never reached disk.
       if (logTaken) {
         try { await rename(compactingPath, logPath) } catch {}
       }
+      throw err
     } finally {
       _savePromise = null
     }
