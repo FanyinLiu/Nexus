@@ -345,15 +345,16 @@ stage('C', 'Security', () => {
     if (missing.length > 0) throw new Error(`missing in windowManager.js/windowCreation.js: ${missing.join(', ')}`)
   })
 
-  check('C', 'electron ≥ 43.2 (latest stable; security rollups)', () => {
-    // Floor tracks the currently declared Electron major. Bump when a new
-    // security-relevant minor lands on the active line.
+  check('C', 'electron ≥ 43.5 (43.x security rollups through preload cache)', () => {
+    // Floor tracks the currently declared Electron line. 43.5.0 is the first
+    // 43.x release that closes the preload-cache advisory; earlier 43.4.1
+    // fixes do not cover it. Bump when a newer security minor lands.
     const pkg = readPkg()
     const range = pkg.devDependencies?.electron ?? pkg.dependencies?.electron ?? ''
     const m = /\d+\.\d+/.exec(range)
     if (!m) throw new Error(`could not parse electron version range: ${range}`)
     const [maj, min] = m[0].split('.').map(Number)
-    if (maj < 43 || (maj === 43 && min < 2)) throw new Error(`electron ${range} < 43.2 — bump devDependencies.electron`)
+    if (maj < 43 || (maj === 43 && min < 5)) throw new Error(`electron ${range} < 43.5 — bump devDependencies.electron`)
     return range
   })
 

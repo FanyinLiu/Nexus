@@ -6,20 +6,24 @@ import type {
   MemoryImportance,
   MemoryItem,
   MemoryKind,
+  MemoryStatus,
 } from '../../types'
+import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
 import {
   DAILY_MEMORY_STORAGE_KEY,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
+  MEMORY_V1_BACKUP_STORAGE_KEY,
   readJson,
   writeJson,
   writeJsonDebounced,
 } from './core.ts'
 import { isObject } from '../guards.ts'
+import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { normalizeBoundedText } from '../normalize.ts'
 
-const MAX_LONG_TERM_MEMORIES = 500
 const MAX_DAILY_ENTRIES_PER_DAY = 16
+const MEMORY_STATUSES = new Set<MemoryStatus>(['active', 'superseded', 'archived'])
 const VALID_CATEGORIES = new Set<MemoryCategory>([
   'profile',
   'preference',
@@ -126,6 +130,18 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
   const supersededPending = typeof value.supersededPending === 'boolean'
     ? value.supersededPending
     : undefined
+  const decayedAt = normalizeIsoTimestamp(value.decayedAt)
+  const updatedAt = normalizeIsoTimestamp(value.updatedAt) ?? lastUsedAt ?? createdAt
+  const explicitStatus = typeof value.status === 'string' && MEMORY_STATUSES.has(value.status as MemoryStatus)
+    ? value.status as MemoryStatus
+    : null
+  // Legacy rows have no status. A confirmed supersession pointer is the
+  // lifecycle; a pending one stays active so the milder recall penalty still applies.
+  const status: MemoryStatus = explicitStatus
+    ?? (supersededBy && supersededPending !== true ? 'superseded' : 'active')
+  const statusReason = normalizeBoundedText(value.statusReason, 240, true)
+  const mergedFrom = normalizeRelatedIds(value.mergedFrom)
+  const userConfirmed = value.userConfirmed === true || source === 'manual'
 
   return {
     id,
@@ -135,7 +151,10 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
     ...(kind ? { kind } : {}),
     enabled: typeof value.enabled === 'boolean' ? value.enabled : true,
     ...(sourceRef ? { sourceRef } : {}),
+    schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
+    status,
     createdAt,
+    updatedAt,
     ...(lastUsedAt ? { lastUsedAt } : {}),
     ...(importance ? { importance } : {}),
     ...(importanceScore !== undefined ? { importanceScore } : {}),
@@ -150,6 +169,10 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
     ...(supersededBy ? { supersededBy } : {}),
     ...(supersededAt ? { supersededAt } : {}),
     ...(supersededPending !== undefined ? { supersededPending } : {}),
+    ...(decayedAt ? { decayedAt } : {}),
+    ...(statusReason ? { statusReason } : {}),
+    ...(mergedFrom ? { mergedFrom } : {}),
+    ...(userConfirmed ? { userConfirmed: true } : {}),
   }
 }
 
@@ -162,9 +185,36 @@ export function normalizeMemoryItemsForStorage(raw: unknown): MemoryItem[] {
     if (!memory || seen.has(memory.id)) continue
     seen.add(memory.id)
     normalized.push(memory)
-    if (normalized.length >= MAX_LONG_TERM_MEMORIES) break
   }
   return normalized
+}
+
+function readStorageText(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key)
+  } catch (error) {
+    console.warn('[memory] storage read failed:', getRedactedLogErrorMessage(error))
+    return null
+  }
+}
+
+/**
+ * Keep the original blob the first time v2 normalization would rewrite it.
+ * Later runs no-op once the backup key exists, including when the blob is corrupt.
+ */
+function backupMemoryV1Raw(rawText: string | null): void {
+  if (!rawText) return
+  try {
+    if (window.localStorage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY) !== null) return
+    window.localStorage.setItem(MEMORY_V1_BACKUP_STORAGE_KEY, rawText)
+  } catch (error) {
+    console.warn('[memory] v1 backup skipped:', getRedactedLogErrorMessage(error))
+  }
+}
+
+function needsV1Backup(parsed: unknown): boolean {
+  if (!Array.isArray(parsed)) return true
+  return parsed.some((item) => !isObject(item) || item.schemaVersion !== MEMORY_RECORD_SCHEMA_VERSION)
 }
 
 function isValidDayKey(value: string): boolean {
@@ -222,7 +272,19 @@ export function normalizeDailyMemoryStore(raw: unknown): DailyMemoryStore {
 }
 
 export function loadMemories(): MemoryItem[] {
-  const rawNext = readJson<unknown>(MEMORY_STORAGE_KEY, [])
+  const rawText = readStorageText(MEMORY_STORAGE_KEY)
+  let rawNext: unknown = []
+  let rawParsed = false
+  if (rawText) {
+    try {
+      rawNext = JSON.parse(rawText) as unknown
+      rawParsed = true
+    } catch (error) {
+      backupMemoryV1Raw(rawText)
+      console.warn('[memory] long-term store did not parse:', getRedactedLogErrorMessage(error))
+    }
+  }
+  if (rawParsed && needsV1Backup(rawNext)) backupMemoryV1Raw(rawText)
   const next = normalizeMemoryItemsForStorage(rawNext)
   if (next.length) {
     if (JSON.stringify(next) !== JSON.stringify(rawNext)) {
@@ -234,10 +296,22 @@ export function loadMemories(): MemoryItem[] {
   // Only fall back to the legacy key when the current key is genuinely absent
   // (first launch after the store was split). A key that exists but holds an
   // empty array means the user deleted every memory — falling back here would
-  // resurrect the legacy memories they just removed.
-  if (window.localStorage.getItem(MEMORY_STORAGE_KEY) !== null) return []
+  // resurrect the legacy memories they just removed. A corrupt current blob
+  // is also present: keep it via the backup and do not resurrect legacy rows.
+  if (rawText !== null) return []
 
-  const rawLegacy = readJson<unknown>(LEGACY_MEMORY_STORAGE_KEY, [])
+  const legacyText = readStorageText(LEGACY_MEMORY_STORAGE_KEY)
+  let rawLegacy: unknown = []
+  if (legacyText) {
+    try {
+      rawLegacy = JSON.parse(legacyText) as unknown
+      if (needsV1Backup(rawLegacy)) backupMemoryV1Raw(legacyText)
+    } catch (error) {
+      backupMemoryV1Raw(legacyText)
+      console.warn('[memory] legacy store did not parse:', getRedactedLogErrorMessage(error))
+      rawLegacy = []
+    }
+  }
   const legacy = normalizeMemoryItemsForStorage(rawLegacy)
   if (legacy.length) {
     writeJson(MEMORY_STORAGE_KEY, legacy)

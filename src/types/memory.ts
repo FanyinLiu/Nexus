@@ -12,6 +12,25 @@ export type MemoryCategory =
 
 export type MemoryImportance = 'low' | 'normal' | 'high' | 'pinned' | 'reflection'
 
+/** Long-term memory record shape written by the v2 reconciler. */
+export const MEMORY_RECORD_SCHEMA_VERSION = 2
+
+export type MemoryStatus = 'active' | 'superseded' | 'archived'
+
+export type MemoryReconcileOpName = 'ADD' | 'UPDATE' | 'MERGE' | 'SUPERSEDE' | 'DELETE' | 'NOOP'
+
+export type MemoryOpActor = 'turn' | 'dream' | 'user' | 'migration' | 'cap'
+
+/** Append-only record of a reconcile or cap decision. Content stays on the memory row. */
+export interface MemoryOpRecord {
+  id: string
+  at: string
+  actor: MemoryOpActor
+  op: MemoryReconcileOpName
+  targetIds: string[]
+  reason?: string
+}
+
 export type MemoryKind = 'preference' | 'fact' | 'relationship' | 'knowledge'
 
 export type EmotionalValence = 'positive' | 'negative' | 'neutral' | 'mixed'
@@ -24,8 +43,23 @@ export interface MemoryItem {
   kind?: MemoryKind
   enabled?: boolean
   sourceRef?: string
+  /** 2 once the row has been through the v2 normalizer. Absent on legacy rows. */
+  schemaVersion?: number
+  /**
+   * Lifecycle. Absent means active so pre-v2 rows stay readable.
+   * Superseded and archived rows stay in the store with a reason instead of
+   * being removed.
+   */
+  status?: MemoryStatus
   createdAt: string
+  updatedAt?: string
   lastUsedAt?: string
+  /** Why status moved off active. */
+  statusReason?: string
+  /** Ids folded into this row by MERGE. */
+  mergedFrom?: string[]
+  /** User-authored or explicitly confirmed. Cap eviction will not drop these. */
+  userConfirmed?: boolean
   importance?: MemoryImportance
   /** Continuous importance score (0–1+). Decays daily, boosted on recall. */
   importanceScore?: number

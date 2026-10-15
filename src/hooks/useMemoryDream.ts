@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  applyDreamEdits,
   buildDreamPrompt,
   createInitialDreamLog,
   incrementDreamSessionCount,
@@ -15,6 +16,7 @@ import {
   detectContradictions,
 } from '../features/memory/contradictionDetector.ts'
 import { rebuildNarrative } from '../features/memory/narrativeMemory.ts'
+import { commitLongTermMemoryCap } from '../features/memory/memoryCapCommit.ts'
 import { rankMemories } from '../features/memory/memory.ts'
 import { cosineSimilarity, embedMemorySearchText } from '../features/memory/vectorSearch.ts'
 import {
@@ -42,6 +44,7 @@ import {
 import {
   AUTONOMY_DREAM_LOG_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
+  appendMemoryOpLog,
   normalizeMemoryItemsForStorage,
   onStorageChange,
   readJson,
@@ -345,23 +348,18 @@ export function useMemoryDream({
       // archive store. Compute against a snapshot of the current memories
       // ref OUTSIDE the updater, then setMemories with the final array.
       const snapshot = memoriesRef.current
-      let updated = [...snapshot]
-
-      // 1. Prune
-      const prunedIds = ops.pruneIds.filter((id) => updated.some((m) => m.id === id))
+      const edited = applyDreamEdits(snapshot, ops, now)
+      let updated = edited.memories
+      const prunedIds = edited.archivedIds
       if (prunedIds.length > 0) {
-        const pruneSet = new Set(prunedIds)
-        updated = updated.filter((m) => !pruneSet.has(m.id))
-      }
-
-      // 2. Update — link to pruned IDs (these are merges)
-      for (const upd of ops.updates) {
-        const idx = updated.findIndex((m) => m.id === upd.id)
-        if (idx >= 0) {
-          const existing = updated[idx]
-          const mergedRelated = [...new Set([...(existing.relatedIds ?? []), ...prunedIds])]
-          updated[idx] = { ...existing, content: upd.content, lastUsedAt: now, relatedIds: mergedRelated.length ? mergedRelated : undefined }
-        }
+        appendMemoryOpLog([{
+          id: `memory-op-dream-prune-${Date.parse(now) || 0}`,
+          at: now,
+          actor: 'dream',
+          op: 'DELETE',
+          targetIds: prunedIds,
+          reason: 'dream-prune',
+        }])
       }
 
       // 3. Add new memories from dream
@@ -372,6 +370,9 @@ export function useMemoryDream({
           category: (newMem.category as MemoryItem['category']) || 'reference',
           source: 'dream',
           createdAt: now,
+          updatedAt: now,
+          schemaVersion: 2,
+          status: 'active',
           importance: (newMem.importance as MemoryItem['importance']) || 'normal',
           relatedIds: prunedIds.length ? prunedIds : undefined,
         })
@@ -387,6 +388,9 @@ export function useMemoryDream({
             category: 'reference' as const,
             source: 'dream' as const,
             createdAt: skillNow,
+            updatedAt: skillNow,
+            schemaVersion: 2,
+            status: 'active',
             importance: 'normal' as const,
           })
         }
@@ -464,14 +468,15 @@ export function useMemoryDream({
         updated = active
       }
 
-      const finalMemories: MemoryItem[] = updated
+      const capped = commitLongTermMemoryCap(updated, now)
+      const finalMemories: MemoryItem[] = capped.kept
 
       // When archiveMemories ran, persist the active set synchronously in the
       // same call stack as that archive write — otherwise a crash between the
       // (synchronous) archive write and the (debounced) active-store save would
       // leave the archived items in BOTH stores (resurfacing as duplicates on
       // restart). The setMemories below still drives the UI + normal save.
-      if (candidates.length > 0) {
+      if (candidates.length > 0 || capped.evicted.length > 0) {
         writeJson(MEMORY_STORAGE_KEY, normalizeMemoryItemsForStorage(finalMemories))
       }
 

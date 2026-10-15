@@ -12,11 +12,12 @@ import type { EmotionState } from '../autonomy/emotionModel.ts'
 import { computeMemorySignificance } from './decay.ts'
 import { getSupersededRecallPenalty } from './contradictionDetector.ts'
 import { createId } from '../../lib/index.ts'
+import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
+import { commitLongTermMemoryCap } from './memoryCapCommit.ts'
 import { localDayKey } from '../../lib/localDate.ts'
 
 const longTermDuplicateThreshold = 0.72
 const dailyDuplicateThreshold = 0.88
-const maxLongTermMemories = 500
 const maxDailyEntriesPerDay = 16
 
 export function normalizeText(text: string) {
@@ -157,6 +158,7 @@ export function extractMemoriesFromMessage(
     ))
     .map((segment) => {
       const category = inferCategory(segment)
+      const createdAt = new Date().toISOString()
       return {
         id: createId('memory'),
         content: segment,
@@ -165,7 +167,10 @@ export function extractMemoriesFromMessage(
         enabled: true,
         source: 'chat',
         importance: inferImportance(segment, category),
-        createdAt: new Date().toISOString(),
+        schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
+        status: 'active' as const,
+        createdAt,
+        updatedAt: createdAt,
         emotionSnapshot: emotionState,
         emotionalValence: valence,
         significance: emotionState ? computeMemorySignificance(emotionState) : undefined,
@@ -192,6 +197,7 @@ function inferImportance(content: string, category: MemoryCategory): MemoryImpor
 }
 
 export function createManualMemory(content: string): MemoryItem {
+  const createdAt = new Date().toISOString()
   return {
     id: createId('memory'),
     content: content.trim(),
@@ -200,7 +206,11 @@ export function createManualMemory(content: string): MemoryItem {
     enabled: true,
     source: 'manual',
     importance: 'high',
-    createdAt: new Date().toISOString(),
+    userConfirmed: true,
+    schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
+    status: 'active',
+    createdAt,
+    updatedAt: createdAt,
   }
 }
 
@@ -227,21 +237,27 @@ export function mergeMemories(existing: MemoryItem[], incoming: MemoryItem[]) {
       continue
     }
 
-    duplicate.lastUsedAt = new Date().toISOString()
+    const touchedAt = new Date().toISOString()
+    duplicate.lastUsedAt = touchedAt
+    duplicate.updatedAt = touchedAt
   }
 
   const nowMs = Date.now()
-  return merged
+  const sorted = merged
     .sort((left, right) => (
       computeMemoryRetentionScore(right, nowMs) - computeMemoryRetentionScore(left, nowMs)
     ))
-    .slice(0, maxLongTermMemories)
+  return commitLongTermMemoryCap(sorted, new Date(nowMs).toISOString()).kept
 }
 
 export function rankMemories(memories: MemoryItem[], query: string) {
   const nowMs = Date.now()
   return [...memories]
-    .filter((memory) => memory.enabled !== false)
+    .filter((memory) => (
+      memory.enabled !== false
+      && memory.status !== 'superseded'
+      && memory.status !== 'archived'
+    ))
     .map((memory) => {
       const relevance = scoreLexicalSimilarity(memory.content, query)
       const retention = computeMemoryRetentionScore(memory, nowMs)

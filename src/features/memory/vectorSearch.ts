@@ -73,6 +73,16 @@ function buildLocalHashEmbedding(text: string) {
   return normalizeVector(vector)
 }
 
+/**
+ * Synchronous local-hash embedding used when a remote vector model is
+ * unavailable. Empty text returns an empty vector so callers can skip it.
+ */
+export function embedLocalHashMemoryText(text: string): number[] {
+  const normalized = normalizeForEmbedding(text)
+  if (!normalized) return []
+  return buildLocalHashEmbedding(normalized)
+}
+
 export function isLocalHashMemoryModel(model: string) {
   return normalizeForEmbedding(model) === LOCAL_HASH_MEMORY_MODEL_ID
 }
