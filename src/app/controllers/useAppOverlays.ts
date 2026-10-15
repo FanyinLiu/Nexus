@@ -2,6 +2,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -12,6 +13,7 @@ import {
   type ChatMemoryTraceFocusTarget,
 } from '../../features/memory/traceDetails.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide.tsx'
+import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
 import type { PetModelDefinition } from '../../features/pet'
 import {
   loadOnboardingCompleted,
@@ -194,7 +196,25 @@ export function useAppOverlays({
   const { t } = useTranslation()
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
-  const [onboardingOpen, setOnboardingOpen] = useState(onboardingPendingInitial)
+  const [firstUseGuideHost] = useState(() => resolveFirstUseGuideHost({
+    pending: onboardingPendingInitial,
+    view,
+    canOpenPanel: typeof window.desktopPet?.openPanel === 'function',
+  }))
+  const [onboardingOpen, setOnboardingOpen] = useState(firstUseGuideHost === 'local')
+  const [openFirstUsePanel] = useState(() => createFirstUsePanelHandoff({
+    openPanel: () => window.desktopPet!.openPanel('chat'),
+  }))
+  const setChatError = chat.setError
+
+  useEffect(() => {
+    if (firstUseGuideHost !== 'panel') return
+    let active = true
+    void openFirstUsePanel().catch(() => {
+      if (active) setChatError(t('ui_v2.error_recovery'))
+    })
+    return () => { active = false }
+  }, [firstUseGuideHost, openFirstUsePanel, setChatError, t])
 
   const closeSettingsSurface = useCallback(() => {
     setSettingsOpen(false)

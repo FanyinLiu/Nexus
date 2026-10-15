@@ -766,6 +766,13 @@ export function SettingsDrawer({
     resetSettingsSectionScroll()
   }, [activeSectionId, open, settingsView])
 
+  useLayoutEffect(() => {
+    if (!open || settingsView !== 'section' || activeSectionId !== 'model' || !saveError) return
+    // The save action stays visible while the model fields scroll; reveal its
+    // error notice even when the user last edited a field below the fold.
+    resetSettingsSectionScroll()
+  }, [activeSectionId, open, saveError, settingsView])
+
   useEffect(() => {
     if (!open || settingsView !== 'section') return undefined
 
@@ -897,6 +904,7 @@ export function SettingsDrawer({
         confirmOptions={confirmOptions}
         onReturnToSettingsHome={handleReturnToSettingsHome}
         onOpenSettingsSection={handleOpenSettingsSection}
+        onOpenOnboardingGuide={handleOpenOnboardingGuide}
         onClose={handleDismiss}
         onDialogKeyDown={handleSettingsDialogKeyDown}
         onDiscardDraft={() => { resetDraftForOpen(settings); themePreview.previewTheme(settings.themeId); windowState.rollbackWindowState() }}
