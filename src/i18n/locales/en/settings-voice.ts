@@ -105,7 +105,7 @@ export const enSettingsVoice = {
   'settings.speech_output.preview_text': 'Preview text',
   'settings.speech_output.preview': 'Preview current voice',
   'settings.speech_output.previewing': 'Previewing...',
-  'settings.voice.test_message': 'Hi, I\\u2019m {companionName}. Let\\u2019s try the current voice playback.',
+  'settings.voice.test_message': 'Hi, I\'m {companionName}. Let\'s try the current voice playback.',
   'settings.voice.fetch_voices_error': 'Couldn\'t load the online voice list — try again in a moment?',
   'settings.voice.empty_preview_text': 'Please enter some preview text first.',
   'settings.voice.preview_error': 'Preview didn\'t work — try again in a moment?',
