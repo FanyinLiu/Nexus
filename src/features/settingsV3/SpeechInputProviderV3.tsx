@@ -5,6 +5,7 @@ import {
   type VolcengineCredentialParts,
 } from '../../components/settingsDrawerSupport.ts'
 import { SenseVoiceDownloadOffer } from '../../components/SenseVoiceDownloadOffer.tsx'
+import { VoiceLanguageSelect } from '../../components/VoiceLanguageSelect.tsx'
 import { UrlInput } from './UrlInput.tsx'
 import {
   getSpeechInputModelOptions,
@@ -196,9 +197,9 @@ export const SpeechInputProviderV3 = memo(function SpeechInputProviderV3({
         </SettingsV3Field>
 
         <SettingsV3Field label={ti('settings.speech_input.recognition_lang')}>
-          <input
+          <VoiceLanguageSelect
             value={draft.speechRecognitionLang}
-            onChange={(event) => setDraft((current) => ({ ...current, speechRecognitionLang: event.target.value }))}
+            onChange={(speechRecognitionLang) => setDraft((current) => ({ ...current, speechRecognitionLang }))}
           />
         </SettingsV3Field>
 

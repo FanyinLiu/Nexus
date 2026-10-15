@@ -350,6 +350,10 @@ check('pre-release gate docs include packaged smoke', () => {
 check('packaged smoke enforces app size and forbidden dependency budgets', () => {
   assert(pkg.scripts?.['package:dir:smoke']?.includes('npm run package:size:audit'), 'packaged smoke must run package:size:audit')
   assert(pkg.build?.files?.includes('!node_modules/onnxruntime-node/**'), 'packaging must exclude unused onnxruntime-node payloads')
+  assert(
+    pkg.build?.asarUnpack?.includes('node_modules/uiohook-napi/**/*'),
+    'packaging must unpack uiohook-napi so the typing hook native binary loads outside asar',
+  )
 })
 
 check('core path smoke is release-gated and documented', () => {

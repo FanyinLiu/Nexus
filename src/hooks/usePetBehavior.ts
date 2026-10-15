@@ -58,6 +58,10 @@ type UsePetBehaviorContext = {
 export function usePetBehavior(ctx: UsePetBehaviorContext) {
   const [mood, setMood] = useState<PetMood>(() => loadPetRuntimeState().mood)
   const [gazeTarget, setGazeTarget] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [typingActivity, setTypingActivity] = useState<{ active: boolean; keysPerSecond: number }>({
+    active: false,
+    keysPerSecond: 0,
+  })
   const [petPerformanceCue, setPetPerformanceCue] = useState<PetPerformanceCue | null>(null)
   const { locale } = useTranslation()
   const [petStatusOverride, setPetStatusOverride] = useState<string | null>(null)
@@ -367,6 +371,8 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     moodRef,
     gazeTarget,
     setGazeTarget,
+    typingActivity,
+    setTypingActivity,
     petPerformanceCue,
     petStatusText,
     ambientPresence,
@@ -392,6 +398,8 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     setMood,
     gazeTarget,
     setGazeTarget,
+    typingActivity,
+    setTypingActivity,
     petPerformanceCue,
     petStatusText,
     ambientPresence,

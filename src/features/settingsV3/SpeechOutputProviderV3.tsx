@@ -23,6 +23,7 @@ import {
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/speechProviderCatalog.ts'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles.ts'
+import { VoiceLanguageSelect } from '../../components/VoiceLanguageSelect.tsx'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
@@ -360,9 +361,9 @@ export const SpeechOutputProviderV3 = memo(function SpeechOutputProviderV3({
         ) : null}
 
         <SettingsV3Field label={ti('settings.speech_output.speech_lang')}>
-          <input
+          <VoiceLanguageSelect
             value={draft.speechSynthesisLang}
-            onChange={(event) => setDraft((current) => ({ ...current, speechSynthesisLang: event.target.value }))}
+            onChange={(speechSynthesisLang) => setDraft((current) => ({ ...current, speechSynthesisLang }))}
           />
         </SettingsV3Field>
       </div>

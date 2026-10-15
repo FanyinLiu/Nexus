@@ -19,6 +19,7 @@ import {
   planLive2DContextRecovery,
 } from './live2d/rendering.ts'
 import { clamp } from '../../../lib/common.ts'
+import { typingIntensityFromRate } from '../../desktopPresence/typingPresence.ts'
 import { useTranslation } from '../../../i18n/index.ts'
 import {
   attachLive2DModelTicker,
@@ -63,6 +64,7 @@ type Live2DCanvasProps = {
   speechLevel?: number
   speechLevelSource?: SpeechLevelSource
   gazeTarget?: GazeTarget
+  typingActivity?: { active: boolean; keysPerSecond: number }
   performanceCue?: PetPerformanceCue | null
   placement?: 'pet-stage' | 'panel-card'
   paused?: boolean
@@ -77,6 +79,7 @@ export function Live2DCanvas({
   speechLevel = 0,
   speechLevelSource,
   gazeTarget = { x: 0, y: 0 },
+  typingActivity,
   performanceCue = null,
   placement = 'panel-card',
   paused = false,
@@ -103,6 +106,8 @@ export function Live2DCanvas({
     x: clamp(gazeTarget.x, -1, 1),
     y: clamp(gazeTarget.y, -1, 1),
   })
+  const typingIntensityRef = useRef(0)
+  const wasTypingRef = useRef(false)
   const frameStateRef = useRef<FrameRenderState>(createPetFrameState())
   const contextRecoveryAttemptsRef = useRef(0)
   const modelDefinitionRef = useRef(modelDefinition)
@@ -225,6 +230,7 @@ export function Live2DCanvas({
         internalModel,
         activeExpressionSlot: currentExpressionSlotRef.current,
         gazeTarget: gazeTargetRef.current,
+        typingIntensity: typingIntensityRef.current,
         speechLevelTarget: isSpeakingRef.current
           ? (speechLevelSourceRef.current?.current ?? speechLevelTargetRef.current)
           : 0,
@@ -842,8 +848,27 @@ export function Live2DCanvas({
     }
   }, [gazeTarget.x, gazeTarget.y])
 
+  const typingActive = Boolean(typingActivity?.active)
+  const typingIntensity = typingActive
+    ? typingIntensityFromRate(typingActivity?.keysPerSecond ?? 0)
+    : 0
+
+  useEffect(() => {
+    typingIntensityRef.current = typingIntensity
+    // Fire once at the start of a typing burst. Parameter offsets carry the
+    // intensity after that; models without an interaction motion no-op.
+    if (typingActive && !wasTypingRef.current && modelReady) {
+      triggerMotion('touchBody')
+    }
+    if (modelReady || !typingActive) wasTypingRef.current = typingActive
+  }, [modelReady, triggerMotion, typingActive, typingIntensity])
+
   return (
-    <div className="live2d-shell">
+    <div
+      className="live2d-shell"
+      data-typing-active={typingActive ? 'true' : 'false'}
+      data-typing-intensity={typingIntensity.toFixed(3)}
+    >
       <div ref={containerRef} className={`live2d-canvas ${modelReady ? 'is-ready' : ''}`} />
       {error ? (
         <div

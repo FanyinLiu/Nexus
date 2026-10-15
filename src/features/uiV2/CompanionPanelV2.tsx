@@ -39,6 +39,7 @@ export type CompanionPanelV2Props = {
     petTapActive: boolean
     petTouchZone: PetTouchZone | null
     gazeTarget: GazeTarget
+    typingActivity?: { active: boolean; keysPerSecond: number }
     petPerformanceCue?: PetPerformanceCue | null
   }
   voice: {
@@ -233,6 +234,7 @@ export function CompanionPanelV2({
             isSpeaking={phase === 'speaking'}
             speechLevelSource={voice.speechLevelSource}
             gazeTarget={pet.gazeTarget}
+            typingActivity={pet.typingActivity}
             performanceCue={pet.petPerformanceCue ?? null}
             placement="pet-stage"
             paused={panelCollapsed || hasModalOverlay}
