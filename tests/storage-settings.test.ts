@@ -258,7 +258,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 9)
+    assert.equal(settings.settingsSchemaVersion, 10)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -431,10 +431,69 @@ test('migrates removed October 2026 catalog and speech ids', () => {
   assert.equal(settings.textProviderProfiles.together?.model, 'moonshotai/Kimi-K3')
   assert.equal(settings.textProviderProfiles.mistral?.model, 'mistral-small-2603')
   assert.equal(settings.textProviderProfiles.qianfan?.model, 'ernie-4.5-turbo-128k')
-  assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4-flash')
-  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4-Flash')
+  assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4.1-flash')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4.1-Flash')
   assert.equal(settings.textProviderProfiles.moonshot?.model, 'kimi-k2.6')
   assert.equal(settings.speechOutputProviderProfiles['elevenlabs-tts']?.model, 'eleven_multilingual_v2')
+})
+
+test('migrates SiliconFlow, NVIDIA, and MiniMax PAYG defaults without moving coding plans', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 9,
+      apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+      model: 'MiniMax-M2.7',
+      textProviderProfiles: {
+        siliconflow: {
+          apiBaseUrl: 'https://api.siliconflow.cn/v1',
+          apiKey: '',
+          model: 'deepseek-ai/DeepSeek-V4-Flash',
+        },
+        'siliconflow-global': {
+          apiBaseUrl: 'https://api.siliconflow.com/v1',
+          apiKey: '',
+          model: 'deepseek-ai/DeepSeek-V4-Pro',
+        },
+        nvidia: {
+          apiBaseUrl: 'https://integrate.api.nvidia.com/v1',
+          apiKey: '',
+          model: 'deepseek-ai/deepseek-v4-flash',
+        },
+        'minimax-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.7',
+        },
+        'minimax-coding': {
+          apiBaseUrl: 'https://api.minimaxi.com/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M3.1-Flash-Preview',
+        },
+        'minimax-coding-global': {
+          apiBaseUrl: 'https://api.minimax.io/anthropic',
+          apiKey: '',
+          model: 'MiniMax-M2.7',
+        },
+      },
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.apiProviderId, 'minimax')
+  assert.equal(settings.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4.1-Flash')
+  assert.equal(settings.textProviderProfiles['siliconflow-global']?.model, 'deepseek-ai/DeepSeek-V4-Pro')
+  assert.equal(settings.textProviderProfiles.nvidia?.model, 'deepseek-ai/deepseek-v4.1-flash')
+  assert.equal(settings.textProviderProfiles['minimax-global']?.model, 'MiniMax-M3')
+  assert.equal(settings.textProviderProfiles['minimax-coding']?.model, 'MiniMax-M3.1-Flash-Preview')
+  assert.equal(settings.textProviderProfiles['minimax-coding-global']?.model, 'MiniMax-M2.7')
 })
 
 test('preserves an explicit older model that was not the previous default', () => {

@@ -238,7 +238,42 @@ function remapSpeechOutputModelIds(
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 9
+/**
+ * Previous catalog defaults promoted after the October 2026 audit.
+ * Only a stored model that still equals that previous default is rewritten.
+ * Coding-plan presets stay on MiniMax-M3.1-Flash-Preview.
+ */
+const V10_RETIRED_CATALOG_DEFAULTS: Record<string, { from: string; to: string }> = {
+  siliconflow: { from: 'deepseek-ai/DeepSeek-V4-Flash', to: 'deepseek-ai/DeepSeek-V4.1-Flash' },
+  'siliconflow-global': { from: 'deepseek-ai/DeepSeek-V4-Flash', to: 'deepseek-ai/DeepSeek-V4.1-Flash' },
+  nvidia: { from: 'deepseek-ai/deepseek-v4-flash', to: 'deepseek-ai/deepseek-v4.1-flash' },
+  minimax: { from: 'MiniMax-M2.7', to: 'MiniMax-M3' },
+  'minimax-global': { from: 'MiniMax-M2.7', to: 'MiniMax-M3' },
+}
+
+/**
+ * Remember the provider inferred from the pre-migration model.
+ * MiniMax-M3 is also the Token Plan disambiguator, so a bare PAYG default
+ * must keep its provider id before the model string changes.
+ */
+function pinProviderIdForDefaultRemap(
+  raw: Record<string, unknown>,
+  mapping: Record<string, { from: string; to: string }>,
+) {
+  const next = { ...raw }
+  if (typeof next.apiProviderId === 'string' && next.apiProviderId.trim()) return next
+  const storedBaseUrl = typeof next.apiBaseUrl === 'string' ? next.apiBaseUrl : ''
+  const storedModel = typeof next.model === 'string' ? next.model : ''
+  if (!storedModel) return next
+  const providerId = inferApiProviderId(storedBaseUrl, storedModel)
+  const entry = mapping[providerId]
+  if (entry && storedModel === entry.from) {
+    next.apiProviderId = providerId
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 10
 
 interface SettingsMigration {
   toVersion: number
@@ -356,6 +391,14 @@ const migrations: SettingsMigration[] = [
     migrate: (raw) => remapSpeechOutputModelIds(
       remapStoredModelIds(raw, V9_RETIRED_MODEL_IDS),
       V9_RETIRED_SPEECH_OUTPUT_IDS,
+    ),
+  },
+  {
+    toVersion: 10,
+    description: 'Promote SiliconFlow, NVIDIA, and MiniMax PAYG defaults',
+    migrate: (raw) => remapStoredCatalogDefaults(
+      pinProviderIdForDefaultRemap(raw, V10_RETIRED_CATALOG_DEFAULTS),
+      V10_RETIRED_CATALOG_DEFAULTS,
     ),
   },
 ]

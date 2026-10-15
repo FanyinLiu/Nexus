@@ -144,6 +144,7 @@ const FALLBACK_PRICING: Array<{ pattern: string; price: Pick<UsagePricing, 'inpu
   { pattern: 'gpt-3.5',         price: { tier: 'cheap',    inputPricePerMTokens: 0.5,  outputPricePerMTokens: 1.5  } },
   // DeepSeek — longest-first so v4-pro / v4-flash beat the bare deepseek-* fallback
   { pattern: 'deepseek-v4-pro',   price: { tier: 'heavy',    inputPricePerMTokens: 1.32, outputPricePerMTokens: 3.96 } },
+  { pattern: 'deepseek-v4.1',     price: { tier: 'cheap',    inputPricePerMTokens: 0.3,   outputPricePerMTokens: 1.2  } },
   { pattern: 'deepseek-v4-flash', price: { tier: 'cheap',    inputPricePerMTokens: 0.3,   outputPricePerMTokens: 1.2  } },
   { pattern: 'deepseek-flash',    price: { tier: 'cheap',    inputPricePerMTokens: 0.3,   outputPricePerMTokens: 1.2  } },
   { pattern: 'grok-4.7',          price: { tier: 'standard', inputPricePerMTokens: 2,    outputPricePerMTokens: 6    } },
