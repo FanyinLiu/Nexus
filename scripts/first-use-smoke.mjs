@@ -134,6 +134,7 @@ async function readSavedModel(page) {
 }
 
 async function openPanel(petPage) {
+  await petPage.locator('.nexus-companion-v2__character-hit').hover()
   await petPage.locator('.nexus-companion-v2__utility-trigger').click()
   await petPage.locator('.nexus-companion-v2__utility-item').first().click()
   return waitForPanel(petPage)
@@ -318,7 +319,7 @@ async function run() {
   await record('normal quit and same isolated profile restart preserve provider, model and conversation', async () => {
     await quitNormally()
     petPage = await launch()
-    await petPage.locator('.nexus-companion-v2__utility-trigger').waitFor()
+    await petPage.locator('.nexus-companion-v2__character-hit').waitFor()
     assert.equal(await petPage.locator('.onboarding-card').count(), 0)
     const saved = await readSavedModel(petPage)
     assert.equal(saved.apiProviderId, 'custom')

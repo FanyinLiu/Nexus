@@ -24,6 +24,7 @@ import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as localDataIpc from './ipc/localDataIpc.js'
+import * as desktopPresenceIpc from './ipc/desktopPresenceIpc.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
@@ -109,6 +110,7 @@ export function registerIpc() {
   mcpIpc.register()
   externalActionPolicyIpc.register()
   localDataIpc.register()
+  desktopPresenceIpc.register()
 
   // Kick off the deferred-module load immediately (no setTimeout). The
   // load is async (Promise.all of dynamic imports) so the call returns
@@ -123,6 +125,7 @@ export function registerIpc() {
   void loadDeferredModules()
 
   app.once('before-quit', async () => {
+    desktopPresenceIpc.stop()
     const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
       import('./services/mcpHost.js').catch(() => null),
       import('./services/memoryVectorStore.js').catch(() => null),

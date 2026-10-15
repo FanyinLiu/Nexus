@@ -30,6 +30,24 @@
   font-family: inherit;
   isolation: isolate;
   user-select: none;
+  /* Margins are not a hotspot. With click-through on, only the character
+     and the controls should pull mouse events back to this window. */
+  pointer-events: none;
+}
+
+.nexus-v2-interactive {
+  pointer-events: auto;
+}
+
+.nexus-companion-v2__backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 24px 16px 20px;
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--nx-v2-surface) 94%, transparent);
+  border: 1px solid var(--nexus-v2-border-strong);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--nx-v2-shadow) 86%, transparent);
+  pointer-events: none;
 }
 
 .nexus-companion-v2__character-hit {
@@ -269,6 +287,31 @@
   font-size: 11px;
   line-height: 1.4;
   transform: translateX(-50%);
+}
+
+/* Chrome stays in the tab order. Opacity keeps it keyboard-reachable
+   without painting a card while the pointer is elsewhere. */
+.nexus-companion-v2__utility-trigger,
+.nexus-companion-v2__voice,
+.nexus-companion-v2__state-label {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.nexus-companion-v2:is(:hover, :focus-within, [data-utility-open='true']) :is(
+  .nexus-companion-v2__utility-trigger,
+  .nexus-companion-v2__voice,
+  .nexus-companion-v2__state-label
+) {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexus-companion-v2__utility-trigger,
+  .nexus-companion-v2__voice,
+  .nexus-companion-v2__state-label {
+    transition: none;
+  }
 }
 
 .nexus-v2-sr-only {

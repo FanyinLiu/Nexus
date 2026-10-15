@@ -891,10 +891,49 @@ test('missing apiProviderId does not promote a non-default MiniMax or SiliconFlo
   assert.equal(settings.textProviderProfiles.siliconflow?.model, 'deepseek-ai/DeepSeek-V4-Pro')
 })
 
+test('companion backdrop defaults off for stores that never chose it', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 12,
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.companionBackdropEnabled, false)
+  assert.equal(settings.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
+})
+
+test('an explicit companion backdrop choice survives the migration', () => {
+  const localStorage = createLocalStorageMock({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({
+      settingsSchemaVersion: 12,
+      companionBackdropEnabled: true,
+    }),
+  })
+
+  Object.defineProperty(globalThis, 'window', {
+    value: { localStorage },
+    configurable: true,
+    writable: true,
+  })
+
+  const settings = loadSettings()
+
+  assert.equal(settings.companionBackdropEnabled, true)
+  assert.equal(settings.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
+})
+
 test('a newer schema version is left untouched and stays newer after save', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      settingsSchemaVersion: 13,
+      settingsSchemaVersion: 15,
       apiProviderId: 'siliconflow',
       apiBaseUrl: 'https://api.siliconflow.cn/v1',
       model: 'deepseek-ai/DeepSeek-V4-Flash',
@@ -908,7 +947,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
   })
 
   const settings = loadSettings()
-  assert.equal(settings.settingsSchemaVersion, 13)
+  assert.equal(settings.settingsSchemaVersion, 15)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
 
   saveSettings(settings, { silent: true })
@@ -916,7 +955,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
     settingsSchemaVersion?: number
     model?: string
   }
-  assert.equal(saved.settingsSchemaVersion, 13)
+  assert.equal(saved.settingsSchemaVersion, 15)
   assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 

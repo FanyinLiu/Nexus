@@ -360,4 +360,25 @@ contextBridge.exposeInMainWorld('desktopPet', {
     ipcRenderer.on('vts-bridge:status', handler)
     return () => ipcRenderer.removeListener('vts-bridge:status', handler)
   },
+
+  // Adaptive desktop presence. Gaze samples are relative to this window.
+  // Typing events are aggregate only — the main process never sends key codes.
+  setDesktopPresencePreferences: (preferences) => ipcRenderer.invoke('desktop-presence:set-preferences', preferences),
+  getDesktopTypingStatus: () => ipcRenderer.invoke('desktop-presence:get-typing-status'),
+  openDesktopTypingPermission: () => ipcRenderer.invoke('desktop-presence:open-typing-permission'),
+  subscribeDesktopGaze: (listener) => {
+    const handler = (_event, sample) => listener(sample)
+    ipcRenderer.on('desktop-presence:gaze', handler)
+    return () => ipcRenderer.removeListener('desktop-presence:gaze', handler)
+  },
+  subscribeDesktopTyping: (listener) => {
+    const handler = (_event, signal) => listener(signal)
+    ipcRenderer.on('desktop-presence:typing', handler)
+    return () => ipcRenderer.removeListener('desktop-presence:typing', handler)
+  },
+  subscribeDesktopTypingStatus: (listener) => {
+    const handler = (_event, status) => listener(status)
+    ipcRenderer.on('desktop-presence:typing-status', handler)
+    return () => ipcRenderer.removeListener('desktop-presence:typing-status', handler)
+  },
 })

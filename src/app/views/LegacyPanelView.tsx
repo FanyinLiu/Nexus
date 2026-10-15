@@ -767,6 +767,7 @@ export function LegacyPanelView({
                     isSpeaking={image4CompanionState.mode === 'speaking'}
                     speechLevelSource={voice.speechLevelSource}
                     gazeTarget={pet.gazeTarget}
+                    typingActivity={pet.typingActivity}
                     performanceCue={pet.petPerformanceCue}
                     placement="pet-stage"
                     paused={Boolean(onboardingGuide)}

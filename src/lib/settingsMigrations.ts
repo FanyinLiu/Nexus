@@ -338,7 +338,7 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 13
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 14
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -496,6 +496,17 @@ const migrations: SettingsMigration[] = [
   },
   {
     toVersion: 13,
+    description: 'Default the frameless companion backdrop off so the character stands on the desktop',
+    migrate: (raw) => {
+      const next = { ...raw }
+      if (typeof next.companionBackdropEnabled !== 'boolean') {
+        next.companionBackdropEnabled = false
+      }
+      return next
+    },
+  },
+  {
+    toVersion: 14,
     description: 'Canonicalize voice language tags without changing providers or voices',
     migrate: migrateVoiceLanguageFields,
   },

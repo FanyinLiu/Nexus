@@ -18,6 +18,7 @@ import { RIGHT_BLINK_LAG_MS, createBlinkLane } from '../../blink.ts'
 import { createSaccadeState, stepIdleSaccade, type SaccadeState } from '../../idleSaccades.ts'
 import { resolveSpeechVisemes } from '../../speechVisemes.ts'
 import { clamp } from '../../../../lib/common.ts'
+import { typingPresenceOffset } from '../../../desktopPresence/typingPresence.ts'
 import type {
   CubismCoreModel,
   GazeTarget,
@@ -54,6 +55,7 @@ export type FrameRenderInputs = {
   internalModel: Live2DInternalModel
   activeExpressionSlot: PetExpressionSlot
   gazeTarget: GazeTarget
+  typingIntensity?: number
   speechLevelTarget: number
   performanceCue: PetPerformanceCue | null
   performanceCueStartedAt: number
@@ -66,6 +68,7 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
     internalModel,
     activeExpressionSlot,
     gazeTarget,
+    typingIntensity = 0,
     speechLevelTarget,
     performanceCue,
     performanceCueStartedAt,
@@ -124,6 +127,7 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
   let eyeFormLevel = 0
   let mouthDownLevel = 0
   let breathLevel = 0.22 + (Math.sin(seconds * 2.1) + 1) * 0.1
+  const typing = typingPresenceOffset(typingIntensity, seconds)
 
   // ── Base expression-slot rig overlays ────────────────────────────────
   switch (activeExpressionSlot) {
@@ -324,6 +328,8 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
     }
   }
 
+  if (typing.gazeYBias) gazeY = clamp(gazeY - typing.gazeYBias, -1, 1)
+
   internalModel.focusController?.focus(gazeX, gazeY)
 
   const bodyAngleY = gazeY * -6 * (activeExpressionSlot === 'sleepy' ? 0.55 : 1)
@@ -338,15 +344,16 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
 
   const visemes = resolveSpeechVisemes(state.smoothedSpeechLevel, now)
 
-  addParameterValue(coreModel, openParam, visemes.open * 0.95)
+  const typingMouth = speechLevelTarget < 0.015 ? typing.mouthOpen : 0
+  addParameterValue(coreModel, openParam, visemes.open * 0.95 + typingMouth)
   addParameterValue(coreModel, roundParam, visemes.round)
   addParameterValue(coreModel, narrowParam, visemes.narrow)
   addParameterValue(coreModel, smileParam, smileLevel)
   addParameterValue(coreModel, downParam, mouthDownLevel)
   addParameterValue(coreModel, rigParams?.angleX, gazeX * 18)
   addParameterValue(coreModel, rigParams?.angleY, gazeY * -12)
-  addParameterValue(coreModel, rigParams?.angleZ, angleZ)
-  addParameterValue(coreModel, rigParams?.bodyAngleX, bodyAngleX)
+  addParameterValue(coreModel, rigParams?.angleZ, angleZ + typing.angleZ)
+  addParameterValue(coreModel, rigParams?.bodyAngleX, bodyAngleX + typing.bodyAngleX)
   addParameterValue(coreModel, rigParams?.bodyAngleY, bodyAngleY)
   addParameterValue(coreModel, rigParams?.eyeBallX, gazeX)
   addParameterValue(coreModel, rigParams?.eyeBallY, gazeY)
@@ -361,7 +368,7 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
   addParameterValue(coreModel, rigParams?.browLForm, browFormLevel)
   addParameterValue(coreModel, rigParams?.browRForm, browFormLevel)
   addParameterValue(coreModel, rigParams?.cheek, cheekLevel)
-  addParameterValue(coreModel, rigParams?.breath, breathLevel)
+  addParameterValue(coreModel, rigParams?.breath, breathLevel + typing.breath)
   addParameterValue(coreModel, rigParams?.eyeLSmile, eyeSmileLevel)
   addParameterValue(coreModel, rigParams?.eyeRSmile, eyeSmileLevel)
   addParameterValue(coreModel, rigParams?.eyeLForm, eyeFormLevel)
