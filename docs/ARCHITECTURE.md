@@ -223,11 +223,11 @@ Current baseline:
   active integration can move to `auto`. Renderer sync sends only mode plus
   active/configured booleans, never tokens, target IDs, MCP commands, args, or
   allowlists.
-- Pet-model local artifact IPC now validates gallery/creator-kit/install/open
-  payloads before service work, writes metadata-only audit records, and requires
-  native confirmation for renderer-supplied direct path, local write, remote
-  import, install, and open-path actions. Audit records store only lengths and
-  category flags, not local paths, URLs, slugs, model IDs, labels, or error text.
+- Pet-model local artifact IPC validates Live2D/sprite import and community
+  gallery payloads before service work and writes metadata-only audit records.
+  Local import is dialog-backed. Community gallery import requires native
+  confirmation. Audit records store only lengths and category flags, not local
+  paths, URLs, slugs, model IDs, labels, or error text.
 - Plugin lifecycle and plugin bus write IPC now record metadata-only
   request/result audit entries and require native confirmation before
   execution-granting lifecycle actions or bus publish/subscribe/unsubscribe

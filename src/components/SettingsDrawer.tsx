@@ -25,7 +25,6 @@ import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import type {
   CodexPetGalleryCatalogResult,
   PetModelDefinition,
-  SpritePetCreatorKitInspection,
 } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
@@ -153,59 +152,6 @@ export type SettingsDrawerProps = {
     message: string
   }>
   onListCodexPetGallery?: (query?: string) => Promise<CodexPetGalleryCatalogResult>
-  onCreateCodexPetCreatorKit?: (payload: {
-    displayName?: string
-    concept?: string
-  }) => Promise<{
-    id: string
-    displayName: string
-    directoryPath: string
-    sourceRowsDirectory?: string
-    message: string
-  }>
-  onInspectCodexPetCreatorKit?: (payload?: { kitDirectory?: string }) => Promise<SpritePetCreatorKitInspection | null>
-  onAssembleCodexPetCreatorKit?: (payload?: { kitDirectory?: string }) => Promise<{
-    model: PetModelDefinition
-    message: string
-    packageDirectory?: string
-    manifestPath?: string
-    spritesheetPath?: string
-    reportPath?: string
-    visualAuditPath?: string
-    archivePath?: string
-  } | null>
-  onInstallCodexPetCreatorKitToCodex?: (payload: {
-    kitDirectory: string
-    manifestPath: string
-  }) => Promise<{
-    ok: boolean
-    id: string
-    directoryPath: string
-    manifestPath: string
-    message: string
-  }>
-  onOpenCodexPetCreatorKitPath?: (payload: {
-    kitDirectory: string
-    targetPath: string
-    mode?: 'open' | 'reveal'
-  }) => Promise<{
-    ok: boolean
-    message: string
-  }>
-  onCreateSpritePetFromImage?: () => Promise<{
-    model: PetModelDefinition
-    message: string
-    packageDirectory?: string
-    packageDirectoryDisplay?: string
-    manifestPath?: string
-    manifestPathDisplay?: string
-    spritesheetPath?: string
-    spritesheetPathDisplay?: string
-    visualAuditPath?: string
-    visualAuditPathDisplay?: string
-    archivePath?: string
-    archivePathDisplay?: string
-  } | null>
   onTestConnection: (
     capability: ServiceConnectionCapability,
     settings: AppSettings,
@@ -268,12 +214,6 @@ export function SettingsDrawer({
   onImportCodexPetGallery,
   onSelectImportedPetModel,
   onListCodexPetGallery,
-  onCreateCodexPetCreatorKit,
-  onInspectCodexPetCreatorKit,
-  onAssembleCodexPetCreatorKit,
-  onInstallCodexPetCreatorKitToCodex,
-  onOpenCodexPetCreatorKitPath,
-  onCreateSpritePetFromImage,
   onTestConnection,
   onLoadSpeechVoices,
   onPreviewSpeech,
@@ -424,12 +364,6 @@ export function SettingsDrawer({
     onImportPetModel,
     onImportCodexPetGallery,
     onListCodexPetGallery,
-    onCreateCodexPetCreatorKit,
-    onInspectCodexPetCreatorKit,
-    onAssembleCodexPetCreatorKit,
-    onInstallCodexPetCreatorKitToCodex,
-    onOpenCodexPetCreatorKitPath,
-    onCreateSpritePetFromImage,
     onSelectImportedPetModel,
     setDraft,
   })

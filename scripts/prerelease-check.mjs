@@ -207,7 +207,7 @@ stage('B', 'Code quality', () => {
       }
     })
 
-    check('B', 'Live2D bundled-model smoke (owned Vite lifecycle + 2 screenshots)', () => {
+    check('B', 'Live2D three-model smoke (owned Vite lifecycle + 7 screenshots)', () => {
       try {
         execFileSync(process.execPath, [join(ROOT, 'scripts/live2d-three-model-smoke.mjs')], {
           cwd: ROOT,

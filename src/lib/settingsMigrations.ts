@@ -309,18 +309,15 @@ const V11_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: stri
   'custom-openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
 }
 
-const REMOVED_LIVE2D_MODEL_IDS = new Set(['haru', 'hiyori'])
-const REMOVED_SPRITE_PET_IDS = new Set(['qiyi'])
+const REMOVED_BUNDLED_SPRITE_PET_IDS = new Set(['codex', 'qiyi'])
 
 /**
- * Map a stored companion id onto a model this build still ships.
- * Removed Live2D samples return to Mao. The removed sprite pet returns to
- * Pip, the bundled sample sprite pet. Imported ids are left alone.
+ * Bundled sprite pets are no longer shipped. Official Live2D samples
+ * (mao, haru, hiyori) stay. Any other id is treated as a user import.
  */
 function remapRemovedBundledPetModelId(modelId: unknown): unknown {
   if (typeof modelId !== 'string') return modelId
-  if (REMOVED_LIVE2D_MODEL_IDS.has(modelId)) return 'mao'
-  if (REMOVED_SPRITE_PET_IDS.has(modelId)) return 'codex'
+  if (REMOVED_BUNDLED_SPRITE_PET_IDS.has(modelId)) return 'mao'
   return modelId
 }
 
@@ -484,7 +481,7 @@ const migrations: SettingsMigration[] = [
   },
   {
     toVersion: 12,
-    description: 'Fall back when a removed bundled Live2D model or sprite pet is still selected',
+    description: 'Fall back when a removed bundled sprite pet is still selected',
     migrate: migrateRemovedBundledPetModels,
   },
 ]

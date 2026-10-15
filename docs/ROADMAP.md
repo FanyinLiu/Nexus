@@ -51,12 +51,13 @@ The larger product steps are:
   fallback, and prove Mao/Haru/Hiyori cold start, switching, and recovery in
   the durable visual plus packaged runtime gates. No dependency upgrade or
   behavior expansion belongs to this patch line.
-- **v0.4.7 — avatar compatibility, portrait v4, and catalog.** Validate
+- **v0.4.7 — avatar compatibility and catalog.** Validate
   imported Cubism resources before activation, explain missing
   textures/motions/expressions, surface actionable repair guidance, and retain
-  packaged switch diagnostics. Portrait Puppet v4 is the default in-app
-  picture path; Grok speech and Qwen 3.8-max / GLM-5.3 catalog defaults are
-  included. The 2026-08-10 `v0.4.7-beta.1` preparation record remains
+  packaged switch diagnostics. Portrait Puppet v4 shipped in v0.4.7 and is
+  removed from this tree. Official Live2D samples are Mao, Haru, and Hiyori;
+  sprite pets are import-only. Grok speech and Qwen 3.8-max / GLM-5.3 catalog
+  defaults are included. The 2026-08-10 `v0.4.7-beta.1` preparation record remains
   historical. This remains a compatibility/catalog release, not a v0.5
   behavior release.
 - **v0.5.0 — adaptive desktop presence.** Extend the existing sprite

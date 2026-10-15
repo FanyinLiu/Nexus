@@ -13,9 +13,9 @@ pet.json
 spritesheet.png
 ```
 
-Bundled app pets live under `public/pets/<pet-id>/` during development and are copied to `dist/pets/<pet-id>/` by the Vite build. Nexus scans bundled sprite pet manifests and imported sprite pet manifests with the same parser, so new built-in pets should use this package shape instead of hard-coded one-off asset paths.
+The shipped app does not include a bundled sprite pet. Built-in avatars are the official Live2D samples Mao (the default), Haru, and Hiyori. A sprite pet is an imported package. For development, place one under `public/pets/<pet-id>/` so the Vite build copies it to `dist/pets/<pet-id>/`. Nexus scans those manifests and imported sprite pet manifests with the same parser.
 
-Nexus also scans user-created Codex-compatible pets from `${CODEX_HOME:-~/.codex}/pets/<pet-id>/`. This is for custom pets you own or generated yourself; do not point Nexus at private Codex application bundles or copy Codex built-in assets into this app.
+Nexus also scans user-created Codex-compatible pets from `${CODEX_HOME:-~/.codex}/pets/<pet-id>/`. This is for custom pets you own; do not point Nexus at private Codex application bundles or copy Codex built-in assets into this app.
 
 `pet.json`:
 
@@ -34,86 +34,15 @@ The spritesheet must be PNG or WebP, transparent where unused, and exactly `1536
 - `9` rows
 - `192x208` pixels per frame
 
-## Easy Creator Flow
+## Importing a finished sprite pet
 
-Most users should not have to learn the atlas details first. The default portrait path is **Portrait Puppet v4**: a layered pack (`preview.png` + `parts/*.png`). In the app, use Settings -> Companion -> Avatar -> `Make a pet from a picture` and select the preview or the layer folder. Copy the in-app layered prompt into an image model, approve the full-body preview, then export same-canvas layers. `npm run pet:scaffold-portrait-v4 -- /path/to/layer-directory` builds the same package from a folder.
+Nexus does not turn a photo or portrait into a pet, and it does not assemble an atlas from row strips. Import a finished package: `pet.json` plus an `8x9` spritesheet, or a community ZIP that contains those files.
 
-A single portrait still works as a **fallback v3 puppet**: one image that approximates turn, blink, breath, and mouth locally. Extra named pictures (`idle`, `happy`, `shy` / `embarrassed`, `闭眼` / `blink`, `张嘴` / `mouth`, `speaking`…) become expression swaps. It is simpler to make than v4, but it cannot occlude blinks or give independent hair and cloth the way a layered pack can.
+In Settings -> Companion -> Avatar, use the local import button for a Live2D `.model3.json`, a sprite `pet.json`, or a sprite ZIP. Use `Import Codex pet` or `Browse gallery` for a community package.
 
-Nexus does **not** generate an `8x9` sprite atlas from a single picture. Existing Live2D/Sprite packages can still be imported, community `.codex-pet.zip` files can still be imported, and the Creator Kit below remains the supported path for authoring an atlas outside Nexus.
+Portrait packages (`kind: portrait-puppet`, layered `parts`, or a `portraitPath`) and packages whose description starts with `Assembled Codex-compatible sprite pet package` are rejected. A community sprite whose description does not use that prefix still imports.
 
-A v4 portrait package is:
-
-- `pet.json` (`formatVersion: 4`, `renderMode: layered-artmesh-v1`)
-- `preview.png`
-- `parts/*.png`
-- `masks/*.png` when present
-- a shareable `.nexus-portrait.zip`
-
-A fallback single-image package is `pet.json` + `portrait.png`. An atlas/sprite package remains:
-
-- `pet.json`
-- `spritesheet.png`
-- `my-pet.codex-pet.zip`
-- `README.md`
-
-The user-facing product flow should be:
-
-1. Prefer a layered v4 pack, or fall back to one portrait.
-2. Nexus builds the portrait package automatically.
-3. Keep or share the generated folder or `.nexus-portrait.zip`.
-4. Use package import or Creator Kit if you already have a native atlas.
-
-Advanced users can still edit `spritesheet.png` frame by frame, but the ecosystem should treat that as optional polish, not the default path.
-
-## Prompt Creator Kit
-
-The in-app path is “give Nexus a picture”. The creator kit stays available from the CLI for people who want to draw or generate the nine row strips themselves:
-
-```bash
-npm run pet:create-kit -- \
-  --id tiny-copper \
-  --display-name "Tiny Copper" \
-  --concept "a tiny bronze guardian mascot with a square terminal face"
-```
-
-The kit writes:
-
-- `creator-brief.json` - machine-readable Codex pet contract and provenance flags.
-- `prompts/base.md` - the base mascot prompt.
-- `prompts/rows/*.md` - one prompt per Codex action row.
-- `references/animation-rows.md` - the exact `8x9`, `1536x1872`, `192x208` row contract.
-- `references/style-samples.md` and `references/style-samples.json` - link-only Codex pet style references for proportions, motion, and package expectations.
-- `references/layout-guides/*.svg` - one layout-only guide per action row, with the correct frame count, `192x208` cells, safe padding, and center marks.
-- `references/quality-checklist.md` - acceptance checks before import.
-- `source-rows/README.md` - the exact row-strip filenames to fill after generation.
-- `package-template/pet.json` - the manifest template for the finished package.
-
-This is the user-friendly version of the hatch-pet rules. It does not fake artwork with local scripts, and it does not bundle community artwork. The style samples are links only, so users can study the Codex pet feeling while still generating or drawing original, user-owned, or explicitly licensed art.
-
-The settings UI does not walk users through this kit. After generating the nine row strips, save them under the kit's `source-rows/` folder with these names:
-
-```text
-0-idle.png
-1-running-right.png
-2-running-left.png
-3-waving.png
-4-jumping.png
-5-failed.png
-6-waiting.png
-7-running.png
-8-review.png
-```
-
-Then assemble the finished Codex-compatible package:
-
-```bash
-npm run pet:assemble-kit -- ./output/pet-creator-kits/tiny-copper --force
-```
-
-The assembler writes `final-package/pet.json`, `final-package/spritesheet.png`, `final-package/assembly-report.json`, `final-package/visual-audit.json`, and a shareable `<pet-id>.codex-pet.zip` next to `final-package/`, then validates the package with the same parser used by Nexus. It does not invent missing row art. If a row strip is absent, the command fails and tells the user which row still needs to be generated.
-
-Import the generated `final-package/` folder, share the generated `.codex-pet.zip`, or use the local import flow with that ZIP. Installation into `${CODEX_HOME:-$HOME/.codex}/pets/` stays explicit and non-destructive: if a pet id already exists, Nexus writes a suffixed id instead of overwriting the existing Codex pet.
+`npm run pet:scaffold` still writes a blank atlas layout guide. It does not generate artwork.
 
 ## Community Gallery Import
 
@@ -135,7 +64,7 @@ Shimeji and eSheep are useful background ecosystems because they have many deskt
 
 In the app, open Settings -> Companion -> Avatar -> `Import Codex pet`. Users can:
 
-1. Click a community source link to browse or generate a pet.
+1. Click a community source link to browse a pet.
 2. Paste a `codex-pet.com` slug, a `codex-pet.com` detail page, a `codex-pet.org` detail page, or a `codexpets.net` detail page and import it directly.
 3. Paste a Coding Pets or CodexPets.net ZIP download URL and let Nexus download, validate, and import it directly.
 4. Use `Browse gallery` to load searchable entries from `codex-pet.com`, `codex-pet.org`, CodexPets.net, and Coding Pets inside Nexus, then click `Import`.
@@ -166,29 +95,6 @@ npm run pet:import -- ./downloads/my-codex-pet.zip --id my-pet
 ```
 
 The ZIP importer rejects path traversal, encrypted archives, Zip64 archives, oversized packages, unsupported compression methods, and packages whose manifest does not validate against the same 8x9 atlas contract.
-
-For a deterministic starter that exercises the creator pipeline, generate the bundled Codex-style mascot sample:
-
-```bash
-npm run pet:generate-codex-style -- --force
-```
-
-That sample is deterministic clean-room vector art with hand-authored frame motion. It exists as a technical baseline for the creator flow: clean transparent frames, visible row-specific motion, and no private Codex code or assets. It is not a substitute for visual QA against real Codex-feeling community pets.
-
-The generator is parameterized so users can make a related pet without learning the atlas first:
-
-```bash
-npm run pet:generate-codex-style -- \
-  --id my-pet \
-  --display-name "My Pet" \
-  --body-color "#62a6ff" \
-  --accent-color "#79f2ff" \
-  --accessory sprout \
-  --output-dir output/pets/my-pet \
-  --force
-```
-
-This is the preferred ecosystem path for Codex-like pets: choose a compact mascot shape, pick colors and one small attached accessory, generate the 8x9 atlas, then preview and import.
 
 ## Codex-Style Model Rules
 

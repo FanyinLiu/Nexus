@@ -270,7 +270,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
   }
 })
 
-test('migrates the old qiyi default pet to the Codex sprite pet', () => {
+test('migrates the old qiyi default through Codex and on to Mao', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
       settingsSchemaVersion: 4,
@@ -286,10 +286,11 @@ test('migrates the old qiyi default pet to the Codex sprite pet', () => {
 
   const settings = loadSettings()
 
-  assert.equal(settings.petModelId, 'codex')
+  assert.equal(settings.petModelId, 'mao')
+  assert.equal(settings.settingsSchemaVersion, 12)
 })
 
-test('migrates a removed bundled model back to the shipped default', () => {
+test('keeps official Live2D samples and maps removed bundled sprites to Mao', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
       settingsSchemaVersion: 11,
@@ -297,6 +298,7 @@ test('migrates a removed bundled model back to the shipped default', () => {
       characterProfiles: [
         { id: 'char-hiyori', companionName: 'Hiyori', petModelId: 'hiyori' },
         { id: 'char-qiyi', companionName: 'Qiyi', petModelId: 'qiyi' },
+        { id: 'char-codex', companionName: 'Pip', petModelId: 'codex' },
         { id: 'char-imported', companionName: 'Imported', petModelId: 'imported-custom' },
       ],
     }),
@@ -310,11 +312,12 @@ test('migrates a removed bundled model back to the shipped default', () => {
 
   const settings = loadSettings()
 
-  assert.equal(settings.petModelId, 'mao')
+  assert.equal(settings.petModelId, 'haru')
   assert.equal(settings.settingsSchemaVersion, 12)
-  assert.equal(settings.characterProfiles[0]?.petModelId, 'mao')
-  assert.equal(settings.characterProfiles[1]?.petModelId, 'codex')
-  assert.equal(settings.characterProfiles[2]?.petModelId, 'imported-custom')
+  assert.equal(settings.characterProfiles[0]?.petModelId, 'hiyori')
+  assert.equal(settings.characterProfiles[1]?.petModelId, 'mao')
+  assert.equal(settings.characterProfiles[2]?.petModelId, 'mao')
+  assert.equal(settings.characterProfiles[3]?.petModelId, 'imported-custom')
 })
 
 test('migrates a stored previous catalog default to the current flagship', () => {

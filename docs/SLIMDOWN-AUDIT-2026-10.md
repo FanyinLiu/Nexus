@@ -239,13 +239,29 @@ key removal because `TranslationKey` is derived from the zh-CN dictionary.
 ## Follow-up (owner-approved)
 
 The GitHub release `portrait-models-v1` is deleted. The git tag of the same
-name is kept. Nothing on `main` downloaded those weights; this audit was the
-only in-repo mention.
+name is kept. Nothing on `main` downloaded those weights.
 
-The 37 unlinked docs listed above, plus `PROJECT_AUDIT_AND_ROADMAP_2026.md`,
-are removed in the follow-up after a fresh check that no README, doc, source
-file, or script names them. Bundled Haru, Hiyori, and Qiyi are removed.
-Mao stays the default Live2D model and Pip (`codex`) stays the bundled sample
-sprite pet. Settings schema 12 rewrites a stored `haru` or `hiyori` selection
-to `mao`, and a stored `qiyi` selection to `codex`, including character
-profiles. Imported model ids are unchanged.
+Image-to-pet is removed from this tree: Portrait Puppet v1–v4, the sprite-pet
+assembler, the creator kit, and `pet:generate-codex-style`. Live2D import
+stays. Community sprite import (ZIP, gallery, and `pet.json`) stays, so the
+sprite renderer stays. The shipped app does not include a bundled sprite pet.
+`npm run pet:audit` remains a dev-only spritesheet check. `sharp` is a
+devDependency and is no longer unpacked into the installer.
+
+Built-in models are only the official Live2D samples. Mao, Haru, and Hiyori
+ship, and Mao stays the default. Bundled sprite pets Pip (`codex`) and Qiyi
+are removed. `main` had no other official Live2D samples.
+
+Settings schema 12, changed in place because it has not shipped, maps a stored
+`codex` or `qiyi` selection to `mao`, including character profiles. The
+historical v5 step still rewrites `qiyi` to `codex`; schema 12 then rewrites
+that to `mao`. Stored `haru` and `hiyori` stay. Other stored ids are left
+alone by the migration, including user-imported models.
+
+Portrait packages and assembler-marked sprite packages (description prefix
+`Assembled Codex-compatible sprite pet package`) fail closed as
+`UNSUPPORTED_FILE` and are not discovered. After a ready discovery, a root
+selection or character profile whose id is absent from the library is set to
+Mao. An assembled pet whose description was edited off that prefix remains a
+playable imported sprite. A community pet whose id is exactly `codex` or
+`qiyi` is remapped by schema 12 along with the removed bundled ids.

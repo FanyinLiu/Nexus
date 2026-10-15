@@ -171,7 +171,7 @@ export function SettingsDrawerActiveSection({
 }: SettingsDrawerActiveSectionProps) {
   const routeParams = new URLSearchParams(window.location.search)
   const isPetView = routeParams.get('view') === 'pet'
-  const supportsPanelCompanionV2 = draft.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.portraitPuppet) || Boolean(petModel.modelPath)
+  const supportsPanelCompanionV2 = draft.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath)
   // PetView can only use V2 for a local Live2D model. Settings intentionally
   // treats configured VTS as legacy even before its asynchronous bridge becomes
   // ready, so VTS/sprite users never lose controls that their active path uses.
@@ -208,26 +208,9 @@ export function SettingsDrawerActiveSection({
           codexPetCatalog={petModelImport.codexPetCatalog}
           codexPetCatalogLoading={petModelImport.codexPetCatalogLoading}
           codexPetCatalogStatus={petModelImport.codexPetCatalogStatus}
-          creatingCreatorKit={petModelImport.creatingCreatorKit}
-          inspectingCreatorKit={petModelImport.inspectingCreatorKit}
-          creatorKitInspection={petModelImport.creatorKitInspection}
-          assemblingCreatorKit={petModelImport.assemblingCreatorKit}
-          lastCreatorKitDirectory={petModelImport.lastCreatorKitDirectory}
-          lastCreatorKitDirectoryDisplay={petModelImport.lastCreatorKitDirectoryDisplay}
-          lastCreatorKitSourceRowsDirectory={petModelImport.lastCreatorKitSourceRowsDirectory}
-          lastCreatorKitSourceRowsDirectoryDisplay={petModelImport.lastCreatorKitSourceRowsDirectoryDisplay}
-          assembledCreatorKitPackage={petModelImport.assembledCreatorKitPackage}
-          generatedSpritePetPackage={petModelImport.generatedSpritePetPackage}
           onImportPetModel={() => void petModelImport.handleImportPetModel()}
           onImportCodexPetGallery={(input) => void petModelImport.handleImportCodexPetGallery(input)}
           onLoadCodexPetGallery={(query) => void petModelImport.handleLoadCodexPetGallery(query)}
-          onCreateCodexPetCreatorKit={(payload) => void petModelImport.handleCreateCodexPetCreatorKit(payload)}
-          onInspectCodexPetCreatorKit={() => void petModelImport.handleInspectCodexPetCreatorKit()}
-          onAssembleCodexPetCreatorKit={() => void petModelImport.handleAssembleCodexPetCreatorKit()}
-          onInstallCodexPetCreatorKitToCodex={() => void petModelImport.handleInstallCodexPetCreatorKitToCodex()}
-          onInstallGeneratedSpritePetPackageToCodex={() => void petModelImport.handleInstallGeneratedSpritePetPackageToCodex()}
-          onOpenCodexPetCreatorKitPath={(payload) => void petModelImport.handleOpenCodexPetCreatorKitPath(payload)}
-          onCreateSpritePetFromImage={() => void petModelImport.handleCreateSpritePetFromImage()}
         />
       )
     case 'history':

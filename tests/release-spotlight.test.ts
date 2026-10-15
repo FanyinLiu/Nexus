@@ -78,7 +78,7 @@ test('current release spotlight describes the v0.4.7 stable compatibility releas
   assert.match(en['about.release_spotlight.bullet.repair_guidance.body'], /Five localized messages.*missing textures.*unsafe paths/i)
   assert.match(en['about.release_spotlight.bullet.limited_compatibility.body'], /without motions or expressions.*still display/i)
   assert.match(en['about.release_spotlight.bullet.private_diagnostics.body'], /categories and counts.*never private local file paths/i)
-  assert.match(en['about.release_spotlight.bullet.runtime_proof.body'], /Mao cold starts.*Moc.*texture.*motion.*expression counts/i)
+  assert.match(en['about.release_spotlight.bullet.runtime_proof.body'], /Three-model cold starts.*Moc.*texture.*motion.*expression counts/i)
   assert.equal(en['about.release_spotlight.action.open_voice'], 'Open Voice Settings')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
@@ -100,7 +100,7 @@ test('current release spotlight describes the v0.4.7 stable compatibility releas
   assert.match(zhCN['about.release_spotlight.bullet.repair_guidance.body'], /五语言.*纹理.*动作.*表情.*不安全路径/)
   assert.match(zhCN['about.release_spotlight.bullet.limited_compatibility.body'], /没有动作或表情.*仍可显示/)
   assert.match(zhCN['about.release_spotlight.bullet.private_diagnostics.body'], /资源类别和数量.*不暴露.*路径/)
-  assert.match(zhCN['about.release_spotlight.bullet.runtime_proof.body'], /Mao.*冷启动.*Moc.*纹理.*动作.*表情数量/)
+  assert.match(zhCN['about.release_spotlight.bullet.runtime_proof.body'], /三模型.*Moc.*纹理.*动作.*表情数量/)
   assert.equal(zhCN['about.release_spotlight.action.open_voice'], '打开语音设置')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
 

@@ -1,8 +1,10 @@
-export const LIVE2D_SMOKE_MODEL_IDS = ['mao']
-export const LIVE2D_SMOKE_SWITCH_SEQUENCE = ['mao']
+export const LIVE2D_SMOKE_MODEL_IDS = ['mao', 'haru', 'hiyori']
+export const LIVE2D_SMOKE_SWITCH_SEQUENCE = ['mao', 'haru', 'hiyori', 'mao']
 export const LIVE2D_SMOKE_MAX_FIRST_FRAME_MS = 45_000
 export const LIVE2D_SMOKE_RESOURCE_PROFILES = {
   mao: { status: 'ready', mocDeclared: '1', textures: 1, motions: 8, expressions: 8 },
+  haru: { status: 'ready', mocDeclared: '1', textures: 2, motions: 6, expressions: 8 },
+  hiyori: { status: 'limited', mocDeclared: '1', textures: 2, motions: 10, expressions: 0 },
 }
 
 export function parseRgbChannels(color) {

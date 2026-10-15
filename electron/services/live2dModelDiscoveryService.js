@@ -29,7 +29,7 @@ function pickDiscoveredModelName(relativeModelPath) {
   return fileName
 }
 
-export function formatDiscoveredModelLabel(name) {
+function formatDiscoveredModelLabel(name) {
   const rawName = String(name ?? '').trim()
 
   if (!rawName) {

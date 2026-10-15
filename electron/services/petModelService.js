@@ -1,4 +1,4 @@
-import { app, dialog, BrowserWindow, shell } from 'electron'
+import { app, dialog, BrowserWindow } from 'electron'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -18,25 +18,6 @@ import {
 import {
   listSpritePetModelsFromRoot,
 } from './spritePetModelDiscovery.js'
-import {
-  copyPortraitPuppetLayers,
-  createPortraitPuppetPackageFromImage,
-  createPortraitPuppetPackageFromImages,
-  expandPortraitImageSources,
-} from './portraitPuppetPackage.js'
-import {
-  copyPortraitPuppetV4Assets,
-  createPortraitPuppetV4PackageFromLayerSources,
-  isFlatPortraitPuppetV4ImageSet,
-  resolvePortraitPuppetV4LayerRoot,
-} from './portraitPuppetV4Package.js'
-import {
-  createSpritePetCreatorKit,
-} from './spritePetCreatorKit.js'
-import {
-  assembleSpritePetCreatorKit,
-  inspectSpritePetCreatorKit,
-} from './spritePetAssembler.js'
 import {
   fetchCodexPetGalleryCatalog,
   isHttpUrl,
@@ -61,9 +42,7 @@ import {
   getImportedSpritePetModelsRoot,
   getLive2dAssetRoot,
   getLocalFileDisplayPath,
-  getPetArtifactDisplayPath,
   getSpritePetAssetRoot,
-  getSpritePetCreatorKitsRoot,
   normalizeAssetRelativePath,
   slugifyPetModelId,
 } from './petModelPaths.js'
@@ -77,7 +56,6 @@ import {
   IMPORTED_SPRITE_PET_MODELS_ROUTE,
 } from './petModelUrlBuilders.js'
 import {
-  formatDiscoveredModelLabel,
   listPetModelsFromRoot,
 } from './live2dModelDiscoveryService.js'
 import { inspectLive2dModelFile } from './live2dModelCompatibility.js'
@@ -157,49 +135,12 @@ async function withFreshImportDirectory(importedRoot, importDirectoryBaseName, w
   }
 }
 
-async function resolveUniqueChildIdDirectory(root, baseId) {
-  let id = baseId
-  let targetDirectory = path.join(root, id)
-  let duplicateIndex = 2
-
-  while (await pathExists(targetDirectory)) {
-    id = `${baseId}-${duplicateIndex}`
-    targetDirectory = path.join(root, id)
-    duplicateIndex += 1
-  }
-
-  return { id, targetDirectory }
-}
-
 function petUserMessage(messageKey, messageParams) {
   return {
     message: messageKey,
     messageKey,
     ...(messageParams ? { messageParams } : {}),
   }
-}
-
-function petArtifactDisplayFields(paths = {}) {
-  const fields = {}
-  for (const [field, displayField] of [
-    ['directoryPath', 'directoryPathDisplay'],
-    ['sourceRowsDirectory', 'sourceRowsDirectoryDisplay'],
-    ['layoutGuidesDirectory', 'layoutGuidesDirectoryDisplay'],
-    ['kitDirectory', 'kitDirectoryDisplay'],
-    ['packageDirectory', 'packageDirectoryDisplay'],
-    ['manifestPath', 'manifestPathDisplay'],
-    ['spritesheetPath', 'spritesheetPathDisplay'],
-    ['reportPath', 'reportPathDisplay'],
-    ['visualAuditPath', 'visualAuditPathDisplay'],
-    ['archivePath', 'archivePathDisplay'],
-    ['contactSheetPath', 'contactSheetPathDisplay'],
-    ['motionPreviewPath', 'motionPreviewPathDisplay'],
-  ]) {
-    if (typeof paths[field] === 'string' && paths[field].trim()) {
-      fields[displayField] = getPetArtifactDisplayPath(paths[field])
-    }
-  }
-  return fields
 }
 
 async function readAndValidateJsonFile(filePath) {
@@ -340,9 +281,7 @@ async function importLive2dPetModelFromPath(selectedModelPath) {
 async function importSpritePetModelFromPath(selectedManifestPath) {
   assertNotPrivateCodexPetSource(selectedManifestPath)
   const manifest = await readSpritePetPackage(selectedManifestPath)
-  const sourceAssetPath = manifest.kind === 'portrait-puppet'
-    ? manifest.sourcePortraitPath
-    : manifest.sourceSpritePath
+  const sourceAssetPath = manifest.sourceSpritePath
   assertNotPrivateCodexPetSource(sourceAssetPath)
   const importedRoot = getImportedSpritePetModelsRoot()
 
@@ -358,46 +297,14 @@ async function importSpritePetModelFromPath(selectedManifestPath) {
     await fs.mkdir(targetDirectory, { recursive: true })
 
     const assetExtension = path.extname(sourceAssetPath).toLowerCase()
-    const isPortrait = manifest.kind === 'portrait-puppet'
-    const isLayeredPortrait = isPortrait
-      && manifest.formatVersion === 4
-      && manifest.renderMode === 'layered-artmesh-v1'
-    const targetAssetName = isPortrait ? `portrait${assetExtension}` : `spritesheet${assetExtension}`
+    const targetAssetName = `spritesheet${assetExtension}`
     const targetAssetPath = path.join(targetDirectory, targetAssetName)
-    const copiedLayers = isPortrait && !isLayeredPortrait
-      ? await copyPortraitPuppetLayers(manifest, targetDirectory)
-      : {}
-    const copiedLayeredAssets = isLayeredPortrait
-      ? await copyPortraitPuppetV4Assets(manifest, targetDirectory)
-      : null
-    const targetManifest = isPortrait
-      ? {
-        id: slugifyPetModelId(manifest.id || manifest.displayName || path.basename(sourceDirectory)),
-        displayName: manifest.displayName,
-        description: manifest.description || 'A simple portrait companion.',
-        kind: 'portrait-puppet',
-        formatVersion: manifest.formatVersion ?? 1,
-        ...(manifest.renderMode ? { renderMode: manifest.renderMode } : {}),
-        portraitPath: targetAssetName,
-        ...(copiedLayeredAssets
-          ? {
-            qualityTier: manifest.qualityTier,
-            canvas: manifest.canvas,
-            parameters: manifest.parameters,
-            parts: copiedLayeredAssets.parts,
-            masks: copiedLayeredAssets.masks,
-            physics: manifest.physics,
-          }
-          : {}),
-        ...(manifest.rig ? { rig: manifest.rig } : {}),
-        ...(Object.keys(copiedLayers).length ? { layers: copiedLayers } : {}),
-      }
-      : {
-        id: slugifyPetModelId(manifest.id || manifest.displayName || path.basename(sourceDirectory)),
-        displayName: manifest.displayName,
-        description: manifest.description || IMPORTED_SPRITE_PET_MODEL_DESCRIPTION,
-        spritesheetPath: targetAssetName,
-      }
+    const targetManifest = {
+      id: slugifyPetModelId(manifest.id || manifest.displayName || path.basename(sourceDirectory)),
+      displayName: manifest.displayName,
+      description: manifest.description || IMPORTED_SPRITE_PET_MODEL_DESCRIPTION,
+      spritesheetPath: targetAssetName,
+    }
 
     await fs.copyFile(sourceAssetPath, targetAssetPath)
     await fs.writeFile(
@@ -412,7 +319,6 @@ async function importSpritePetModelFromPath(selectedManifestPath) {
     )
     const importedModel = importedModels.find((model) => (
       model.spriteAtlas?.imagePath === importedAssetUrl
-      || model.portraitPuppet?.imagePath === importedAssetUrl
     ))
 
     if (!importedModel) {
@@ -479,89 +385,6 @@ async function importSpritePetModelFromCodexGalleryUrlCandidates(candidateUrls) 
 
   throw buildPetIpcError(PET_IPC_ERROR_CODES.GALLERY_FAILED, { cause: lastError })
 }
-
-async function createSpritePetModelFromImagePaths(selectedImagePaths) {
-  const selectedPaths = (Array.isArray(selectedImagePaths) ? selectedImagePaths : [selectedImagePaths])
-    .filter(Boolean)
-    .map((entry) => path.resolve(entry))
-  if (!selectedPaths.length) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.UNSUPPORTED_FILE)
-  }
-  for (const selectedPath of selectedPaths) {
-    assertNotPrivateCodexPetSource(selectedPath)
-  }
-  const importedRoot = getImportedSpritePetModelsRoot()
-  const packageId = slugifyPetModelId(path.basename(selectedPaths[0], path.extname(selectedPaths[0])))
-  const displayName = formatDiscoveredModelLabel(packageId)
-  const importDirectoryBaseName = `${packageId}-${Date.now()}`
-  const expanded = await expandPortraitImageSources(selectedPaths)
-  if (!expanded.length) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.UNSUPPORTED_FILE)
-  }
-
-  await fs.mkdir(importedRoot, { recursive: true })
-  return withFreshImportDirectory(importedRoot, importDirectoryBaseName, async (targetDirectory) => {
-    const v4LayerRoot = await resolvePortraitPuppetV4LayerRoot(selectedPaths)
-    const created = v4LayerRoot || isFlatPortraitPuppetV4ImageSet(expanded)
-      ? await createPortraitPuppetV4PackageFromLayerSources({
-        sourceDirectory: v4LayerRoot,
-        sourcePaths: expanded,
-        targetDirectory,
-        id: packageId,
-        displayName,
-        description: 'Layered portrait puppet with independent eyes, mouth, hair, and cloth.',
-      })
-      : expanded.length > 1
-        ? await createPortraitPuppetPackageFromImages({
-          sourcePaths: expanded,
-          targetDirectory,
-          id: packageId,
-          displayName,
-        })
-        : await createPortraitPuppetPackageFromImage({
-          sourcePath: expanded[0],
-          targetDirectory,
-          id: packageId,
-          displayName,
-          description: 'Locally animated from one portrait by Nexus — no LLM or online image generation.',
-        })
-    const importedModels = await listImportedSpritePetModels()
-    const importedSpriteUrl = buildImportedSpritePetAssetUrl(
-      normalizeAssetRelativePath(importedRoot, created.portraitPath || created.spritePath),
-    )
-    const importedModel = importedModels.find((model) => (
-      model.portraitPuppet?.imagePath === importedSpriteUrl
-      || model.spriteAtlas?.imagePath === importedSpriteUrl
-    ))
-
-    if (!importedModel) {
-      throw buildPetIpcError(PET_IPC_ERROR_CODES.IMPORT_INCOMPLETE)
-    }
-
-    const isLayered = Boolean(importedModel.portraitPuppet?.layeredRig)
-    return {
-      model: importedModel,
-      packageDirectory: created.targetDirectory || targetDirectory,
-      manifestPath: created.manifestPath,
-      archivePath: created.archivePath,
-      ...petArtifactDisplayFields({
-        packageDirectory: created.targetDirectory || targetDirectory,
-        manifestPath: created.manifestPath,
-        archivePath: created.archivePath,
-      }),
-      ...petUserMessage(
-        isLayered ? PET_IMPORT_MESSAGE_KEYS.layered : PET_IMPORT_MESSAGE_KEYS.portrait,
-        {
-          name: importedModel.label,
-          actionKey: isLayered
-            ? PET_IMPORT_MESSAGE_KEYS.actionLayered
-            : PET_IMPORT_MESSAGE_KEYS.actionPortrait,
-        },
-      ),
-    }
-  })
-}
-
 
 async function importSpritePetModelFromCodexGallery(input) {
   const rawInput = String(input ?? '').trim()
@@ -658,278 +481,18 @@ async function listCodexPetGalleryCatalog(payload = {}) {
   })
 }
 
-async function createSpritePetCreatorKitFromPayload(payload = {}) {
-  const displayName = String(payload?.displayName ?? '').trim()
-  const concept = String(payload?.concept ?? '').trim()
-  const requestedId = String(payload?.id ?? displayName ?? concept ?? '').trim()
-  const packageId = slugifyPetModelId(requestedId || 'sprite-pet')
-  const targetDirectory = path.join(getSpritePetCreatorKitsRoot(), `${packageId}-${Date.now()}`)
-
-  await fs.mkdir(getSpritePetCreatorKitsRoot(), { recursive: true })
-
-  try {
-    const created = await createSpritePetCreatorKit({
-      targetDirectory,
-      id: packageId,
-      displayName,
-      concept,
-      description: String(payload?.description ?? '').trim(),
-      styleNotes: String(payload?.styleNotes ?? '').trim(),
-    })
-    return {
-      ...created,
-      ...petArtifactDisplayFields(created),
-      ...petUserMessage(PET_IMPORT_MESSAGE_KEYS.kitCreated, {
-        name: created.displayName,
-        path: getPetArtifactDisplayPath(created.directoryPath),
-      }),
-    }
-  } catch (error) {
-    await fs.rm(targetDirectory, { recursive: true, force: true }).catch(() => {})
-    throw error
-  }
-}
-
-function assembledImportResult(imported, assembled) {
-  return {
-    ...imported,
-    packageDirectory: assembled.packageDirectory,
-    manifestPath: assembled.manifestPath,
-    spritesheetPath: assembled.spritesheetPath,
-    reportPath: assembled.reportPath,
-    visualAuditPath: assembled.visualAuditPath,
-    archivePath: assembled.archivePath,
-    ...petArtifactDisplayFields(assembled),
-    ...petUserMessage(PET_IMPORT_MESSAGE_KEYS.assembled, {
-      name: imported.model.label,
-      path: getPetArtifactDisplayPath(assembled.packageDirectory),
-      auditKey: assembled.visualWarnings?.length
-        ? PET_IMPORT_MESSAGE_KEYS.auditWarn
-        : PET_IMPORT_MESSAGE_KEYS.auditOk,
-      count: assembled.visualWarnings?.length ?? 0,
-    }),
-  }
-}
-
-function inspectUserMessage(inspection) {
-  if (!inspection.ready) {
-    return petUserMessage(PET_IMPORT_MESSAGE_KEYS.kitIncomplete, {
-      name: inspection.displayName,
-      ready: inspection.readyCount,
-      missing: inspection.rows
-        .filter((row) => !row.ready)
-        .map((row) => `${row.row}-${row.state}`)
-        .join(', '),
-    })
-  }
-  if (inspection.warningCount) {
-    return petUserMessage(PET_IMPORT_MESSAGE_KEYS.kitReadyWarn, {
-      name: inspection.displayName,
-      count: inspection.warningCount,
-    })
-  }
-  return petUserMessage(PET_IMPORT_MESSAGE_KEYS.kitReady, {
-    name: inspection.displayName,
-  })
-}
-
-function normalizeOptionalKitDirectory(value) {
-  const rawDirectory = String(value ?? '').trim()
-  return rawDirectory ? path.resolve(rawDirectory) : ''
-}
-
-async function assembleSpritePetCreatorKitFromDialog(payload = {}) {
-  const directKitDirectory = normalizeOptionalKitDirectory(payload?.kitDirectory)
-  if (directKitDirectory) {
-    const assembled = await assembleSpritePetCreatorKit({
-      kitDirectory: directKitDirectory,
-      force: true,
-    })
-    const imported = await importSpritePetModelFromPath(assembled.manifestPath)
-    return assembledImportResult(imported, assembled)
-  }
-
-  const panelWindow = _getPanelWindow()
-  const mainWindow = _getMainWindow()
-  const sourceWindow = BrowserWindow.getFocusedWindow() ?? panelWindow ?? mainWindow ?? undefined
-  const dialogOptions = {
-    title: '选择 Codex 宠物制作包目录',
-    buttonLabel: '组装并导入',
-    properties: ['openDirectory'],
-  }
-  const selection = sourceWindow
-    ? await dialog.showOpenDialog(sourceWindow, dialogOptions)
-    : await dialog.showOpenDialog(dialogOptions)
-
-  if (selection.canceled || !selection.filePaths.length) {
-    return null
-  }
-
-  const assembled = await assembleSpritePetCreatorKit({
-    kitDirectory: path.resolve(selection.filePaths[0]),
-    force: true,
-  })
-  const imported = await importSpritePetModelFromPath(assembled.manifestPath)
-  return assembledImportResult(imported, assembled)
-}
-
-async function installSpritePetCreatorKitPackageToCodex(payload = {}) {
-  const rawKitDirectory = String(payload?.kitDirectory ?? '').trim()
-  const rawManifestPath = String(payload?.manifestPath ?? '').trim()
-
-  if (!rawKitDirectory || !rawManifestPath) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.KIT_PATH)
-  }
-
-  const kitDirectory = path.resolve(rawKitDirectory)
-  const manifestPath = path.resolve(rawManifestPath)
-  const [kitRealPath, manifestRealPath] = await Promise.all([
-    fs.realpath(kitDirectory),
-    fs.realpath(manifestPath),
-  ])
-
-  if (!isPathInsideRoot(kitRealPath, manifestRealPath)) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.KIT_PATH)
-  }
-
-  const sourcePackage = await readSpritePetPackage(manifestRealPath)
-  const petsRoot = getCodexCustomSpritePetModelsRoot()
-  const basePackageId = slugifyPetModelId(
-    sourcePackage.id || sourcePackage.displayName || path.basename(path.dirname(manifestRealPath)),
-  )
-
-  await fs.mkdir(petsRoot, { recursive: true })
-  const { id: packageId, targetDirectory } = await resolveUniqueChildIdDirectory(petsRoot, basePackageId)
-
-  try {
-    await fs.mkdir(targetDirectory, { recursive: true })
-
-    const spriteExtension = path.extname(sourcePackage.sourceSpritePath).toLowerCase()
-    const targetSpriteName = `spritesheet${spriteExtension}`
-    const targetSpritePath = path.join(targetDirectory, targetSpriteName)
-    const targetManifestPath = path.join(targetDirectory, 'pet.json')
-    const targetManifest = {
-      id: packageId,
-      displayName: sourcePackage.displayName,
-      description: sourcePackage.description || IMPORTED_SPRITE_PET_MODEL_DESCRIPTION,
-      spritesheetPath: targetSpriteName,
-    }
-
-    await fs.copyFile(sourcePackage.sourceSpritePath, targetSpritePath)
-    await fs.writeFile(targetManifestPath, `${JSON.stringify(targetManifest, null, 2)}\n`, 'utf8')
-    await readSpritePetPackage(targetManifestPath)
-
-    return {
-      ok: true,
-      id: packageId,
-      directoryPath: targetDirectory,
-      manifestPath: targetManifestPath,
-      ...petArtifactDisplayFields({
-        directoryPath: targetDirectory,
-        manifestPath: targetManifestPath,
-      }),
-      ...petUserMessage(PET_IMPORT_MESSAGE_KEYS.kitInstalled, {
-        path: getPetArtifactDisplayPath(targetDirectory),
-      }),
-    }
-  } catch (error) {
-    await fs.rm(targetDirectory, { recursive: true, force: true }).catch(() => {})
-    throw error
-  }
-}
-
-async function inspectSpritePetCreatorKitFromDialog(payload = {}) {
-  const directKitDirectory = normalizeOptionalKitDirectory(payload?.kitDirectory)
-  if (directKitDirectory) {
-    const inspection = await inspectSpritePetCreatorKit({
-      kitDirectory: directKitDirectory,
-    })
-    return {
-      ...inspection,
-      ...petArtifactDisplayFields(inspection),
-      ...inspectUserMessage(inspection),
-    }
-  }
-
-  const panelWindow = _getPanelWindow()
-  const mainWindow = _getMainWindow()
-  const sourceWindow = BrowserWindow.getFocusedWindow() ?? panelWindow ?? mainWindow ?? undefined
-  const dialogOptions = {
-    title: '检查 Codex 宠物制作包目录',
-    buttonLabel: '检查制作包',
-    properties: ['openDirectory'],
-  }
-  const selection = sourceWindow
-    ? await dialog.showOpenDialog(sourceWindow, dialogOptions)
-    : await dialog.showOpenDialog(dialogOptions)
-
-  if (selection.canceled || !selection.filePaths.length) {
-    return null
-  }
-
-  const inspection = await inspectSpritePetCreatorKit({
-    kitDirectory: path.resolve(selection.filePaths[0]),
-  })
-  return {
-    ...inspection,
-    ...petArtifactDisplayFields(inspection),
-    ...inspectUserMessage(inspection),
-  }
-}
-
-async function openSpritePetCreatorKitPathFromPayload(payload = {}) {
-  const rawKitDirectory = String(payload?.kitDirectory ?? '').trim()
-  const rawTargetPath = String(payload?.targetPath ?? '').trim()
-  const mode = String(payload?.mode ?? 'open').trim()
-
-  if (!rawKitDirectory || !rawTargetPath) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.KIT_PATH)
-  }
-
-  const kitDirectory = path.resolve(rawKitDirectory)
-  const targetPath = path.resolve(rawTargetPath)
-  const [kitRealPath, targetRealPath] = await Promise.all([
-    fs.realpath(kitDirectory),
-    fs.realpath(targetPath),
-  ])
-
-  if (!isPathInsideRoot(kitRealPath, targetRealPath)) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.KIT_PATH)
-  }
-
-  const stats = await fs.stat(targetRealPath)
-  const openTargetPath = mode === 'reveal' && !stats.isDirectory()
-    ? path.dirname(targetRealPath)
-    : targetRealPath
-  const errorMessage = await shell.openPath(openTargetPath)
-
-  if (errorMessage) {
-    throw buildPetIpcError(PET_IPC_ERROR_CODES.KIT_PATH)
-  }
-
-  return {
-    ok: true,
-    ...petUserMessage(
-      stats.isDirectory()
-        ? PET_IMPORT_MESSAGE_KEYS.kitOpenedDir
-        : PET_IMPORT_MESSAGE_KEYS.kitOpenedFile,
-      { path: getPetArtifactDisplayPath(targetRealPath) },
-    ),
-  }
-}
-
 async function importPetModelFromDialog() {
   const panelWindow = _getPanelWindow()
   const mainWindow = _getMainWindow()
   const sourceWindow = BrowserWindow.getFocusedWindow() ?? panelWindow ?? mainWindow ?? undefined
   const dialogOptions = {
-    title: '选择 Live2D 模型、宠物包或角色图',
+    title: '选择 Live2D 模型或精灵宠物包',
     buttonLabel: '导入',
     properties: ['openFile'],
     filters: [
       {
-        name: 'Model, pet package, or image',
-        extensions: ['json', 'zip', 'png', 'jpg', 'jpeg', 'webp'],
+        name: 'Live2D model or sprite pet package',
+        extensions: ['json', 'zip'],
       },
     ],
   }
@@ -941,9 +504,7 @@ async function importPetModelFromDialog() {
     return null
   }
 
-  const selectedPaths = selection.filePaths.map((entry) => path.resolve(entry))
-  const selectedPath = selectedPaths[0]
-  const allImages = selectedPaths.every((entry) => /\.(?:png|jpe?g|webp)$/i.test(entry))
+  const selectedPath = path.resolve(selection.filePaths[0])
 
   if (/\.model3\.json$/i.test(path.basename(selectedPath))) {
     return importLive2dPetModelFromPath(selectedPath)
@@ -953,10 +514,6 @@ async function importPetModelFromDialog() {
     return importSpritePetModelFromZipArchive(selectedPath)
   }
 
-  if (allImages) {
-    return createSpritePetModelFromImagePaths(selectedPaths)
-  }
-
   const manifest = await readAndValidateJsonFile(selectedPath)
   if (path.basename(selectedPath) === 'pet.json' || isSpritePetManifest(manifest)) {
     return importSpritePetModelFromPath(selectedPath)
@@ -964,33 +521,6 @@ async function importPetModelFromDialog() {
 
   throw buildPetIpcError(PET_IPC_ERROR_CODES.UNSUPPORTED_FILE)
 }
-
-async function createSpritePetModelFromImageDialog() {
-  const panelWindow = _getPanelWindow()
-  const mainWindow = _getMainWindow()
-  const sourceWindow = BrowserWindow.getFocusedWindow() ?? panelWindow ?? mainWindow ?? undefined
-  const dialogOptions = {
-    title: '选择分层立绘文件夹（推荐），或一张备用单图',
-    buttonLabel: '做成宠物',
-    properties: ['openFile', 'openDirectory', 'multiSelections'],
-    filters: [
-      {
-        name: 'Image',
-        extensions: ['png', 'jpg', 'jpeg', 'webp'],
-      },
-    ],
-  }
-  const selection = sourceWindow
-    ? await dialog.showOpenDialog(sourceWindow, dialogOptions)
-    : await dialog.showOpenDialog(dialogOptions)
-
-  if (selection.canceled || !selection.filePaths.length) {
-    return null
-  }
-
-  return createSpritePetModelFromImagePaths(selection.filePaths.map((entry) => path.resolve(entry)))
-}
-
 
 async function saveTextFileFromDialog(sourceWindow, payload = {}) {
   const defaultFileName = String(payload.defaultFileName ?? '').trim() || `desktop-pet-${Date.now()}.json`
@@ -1086,12 +616,6 @@ export {
   importPetModelFromDialog,
   importSpritePetModelFromCodexGallery,
   listCodexPetGalleryCatalog,
-  createSpritePetCreatorKitFromPayload,
-  inspectSpritePetCreatorKitFromDialog,
-  assembleSpritePetCreatorKitFromDialog,
-  installSpritePetCreatorKitPackageToCodex,
-  openSpritePetCreatorKitPathFromPayload,
-  createSpritePetModelFromImageDialog,
   saveTextFileFromDialog,
   openTextFileFromDialog,
 }

@@ -36,7 +36,7 @@ const ACTIVE_ROUTE_CONTRACTS = [
     fragments: [
       "new URLSearchParams(window.location.search).get('uiV2') !== '0'",
       'const useCompanionV2',
-      '&& (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.portraitPuppet) || Boolean(petModel.modelPath))',
+      '&& (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath))',
       '<CompanionPanelV2',
       '<LegacyPanelView',
     ],

@@ -17,13 +17,12 @@ import {
 } from '../appSupport.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 import {
-  DEFAULT_PET_MODEL_ID,
   getPetModelPreset,
   getPetModelPresets,
   isPetModelSelectionResolved,
   nextPetModelDiscoveryAfterError,
   nextPetModelDiscoveryBeforeLoad,
-  shouldRepairPetModelSelection,
+  repairDiscoveredPetModelSelection,
   type PetModelDefinition,
   type PetModelDiscoveryStatus,
 } from '../../features/pet'
@@ -301,33 +300,18 @@ export function useDesktopBridge({
   ), [loadPetModels])
 
   useEffect(() => {
-    if (!shouldRepairPetModelSelection(
-      petModelDiscoveryStatus,
-      settings.petModelId,
-      petModelPresets,
-    )) {
-      return
-    }
+    if (petModelDiscoveryStatus !== 'ready') return undefined
 
     const timerId = window.setTimeout(() => {
-      setSettings((current) => {
-        if (!shouldRepairPetModelSelection(
-          petModelDiscoveryStatus,
-          current.petModelId,
-          petModelPresets,
-        )) {
-          return current
-        }
-
-        return {
-          ...current,
-          petModelId: petModelPresets[0]?.id ?? DEFAULT_PET_MODEL_ID,
-        }
-      })
+      setSettings((current) => repairDiscoveredPetModelSelection(
+        current,
+        petModelDiscoveryStatus,
+        petModelPresets,
+      ))
     }, 0)
 
     return () => window.clearTimeout(timerId)
-  }, [petModelDiscoveryStatus, petModelPresets, setSettings, settings.petModelId])
+  }, [petModelDiscoveryStatus, petModelPresets, setSettings])
 
   useEffect(() => {
     document.documentElement.dataset.windowView = view

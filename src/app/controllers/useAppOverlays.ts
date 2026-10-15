@@ -456,66 +456,6 @@ export function useAppOverlays({
         limit: 12,
       })
     },
-    onCreateCodexPetCreatorKit: async (payload) => {
-      if (!window.desktopPet?.createCodexPetCreatorKit) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      return window.desktopPet.createCodexPetCreatorKit(payload)
-    },
-    onInspectCodexPetCreatorKit: async (payload) => {
-      if (!window.desktopPet?.inspectCodexPetCreatorKit) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      return window.desktopPet.inspectCodexPetCreatorKit(payload)
-    },
-    onAssembleCodexPetCreatorKit: async (payload) => {
-      if (!window.desktopPet?.assembleCodexPetCreatorKit) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      const result = await window.desktopPet.assembleCodexPetCreatorKit(payload)
-      if (!result) {
-        return null
-      }
-
-      const refreshedModels = await loadPetModels()
-      return {
-        ...result,
-        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
-      }
-    },
-    onInstallCodexPetCreatorKitToCodex: async (payload) => {
-      if (!window.desktopPet?.installCodexPetCreatorKitToCodex) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      return window.desktopPet.installCodexPetCreatorKitToCodex(payload)
-    },
-    onOpenCodexPetCreatorKitPath: async (payload) => {
-      if (!window.desktopPet?.openCodexPetCreatorKitPath) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      return window.desktopPet.openCodexPetCreatorKitPath(payload)
-    },
-    onCreateSpritePetFromImage: async () => {
-      if (!window.desktopPet?.createSpritePetFromImage) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      const result = await window.desktopPet.createSpritePetFromImage()
-      if (!result) {
-        return null
-      }
-
-      const refreshedModels = await loadPetModels()
-      return {
-        ...result,
-        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
-      }
-    },
     onTestConnection: async (capability, draftSettings) => {
       if (capability === 'text') {
         if (!window.desktopPet?.testChatConnection) {

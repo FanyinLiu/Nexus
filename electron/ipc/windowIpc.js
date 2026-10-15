@@ -27,12 +27,6 @@ import {
   importPetModelFromDialog,
   importSpritePetModelFromCodexGallery,
   listCodexPetGalleryCatalog,
-  createSpritePetCreatorKitFromPayload,
-  inspectSpritePetCreatorKitFromDialog,
-  assembleSpritePetCreatorKitFromDialog,
-  installSpritePetCreatorKitPackageToCodex,
-  openSpritePetCreatorKitPathFromPayload,
-  createSpritePetModelFromImageDialog,
   saveTextFileFromDialog,
   openTextFileFromDialog,
 } from '../services/petModelService.js'
@@ -71,10 +65,6 @@ import {
   validateMediaSessionControlPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
-  validatePetModelCreatorKitCreatePayload,
-  validatePetModelCreatorKitInstallPayload,
-  validatePetModelCreatorKitOpenPathPayload,
-  validatePetModelCreatorKitOptionalPathPayload,
   validatePetModelGalleryImportPayload,
   validatePetModelGalleryListPayload,
   validatePetWindowStatePayload,
@@ -321,66 +311,6 @@ export function register() {
     payload = validatePetModelGalleryListPayload(payload)
     return listCodexPetGalleryCatalog(payload)
   })
-
-  ipcMain.handle('pet-model:create-creator-kit', async (event, payload = {}) => {
-    requireTrustedSender(event)
-    payload = validatePetModelCreatorKitCreatePayload(payload)
-    return runAuditedPetModelAction(event, 'pet-model:create-creator-kit', payload, () => (
-      createSpritePetCreatorKitFromPayload(payload)
-    ))
-  })
-
-  ipcMain.handle('pet-model:inspect-creator-kit', async (event, payload = {}) => {
-    requireTrustedSender(event)
-    payload = validatePetModelCreatorKitOptionalPathPayload('pet-model:inspect-creator-kit', payload)
-    return runAuditedPetModelAction(event, 'pet-model:inspect-creator-kit', payload, () => (
-      inspectSpritePetCreatorKitFromDialog(payload)
-    ))
-  })
-
-  ipcMain.handle('pet-model:assemble-creator-kit', async (event, payload = {}) => {
-    requireTrustedSender(event)
-    payload = validatePetModelCreatorKitOptionalPathPayload('pet-model:assemble-creator-kit', payload)
-    return runAuditedPetModelAction(
-      event,
-      'pet-model:assemble-creator-kit',
-      payload,
-      () => assembleSpritePetCreatorKitFromDialog(payload),
-      { notifyLibraryChanged: true },
-    )
-  })
-
-  ipcMain.handle('pet-model:install-creator-kit-codex', async (event, payload = {}) => {
-    requireTrustedSender(event)
-    payload = validatePetModelCreatorKitInstallPayload(payload)
-    return runAuditedPetModelAction(
-      event,
-      'pet-model:install-creator-kit-codex',
-      payload,
-      () => installSpritePetCreatorKitPackageToCodex(payload),
-      { notifyLibraryChanged: true },
-    )
-  })
-
-  ipcMain.handle('pet-model:open-creator-kit-path', async (event, payload = {}) => {
-    requireTrustedSender(event)
-    payload = validatePetModelCreatorKitOpenPathPayload(payload)
-    return runAuditedPetModelAction(event, 'pet-model:open-creator-kit-path', payload, () => (
-      openSpritePetCreatorKitPathFromPayload(payload)
-    ))
-  })
-
-  ipcMain.handle('pet-model:create-from-image', async (event) => {
-    requireTrustedSender(event)
-    return runAuditedPetModelAction(
-      event,
-      'pet-model:create-from-image',
-      {},
-      () => createSpritePetModelFromImageDialog(),
-      { notifyLibraryChanged: true },
-    )
-  })
-
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
     requireTrustedSender(event)

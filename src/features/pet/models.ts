@@ -6,7 +6,6 @@ import type {
 } from '../../../shared/live2dModelResources.js'
 import type { PetImportMessageKey } from '../../../shared/petErrorCodes.js'
 import type { PetExpressionSlot, SpritePetAtlasDefinition } from './types.ts'
-import type { PortraitPuppetDefinition } from './portraitPuppet.ts'
 
 /** @deprecated Import from `./types` — re-exported for backward compatibility. */
 export type { PetExpressionSlot } from './types.ts'
@@ -57,7 +56,6 @@ export interface PetModelDefinition {
   modelPath: string
   fallbackImagePath: string
   spriteAtlas?: SpritePetAtlasDefinition
-  portraitPuppet?: PortraitPuppetDefinition
   motionGroups: {
     idle?: string
     interaction?: string
@@ -234,7 +232,8 @@ const DEFAULT_RIG_PARAMS = {
 } as const
 
 // Live2D 星绘 (mao) is the default face of the companion — the soul and the
-// model match. Pip (codex) is the remaining bundled sample sprite pet.
+// model match. Haru and Hiyori are the other official Live2D samples.
+// Bundled sprite pets are not shipped; imported sprite packages still play.
 export const DEFAULT_PET_MODEL_ID = 'mao'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
@@ -344,44 +343,88 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
     ],
   },
   {
-    id: 'codex',
-    label: 'pet.model.codex.label' satisfies TranslationKey,
-    description: 'pet.model.codex.description' satisfies TranslationKey,
-    modelPath: '',
+    id: 'haru',
+    label: 'pet.model.haru.label' satisfies TranslationKey,
+    description: 'pet.model.haru.description' satisfies TranslationKey,
+    modelPath: './live2d/haru/Haru.model3.json',
     fallbackImagePath: '',
-    spriteAtlas: {
-      imagePath: './pets/codex/spritesheet.webp',
-      imageRendering: 'pixelated',
-      stageSize: 'clamp(88px, 15vmin, 126px)',
-      stageMinSize: '88px',
-      stageMaxSize: '126px',
-      stageMarginBottom: 'clamp(52px, 9vh, 80px)',
-      previewSize: '6.2rem',
-      previewMinSize: '6.2rem',
+    motionGroups: {
+      idle: 'Idle',
+      interaction: 'TapBody',
+      listeningStart: 'TapBody',
+      speakingStart: 'TapBody',
+      hit: 'TapBody',
+      gestures: {
+        wave: 'TapBody',
+        nod: 'TapBody',
+        shake: 'TapBody',
+        tilt: 'Idle',
+        point: 'TapBody',
+      },
     },
-    motionGroups: {},
     expressionMap: {
-      idle: 'idle',
-      listening: 'listening',
-      thinking: 'thinking',
-      sleepy: 'sleepy',
-      speaking: 'speaking',
-      happy: 'happy',
-      surprised: 'surprised',
-      confused: 'confused',
-      embarrassed: 'embarrassed',
-      touchBody: 'happy',
-      touchFace: 'embarrassed',
-      touchHead: 'surprised',
+      idle: 'F01',
+      listening: 'F02',
+      thinking: 'F03',
+      sleepy: 'F04',
+      speaking: 'F05',
+      happy: 'F06',
+      embarrassed: 'F07',
+      surprised: 'F08',
+      confused: 'F03',
+      touchBody: 'F06',
+      touchFace: 'F07',
+      touchHead: 'F08',
+    },
+    mouthParams: {
+      open: 'ParamMouthOpenY',
+      smile: 'ParamMouthForm',
     },
     layout: {
-      widthRatio: 0.6,
-      heightRatio: 0.68,
-      minWidth: 140,
-      minHeight: 190,
+      widthRatio: 0.74,
+      heightRatio: 0.84,
+      minWidth: 250,
+      minHeight: 360,
       anchorX: 0.5,
       anchorY: 0,
-      yOffsetRatio: 0.02,
+      yOffsetRatio: 0.03,
+      yOffsetPx: 12,
+    },
+  },
+  {
+    id: 'hiyori',
+    label: 'pet.model.hiyori.label' satisfies TranslationKey,
+    description: 'pet.model.hiyori.description' satisfies TranslationKey,
+    modelPath: './live2d/hiyori/Hiyori.model3.json',
+    fallbackImagePath: '',
+    motionGroups: {
+      idle: 'Idle',
+      interaction: 'TapBody',
+      listeningStart: 'TapBody',
+      speakingStart: 'TapBody',
+      hit: 'TapBody',
+      gestures: {
+        wave: 'TapBody',
+        nod: 'TapBody',
+        shake: 'TapBody',
+        tilt: 'Idle',
+        point: 'TapBody',
+      },
+    },
+    expressionMap: {},
+    mouthParams: {
+      open: 'ParamMouthOpenY',
+      smile: 'ParamMouthForm',
+    },
+    layout: {
+      widthRatio: 0.74,
+      heightRatio: 0.84,
+      minWidth: 250,
+      minHeight: 360,
+      anchorX: 0.5,
+      anchorY: 0,
+      yOffsetRatio: 0.03,
+      yOffsetPx: 12,
     },
   },
 ]
@@ -444,6 +487,37 @@ export function shouldRepairPetModelSelection(
   return status === 'ready'
     && presets.length > 0
     && !presets.some((preset) => preset.id === modelId)
+}
+
+/**
+ * Point a missing companion selection at Mao after discovery.
+ * Imported models that are still in the library are left alone. Portrait
+ * packages and assembler-marked sprite pets are not discovered, so they
+ * land here together with the removed bundled sprite ids.
+ */
+export function repairDiscoveredPetModelSelection<T extends {
+  petModelId: string
+  characterProfiles: readonly { petModelId: string }[]
+}>(
+  settings: T,
+  status: PetModelDiscoveryStatus,
+  presets: readonly Pick<PetModelDefinition, 'id'>[],
+): T {
+  if (status !== 'ready' || presets.length === 0) return settings
+  const known = new Set(presets.map((preset) => preset.id))
+  const petModelId = known.has(settings.petModelId) ? settings.petModelId : DEFAULT_PET_MODEL_ID
+  let profilesChanged = false
+  const characterProfiles = settings.characterProfiles.map((profile) => {
+    if (known.has(profile.petModelId)) return profile
+    profilesChanged = true
+    return { ...profile, petModelId: DEFAULT_PET_MODEL_ID }
+  })
+  if (petModelId === settings.petModelId && !profilesChanged) return settings
+  return {
+    ...settings,
+    petModelId,
+    characterProfiles: profilesChanged ? characterProfiles : settings.characterProfiles,
+  }
 }
 
 export function buildRuntimePetModelDefinition(
