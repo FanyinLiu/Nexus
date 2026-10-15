@@ -22,6 +22,7 @@ import {
   getUserModelsRoot,
   getPrimaryModelsDir,
 } from './modelPaths.js'
+import { migrateLegacySenseVoice } from './senseVoiceMigration.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 
 const PROGRESS_CHANNEL = 'models:download-progress'
@@ -138,6 +139,13 @@ export function initModelManager() {
   // Prime the HF probe in the background — the first inventory call will
   // then return quickly without stalling the wizard on a 5s timeout.
   canReachHuggingFace().catch(() => {})
+  // Upgrade copies are best-effort and must not delay the first window.
+  // A failed copy leaves the legacy bundled files in place.
+  const userRoot = getUserModelsRoot()
+  const legacyRoots = getModelsRoots().filter((root) => root !== userRoot)
+  void migrateLegacySenseVoice({ userRoot, legacyRoots }).catch((error) => {
+    console.warn('[ModelManager] SenseVoice migration skipped:', getRedactedErrorMessage(error))
+  })
   if (app.isPackaged) {
     const inv = getInventory()
     if (!inv.ready) {

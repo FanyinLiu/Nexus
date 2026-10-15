@@ -8,6 +8,7 @@
  */
 
 import {
+  createReadStream,
   createWriteStream,
   existsSync,
   mkdirSync,
@@ -15,6 +16,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statfsSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
@@ -83,13 +85,88 @@ function replaceFile(tempPath, destPath) {
   }
 }
 
-function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5) {
+/** Extra free space kept beside the file so a resume partial can finish. */
+export const MODEL_DOWNLOAD_DISK_MARGIN_BYTES = 32 * 1024 * 1024
+
+/**
+ * Bytes still to fetch. `presentFiles` names catalog files whose on-disk
+ * size already matches the integrity manifest.
+ * @param {object} model
+ * @param {Set<string>} [presentFiles]
+ */
+export function modelDownloadBytesNeeded(model, presentFiles = new Set()) {
+  if (model.kind === 'files') {
+    return model.files.reduce((sum, name) => {
+      if (presentFiles.has(name)) return sum
+      const size = model.integrity?.files?.[name]?.sizeBytes
+      return sum + (Number.isSafeInteger(size) ? size : 0)
+    }, 0)
+  }
+  if (model.kind === 'archive') return model.integrity?.archive?.sizeBytes ?? 0
+  if (model.kind === 'standalone') return model.standalone?.integrity?.sizeBytes ?? 0
+  return 0
+}
+
+/**
+ * Reject a download before the first byte when the volume cannot hold it.
+ * The message matches the renderer disk-space humanizer.
+ * @param {number} availableBytes
+ * @param {number} neededBytes
+ */
+export function assertModelDownloadDiskSpace(availableBytes, neededBytes) {
+  if (!Number.isSafeInteger(neededBytes) || neededBytes <= 0) return
+  const required = neededBytes + MODEL_DOWNLOAD_DISK_MARGIN_BYTES
+  if (!Number.isSafeInteger(availableBytes) || availableBytes < required) {
+    const error = new Error('Not enough disk space for the model download')
+    error.code = 'ENOSPC'
+    throw error
+  }
+}
+
+/**
+ * How to treat an existing `.partial` sibling.
+ * @param {number} partialSize
+ * @param {number} expectedSize
+ * @returns {{ mode: 'fresh' | 'discard' | 'verify' | 'resume', offset: number }}
+ */
+export function planFileResume(partialSize, expectedSize) {
+  if (!Number.isSafeInteger(partialSize) || partialSize <= 0) return { mode: 'fresh', offset: 0 }
+  if (!Number.isSafeInteger(expectedSize) || expectedSize <= 0 || partialSize > expectedSize) {
+    return { mode: 'discard', offset: 0 }
+  }
+  if (partialSize === expectedSize) return { mode: 'verify', offset: partialSize }
+  return { mode: 'resume', offset: partialSize }
+}
+
+function readAvailableDiskBytes(directory) {
+  const stats = statfsSync(directory)
+  return stats.bavail * stats.bsize
+}
+
+function hashFileRange(filePath, byteLength) {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256')
+    if (byteLength <= 0) {
+      resolve(hash)
+      return
+    }
+    const stream = createReadStream(filePath, { start: 0, end: byteLength - 1 })
+    stream.on('data', (chunk) => hash.update(chunk))
+    stream.on('error', reject)
+    stream.on('end', () => resolve(hash))
+  })
+}
+
+function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5, options = {}) {
   const safeUrl = validateModelDownloadUrl(url).toString()
   const expected = validateModelIntegrity(integrity)
+  const resumeOffset = Number.isSafeInteger(options.resumeOffset) ? options.resumeOffset : 0
+  const keepPartial = options.keepPartial === true
   return new Promise((resolve, reject) => {
     if (maxRedirects < 0) return reject(new Error('Too many model download redirects'))
 
-    const req = httpsGet(safeUrl, { timeout: 120_000 }, (res) => {
+    const headers = resumeOffset > 0 ? { Range: `bytes=${resumeOffset}-` } : undefined
+    const req = httpsGet(safeUrl, { timeout: 120_000, headers }, (res) => {
       if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
         req.destroy()
         let redirectUrl
@@ -99,78 +176,96 @@ function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5) {
           reject(error)
           return
         }
-        return downloadFile(redirectUrl, destPath, onProgress, expected, maxRedirects - 1)
+        return downloadFile(redirectUrl, destPath, onProgress, expected, maxRedirects - 1, options)
           .then(resolve)
           .catch(reject)
       }
 
-      if (res.statusCode !== 200) {
+      const ranged = resumeOffset > 0 && res.statusCode === 206
+      if (res.statusCode === 416 && keepPartial) {
+        req.destroy()
+        try { rmSync(destPath, { force: true }) } catch {}
+        return reject(new Error('Model download failed with HTTP 416'))
+      }
+      if (!ranged && res.statusCode !== 200) {
         req.destroy()
         return reject(new Error(`Model download failed with HTTP ${res.statusCode}`))
       }
 
-      mkdirSync(dirname(destPath), { recursive: true })
-      const tempPath = `${destPath}.partial-${process.pid}-${Date.now()}`
-      const file = createWriteStream(tempPath, { flags: 'wx' })
-      const hash = createHash('sha256')
-      const contentLength = Number.parseInt(res.headers['content-length'] || '0', 10)
-      let downloaded = 0
-      let settled = false
+      // A 200 after a Range request means the server ignored the offset.
+      // Truncate and treat the body as the whole file.
+      const offset = ranged ? resumeOffset : 0
+      res.pause()
+      void hashFileRange(ranged ? destPath : '', ranged ? offset : 0).then((hash) => {
+        mkdirSync(dirname(destPath), { recursive: true })
+        const tempPath = keepPartial ? destPath : `${destPath}.partial-${process.pid}-${Date.now()}`
+        const file = createWriteStream(tempPath, { flags: ranged ? 'a' : 'w' })
+        const contentLength = Number.parseInt(res.headers['content-length'] || '0', 10)
+        const expectedBody = expected.sizeBytes - offset
+        let downloaded = 0
+        let settled = false
 
-      const fail = (error) => {
-        if (settled) return
-        settled = true
-        res.unpipe(file)
-        res.destroy()
-        file.destroy()
-        try { rmSync(tempPath, { force: true }) } catch {}
-        reject(error)
-      }
+        const fail = (error, discardPartial = false) => {
+          if (settled) return
+          settled = true
+          res.unpipe(file)
+          res.destroy()
+          file.destroy()
+          if (!keepPartial || discardPartial) {
+            try { rmSync(tempPath, { force: true }) } catch {}
+          }
+          reject(error)
+        }
 
-      if (contentLength > 0 && contentLength !== expected.sizeBytes) {
-        fail(new Error('Model download size does not match its integrity manifest'))
-        return
-      }
-
-      res.on('data', (chunk) => {
-        downloaded += chunk.length
-        if (downloaded > expected.sizeBytes) {
-          fail(new Error('Model download exceeded its integrity size limit'))
+        if (contentLength > 0 && contentLength !== expectedBody) {
+          fail(new Error('Model download size does not match its integrity manifest'), true)
           return
         }
-        hash.update(chunk)
-        if (typeof onProgress === 'function') {
-          try {
-            onProgress({ downloaded, total: expected.sizeBytes })
-          } catch { /* swallow — downloader must not die from callback errors */ }
-        }
-      })
 
-      res.pipe(file)
-      file.on('finish', () => {
-        file.close(() => {
-          if (settled) return
-          if (downloaded !== expected.sizeBytes) {
-            fail(new Error('Model download ended before the expected size'))
+        res.on('data', (chunk) => {
+          downloaded += chunk.length
+          if (offset + downloaded > expected.sizeBytes) {
+            fail(new Error('Model download exceeded its integrity size limit'), true)
             return
           }
-          const digest = hash.digest('hex')
-          if (digest !== expected.sha256) {
-            fail(new Error('Model download SHA-256 verification failed'))
-            return
-          }
-          try {
-            replaceFile(tempPath, destPath)
-            settled = true
-            resolve({ sizeBytes: downloaded, sha256: digest })
-          } catch (error) {
-            fail(error)
+          hash.update(chunk)
+          if (typeof onProgress === 'function') {
+            try {
+              onProgress({ downloaded: offset + downloaded, total: expected.sizeBytes })
+            } catch { /* swallow — downloader must not die from callback errors */ }
           }
         })
+
+        res.pipe(file)
+        res.resume()
+        file.on('finish', () => {
+          file.close(() => {
+            if (settled) return
+            if (offset + downloaded !== expected.sizeBytes) {
+              fail(new Error('Model download ended before the expected size'))
+              return
+            }
+            const digest = hash.digest('hex')
+            if (digest !== expected.sha256) {
+              fail(new Error('Model download SHA-256 verification failed'), true)
+              return
+            }
+            try {
+              if (!keepPartial) replaceFile(tempPath, destPath)
+              settled = true
+              resolve({ sizeBytes: expected.sizeBytes, sha256: digest })
+            } catch (error) {
+              fail(error)
+            }
+          })
+        })
+        file.on('error', (error) => fail(error))
+        res.on('aborted', () => fail(new Error('Model download response was aborted')))
+        res.on('error', (error) => fail(error))
+      }).catch((error) => {
+        res.destroy()
+        reject(error)
       })
-      file.on('error', fail)
-      res.on('aborted', () => fail(new Error('Model download response was aborted')))
-      res.on('error', fail)
     })
 
     req.on('error', reject)
@@ -254,6 +349,45 @@ async function downloadAndExtractArchive(model, parentDir, onProgress) {
 
 // ── File-by-file download (HF resolve/main with ModelScope fallback) ───
 
+/**
+ * Download one catalog file, resuming a sibling `.partial` when the server
+ * honors Range. A network failure leaves the partial in place for the next try.
+ */
+async function downloadCatalogFile(url, fileDest, partialPath, onProgress, integrity) {
+  const expected = validateModelIntegrity(integrity)
+  let plan = { mode: 'fresh', offset: 0 }
+  if (existsSync(partialPath)) {
+    plan = planFileResume(statSync(partialPath).size, expected.sizeBytes)
+    if (plan.mode === 'discard') {
+      rmSync(partialPath, { force: true })
+      plan = { mode: 'fresh', offset: 0 }
+    } else if (plan.mode === 'verify') {
+      const hash = await hashFileRange(partialPath, plan.offset)
+      if (hash.digest('hex') === expected.sha256) {
+        replaceFile(partialPath, fileDest)
+        if (typeof onProgress === 'function') onProgress({ downloaded: expected.sizeBytes, total: expected.sizeBytes })
+        return
+      }
+      rmSync(partialPath, { force: true })
+      plan = { mode: 'fresh', offset: 0 }
+    }
+  }
+
+  const request = (resumeOffset) => downloadFile(url, partialPath, onProgress, expected, 5, {
+    keepPartial: true,
+    resumeOffset,
+  })
+
+  try {
+    await request(plan.mode === 'resume' ? plan.offset : 0)
+  } catch (error) {
+    // The partial was longer than the server still accepts. One clean retry.
+    if (!String(error?.message ?? '').includes('HTTP 416')) throw error
+    await request(0)
+  }
+  replaceFile(partialPath, fileDest)
+}
+
 async function downloadModelFiles(model, destDir, onProgress) {
   const hfBase = `https://huggingface.co/${model.hfRepo}/resolve/${model.revision}`
   const msBase = `https://modelscope.cn/models/${model.hfRepo}/resolve/master`
@@ -279,9 +413,10 @@ async function downloadModelFiles(model, destDir, onProgress) {
   for (const fileName of model.files) {
     fileIndex += 1
     const fileDest = join(destDir, fileName)
+    const expected = model.integrity.files[fileName]
+    if (existsSync(fileDest) && statSync(fileDest).size === expected.sizeBytes) continue
 
-    if (existsSync(fileDest)) continue
-
+    const partialPath = `${fileDest}.partial`
     const fileProgress = (p) => {
       if (typeof onProgress === 'function') {
         onProgress({
@@ -294,18 +429,19 @@ async function downloadModelFiles(model, destDir, onProgress) {
     }
 
     let ok = false
+    let lastError = null
     for (const base of [primaryBase, fallbackBase]) {
       try {
-        await downloadFile(`${base}/${fileName}`, fileDest, fileProgress, model.integrity.files[fileName])
+        await downloadCatalogFile(`${base}/${fileName}`, fileDest, partialPath, fileProgress, expected)
         ok = true
         break
-      } catch {
-        try { rmSync(fileDest, { force: true }) } catch {}
+      } catch (error) {
+        lastError = error
       }
     }
 
     if (!ok && required.has(fileName)) {
-      throw new Error(`Failed to fetch required file ${fileName}`)
+      throw lastError ?? new Error(`Failed to fetch required file ${fileName}`)
     }
   }
 
@@ -353,6 +489,27 @@ export async function downloadModel(model, opts) {
   emit({ phase: 'start' })
 
   try {
+    mkdirSync(modelsRoot, { recursive: true })
+    try {
+      const presentFiles = new Set()
+      if (model.kind === 'files') {
+        const destDir = join(modelsRoot, model.directory)
+        for (const fileName of model.files) {
+          const filePath = join(destDir, fileName)
+          const expectedSize = model.integrity?.files?.[fileName]?.sizeBytes
+          if (existsSync(filePath) && statSync(filePath).size === expectedSize) presentFiles.add(fileName)
+        }
+      }
+      assertModelDownloadDiskSpace(
+        readAvailableDiskBytes(modelsRoot),
+        modelDownloadBytesNeeded(model, presentFiles),
+      )
+    } catch (error) {
+      if (error?.code === 'ENOSPC') throw error
+      // statfs can fail on some virtual filesystems. The write path still
+      // surfaces a real ENOSPC later, which the same humanizer maps.
+    }
+
     if (model.kind === 'archive') {
       await downloadAndExtractArchive(model, modelsRoot, (p) => {
         emit({ phase: 'downloading', ...p })

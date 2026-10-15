@@ -4,6 +4,7 @@ import {
   parseVolcengineCredentialParts,
   type VolcengineCredentialParts,
 } from '../../components/settingsDrawerSupport.ts'
+import { SenseVoiceDownloadOffer } from '../../components/SenseVoiceDownloadOffer.tsx'
 import { UrlInput } from './UrlInput.tsx'
 import {
   getSpeechInputModelOptions,
@@ -124,6 +125,10 @@ export const SpeechInputProviderV3 = memo(function SpeechInputProviderV3({
             ))}
           </select>
         </SettingsV3Field>
+
+        {isSenseVoice ? (
+          <SenseVoiceDownloadOffer uiLanguage={draft.uiLanguage} providerId={draft.speechInputProviderId} />
+        ) : null}
 
         <SettingsV3Notice
           title={ti(provider.notes as TranslationKey)}

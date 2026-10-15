@@ -498,6 +498,9 @@ Flags:
    module that ships UI strings (heuristic: each locale key referenced
    ≥ 1× per file).
 2. `sherpa-models` referenced in `build.{mac,win,linux}.extraResources`.
+   Wake-word models and Silero VAD ship there. SenseVoice int8 does not:
+   the extraResources filter excludes `sherpa-onnx-sense-voice-*`, and
+   `prepackage:*` does not download it.
 3. `dist/index.html` + `app-runtime-*.js` + `ort-wasm-simd*.wasm` present.
 
 ### Stage E — Docs + compliance (beta: 3 checks; stable: 10 checks)

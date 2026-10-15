@@ -11,6 +11,7 @@ import {
 } from '../../../../lib/speechProviderProfiles.ts'
 import { displaySecretInputValue } from '../../../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
+import { SenseVoiceDownloadOffer } from '../../../../components/SenseVoiceDownloadOffer.tsx'
 import type { AppSettings, SpeechVoiceOption, TranslationKey } from '../../../../types'
 import { LocalVoiceModelsStatus } from './LocalVoiceModelsStatus.tsx'
 import type { OnboardingDraftSetter } from './types.ts'
@@ -88,6 +89,7 @@ export function VoiceStep({
 
       {draft.speechInputEnabled ? (
         <div className="onboarding-subsection">
+          <SenseVoiceDownloadOffer uiLanguage={draft.uiLanguage} providerId={draft.speechInputProviderId} />
           <strong>{ti('onboarding.voice.input_heading')}</strong>
           <label>
             <span>{ti('onboarding.voice.input_provider')}</span>

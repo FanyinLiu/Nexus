@@ -4,7 +4,9 @@ import {
   isSenseVoiceSpeechInputProvider,
   isTencentAsrSpeechInputProvider,
 } from '../../lib/audioProviders.ts'
+import { resolveMissingSenseVoiceSpeechInput } from '../../features/voice/senseVoiceInstall.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { switchSpeechInputProvider } from '../../lib/speechProviderProfiles.ts'
 import { checkParaformerAvailability } from '../../features/hearing/localParaformer.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
@@ -169,9 +171,22 @@ export function startVoiceConversationEntrypoint(
       }
 
       if (!status.installed || !status.modelFound) {
+        if (status.installed && !status.modelFound) {
+          const decision = resolveMissingSenseVoiceSpeechInput(params.settingsRef.current)
+          if (decision.action === 'cloud') {
+            const next = switchSpeechInputProvider(params.settingsRef.current, decision.providerId)
+            if (next.speechInputProviderId !== params.settingsRef.current.speechInputProviderId) {
+              params.settingsRef.current = next
+              params.showPetStatus(params.ti('voice.provider.sensevoice.fallback_cloud'), 5_000)
+              params.sensevoiceStartingRef.current = false
+              startVoiceConversationEntrypoint(params)
+              return
+            }
+          }
+        }
         const msg = !status.installed
           ? params.ti('voice.provider.sensevoice.node_missing')
-          : params.ti('voice.provider.sensevoice.model_missing')
+          : params.ti('voice.provider.sensevoice.not_installed')
         params.setError(msg)
         params.showPetStatus(msg, 5_000)
         console.warn('[Voice] SenseVoice unavailable:', status)

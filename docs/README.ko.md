@@ -209,14 +209,15 @@ README에는 현재 안정 버전 v0.4.7과 이전 공개 버전 v0.4.6의 핵�
    ```
    (또는: Nexus.app 을 우클릭 → 열기 → 대화상자에서 확인.)
 3. Nexus 를 실행합니다. 처음 실행 시 **"로컬 음성 모델 설치"**
-   마법사가 표시됩니다. **"원클릭 다운로드"** 를 클릭해 ~280 MB 의
-   sherpa-onnx + VAD 모델을
+   마법사가 표시됩니다. **"원클릭 다운로드"** 를 클릭해 웨이크워드와
+   VAD 모델을
    `~/Library/Application Support/Nexus/sherpa-models` 로
    다운로드합니다. 마법사는 닫을 수 있고, 나중에 설정에서 다시 열 수 있습니다.
+   SenseVoice int8(약 239 MB)은 설치 파일에 없으며, 로컬 음성 인식을 켤 때 받습니다.
 4. Python 기반 옵션(OmniVoice TTS / GLM-ASR)은 자동으로 감지됩니다.
    Python + `requirements.txt` 가 설치되어 있지 않으면 조용히
-   건너뜁니다 — 핵심 채팅 + SenseVoice STT + Edge TTS 스택은
-   여전히 동작합니다.
+   건너뜁니다 — 핵심 채팅과 Edge TTS 는 그대로 동작합니다. 로컬 인식이
+   없으면 설정해 둔 클라우드 음성 인식을 쓰고, 그것도 없으면 음성 입력은 꺼진 채로 둡니다.
 
 #### Windows 첫 실행
 

@@ -211,12 +211,13 @@ README 只保留目前穩定版 v0.4.7 和上一公開版本 v0.4.6 的重點；
    ```
    （或者：在 Nexus.app 上按右鍵 → 打開 → 在對話框中確認。）
 3. 啟動 Nexus。首次執行會出現 **「安裝本地語音模型」** 精靈，點
-   **一鍵下載** 把 ~280 MB 的 sherpa-onnx + VAD 模型下載到
+   **一鍵下載** 把喚醒詞和 VAD 模型下載到
    `~/Library/Application Support/Nexus/sherpa-models`。精靈可以
-   關掉，之後從設定裡重新開啟。
+   關掉，之後從設定裡重新開啟。SenseVoice int8（約 239 MB）不在安裝包裡，
+   打開本機語音辨識時再下載。
 4. Python 相關的選項（OmniVoice TTS / GLM-ASR）會自動偵測。
    如果沒裝 Python + `requirements.txt`，會被靜默跳過——核心
-   聊天 + SenseVoice STT + Edge TTS 路徑依然可用。
+   聊天和 Edge TTS 依然可用。本機辨識還沒裝好時，已設定的雲端語音辨識會接著用，否則語音輸入保持關閉。
 
 #### Windows 首次啟動
 

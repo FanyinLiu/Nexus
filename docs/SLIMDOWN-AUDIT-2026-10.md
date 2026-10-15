@@ -265,3 +265,27 @@ selection or character profile whose id is absent from the library is set to
 Mao. An assembled pet whose description was edited off that prefix remains a
 playable imported sprite. A community pet whose id is exactly `codex` or
 `qiyi` is remapped by schema 12 along with the removed bundled ids.
+
+SenseVoice int8 is no longer an installer extraResource. `prepackage:*`
+still runs `download-models.mjs --skip-asr`, and the catalog marks
+SenseVoice `required: false`, so the build does not fetch it. Packaged
+`sherpa-models` keeps the wake-word models and Silero VAD. The int8 pair
+(`model.int8.onnx` + `tokens.txt`, about 239 MB) downloads through the
+existing model catalog the first time local speech recognition is turned
+on, in settings or onboarding. The download shows the size, checks free
+disk, reports progress, verifies SHA-256, and resumes a `.partial` file.
+A failure stays on that panel and does not block startup.
+
+Until that model is installed, local STT is reported as not installed,
+with a download action. If the user already stored credentials for a
+cloud speech provider, that turn uses the cloud provider and does not
+change the saved selection. Otherwise speech input stays off. Wake word
+does not depend on SenseVoice.
+
+Upgrades copy a legacy int8 install from the old bundled `sherpa-models`
+directory into `userData/sherpa-models` on first launch, after the
+checksum matches, and leave the source in place. That is safer than
+asking every upgraded user to download 239 MB again: the files are
+already on disk, and a failed copy still leaves the old path readable.
+An installer that already deleted the bundle finds nothing to copy, so
+those users get the not-installed action instead of a startup download.

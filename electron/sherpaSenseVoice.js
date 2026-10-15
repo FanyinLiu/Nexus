@@ -95,9 +95,15 @@ class SherpaSenseVoiceService {
 
   getStatus() {
     const model = this._findModel()
+    const installState = !sherpa
+      ? 'engine-missing'
+      : model
+        ? 'installed'
+        : 'not-installed'
     return {
       installed: sherpa !== null,
       modelFound: model !== null,
+      installState,
       modelsDir: getPrimaryModelsDir(),
       currentModelId: this.activeModelId,
     }

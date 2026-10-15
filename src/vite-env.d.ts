@@ -872,7 +872,7 @@ declare global {
       pythonRuntimeStatus: () => Promise<PythonRuntimeStatus>
 
       // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
-      sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>
+      sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; installState?: 'installed' | 'not-installed' | 'engine-missing'; modelsDir: string; currentModelId: string | null }>
       sensevoiceStart: () => Promise<{ ok: boolean; sampleRate: number }>
       sensevoiceFeed: (
         payload: { samples: number[] | Float32Array },

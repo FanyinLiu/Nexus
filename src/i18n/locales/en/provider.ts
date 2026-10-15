@@ -3,7 +3,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 /** en messages — namespace `provider`. */
 export const enProvider = {
   'provider.stt.local-sensevoice.label': '[Local] SenseVoice high-accuracy recognition',
-  'provider.stt.local-sensevoice.notes': 'Alibaba SenseVoice-Small offline recognition — 10s audio processed in ~70ms (15x faster than Whisper), excellent Chinese accuracy. Download the model into the sherpa-models directory first.',
+  'provider.stt.local-sensevoice.notes': 'Alibaba SenseVoice-Small offline recognition — 10s of audio in about 70ms, strong Chinese accuracy. The int8 model (~239 MB) downloads the first time you turn on local speech recognition and is not in the installer.',
   'provider.stt.local-sensevoice.model.sensevoice-zh-en.label': 'SenseVoice Chinese + English (recommended)',
   'provider.stt.local-paraformer.label': '[Local] Paraformer streaming recognition',
   'provider.stt.local-paraformer.notes': 'Alibaba Paraformer streaming recognition — transcribes as you speak, shows results in real time. Supports Chinese, English, and Cantonese. Download the model into the sherpa-models directory first.',

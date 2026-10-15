@@ -12,6 +12,7 @@
  * Usage:
  *   node scripts/download-models.mjs              # download all
  *   node scripts/download-models.mjs --skip-asr   # skip non-required models
+ *                                                 # (SenseVoice int8 included)
  */
 
 import { mkdirSync } from 'node:fs'
@@ -93,6 +94,13 @@ async function main() {
     const rootsForCheck = model.kind === 'standalone'
       ? [standaloneDir]
       : [modelsDir]
+    if (skipAsr && !model.required) {
+      console.log('  ⊘ 使用了 --skip-asr，跳过可选模型')
+      skipped++
+      console.log()
+      continue
+    }
+
     const presence = checkModelPresence(model, rootsForCheck)
     if (presence.present && presence.verified) {
       console.log('  ✓ 已存在，跳过')
@@ -101,13 +109,6 @@ async function main() {
       continue
     }
     if (presence.present) console.log('  ! 发现旧版未校验模型，将重新下载并验证')
-
-    if (skipAsr && !model.required) {
-      console.log('  ⊘ 使用了 --skip-asr，跳过可选模型')
-      skipped++
-      console.log()
-      continue
-    }
 
     console.log('  ↓ 开始下载...')
     try {
