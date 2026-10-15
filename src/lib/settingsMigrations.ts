@@ -12,6 +12,7 @@
 
 import type { UiLanguage } from '../types'
 import { inferApiProviderId } from '../features/models/providerCatalog.ts'
+import { migrateVoiceLanguageValue } from '../features/voiceProfile/voiceLanguages.ts'
 import { normalizeUiLanguage } from './uiLanguage.ts'
 
 /**
@@ -337,7 +338,16 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 13
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 14
+
+function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
+  const next = { ...raw }
+  for (const key of ['speechRecognitionLang', 'speechSynthesisLang'] as const) {
+    if (typeof next[key] !== 'string') continue
+    next[key] = migrateVoiceLanguageValue(next[key]).value
+  }
+  return next
+}
 
 interface SettingsMigration {
   toVersion: number
@@ -494,6 +504,11 @@ const migrations: SettingsMigration[] = [
       }
       return next
     },
+  },
+  {
+    toVersion: 14,
+    description: 'Canonicalize voice language tags without changing providers or voices',
+    migrate: migrateVoiceLanguageFields,
   },
 ]
 

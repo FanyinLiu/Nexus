@@ -33,6 +33,7 @@ import {
   SettingsV3Switch,
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
+import { VoiceProfileSuggestion } from '../../components/VoiceProfileSuggestion.tsx'
 import { SpeechInputProviderV3 } from './SpeechInputProviderV3.tsx'
 import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3.tsx'
 import './voice-section-v3.css'
@@ -185,6 +186,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   return (
     <SettingsV3Page className={active ? 'settings-v3-voice' : 'is-hidden settings-v3-voice'}>
       {platformHint ? <SettingsV3Notice tone="warning" title={platformHint} /> : null}
+      <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />
 
       <SettingsV3Section title={ti('settings.voice.loop_title')} description={ti('settings.voice.loop_hint')}>
         <SettingsV3Row

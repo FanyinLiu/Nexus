@@ -226,10 +226,8 @@
 }
 
 .desktop-pet-root .onboarding-card--calm .onboarding-card__body {
-  padding: 0 4px 74px 0;
-  scroll-padding-bottom: 88px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  padding: 0 4px 8px 0;
+  scroll-padding-bottom: 8px;
 }
 
 .desktop-pet-root .onboarding-card--calm:not(.onboarding-card--disclosure) .onboarding-section {

@@ -28,7 +28,9 @@
   width: min(100%, 720px);
   max-height: min(calc(100vh - 32px), 680px);
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  /* Three tracks: progress, scrolling step, actions. A leftover stepper
+     track put the buttons in the flexible row and left a dead band. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
   min-height: 0;
   overflow: hidden;
@@ -215,6 +217,13 @@
 .onboarding-section__intro strong {
   color: #ffffff;
   font-size: 18px;
+}
+
+/* The card surface stays dark in every theme, so the step title must not
+   follow --color-text-primary (near-black on light themes). */
+.onboarding-card .onboarding-section__intro h2,
+.onboarding-card .ai-disclosure-step h2 {
+  color: #f5f7fb;
 }
 
 .onboarding-section__intro p,
@@ -767,10 +776,8 @@
 
 .onboarding-card__body {
   padding-right: 4px;
-  padding-bottom: 88px;
-  scroll-padding-bottom: 88px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 52px), transparent);
+  padding-bottom: 8px;
+  scroll-padding-bottom: 8px;
 }
 
 .onboarding-section {

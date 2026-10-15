@@ -166,3 +166,17 @@ export function validateKwsOptionsPayload(channel, payload) {
 export function validateVadStartPayload(payload) {
   return validateIpcPayload('vad:start', payload, vadStartSchema)
 }
+
+const voiceProfileProbeSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    benchmark: { type: 'boolean', optional: true, default: false },
+  },
+}
+
+/** @param {unknown} payload */
+export function validateVoiceProfileProbePayload(payload) {
+  return validateIpcPayload('voice-profile:probe', payload, voiceProfileProbeSchema)
+}

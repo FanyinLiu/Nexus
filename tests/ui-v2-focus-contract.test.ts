@@ -113,11 +113,11 @@ test('Settings V2 moves route context focus only for keyboard or assistive activ
   assert.match(drawer, /const shouldFocusActiveSectionHeadingRef = useRef\(true\)/)
   assert.match(
     drawer,
-    /function handleOpenSettingsSection\(sectionId: SettingsSectionId, moveFocus = true\)[\s\S]*?settingsView === 'section' && normalizedSectionId === activeSectionId[\s\S]*?if \(moveFocus\) activeSectionHeadingRef\.current\?\.focus\(\{ preventScroll: true \}\)[\s\S]*?return[\s\S]*?shouldFocusActiveSectionHeadingRef\.current = moveFocus/,
+    /function handleOpenSettingsSection\(sectionId: SettingsSectionId, moveFocus = true\)[\s\S]*?settingsView === 'section' && normalizedSectionId === activeSectionId[\s\S]*?if \(moveFocus\) activeSectionHeadingRef\.current\?\.focus\(\{ preventScroll: true, focusVisible: false \}\)[\s\S]*?return[\s\S]*?shouldFocusActiveSectionHeadingRef\.current = moveFocus/,
   )
   assert.match(
     drawer,
-    /const shouldMoveFocus = shouldFocusActiveSectionHeadingRef\.current[\s\S]*?shouldFocusActiveSectionHeadingRef\.current = true[\s\S]*?if \(!shouldMoveFocus\) return undefined[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?activeSectionHeadingRef\.current\?\.focus\(\{ preventScroll: true \}\)/,
+    /const shouldMoveFocus = shouldFocusActiveSectionHeadingRef\.current[\s\S]*?shouldFocusActiveSectionHeadingRef\.current = true[\s\S]*?if \(!shouldMoveFocus\) return undefined[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?activeSectionHeadingRef\.current\?\.focus\(\{ preventScroll: true, focusVisible: false \}\)/,
   )
   assert.match(drawer, /function handleReturnToSettingsHome\(moveFocus = true\)[\s\S]*?setSettingsView\('home'\)[\s\S]*?if \(!moveFocus\) return[\s\S]*?settingsHomeCardRefs\.current\[returnSectionId\]\?\.focus\(\)/)
 })
