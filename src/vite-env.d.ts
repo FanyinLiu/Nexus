@@ -873,6 +873,24 @@ declare global {
       modelsDownload: (modelId: string) => Promise<ModelInventory>
       modelsDownloadMissing: () => Promise<{ results: { id: string; ok: boolean; message?: string }[]; inventory: ModelInventory }>
       modelsNetworkProbe: () => Promise<{ huggingFaceReachable: boolean }>
+      voiceProfileProbe: (payload?: { benchmark?: boolean }) => Promise<{
+        ok: boolean
+        probeTimedOut?: boolean
+        hardware: {
+          platform: string | null
+          arch: string | null
+          release: string | null
+          logicalCores: number | null
+          cpuModel: string | null
+          totalMemBytes: number | null
+          freeMemBytes: number | null
+          freeDiskBytes: number | null
+          onBattery: boolean | null
+          gpuVendorId: number | null
+          gpuDeviceId: number | null
+        } | null
+        benchmark: { status: 'ok' | 'timeout' | 'skipped' | 'error' | 'not-run'; sttRtf: number | null }
+      }>
       subscribeModelsProgress: (listener: (event: ModelProgressEvent) => void) => () => void
       pythonRuntimeStatus: () => Promise<PythonRuntimeStatus>
 

@@ -42,6 +42,10 @@ import {
   normalizeUiLanguage,
 } from '../uiLanguage.ts'
 import {
+  defaultEdgeVoiceForLanguage,
+  resolveStoredVoiceLanguage,
+} from '../../features/voiceProfile/voiceLanguages.ts'
+import {
   readJson,
   SETTINGS_STORAGE_KEY,
   SETTINGS_UPDATED_EVENT,
@@ -409,8 +413,20 @@ export function loadSettings(): AppSettings {
   )
   const speechOutputModel = String(stored.speechOutputModel ?? defaultSettings.speechOutputModel).trim()
     || speechOutputPreset.defaultModel || defaultSettings.speechOutputModel
-  const speechOutputVoice = String(stored.speechOutputVoice ?? defaultSettings.speechOutputVoice).trim()
+  const speechRecognitionLang = resolveStoredVoiceLanguage(
+    stored.speechRecognitionLang,
+    resolvedUiLanguage,
+  )
+  const speechSynthesisLang = resolveStoredVoiceLanguage(
+    stored.speechSynthesisLang,
+    resolvedUiLanguage,
+  )
+  let speechOutputVoice = String(stored.speechOutputVoice ?? defaultSettings.speechOutputVoice).trim()
     || speechOutputPreset.defaultVoice || defaultSettings.speechOutputVoice
+  if (isFreshInstall && speechOutputProviderId === 'edge-tts') {
+    const matchedVoice = defaultEdgeVoiceForLanguage(speechSynthesisLang)
+    if (matchedVoice) speechOutputVoice = matchedVoice
+  }
   const speechOutputApiKey = String(stored.speechOutputApiKey ?? defaultSettings.speechOutputApiKey)
   const speechOutputInstructions = String(stored.speechOutputInstructions ?? defaultSettings.speechOutputInstructions)
   const toolWebSearchProviderId = normalizeWebSearchProviderId(
@@ -450,6 +466,8 @@ export function loadSettings(): AppSettings {
       ? ''
       : String(stored.speechInputApiKey ?? defaultSettings.speechInputApiKey),
     speechInputModel,
+    speechRecognitionLang,
+    speechSynthesisLang,
     speechOutputProviderId,
     speechOutputApiBaseUrl,
     speechOutputApiKey,

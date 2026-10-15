@@ -260,7 +260,7 @@ test('ignores malformed root settings values and falls back to defaults', () => 
 
     const settings = loadSettings()
 
-    assert.equal(settings.settingsSchemaVersion, 12)
+    assert.equal(settings.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
     assert.equal(settings.apiProviderId, 'ollama')
     assert.equal(settings.apiBaseUrl, 'http://127.0.0.1:11434/v1')
     assert.equal(settings.model, 'qwen3:8b')
@@ -287,7 +287,7 @@ test('migrates the old qiyi default through Codex and on to Mao', () => {
   const settings = loadSettings()
 
   assert.equal(settings.petModelId, 'mao')
-  assert.equal(settings.settingsSchemaVersion, 12)
+  assert.equal(settings.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
 })
 
 test('keeps official Live2D samples and maps removed bundled sprites to Mao', () => {
@@ -313,7 +313,7 @@ test('keeps official Live2D samples and maps removed bundled sprites to Mao', ()
   const settings = loadSettings()
 
   assert.equal(settings.petModelId, 'haru')
-  assert.equal(settings.settingsSchemaVersion, 12)
+  assert.equal(settings.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
   assert.equal(settings.characterProfiles[0]?.petModelId, 'hiyori')
   assert.equal(settings.characterProfiles[1]?.petModelId, 'mao')
   assert.equal(settings.characterProfiles[2]?.petModelId, 'mao')
@@ -785,7 +785,7 @@ test('a schema 10 store keeps a non-retired manual selection and retires MiniMax
 
   const settings = loadSettings()
 
-  assert.equal(settings.settingsSchemaVersion, 12)
+  assert.equal(settings.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
   assert.equal(settings.textProviderProfiles.minimax?.model, 'MiniMax-M3')
 })

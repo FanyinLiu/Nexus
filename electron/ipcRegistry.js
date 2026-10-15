@@ -18,6 +18,7 @@ import * as vtsBridgeIpc from './ipc/vtsBridgeIpc.js'
 import * as personaIpc from './ipc/personaIpc.js'
 import * as updaterIpc from './ipc/updaterIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
+import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
@@ -102,6 +103,7 @@ export function registerIpc() {
   personaIpc.register()
   updaterIpc.register()
   sherpaIpc.register()
+  voiceProfileIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
   mcpIpc.register()

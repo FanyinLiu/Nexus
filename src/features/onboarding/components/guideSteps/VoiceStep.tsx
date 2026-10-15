@@ -13,6 +13,8 @@ import { displaySecretInputValue } from '../../../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
 import { SenseVoiceDownloadOffer } from '../../../../components/SenseVoiceDownloadOffer.tsx'
 import type { AppSettings, SpeechVoiceOption, TranslationKey } from '../../../../types'
+import { VoiceLanguageSelect } from '../../../../components/VoiceLanguageSelect.tsx'
+import { VoiceProfileSuggestion } from '../../../../components/VoiceProfileSuggestion.tsx'
 import { LocalVoiceModelsStatus } from './LocalVoiceModelsStatus.tsx'
 import type { OnboardingDraftSetter } from './types.ts'
 
@@ -59,6 +61,7 @@ export function VoiceStep({
     pickTranslatedUiText(draft.uiLanguage, key)
   return (
     <div className="onboarding-grid onboarding-grid--stack">
+      <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="onboarding" />
       <LocalVoiceModelsStatus uiLanguage={draft.uiLanguage} />
 
       <div className="onboarding-grid onboarding-grid--two">
@@ -172,11 +175,11 @@ export function VoiceStep({
 
             <label>
               <span>{ti('onboarding.voice.recognition_lang')}</span>
-              <input
+              <VoiceLanguageSelect
                 value={draft.speechRecognitionLang}
-                onChange={(event) => setDraft((current) => ({
+                onChange={(speechRecognitionLang) => setDraft((current) => ({
                   ...current,
-                  speechRecognitionLang: event.target.value,
+                  speechRecognitionLang,
                 }))}
               />
             </label>
@@ -268,11 +271,11 @@ export function VoiceStep({
 
             <label>
               <span>{ti('onboarding.voice.synthesis_lang')}</span>
-              <input
+              <VoiceLanguageSelect
                 value={draft.speechSynthesisLang}
-                onChange={(event) => setDraft((current) => ({
+                onChange={(speechSynthesisLang) => setDraft((current) => ({
                   ...current,
-                  speechSynthesisLang: event.target.value,
+                  speechSynthesisLang,
                 }))}
               />
             </label>

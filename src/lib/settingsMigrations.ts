@@ -12,6 +12,7 @@
 
 import type { UiLanguage } from '../types'
 import { inferApiProviderId } from '../features/models/providerCatalog.ts'
+import { migrateVoiceLanguageValue } from '../features/voiceProfile/voiceLanguages.ts'
 import { normalizeUiLanguage } from './uiLanguage.ts'
 
 /**
@@ -337,7 +338,16 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 12
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 13
+
+function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
+  const next = { ...raw }
+  for (const key of ['speechRecognitionLang', 'speechSynthesisLang'] as const) {
+    if (typeof next[key] !== 'string') continue
+    next[key] = migrateVoiceLanguageValue(next[key]).value
+  }
+  return next
+}
 
 interface SettingsMigration {
   toVersion: number
@@ -483,6 +493,11 @@ const migrations: SettingsMigration[] = [
     toVersion: 12,
     description: 'Fall back when a removed bundled sprite pet is still selected',
     migrate: migrateRemovedBundledPetModels,
+  },
+  {
+    toVersion: 13,
+    description: 'Canonicalize voice language tags without changing providers or voices',
+    migrate: migrateVoiceLanguageFields,
   },
 ]
 

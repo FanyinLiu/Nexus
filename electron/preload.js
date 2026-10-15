@@ -118,6 +118,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   modelsDownload: (modelId) => ipcRenderer.invoke('models:download', { modelId }),
   modelsDownloadMissing: () => ipcRenderer.invoke('models:download-missing'),
   modelsNetworkProbe: () => ipcRenderer.invoke('models:network-probe'),
+  voiceProfileProbe: (payload) => ipcRenderer.invoke('voice-profile:probe', payload ?? {}),
   pythonRuntimeStatus: () => ipcRenderer.invoke('python:status'),
   subscribeModelsProgress: (listener) => {
     const handler = (_event, payload) => listener(payload)
