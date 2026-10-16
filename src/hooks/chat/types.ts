@@ -184,5 +184,6 @@ export type CompanionNoticePayload = {
   toolResult?: ChatToolResult
   shouldResumeContinuousVoice?: boolean
   loopOffer?: ChatMessage['loopOffer']
+  loopCheck?: ChatMessage['loopCheck']
   proactiveWhy?: ChatMessage['proactiveWhy']
 }

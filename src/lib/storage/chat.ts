@@ -235,6 +235,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     ? value.reasoning_content
     : undefined
   const loopOffer = normalizeLoopOffer(value.loopOffer)
+  const loopCheck = normalizeLoopCheck(value.loopCheck)
   const proactiveWhy = normalizeProactiveWhy(value.proactiveWhy)
 
   return {
@@ -247,6 +248,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     ...(memoryTrace ? { memoryTrace } : {}),
     ...(reasoning ? { reasoning_content: reasoning } : {}),
     ...(loopOffer ? { loopOffer } : {}),
+    ...(loopCheck ? { loopCheck } : {}),
     ...(proactiveWhy ? { proactiveWhy } : {}),
   }
 }
@@ -264,6 +266,17 @@ function normalizeLoopOffer(value: unknown): ChatMessage['loopOffer'] {
     : 'pending'
   if (!memoryId || !title || !nightBeforeAt) return undefined
   return { memoryId, title: title.slice(0, 80), nightBeforeAt, status }
+}
+
+function normalizeLoopCheck(value: unknown): ChatMessage['loopCheck'] {
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  const memoryId = typeof record.memoryId === 'string' ? record.memoryId.trim() : ''
+  const status = record.status === 'done' || record.status === 'later' || record.status === 'moved' || record.status === 'pending'
+    ? record.status
+    : 'pending'
+  if (!memoryId) return undefined
+  return { memoryId, status }
 }
 
 function normalizeProactiveWhy(value: unknown): ChatMessage['proactiveWhy'] {
@@ -327,6 +340,12 @@ function loopOfferRank(status: NonNullable<ChatMessage['loopOffer']>['status'] |
   return 0
 }
 
+function loopCheckRank(status: NonNullable<ChatMessage['loopCheck']>['status'] | undefined): number {
+  if (status === 'done' || status === 'later' || status === 'moved') return 2
+  if (status === 'pending') return 1
+  return 0
+}
+
 /**
  * Fold a broadcast message list onto the local thread.
  * A night-before card the user already accepted or declined stays decided
@@ -349,6 +368,11 @@ export function mergeRemoteChatMessages(
     const remoteOffer = incoming.loopOffer
     if (localOffer && loopOfferRank(localOffer.status) > loopOfferRank(remoteOffer?.status)) {
       next = { ...next, loopOffer: localOffer }
+    }
+    const localCheck = current.loopCheck
+    const remoteCheck = incoming.loopCheck
+    if (localCheck && loopCheckRank(localCheck.status) > loopCheckRank(remoteCheck?.status)) {
+      next = { ...next, loopCheck: localCheck }
     }
     return next
   })

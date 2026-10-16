@@ -31,6 +31,8 @@ export interface LoopOutreach {
   text: string
   why: LoopOutreachWhy
   offer: LoopOutreachOffer | null
+  /** Set on the post-due ask so the card can offer done / not yet / reschedule. */
+  check: { memoryId: string } | null
 }
 
 type Translate = Translator
@@ -104,6 +106,7 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
       text: t('proactive.loop.check', { what }),
       why,
       offer: null,
+      check: { memoryId: memory.id },
     }
   }
   const night = nightBeforeIso(memory.loopDueAt ?? '')
@@ -118,6 +121,7 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
     text,
     why,
     offer: night ? { memoryId: memory.id, title: what.slice(0, 80), nightBeforeAt: night } : null,
+    check: null,
   }
 }
 

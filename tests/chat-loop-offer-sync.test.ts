@@ -59,3 +59,18 @@ test('a remote decision still wins when this window has not answered', () => {
   assert.equal(merged[0]?.loopOffer?.status, 'declined')
   assert.deepEqual(merged[0]?.images, ['data:image/png;base64,abc'])
 })
+
+test('a decided check card is not put back to pending by the other window', () => {
+  const local = [message({
+    id: 'check',
+    content: '办好了吗？',
+    loopCheck: { memoryId: 'loop-1', status: 'done' },
+  })]
+  const remote = [message({
+    id: 'check',
+    content: '办好了吗？',
+    loopCheck: { memoryId: 'loop-1', status: 'pending' },
+  })]
+  const merged = mergeRemoteChatMessages(local, remote)
+  assert.equal(merged[0]?.loopCheck?.status, 'done')
+})

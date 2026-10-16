@@ -15,7 +15,9 @@ function messagesSignature(msgs: ChatMessage[]): string {
   const last = msgs[msgs.length - 1]
   // Offer status lives on an earlier card once a later line arrives, so the
   // signature has to see every card or an accept never gets written.
-  const offers = msgs.map((message) => message.loopOffer?.status ?? '-').join('.')
+  const offers = msgs.map((message) => (
+    `${message.loopOffer?.status ?? '-'}:${message.loopCheck?.status ?? '-'}`
+  )).join('.')
   return `${msgs.length}:${last.id}:${last.content.length}:${last.tone ?? ''}:${offers}`
 }
 

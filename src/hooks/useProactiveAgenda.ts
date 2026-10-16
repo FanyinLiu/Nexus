@@ -35,6 +35,7 @@ import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { appendMemoryOpLog } from '../lib/storage/memoryOpLog.ts'
 import { saveMemoryRunSnapshot } from '../lib/storage/memoryRunSnapshot.ts'
+import { applyLoopCardAction, type LoopCardAction } from '../features/memory/loopCardActions.ts'
 import { buildLoopOutreach, loopReminderDraft } from '../features/memory/loopOutreach.ts'
 import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
 import type { ChatMessage } from '../types/chat.ts'
@@ -50,6 +51,7 @@ type Notice = {
   bubbleContent?: string
   dedupeKey?: string
   loopOffer?: NonNullable<ChatMessage['loopOffer']>
+  loopCheck?: NonNullable<ChatMessage['loopCheck']>
   proactiveWhy?: NonNullable<ChatMessage['proactiveWhy']>
 }
 
@@ -57,6 +59,12 @@ type LoopOfferDetail = {
   memoryId?: string
   messageId?: string
   nightBeforeAt?: string
+}
+
+type LoopCheckDetail = {
+  memoryId?: string
+  action?: LoopCardAction
+  quote?: string
 }
 
 export function useProactiveAgenda(options: {
@@ -244,6 +252,7 @@ export function useProactiveAgenda(options: {
         dedupeKey: `agenda:${item.id}:${outreach?.phase ?? 'note'}:${localDayKey(nowMs)}`,
         ...(outreach?.why ? { proactiveWhy: outreach.why } : {}),
         ...(outreach?.offer ? { loopOffer: { ...outreach.offer, status: 'pending' as const } } : {}),
+        ...(outreach?.check ? { loopCheck: { memoryId: outreach.check.memoryId, status: 'pending' as const } } : {}),
       })
       const hidden = typeof document !== 'undefined' && (document.hidden || !document.hasFocus())
       if (hidden && settings.proactiveAwayNotificationsEnabled && outreach) {
@@ -391,13 +400,40 @@ export function useProactiveAgenda(options: {
         }
       }))
     }
+    const onCheck = (event: Event) => {
+      const detail = (event as CustomEvent<LoopCheckDetail>).detail
+      if (!detail?.memoryId || !detail.action) return
+      const current = optionsRef.current
+      const result = applyLoopCardAction(
+        current.memoriesRef.current,
+        detail.memoryId,
+        detail.action,
+        new Date(appNowMs()).toISOString(),
+        detail.quote ?? '',
+      )
+      if (!result.op) return
+      current.memoriesRef.current = result.memories
+      current.setMemories(result.memories)
+      appendMemoryOpLog([result.op])
+      const status = detail.action === 'done' ? 'done' as const : detail.action === 'later' ? 'later' as const : 'moved' as const
+      current.setMessages?.((messages) => messages.map((message) => {
+        const check = message.loopCheck
+        if (!check || check.memoryId !== detail.memoryId || check.status !== 'pending') return message
+        return {
+          ...message,
+          loopCheck: { memoryId: check.memoryId, status },
+        }
+      }))
+    }
     window.addEventListener('nexus:focus-state', onFocus)
     window.addEventListener('nexus:accept-loop-offer', onAccept)
     window.addEventListener('nexus:decline-loop-offer', onDecline)
+    window.addEventListener('nexus:loop-check', onCheck)
     return () => {
       window.removeEventListener('nexus:focus-state', onFocus)
       window.removeEventListener('nexus:accept-loop-offer', onAccept)
       window.removeEventListener('nexus:decline-loop-offer', onDecline)
+      window.removeEventListener('nexus:loop-check', onCheck)
     }
   }, [deliverReturn])
 
