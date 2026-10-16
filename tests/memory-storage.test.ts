@@ -6,6 +6,7 @@ import {
   loadMemories,
   normalizeDailyMemoryStore,
   normalizeMemoryItemsForStorage,
+  saveMemories,
 } from '../src/lib/storage/memory.ts'
 import {
   DAILY_MEMORY_STORAGE_KEY,
@@ -128,6 +129,14 @@ test('loadMemories migrates sanitized legacy memories when current store key is 
   assert.equal(memories.length, 1)
   assert.equal(memories[0]?.id, 'legacy-1')
   assert.deepEqual(JSON.parse(storage.getItem(MEMORY_STORAGE_KEY) ?? '[]'), memories)
+})
+
+test('saveMemories does not create the long-term key from an empty first launch', () => {
+  const storage = installStorage()
+
+  saveMemories([])
+
+  assert.equal(storage.getItem(MEMORY_STORAGE_KEY), null)
 })
 
 test('loadMemories does not resurrect legacy memories after the user deleted all memories', () => {

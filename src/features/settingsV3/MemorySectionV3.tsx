@@ -40,6 +40,7 @@ import {
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 import { CompanionMigrationAdapterV3, MemoryMigrationAdapterV3 } from './MemoryMigrationAdaptersV3.tsx'
+import { OpenLoopAgendaV3 } from './OpenLoopAgendaV3.tsx'
 import './settings-v3-collection.css'
 
 type MemorySearchModeOption = {
@@ -72,6 +73,10 @@ export type MemorySectionV3Props = {
   onClearMemoryArchive: () => void
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
+  onPatchMemory?: (
+    id: string,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
+  ) => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
@@ -117,6 +122,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
   onClearMemoryArchive,
   onAddManualMemory,
   onUpdateMemory,
+  onPatchMemory,
   onSetMemoryEnabled,
   onRemoveMemory,
   onClearDailyMemory,
@@ -297,6 +303,14 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
             : ti('settings.memory.transparency.context_off')}
         />
       </SettingsV3Section>
+
+      <OpenLoopAgendaV3
+        draft={draft}
+        memories={memories}
+        onPatchMemory={onPatchMemory}
+        setDraft={setDraft}
+        uiLanguage={uiLanguage}
+      />
 
       <SettingsV3Notice title={ti('settings.memory.transparency.storage_note')}>
         {ti('settings.memory.long_term.archive_note')}

@@ -121,6 +121,10 @@ const defaultSettings: AppSettings = {
   memoryHotTierMaxChars: 3500,
   autoSkillGenerationEnabled: false,
   lorebookRewriteQueryEnabled: false,
+  proactiveAgendaEnabled: true,
+  proactiveFrequency: 'normal',
+  proactiveQuietHoursStart: 23,
+  proactiveQuietHoursEnd: 8,
   contextAwarenessEnabled: false,
   companionAwarenessPaused: false,
   activeWindowContextEnabled: false,
@@ -627,6 +631,24 @@ export function loadSettings(): AppSettings {
     autonomyQuietHoursEnd: clampInteger(
       stored.autonomyQuietHoursEnd ?? defaultSettings.autonomyQuietHoursEnd,
       defaultSettings.autonomyQuietHoursEnd,
+      0,
+      23,
+    ),
+    proactiveAgendaEnabled: typeof stored.proactiveAgendaEnabled === 'boolean'
+      ? stored.proactiveAgendaEnabled
+      : defaultSettings.proactiveAgendaEnabled,
+    proactiveFrequency: stored.proactiveFrequency === 'low' || stored.proactiveFrequency === 'normal'
+      ? stored.proactiveFrequency
+      : defaultSettings.proactiveFrequency,
+    proactiveQuietHoursStart: clampInteger(
+      stored.proactiveQuietHoursStart ?? defaultSettings.proactiveQuietHoursStart,
+      defaultSettings.proactiveQuietHoursStart,
+      0,
+      23,
+    ),
+    proactiveQuietHoursEnd: clampInteger(
+      stored.proactiveQuietHoursEnd ?? defaultSettings.proactiveQuietHoursEnd,
+      defaultSettings.proactiveQuietHoursEnd,
       0,
       23,
     ),

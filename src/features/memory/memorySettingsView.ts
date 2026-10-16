@@ -41,6 +41,7 @@ const EMPTY_KIND_COUNTS: MemoryKindCounts = {
   fact: 0,
   relationship: 0,
   knowledge: 0,
+  open_loop: 0,
 }
 
 export function countMemoryKinds(memories: MemoryItem[]): MemoryKindCounts {

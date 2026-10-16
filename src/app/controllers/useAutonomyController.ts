@@ -24,6 +24,7 @@ import { useDiscordBridge } from './useDiscordBridge.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils.ts'
 import { consumeMessageFollowUpPromptText, recordMessageFollowUp } from '../../lib/storage/messageFollowUps.ts'
+import { useProactiveAgenda } from '../../hooks/useProactiveAgenda.ts'
 import { relationshipLevelToCloseness } from '../../features/autonomy/emotionModel.ts'
 import { getRelationshipLevel } from '../../features/autonomy/relationshipTracker.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
@@ -113,9 +114,10 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const bridgeBusyRef = busyRef ?? fallbackBusyRef
   const focusAwareness = useFocusAwareness({
     settingsRef,
-    enabled: backgroundRuntimeEnabled
-      && settings.autonomyEnabled
-      && settings.autonomyFocusAwarenessEnabled,
+    enabled: backgroundRuntimeEnabled && (
+      (settings.autonomyEnabled && settings.autonomyFocusAwarenessEnabled)
+      || settings.proactiveAgendaEnabled
+    ),
   })
 
   const emotionState = useEmotionState()
@@ -406,6 +408,35 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     [emotionState, relationshipState],
   )
 
+  const proactiveAgenda = useProactiveAgenda({
+    enabled: backgroundRuntimeEnabled,
+    settingsRef,
+    memoriesRef: memory.memoriesRef,
+    dailyMemoriesRef: memory.dailyMemoriesRef,
+    setMemories: (next) => memory.setMemories(() => next),
+    focusState: focusAwareness.focusState,
+    focusStateRef: focusAwareness.focusStateRef,
+    idleSecondsRef: focusAwareness.idleSecondsRef,
+    busyRef: bridgeBusyRef,
+    pushCompanionNotice: chat.pushCompanionNotice,
+    t,
+    onLog: (title, detail) => debugConsole.appendDebugConsoleEvent({
+      source: 'autonomy',
+      title,
+      detail,
+    }),
+  })
+
+  const consumeNextTurn = proactiveAgenda.consumeNextTurn
+  const consumeProactivePromptText = useCallback(() => {
+    try {
+      if (!settingsRef.current.proactiveAgendaEnabled) return consumeMessageFollowUpPromptText()
+      return consumeNextTurn()
+    } catch {
+      return ''
+    }
+  }, [consumeNextTurn, settingsRef])
+
   return useMemo(() => ({
     focusAwareness,
     autonomyTick,
@@ -426,7 +457,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     consumePendingMilestoneText: relationshipState.consumePendingMilestoneText,
     consumeAnniversaryPromptText: relationshipState.consumeAnniversaryPromptText,
     consumeOnThisDayPromptText: relationshipState.consumeOnThisDayPromptText,
-    consumeMessageFollowUpPromptText,
+    consumeMessageFollowUpPromptText: consumeProactivePromptText,
     processRelationshipMessage: relationshipState.processMessage,
     updateSessionContext: relationshipState.updateSessionContext,
     rhythmRef: rhythmState.rhythmRef,
@@ -457,5 +488,6 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     rhythmState.rhythmRef,
     rhythmState.getRhythmPrompt,
     setGoals,
+    consumeProactivePromptText,
   ])
 }

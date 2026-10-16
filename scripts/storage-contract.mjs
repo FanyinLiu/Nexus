@@ -80,6 +80,7 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'CHAT_LOCAL_DATA_RUNTIME_MIRROR_CONSENT_KEY', key: 'nexus:chat:local-data-runtime-mirror-consent', domain: 'chat', classification: 'settings', authority: 'renderer-localStorage-hidden-feature-consent', migration: 'keep-until-chat-authority-cutover' },
   { constant: 'CHAT_LOCAL_DATA_AUTHORITY_CONSENT_KEY', key: 'nexus:chat:local-data-authority-consent', domain: 'chat', classification: 'settings', authority: 'renderer-localStorage-hidden-feature-consent', migration: 'keep-until-chat-authority-cutover' },
   { constant: 'STORE_KEY', key: 'nexus:message-follow-ups', domain: 'chat', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'PROACTIVE_AGENDA_STORAGE_KEY', key: 'nexus:proactive:agenda', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'PENDING_GREETING_KEY', key: 'nexus:pending-companion-greeting', domain: 'presence', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'STARTUP_GREETING_SESSION_KEY', key: 'nexus:startup-greeting-shown', domain: 'presence', classification: 'session', authority: 'renderer-sessionStorage', migration: 'do-not-migrate' },
   { constant: 'VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY', key: 'nexus:voice-trigger-direct-send-migration-v1', domain: 'voice', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },

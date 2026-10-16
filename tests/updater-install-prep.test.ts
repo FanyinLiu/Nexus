@@ -320,10 +320,12 @@ test('debounced json stores flush before their timer and renderer memory v2 is c
 
     const {
       captureDurableUpdateSnapshot,
+      writeJson,
       writeJsonDebounced,
       MEMORY_STORAGE_KEY,
       MEMORY_OP_LOG_STORAGE_KEY,
       MEMORY_V1_BACKUP_STORAGE_KEY,
+      PROACTIVE_AGENDA_STORAGE_KEY,
     } = await import('../src/lib/storage/core.ts')
     const saved = new Map<string, string>([
       [MEMORY_V1_BACKUP_STORAGE_KEY, '[{"id":"v1-backup"}]'],
@@ -347,14 +349,27 @@ test('debounced json stores flush before their timer and renderer memory v2 is c
         dispatchEvent: () => true,
       },
     })
-    writeJsonDebounced(MEMORY_STORAGE_KEY, [{ id: 'm-v2', content: 'kept' }], 60_000)
+    writeJsonDebounced(MEMORY_STORAGE_KEY, [{
+      id: 'loop-1',
+      content: 'send the report',
+      kind: 'open_loop',
+      loopStatus: 'open',
+      loopSnoozeUntil: '2026-10-16T18:00:00.000Z',
+    }], 60_000)
     writeJsonDebounced(MEMORY_OP_LOG_STORAGE_KEY, [{ id: 'op-1', op: 'ADD' }], 60_000)
+    writeJson(PROACTIVE_AGENDA_STORAGE_KEY, {
+      items: [{ id: 'agenda:open_loop:loop-1', kind: 'open_loop' }],
+      firedAt: [],
+      lastConsolidationAt: null,
+    })
     assert.equal(saved.get(MEMORY_STORAGE_KEY) ?? null, null)
     const snapshot = captureDurableUpdateSnapshot()
-    assert.match(snapshot.memoryV2.longTerm ?? '', /m-v2/)
+    assert.match(snapshot.memoryV2.longTerm ?? '', /open_loop/)
+    assert.match(snapshot.memoryV2.longTerm ?? '', /loopSnoozeUntil/)
     assert.match(snapshot.memoryV2.opLog ?? '', /ADD/)
     assert.equal(snapshot.memoryV2.v1Backup, '[{"id":"v1-backup"}]')
-    assert.match(saved.get(MEMORY_STORAGE_KEY) ?? '', /kept/)
+    assert.match(saved.get(MEMORY_STORAGE_KEY) ?? '', /send the report/)
+    assert.match(saved.get(PROACTIVE_AGENDA_STORAGE_KEY) ?? '', /agenda:open_loop:loop-1/)
   } finally {
     rmSync(userData, { recursive: true, force: true })
     delete (globalThis as { window?: unknown }).window

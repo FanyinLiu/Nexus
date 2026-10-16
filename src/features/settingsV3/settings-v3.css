@@ -153,6 +153,14 @@
 .settings-v3-disclosure__body { display: grid; gap: 12px; padding: 0 14px 14px; border-top: 1px solid var(--sv3-line); }
 
 .settings-v3-field { display: grid; gap: 6px; min-width: 0; padding-top: 12px; color: var(--sv3-ink); font-weight: 620; }
+/* The hour stays on the same row as its label so scrolling cannot leave a bare number. */
+.settings-v3-hour-fields { display: grid; gap: 0; padding: 0 14px 12px; }
+.settings-v3-hour-fields .settings-v3-field {
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+}
 .settings-v3-field :is(input, select, textarea) { width: 100%; min-height: 44px; padding: 9px 11px; color: var(--sv3-ink); background: var(--sv3-field, var(--sv3-surface)); border: 1px solid var(--sv3-line); border-radius: 10px; font: inherit; }
 .settings-v3-field textarea { min-height: 108px; resize: vertical; }
 .settings-v3-field small { color: var(--sv3-muted); font-size: 12px; font-weight: 400; }

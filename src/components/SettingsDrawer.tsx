@@ -134,6 +134,10 @@ export type SettingsDrawerProps = {
   }>
   onAddManualMemory: (content: string) => void
   onUpdateMemory: (id: string, content: string) => void
+  onPatchMemory?: (
+    id: string,
+    patch: Partial<Pick<import('../types').MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
+  ) => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
@@ -205,6 +209,7 @@ export function SettingsDrawer({
   onClearMemoryArchive,
   onAddManualMemory,
   onUpdateMemory,
+  onPatchMemory,
   onSetMemoryEnabled,
   onRemoveMemory,
   onClearDailyMemory,
@@ -768,6 +773,7 @@ export function SettingsDrawer({
         onSetMemoryEnabled={onSetMemoryEnabled}
         onUpdateDailyEntry={onUpdateDailyEntry}
         onUpdateMemory={onUpdateMemory}
+        onPatchMemory={onPatchMemory}
         onUpdateNotificationChannel={onUpdateNotificationChannel}
         petModel={petModel}
         petModelImport={petModel_}

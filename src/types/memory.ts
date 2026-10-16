@@ -31,7 +31,10 @@ export interface MemoryOpRecord {
   reason?: string
 }
 
-export type MemoryKind = 'preference' | 'fact' | 'relationship' | 'knowledge'
+export type MemoryKind = 'preference' | 'fact' | 'relationship' | 'knowledge' | 'open_loop'
+
+/** User-facing lifecycle for a commitment. Snooze is a deferral, not a status. */
+export type LoopStatus = 'open' | 'done' | 'dismissed'
 
 export type EmotionalValence = 'positive' | 'negative' | 'neutral' | 'mixed'
 
@@ -110,6 +113,22 @@ export interface MemoryItem {
    * both tiers are fully automatic (v0.4.6 decision: no confirmation UI).
    */
   supersededPending?: boolean
+  /**
+   * Only for kind `open_loop`. Absent on older rows, which are not loops.
+   * `done` and `dismissed` stay in the store so a later pass does not
+   * recreate the same commitment and nag again.
+   */
+  loopStatus?: LoopStatus
+  /** ISO time the commitment is due. Absent when the user named no time. */
+  loopDueAt?: string
+  /** The time phrase as the user said it, kept for the memory view. */
+  loopDueText?: string
+  /** ISO time until which proactive delivery must skip this loop. */
+  loopSnoozeUntil?: string
+  /** How many times this loop was handed to a proactive channel. */
+  loopSurfacedCount?: number
+  /** ISO time of the last proactive handoff. */
+  loopLastSurfacedAt?: string
 }
 
 export interface DailyMemoryEntry {
