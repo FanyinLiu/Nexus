@@ -117,6 +117,12 @@ const externalActionPolicySyncSchema = {
       },
     },
     desktopContext: desktopContextFlagsSchema,
+    toolOpenExternalRequiresConfirmation: { type: 'boolean', optional: true },
+    uiLanguage: {
+      type: 'enum',
+      optional: true,
+      values: ['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko'],
+    },
   },
 }
 

@@ -149,4 +149,5 @@ export const jaSettingsChat = {
   'settings.letters.active_days_label': '今週は {n} 日話した',
   'settings.letters.export': '保存',
   'settings.letters.export_title': 'この手紙を単体の HTML ファイルとしてエクスポート',
+  'settings.letters.save_dialog_title': '手紙を保存',
 } as const satisfies Partial<TranslationDictionary>

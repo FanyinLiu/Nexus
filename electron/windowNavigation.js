@@ -128,3 +128,44 @@ export function isAllowedRendererNavigation(targetUrl, rendererEntryUrl) {
 export function normalizeExternalWindowOpenUrl(rawUrl) {
   return normalizeExternalUrl(rawUrl)
 }
+
+// First-party project pages and the crisis chat link are opened from
+// controls the app itself rendered. Anything else is a link the page
+// supplied, and follows the saved confirmation preference.
+const PROJECT_HOST = 'github.com'
+const PROJECT_PATH_PREFIX = '/fanyinliu/nexus'
+const CRISIS_CHAT_HOSTS = new Set([
+  'chat.988lifeline.org',
+])
+
+/**
+ * @param {unknown} rawUrl
+ * @returns {boolean}
+ */
+export function isAllowlistedExternalWindowOpenUrl(rawUrl) {
+  let parsed
+  try {
+    parsed = new URL(String(rawUrl ?? ''))
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== 'https:') return false
+  if (parsed.username || parsed.password) return false
+  const host = parsed.hostname.toLowerCase()
+  if (CRISIS_CHAT_HOSTS.has(host)) return true
+  if (host !== PROJECT_HOST) return false
+  const pathname = parsed.pathname.toLowerCase()
+  return pathname === PROJECT_PATH_PREFIX || pathname.startsWith(`${PROJECT_PATH_PREFIX}/`)
+}
+
+/**
+ * Allowlisted links open directly. Every other http(s) link asks first
+ * unless the saved preference explicitly turned confirmation off.
+ * @param {unknown} rawUrl
+ * @param {unknown} requiresConfirmation
+ * @returns {boolean}
+ */
+export function externalWindowOpenNeedsConfirmation(rawUrl, requiresConfirmation) {
+  if (isAllowlistedExternalWindowOpenUrl(rawUrl)) return false
+  return requiresConfirmation !== false
+}

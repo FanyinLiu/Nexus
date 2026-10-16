@@ -164,6 +164,7 @@ test('renderer policy sync payload omits tokens target IDs commands and args', (
       factorio: { mode: 'confirm', active: false },
       mcp: { mode: 'auto', active: true },
     },
+    toolOpenExternalRequiresConfirmation: true,
   })
 
   const serialized = JSON.stringify(payload)

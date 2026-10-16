@@ -116,7 +116,7 @@ export const zhTWSettingsVoice = {
   'settings.speech_connection.input_provider_error': '語音辨識服務回傳了異常狀態，請檢查介面和憑證。',
   'settings.speech_connection.input_unsupported': '這個語音輸入方案不能在這裡測試連線。',
   'settings.speech_connection.output_synthesis_ready': '連線成功，已取得可驗證的合成音訊（尚未驗證本機揚聲器播放）。',
-  'settings.speech_connection.output_synthesis_fallback': '連線成功，已取得合成音訊，但實際音色/叢集與請求目標不一致，請复核設定。',
+  'settings.speech_connection.output_synthesis_fallback': '連線成功，已取得合成音訊，但實際音色/叢集與請求目標不一致，請覆核設定。',
   'settings.speech_connection.output_invalid_audio': '語音服務回傳了成功狀態，但音訊內容無法驗證。請檢查介面、音色和模型設定。',
   'settings.speech_connection.output_empty_audio': '語音服務回傳了成功狀態，但沒有收到有效音訊。請檢查介面、音色和模型設定。',
   'settings.speech_connection.identity_mismatch': '服務有回應，但回傳的供應商/模型/音色與請求目標不一致。',

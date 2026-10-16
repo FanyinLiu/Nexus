@@ -2,7 +2,7 @@
  * BrowserWindow construction for pet (main) and panel windows.
  * Host (windowManager) injects live window getters/setters and shared helpers.
  */
-import { app, BrowserWindow, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, screen, shell } from 'electron'
 import { getPreloadPath, getRendererEntry } from './rendererServer.js'
 import { clampWindowPosition } from './windowManagerHelpers.js'
 import {
@@ -12,11 +12,14 @@ import {
 } from './windowAssets.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
 import {
+  externalWindowOpenNeedsConfirmation,
   isAllowedRendererNavigation,
   normalizeExternalWindowOpenUrl,
   summarizeWindowNavigationErrorForLog,
   summarizeWindowNavigationUrlForLog,
 } from './windowNavigation.js'
+import { externalOpenDialogCopy } from './userFacingDialogs.js'
+import { getExternalOpenConfirmation } from './services/externalOpenConfirmation.js'
 import { bindWindowCapability, unbindWindowCapability } from './ipc/windowCapabilities.js'
 import {
   getPanelWindowCreationState,
@@ -89,23 +92,66 @@ export function configureWindowCreation(deps) {
   settingsReturnFocus = deps.settingsReturnFocus
 }
 
-function openExternalUrlFromWindow(url, label) {
+function readExternalOpenLocale() {
+  const saved = getExternalOpenConfirmation().uiLanguage
+  if (saved) return saved
   try {
-    const safeUrl = normalizeExternalWindowOpenUrl(url)
-    shell.openExternal(safeUrl).catch((err) => {
-      console.warn(
-        `[security] failed to open ${label} external URL:`,
-        summarizeWindowNavigationUrlForLog(safeUrl),
-        summarizeWindowNavigationErrorForLog(err),
-      )
-    })
+    return app.getLocale()
+  } catch {
+    return 'en-US'
+  }
+}
+
+async function confirmExternalWindowOpen(parent, url) {
+  const copy = externalOpenDialogCopy(readExternalOpenLocale())
+  const dialogOptions = {
+    type: 'question',
+    buttons: [copy.open, copy.cancel],
+    defaultId: 1,
+    cancelId: 1,
+    title: copy.title,
+    message: copy.message,
+    detail: url,
+    noLink: true,
+  }
+  try {
+    const parentReady = parent && typeof parent.isDestroyed === 'function' && !parent.isDestroyed()
+    const { response } = parentReady
+      ? await dialog.showMessageBox(parent, dialogOptions)
+      : await dialog.showMessageBox(dialogOptions)
+    return response === 0
+  } catch (err) {
+    console.warn('[security] external open confirmation failed:', getRedactedErrorMessage(err))
+    return false
+  }
+}
+
+async function openExternalUrlFromWindow(url, label, parent) {
+  let safeUrl
+  try {
+    safeUrl = normalizeExternalWindowOpenUrl(url)
   } catch (err) {
     console.warn(
       `[security] blocked ${label} external URL:`,
       summarizeWindowNavigationUrlForLog(url),
       summarizeWindowNavigationErrorForLog(err),
     )
+    return
   }
+
+  const requiresConfirmation = getExternalOpenConfirmation().requiresConfirmation
+  if (externalWindowOpenNeedsConfirmation(safeUrl, requiresConfirmation)) {
+    const accepted = await confirmExternalWindowOpen(parent, safeUrl)
+    if (!accepted) return
+  }
+
+  shell.openExternal(safeUrl).catch((err) => {
+    console.warn(
+      `[security] failed to open ${label} external URL:`,
+      summarizeWindowNavigationUrlForLog(safeUrl),
+      summarizeWindowNavigationErrorForLog(err),
+    )
+  })
 }
 
 function attachNavigationGuards(win, label, view) {
@@ -117,7 +163,7 @@ function attachNavigationGuards(win, label, view) {
   })
 
   contents.setWindowOpenHandler(({ url }) => {
-    openExternalUrlFromWindow(url, label)
+    void openExternalUrlFromWindow(url, label, win)
     return { action: 'deny' }
   })
 

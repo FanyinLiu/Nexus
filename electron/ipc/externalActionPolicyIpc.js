@@ -5,6 +5,7 @@ import {
   syncExternalActionPolicy,
 } from '../services/externalActionPolicy.js'
 import { saveDesktopContextFlags } from '../services/desktopContextPolicy.js'
+import { saveExternalOpenConfirmation } from '../services/externalOpenConfirmation.js'
 import { requireTrustedSender } from './validate.js'
 import { validateExternalActionPolicySyncPayload } from './payloadSchemas.js'
 
@@ -36,6 +37,15 @@ export function register() {
     // desktop-context:get cannot honor a pet-supplied enablement.
     if (payload?.desktopContext) {
       saveDesktopContextFlags(payload.desktopContext)
+    }
+    if (
+      typeof payload?.toolOpenExternalRequiresConfirmation === 'boolean'
+      || typeof payload?.uiLanguage === 'string'
+    ) {
+      saveExternalOpenConfirmation({
+        requiresConfirmation: payload.toolOpenExternalRequiresConfirmation,
+        uiLanguage: payload.uiLanguage,
+      })
     }
     return syncExternalActionPolicy(payload)
   })

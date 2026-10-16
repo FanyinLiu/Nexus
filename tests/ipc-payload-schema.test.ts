@@ -688,6 +688,26 @@ test('IPC external action policy schema accepts modes and active flags only', ()
       },
     },
   )
+  assert.deepEqual(
+    validateExternalActionPolicySyncPayload({
+      policies: {},
+      toolOpenExternalRequiresConfirmation: false,
+      uiLanguage: 'ja',
+    }),
+    {
+      policies: {},
+      toolOpenExternalRequiresConfirmation: false,
+      uiLanguage: 'ja',
+    },
+  )
+  assert.throws(
+    () => validateExternalActionPolicySyncPayload({
+      policies: {},
+      uiLanguage: 'fr',
+    }),
+    /payload\.uiLanguage must be one of/,
+  )
+
   assert.throws(
     () => validateExternalActionPolicySyncPayload({
       policies: {},
