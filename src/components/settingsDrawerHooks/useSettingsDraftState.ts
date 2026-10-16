@@ -31,6 +31,14 @@ export function useSettingsDraftState(settings: AppSettings) {
     setDraft((current) => ensureDraftPetModelPreset(current, petModelPresets))
   }, [])
 
+  const patchCommittedField = useCallback(<K extends keyof AppSettings>(
+    key: K,
+    value: AppSettings[K],
+  ) => {
+    setDraft((current) => (current[key] === value ? current : { ...current, [key]: value }))
+    setBaseline((current) => (current[key] === value ? current : { ...current, [key]: value }))
+  }, [])
+
   const createSavePayload = useCallback(
     () => buildSettingsSavePayload(draft),
     [draft],
@@ -49,6 +57,7 @@ export function useSettingsDraftState(settings: AppSettings) {
     getRollbackThemeId,
     mergeHydratedSecrets,
     ensurePetModelPreset,
+    patchCommittedField,
     createSavePayload,
     isDirty,
   }

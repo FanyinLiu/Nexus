@@ -22,6 +22,7 @@ export type PetControlIconName =
   | 'skip-forward'
   | 'play'
   | 'pause'
+  | 'pencil'
   | 'speaker'
   | 'sparkles'
   | 'leaf'
@@ -163,6 +164,12 @@ export function PetControlIcon({ name, ...props }: PetControlIconProps) {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
           <path fill="currentColor" d="M8.5 5A1.5 1.5 0 0 0 7 6.5v11a1.5 1.5 0 0 0 3 0v-11A1.5 1.5 0 0 0 8.5 5Zm7 0A1.5 1.5 0 0 0 14 6.5v11a1.5 1.5 0 0 0 3 0v-11A1.5 1.5 0 0 0 15.5 5Z" />
+        </svg>
+      )
+    case 'pencil':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+          <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25ZM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" />
         </svg>
       )
     case 'speaker':

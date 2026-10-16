@@ -2,6 +2,7 @@ import { memo } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import { segmentStageDirections } from '../features/pet/performance.ts'
+import { describeChatMemoryTrace } from '../features/memory/memoryTraceLabel.ts'
 import type { ChatMemoryTraceDetailItem, ChatMemoryTraceDetails } from '../features/memory/traceDetails.ts'
 import type { ChatMessage } from '../types'
 import { ToolResultCard } from './ToolResultCard.tsx'
@@ -141,26 +142,9 @@ function renderAssistantContent(content: string) {
 }
 
 function getMemoryTraceLabel(message: ChatMessage, t: ReturnType<typeof useTranslation>['t']) {
-  const trace = message.memoryTrace
-  if (!trace || message.role !== 'assistant') return null
-
-  if (trace.status === 'paused') {
-    return t('message_bubble.memory_trace.paused')
-  }
-
-  const longTerm = trace.longTermIds.length
-  const daily = trace.dailyEntryIds.length
-  const semantic = trace.semanticIds.length
-
-  if (longTerm + daily + semantic === 0) {
-    return t('message_bubble.memory_trace.none')
-  }
-
-  return t('message_bubble.memory_trace.used', {
-    longTerm,
-    daily,
-    semantic,
-  })
+  const trace = describeChatMemoryTrace(message)
+  if (!trace) return null
+  return t(trace.key, trace.params)
 }
 
 function renderMemoryTraceItem(

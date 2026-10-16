@@ -161,7 +161,6 @@ export function buildSettingsSectionMeta(input: BuildSettingsSectionMetaInput): 
       description: descriptions.lorebooks,
       preview: [
         ti('settings.preview.lorebooks.tagline_1'),
-        ti('settings.preview.lorebooks.tagline_2'),
       ],
     },
     voice: {

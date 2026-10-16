@@ -139,6 +139,7 @@ export type SettingsDrawerProps = {
     patch: Partial<Pick<import('../types').MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
   ) => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
+  onCommitMemoryPaused: (paused: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
@@ -211,6 +212,7 @@ export function SettingsDrawer({
   onUpdateMemory,
   onPatchMemory,
   onSetMemoryEnabled,
+  onCommitMemoryPaused,
   onRemoveMemory,
   onClearDailyMemory,
   onUpdateDailyEntry,
@@ -239,6 +241,7 @@ export function SettingsDrawer({
     getRollbackThemeId,
     mergeHydratedSecrets,
     ensurePetModelPreset,
+    patchCommittedField,
     createSavePayload,
     isDirty,
   } = useSettingsDraftState(settings)
@@ -771,6 +774,10 @@ export function SettingsDrawer({
         onStopVoiceConversation={onStopVoiceConversation}
         onCancelVoiceTurn={onCancelVoiceTurn}
         onSetMemoryEnabled={onSetMemoryEnabled}
+        onCommitMemoryPaused={(paused) => {
+          patchCommittedField('memoryPaused', paused)
+          onCommitMemoryPaused(paused)
+        }}
         onUpdateDailyEntry={onUpdateDailyEntry}
         onUpdateMemory={onUpdateMemory}
         onPatchMemory={onPatchMemory}
@@ -1017,7 +1024,7 @@ export function SettingsDrawer({
                     </button>
 
                     <div className="settings-page__headline sph">
-                      {activeSectionMeta.eyebrow ? (
+                      {activeSectionMeta.eyebrow && activeSectionMeta.eyebrow !== activeSectionLabel ? (
                         <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
                       ) : null}
                       <h4 ref={activeSectionHeadingRef} tabIndex={-1}>{activeSectionLabel}</h4>

@@ -15,6 +15,7 @@ export interface ChatSheetV2Message {
   id: string
   role: ChatSheetV2MessageRole
   content: string
+  memoryTraceLabel?: string
 }
 
 export interface ChatSheetV2Labels {
@@ -323,7 +324,12 @@ export function ChatSheetV2({
                 <p className="chat-sheet-v2__speaker">
                   {message.role === 'user' ? labels.userName : companionName}
                 </p>
-                <p className="chat-sheet-v2__message">{message.content}</p>
+                <div className="chat-sheet-v2__bubble">
+                  <p className="chat-sheet-v2__message">{message.content}</p>
+                  {message.memoryTraceLabel ? (
+                    <p className="chat-sheet-v2__memory-trace">{message.memoryTraceLabel}</p>
+                  ) : null}
+                </div>
               </article>
             ))
           )}

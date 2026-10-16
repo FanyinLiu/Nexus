@@ -93,6 +93,7 @@ export type SettingsDrawerActiveSectionProps = {
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
+  onCommitMemoryPaused: (paused: boolean) => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onUpdateMemory: (id: string, content: string) => void
   onPatchMemory?: (
@@ -153,6 +154,7 @@ export function SettingsDrawerActiveSection({
   onStopVoiceConversation,
   onCancelVoiceTurn,
   onSetMemoryEnabled,
+  onCommitMemoryPaused,
   onUpdateDailyEntry,
   onUpdateMemory,
   onPatchMemory,
@@ -271,6 +273,7 @@ export function SettingsDrawerActiveSection({
           onUpdateMemory={onUpdateMemory}
           onPatchMemory={onPatchMemory}
           onSetMemoryEnabled={onSetMemoryEnabled}
+          onCommitMemoryPaused={onCommitMemoryPaused}
           onRemoveMemory={onRemoveMemory}
           onClearDailyMemory={onClearDailyMemory}
           onUpdateDailyEntry={onUpdateDailyEntry}
