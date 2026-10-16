@@ -6,39 +6,43 @@
 
 ## [Unreleased]
 
-### [0.5.0]
+### [0.4.8]
 
-Not tagged and not published. Stable target 2026-11-15; beta around
-2026-11-08. v0.4.7 remains the current stable release, and the README
-stable entry stays there. The package is still `0.4.8-beta.1`. The
-`0.4.8-beta.1` candidate notes stay in
+Stability, a slimmer install, desktop presence, voice auto-detect, a memory
+upgrade, and the model catalog. Not the stable release yet. The stable
+target is before 2026-11-15. `v0.4.8-beta.1` is already a GitHub prerelease
+(2026-10-15); the next build is `0.4.8-beta.2`. v0.4.7 remains the current
+stable release, and the README stable entry stays there until the stable
+release. `package.json` may be `0.4.8-beta.N` during beta. Notes for the
+first prerelease stay in
 [`docs/RELEASE-NOTES-v0.4.8-beta.1.md`](docs/RELEASE-NOTES-v0.4.8-beta.1.md).
 
-- The pet follows your cursor across the screen and notices when you are
-  typing, without blocking what you are doing. The frameless backdrop stays
-  off unless you turn it on, so the character stands on the desktop.
-- Setup can suggest a speech model from this computer's hardware. SenseVoice
-  downloads when you choose it, instead of shipping inside the installer.
-- Memory uses a v2 record you can reconcile, keeps open loops, and shares one
-  proactive agenda for follow-ups.
-- Updates flush your data and wait until you confirm install. Each window
-  only receives the capabilities that belong to it. The app runs on
-  Electron 43.7.11.
-- Bundled characters are the official Live2D samples (Mao, Haru, and Hiyori).
-  Making a pet from a picture is dropped, and the old bundled sprite pets are
-  gone. A sprite you imported yourself still works.
-- Minecraft and Factorio stay hidden in Settings.
-- The model list includes the October 2026 refresh (`gpt-6-sol`, MiniMax
+- Stability: updates flush your data and wait until you confirm install.
+  Each window only receives the capabilities that belong to it. The app
+  runs on Electron 43.7.11. First-use setup opens in the panel, and a failed
+  model save shows an error you can retry.
+- Slimdown: bundled characters are the official Live2D samples (Mao, Haru,
+  and Hiyori). Making a pet from a picture is dropped, and the old bundled
+  sprite pets are gone. A sprite you imported yourself still works.
+  SenseVoice downloads when you choose it, instead of shipping inside the
+  installer. Minecraft and Factorio stay hidden until a later release.
+- Presence: the pet follows your cursor across the screen and notices when
+  you are typing, without blocking what you are doing. The frameless
+  backdrop stays off unless you turn it on, so the character stands on the
+  desktop.
+- Voice auto-detect: setup can suggest a speech model from this computer's
+  hardware.
+- Memory: long-term memory uses a v2 record you can reconcile, keeps open
+  loops, and shares one proactive agenda for follow-ups.
+- Catalog: the October 2026 defaults are in (`gpt-6-sol`, MiniMax
   `MiniMax-M3`, DeepSeek V4.1 Flash on SiliconFlow and NVIDIA, and the other
   current defaults). `MiniMax-M2.7` and `MiniMax-M2.7-highspeed` leave the
   MiniMax pickers before the 2026-11-18 retirement. A saved choice of either
-  one moves to `MiniMax-M3`, and the plan you were on stays put.
-- Custom OpenAI-compatible speech-to-text defaults to `gpt-transcribe`, the
-  model OpenAI recommends for a finished recording. A saved
-  `custom-openai-stt` value moves only when it is still
-  `gpt-4o-mini-transcribe`. A name you typed for your own service stays.
-- First-use setup opens in the panel, a failed model save shows an error you
-  can retry, and the onboarding message-action demo keeps its styles.
+  one moves to `MiniMax-M3`, and the plan you were on stays put. Custom
+  OpenAI-compatible speech-to-text defaults to `gpt-transcribe`, the model
+  OpenAI recommends for a finished recording. A saved `custom-openai-stt`
+  value moves only when it is still `gpt-4o-mini-transcribe`. A name you
+  typed for your own service stays.
 
 ## [0.4.7] - 2026-08-27
 

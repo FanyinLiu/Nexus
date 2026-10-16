@@ -1,8 +1,9 @@
 /**
- * Minecraft and Factorio remain for a later voice-chat companion
- * (Mineflayer). 0.5.0 must not offer them: Minecraft opens a WebSocket
- * rather than the Java protocol, and Factorio still sends an empty
- * password. Saved settings stay in the schema and are not rewritten.
+ * Minecraft and Factorio stay hidden through v0.4.8. v0.5.0 is the first
+ * time Minecraft is offered, via Mineflayer. These rows are not that
+ * companion: Minecraft opens a WebSocket rather than the Java protocol,
+ * and Factorio still sends an empty password. Saved settings stay in the
+ * schema and are not rewritten.
  *
  * Set `VITE_NEXUS_ENABLE_GAME_COMPANION=1` to show the rows and allow
  * startup connect again. Any other value, including unset, keeps both off.

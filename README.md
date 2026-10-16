@@ -125,7 +125,7 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 
 ## 本次 beta 候选 — v0.4.8-beta.1
 
-> **尚未打 tag，不是稳定版。** 当前稳定入口仍是 v0.4.7。候选说明见 [English release notes](docs/RELEASE-NOTES-v0.4.8-beta.1.md)。
+> **已作为预发布打 tag，不是稳定版。** 下一包是 v0.4.8-beta.2。当前稳定入口仍是 v0.4.7。候选说明见 [English release notes](docs/RELEASE-NOTES-v0.4.8-beta.1.md)。
 
 - #139 的 2026 年 10 月目录刷新已经在 main 上：设置 schema v10，以及 v8–v10 迁移和新的模型默认值。
 - `MiniMax-M2.7` 和 `MiniMax-M2.7-highspeed` 在 2026-11-18 退役前移出选择列表。已保存的选择会迁到 `MiniMax-M3`，原来的套餐不变。更早的 Token Plan `MiniMax-M2.7` 仍迁到 `MiniMax-M3.1-Flash-Preview`。

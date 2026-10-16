@@ -134,6 +134,15 @@ or a GitHub Release. The owner pushes the tag only after this commit is on
 `main`, CI is green, and `npm run prerelease-check -- v0.4.8-beta.1` passes.
 #137 and #133 are on `main` and are listed in this candidate.
 
+### v0.4.8-beta.1 published — 2026-10-15
+
+`v0.4.8-beta.1` was published as a GitHub pre-release on 2026-10-15.
+That tag is spent. The next package on this line is `0.4.8-beta.2`.
+v0.4.7 remains the public stable release. During beta, `package.json` may
+be `0.4.8-beta.N`. The README stable entry stays on v0.4.7 until the
+v0.4.8 stable release. The stable target is before 2026-11-15. This batch
+is the v0.4.8 line. v0.5.0 stays reserved for later headline features.
+
 This doc is the source of truth for every release. The short version:
 
 ```

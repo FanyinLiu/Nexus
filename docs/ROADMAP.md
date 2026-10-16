@@ -42,10 +42,10 @@ The larger product steps are:
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
   `v0.4.7` until a later release is explicitly prepared. The v0.4.7 stable
-  promotion is the current release boundary. `v0.4.8-beta.1` is the prepared
-  package candidate for the October 2026 catalog follow-up. It does not move
-  the README stable entry, tag, or GitHub Release; v0.4.7 stays the public
-  stable release until the beta validation window closes.
+  promotion is the current release boundary. `v0.4.8-beta.1` is a published
+  GitHub prerelease (2026-10-15). The next package bump is `0.4.8-beta.2`.
+  During beta, `package.json` may be `0.4.8-beta.N`. The README stable entry
+  stays on v0.4.7 until the v0.4.8 stable release.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
   fallback, and prove Mao/Haru/Hiyori cold start, switching, and recovery in
@@ -60,27 +60,29 @@ The larger product steps are:
   defaults are included. The 2026-08-10 `v0.4.7-beta.1` preparation record remains
   historical. This remains a compatibility/catalog release, not a v0.5
   behavior release.
-- **v0.5.0 — adaptive desktop presence, voice, memory, and stability.**
-  Stable target 2026-11-15; beta around 2026-11-08. The visible companion
-  reacts to mouse proximity, coarse typing rhythm, idleness, and window
-  edges on the shared sprite/Live2D behavior layer, with the frameless
-  backdrop off unless the user turns it on. Onboarding can suggest a speech
-  model from a local hardware check. Long-term memory uses the v2 record
-  lifecycle, open loops, and one proactive agenda. This line also carries
-  the Electron 43.7.11 runtime, window-bound capabilities, and crash-safe
-  updates. The image-to-pet route is dropped. Bundled characters are the
-  official Live2D samples (Mao, Haru, and Hiyori); sprite pets stay
-  import-only. Inputs stay derived and content-free, with explicit
-  pause/permission controls. Physical-device wake, nearest-speaker routing,
-  and home-device control require a separate discovery, authorization, and
-  privacy design and are not part of the v0.5 baseline. `v0.4.8-beta.1`
-  remains the prepared package candidate and does not move the README
-  stable entry, tag, or GitHub Release.
-- **After v0.5.0 — voice companion while gaming.** Minecraft comes first,
-  through a Mineflayer adapter (MIT). The bot joins an Open-to-LAN world and
-  uses the pet's existing voice and memory. Minecraft and Factorio stay
-  hidden in Settings until that ships. The current gateways are not that
-  companion.
+- **v0.4.8 — stability, slimdown, presence, voice, memory, and catalog.**
+  Beta builds are `0.4.8-beta.N` now. `v0.4.8-beta.1` is already published;
+  the next one is `0.4.8-beta.2`. The stable target is before 2026-11-15.
+  The visible companion reacts to mouse proximity, coarse typing rhythm,
+  idleness, and window edges, with the frameless backdrop off unless the
+  user turns it on. Onboarding can suggest a speech model from a local
+  hardware check. Long-term memory uses the v2 record lifecycle, open loops,
+  and one proactive agenda. This line also carries the Electron 43.7.11
+  runtime, window-bound capabilities, and crash-safe updates. The
+  image-to-pet route is dropped. Bundled characters are the official Live2D
+  samples (Mao, Haru, and Hiyori); sprite pets stay import-only. Minecraft
+  and Factorio stay hidden. Inputs stay derived and content-free, with
+  explicit pause/permission controls. `package.json` may be `0.4.8-beta.N`
+  during beta. The README stable entry stays on v0.4.7 until the stable
+  release.
+- **v0.5.0 — future major.** Reserved for headline features, not this
+  batch. Planned scope is local Kokoro TTS for Chinese and English, downloaded
+  on demand; a voice companion while gaming, with Minecraft first through a
+  Mineflayer adapter (MIT) that shares the pet's voice and memory; and other
+  headline features still to be decided. The current Minecraft and Factorio
+  gateways stay hidden until that companion ships. Physical-device wake,
+  nearest-speaker routing, and home-device control still need a separate
+  discovery, authorization, and privacy design.
 
 Both steps must preserve the v0.3 privacy posture: sanitized summaries for the
 model, no raw screenshot chat context, no precise timer language, and no
@@ -803,9 +805,9 @@ These features can stay in the codebase, but should not dominate onboarding
 or the main settings flow until they are reliable and clearly companion-led.
 
 - Realtime OpenAI voice.
-- Minecraft / Factorio gateways. Both stay hidden through v0.5.0. The
-  post-0.5.0 voice companion is the first time Minecraft is offered, via
-  Mineflayer, sharing the pet's voice and memory.
+- Minecraft / Factorio gateways. Both stay hidden through v0.4.8. v0.5.0
+  is the first time Minecraft is offered, via Mineflayer, sharing the pet's
+  voice and memory. The current gateways are not that companion.
 - Telegram / Discord bridges.
 - Broad MCP/plugin execution.
 - Long-running autonomous tasks.
