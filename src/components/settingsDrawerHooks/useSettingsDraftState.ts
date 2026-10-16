@@ -11,14 +11,17 @@ export function useSettingsDraftState(settings: AppSettings) {
   const [draft, setDraft] = useState(settings)
   const [baseline, setBaseline] = useState(settings)
   const initialThemeIdRef = useRef(settings.themeId)
+  const initialColorSchemeRef = useRef(settings.themeColorScheme)
 
   const resetDraftForOpen = useCallback((nextSettings: AppSettings) => {
     initialThemeIdRef.current = nextSettings.themeId
+    initialColorSchemeRef.current = nextSettings.themeColorScheme
     setBaseline(nextSettings)
     setDraft(nextSettings)
   }, [])
 
   const getRollbackThemeId = useCallback(() => initialThemeIdRef.current, [])
+  const getRollbackColorScheme = useCallback(() => initialColorSchemeRef.current, [])
 
   const mergeHydratedSecrets = useCallback((incoming: AppSettings) => {
     setBaseline((current) => mergeHydratedSettingsSecrets(current, incoming))
@@ -55,6 +58,7 @@ export function useSettingsDraftState(settings: AppSettings) {
     setDraft,
     resetDraftForOpen,
     getRollbackThemeId,
+    getRollbackColorScheme,
     mergeHydratedSecrets,
     ensurePetModelPreset,
     patchCommittedField,

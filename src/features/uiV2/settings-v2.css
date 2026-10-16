@@ -13,7 +13,7 @@
   --settings-v2-danger: var(--nx-settings-danger);
   --settings-v2-success: var(--nx-settings-success);
   --settings-v2-warning: var(--nx-settings-warning);
-  --settings-v2-on-accent: var(--color-on-accent, #fff);
+  --settings-v2-on-accent: var(--color-on-accent);
   --settings-v2-shadow: color-mix(in srgb, var(--settings-v2-ink) 14%, transparent);
   --settings-v2-shadow-soft: color-mix(in srgb, var(--settings-v2-ink) 7%, transparent);
   display: grid;
@@ -360,19 +360,23 @@
 
   .settings-v2__mobile-back {
     display: inline-flex;
-    gap: 4px;
     justify-self: start;
-    width: auto;
-    max-width: none;
-    padding: 0 6px;
+    width: 44px;
+    max-width: 44px;
+    padding: 0;
     color: var(--settings-v2-accent);
-    font-size: 12px;
   }
 
   .settings-v2__mobile-back span {
-    overflow: visible;
-    text-overflow: clip;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+    border: 0;
   }
 
   .settings-v2__heading {

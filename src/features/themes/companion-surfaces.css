@@ -1,0 +1,367 @@
+/*
+ * Companion looks read the token layer written on <html>.
+ * `.nx-companion-card` is the shared card for reminder and memory
+ * posters other screens can reuse without inventing a second palette.
+ */
+
+html[data-companion-theme] .sd,
+html[data-companion-theme] .sb,
+html[data-companion-theme] .settings-drawer--v2 > .settings-v2 {
+  --nx-settings-ink: var(--color-text-primary);
+  --nx-settings-muted: var(--color-text-muted);
+  --nx-settings-faint: var(--color-text-soft);
+  --nx-settings-line: var(--color-border);
+  --nx-settings-line-soft: var(--color-border);
+  --nx-settings-surface: var(--color-surface-elevated);
+  --nx-settings-surface-soft: var(--color-surface);
+  --nx-settings-surface-hover: var(--color-surface-muted);
+  --nx-settings-segment-surface: var(--color-surface-muted);
+  --nx-settings-segment-active: var(--color-surface-elevated);
+  --nx-settings-field: var(--color-surface);
+  --nx-settings-field-hover: var(--color-surface-muted);
+  --nx-settings-accent: var(--color-accent);
+  --nx-settings-accent-soft: var(--color-accent-soft);
+  --nx-settings-danger: var(--color-danger);
+  --nx-settings-success: var(--color-success);
+  --nx-settings-warning: var(--color-warning);
+  --nx-settings-footer-surface: var(--color-surface-elevated);
+  --settings-v2-ink: var(--color-text-primary);
+  --settings-v2-muted: var(--color-text-muted);
+  --settings-v2-accent: var(--color-accent);
+  --settings-v2-accent-soft: var(--color-accent-soft);
+  --settings-v2-surface: var(--color-surface-elevated);
+  --settings-v2-soft: var(--color-surface);
+  --settings-v2-line: var(--color-border);
+  --settings-v2-field: var(--color-surface);
+  --settings-v2-hover: var(--color-surface-muted);
+  --settings-v2-on-accent: var(--color-on-accent);
+  --settings-v2-danger: var(--color-danger);
+  --settings-v2-success: var(--color-success);
+  --settings-v2-warning: var(--color-warning);
+  --nx-settings-radius-panel: var(--nx-radius-card);
+  --nx-settings-radius-control: var(--nx-radius-control);
+  color: var(--color-text-primary);
+  color-scheme: var(--nx-color-scheme);
+  font-family: var(--nx-font-family);
+}
+
+html[data-companion-theme] .settings-v2 {
+  border-radius: var(--nx-radius-window);
+  background:
+    radial-gradient(180px 120px at 0 0, var(--nx-blob-pink), transparent 70%),
+    radial-gradient(200px 140px at 100% 12%, var(--nx-blob-blue), transparent 72%),
+    radial-gradient(160px 120px at 80% 100%, var(--nx-blob-yellow), transparent 70%),
+    var(--color-surface);
+  box-shadow: var(--nx-shadow-card);
+}
+
+html[data-companion-theme] .settings-v2__heading h1,
+html[data-companion-theme] .settings-v2__home-copy strong,
+html[data-companion-theme] .settings-v3-section__header h3 {
+  font-size: var(--nx-type-title);
+  font-weight: var(--nx-font-weight);
+}
+
+html[data-companion-theme] .settings-v2__home-copy span,
+html[data-companion-theme] .settings-v3-page {
+  font-size: var(--nx-type-body);
+}
+
+html[data-companion-theme] .settings-v2__home {
+  gap: var(--nx-space-stack);
+  padding: var(--nx-space-page);
+}
+
+html[data-companion-theme] .settings-v2__home-card,
+html[data-companion-theme] .settings-v3-section__body,
+html[data-companion-theme] .settings-v3-voice-models__row {
+  border-radius: var(--nx-radius-card);
+  background: var(--nx-card-bg);
+  color: var(--nx-card-fg);
+  border-color: var(--nx-card-border);
+  box-shadow: var(--nx-shadow-card);
+}
+
+html[data-companion-theme] .settings-v2__home-icon,
+html[data-companion-theme] .settings-v2__nav-item,
+html[data-companion-theme] .settings-v2__draft-button,
+html[data-companion-theme] .settings-v2__section-tabs button {
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .settings-v2__home-icon {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .settings-v2__home-icon svg,
+html[data-companion-theme] .settings-v2__nav-icon svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  overflow: visible;
+}
+
+html[data-companion-theme='system'] .settings-v2__home {
+  gap: 1px;
+  background: transparent;
+}
+
+html[data-companion-theme='system'] .settings-v2__home-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html[data-companion-theme='system'] .settings-v2__home-card:first-child {
+  border-radius: var(--nx-radius-card) var(--nx-radius-card) 0 0;
+}
+
+html[data-companion-theme='system'] .settings-v2__home-card:last-child {
+  border-radius: 0 0 var(--nx-radius-card) var(--nx-radius-card);
+}
+
+html[data-companion-theme='system'] .settings-v2__home-icon {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+html[data-companion-theme='system'] .settings-drawer--v2 > .settings-v2,
+html[data-companion-theme='system'] .chat-sheet-v2__sheet {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(28px) saturate(1.35);
+}
+
+html[data-companion-theme] .chat-sheet-v2 {
+  --chat-sheet-v2-surface: var(--color-surface-elevated);
+  --chat-sheet-v2-surface-soft: var(--color-surface);
+  --chat-sheet-v2-ink: var(--color-text-primary);
+  --chat-sheet-v2-muted: var(--color-text-muted);
+  --chat-sheet-v2-line: var(--color-border);
+  --chat-sheet-v2-lavender: var(--color-accent);
+  --chat-sheet-v2-amber: var(--color-accent-hover);
+  --chat-sheet-v2-on-accent: var(--color-on-accent);
+  font-family: var(--nx-font-family);
+  font-size: var(--nx-type-body);
+}
+
+html[data-companion-theme] .chat-sheet-v2__turn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 6px 2px;
+  border-bottom: 0;
+}
+
+html[data-companion-theme] .chat-sheet-v2__turn[data-role='user'] {
+  align-items: flex-end;
+}
+
+html[data-companion-theme] .chat-sheet-v2__speaker {
+  font-size: var(--nx-type-meta);
+}
+
+html[data-companion-theme] .chat-sheet-v2__message {
+  max-width: min(86%, 280px);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--nx-radius-card);
+  background: var(--nx-bubble-assistant);
+  color: var(--nx-bubble-assistant-ink);
+  font-size: var(--nx-type-body);
+}
+
+html[data-companion-theme] .chat-sheet-v2__turn[data-role='user'] .chat-sheet-v2__message {
+  border-color: transparent;
+  background: var(--nx-bubble-user);
+  color: var(--nx-bubble-user-ink);
+}
+
+html[data-companion-theme] .chat-sheet-v2__composer,
+html[data-companion-theme] .chat-sheet-v2__composer-toggle {
+  border-radius: var(--nx-radius-card);
+  background: var(--nx-card-bg);
+  color: var(--nx-card-fg);
+  box-shadow: var(--nx-shadow-card);
+}
+
+html[data-companion-theme] .chat-sheet-v2__send {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+html[data-companion-theme] .chat-sheet-v2__back {
+  width: 44px;
+  max-width: 44px;
+  padding: 0;
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .chat-sheet-v2__back span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.nx-companion-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--nx-card-border);
+  border-radius: var(--nx-card-radius);
+  background: var(--nx-card-bg);
+  color: var(--nx-card-fg);
+  box-shadow: var(--nx-card-shadow);
+}
+
+.nx-companion-card__title {
+  margin: 0;
+  color: var(--nx-card-fg);
+  font-size: var(--nx-type-title);
+  font-weight: var(--nx-font-weight);
+}
+
+.nx-companion-card__body {
+  margin: 0;
+  color: var(--nx-card-muted);
+  font-size: var(--nx-type-body);
+}
+
+.nx-companion-card--soul {
+  background: var(--nx-poster-soul);
+  color: var(--nx-poster-ink);
+  border-color: transparent;
+}
+
+.nx-companion-card--memory {
+  background: var(--nx-poster-memory);
+  color: var(--nx-poster-ink);
+  border-color: transparent;
+}
+
+.nx-companion-card--soul .nx-companion-card__title,
+.nx-companion-card--soul .nx-companion-card__body,
+.nx-companion-card--memory .nx-companion-card__title,
+.nx-companion-card--memory .nx-companion-card__body {
+  color: var(--nx-poster-ink);
+}
+
+.companion-theme-picker {
+  display: grid;
+  gap: var(--nx-space-stack, 12px);
+}
+
+.companion-theme-picker__looks {
+  display: grid;
+  gap: 8px;
+}
+
+.companion-theme-picker__look {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  min-height: 64px;
+  padding: 8px;
+  text-align: left;
+  color: var(--color-text-primary);
+  background: var(--nx-card-bg, var(--color-surface-elevated));
+  border: 1px solid var(--nx-card-border, var(--color-border));
+  border-radius: var(--nx-radius-control, 12px);
+  cursor: pointer;
+}
+
+.companion-theme-picker__look.is-selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft);
+}
+
+.companion-theme-picker__swatch {
+  grid-row: 1 / span 2;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--companion-swatch-surface);
+}
+
+.companion-theme-picker__swatch-card {
+  width: 34px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--companion-swatch-elevated);
+  box-shadow: inset 0 -3px 0 var(--companion-swatch-accent);
+}
+
+.companion-theme-picker__swatch-dot {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--companion-swatch-accent);
+}
+
+.companion-theme-picker__name {
+  font-size: var(--nx-type-body, 15px);
+  font-weight: var(--nx-font-weight, 600);
+}
+
+.companion-theme-picker__hint,
+.companion-theme-picker__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--nx-type-meta, 13px);
+  line-height: 1.4;
+}
+
+.companion-theme-picker__schemes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.companion-theme-picker__schemes button {
+  min-height: 44px;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--nx-radius-control, 12px);
+  cursor: pointer;
+}
+
+.companion-theme-picker__schemes button.is-selected {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-companion-theme] .settings-v2__home-card,
+  html[data-companion-theme] .chat-sheet-v2__message,
+  html[data-companion-theme] .companion-theme-picker__look {
+    transition: background-color var(--nx-motion) ease, box-shadow var(--nx-motion) ease, border-color var(--nx-motion) ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-companion-theme] .settings-v2__home-card,
+  html[data-companion-theme] .chat-sheet-v2__message {
+    transition: none;
+    animation: none;
+  }
+}

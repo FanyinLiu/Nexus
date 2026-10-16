@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/onboarding-guide-shell.css'
 import '../styles/onboarding-guide-responsive.css'
 import '../styles/onboarding-guide-calm.css'
+import '../styles/onboarding-companion.css'
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import {
   apiProviderRequiresApiKey,

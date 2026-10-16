@@ -16,6 +16,7 @@ import {
   normalizePetWeatherPreview,
 } from '../../features/panelScene/resolver.ts'
 import { clampPresenceIntervalMinutes } from '../settings.ts'
+import { mapStoredCompanionTheme } from '../../features/themes/companionThemes.ts'
 import {
   CURRENT_SETTINGS_SCHEMA_VERSION,
   getDefaultSystemPrompt,
@@ -56,7 +57,8 @@ const defaultSettings: AppSettings = {
   settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
   petModelId: DEFAULT_PET_MODEL_ID,
   uiLanguage: 'zh-CN',
-  themeId: 'nexus-default',
+  themeId: 'warm',
+  themeColorScheme: 'light',
   ambientWeatherEnabled: false,
   petSceneLocation: 'off',
   petWeatherPreview: 'auto',
@@ -337,20 +339,12 @@ function readStoredMcpServers(stored: Record<string, unknown>) {
   return []
 }
 
-function resolveThemeId(storedThemeId: unknown): AppSettings['themeId'] {
-  switch (storedThemeId) {
-    case 'editorial':
-    case 'soft':
-    case 'high-contrast':
-    case 'nexus-default':
-    case 'system-black':
-    case 'system-day':
-    case 'warm-day':
-    case 'system-dark':
-      return storedThemeId
-    default:
-      return defaultSettings.themeId
-  }
+function resolveThemeId(storedThemeId: unknown, storedColorScheme: unknown): AppSettings['themeId'] {
+  return mapStoredCompanionTheme(storedThemeId, storedColorScheme).themeId
+}
+
+function resolveThemeColorScheme(storedThemeId: unknown, storedColorScheme: unknown): AppSettings['themeColorScheme'] {
+  return mapStoredCompanionTheme(storedThemeId, storedColorScheme).colorScheme
 }
 
 function readStoredSettingsRecord(): Record<string, unknown> {
@@ -459,7 +453,8 @@ export function loadSettings(): AppSettings {
       ? storedVersion
       : CURRENT_SETTINGS_SCHEMA_VERSION,
     uiLanguage: resolvedUiLanguage,
-    themeId: resolveThemeId(stored.themeId),
+    themeId: resolveThemeId(stored.themeId, stored.themeColorScheme),
+    themeColorScheme: resolveThemeColorScheme(stored.themeId, stored.themeColorScheme),
     ambientWeatherEnabled: stored.ambientWeatherEnabled === true,
     gazeFollowEnabled: stored.gazeFollowEnabled !== false,
     typingAwarenessEnabled: stored.typingAwarenessEnabled === true,

@@ -36,16 +36,14 @@ test('theme registry returns defensive copies so callers cannot mutate global th
   assert.notEqual(resolveTheme('nexus-default').tokens.accent, '#00ff00')
 })
 
-test('settings appearance options expose four distinct drawer theme modes', () => {
+test('settings appearance options expose the three companion looks', () => {
   const optionThemeIds = SETTINGS_APPEARANCE_OPTIONS.map((option) => option.id)
 
-  assert.deepEqual(optionThemeIds, ['system-black', 'system-dark', 'system-day', 'warm-day'])
-  assert.deepEqual(SETTINGS_APPEARANCE_OPTIONS.map((option) => option.tone), ['black', 'night', 'day', 'warm-day'])
+  assert.deepEqual(optionThemeIds, ['warm', 'system', 'playful'])
   assert.deepEqual(SETTINGS_APPEARANCE_OPTIONS.map((option) => option.labelKey), [
-    'settings.appearance.black',
-    'settings.appearance.night',
-    'settings.appearance.day',
-    'settings.appearance.warm_day',
+    'settings.appearance.warm',
+    'settings.appearance.system',
+    'settings.appearance.playful',
   ])
   assert.equal(getSettingsThemeTone('editorial'), 'day')
   assert.equal(getSettingsThemeTone('nexus-default'), 'day')
@@ -54,6 +52,10 @@ test('settings appearance options expose four distinct drawer theme modes', () =
   assert.equal(getSettingsThemeTone('warm-day'), 'warm-day')
   assert.equal(getSettingsThemeTone('system-black'), 'black')
   assert.equal(getSettingsThemeTone('system-dark'), 'night')
+  assert.equal(getSettingsThemeTone('warm', 'light'), 'warm-day')
+  assert.equal(getSettingsThemeTone('warm', 'dark'), 'night')
+  assert.equal(getSettingsThemeTone('system', 'dark'), 'night')
+  assert.equal(getSettingsThemeTone('playful', 'light'), 'day')
 })
 
 test('toCssVariables maps every theme token to the expected CSS variable', () => {

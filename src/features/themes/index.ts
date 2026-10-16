@@ -1,3 +1,4 @@
+export * from './companionThemes.ts'
 export * from './cssVariables.ts'
 export * from './presets/index.ts'
 export * from './registry.ts'

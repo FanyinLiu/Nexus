@@ -515,6 +515,7 @@ declare global {
       openPetMenu: () => Promise<void>
       closePanel: () => Promise<void>
       closeSettings?: () => Promise<void>
+      setSystemVibrancy?: (enabled: boolean) => Promise<{ applied: boolean }>
       getPanelWindowState: () => Promise<PanelWindowState>
       setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
       isPanelWindow: () => Promise<boolean>

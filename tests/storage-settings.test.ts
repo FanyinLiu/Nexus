@@ -934,7 +934,7 @@ test('an explicit companion backdrop choice survives the migration', () => {
 test('a newer schema version is left untouched and stays newer after save', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      settingsSchemaVersion: 16,
+      settingsSchemaVersion: 21,
       apiProviderId: 'siliconflow',
       apiBaseUrl: 'https://api.siliconflow.cn/v1',
       model: 'deepseek-ai/DeepSeek-V4-Flash',
@@ -948,7 +948,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
   })
 
   const settings = loadSettings()
-  assert.equal(settings.settingsSchemaVersion, 16)
+  assert.equal(settings.settingsSchemaVersion, 21)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
 
   saveSettings(settings, { silent: true })
@@ -956,7 +956,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
     settingsSchemaVersion?: number
     model?: string
   }
-  assert.equal(saved.settingsSchemaVersion, 16)
+  assert.equal(saved.settingsSchemaVersion, 21)
   assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 
@@ -1050,7 +1050,7 @@ test('preserves an explicit local sensevoice speech input selection on load', ()
   assert.equal(settings.speechInputModel, 'sensevoice-zh-en')
 })
 
-test('preserves the editorial theme selection on load', () => {
+test('maps a stored editorial theme onto the playful companion look', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
       themeId: 'editorial',
@@ -1065,7 +1065,8 @@ test('preserves the editorial theme selection on load', () => {
 
   const settings = loadSettings()
 
-  assert.equal(settings.themeId, 'editorial')
+  assert.equal(settings.themeId, 'playful')
+  assert.equal(settings.themeColorScheme, 'light')
 })
 
 test('commitSettingsUpdate persists settings changes and applies them in memory', async () => {

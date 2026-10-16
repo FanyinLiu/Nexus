@@ -10,6 +10,7 @@ import { pickTranslatedUiText, pickTranslatedUiTextOrFallback } from '../../lib/
 import { setCompanionNameWithWakeWordSync } from '../hearing/companionWakeWordSync.ts'
 import type { AppSettings, CompanionRelationshipType } from '../../types'
 import type { ConfirmFn } from '../../components/useConfirm.ts'
+import { CompanionThemePicker } from '../../components/CompanionThemePicker.tsx'
 import {
   SettingsV3Disclosure,
   SettingsV3Field,
@@ -63,6 +64,18 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
 
   return (
     <SettingsV3Page className="settings-v3-chat">
+      <SettingsV3Section title={ti('settings.appearance.label')}>
+        <CompanionThemePicker
+          themeId={draft.themeId}
+          colorScheme={draft.themeColorScheme}
+          language={draft.uiLanguage}
+          onChange={(next) => setDraft((prev) => ({
+            ...prev,
+            themeId: next.themeId,
+            themeColorScheme: next.colorScheme,
+          }))}
+        />
+      </SettingsV3Section>
       <SettingsV3Section
         title={ti('settings.chat.companion_name')}
       >

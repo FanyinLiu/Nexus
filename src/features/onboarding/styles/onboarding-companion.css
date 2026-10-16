@@ -1,0 +1,156 @@
+/*
+ * First-launch guide follows the companion token layer. Loaded after the
+ * shell so the guide does not keep its own dark palette.
+ */
+
+html[data-companion-theme] .onboarding-backdrop,
+html[data-companion-theme] .onboarding-backdrop--pet {
+  background: var(--nx-scrim);
+}
+
+html[data-companion-theme] .onboarding-card,
+html[data-companion-theme] .onboarding-card--pet {
+  border: 1px solid var(--color-border);
+  border-radius: var(--nx-radius-window);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--nx-shadow-card);
+  font-family: var(--nx-font-family);
+}
+
+html[data-companion-theme] .onboarding-card :is(h1, h2, h3, h4, strong, label, legend) {
+  color: var(--color-text-primary);
+}
+
+html[data-companion-theme] .onboarding-card :is(p, small, li) {
+  color: var(--color-text-muted);
+}
+
+html[data-companion-theme] .onboarding-card :is(input, select, textarea) {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card.onboarding-card--calm,
+html[data-companion-theme] .desktop-pet-root .onboarding-card.onboarding-card--disclosure {
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-window);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--nx-shadow-card);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--calm:not(.onboarding-card--disclosure) .onboarding-section {
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-card);
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--calm .onboarding-section__intro {
+  border-bottom-color: var(--color-border);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step h2,
+html[data-companion-theme] .desktop-pet-root .onboarding-card--calm .onboarding-section__intro h2 {
+  color: var(--color-text-primary);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__summary p,
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__details summary,
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__bullets li,
+html[data-companion-theme] .desktop-pet-root .onboarding-card--calm .onboarding-section__intro p,
+html[data-companion-theme] .desktop-pet-root .onboarding-disclosure__progress,
+html[data-companion-theme] .onboarding-disclosure__progress {
+  color: var(--color-text-muted);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__accent {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__details {
+  border-top-color: var(--color-border);
+  border-bottom-color: var(--color-border);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step__chevron {
+  background: var(--color-text-muted);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions,
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--calm,
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--disclosure {
+  background: var(--color-surface-elevated);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card .primary-button,
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--disclosure .primary-button,
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--calm :is(.ghost-button, .primary-button) {
+  width: 100%;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: transparent;
+  border-radius: var(--nx-radius-control);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .onboarding-disclosure__dismiss,
+html[data-companion-theme] .desktop-pet-root .onboarding-disclosure__dismiss {
+  color: var(--color-accent);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--calm .onboarding-section__intro h2,
+html[data-companion-theme] .desktop-pet-root .onboarding-card--disclosure .ai-disclosure-step h2 {
+  color: var(--color-text-primary);
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card--calm .onboarding-section__intro p,
+html[data-companion-theme] .desktop-pet-root .onboarding-disclosure__progress,
+html[data-companion-theme] .onboarding-disclosure__progress {
+  color: var(--color-text-muted);
+}
+
+html[data-companion-theme] .onboarding-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  background: var(--color-surface-elevated);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .onboarding-card__actions :is(.ghost-button, .primary-button) {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--nx-radius-control);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .onboarding-card__actions .primary-button,
+html[data-companion-theme] .onboarding-card__actions .primary-button:hover:not(:disabled) {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: transparent;
+  filter: none;
+}
+
+html[data-companion-theme] .onboarding-card__actions .ghost-button {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+html[data-companion-theme] .onboarding-card :is(.ghost-button, .onboarding-region-tabs__tab) {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .onboarding-card :is(.onboarding-step, .onboarding-choice, .onboarding-card__step, .ai-disclosure-step) {
+  border-radius: var(--nx-radius-card);
+}

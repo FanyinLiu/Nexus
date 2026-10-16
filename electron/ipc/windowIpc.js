@@ -58,6 +58,7 @@ import {
   summarizePetModelRequest,
   summarizePetModelResult,
 } from './petModelAudit.js'
+import { applySystemVibrancy } from '../systemVibrancy.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateDesktopContextRequestPayload,
@@ -207,6 +208,13 @@ export function register() {
   ipcMain.handle('window:close-panel', (event) => {
     requireTrustedSender(event)
     closePanelWindow()
+  })
+
+  ipcMain.handle('window:set-system-vibrancy', (event, payload) => {
+    requireTrustedSender(event)
+    const enabled = Boolean(payload && payload.enabled)
+    const win = BrowserWindow.fromWebContents(event.sender)
+    return { applied: applySystemVibrancy(win, enabled) }
   })
 
   ipcMain.handle('window:close-settings', (event) => {

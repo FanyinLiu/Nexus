@@ -7,7 +7,6 @@ import type { SettingsTrustSurfaceGroupId } from './settingsDrawerMetadata.ts'
 import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import {
   SETTINGS_APPEARANCE_OPTIONS,
-  type SettingsAppearanceTone,
   type SettingsSectionId,
 } from './settingsDrawerSupport.ts'
 import { SettingsHomePresence } from './SettingsHomePresence.tsx'
@@ -46,7 +45,6 @@ export type SettingsHomeViewProps = {
   }
   selectedAppearanceIndex: number
   settingsHomeCardRefs: MutableRefObject<Partial<Record<SettingsSectionId, HTMLButtonElement | null>>>
-  settingsThemeTone: SettingsAppearanceTone
   ti: Translator
   onAppearanceOptionKeyDown: (
     event: ReactKeyboardEvent<HTMLButtonElement>,
@@ -63,7 +61,6 @@ export function SettingsHomeView({
   presence,
   selectedAppearanceIndex,
   settingsHomeCardRefs,
-  settingsThemeTone,
   ti,
   onAppearanceOptionKeyDown,
   onOpenHomeAction,
@@ -109,7 +106,7 @@ export function SettingsHomeView({
         <span className="settings-appearance-switch__label">{ti('settings.appearance.label')}</span>
         <div className="settings-appearance-switch__control">
           {SETTINGS_APPEARANCE_OPTIONS.map((option, optionIndex) => {
-            const isActive = option.tone === settingsThemeTone
+            const isActive = optionIndex === selectedAppearanceIndex
             const optionLabel = ti(option.labelKey)
             const optionTitle = `${ti('settings.appearance.label')}: ${optionLabel}`
             const optionStyle = {

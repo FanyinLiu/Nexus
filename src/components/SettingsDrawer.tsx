@@ -239,6 +239,7 @@ export function SettingsDrawer({
     setDraft,
     resetDraftForOpen,
     getRollbackThemeId,
+    getRollbackColorScheme,
     mergeHydratedSecrets,
     ensurePetModelPreset,
     patchCommittedField,
@@ -451,10 +452,10 @@ export function SettingsDrawer({
   })).filter((group) => group.cards.length || group.actions?.length), [settingsHomeCardsBySectionId])
   const activeSectionMeta = settingsSectionMetaById[activeSectionId]
   const activeSectionDescription = activeSectionMeta.description
-  const settingsThemeTone = getSettingsThemeTone(draft.themeId)
+  const settingsThemeTone = getSettingsThemeTone(draft.themeId, draft.themeColorScheme)
   const selectedAppearanceIndex = Math.max(
     0,
-    SETTINGS_APPEARANCE_OPTIONS.findIndex((option) => option.tone === settingsThemeTone),
+    SETTINGS_APPEARANCE_OPTIONS.findIndex((option) => option.id === draft.themeId),
   )
   const settingsUsesDarkChrome = settingsThemeTone === 'black' || settingsThemeTone === 'night'
   const settingsBackdropClassName = [
@@ -506,13 +507,19 @@ export function SettingsDrawer({
   useEffect(() => {
     if (open) {
       resetDraftForOpen(settings)
-      themePreview.previewTheme(settings.themeId)
+      themePreview.previewCompanionAppearance({
+        themeId: settings.themeId,
+        colorScheme: settings.themeColorScheme,
+      })
       speechVoices.syncPreviewText(settings.companionName)
       if (preferredSectionId) {
         shouldFocusActiveSectionHeadingRef.current = true
       }
     } else {
-      themePreview.previewTheme(settings.themeId)
+      themePreview.previewCompanionAppearance({
+        themeId: settings.themeId,
+        colorScheme: settings.themeColorScheme,
+      })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
@@ -605,7 +612,10 @@ export function SettingsDrawer({
   async function handleDismiss() {
     if (saving) return
     if (isDirty && !await confirm({ title: ti('settings.unsaved_changes'), message: ti('settings.discard_changes_confirm'), confirmLabel: ti('settings.discard_changes'), tone: 'danger' })) return
-    themePreview.previewTheme(getRollbackThemeId())
+    themePreview.previewCompanionAppearance({
+      themeId: getRollbackThemeId(),
+      colorScheme: getRollbackColorScheme(),
+    })
     windowState.rollbackWindowState()
     onClose()
     restoreSettingsOpenerFocus()
@@ -678,7 +688,10 @@ export function SettingsDrawer({
     setSettingsView('section')
   }
   function handleOpenOnboardingGuide() {
-    themePreview.previewTheme(getRollbackThemeId())
+    themePreview.previewCompanionAppearance({
+      themeId: getRollbackThemeId(),
+      colorScheme: getRollbackColorScheme(),
+    })
     windowState.rollbackWindowState()
     onOpenOnboardingGuide()
   }
@@ -856,7 +869,14 @@ export function SettingsDrawer({
         onOpenOnboardingGuide={handleOpenOnboardingGuide}
         onClose={handleDismiss}
         onDialogKeyDown={handleSettingsDialogKeyDown}
-        onDiscardDraft={() => { resetDraftForOpen(settings); themePreview.previewTheme(settings.themeId); windowState.rollbackWindowState() }}
+        onDiscardDraft={() => {
+          resetDraftForOpen(settings)
+          themePreview.previewCompanionAppearance({
+            themeId: settings.themeId,
+            colorScheme: settings.themeColorScheme,
+          })
+          windowState.rollbackWindowState()
+        }}
         onSaveDraft={handleSaveDraft}
         saving={saving}
         onConfirm={handleConfirm}
@@ -998,7 +1018,6 @@ export function SettingsDrawer({
               }}
               selectedAppearanceIndex={selectedAppearanceIndex}
               settingsHomeCardRefs={settingsHomeCardRefs}
-              settingsThemeTone={settingsThemeTone}
               ti={ti}
               onAppearanceOptionKeyDown={handleAppearanceOptionKeyDown}
               onOpenHomeAction={handleOpenSettingsHomeAction}
