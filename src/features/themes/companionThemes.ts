@@ -309,7 +309,7 @@ const APPEARANCES: Record<CompanionThemeId, Record<ThemeColorScheme, CompanionAp
       danger: '#B4235A',
       success: '#1F7A58',
       warning: '#8A5A00',
-      bubbleUser: '#1F7A58',
+      bubbleUser: '#B4235A',
       bubbleUserInk: '#FFFFFF',
       bubbleAssistant: '#FFE8F2',
       bubbleAssistantInk: '#3A2C38',

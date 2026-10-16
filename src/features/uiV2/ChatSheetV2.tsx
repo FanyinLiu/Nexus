@@ -128,8 +128,8 @@ export function ChatSheetV2({
   }, [])
 
   useEffect(() => {
-    if (initiallyEmptyRef.current) inputRef.current?.focus()
-    else backButtonRef.current?.focus()
+    if (initiallyEmptyRef.current) inputRef.current?.focus({ preventScroll: true, focusVisible: false })
+    else backButtonRef.current?.focus({ preventScroll: true, focusVisible: false })
   }, [])
 
   useEffect(() => {

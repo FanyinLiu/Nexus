@@ -137,6 +137,15 @@ html[data-companion-theme='system'] .chat-sheet-v2__sheet {
   backdrop-filter: blur(28px) saturate(1.35);
 }
 
+html[data-companion-theme] .chat-sheet-v2__sheet {
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+html[data-companion-theme] .nexus-panel-v2__utility::before {
+  border-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
 html[data-companion-theme] .chat-sheet-v2 {
   --chat-sheet-v2-surface: var(--color-surface-elevated);
   --chat-sheet-v2-surface-soft: var(--color-surface);
@@ -189,7 +198,7 @@ html[data-companion-theme] .chat-sheet-v2__composer-toggle {
   border-radius: var(--nx-radius-card);
   background: var(--nx-card-bg);
   color: var(--nx-card-fg);
-  box-shadow: var(--nx-shadow-card);
+  box-shadow: none;
 }
 
 html[data-companion-theme] .chat-sheet-v2__send {
@@ -204,17 +213,13 @@ html[data-companion-theme] .chat-sheet-v2__back {
   border-radius: var(--nx-radius-control);
 }
 
-html[data-companion-theme] .nexus-panel-v2__notices {
-  padding-bottom: 6px;
-}
-
 html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary,
 html[data-companion-theme] .nexus-panel-v2__caption {
   border-radius: var(--nx-card-radius);
   background: var(--nx-card-bg);
   color: var(--nx-card-fg);
   border-color: var(--nx-card-border);
-  box-shadow: var(--nx-card-shadow);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   font-family: var(--nx-font-family);
 }
 

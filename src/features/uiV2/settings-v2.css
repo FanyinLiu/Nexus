@@ -6,7 +6,7 @@
   --settings-v2-surface: var(--nx-settings-surface);
   --settings-v2-soft: var(--nx-settings-surface-soft);
   --settings-v2-accent: var(--color-accent, var(--nx-settings-accent));
-  --nx-v2-focus-ring: color-mix(in srgb, var(--settings-v2-ink) 78%, var(--settings-v2-accent) 22%);
+  --nx-v2-focus-ring: color-mix(in srgb, var(--settings-v2-accent) 48%, transparent);
   --settings-v2-accent-soft: var(--color-accent-soft, var(--nx-settings-accent-soft));
   --settings-v2-field: var(--nx-settings-field);
   --settings-v2-hover: var(--nx-settings-surface-hover);
@@ -581,7 +581,7 @@ html[data-theme] .settings-drawer.settings-drawer--v2 {
 
 .settings-drawer--v2 :is(h1, h2, h3, h4)[tabindex]:focus-visible {
   outline: 3px solid var(--nx-v2-focus-ring);
-  outline-offset: -3px;
+  outline-offset: 2px;
   border-radius: 5px;
 }
 

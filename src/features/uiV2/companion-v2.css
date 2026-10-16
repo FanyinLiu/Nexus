@@ -2,7 +2,7 @@
   --nx-v2-ink: var(--color-text-primary, #302b39);
   --nx-v2-muted: var(--color-text-muted, #746d7e);
   --nx-v2-accent: var(--color-accent, #7d67d9);
-  --nx-v2-focus-ring: color-mix(in srgb, var(--nx-v2-ink) 78%, var(--nx-v2-accent) 22%);
+  --nx-v2-focus-ring: color-mix(in srgb, var(--nx-v2-accent) 48%, transparent);
   --nx-v2-accent-soft: var(--color-accent-soft, rgb(125 103 217 / 26%));
   --nx-v2-secondary: var(--color-accent-secondary, var(--color-accent-hover, #e98a57));
   --nx-v2-surface: var(--color-surface-elevated, #fffcf9);

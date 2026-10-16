@@ -10,7 +10,7 @@
   --chat-sheet-v2-shadow: var(--nx-v2-shadow, var(--color-shadow));
   --chat-sheet-v2-on-accent: var(--nx-v2-on-accent, var(--color-on-accent));
   --chat-sheet-v2-ink-strong: color-mix(in srgb, var(--chat-sheet-v2-ink) 86%, var(--chat-sheet-v2-muted));
-  --chat-sheet-v2-focus: color-mix(in srgb, var(--chat-sheet-v2-ink) 78%, var(--chat-sheet-v2-lavender));
+  --chat-sheet-v2-focus: color-mix(in srgb, var(--chat-sheet-v2-lavender) 48%, transparent);
   --chat-sheet-v2-accent-strong: color-mix(in srgb, var(--chat-sheet-v2-ink) 66%, var(--chat-sheet-v2-lavender));
   --chat-sheet-v2-placeholder: color-mix(in srgb, var(--chat-sheet-v2-ink) 72%, var(--chat-sheet-v2-muted));
   position: absolute;
