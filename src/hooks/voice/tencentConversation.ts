@@ -1,10 +1,12 @@
 import type { MutableRefObject } from 'react'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
+import { formatTencentHotwordList } from '../../features/hearing/tencentHotwords.ts'
 import {
   parseTencentCredentials,
   startTencentAsrStream,
   type TencentAsrStreamSession,
 } from '../../features/hearing/tencentAsr.ts'
+import { resolveSherpaStreamIdleTimeoutMs } from '../../features/voice/sherpaIdleTimeout.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
@@ -26,7 +28,6 @@ import type {
 import {
   API_RECORDING_MAX_DURATION_MS,
   SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
-  SHERPA_STREAM_MAX_IDLE_MS,
   SHERPA_STREAM_SILENCE_FINISH_MS,
 } from './constants.ts'
 import { createAdaptiveRmsGate } from './support.ts'
@@ -116,8 +117,8 @@ export async function startTencentConversation(
   }
 
   credentials.engineModelType = params.currentSettings.speechInputModel || '16k_zh'
-  // TODO: re-enable after verifying Tencent real-time ASR hotword_list support
-  // credentials.hotwordList = extractHotwordList()
+  const hotwordList = formatTencentHotwordList(params.currentSettings.speechInputHotwords)
+  if (hotwordList) credentials.hotwordList = hotwordList
 
   params.clearPendingVoiceRestart()
 
@@ -175,7 +176,7 @@ export async function startTencentConversation(
         }
 
         void finalizeTranscript(params.ti('voice.pipeline.long_idle_wrap_up'), latestText, ' (silent finalize)')
-      }, SHERPA_STREAM_MAX_IDLE_MS)
+      }, resolveSherpaStreamIdleTimeoutMs(params.currentSettings.wakewordSessionIdleTimeoutMs))
     }
 
     const markSpeechDetected = () => {

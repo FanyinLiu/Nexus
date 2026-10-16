@@ -13,7 +13,7 @@ export const koVoice = {
   'voice_pipeline.reply_received': '답장 수신',
   'voice_pipeline.reply_failed': '답장이 안 갔어요',
   'voice_trigger.direct_send.label': '인식 즉시 전송',
-  'voice_trigger.direct_send.hint': '완전한 문장이 인식되면 즉시 전송해 음성 왕복 지연을 최소화합니다.',
+  'voice_trigger.direct_send.hint': '한 문장을 끝내면 바로 보내서, 답이 가장 빨리 옵니다.',
   'voice_trigger.wake_word.label': '웨이크워드 시 전송',
   'voice_trigger.wake_word.hint': '웨이크워드가 포함된 발화만 모델로 전달됩니다.',
   'voice_trigger.manual_confirm.label': '입력창에만 채우기',

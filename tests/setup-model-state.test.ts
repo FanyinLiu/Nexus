@@ -9,6 +9,7 @@ import {
   isModelProgressError,
   mergeModelProgress,
   normalizeModelProgressEvent,
+  shouldRestoreModelSetupAfterGuide,
   shouldShowModelSetupOverlay,
 } from '../src/features/setup/modelSetupState.ts'
 
@@ -161,6 +162,29 @@ test('shouldShowModelSetupOverlay only opens for missing inventory that is not s
   assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: true, inventoryReady: false }), false)
   assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: true }), false)
   assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: undefined }), false)
+})
+
+test('closing the model guide restores the dialog unless the user dismissed it', () => {
+  assert.equal(shouldRestoreModelSetupAfterGuide({
+    covered: true,
+    dismissed: false,
+    inventoryReady: false,
+  }), false)
+  assert.equal(shouldRestoreModelSetupAfterGuide({
+    covered: false,
+    dismissed: false,
+    inventoryReady: false,
+  }), true)
+  assert.equal(shouldRestoreModelSetupAfterGuide({
+    covered: false,
+    dismissed: true,
+    inventoryReady: false,
+  }), false)
+  assert.equal(shouldRestoreModelSetupAfterGuide({
+    covered: false,
+    dismissed: false,
+    inventoryReady: true,
+  }), false)
 })
 
 test('buildTextModelSetupSnapshot flags missing authentication before a real connection test', () => {

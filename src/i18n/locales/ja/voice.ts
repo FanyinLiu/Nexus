@@ -13,7 +13,7 @@ export const jaVoice = {
   'voice_pipeline.reply_received': '返信受信',
   'voice_pipeline.reply_failed': '返信が届かなかった',
   'voice_trigger.direct_send.label': '認識後すぐに送信',
-  'voice_trigger.direct_send.hint': '完全な文が認識されたら即座に送信。音声のラウンドトリップ遅延が最短。',
+  'voice_trigger.direct_send.hint': '一文言い終わるとすぐ送ります。返事が一番早く返ってきます。',
   'voice_trigger.wake_word.label': 'ウェイクワード命中で送信',
   'voice_trigger.wake_word.hint': 'ウェイクワードを含む発話のみモデルに転送します。',
   'voice_trigger.manual_confirm.label': '入力欄に入れるだけ',

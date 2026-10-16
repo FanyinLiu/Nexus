@@ -16,6 +16,10 @@ import {
   downloadModel as downloadModelCore,
   checkModelPresence,
   canReachHuggingFace,
+  evaluateModelDiskSpace,
+  modelDownloadBytesNeeded,
+  modelDownloadCanResume,
+  readModelDownloadFreeBytes,
 } from './modelDownloader.js'
 import {
   getModelsRoots,
@@ -44,8 +48,10 @@ function ensureUserModelsRoot() {
 
 export function getInventory() {
   const roots = getModelsRoots()
+  const userRoot = getUserModelsRoot()
   const entries = MODEL_CATALOG.map((model) => {
     const presence = checkModelPresence(model, roots)
+    const present = presence.present && presence.verified
     return {
       id: model.id,
       label: model.label,
@@ -53,14 +59,18 @@ export function getInventory() {
       purpose: model.purpose,
       required: model.required,
       kind: model.kind,
-      present: presence.present && presence.verified,
+      present,
       verified: presence.verified,
       location: presence.location,
+      resumable: !present && modelDownloadCanResume(model, userRoot),
     }
   })
 
   const requiredEntries = entries.filter(e => e.required)
   const missingRequired = requiredEntries.filter(e => !e.present).map(e => e.id)
+  const missingCatalog = MODEL_CATALOG.filter((model) => missingRequired.includes(model.id))
+  const neededBytes = missingCatalog.reduce((sum, model) => sum + modelDownloadBytesNeeded(model), 0)
+  const diskSpace = evaluateModelDiskSpace(readModelDownloadFreeBytes(userRoot), neededBytes)
 
   return {
     models: entries,
@@ -68,6 +78,10 @@ export function getInventory() {
     missingRequired,
     primaryDir: getPrimaryModelsDir(),
     searchRoots: roots,
+    disk: {
+      ...diskSpace,
+      resumable: entries.some((entry) => entry.resumable),
+    },
   }
 }
 

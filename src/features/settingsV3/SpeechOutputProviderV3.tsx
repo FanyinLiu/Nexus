@@ -24,6 +24,7 @@ import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBri
 import { SPEECH_OUTPUT_PROVIDERS } from '../../lib/speechProviderCatalog.ts'
 import { updateCurrentSpeechOutputProviderProfile } from '../../lib/speechProviderProfiles.ts'
 import { VoiceLanguageSelect } from '../../components/VoiceLanguageSelect.tsx'
+import { visibleSpeechAdjustments } from '../voice/ttsAdjustments.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
   AppSettings,
@@ -67,7 +68,7 @@ type TuningSliderProps = {
   min: number
   max: number
   step: number
-  disabled: boolean
+  disabled?: boolean
   onChange: (value: number) => void
 }
 
@@ -140,6 +141,7 @@ export const SpeechOutputProviderV3 = memo(function SpeechOutputProviderV3({
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(draft.uiLanguage, key)
   const provider = getSpeechOutputProviderPreset(draft.speechOutputProviderId)
   const adjustmentSupport = getSpeechOutputAdjustmentSupport(draft.speechOutputProviderId)
+  const adjustments = visibleSpeechAdjustments(adjustmentSupport)
   const modelOptions = getSpeechOutputModelOptions(draft.speechOutputProviderId)
   const styleOptions = getSpeechOutputStyleOptions(draft.speechOutputProviderId)
   const isMiniMax = isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
@@ -368,57 +370,62 @@ export const SpeechOutputProviderV3 = memo(function SpeechOutputProviderV3({
         </SettingsV3Field>
       </div>
 
-      <SettingsV3Disclosure
-        title={ti('settings.speech_output.tuning_title')}
-        description={ti(adjustmentSupport.note as TranslationKey)}
-      >
-        <SettingsV3Toolbar>
-          <button
-            type="button"
-            onClick={() => setDraft((current) => ({ ...current, speechRate: 0.92, speechPitch: 1.08, speechVolume: 1 }))}
-          >
-            {ti('settings.speech_output.restore_defaults')}
-          </button>
-        </SettingsV3Toolbar>
-        <div className="settings-v3-tuning-list">
-          <TuningSliderV3
-            label={ti('settings.speech_output.rate')}
-            displayValue={formatTtsAdjustmentValue('rate', draft.speechRate)}
-            hint={ti('settings.speech_output.rate_hint')}
-            disabledHint={ti('settings.speech_output.rate_disabled_hint')}
-            value={draft.speechRate}
-            min={0.5}
-            max={2}
-            step={0.05}
-            disabled={!adjustmentSupport.rate}
-            onChange={(speechRate) => setDraft((current) => ({ ...current, speechRate }))}
-          />
-          <TuningSliderV3
-            label={ti('settings.speech_output.pitch')}
-            displayValue={formatTtsAdjustmentValue('pitch', draft.speechPitch)}
-            hint={ti('settings.speech_output.pitch_hint')}
-            disabledHint={ti('settings.speech_output.pitch_disabled_hint')}
-            value={draft.speechPitch}
-            min={0.5}
-            max={2}
-            step={0.05}
-            disabled={!adjustmentSupport.pitch}
-            onChange={(speechPitch) => setDraft((current) => ({ ...current, speechPitch }))}
-          />
-          <TuningSliderV3
-            label={ti('settings.speech_output.volume')}
-            displayValue={formatTtsAdjustmentValue('volume', draft.speechVolume)}
-            hint={ti('settings.speech_output.volume_hint')}
-            disabledHint={ti('settings.speech_output.volume_disabled_hint')}
-            value={draft.speechVolume}
-            min={0}
-            max={1}
-            step={0.05}
-            disabled={!adjustmentSupport.volume}
-            onChange={(speechVolume) => setDraft((current) => ({ ...current, speechVolume }))}
-          />
-        </div>
-      </SettingsV3Disclosure>
+      {adjustments.any ? (
+        <SettingsV3Disclosure
+          title={ti('settings.speech_output.tuning_title')}
+          description={ti(adjustmentSupport.note as TranslationKey)}
+        >
+          <SettingsV3Toolbar>
+            <button
+              type="button"
+              onClick={() => setDraft((current) => ({ ...current, speechRate: 0.92, speechPitch: 1.08, speechVolume: 1 }))}
+            >
+              {ti('settings.speech_output.restore_defaults')}
+            </button>
+          </SettingsV3Toolbar>
+          <div className="settings-v3-tuning-list">
+            {adjustments.rate ? (
+              <TuningSliderV3
+                label={ti('settings.speech_output.rate')}
+                displayValue={formatTtsAdjustmentValue('rate', draft.speechRate)}
+                hint={ti('settings.speech_output.rate_hint')}
+                disabledHint={ti('settings.speech_output.rate_disabled_hint')}
+                value={draft.speechRate}
+                min={0.5}
+                max={2}
+                step={0.05}
+                onChange={(speechRate) => setDraft((current) => ({ ...current, speechRate }))}
+              />
+            ) : null}
+            {adjustments.pitch ? (
+              <TuningSliderV3
+                label={ti('settings.speech_output.pitch')}
+                displayValue={formatTtsAdjustmentValue('pitch', draft.speechPitch)}
+                hint={ti('settings.speech_output.pitch_hint')}
+                disabledHint={ti('settings.speech_output.pitch_disabled_hint')}
+                value={draft.speechPitch}
+                min={0.5}
+                max={2}
+                step={0.05}
+                onChange={(speechPitch) => setDraft((current) => ({ ...current, speechPitch }))}
+              />
+            ) : null}
+            {adjustments.volume ? (
+              <TuningSliderV3
+                label={ti('settings.speech_output.volume')}
+                displayValue={formatTtsAdjustmentValue('volume', draft.speechVolume)}
+                hint={ti('settings.speech_output.volume_hint')}
+                disabledHint={ti('settings.speech_output.volume_disabled_hint')}
+                value={draft.speechVolume}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(speechVolume) => setDraft((current) => ({ ...current, speechVolume }))}
+              />
+            ) : null}
+          </div>
+        </SettingsV3Disclosure>
+      ) : null}
 
       <div className="settings-v3-editor settings-v3-provider__preview">
         <SettingsV3Field label={ti('settings.speech_output.preview_text')}>

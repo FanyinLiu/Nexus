@@ -11,7 +11,7 @@ export const zhCNVoice = {
   'voice_pipeline.reply_received': '已收到回复',
   'voice_pipeline.reply_failed': '没能回复',
   'voice_trigger.direct_send.label': '识别后直接发送',
-  'voice_trigger.direct_send.hint': '识别到完整句子后立刻发送，语音往返延迟最低。',
+  'voice_trigger.direct_send.hint': '说完一句就发送，回应最快。',
   'voice_trigger.wake_word.label': '命中唤醒词再发送',
   'voice_trigger.wake_word.hint': '只有检测到唤醒词时，转写结果才会继续发给模型。',
   'voice_trigger.manual_confirm.label': '只填入输入框',

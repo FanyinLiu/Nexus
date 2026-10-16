@@ -21,10 +21,10 @@ import type {
   VoicePipelineState,
   VoiceState,
 } from '../../types/index.ts'
+import { resolveSherpaStreamIdleTimeoutMs } from '../../features/voice/sherpaIdleTimeout.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
   SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
-  SHERPA_STREAM_MAX_IDLE_MS,
   SHERPA_STREAM_SILENCE_FINISH_MS,
 } from './constants.ts'
 import { createAdaptiveRmsGate } from './support.ts'
@@ -163,7 +163,7 @@ export async function startSenseVoiceConversation(
         }
 
         void finalizeSenseVoiceTranscript(params.ti('voice.pipeline.long_idle_wrap_up'))
-      }, SHERPA_STREAM_MAX_IDLE_MS)
+      }, resolveSherpaStreamIdleTimeoutMs(params.currentSettings.wakewordSessionIdleTimeoutMs))
     }
 
     const finalizeSenseVoiceTranscript = async (

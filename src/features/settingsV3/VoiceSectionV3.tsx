@@ -34,6 +34,7 @@ import {
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 import { VoiceProfileSuggestion } from '../../components/VoiceProfileSuggestion.tsx'
+import { LocalVoiceModelsPanel } from './LocalVoiceModelsPanel.tsx'
 import { SpeechInputProviderV3 } from './SpeechInputProviderV3.tsx'
 import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3.tsx'
 import './voice-section-v3.css'
@@ -187,6 +188,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
     <SettingsV3Page className={active ? 'settings-v3-voice' : 'is-hidden settings-v3-voice'}>
       {platformHint ? <SettingsV3Notice tone="warning" title={platformHint} /> : null}
       <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />
+      <LocalVoiceModelsPanel uiLanguage={uiLanguage} />
 
       <SettingsV3Section title={ti('settings.voice.loop_title')} description={ti('settings.voice.loop_hint')}>
         <SettingsV3Row
@@ -249,7 +251,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
 
       <SettingsV3Section title={ti('settings.voice.trigger_mode')} description={triggerOption.hint.trim()}>
         <div className="settings-v3-editor">
-          <SettingsV3Field label={ti('settings.voice.trigger_mode')} hint={triggerOption.hint.trim()}>
+          <SettingsV3Field label={ti('settings.voice.trigger_mode')}>
             <select
               value={draft.voiceTriggerMode}
               onChange={(event) => {

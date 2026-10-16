@@ -8,6 +8,7 @@ import {
   startParaformerStream,
   type ParaformerStreamSession,
 } from '../../features/hearing/localParaformer.ts'
+import { resolveSherpaStreamIdleTimeoutMs } from '../../features/voice/sherpaIdleTimeout.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
@@ -26,7 +27,6 @@ import type {
 } from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
-  SHERPA_STREAM_MAX_IDLE_MS,
 } from './constants.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
@@ -156,7 +156,7 @@ export async function startParaformerConversation(
         }
 
         void finalizeParaformerTranscript(params.ti('voice.pipeline.long_idle_wrap_up'))
-      }, SHERPA_STREAM_MAX_IDLE_MS)
+      }, resolveSherpaStreamIdleTimeoutMs(params.currentSettings.wakewordSessionIdleTimeoutMs))
     }
 
     const finalizeParaformerTranscript = async (

@@ -16,6 +16,23 @@
 .settings-v3-tuning__controls input[type='range'] { width: 100%; accent-color: var(--sv3-accent); }
 .settings-v3-tuning__controls input[type='number'] { width: 100%; padding: 8px; color: var(--sv3-ink); background: var(--sv3-field, var(--sv3-surface)); border: 1px solid var(--sv3-line); border-radius: 10px; font: inherit; }
 .settings-v3-tuning > small { color: var(--sv3-muted); font-size: 12px; }
+.settings-v3-voice-models { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.settings-v3-voice-models__summary { margin: 0; color: var(--sv3-muted); font-size: 13px; }
+.settings-v3-voice-models__row { display: grid; gap: 4px; padding: 10px 12px; background: var(--sv3-surface); border: 1px solid var(--sv3-line); border-radius: 12px; }
+.settings-v3-voice-models__head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
+.settings-v3-voice-models__size,
+.settings-v3-voice-models__status { color: var(--sv3-muted); font-size: 12px; }
+.settings-v3-voice-models progress { width: 100%; height: 6px; }
+.settings-v3-section .settings-v3-toolbar button.primary-button.settings-v3-voice-models__download:disabled,
+.settings-v3-section .settings-v3-toolbar button.primary-button.settings-v3-voice-models__download:disabled:hover {
+  cursor: not-allowed;
+  opacity: 1;
+  color: var(--sv3-ink);
+  -webkit-text-fill-color: var(--sv3-ink);
+  background: var(--sv3-soft);
+  border-color: var(--sv3-line);
+  box-shadow: none;
+}
 
 @media (max-width: 719px) {
   .settings-v3-provider__grid { grid-template-columns: minmax(0, 1fr); }

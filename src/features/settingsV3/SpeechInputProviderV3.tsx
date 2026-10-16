@@ -12,8 +12,10 @@ import {
   getSpeechInputProviderPreset,
   isSenseVoiceSpeechInputProvider,
   isSpeechInputLocal,
+  isTencentAsrSpeechInputProvider,
   isVolcengineSpeechInputProvider,
 } from '../../lib/audioProviders.ts'
+import { planSpeechInputConnectionTest } from '../voice/speechInputProbe.ts'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { getPlatformDependencyHint, isVoiceSpeechInputAvailable } from '../../lib/platformProfile.ts'
 import { SPEECH_INPUT_PROVIDERS } from '../../lib/speechProviderCatalog.ts'
@@ -75,6 +77,8 @@ export const SpeechInputProviderV3 = memo(function SpeechInputProviderV3({
     ? ({ appId: '', accessToken: '' } satisfies VolcengineCredentialParts)
     : parseVolcengineCredentialParts(draft.speechInputApiKey)
   const available = isVoiceSpeechInputAvailable(platformProfile)
+  const connectionTestPlan = planSpeechInputConnectionTest(draft.speechInputProviderId)
+  const connectionTestUnavailable = connectionTestPlan.mode === 'unavailable'
   const platformReason = getPlatformDependencyHint(
     platformProfile,
     platformProfile.voice.speechInputSupported,
@@ -107,11 +111,14 @@ export const SpeechInputProviderV3 = memo(function SpeechInputProviderV3({
         <button
           type="button"
           onClick={onRunConnectionTest}
-          disabled={testingTarget === 'speech-input' || !available}
+          disabled={testingTarget === 'speech-input' || !available || connectionTestUnavailable}
         >
           {testingTarget === 'speech-input' ? ti('settings.speech_input.testing') : ti('settings.speech_input.test')}
         </button>
       </SettingsV3Toolbar>
+      {connectionTestUnavailable ? (
+        <SettingsV3Notice tone="info" title={ti(connectionTestPlan.reasonKey)} />
+      ) : null}
 
       {platformHint ? <SettingsV3Notice tone="warning" title={platformHint} /> : null}
 
@@ -203,7 +210,7 @@ export const SpeechInputProviderV3 = memo(function SpeechInputProviderV3({
           />
         </SettingsV3Field>
 
-        {draft.speechInputProviderId === 'zhipu-stt' ? (
+        {draft.speechInputProviderId === 'zhipu-stt' || isTencentAsrSpeechInputProvider(draft.speechInputProviderId) ? (
           <SettingsV3Field
             label={ti('settings.speech_input.hotwords')}
             hint={ti('settings.speech_input.hotwords_hint')}

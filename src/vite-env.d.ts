@@ -182,6 +182,7 @@ type ModelCatalogEntry = {
   present: boolean
   verified: boolean
   location: string | null
+  resumable?: boolean
 }
 
 type ModelInventory = {
@@ -190,6 +191,12 @@ type ModelInventory = {
   missingRequired: string[]
   primaryDir: string
   searchRoots: string[]
+  disk?: {
+    ok: boolean
+    freeBytes: number | null
+    neededBytes: number
+    resumable: boolean
+  }
 }
 
 type PythonRuntimeStatus = {

@@ -13,6 +13,13 @@ import {
   isSenseVoiceSpeechInputProvider,
 } from '../../lib/audioProviders.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
+import { humanizeError } from '../../lib/humanizeError.ts'
+import {
+  buildSpeechRecognitionProbe,
+  classifyRecognitionProbe,
+  planSpeechInputConnectionTest,
+  SPEECH_PROBE_SAMPLE_RATE,
+} from '../../features/voice/speechInputProbe.ts'
 import type {
   AppSettings,
   ServiceConnectionResponse,
@@ -167,16 +174,126 @@ export async function testSpeechInputReadinessRuntime(
   }
 }
 
+function recognitionProbeResult(
+  options: TestSpeechInputConnectionRuntimeOptions,
+  providerId: string,
+  modelId: string | null | undefined,
+  result: unknown,
+): VoiceDiagnosticResult {
+  const kind = classifyRecognitionProbe(result)
+  if (kind === 'invalid') {
+    return {
+      ok: false,
+      message: options.ti('settings.speech_connection.input_invalid_probe'),
+    }
+  }
+  return {
+    ok: true,
+    message: options.ti(kind === 'transcript'
+      ? 'settings.speech_connection.input_ready'
+      : 'settings.speech_connection.input_ready_silent'),
+    checkedAt: new Date().toISOString(),
+    evidence: {
+      kind: 'local-runtime',
+      providerId,
+      modelId: modelId || undefined,
+    },
+  }
+}
+
+async function runSenseVoiceRecognitionProbe(
+  options: TestSpeechInputConnectionRuntimeOptions,
+): Promise<VoiceDiagnosticResult> {
+  const transcribe = window.desktopPet?.sensevoiceTranscribe
+  if (!transcribe) {
+    return {
+      ok: false,
+      message: options.ti('voice.diagnostics.input_no_connection_test'),
+    }
+  }
+  try {
+    const result = await transcribe({
+      samples: buildSpeechRecognitionProbe(),
+      sampleRate: SPEECH_PROBE_SAMPLE_RATE,
+    })
+    return recognitionProbeResult(
+      options,
+      options.draftSettings.speechInputProviderId,
+      options.draftSettings.speechInputModel,
+      result,
+    )
+  } catch (error) {
+    return {
+      ok: false,
+      message: humanizeError(error, 'stt'),
+    }
+  }
+}
+
+async function runParaformerRecognitionProbe(
+  options: TestSpeechInputConnectionRuntimeOptions,
+): Promise<VoiceDiagnosticResult> {
+  const api = window.desktopPet
+  if (!api?.paraformerStatus || !api.paraformerStart || !api.paraformerFeed || !api.paraformerFinish) {
+    return {
+      ok: false,
+      message: options.ti('voice.diagnostics.input_no_connection_test'),
+    }
+  }
+  const status = await api.paraformerStatus()
+  if (!status.modelFound) {
+    return {
+      ok: false,
+      message: options.ti('settings.speech_input.paraformer_model_missing'),
+    }
+  }
+  if (!status.installed) {
+    return {
+      ok: false,
+      message: options.ti('voice.provider.paraformer.unavailable'),
+    }
+  }
+  try {
+    await api.paraformerStart()
+    await api.paraformerFeed({ samples: buildSpeechRecognitionProbe() })
+    const result = await api.paraformerFinish()
+    return recognitionProbeResult(
+      options,
+      options.draftSettings.speechInputProviderId,
+      status.currentModelId,
+      result,
+    )
+  } catch (error) {
+    try { await api.paraformerAbort?.() } catch { /* the session is already closed */ }
+    return {
+      ok: false,
+      message: humanizeError(error, 'stt'),
+    }
+  }
+}
+
 export async function testSpeechInputConnectionRuntime(
   options: TestSpeechInputConnectionRuntimeOptions,
 ): Promise<VoiceDiagnosticResult> {
+  const plan = planSpeechInputConnectionTest(options.draftSettings.speechInputProviderId)
+  if (plan.mode === 'unavailable') {
+    return {
+      ok: false,
+      message: options.ti(plan.reasonKey),
+    }
+  }
+
   const localSpeechCheck = await options.testSpeechInputReadiness(options.draftSettings)
   if (!localSpeechCheck.ok) {
     return localSpeechCheck
   }
 
-  if (isSenseVoiceSpeechInputProvider(options.draftSettings.speechInputProviderId)) {
-    return localSpeechCheck
+  if (plan.mode === 'sensevoice-recognition') {
+    return runSenseVoiceRecognitionProbe(options)
+  }
+
+  if (plan.mode === 'paraformer-recognition') {
+    return runParaformerRecognitionProbe(options)
   }
 
   if (!window.desktopPet?.testServiceConnection) {

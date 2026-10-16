@@ -114,9 +114,6 @@ function App() {
       <ModelSetupOverlay
         suppressed={competingModalOpen}
         onVisibilityChange={handleModelSetupVisibilityChange}
-        settings={controller.panelView.settings}
-        onOpenOnboardingGuide={controller.overlays.openOnboardingGuide}
-        onTestTextConnection={controller.overlays.onboardingGuideProps.onTestTextConnection}
       />
     </AppErrorBoundary>
   )
