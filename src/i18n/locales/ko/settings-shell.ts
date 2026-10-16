@@ -51,7 +51,7 @@ export const koSettingsShell = {
   'settings.section_desc.chat': '동반자 이름, 당신을 부르는 이름, 성격, 미니멀 아바타를 조정합니다.',
   'settings.section_desc.window': '데스크톱 상주와 상호작용을 제어합니다.',
   'settings.section_desc.tools': '웹 검색, 날씨, 외부 링크 권한 같은 내장 도구를 설정합니다.',
-  'settings.section_desc.voice': '연속 대화 모드와 입출력 음성 파이프라인을 설정합니다.',
+  'settings.section_desc.voice': '말하기, 받아쓰기, 목소리 선택',
   'settings.section_desc.memory': '장기 기억, 일기, 배경 표현, 검색을 정리합니다.',
   'settings.section_desc.history': '현재 채팅 기록의 가져오기, 내보내기, 정리를 관리합니다.',
   'settings.save': '설정 저장',

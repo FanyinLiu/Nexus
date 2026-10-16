@@ -51,7 +51,7 @@ export const enSettingsShell = {
   'settings.section_desc.chat': 'Tune the companion name, user name, personality, and minimal avatar.',
   'settings.section_desc.window': 'Control desktop presence and interaction.',
   'settings.section_desc.tools': 'Configure built-in tools for web search, weather, and external link authorization.',
-  'settings.section_desc.voice': 'Configure continuous talk mode plus the input and output voice pipeline.',
+  'settings.section_desc.voice': 'Speech, dictation, and voice choice',
   'settings.section_desc.memory': 'Organize long-term memory, diary notes, background phrases, and retrieval.',
   'settings.section_desc.history': 'Manage import, export, and cleanup for the current chat history.',
   'settings.save': 'Save settings',

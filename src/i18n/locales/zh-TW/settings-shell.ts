@@ -51,7 +51,7 @@ export const zhTWSettingsShell = {
   'settings.section_desc.chat': '調整夥伴名字、你的稱呼、性格與極簡頭像。',
   'settings.section_desc.window': '控制桌面常駐和互動。',
   'settings.section_desc.tools': '配置網頁搜尋、天氣、外鏈授權等內建工具。',
-  'settings.section_desc.voice': '統一配置連續對話、輸入輸出鏈路和語音體驗。',
+  'settings.section_desc.voice': '說話、聽寫和聲音選擇',
   'settings.section_desc.memory': '整理長期記憶、日記、背景表達和檢索。',
   'settings.section_desc.history': '管理目前會話聊天記錄的匯入、匯出與清理。',
   'settings.save': '儲存設定',

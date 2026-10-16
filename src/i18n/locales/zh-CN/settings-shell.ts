@@ -49,7 +49,7 @@ export const zhCNSettingsShell = {
   'settings.section_desc.chat': '调整伙伴名字、你的称呼、性格与极简头像。',
   'settings.section_desc.window': '控制桌面常驻和交互。',
   'settings.section_desc.tools': '配置网页搜索、天气、外链授权等内置工具。',
-  'settings.section_desc.voice': '统一配置连续对话、输入输出链路和语音体验。',
+  'settings.section_desc.voice': '说话、听写和声音选择',
   'settings.section_desc.memory': '整理长期记忆、日记、背景表达和检索。',
   'settings.section_desc.history': '管理当前会话聊天记录的导入、导出与清理。',
   'settings.save': '保存设置',

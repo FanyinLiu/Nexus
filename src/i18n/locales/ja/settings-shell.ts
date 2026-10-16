@@ -51,7 +51,7 @@ export const jaSettingsShell = {
   'settings.section_desc.chat': 'コンパニオン名、あなたの呼び名、性格、ミニマルなアバターを調整します。',
   'settings.section_desc.window': 'デスクトップ常駐と操作を制御します。',
   'settings.section_desc.tools': 'ウェブ検索、天気、外部リンク許可などの内蔵ツールを設定します。',
-  'settings.section_desc.voice': '連続会話モードと、入出力音声パイプラインを設定します。',
+  'settings.section_desc.voice': '発話、書き取り、声の選択',
   'settings.section_desc.memory': '長期記憶、日記、背景表現、検索を整理します。',
   'settings.section_desc.history': '現在のチャット履歴のインポート、エクスポート、クリーンアップを管理します。',
   'settings.save': '設定を保存',
