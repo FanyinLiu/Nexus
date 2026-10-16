@@ -154,3 +154,149 @@ html[data-companion-theme] .onboarding-card :is(.ghost-button, .onboarding-regio
 html[data-companion-theme] .onboarding-card :is(.onboarding-step, .onboarding-choice, .onboarding-card__step, .ai-disclosure-step) {
   border-radius: var(--nx-radius-card);
 }
+
+/*
+ * The shell still carries the old dark palette, and several of those rules
+ * outrank the generic card colors above. These controls are on the guide
+ * screens, so a companion look has to win with the same tokens.
+ */
+html[data-companion-theme] .onboarding-card .onboarding-section {
+  color: var(--color-text-primary);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-summary,
+html[data-companion-theme] .onboarding-card .onboarding-subsection,
+html[data-companion-theme] .onboarding-card .onboarding-readiness {
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-card);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-tip,
+html[data-companion-theme] .onboarding-card .onboarding-tip--strong {
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-relationship__label,
+html[data-companion-theme] .onboarding-card .onboarding-relationship__hint,
+html[data-companion-theme] .onboarding-card .onboarding-summary p,
+html[data-companion-theme] .onboarding-card .onboarding-readiness p,
+html[data-companion-theme] .onboarding-card .onboarding-readiness__timebox,
+html[data-companion-theme] .onboarding-card .ai-disclosure-step__lead,
+html[data-companion-theme] .onboarding-card .ai-disclosure-step__continue-note {
+  color: var(--color-text-muted);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__timebox {
+  color: var(--color-text-muted) !important;
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-summary strong,
+html[data-companion-theme] .onboarding-card .onboarding-readiness__header strong,
+html[data-companion-theme] .onboarding-card .onboarding-readiness__item {
+  color: var(--color-text-primary);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-relationship__chip,
+html[data-companion-theme] .onboarding-card .onboarding-relationship__chip:hover,
+html[data-companion-theme] .onboarding-card .onboarding-region-tabs__tab,
+html[data-companion-theme] .onboarding-card .onboarding-region-tabs__tab:hover {
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-relationship__chip.is-active,
+html[data-companion-theme] .onboarding-card .onboarding-region-tabs__tab.is-active {
+  color: var(--color-text-primary);
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+
+html[data-companion-theme] .onboarding-card .ai-disclosure-step__bullets li {
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  border-left-color: var(--color-accent);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__status--ready {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__status--warning {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 16%, transparent);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__status--blocked {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__item--ready .onboarding-readiness__dot {
+  background: var(--color-success);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__item--warning .onboarding-readiness__dot {
+  background: var(--color-warning);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-readiness__item--blocked .onboarding-readiness__dot {
+  background: var(--color-danger);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-toggle {
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  border-color: var(--color-border);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-toggle input {
+  background: var(--color-border-strong);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-toggle input::after {
+  background: var(--color-surface-elevated);
+}
+
+html[data-companion-theme] .onboarding-card .onboarding-toggle input:checked {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+html[data-companion-theme] .onboarding-card :is(input, select, textarea),
+html[data-companion-theme] .onboarding-card :focus-visible {
+  outline-color: var(--color-accent);
+}
+
+html[data-companion-theme] .onboarding-card select {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+    linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 13px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+}
+
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions .ghost-button,
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions .ghost-button:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+html[data-companion-theme] .onboarding-card__body {
+  scrollbar-color: var(--color-border-strong) transparent;
+}
