@@ -11,6 +11,7 @@ import {
   extractMemoriesFromMessage,
 } from '../../features/memory/index.ts'
 import { archiveEvictedMemories } from '../../features/memory/memoryCapCommit.ts'
+import { bookClearPlanReminders } from '../../features/memory/loopOutreach.ts'
 import { planTurnMemoryWrite } from '../../features/memory/reconcile.ts'
 import { appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { formatTraceLabel, logVoiceEvent } from '../../features/voice/index.ts'
@@ -235,6 +236,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
         candidates,
         now: userMessage.createdAt,
         utterance: content,
+        messageId: userMessage.id,
       })
       let nextMemories = plan.memories
       let nextDailyMemories = ctx.dailyMemoriesRef.current
@@ -250,9 +252,13 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
         }
         const persistedOps = plan.ops.filter((op) => op.op !== 'NOOP' || op.reason === 'protected')
         if (persistedOps.length) appendMemoryOpLog(persistedOps)
-        nextMemories = plan.memories
-        ctx.memoriesRef.current = plan.memories
-        ctx.setMemories(plan.memories)
+        nextMemories = bookClearPlanReminders(
+          plan.memories,
+          Date.parse(userMessage.createdAt),
+          (draft) => ctx.addReminderTask(draft),
+        )
+        ctx.memoriesRef.current = nextMemories
+        ctx.setMemories(nextMemories)
         nextDailyMemories = ctx.appendDailyMemoryEntries(
           [createDailyMemoryEntry(userMessage, fromVoice ? 'voice' : 'chat')].filter(
             (entry): entry is DailyMemoryEntry => Boolean(entry),

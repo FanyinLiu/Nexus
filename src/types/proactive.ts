@@ -26,5 +26,7 @@ export interface AgendaItem {
 export interface ProactiveAgendaState {
   items: AgendaItem[]
   firedAt: number[]
+  /** Times the user dismissed a proactive line. Two recent ones back the budget off. */
+  dismissedAt?: number[]
   lastConsolidationAt: string | null
 }

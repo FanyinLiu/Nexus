@@ -287,6 +287,15 @@ function formatContextSections(
   }
 
   // ── Memory highlights ──
+  if (context.openLoops?.length) {
+    sections.push(
+      `Open commitments (ask, never assert they were forgotten):\n`
+      + context.openLoops
+        .map((loop) => `- ${loop.content}${loop.place ? ` @ ${loop.place}` : ''}${loop.dueAt ? ` due ${loop.dueAt}` : ''}`)
+        .join('\n'),
+    )
+  }
+
   if (context.topMemories.length) {
     const trimmed = context.topMemories.slice(0, maxMemories)
     sections.push(

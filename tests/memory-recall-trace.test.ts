@@ -70,3 +70,25 @@ test('buildChatMemoryTrace makes paused turns explicit and empty', () => {
   })
   assert.equal(describeChatMemoryTrace({ role: 'user', memoryTrace: trace }), null)
 })
+
+test('a reply names how many memories it used, and says nothing when that is zero', () => {
+  const trace = buildChatMemoryTrace({
+    memoryContext: activeContext,
+    memoryPaused: false,
+  })
+  assert.deepEqual(describeChatMemoryTrace({ role: 'assistant', memoryTrace: trace }), {
+    key: 'message_bubble.memory_trace.used',
+    params: { count: 2 },
+  })
+  assert.equal(describeChatMemoryTrace({
+    role: 'assistant',
+    memoryTrace: {
+      status: 'active',
+      searchModeUsed: 'keyword',
+      vectorSearchAvailable: false,
+      longTermIds: [],
+      dailyEntryIds: [],
+      semanticIds: [],
+    },
+  }), null)
+})

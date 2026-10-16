@@ -23,15 +23,17 @@ export function describeChatMemoryTrace(message: {
     return { key: 'message_bubble.memory_trace.paused' }
   }
 
-  const longTerm = trace.longTermIds.length
-  const daily = trace.dailyEntryIds.length
-  const semantic = trace.semanticIds.length
-  if (longTerm + daily + semantic === 0) {
-    return { key: 'message_bubble.memory_trace.none' }
-  }
+  // Semantic hits often repeat a long-term or diary id. The line counts
+  // memories, not the three search buckets.
+  const ids = new Set([
+    ...trace.longTermIds,
+    ...trace.dailyEntryIds,
+    ...trace.semanticIds,
+  ])
+  if (ids.size === 0) return null
 
   return {
     key: 'message_bubble.memory_trace.used',
-    params: { longTerm, daily, semantic },
+    params: { count: ids.size },
   }
 }

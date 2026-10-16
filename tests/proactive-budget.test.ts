@@ -114,6 +114,11 @@ test('a return bubble waits until the user is back and the resume grace has pass
     channel: 'return',
     resumedAtMs: NOW - PROACTIVE_RESUME_GRACE_MS,
   })).reason, 'ok')
+  assert.equal(evaluateProactiveEtiquette(input({
+    channel: 'return',
+    resumedAtMs: NOW,
+    resumeGraceMs: 0,
+  })).reason, 'ok')
   assert.equal(evaluateProactiveEtiquette(input({ enabled: false })).reason, 'disabled')
 })
 

@@ -21,7 +21,7 @@ import {
   type PendingReminderDraftInput,
   type UseChatContext,
 } from './chat/index.ts'
-import { loadChatMessages } from '../lib/storage/chat.ts'
+import { loadChatMessages, mergeRemoteChatMessages } from '../lib/storage/chat.ts'
 import { useChatPersistence } from './chat/useChatPersistence.ts'
 import { createSendMessageHandler } from './chat/sendMessage.ts'
 import { usePetDialogBubbles } from './chat/usePetDialogBubbles.ts'
@@ -122,7 +122,9 @@ export function useChat(ctx: UseChatContext) {
   // immediately re-broadcast (which would kick the originating window into
   // rewriting over its own in-flight additions).
   const applyRemoteMessages = useCallback((next: ChatMessage[]) => {
-    messagesRef.current = next
+    // The ref has to match the merge. A raw remote list is often a stale
+    // prefix, and the next local append would otherwise replace the tail.
+    messagesRef.current = mergeRemoteChatMessages(messagesRef.current, next)
     applyRemoteMessagesToState(next)
   }, [applyRemoteMessagesToState])
 

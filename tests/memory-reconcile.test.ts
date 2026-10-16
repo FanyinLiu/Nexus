@@ -103,7 +103,14 @@ test('model supersede keeps the old row with a pointer and reason', () => {
     existing,
     [],
     JSON.stringify({
-      ops: [{ op: 'SUPERSEDE', targetId: 'm1', content: 'I live in Beijing', reason: 'moved cities' }],
+      ops: [{
+        op: 'SUPERSEDE',
+        targetId: 'm1',
+        content: 'I live in Beijing',
+        reason: 'moved cities',
+        evidenceQuote: 'I live in Beijing',
+        messageRef: 'msg-city',
+      }],
     }),
     { now, embed: noEmbed, createId: () => 'm2' },
   )
@@ -128,9 +135,9 @@ test('model delete archives instead of removing, and protected rows are left alo
     [],
     JSON.stringify({
       ops: [
-        { op: 'DELETE', targetId: 'm1', reason: 'user retracted' },
-        { op: 'DELETE', targetId: 'pin', reason: 'should not stick' },
-        { op: 'UPDATE', targetId: 'missing', content: 'nope', reason: 'guess' },
+        { op: 'DELETE', targetId: 'm1', reason: 'user retracted', evidenceQuote: 'forget Hangzhou', messageRef: 'msg-1' },
+        { op: 'DELETE', targetId: 'pin', reason: 'should not stick', evidenceQuote: 'forget the name', messageRef: 'msg-2' },
+        { op: 'UPDATE', targetId: 'missing', content: 'nope', reason: 'guess', evidenceQuote: 'nope', messageRef: 'msg-3' },
       ],
     }),
     { now, embed: noEmbed },
@@ -153,7 +160,13 @@ test('over-deletion from the model falls back without dropping rows', () => {
     existing,
     [],
     JSON.stringify({
-      ops: ['a', 'b', 'c'].map((id) => ({ op: 'DELETE', targetId: id, reason: 'wipe' })),
+      ops: ['a', 'b', 'c'].map((id) => ({
+        op: 'DELETE',
+        targetId: id,
+        reason: 'wipe',
+        evidenceQuote: `wipe ${id}`,
+        messageRef: `msg-${id}`,
+      })),
     }),
     { now, embed: noEmbed },
   )

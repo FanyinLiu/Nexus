@@ -12,7 +12,7 @@ export const enChat = {
   'message_bubble.run_status.tool_result_preview': 'Found a result',
   'message_bubble.run_status.interrupted': 'Paused',
   'message_bubble.run_status.error_recoverable': 'Can retry',
-  'message_bubble.memory_trace.used': 'Memory touched this reply · long-term {longTerm} · daily {daily} · semantic {semantic}',
+  'message_bubble.memory_trace.used': 'Used {count} memories',
   'message_bubble.memory_trace.none': 'Memory was on; nothing was recalled for this reply.',
   'message_bubble.memory_trace.paused': 'This reply did not use memory',
   'message_bubble.memory_trace.long_term': 'Long-term',

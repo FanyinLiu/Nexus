@@ -28,7 +28,9 @@ import {
 } from '../../features/pet'
 import {
   CHAT_STORAGE_KEY,
+  MEMORY_STORAGE_KEY,
   loadChatMessages,
+  loadMemories,
   onStorageChange,
   savePetWindowPreferences,
 } from '../../lib'
@@ -71,7 +73,7 @@ type UseDesktopBridgeOptions = {
   reminderTasks: ReminderTask[]
   setReminderTasks: Dispatch<SetStateAction<ReminderTask[]>>
   setDebugConsoleEvents: Dispatch<SetStateAction<DebugConsoleEvent[]>>
-  memory: Pick<MemoryController, 'memories' | 'setMemories' | 'setDailyMemories'>
+  memory: Pick<MemoryController, 'memories' | 'setMemories' | 'setDailyMemories' | 'applyRemoteMemories'>
   chat: Pick<ChatController, 'input' | 'busy' | 'assistantActivity' | 'setMessages' | 'applyRemoteMessages'>
   pet: Pick<
     PetController,
@@ -328,29 +330,29 @@ export function useDesktopBridge({
   // instances (electron/electron#7066, #1037), so the pet and panel
   // windows can't use it to observe each other's writes.
   //
-  // Scope deliberately narrow: only CHAT_STORAGE_KEY is worth syncing —
-  // that's what makes voice-turn messages visible in an open chat panel.
-  // Earlier revisions also subscribed memory, voice-trace, reminder
-  // tasks, etc., but those storage writes happen on high-frequency code
-  // paths (per-voice-event voice-trace updates, per-debug-log
-  // debug-console-events writes) and the raw setState(loadXxx())
-  // pattern turns every such write into a cross-window setState echo
-  // that trips "Maximum update depth exceeded" on the receiving side.
-  // The historical `addEventListener('storage', …)` code they replaced
-  // was never actually firing cross-BrowserWindow anyway, so dropping
-  // them here is a no-op functionally and removes the loop source.
-  //
-  // If cross-window sync for any of those keys becomes necessary later,
-  // follow the chat pattern: expose an `applyRemoteXxx` method on the
-  // owning hook that marks its save-effect skip flag + updates its
-  // signature ref, and use that from the subscriber callback.
+  // Chat sync is what makes a voice turn visible in the open panel.
+  // Long-term memory is synced the same way: the pet owns proactive
+  // delivery, and a commitment typed in the panel has to be in the pet's
+  // list or the reminder never leaves that window. The apply path skips
+  // the save effect, so the copy does not bounce back.
+  // Voice traces and debug logs stay local. Those writes are frequent
+  // and used to echo into a render loop.
+  const applyRemoteMessages = chat.applyRemoteMessages
+  const applyRemoteMemories = memory.applyRemoteMemories
   useEffect(() => {
-    const unsubscribe = onStorageChange(
+    const unsubscribeChat = onStorageChange(
       CHAT_STORAGE_KEY,
-      () => chat.applyRemoteMessages(loadChatMessages()),
+      () => applyRemoteMessages(loadChatMessages()),
     )
-    return unsubscribe
-  }, [chat])
+    const unsubscribeMemories = onStorageChange(
+      MEMORY_STORAGE_KEY,
+      () => applyRemoteMemories(loadMemories()),
+    )
+    return () => {
+      unsubscribeChat()
+      unsubscribeMemories()
+    }
+  }, [applyRemoteMessages, applyRemoteMemories])
 
   // Runtime-state bridge: listens for cross-window snapshot pushes and writes
   // them into local state. Depends only on `pet.setMood` — not the whole

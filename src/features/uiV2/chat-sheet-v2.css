@@ -24,7 +24,7 @@
   overflow: hidden;
   color: var(--chat-sheet-v2-ink);
   background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--nx-font-family, "PingFang SC", system-ui, "Noto Sans CJK SC", "Noto Sans CJK", "Microsoft YaHei", "Noto Sans", "WenQuanYi Micro Hei", sans-serif);
   pointer-events: none;
 }
 
@@ -158,11 +158,31 @@
 
 .chat-sheet-v2__turn {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
   margin: 0;
-  padding: 16px 0;
+  padding: 10px 0;
   border-bottom: 1px solid color-mix(in srgb, var(--chat-sheet-v2-line) 72%, transparent);
+}
+
+.chat-sheet-v2__turn--card {
+  display: block;
+  padding-inline: 2px;
+}
+
+.chat-sheet-v2__turn[data-role='user'] {
+  justify-items: end;
+}
+
+.chat-sheet-v2__turn[data-role='user'] .chat-sheet-v2__speaker {
+  display: none;
+}
+
+.chat-sheet-v2__turn[data-role='user'] .chat-sheet-v2__message {
+  max-width: min(100%, 320px);
+  padding: 10px 14px;
+  border-radius: 16px 16px 6px 16px;
+  background: color-mix(in srgb, var(--chat-sheet-v2-lavender) 16%, var(--chat-sheet-v2-surface));
 }
 
 .chat-sheet-v2__speaker,
@@ -488,4 +508,105 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+.loop-outreach {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  margin: 4px 0;
+}
+
+.loop-outreach__card.nx-companion-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 14px;
+  font-family: var(--nx-font-family, "PingFang SC", system-ui, "Noto Sans CJK SC", "Noto Sans CJK", "Microsoft YaHei", "Noto Sans", "WenQuanYi Micro Hei", sans-serif);
+  border: 1px solid var(--nx-card-border, var(--color-border));
+  border-radius: var(--nx-card-radius, 16px);
+  background: var(--nx-card-bg, var(--color-surface-elevated));
+  color: var(--nx-card-fg, var(--color-text-primary));
+  box-shadow: var(--nx-card-shadow, var(--color-shadow));
+}
+
+.loop-outreach__title,
+.loop-outreach__body,
+.loop-outreach__status {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.loop-outreach__title {
+  color: var(--nx-card-fg, var(--color-text-primary));
+  font-size: var(--nx-type-title, 13px);
+  font-weight: var(--nx-font-weight, 700);
+}
+
+.loop-outreach__body,
+.loop-outreach__status {
+  color: var(--nx-card-muted, var(--color-text-muted));
+  font-size: var(--nx-type-body, 14px);
+  line-height: 1.55;
+}
+
+.loop-outreach__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loop-outreach__accept,
+.loop-outreach__decline {
+  flex: 1 1 120px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--nx-radius-control, 999px);
+  font: inherit;
+  font-size: var(--nx-type-meta, 13px);
+  cursor: pointer;
+}
+
+.loop-outreach__accept {
+  border: 0;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.loop-outreach__decline {
+  border: 1px solid var(--nx-card-border, var(--color-border));
+  background: transparent;
+  color: var(--nx-card-fg, inherit);
+}
+
+.chat-sheet-v2 .loop-outreach__accept:hover {
+  background: var(--color-accent-hover, var(--color-accent));
+}
+
+.chat-sheet-v2 .loop-outreach__decline:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.loop-outreach__why {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--nx-card-muted, var(--color-text-muted));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.loop-outreach__why summary {
+  width: fit-content;
+  max-width: 100%;
+  cursor: pointer;
+}
+
+.loop-outreach__why p {
+  margin: 6px 0 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }

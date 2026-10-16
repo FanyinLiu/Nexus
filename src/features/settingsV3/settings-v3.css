@@ -83,7 +83,7 @@
 .settings-v3-row[data-disabled='true'] { color: color-mix(in srgb, var(--sv3-muted) 68%, transparent); }
 .settings-v3-row__icon { display: grid; width: 24px; height: 24px; place-items: center; color: var(--sv3-muted); }
 .settings-v3-row__icon svg { width: 20px; height: 20px; }
-.settings-v3-row__copy { display: grid; gap: 2px; min-width: 0; }
+.settings-v3-row__copy { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
 .settings-v3-row__copy strong { font-size: 13px; font-weight: 680; }
 .settings-v3-row__copy span,
 .settings-v3-row__meta { color: var(--sv3-muted); font-size: 12px; overflow-wrap: anywhere; }
@@ -178,9 +178,9 @@
 
 @media (max-width: 719px) {
   .settings-v3-page { gap: 20px; padding: 2px 0 24px; }
-  .settings-v3-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
-  .settings-v3-row__meta { grid-column: 2 / -1; }
-  .settings-v3-row__control { grid-column: 3; grid-row: 1 / span 2; }
+  .settings-v3-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 10px; padding: 10px 12px; }
+  .settings-v3-row__meta { flex: 0 0 auto; white-space: nowrap; }
+  .settings-v3-row__control { flex: 0 0 auto; }
   .settings-v3-section__header p { font-size: 12px; line-height: 1.5; }
 }
 

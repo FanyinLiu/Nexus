@@ -7,7 +7,10 @@
 import type { FocusState } from '../../types/autonomy.ts'
 import { isSameLocalDay } from '../../lib/localDate.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../../types/memory.ts'
+import { absorbLoopFollowUp } from './loopDetails.ts'
+import { curateMemories } from './curation.ts'
 import { extractMemoriesFromMessage } from './memory.ts'
+import { isSensitiveMemoryText } from './memoryRules.ts'
 import {
   reconcileExtractedMemories,
   type MemoryReconcileResult,
@@ -86,7 +89,9 @@ function diaryCandidates(entries: readonly DailyMemoryEntry[], sinceMs: number |
 /**
  * Reconcile diary lines since the watermark, then let loop resolution run
  * inside that reconcile. Never throws. Without `complete`, the fallback
- * dedupe is the whole pass.
+ * dedupe is the whole pass. A global memory pause returns the list as it
+ * is: no diary capture and no curation, even if the scheduler already
+ * decided to run.
  */
 export async function consolidateDailyMemory(input: {
   memories: readonly MemoryItem[]
@@ -96,7 +101,12 @@ export async function consolidateDailyMemory(input: {
   utterance?: string
   complete?: ((prompt: { system: string; user: string }) => Promise<string | null | undefined>) | null
   embed?: MemoryTextEmbedder
+  runId?: string
+  memoryPaused?: boolean
 }): Promise<MemoryReconcileResult> {
+  if (input.memoryPaused) {
+    return { memories: [...input.memories], ops: [], decisionSource: 'fallback' }
+  }
   const now = input.now ?? new Date().toISOString()
   try {
     const freshEntries = input.diaryEntries.filter((entry) => {
@@ -105,12 +115,12 @@ export async function consolidateDailyMemory(input: {
       if (input.sinceMs == null || !Number.isFinite(input.sinceMs)) return true
       return Number.isFinite(stamp) && stamp > input.sinceMs
     })
-    const candidates = diaryCandidates(freshEntries, null)
+    const candidates = diaryCandidates(freshEntries, null).filter((item) => !isSensitiveMemoryText(item.content))
     const utterance = input.utterance ?? freshEntries.map((entry) => entry.content).join('\n')
     if (!candidates.length && !utterance.trim()) {
       return { memories: [...input.memories], ops: [], decisionSource: 'fallback', fallbackReason: 'no-model' }
     }
-    return await reconcileExtractedMemories({
+    const reconciled = await reconcileExtractedMemories({
       existing: input.memories,
       candidates,
       now,
@@ -118,6 +128,16 @@ export async function consolidateDailyMemory(input: {
       complete: input.complete,
       embed: input.embed,
     })
+    const absorbed = isSensitiveMemoryText(utterance)
+      ? { memories: reconciled.memories, ops: [] }
+      : absorbLoopFollowUp(reconciled.memories, utterance, now)
+    const curated = curateMemories(absorbed.memories, now, input.runId)
+    return {
+      memories: curated.memories,
+      ops: [...reconciled.ops, ...absorbed.ops, ...curated.ops],
+      decisionSource: reconciled.decisionSource,
+      ...(reconciled.fallbackReason ? { fallbackReason: reconciled.fallbackReason } : {}),
+    }
   } catch {
     return {
       memories: [...input.memories],

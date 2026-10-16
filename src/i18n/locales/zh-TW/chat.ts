@@ -12,7 +12,7 @@ export const zhTWChat = {
   'message_bubble.run_status.tool_result_preview': '已有結果',
   'message_bubble.run_status.interrupted': '已暫停',
   'message_bubble.run_status.error_recoverable': '可重試',
-  'message_bubble.memory_trace.used': '這次參考了記憶 · 長期 {longTerm} · 日記 {daily} · 語義 {semantic}',
+  'message_bubble.memory_trace.used': '用到了 {count} 條記憶',
   'message_bubble.memory_trace.none': '記憶開著，但這次沒有召回到內容。',
   'message_bubble.memory_trace.paused': '本條未使用記憶',
   'message_bubble.memory_trace.long_term': '長期記憶',

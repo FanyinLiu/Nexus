@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
+import { LoopOutreachNote } from '../../components/LoopOutreachNote.tsx'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import type { ChatMessage } from '../../types/chat.ts'
 import { useModalFocusTrap } from '../../hooks/useModalFocusTrap.ts'
 import {
   getChatAssistantMessageKey,
@@ -16,6 +18,9 @@ export interface ChatSheetV2Message {
   role: ChatSheetV2MessageRole
   content: string
   memoryTraceLabel?: string
+  loopOffer?: ChatMessage['loopOffer']
+  loopCheck?: ChatMessage['loopCheck']
+  proactiveWhy?: ChatMessage['proactiveWhy']
 }
 
 export interface ChatSheetV2Labels {
@@ -315,23 +320,38 @@ export function ChatSheetV2({
               </div>
             </div>
           ) : (
-            messages.map((message) => (
-              <article
-                key={message.id}
-                className="chat-sheet-v2__turn"
-                data-role={message.role}
-              >
-                <p className="chat-sheet-v2__speaker">
-                  {message.role === 'user' ? labels.userName : companionName}
-                </p>
-                <div className="chat-sheet-v2__bubble">
-                  <p className="chat-sheet-v2__message">{message.content}</p>
-                  {message.memoryTraceLabel ? (
-                    <p className="chat-sheet-v2__memory-trace">{message.memoryTraceLabel}</p>
-                  ) : null}
-                </div>
-              </article>
-            ))
+            messages.map((message) => {
+              const card = Boolean(message.loopOffer || message.loopCheck || message.proactiveWhy)
+              return (
+                <article
+                  key={message.id}
+                  className={card ? 'chat-sheet-v2__turn chat-sheet-v2__turn--card' : 'chat-sheet-v2__turn'}
+                  data-role={message.role}
+                >
+                  {card ? (
+                    <LoopOutreachNote
+                      body={message.content}
+                      messageId={message.id}
+                      loopOffer={message.loopOffer}
+                      loopCheck={message.loopCheck}
+                      proactiveWhy={message.proactiveWhy}
+                    />
+                  ) : (
+                    <>
+                      <p className="chat-sheet-v2__speaker">
+                        {message.role === 'user' ? labels.userName : companionName}
+                      </p>
+                      <div className="chat-sheet-v2__bubble">
+                        <p className="chat-sheet-v2__message">{message.content}</p>
+                        {message.memoryTraceLabel ? (
+                          <p className="chat-sheet-v2__memory-trace">{message.memoryTraceLabel}</p>
+                        ) : null}
+                      </div>
+                    </>
+                  )}
+                </article>
+              )
+            })
           )}
         </div>
 

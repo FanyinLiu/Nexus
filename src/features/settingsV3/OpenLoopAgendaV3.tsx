@@ -27,7 +27,7 @@ import {
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 
-type Patch = Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>
+type Patch = Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'pinned' | 'userEdited' | 'importance'>>
 
 function visibleAgenda(memories: readonly MemoryItem[], nowMs: number): ProactiveAgendaState {
   return projectAgenda({

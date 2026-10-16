@@ -30,9 +30,16 @@ import {
 } from '../features/memory/dailyConsolidation.ts'
 import type { Translator } from '../types/i18n.ts'
 import { getMemoryReconcileRevision } from './chat/memoryReconcile.ts'
+import { appNowMs, resumeGraceMs as resolveResumeGraceMs } from '../lib/appClock.ts'
 import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { appendMemoryOpLog } from '../lib/storage/memoryOpLog.ts'
+import { saveMemoryRunSnapshot } from '../lib/storage/memoryRunSnapshot.ts'
+import { applyBookedLoopAction, applyLoopCardAction, type LoopBookedAction, type LoopCardAction } from '../features/memory/loopCardActions.ts'
+import { bookClearPlanReminders, buildLoopOutreach, loopReminderDraft } from '../features/memory/loopOutreach.ts'
+import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
+import type { ChatMessage } from '../types/chat.ts'
+import type { ReminderTaskDraftInput } from '../features/reminders/schedule.ts'
 import { loadMessageFollowUps, settleMessageFollowUp } from '../lib/storage/messageFollowUps.ts'
 import { loadProactiveAgenda, saveProactiveAgenda } from '../lib/storage/proactiveAgenda.ts'
 import type { AppSettings, DailyMemoryStore, FocusState, MemoryItem } from '../types'
@@ -43,6 +50,27 @@ type Notice = {
   chatContent: string
   bubbleContent?: string
   dedupeKey?: string
+  loopOffer?: NonNullable<ChatMessage['loopOffer']>
+  loopCheck?: NonNullable<ChatMessage['loopCheck']>
+  proactiveWhy?: NonNullable<ChatMessage['proactiveWhy']>
+}
+
+type LoopOfferDetail = {
+  memoryId?: string
+  messageId?: string
+  nightBeforeAt?: string
+}
+
+type LoopCheckDetail = {
+  memoryId?: string
+  action?: LoopCardAction
+  quote?: string
+}
+
+type LoopBookedDetail = {
+  memoryId?: string
+  action?: LoopBookedAction
+  quote?: string
 }
 
 export function useProactiveAgenda(options: {
@@ -58,6 +86,9 @@ export function useProactiveAgenda(options: {
   pushCompanionNotice: (payload: Notice) => Promise<void>
   t: Translator
   onLog: (title: string, detail: string) => void
+  addReminderTask?: (input: ReminderTaskDraftInput) => { id: string } | null
+  removeReminderTask?: (id: string) => { id: string } | null
+  setMessages?: (updater: (current: ChatMessage[]) => ChatMessage[]) => void
 }) {
   const optionsRef = useRef(options)
   // Readers are timers and callbacks, which run after commit. The write stays
@@ -92,7 +123,7 @@ export function useProactiveAgenda(options: {
     if (!settings) return
     const busy = current.busyRef?.current === true
     const decision = decideDailyConsolidation({
-      nowMs: Date.now(),
+      nowMs: appNowMs(),
       lastRunAtMs: Date.parse(loadProactiveAgenda().lastConsolidationAt ?? ''),
       focusState: current.focusStateRef.current,
       idleSeconds: current.idleSecondsRef.current,
@@ -140,11 +171,16 @@ export function useProactiveAgenda(options: {
         }
       }
       const sinceMs = Date.parse(loadProactiveAgenda().lastConsolidationAt ?? '')
+      const nowMs = appNowMs()
+      const runId = `memory-run-${nowMs}`
+      saveMemoryRunSnapshot(runId, new Date(nowMs).toISOString(), current.memoriesRef.current)
       const result = await consolidateDailyMemory({
         memories: current.memoriesRef.current,
         diaryEntries: diary,
         sinceMs: Number.isFinite(sinceMs) ? sinceMs : null,
         complete,
+        runId,
+        memoryPaused: current.settingsRef.current?.memoryPaused === true,
       })
       if (revision !== getMemoryReconcileRevision() || current.busyRef?.current) {
         current.onLog('Daily consolidation skipped', 'chat moved on')
@@ -156,7 +192,6 @@ export function useProactiveAgenda(options: {
       }
       const persisted = result.ops.filter((op) => op.op !== 'NOOP')
       if (persisted.length) appendMemoryOpLog(persisted)
-      const nowMs = Date.now()
       const synced = syncProactiveAgenda(result.memories, nowMs)
       saveProactiveAgenda({ ...synced, lastConsolidationAt: new Date(nowMs).toISOString() })
       launchRef.current = false
@@ -174,10 +209,19 @@ export function useProactiveAgenda(options: {
     if (!current.enabled) return
     const settings = current.settingsRef.current
     if (!settings?.proactiveAgendaEnabled || settings.memoryPaused) return
-    if (current.busyRef?.current) return
     try {
+      const nowMs = appNowMs()
+      const booked = bookClearPlanReminders(
+        current.memoriesRef.current,
+        nowMs,
+        (draft) => current.addReminderTask?.(draft) ?? null,
+      )
+      if (booked !== current.memoriesRef.current) {
+        current.memoriesRef.current = booked
+        current.setMemories(booked)
+      }
+      if (current.busyRef?.current) return
       await refreshFullscreen()
-      const nowMs = Date.now()
       const state = syncProactiveAgenda(current.memoriesRef.current, nowMs)
       const etiquette = evaluateProactiveEtiquette({
         nowMs,
@@ -186,32 +230,59 @@ export function useProactiveAgenda(options: {
         quietStart: settings.proactiveQuietHoursStart,
         quietEnd: settings.proactiveQuietHoursEnd,
         firedAt: state.firedAt,
+        dismissedAt: state.dismissedAt,
         userTyping: isUserTyping(nowMs),
         fullscreen: fullscreenRef.current,
-        focusState: 'active',
+        focusState: current.focusStateRef.current,
         channel: 'return',
         resumedAtMs: resumedAtRef.current,
+        resumeGraceMs: resolveResumeGraceMs(PROACTIVE_RESUME_GRACE_MS),
       })
       if (!etiquette.allow) return
       const item = selectAgendaItem(state.items, nowMs, 'return')
       if (!item) return
-      const text = item.kind === 'message_follow_up'
-        ? current.t('proactive.bubble.follow_up', { summary: item.summary })
-        : current.t('proactive.bubble.loop', { summary: item.summary })
+      const memory = item.kind === 'open_loop'
+        ? current.memoriesRef.current.find((row) => row.id === item.sourceId)
+        : undefined
+      const outreach: LoopOutreach | null = memory ? buildLoopOutreach(memory, nowMs, current.t) : null
+      const text = outreach?.text
+        ?? (item.kind === 'message_follow_up'
+          ? current.t('proactive.bubble.follow_up', { summary: item.summary })
+          : current.t('proactive.bubble.loop', { summary: item.summary }))
       // Claim the slot before the bubble. The in-memory notice dedupe does not
       // survive a restart or update, so a crash after the bubble would send it again.
       saveProactiveAgenda(markAgendaFired(state, item.id, nowMs))
       if (item.kind === 'message_follow_up') settleMessageFollowUp(item.sourceId, nowMs)
       if (item.kind === 'open_loop') {
-        const next = recordLoopSurfaced(current.memoriesRef.current, item.sourceId, new Date(nowMs).toISOString())
+        const next = recordLoopSurfaced(
+          current.memoriesRef.current,
+          item.sourceId,
+          new Date(nowMs).toISOString(),
+          outreach?.phase,
+        )
         current.memoriesRef.current = next
         current.setMemories(next)
       }
       await current.pushCompanionNotice({
         chatContent: text,
         bubbleContent: text,
-        dedupeKey: `agenda:${item.id}:${localDayKey(nowMs)}`,
+        dedupeKey: `agenda:${item.id}:${outreach?.phase ?? 'note'}:${localDayKey(nowMs)}`,
+        ...(outreach?.why ? { proactiveWhy: outreach.why } : {}),
+        ...(outreach?.offer ? {
+          loopOffer: {
+            ...outreach.offer,
+            status: outreach.mode === 'confirm' ? 'booked' as const : 'pending' as const,
+          },
+        } : {}),
+        ...(outreach?.check ? { loopCheck: { memoryId: outreach.check.memoryId, status: 'pending' as const } } : {}),
       })
+      const hidden = typeof document !== 'undefined' && (document.hidden || !document.hasFocus())
+      if (hidden && settings.proactiveAwayNotificationsEnabled && outreach) {
+        await window.desktopPet?.showProactiveNotification?.({
+          title: current.t('proactive.loop.notify_title'),
+          body: text,
+        })
+      }
     } catch (error) {
       current.onLog('Proactive agenda skipped', getRedactedLogErrorMessage(error))
     }
@@ -222,8 +293,8 @@ export function useProactiveAgenda(options: {
     const previous = previousFocusRef.current
     previousFocusRef.current = options.focusState
     if (previous !== 'active' && options.focusState === 'active') {
-      resumedAtRef.current = Date.now()
-      const timer = window.setTimeout(() => { void deliverReturn() }, PROACTIVE_RESUME_GRACE_MS)
+      resumedAtRef.current = appNowMs()
+      const timer = window.setTimeout(() => { void deliverReturn() }, resolveResumeGraceMs(PROACTIVE_RESUME_GRACE_MS))
       return () => window.clearTimeout(timer)
     }
     return undefined
@@ -231,11 +302,14 @@ export function useProactiveAgenda(options: {
 
   useEffect(() => {
     if (!options.enabled) return
-    const tick = () => { void runConsolidation(launchRef.current) }
+    const tick = () => {
+      void runConsolidation(launchRef.current)
+      if (optionsRef.current.focusStateRef.current === 'active') void deliverReturn()
+    }
     tick()
     const timer = window.setInterval(tick, TICK_MS)
     return () => window.clearInterval(timer)
-  }, [options.enabled, options.focusState, runConsolidation])
+  }, [deliverReturn, options.enabled, options.focusState, runConsolidation])
 
   const consumeNextTurn = useCallback((): string => {
     try {
@@ -244,7 +318,7 @@ export function useProactiveAgenda(options: {
       if (!settings?.proactiveAgendaEnabled) {
         return ''
       }
-      const nowMs = Date.now()
+      const nowMs = appNowMs()
       const state = syncProactiveAgenda(current.memoriesRef.current, nowMs)
       const items = settings.memoryPaused
         ? state.items.filter((item) => item.kind !== 'open_loop')
@@ -256,6 +330,7 @@ export function useProactiveAgenda(options: {
         quietStart: settings.proactiveQuietHoursStart,
         quietEnd: settings.proactiveQuietHoursEnd,
         firedAt: state.firedAt,
+        dismissedAt: state.dismissedAt,
         userTyping: false,
         fullscreen: fullscreenRef.current,
         focusState: 'active',
@@ -264,18 +339,161 @@ export function useProactiveAgenda(options: {
       if (!etiquette.allow) return ''
       const item = selectAgendaItem(items, nowMs, 'next_turn')
       if (!item) return ''
+      const memory = item.kind === 'open_loop'
+        ? current.memoriesRef.current.find((row) => row.id === item.sourceId)
+        : undefined
+      const outreach = memory ? buildLoopOutreach(memory, nowMs, current.t) : null
       saveProactiveAgenda(markAgendaFired({ ...state, items: state.items }, item.id, nowMs))
       if (item.kind === 'message_follow_up') settleMessageFollowUp(item.sourceId, nowMs)
       if (item.kind === 'open_loop') {
-        const next = recordLoopSurfaced(current.memoriesRef.current, item.sourceId, new Date(nowMs).toISOString())
+        const next = recordLoopSurfaced(
+          current.memoriesRef.current,
+          item.sourceId,
+          new Date(nowMs).toISOString(),
+          outreach?.phase,
+        )
         current.memoriesRef.current = next
         current.setMemories(next)
+      }
+      if (outreach?.mode === 'confirm') {
+        return `The user already has this reminder set. If it fits this turn, confirm it in one sentence: "${outreach.text}" Do not ask whether to remind them, and do not assert that they forgot.`
+      }
+      if (outreach) {
+        return `The user has an unfinished commitment. If it fits this turn, ask once, as a question, and do not assert that they forgot: "${outreach.text}" If they say it is done, or not to remind them, accept that and drop it.`
       }
       return buildAgendaPrompt(item, loadMessageFollowUps())
     } catch {
       return ''
     }
   }, [])
+
+  useEffect(() => {
+    const onFocus = (event: Event) => {
+      const next = (event as CustomEvent<string>).detail
+      if (next !== 'active' && next !== 'away' && next !== 'locked' && next !== 'idle') return
+      const previous = previousFocusRef.current
+      previousFocusRef.current = next
+      optionsRef.current.focusStateRef.current = next
+      if (previous !== 'active' && next === 'active') {
+        resumedAtRef.current = appNowMs()
+        window.setTimeout(() => { void deliverReturn() }, resolveResumeGraceMs(PROACTIVE_RESUME_GRACE_MS))
+      }
+    }
+    const onAccept = (event: Event) => {
+      const detail = (event as CustomEvent<LoopOfferDetail>).detail
+      if (!detail?.memoryId) return
+      const current = optionsRef.current
+      const memory = current.memoriesRef.current.find((row) => row.id === detail.memoryId)
+      if (!memory) return
+      const draft = loopReminderDraft(memory, appNowMs())
+      const created = draft ? current.addReminderTask?.(draft) : null
+      if (created?.id) {
+        const next = current.memoriesRef.current.map((row) => (
+          row.id === memory.id ? { ...row, loopReminderTaskId: created.id, updatedAt: new Date(appNowMs()).toISOString() } : row
+        ))
+        current.memoriesRef.current = next
+        current.setMemories(next)
+      }
+      current.setMessages?.((messages) => messages.map((message) => {
+        const offer = message.loopOffer
+        if (!offer || offer.memoryId !== detail.memoryId) return message
+        return {
+          ...message,
+          loopOffer: {
+            memoryId: offer.memoryId,
+            title: offer.title,
+            nightBeforeAt: offer.nightBeforeAt,
+            status: 'accepted' as const,
+          },
+        }
+      }))
+    }
+    const onDecline = (event: Event) => {
+      const detail = (event as CustomEvent<LoopOfferDetail>).detail
+      if (!detail?.memoryId) return
+      optionsRef.current.setMessages?.((messages) => messages.map((message) => {
+        const offer = message.loopOffer
+        if (!offer || offer.memoryId !== detail.memoryId) return message
+        return {
+          ...message,
+          loopOffer: {
+            memoryId: offer.memoryId,
+            title: offer.title,
+            nightBeforeAt: offer.nightBeforeAt,
+            status: 'declined' as const,
+          },
+        }
+      }))
+    }
+    const onBooked = (event: Event) => {
+      const detail = (event as CustomEvent<LoopBookedDetail>).detail
+      if (!detail?.memoryId || (detail.action !== 'cancel' && detail.action !== 'reschedule')) return
+      const current = optionsRef.current
+      const result = applyBookedLoopAction(
+        current.memoriesRef.current,
+        detail.memoryId,
+        detail.action,
+        new Date(appNowMs()).toISOString(),
+        detail.quote ?? '',
+      )
+      if (!result.op) return
+      if (result.reminderTaskId) current.removeReminderTask?.(result.reminderTaskId)
+      current.memoriesRef.current = result.memories
+      current.setMemories(result.memories)
+      appendMemoryOpLog([result.op])
+      const status = detail.action === 'cancel' ? 'cancelled' as const : 'rescheduled' as const
+      current.setMessages?.((messages) => messages.map((message) => {
+        const offer = message.loopOffer
+        if (!offer || offer.memoryId !== detail.memoryId) return message
+        return {
+          ...message,
+          loopOffer: {
+            memoryId: offer.memoryId,
+            title: offer.title,
+            nightBeforeAt: offer.nightBeforeAt,
+            status,
+          },
+        }
+      }))
+    }
+    const onCheck = (event: Event) => {
+      const detail = (event as CustomEvent<LoopCheckDetail>).detail
+      if (!detail?.memoryId || !detail.action) return
+      const current = optionsRef.current
+      const result = applyLoopCardAction(
+        current.memoriesRef.current,
+        detail.memoryId,
+        detail.action,
+        new Date(appNowMs()).toISOString(),
+        detail.quote ?? '',
+      )
+      if (!result.op) return
+      current.memoriesRef.current = result.memories
+      current.setMemories(result.memories)
+      appendMemoryOpLog([result.op])
+      const status = detail.action === 'done' ? 'done' as const : detail.action === 'later' ? 'later' as const : 'moved' as const
+      current.setMessages?.((messages) => messages.map((message) => {
+        const check = message.loopCheck
+        if (!check || check.memoryId !== detail.memoryId || check.status !== 'pending') return message
+        return {
+          ...message,
+          loopCheck: { memoryId: check.memoryId, status },
+        }
+      }))
+    }
+    window.addEventListener('nexus:focus-state', onFocus)
+    window.addEventListener('nexus:accept-loop-offer', onAccept)
+    window.addEventListener('nexus:decline-loop-offer', onDecline)
+    window.addEventListener('nexus:loop-check', onCheck)
+    window.addEventListener('nexus:loop-booked', onBooked)
+    return () => {
+      window.removeEventListener('nexus:focus-state', onFocus)
+      window.removeEventListener('nexus:accept-loop-offer', onAccept)
+      window.removeEventListener('nexus:decline-loop-offer', onDecline)
+      window.removeEventListener('nexus:loop-check', onCheck)
+      window.removeEventListener('nexus:loop-booked', onBooked)
+    }
+  }, [deliverReturn])
 
   return { consumeNextTurn }
 }

@@ -1,0 +1,206 @@
+/*
+ * SOUL and 记忆 summary cards.
+ * Color, radius, and type come from the companion theme tokens
+ * (--nx-poster-soul, --nx-poster-memory, --nx-poster-ink, --nx-card-radius).
+ * This file stays out of the shared settings rule budget, which is already full.
+ */
+
+.memory-portrait {
+  --memory-portrait-soul: var(--nx-poster-soul);
+  --memory-portrait-memory: var(--nx-poster-memory);
+  --memory-portrait-on: var(--nx-poster-ink);
+  display: grid;
+  gap: var(--nx-space-stack, 12px);
+  font-family: var(--nx-font-family, "PingFang SC", system-ui, "Noto Sans CJK SC", "Noto Sans CJK", "Microsoft YaHei", "Noto Sans", "WenQuanYi Micro Hei", sans-serif);
+}
+
+.memory-portrait__privacy {
+  margin: 0;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.memory-portrait__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.memory-portrait__card.nx-companion-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 148px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+  border-radius: var(--nx-card-radius, 18px);
+  color: var(--memory-portrait-on);
+  box-shadow: var(--nx-card-shadow, none);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.memory-portrait__card--soul { background: var(--memory-portrait-soul); }
+.memory-portrait__card--memory { background: var(--memory-portrait-memory); }
+
+.memory-portrait__kicker,
+.memory-portrait__summary {
+  margin: 0;
+}
+
+.memory-portrait__kicker {
+  color: var(--nx-poster-ink);
+  font-size: var(--nx-type-meta, 13px);
+  font-weight: var(--nx-font-weight, 700);
+  letter-spacing: 0.04em;
+}
+
+.memory-portrait__summary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--nx-poster-ink);
+  font-size: var(--nx-type-body, 13px);
+  line-height: 1.45;
+}
+
+.memory-portrait__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 12px;
+  opacity: 0.92;
+}
+
+.memory-portrait__meta > :last-child {
+  margin-inline-start: auto;
+}
+
+.memory-portrait__notes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-portrait__notes li,
+.memory-portrait__line {
+  margin: 0;
+  color: var(--sv3-ink, var(--settings-v2-ink));
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.memory-portrait__tag {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  background: color-mix(in srgb, var(--sv3-line, var(--settings-v2-line)) 70%, transparent);
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
+.memory-portrait__sheet {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  padding: 12px;
+  background: color-mix(in srgb, var(--sv3-ink, var(--settings-v2-ink)) 28%, transparent);
+}
+
+.memory-portrait__sheet-card {
+  display: grid;
+  gap: 12px;
+  max-height: min(78vh, 640px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--nx-radius-card, 18px);
+  background: var(--sv3-surface, var(--settings-v2-surface));
+  color: var(--sv3-ink, var(--settings-v2-ink));
+}
+
+.memory-portrait__sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.memory-portrait__sheet-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.memory-portrait__label {
+  margin: 4px 0 0;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.memory-portrait__row {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--sv3-line, var(--settings-v2-line)) 70%, transparent);
+}
+
+.memory-portrait__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-portrait__actions button,
+.memory-portrait__sheet-head button,
+.memory-portrait__save {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--sv3-line, var(--settings-v2-line));
+  border-radius: var(--nx-radius-control, 999px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.memory-portrait__editor {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--sv3-line, var(--settings-v2-line));
+  border-radius: var(--nx-radius-control, 12px);
+  background: var(--sv3-field, var(--sv3-surface, var(--settings-v2-surface)));
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.memory-portrait__change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.memory-portrait__change p {
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
