@@ -186,7 +186,7 @@ export const zhTWSettingsMemory = {
   'settings.memory.long_term.recall_diary': '日記召回數',
   'settings.memory.long_term.recall_semantic': '語意命中數',
   'settings.memory.long_term.diary_retention': '每日日誌保留天數',
-  'settings.memory.long_term.archive_note': '記憶匯入會取代目前長期記憶與每日日誌；手動編輯可以直接改單條長期記憶內容。',
+  'settings.memory.long_term.archive_note': '刪除所有長期記憶和日記，不能撤銷',
   'settings.memory.long_term.import_title': '匯入記憶',
   'settings.memory.long_term.import_hint': '會取代現有的長期記憶和日記',
   'settings.memory.long_term.exporting': '匯出中...',

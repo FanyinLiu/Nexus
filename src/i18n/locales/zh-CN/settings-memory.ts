@@ -184,7 +184,7 @@ export const zhCNSettingsMemory = {
   'settings.memory.long_term.recall_diary': '日记召回数',
   'settings.memory.long_term.recall_semantic': '语义命中数',
   'settings.memory.long_term.diary_retention': '每日日志保留天数',
-  'settings.memory.long_term.archive_note': '记忆导入会替换当前长期记忆和每日日志；手动编辑可以直接改单条长期记忆内容。',
+  'settings.memory.long_term.archive_note': '删除所有长期记忆和日记，不能撤销',
   'settings.memory.long_term.import_title': '导入记忆',
   'settings.memory.long_term.import_hint': '会替换现有的长期记忆和日记',
   'settings.memory.long_term.exporting': '导出中...',

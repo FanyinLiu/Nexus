@@ -186,7 +186,7 @@ export const enSettingsMemory = {
   'settings.memory.long_term.recall_diary': 'Diary recall count',
   'settings.memory.long_term.recall_semantic': 'Semantic hit count',
   'settings.memory.long_term.diary_retention': 'Daily log retention (days)',
-  'settings.memory.long_term.archive_note': 'Importing memory replaces current long-term and daily logs. You can also edit individual long-term entries directly.',
+  'settings.memory.long_term.archive_note': 'Deletes all long-term memories and diary entries. Can\'t be undone.',
   'settings.memory.long_term.import_title': 'Import memory',
   'settings.memory.long_term.import_hint': 'Replaces the long-term memory and diary you have now',
   'settings.memory.long_term.exporting': 'Exporting...',

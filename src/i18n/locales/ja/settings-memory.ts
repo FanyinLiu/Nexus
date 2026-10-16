@@ -186,7 +186,7 @@ export const jaSettingsMemory = {
   'settings.memory.long_term.recall_diary': '日記の呼び出し数',
   'settings.memory.long_term.recall_semantic': 'セマンティックヒット数',
   'settings.memory.long_term.diary_retention': '日記の保持期間（日）',
-  'settings.memory.long_term.archive_note': '記憶のインポートは現在の長期記憶と日記を上書きします。個別の長期記憶を直接編集することもできます。',
+  'settings.memory.long_term.archive_note': '長期記憶と日記をすべて削除します。元に戻せません。',
   'settings.memory.long_term.import_title': '記憶を読み込む',
   'settings.memory.long_term.import_hint': '今ある長期記憶と日記を置き換えます',
   'settings.memory.long_term.exporting': 'エクスポート中...',

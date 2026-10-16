@@ -186,7 +186,7 @@ export const koSettingsMemory = {
   'settings.memory.long_term.recall_diary': '일기 호출 수',
   'settings.memory.long_term.recall_semantic': '의미 일치 수',
   'settings.memory.long_term.diary_retention': '일일 로그 보관 (일)',
-  'settings.memory.long_term.archive_note': '기억 가져오기는 현재 장기 기억과 일일 로그를 덮어씁니다. 개별 장기 항목을 직접 편집할 수도 있습니다.',
+  'settings.memory.long_term.archive_note': '장기 기억과 일기를 모두 삭제합니다. 되돌릴 수 없어요.',
   'settings.memory.long_term.import_title': '기억 가져오기',
   'settings.memory.long_term.import_hint': '지금 있는 장기 기억과 일기를 바꿉니다',
   'settings.memory.long_term.exporting': '내보내는 중...',

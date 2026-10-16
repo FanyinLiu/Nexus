@@ -41,6 +41,8 @@ test('memory controls use stable labels and keep the count with its unit', () =>
   assert.equal(zhCNSettingsMemory['settings.memory.long_term.import_title'], '导入记忆')
   assert.equal(zhCNSettingsMemory['settings.memory.long_term.import_hint'], '会替换现有的长期记忆和日记')
   assert.equal(zhCNSettingsMemory['settings.memory.long_term.search_mode'], '怎么找回记忆')
+  assert.equal(zhCNSettingsMemory['settings.memory.long_term.archive_note'], '删除所有长期记忆和日记，不能撤销')
+  assert.equal(enSettingsMemory['settings.memory.long_term.archive_note'], 'Deletes all long-term memories and diary entries. Can\'t be undone.')
   assert.equal(zhCNCore['memory_search.hybrid.hint'], '自动（推荐）')
 
   for (const locale of locales) {
@@ -64,6 +66,9 @@ test('memory controls use stable labels and keep the count with its unit', () =>
     assert.equal(importHint.endsWith('.') || importHint.endsWith('。'), false)
     assert.equal(importTitle.endsWith('.') || importTitle.endsWith('。'), false)
     assert.notEqual(importTitle, locale.memory['settings.memory.long_term.archive_note'])
+    assert.equal(/导入会替换|匯入會取代|Importing memory replaces|インポートは|가져오기는/.test(
+      locale.memory['settings.memory.long_term.archive_note'],
+    ), false)
     assert.equal(locale.core['memory_search.hybrid.hint'].endsWith('.') || locale.core['memory_search.hybrid.hint'].endsWith('。'), false)
   }
 })
