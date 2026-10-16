@@ -46,7 +46,7 @@ export const jaSettingsShell = {
   'settings.section.voice': '音声',
   'settings.section.memory': '記憶',
   'settings.section.history': '履歴',
-  'settings.section_desc.console': 'モデル、プレビュー URL、実行状態を確認します。',
+  'settings.section_desc.console': 'それぞれ問題ないか見てみる',
   'settings.section_desc.model': 'テキストモデル、API プロバイダー、キー、ローカル接続先を選びます。',
   'settings.section_desc.chat': 'コンパニオン名、あなたの呼び名、性格、ミニマルなアバターを調整します。',
   'settings.section_desc.window': 'デスクトップ常駐と操作を制御します。',

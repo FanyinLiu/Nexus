@@ -190,7 +190,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
       <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />
       <LocalVoiceModelsPanel uiLanguage={uiLanguage} />
 
-      <SettingsV3Section title={ti('settings.voice.loop_title')} description={ti('settings.voice.loop_hint')}>
+      <SettingsV3Section title={ti('settings.voice.loop_title')}>
         <SettingsV3Row
           icon="mic"
           label={ti('settings.voice.enable_input')}
@@ -220,12 +220,12 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
       </SettingsV3Section>
 
       <SettingsV3Notice
-        tone={audioSmokeStatus ? (audioSmokeStatus.ok ? 'success' : 'error') : 'info'}
-        title={smokeMessage ?? tiParam('settings.voice.test_message', { companionName: draft.companionName })}
+        tone={audioSmokeStatus && !audioSmokeStatus.ok ? 'error' : 'success'}
+        title={audioSmokeStatus && !audioSmokeStatus.ok
+          ? (smokeMessage || ti('settings.voice.audio_smoke_error'))
+          : ti('settings.voice.status_all_clear')}
         announce={Boolean(audioSmokeStatus)}
-      >
-        {!audioSmokeStatus ? ti('settings.voice.loop_hint') : undefined}
-      </SettingsV3Notice>
+      />
       {saveError ? <SettingsV3Notice tone="error" title={ti('settings.save_failed_fallback')} /> : null}
       <SettingsV3Toolbar>
         <button

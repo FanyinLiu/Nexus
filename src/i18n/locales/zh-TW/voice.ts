@@ -186,7 +186,7 @@ export const zhTWVoice = {
   'voice.mic.no_audio_track': '已經拿到錄音串流，但沒有發現可用的音訊軌道。',
   'voice.mic.open_failed_generic': '麥克風沒能打開，看看系統權限、裝置佔用與輸入裝置狀態？',
   'voice.mic.permission_denied': '麥克風權限沒拿到，去系統和瀏覽器裡允許 Nexus 使用麥克風？',
-  'voice.mic.not_found': '沒偵測到可用的麥克風，先連接或啟用一下錄音裝置？',
+  'voice.mic.not_found': '沒找到麥克風，連上或打開錄音裝置後再試',
   'voice.mic.busy': '麥克風好像被其他應用佔著，或目前裝置暫時讀不到。',
   'voice.mic.aborted': '麥克風測試被中斷了，再試一次？',
   'voice.mic.local_readiness_failed_with_detail': '本地語音還沒準備好：{detail}',

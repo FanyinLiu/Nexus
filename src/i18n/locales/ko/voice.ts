@@ -186,7 +186,7 @@ export const koVoice = {
   'voice.mic.no_audio_track': '녹음 스트림은 받았지만 사용 가능한 오디오 트랙을 찾지 못했습니다.',
   'voice.mic.open_failed_generic': '마이크가 안 열려요 — 시스템 권한, 장치 점유, 입력 장치 상태를 한번 봐주세요.',
   'voice.mic.permission_denied': '마이크 권한을 받지 못했어요. 시스템과 브라우저 권한에서 Nexus의 마이크 사용을 허용해 주세요.',
-  'voice.mic.not_found': '사용 가능한 마이크를 찾지 못했어요. 먼저 녹음 장치를 연결하거나 활성화해 주세요.',
+  'voice.mic.not_found': '마이크를 못 찾았어요. 연결하거나 녹음 장치를 켠 다음 다시 해 보세요.',
   'voice.mic.busy': '마이크가 다른 앱에 의해 점유됐거나 현재 장치를 읽을 수 없어요.',
   'voice.mic.aborted': '마이크 테스트가 중단됐어요 — 다시 해볼래요?',
   'voice.mic.local_readiness_failed_with_detail': '로컬 음성이 아직 준비되지 않았어요: {detail}',

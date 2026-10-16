@@ -44,7 +44,7 @@ export const zhCNSettingsShell = {
   'settings.section.voice': '语音',
   'settings.section.memory': '记忆',
   'settings.section.history': '聊天记录',
-  'settings.section_desc.console': '检查模型、预览地址和运行状态。',
+  'settings.section_desc.console': '看看各项是否正常',
   'settings.section_desc.model': '选择文本模型、API 服务商、密钥和本地地址。',
   'settings.section_desc.chat': '调整伙伴名字、你的称呼、性格与极简头像。',
   'settings.section_desc.window': '控制桌面常驻和交互。',

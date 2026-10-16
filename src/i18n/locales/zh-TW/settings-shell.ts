@@ -46,7 +46,7 @@ export const zhTWSettingsShell = {
   'settings.section.voice': '語音',
   'settings.section.memory': '記憶',
   'settings.section.history': '聊天記錄',
-  'settings.section_desc.console': '檢查模型、預覽地址和執行狀態。',
+  'settings.section_desc.console': '看看各項是否正常',
   'settings.section_desc.model': '選擇文字模型、API 服務商、金鑰和本地地址。',
   'settings.section_desc.chat': '調整夥伴名字、你的稱呼、性格與極簡頭像。',
   'settings.section_desc.window': '控制桌面常駐和互動。',

@@ -184,7 +184,7 @@ export const zhCNVoice = {
   'voice.mic.no_audio_track': '已经拿到录音流，但没有发现可用的音频轨道。',
   'voice.mic.open_failed_generic': '麦克风没能打开，看看系统权限、设备占用和输入设备状态？',
   'voice.mic.permission_denied': '没有拿到麦克风权限，请在系统和浏览器权限里允许 Nexus 使用麦克风。',
-  'voice.mic.not_found': '没有检测到可用麦克风，请先连接或启用录音设备。',
+  'voice.mic.not_found': '没找到麦克风，连上或打开录音设备后再试',
   'voice.mic.busy': '麦克风正在被其他应用独占，或者当前设备暂时无法读取。',
   'voice.mic.aborted': '麦克风测试被中断，请再试一次。',
   'voice.mic.local_readiness_failed_with_detail': '本地语音还没准备好：{detail}',

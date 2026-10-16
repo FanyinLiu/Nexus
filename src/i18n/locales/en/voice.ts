@@ -186,7 +186,7 @@ export const enVoice = {
   'voice.mic.no_audio_track': 'Got a recording stream but no usable audio track.',
   'voice.mic.open_failed_generic': 'Couldn\'t open the microphone — check system permissions, device usage, and input device status?',
   'voice.mic.permission_denied': 'Microphone permission was not granted. Allow Nexus to use the microphone in system and browser settings.',
-  'voice.mic.not_found': 'No usable microphone detected. Connect or enable a recording device first.',
+  'voice.mic.not_found': 'Couldn\'t find a microphone. Plug one in or turn recording on, then try again.',
   'voice.mic.busy': 'The microphone is held by another app, or the current device cannot be read right now.',
   'voice.mic.aborted': 'The microphone test was interrupted — try again?',
   'voice.mic.local_readiness_failed_with_detail': 'Local speech isn\'t ready yet: {detail}',

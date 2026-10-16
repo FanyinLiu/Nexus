@@ -186,7 +186,7 @@ export const jaVoice = {
   'voice.mic.no_audio_track': '録音ストリームは取得できましたが、利用可能な音声トラックが見つかりませんでした。',
   'voice.mic.open_failed_generic': 'マイクが開けなかった…システムの権限やデバイスの占有、入力デバイスの状態を見てみて。',
   'voice.mic.permission_denied': 'マイクの権限が得られなかったみたい。システムとブラウザの設定で Nexus にマイクを許可してみて。',
-  'voice.mic.not_found': '使えるマイクが見つからなかったみたい。録音デバイスを繋ぐか有効にしてみて。',
+  'voice.mic.not_found': 'マイクが見つからなかった。つないで録音をオンにしてから、もう一度試して。',
   'voice.mic.busy': 'マイクが他のアプリに使われてるか、今のデバイスが一時的に読み取れないみたい。',
   'voice.mic.aborted': 'マイクテストが途中で止まっちゃった。もう一度やってみて。',
   'voice.mic.local_readiness_failed_with_detail': 'ローカルの音声認識がまだ準備できていません：{detail}',

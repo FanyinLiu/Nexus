@@ -95,7 +95,7 @@ export function SettingsV3Notice({
       role={tone === 'error' ? 'alert' : announce ? 'status' : undefined}
       aria-atomic={tone === 'error' || announce ? 'true' : undefined}
     >
-      <PetControlIcon name={tone === 'error' ? 'close' : 'tuning'} aria-hidden="true" />
+      <PetControlIcon name={tone === 'error' ? 'close' : tone === 'success' ? 'check' : 'tuning'} aria-hidden="true" />
       <div><strong>{title}</strong>{children ? <span>{children}</span> : null}</div>
     </div>
   )
