@@ -48,6 +48,13 @@ export interface ChatSheetV2Props {
   onCancel: () => void
   onClose: () => void
   className?: string
+  replyMode?: {
+    hint: string
+    sendLabel: string
+    cancelLabel: string
+    onCancel: () => void
+  } | null
+  focusComposerRequestId?: number
 }
 
 export function ChatSheetV2({
@@ -62,8 +69,15 @@ export function ChatSheetV2({
   onCancel,
   onClose,
   className,
+  replyMode = null,
+  focusComposerRequestId = 0,
 }: ChatSheetV2Props) {
   const [composerExpanded, setComposerExpanded] = useState(() => messages.length === 0)
+  const [appliedFocusRequestId, setAppliedFocusRequestId] = useState(0)
+  if (focusComposerRequestId !== appliedFocusRequestId) {
+    setAppliedFocusRequestId(focusComposerRequestId)
+    if (focusComposerRequestId !== 0) setComposerExpanded(true)
+  }
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
   const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user')
   const latestAssistantKey = getChatAssistantMessageKey(latestAssistantMessage)
@@ -116,6 +130,17 @@ export function ChatSheetV2({
     if (initiallyEmptyRef.current) inputRef.current?.focus()
     else backButtonRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (!focusComposerRequestId) return
+    scheduleFrame(() => {
+      const input = inputRef.current
+      if (!input) return
+      input.focus()
+      const cursor = input.value.length
+      input.setSelectionRange(cursor, cursor)
+    })
+  }, [focusComposerRequestId, scheduleFrame])
 
   useEffect(() => {
     if (initialScrollCompleteRef.current) return
@@ -331,6 +356,14 @@ export function ChatSheetV2({
         ) : null}
 
         <div className="chat-sheet-v2__composer-zone">
+          {replyMode ? (
+            <div className="chat-sheet-v2__reply">
+              <span>{replyMode.hint}</span>
+              <button type="button" aria-label={replyMode.cancelLabel} onClick={replyMode.onCancel}>
+                ×
+              </button>
+            </div>
+          ) : null}
           {composerVisible ? (
             <form className="chat-sheet-v2__composer" onSubmit={handleSubmit}>
               <textarea
@@ -357,7 +390,7 @@ export function ChatSheetV2({
                   type="submit"
                   className="chat-sheet-v2__send"
                   disabled={!inputValue.trim()}
-                  aria-label={labels.send}
+                  aria-label={replyMode?.sendLabel ?? labels.send}
                 >
                   <PetControlIcon name="send" />
                 </button>

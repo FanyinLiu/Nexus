@@ -31,7 +31,8 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile.ts'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
 import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement.ts'
-import { isNotificationBridgeEnabled } from './notificationBridgeActivation.ts'
+import { isNotificationBridgeEnabled, shouldPanelArmNotificationBridge } from './notificationBridgeActivation.ts'
+import { shouldAppendNotificationChatLine } from '../../features/notifications/notificationCardSession.ts'
 import {
   buildNotificationHistorySafeNoticeContent,
   buildNotificationMessageChatForwardText,
@@ -232,10 +233,8 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     evaluateTriggersRef.current = contextScheduler.evaluateTriggers
   }, [contextScheduler.evaluateTriggers])
 
-  // Forward desktop messages into the companion chat with the same
-  // busy-aware retry queue the bot bridges use. Burst dedupe: one chat
-  // injection per conversation per window, so ten rapid WeChat pings
-  // become one companion reaction instead of ten LLM turns.
+  // Busy-aware queue for a metadata-only forward. The card list owns the
+  // notice, so shouldAppendNotificationChatLine leaves this idle.
   const notificationChatQueueRef = useRef<BridgeForwardQueue | null>(null)
   const notificationConversationSeenRef = useRef<Map<string, number>>(new Map())
   const chatNotifyRef = useRef(chat)
@@ -278,6 +277,9 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
       if (announcement) {
         void chat.pushCompanionNotice({
           ...announcement,
+          // The card already shows this arrival. Speech and the pet bubble
+          // can still mention it; the transcript does not get another line.
+          chatContent: '',
           autoHideMs: 12_000,
         })
       }
@@ -294,11 +296,13 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
         recordMessageFollowUp(buildNotificationMessageFollowUpInput(message))
       }
 
-      // Into the conversation (the actual "companion knows about all your
-      // messages" behaviour). Forward only source/sender metadata. The preview
-      // toggle is for local UI/TTS, not for sending third-party message bodies
-      // into the chat model or future prompt history.
-      if (currentSettings.autonomyNotificationMessagesToChatEnabled && chat.sendMessage) {
+      // Metadata-only text stays available, but each arrival already has a
+      // card. Copying it into the transcript would repeat the same notice.
+      if (
+        shouldAppendNotificationChatLine()
+        && currentSettings.autonomyNotificationMessagesToChatEnabled
+        && chat.sendMessage
+      ) {
         const conversationKey = getNotificationConversationKey(message)
         const now = Date.now()
         const seen = notificationConversationSeenRef.current
@@ -323,6 +327,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
 
     void chat.pushCompanionNotice({
       ...buildNotificationHistorySafeNoticeContent(message, t),
+      chatContent: '',
       autoHideMs: 12_000,
     })
   }, [applyEmotionSignalStable, chat, debugConsole, focusAwareness.focusStateRef, settingsRef, t])
@@ -332,6 +337,18 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     enabled: isNotificationBridgeEnabled(settings),
     runtimeOwner: backgroundRuntimeEnabled,
   })
+
+  const panelArmsNotificationBridge = shouldPanelArmNotificationBridge(
+    backgroundRuntimeEnabled,
+    isNotificationBridgeEnabled(settings),
+  )
+  useEffect(() => {
+    if (!panelArmsNotificationBridge) return
+    void window.desktopPet?.startNotificationBridge?.()
+    return () => {
+      void window.desktopPet?.stopNotificationBridge?.()
+    }
+  }, [panelArmsNotificationBridge])
 
   // Keep the in-app macOS Notification Center watcher in sync with settings.
   // It rides the same master switch as the rest of the notification bridge.

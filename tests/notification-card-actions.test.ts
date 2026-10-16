@@ -23,28 +23,24 @@ function makeMessage(overrides: Partial<NotificationMessage> = {}): Notification
   }
 }
 
-test('notification card exposes the three primary action buttons in a stable order', () => {
+test('notification card menu keeps later and important, and leaves reply on the card', () => {
   const actions = getNotificationCardPrimaryActions(makeMessage())
 
   assert.deepEqual(actions.map((action) => action.id), [
-    'draft_reply',
     'mark_important',
     'snooze_later',
   ])
   assert.deepEqual(actions.map((action) => action.labelKey), [
-    'panel.notification.action.draft_reply',
     'panel.notification.action.mark_important',
     'panel.notification.action.snooze_later',
   ])
+  assert.equal(actions.some((action) => action.id === 'draft_reply'), false)
 })
 
-test('notification card primary actions keep long helper copy out of button labels', () => {
+test('notification card menu actions keep long helper copy out of button labels', () => {
   const actions = getNotificationCardPrimaryActions(makeMessage())
-  const draftAction = actions.find((action) => action.id === 'draft_reply')
   const snoozeAction = actions.find((action) => action.id === 'snooze_later')
 
-  assert.equal(draftAction?.labelKey, 'panel.notification.action.draft_reply')
-  assert.equal(draftAction?.titleKey, 'panel.notification.draft_reply')
   assert.equal(snoozeAction?.labelKey, 'panel.notification.action.snooze_later')
   assert.equal(snoozeAction?.titleKey, 'panel.notification.snooze_30m')
 })
@@ -52,6 +48,6 @@ test('notification card primary actions keep long helper copy out of button labe
 test('notification card important action toggles its label when already important', () => {
   const actions = getNotificationCardPrimaryActions(makeMessage({ isImportant: true }))
 
-  assert.equal(actions[1]?.id, 'mark_important')
-  assert.equal(actions[1]?.labelKey, 'panel.notification.action.unmark_important')
+  assert.equal(actions[0]?.id, 'mark_important')
+  assert.equal(actions[0]?.labelKey, 'panel.notification.action.unmark_important')
 })

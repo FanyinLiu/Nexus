@@ -9,6 +9,7 @@ import {
   clearExpiredNotificationSnoozes,
   commitNotificationMessages,
   prependNotificationMessage,
+  retainNotificationPreview,
   sanitizeNotificationMessageSnapshot,
 } from '../lib/privacy/notificationMessageState.ts'
 import type { NotificationChannel, NotificationMessage } from '../types'
@@ -33,6 +34,7 @@ export function useNotificationBridge({
     return clearExpiredNotificationSnoozes(initialMessages, Date.now())
   })
   const messagesRef = useRef(messages)
+  const livePreviewRef = useRef(new Map<string, { body: string; summary?: string }>())
   const onNotificationRef = useRef(onNotification)
 
   useEffect(() => {
@@ -54,7 +56,11 @@ export function useNotificationBridge({
 
   useEffect(() => onStorageChange(
     AUTONOMY_NOTIFICATIONS_MESSAGES_STORAGE_KEY,
-    (value) => applyMessages(sanitizeNotificationMessageSnapshot(value)),
+    (value) => applyMessages(retainNotificationPreview(
+      sanitizeNotificationMessageSnapshot(value),
+      messagesRef.current,
+      livePreviewRef.current,
+    )),
   ), [applyMessages])
 
   // Clean up expired snoozes so "later" notifications reappear automatically.
@@ -133,12 +139,16 @@ export function useNotificationBridge({
 
   // ── Bridge lifecycle ───────────────────────────────────────────────────────
 
-  // Start/stop the bridge based on settings — re-runs when enabled changes
+  // Start/stop follows the owner. notification:start is panel-only, so this
+  // call is rejected there; the catch keeps that rejection off the console.
+  // The panel window arms the bridge instead.
   useEffect(() => {
     if (!runtimeOwner) return
     if (!enabled) return
 
-    void window.desktopPet?.startNotificationBridge?.()
+    void window.desktopPet?.startNotificationBridge?.().catch(() => {
+      // The panel window arms the bridge; this owner call is panel-only.
+    })
 
     return () => {
       void window.desktopPet?.stopNotificationBridge?.()
@@ -156,6 +166,31 @@ export function useNotificationBridge({
       unsubscribe?.()
     }
   }, [enabled, handleIncomingNotification, runtimeOwner])
+
+  // The panel shows the card, but only the owner writes storage. Remember
+  // the live body so the preview line survives the sanitized snapshot.
+  useEffect(() => {
+    if (runtimeOwner || !enabled) return
+
+    const unsubscribe = window.desktopPet?.subscribeNotifications?.((message) => {
+      const body = message.body?.trim() ?? ''
+      const summary = message.summary?.trim()
+      if (!body && !summary) return
+      const remembered = livePreviewRef.current
+      remembered.set(message.id, { body, summary: summary || undefined })
+      if (remembered.size > 50) {
+        const oldest = remembered.keys().next().value
+        if (oldest) remembered.delete(oldest)
+      }
+      const current = messagesRef.current
+      if (!current.some((item) => item.id === message.id)) return
+      applyMessages(retainNotificationPreview(current, current, remembered))
+    })
+
+    return () => {
+      unsubscribe?.()
+    }
+  }, [applyMessages, enabled, runtimeOwner])
 
   // ── Message helpers ────────────────────────────────────────────────────────
 

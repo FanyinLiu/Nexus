@@ -202,6 +202,118 @@
 
 .nexus-panel-v2__caption svg { width: 18px; height: 18px; }
 
+.nexus-panel-v2__caption--dismissible {
+  cursor: default;
+}
+
+.nexus-panel-v2__caption-dismiss {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--v2-ink);
+  font-size: 16px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.nexus-panel-v2__notices {
+  position: absolute;
+  z-index: 9;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  max-height: min(340px, 52%);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.nexus-panel-v2__notices .panel-notification-summary {
+  margin: 0;
+  border: 1px solid var(--v2-line);
+  border-radius: 14px;
+  color: var(--v2-ink);
+  background: color-mix(in srgb, var(--nx-v2-surface) 94%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--nx-v2-shadow) 76%, transparent);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__title,
+.nexus-panel-v2__notices .panel-notification-summary__item-title,
+.nexus-panel-v2__notices .panel-notification-summary__item-title strong,
+.nexus-panel-v2__notices .panel-notification-summary__item-body {
+  color: var(--v2-ink);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__hint,
+.nexus-panel-v2__notices .panel-notification-summary__empty,
+.nexus-panel-v2__notices .panel-notification-summary__item-title small {
+  color: var(--nx-v2-muted);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__item-title {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__item-title strong,
+.nexus-panel-v2__notices .panel-notification-summary__item-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__avatar {
+  color: var(--nx-v2-on-accent);
+  background: var(--nx-v2-accent);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__tag {
+  color: var(--nx-v2-accent);
+  background: var(--nx-v2-accent-soft);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__menu {
+  color: var(--v2-ink);
+  background: var(--nx-v2-surface);
+  border-color: var(--v2-line);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--nx-v2-shadow) 76%, transparent);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__item {
+  border-color: var(--v2-line);
+  background: color-mix(in srgb, var(--nx-v2-surface-soft) 88%, transparent);
+}
+
+.nexus-panel-v2__notices .ghost-button {
+  min-height: 32px;
+  padding: 4px 8px;
+  color: var(--v2-ink);
+  font-size: 12px;
+  background: color-mix(in srgb, var(--nx-v2-surface) 92%, transparent);
+  border-color: var(--v2-line);
+  box-shadow: none;
+}
+
+.nexus-panel-v2__notices .ghost-button.panel-notification-summary__action--primary {
+  color: var(--nx-v2-on-accent);
+  background: var(--nx-v2-accent);
+  border-color: var(--nx-v2-accent);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__item-actions .ghost-button {
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: 12px;
+}
+
 .nexus-panel-v2__safety-layer {
   position: absolute;
   z-index: 30;

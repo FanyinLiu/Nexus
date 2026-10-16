@@ -5,12 +5,14 @@ import type {
   AppSettings,
   AssistantRuntimeActivity,
   ChatMessage,
+  NotificationMessage,
   PetMood,
   PetTouchZone,
   RuntimeStateSnapshot,
   SpeechLevelSource,
   VoiceState,
 } from '../../types'
+import { captionRepeatsVisibleNotification } from '../notifications/notificationCardSession.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { PetPerformanceCue } from '../pet/types.ts'
@@ -55,6 +57,7 @@ export type CompanionPanelV2Props = {
     error: string | null
     assistantActivity: AssistantRuntimeActivity
     setInput: (value: string) => void
+    setError: (value: string | null) => void
     sendMessage: () => Promise<unknown>
     cancelActiveTurn: () => void
   }
@@ -67,6 +70,16 @@ export type CompanionPanelV2Props = {
   onboardingGuide: ReactNode
   modelSetupOverlayOpen: boolean
   safetyLayer?: ReactNode
+  notificationCards?: ReactNode
+  notificationMessages?: readonly NotificationMessage[]
+  notificationReply?: {
+    hint: string
+    sendLabel: string
+    cancelLabel: string
+    onSend: (text: string) => void
+    onCancel: () => void
+  } | null
+  notificationComposerRequestId?: number
 }
 
 function toChatSheetMessages(
@@ -94,6 +107,10 @@ export function CompanionPanelV2({
   onboardingGuide,
   modelSetupOverlayOpen,
   safetyLayer,
+  notificationCards = null,
+  notificationMessages = [],
+  notificationReply = null,
+  notificationComposerRequestId = 0,
 }: CompanionPanelV2Props) {
   const [utilityOpen, setUtilityOpen] = useState(false)
   const [chatSheetOpen, setChatSheetOpen] = useState(false)
@@ -102,6 +119,11 @@ export function CompanionPanelV2({
   const utilityButtonRef = useRef<HTMLButtonElement>(null)
   const captionButtonRef = useRef<HTMLButtonElement>(null)
   const chatReturnTargetRef = useRef<HTMLElement | null>(null)
+  const [appliedComposerRequestId, setAppliedComposerRequestId] = useState(0)
+  if (notificationComposerRequestId !== appliedComposerRequestId) {
+    setAppliedComposerRequestId(notificationComposerRequestId)
+    if (notificationComposerRequestId !== 0) setChatSheetOpen(true)
+  }
   const utilityMenuRef = useRef<HTMLDivElement>(null)
   const previewPhase = new URLSearchParams(window.location.search).get('uiV2State')
   const phaseOverride = previewPhase === 'idle'
@@ -144,12 +166,16 @@ export function CompanionPanelV2({
   const nextCaption = resolvedCaption ?? (phaseOverride === 'speaking'
     ? ti('panel.status.speaking')
     : undefined)
-  const latestCaption = useReadableCaption(nextCaption, phase, captionPaused)
+  const readableCaption = useReadableCaption(nextCaption, phase, captionPaused)
+  const latestCaption = captionRepeatsVisibleNotification(readableCaption, notificationMessages)
+    ? undefined
+    : readableCaption
   const openChatSheet = (trigger?: HTMLButtonElement | null) => {
     chatReturnTargetRef.current = trigger ?? document.activeElement as HTMLElement | null
     setChatSheetOpen(true)
   }
   const closeChatSheet = () => {
+    notificationReply?.onCancel()
     setChatSheetOpen(false)
     requestAnimationFrame(() => {
       const target = chatReturnTargetRef.current
@@ -158,6 +184,11 @@ export function CompanionPanelV2({
       chatReturnTargetRef.current = null
     })
   }
+
+  useEffect(() => {
+    if (notificationComposerRequestId === 0) return
+    chatReturnTargetRef.current = utilityButtonRef.current
+  }, [notificationComposerRequestId])
 
   useEffect(() => {
     if (!utilityOpen) return undefined
@@ -242,20 +273,39 @@ export function CompanionPanelV2({
         </Suspense>}
       </div>
       {!chatSheetOpen && latestCaption ? (
-        <button
-          ref={captionButtonRef}
-          type="button"
-          className="nexus-panel-v2__caption"
-          onClick={() => openChatSheet(captionButtonRef.current)}
-          onPointerEnter={() => setCaptionPaused(true)}
-          onPointerLeave={() => setCaptionPaused(false)}
-          onFocus={() => setCaptionPaused(true)}
-          onBlur={() => setCaptionPaused(false)}
-          aria-label={ti('ui_v2.chat.open_reply', { reply: latestCaption })}
-        >
-          <span>{latestCaption}</span>
-          <PetControlIcon name="expand" />
-        </button>
+        chat.error ? (
+          <div className="nexus-panel-v2__caption nexus-panel-v2__caption--dismissible" role="status">
+            <span>{chat.error}</span>
+            <button
+              type="button"
+              className="nexus-panel-v2__caption-dismiss"
+              aria-label={ti('common.close')}
+              onClick={() => chat.setError(null)}
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          <button
+            ref={captionButtonRef}
+            type="button"
+            className="nexus-panel-v2__caption"
+            onClick={() => openChatSheet(captionButtonRef.current)}
+            onPointerEnter={() => setCaptionPaused(true)}
+            onPointerLeave={() => setCaptionPaused(false)}
+            onFocus={() => setCaptionPaused(true)}
+            onBlur={() => setCaptionPaused(false)}
+            aria-label={ti('ui_v2.chat.open_reply', { reply: latestCaption })}
+          >
+            <span>{latestCaption}</span>
+            <PetControlIcon name="expand" />
+          </button>
+        )
+      ) : null}
+      {!chatSheetOpen && notificationCards ? (
+        <div className="nexus-panel-v2__notices">
+          {notificationCards}
+        </div>
       ) : null}
     </div>
   )
@@ -335,8 +385,21 @@ export function CompanionPanelV2({
             viewNewMessages: ti('ui_v2.chat.view_new_messages'),
             cancel: ti('panel.voice.cancel_reply'),
           }}
+          replyMode={notificationReply ? {
+            hint: notificationReply.hint,
+            sendLabel: notificationReply.sendLabel,
+            cancelLabel: notificationReply.cancelLabel,
+            onCancel: notificationReply.onCancel,
+          } : null}
+          focusComposerRequestId={notificationComposerRequestId}
           onInputChange={chat.setInput}
-          onSend={() => { void chat.sendMessage() }}
+          onSend={() => {
+            if (notificationReply) {
+              notificationReply.onSend(chat.input)
+              return
+            }
+            void chat.sendMessage()
+          }}
           busy={chat.busy}
           error={chat.error}
           onCancel={chat.cancelActiveTurn}

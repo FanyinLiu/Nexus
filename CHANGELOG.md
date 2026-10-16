@@ -34,6 +34,10 @@ first prerelease stay in
   hardware.
 - Memory: long-term memory uses a v2 record you can reconcile, keeps open
   loops, and shares one proactive agenda for follow-ups.
+- Companion panel: Telegram and Discord messages show as cards on the
+  default panel. Reply and read stay on the card; later and important
+  sit in a small menu. A card shows one preview line when the message
+  still has text. The same arrival is not copied into the chat.
 - Catalog: the October 2026 defaults are in (`gpt-6-sol`, MiniMax
   `MiniMax-M3`, DeepSeek V4.1 Flash on SiliconFlow and NVIDIA, and the other
   current defaults). `MiniMax-M2.7` and `MiniMax-M2.7-highspeed` leave the

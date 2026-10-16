@@ -191,6 +191,42 @@
   white-space: pre-wrap;
 }
 
+.chat-sheet-v2__reply {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 8px;
+  padding: 2px 2px 2px 10px;
+  color: var(--chat-sheet-v2-ink);
+  font-size: 12px;
+  line-height: 1.35;
+  background: color-mix(in srgb, var(--chat-sheet-v2-surface) 82%, var(--chat-sheet-v2-amber));
+  border: 1px solid var(--chat-sheet-v2-line);
+  border-radius: 999px;
+}
+
+.chat-sheet-v2__reply span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chat-sheet-v2__reply button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  color: var(--chat-sheet-v2-ink);
+  font-size: 14px;
+  line-height: 1;
+  background: color-mix(in srgb, var(--chat-sheet-v2-surface) 70%, transparent);
+  border-radius: 50%;
+}
+
 .chat-sheet-v2__composer-zone {
   flex: 0 0 auto;
   padding: 8px 12px 12px;
