@@ -23,7 +23,7 @@ import {
   isModelProgressComplete,
   isModelProgressError,
   mergeModelProgress,
-  shouldShowModelSetupOverlay,
+  shouldRestoreModelSetupAfterGuide,
   type Inventory,
   type ModelEntry,
   type PerModelProgress,
@@ -37,6 +37,10 @@ type Props = {
   settings?: AppSettings
   onOpenOnboardingGuide?: () => void
   onTestTextConnection?: (settings: AppSettings) => Promise<ConnectionResult>
+}
+
+function readModelSetupDismissed(): boolean {
+  try { return sessionStorage.getItem(MODEL_SETUP_DISMISSED_STORAGE_KEY) === '1' } catch { return false }
 }
 
 function formatBytes(bytes: number): string {
@@ -64,9 +68,17 @@ export function ModelSetupOverlay({
     result: ConnectionResult
   } | null>(null)
   const [connectionFreshnessTick, setConnectionFreshnessTick] = useState(0)
-  const [dismissed, setDismissed] = useState(() => {
-    try { return sessionStorage.getItem(MODEL_SETUP_DISMISSED_STORAGE_KEY) === '1' } catch { return false }
-  })
+  const [dismissed, setDismissed] = useState(readModelSetupDismissed)
+  const [coverSeen, setCoverSeen] = useState(suppressed)
+  if (coverSeen !== suppressed) {
+    setCoverSeen(suppressed)
+    // A covering guide is not "maybe later". Re-read the dismiss flag when
+    // the cover lifts so the dialog comes back unless the user dismissed it.
+    if (!suppressed) {
+      const stored = readModelSetupDismissed()
+      if (dismissed !== stored) setDismissed(stored)
+    }
+  }
   const [networkProbe, setNetworkProbe] = useState<{ huggingFaceReachable: boolean } | null>(null)
   const [pythonStatus, setPythonStatus] = useState<{
     pythonAvailable: boolean
@@ -306,7 +318,15 @@ export function ModelSetupOverlay({
     setDismissed(true)
   }, [])
 
-  const overlayVisible = shouldShowModelSetupOverlay({ suppressed, dismissed, inventoryReady: inventory?.ready })
+  const openModelGuide = useCallback(() => {
+    onOpenOnboardingGuide?.()
+  }, [onOpenOnboardingGuide])
+
+  const overlayVisible = shouldRestoreModelSetupAfterGuide({
+    dismissed,
+    inventoryReady: inventory?.ready,
+    covered: suppressed,
+  })
   useModalFocusTrap(dialogRef, overlayVisible)
 
   useLayoutEffect(() => {
@@ -561,7 +581,7 @@ export function ModelSetupOverlay({
                   <button
                     type="button"
                     className="model-setup__inline-btn model-setup__inline-btn--secondary"
-                    onClick={onOpenOnboardingGuide}
+                    onClick={openModelGuide}
                     disabled={textConnectionBusy}
                   >
                     {t('model_setup.text_check_open_guide')}

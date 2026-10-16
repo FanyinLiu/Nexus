@@ -184,13 +184,6 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
       </SettingsV3Disclosure>
 
       <SettingsV3Disclosure title={ti('settings.chat.character_voice')} description={ti('settings.chat.character_voice_hint')}>
-        <SettingsV3Field label={ti('settings.chat.voice_id')} hint={ti('settings.chat.voice_id_placeholder')}>
-          <input
-            value={draft.speechOutputVoice}
-            placeholder={ti('settings.chat.voice_id_placeholder')}
-            onChange={(event) => setDraft((prev) => ({ ...prev, speechOutputVoice: event.target.value }))}
-          />
-        </SettingsV3Field>
         <SettingsV3Field label={ti('settings.chat.speaking_instructions')} hint={ti('settings.chat.speaking_instructions_placeholder')}>
           <textarea
             rows={3}

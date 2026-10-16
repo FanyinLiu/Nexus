@@ -13,6 +13,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -114,12 +115,29 @@ export function modelDownloadBytesNeeded(model, presentFiles = new Set()) {
  * @param {number} neededBytes
  */
 export function assertModelDownloadDiskSpace(availableBytes, neededBytes) {
-  if (!Number.isSafeInteger(neededBytes) || neededBytes <= 0) return
-  const required = neededBytes + MODEL_DOWNLOAD_DISK_MARGIN_BYTES
-  if (!Number.isSafeInteger(availableBytes) || availableBytes < required) {
-    const error = new Error('Not enough disk space for the model download')
-    error.code = 'ENOSPC'
-    throw error
+  const check = evaluateModelDiskSpace(availableBytes, neededBytes)
+  if (check.ok || check.neededBytes <= 0) return
+  const error = new Error('Not enough disk space for the model download')
+  error.code = 'ENOSPC'
+  throw error
+}
+
+/**
+ * Whether a volume can hold the remaining model bytes plus the resume margin.
+ * Unknown free space does not block the UI; the download still checks again.
+ * @param {number | null | undefined} freeBytes
+ * @param {number} neededBytes
+ * @returns {{ freeBytes: number | null, neededBytes: number, ok: boolean }}
+ */
+export function evaluateModelDiskSpace(freeBytes, neededBytes) {
+  const needed = Number.isSafeInteger(neededBytes) && neededBytes > 0 ? neededBytes : 0
+  const knownFree = Number.isSafeInteger(freeBytes) ? freeBytes : null
+  if (needed === 0) return { freeBytes: knownFree, neededBytes: 0, ok: true }
+  const required = needed + MODEL_DOWNLOAD_DISK_MARGIN_BYTES
+  return {
+    freeBytes: knownFree,
+    neededBytes: needed,
+    ok: knownFree === null || knownFree >= required,
   }
 }
 
@@ -129,6 +147,55 @@ export function assertModelDownloadDiskSpace(availableBytes, neededBytes) {
  * @param {number} expectedSize
  * @returns {{ mode: 'fresh' | 'discard' | 'verify' | 'resume', offset: number }}
  */
+/**
+ * Where an interrupted archive or standalone download leaves its partial.
+ * File-kind models use one `.partial` sibling per catalog file instead.
+ * @param {object} model
+ * @param {string} modelsRoot
+ * @returns {string | null}
+ */
+export function modelResumePartialPath(model, modelsRoot) {
+  if (!modelsRoot || typeof modelsRoot !== 'string') return null
+  if (model?.kind === 'archive' && typeof model.id === 'string' && model.id) {
+    return join(modelsRoot, '.nexus-partials', `${model.id}.tar.bz2.partial`)
+  }
+  if (model?.kind === 'standalone' && typeof model.standalone?.dest === 'string' && model.standalone.dest) {
+    return `${join(modelsRoot, model.standalone.dest)}.partial`
+  }
+  return null
+}
+
+/**
+ * True when a previous attempt left bytes the next download can continue.
+ * @param {object} model
+ * @param {string} modelsRoot
+ */
+export function modelDownloadCanResume(model, modelsRoot) {
+  if (!modelsRoot) return false
+  if (model?.kind === 'files' && model.directory) {
+    try {
+      return readdirSync(join(modelsRoot, model.directory)).some((name) => name.endsWith('.partial'))
+    } catch {
+      return false
+    }
+  }
+  const partial = modelResumePartialPath(model, modelsRoot)
+  if (!partial) return false
+  try {
+    if (statSync(partial).size > 0) return true
+  } catch { /* no partial sibling */ }
+  // The archive can finish downloading and still be unextracted when the
+  // process is killed. That staged file is the resume point.
+  if (model?.kind !== 'archive') return false
+  const staged = partial.slice(0, -'.partial'.length)
+  const expected = model.integrity?.archive?.sizeBytes
+  try {
+    return statSync(staged).size === expected
+  } catch {
+    return false
+  }
+}
+
 export function planFileResume(partialSize, expectedSize) {
   if (!Number.isSafeInteger(partialSize) || partialSize <= 0) return { mode: 'fresh', offset: 0 }
   if (!Number.isSafeInteger(expectedSize) || expectedSize <= 0 || partialSize > expectedSize) {
@@ -141,6 +208,20 @@ export function planFileResume(partialSize, expectedSize) {
 function readAvailableDiskBytes(directory) {
   const stats = statfsSync(directory)
   return stats.bavail * stats.bsize
+}
+
+/**
+ * Free bytes on the volume that holds `directory`, or null when the
+ * platform cannot answer. Callers must not treat null as "disk full".
+ * @param {string} directory
+ * @returns {number | null}
+ */
+export function readModelDownloadFreeBytes(directory) {
+  try {
+    return readAvailableDiskBytes(directory)
+  } catch {
+    return null
+  }
 }
 
 function hashFileRange(filePath, byteLength) {
@@ -331,17 +412,31 @@ function replaceDirectory(sourceDir, destDir) {
 
 async function downloadAndExtractArchive(model, parentDir, onProgress) {
   mkdirSync(parentDir, { recursive: true })
+  const partialPath = modelResumePartialPath(model, parentDir)
+  const archivePath = partialPath.slice(0, -'.partial'.length)
   const installRoot = mkdtempSync(join(parentDir, `.nexus-${model.id}-`))
-  const archivePath = join(installRoot, 'model.tar.bz2')
 
   try {
-    await downloadFile(model.githubArchive, archivePath, onProgress, model.integrity.archive)
+    // The partial stays under .nexus-partials when the process is interrupted.
+    // A killed process can also leave the finished archive before extract.
+    const expectedSize = model.integrity?.archive?.sizeBytes
+    const stagedReady = existsSync(archivePath) && statSync(archivePath).size === expectedSize
+    if (!stagedReady) {
+      await downloadCatalogFile(
+        model.githubArchive,
+        archivePath,
+        partialPath,
+        onProgress,
+        model.integrity.archive,
+      )
+    }
     await extractTarArchive(archivePath, installRoot, model.directory)
     const extractedDir = join(installRoot, model.directory)
     const checkFilePath = join(extractedDir, model.checkFile)
     if (!existsSync(checkFilePath)) throw new Error('Model archive is missing its required check file')
     writeModelReceipt(model, extractedDir, checkFilePath)
     replaceDirectory(extractedDir, join(parentDir, model.directory))
+    rmSync(archivePath, { force: true })
   } finally {
     try { rmSync(installRoot, { recursive: true, force: true }) } catch {}
   }
@@ -454,14 +549,14 @@ async function downloadModelFiles(model, destDir, onProgress) {
 
 async function downloadStandalone(file, destPath, onProgress) {
   mkdirSync(dirname(destPath), { recursive: true })
+  const partialPath = `${destPath}.partial`
   let lastError = null
   for (const url of file.urls) {
     try {
-      await downloadFile(url, destPath, onProgress, file.integrity)
+      await downloadCatalogFile(url, destPath, partialPath, onProgress, file.integrity)
       return
     } catch (err) {
       lastError = err
-      try { rmSync(destPath, { force: true }) } catch {}
     }
   }
   throw lastError ?? new Error('All standalone URLs failed')

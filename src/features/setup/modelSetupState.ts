@@ -144,6 +144,27 @@ export function shouldShowModelSetupOverlay({
   return !suppressed && !dismissed && inventoryReady === false
 }
 
+/**
+ * Settings and the onboarding guide cover the model dialog only while they
+ * are open. Closing the guide is not a dismissal: the dialog returns when
+ * required models are still missing and the user has not chosen "maybe later".
+ */
+export function shouldRestoreModelSetupAfterGuide({
+  dismissed,
+  inventoryReady,
+  covered,
+}: {
+  dismissed: boolean
+  inventoryReady: boolean | undefined
+  covered: boolean
+}): boolean {
+  return shouldShowModelSetupOverlay({
+    suppressed: covered,
+    dismissed,
+    inventoryReady,
+  })
+}
+
 export function buildTextModelSetupSnapshot(settings: Pick<
   AppSettings,
   'apiProviderId' | 'apiKey' | 'apiBaseUrl' | 'model' | 'uiLanguage'
