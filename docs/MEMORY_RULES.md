@@ -55,22 +55,32 @@ list with no ops.
 
 ## Open loops
 
-A commitment the user stated becomes one open loop, with the due date taken
-from the words and the day they were said. `下周二` is the Tuesday of the
-next Monday-based week. A clock is applied only when the user names one;
-otherwise the due time stays 18:00. A later turn that adds a place or a
-clock updates that same loop (`slotKey`, or the only open loop when the
-place or clock is unambiguous). It does not create a second loop. The
-daily pass does not invent tasks the user did not state.
+A commitment the user stated about their own plan becomes one open loop,
+with the due date taken from the words and the day they were said.
+`下周二` is the Tuesday of the next Monday-based week. A clock is applied
+only when the user names one; otherwise the due time stays 18:00. Someone
+else's plan, a hypothetical, a past event, and sensitive text are not
+stored. A later turn that adds a place or a clock updates that same loop
+(`slotKey`, or the only open loop when the place or clock is unambiguous).
+It does not create a second loop. The daily pass does not invent tasks the
+user did not state.
+
+A plan is clear when it is the user's own, the date resolves, the user
+named a clock, and a place is present when the errand needs one (a hall,
+an appointment, an interview, a meeting). A report or a send does not need
+a place. Vague time, a missing clock, a missing place, or two readings
+stay a question.
 
 ## Proactive mentions
 
-Before the due time the companion confirms what, when, and where, adds a
-short prep note, and asks whether to remind the user the night before.
-Accepting that card creates a real reminder. Declining does not close the
-loop. After the due time it asks once whether the thing got done. Both
-lines are questions. Neither asserts that the user forgot. "Done" closes
-the loop. Migrated loops are kept and are never selected for a mention.
+A clear plan books a night-before reminder as soon as it is clear, plus
+the day-of check. The card then confirms the date and place (`10月20日 9:00`)
+and offers 改时间 and 撤销. 撤销 dismisses the loop, removes the reminder,
+and writes an op. An unclear plan still asks, with a short prep note,
+before any reminder is created. Declining that ask does not close the
+loop. After the due time the card asks once whether the thing got done.
+No line asserts that the user forgot. "Done" closes the loop. Migrated
+loops are kept and are never selected for a mention.
 
 The shared budget still applies: at most 3 mentions a day, at least 90
 minutes apart, quiet hours 23:00–08:00, and after two dismissals the next

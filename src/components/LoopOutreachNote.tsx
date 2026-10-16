@@ -56,6 +56,12 @@ export function LoopOutreachNote({
       detail: { memoryId: loopOffer.memoryId, messageId },
     }))
   }
+  const booked = (action: 'cancel' | 'reschedule', quote: string) => {
+    if (!loopOffer || loopOffer.status !== 'booked') return
+    window.dispatchEvent(new CustomEvent('nexus:loop-booked', {
+      detail: { memoryId: loopOffer.memoryId, messageId, action, quote },
+    }))
+  }
   const answer = (action: 'done' | 'later' | 'moved', quote: string) => {
     if (!loopCheck || loopCheck.status !== 'pending') return
     window.dispatchEvent(new CustomEvent('nexus:loop-check', {
@@ -66,7 +72,11 @@ export function LoopOutreachNote({
     ? t('proactive.loop.card_accepted')
     : loopOffer?.status === 'declined'
       ? t('proactive.loop.card_declined')
-      : ''
+      : loopOffer?.status === 'cancelled'
+        ? t('proactive.loop.card_cancelled')
+        : loopOffer?.status === 'rescheduled'
+          ? t('proactive.loop.card_rescheduled')
+          : ''
   const checkNote = loopCheck?.status === 'done'
     ? t('proactive.loop.check_done_note')
     : loopCheck?.status === 'later'
@@ -90,6 +100,24 @@ export function LoopOutreachNote({
             </button>
             <button type="button" className="loop-outreach__decline" onClick={decline}>
               {t('proactive.loop.card_decline')}
+            </button>
+          </div>
+        ) : null}
+        {loopOffer?.status === 'booked' ? (
+          <div className="loop-outreach__actions">
+            <button
+              type="button"
+              className="loop-outreach__accept loop-outreach__reschedule"
+              onClick={() => booked('reschedule', t('proactive.loop.card_reschedule'))}
+            >
+              {t('proactive.loop.card_reschedule')}
+            </button>
+            <button
+              type="button"
+              className="loop-outreach__decline loop-outreach__cancel"
+              onClick={() => booked('cancel', t('proactive.loop.card_cancel'))}
+            >
+              {t('proactive.loop.card_cancel')}
             </button>
           </div>
         ) : null}

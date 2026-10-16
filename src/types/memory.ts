@@ -149,7 +149,7 @@ export interface MemoryItem {
   loopCheckAskedAt?: string
   /** Place the user named, such as a hall or office. */
   loopPlace?: string
-  /** Reminder created when the user accepts the night-before offer. */
+  /** Reminder booked for a clear plan, or when the user accepts an ask. */
   loopReminderTaskId?: string
   /**
    * Groups a commitment with later details. "办护照" and a follow-up

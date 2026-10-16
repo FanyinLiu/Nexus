@@ -81,7 +81,7 @@ export interface ChatMessage {
     memoryId: string
     title: string
     nightBeforeAt: string
-    status: 'pending' | 'accepted' | 'declined'
+    status: 'pending' | 'accepted' | 'declined' | 'booked' | 'cancelled' | 'rescheduled'
   }
   /** Post-due "did it get done" answers on the same card. */
   loopCheck?: {

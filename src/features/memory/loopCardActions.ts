@@ -9,6 +9,7 @@
 import type { MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
 
 export type LoopCardAction = 'done' | 'later' | 'moved'
+export type LoopBookedAction = 'cancel' | 'reschedule'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -62,5 +63,51 @@ export function applyLoopCardAction(
       messageRef: memoryId,
       before: [{ ...current }],
     },
+  }
+}
+
+/**
+ * Cancel drops the loop and the night-before reminder.
+ * Reschedule drops the clock the same way a moved check does, and snoozes
+ * a day so we wait for the user to name a new time.
+ */
+export function applyBookedLoopAction(
+  memories: readonly MemoryItem[],
+  memoryId: string,
+  action: LoopBookedAction,
+  nowIso: string,
+  evidenceQuote: string,
+): { memories: MemoryItem[]; op: MemoryOpRecord | null; reminderTaskId: string | null } {
+  const current = memories.find((memory) => memory.id === memoryId)
+  if (!current || current.kind !== 'open_loop') {
+    return { memories: [...memories], op: null, reminderTaskId: null }
+  }
+  const nowMs = Date.parse(nowIso)
+  const snooze = new Date((Number.isFinite(nowMs) ? nowMs : Date.now()) + DAY_MS).toISOString()
+  const reminderTaskId = current.loopReminderTaskId ?? null
+  const next = action === 'cancel'
+    ? withoutKeys(
+      { ...current, loopStatus: 'dismissed' as const, updatedAt: nowIso },
+      ['loopSnoozeUntil', 'loopReminderTaskId'],
+    )
+    : withoutKeys(
+      { ...current, loopStatus: 'open' as const, loopSnoozeUntil: snooze, updatedAt: nowIso },
+      ['loopDueAt', 'loopDueText', 'loopReminderTaskId'],
+    )
+  const quote = evidenceQuote.trim().slice(0, 240) || current.content.slice(0, 240)
+  return {
+    memories: memories.map((memory) => (memory.id === memoryId ? next : memory)),
+    op: {
+      id: `memory-op-card-${action}-${memoryId}-${nowIso}`,
+      at: nowIso,
+      actor: 'user',
+      op: 'UPDATE',
+      targetIds: [memoryId],
+      reason: action === 'cancel' ? 'loop-cancel' : 'loop-moved',
+      evidenceQuote: quote,
+      messageRef: memoryId,
+      before: [{ ...current }],
+    },
+    reminderTaskId,
   }
 }
