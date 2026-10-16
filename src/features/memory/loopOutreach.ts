@@ -1,16 +1,18 @@
 /**
  * Hark-style copy for one open loop.
  *
- * Before the due time the line confirms what, when, and where, adds a short
- * prep note, and asks whether to remind the user the night before.
- * After the due time it asks once whether the thing got done.
- * Both are questions. Neither asserts that the user forgot.
+ * A clear plan already has a night-before reminder, so the card confirms
+ * the date and the place. A plan with a gap still asks before creating one.
+ * After the due time the card asks once whether the thing got done.
+ * None of these lines asserts that the user forgot.
  */
 
 import type { ReminderTaskDraftInput } from '../reminders/schedule.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { MemoryItem } from '../../types/memory.ts'
+import { hasExplicitClock } from './loopDetails.ts'
 import { isNagFreeMemory } from './memoryRules.ts'
+import { loopPlanReading } from './openLoops.ts'
 
 export interface LoopOutreachWhy {
   summary: string
@@ -28,6 +30,8 @@ export interface LoopOutreachOffer {
 
 export interface LoopOutreach {
   phase: 'preview' | 'check'
+  /** `confirm` means the night-before reminder is already booked. */
+  mode: 'confirm' | 'ask'
   text: string
   why: LoopOutreachWhy
   offer: LoopOutreachOffer | null
@@ -53,14 +57,28 @@ function joinSentences(parts: readonly string[]): string {
   }, '')
 }
 
-/** Local date and clock, short enough for a bubble. */
-export function formatLoopWhen(iso: string): string {
+function clockLabel(date: Date): string {
+  const minute = date.getMinutes()
+  const hour = date.getHours()
+  return minute === 0 ? `${hour}:00` : `${hour}:${pad(minute)}`
+}
+
+/**
+ * Locale date for the card. A placeholder 18:00 is not a clock the user
+ * named, so the ask path shows the day only.
+ */
+function formatLoopWhen(iso: string, namedClock: boolean, t: Translate): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  const hour = date.getHours()
-  const minute = date.getMinutes()
-  const clock = minute === 0 ? `${hour}:00` : `${hour}:${pad(minute)}`
-  return `${date.getMonth() + 1}/${date.getDate()} ${clock}`
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  if (!namedClock) return t('proactive.loop.when_day', { month, day })
+  return t('proactive.loop.when', { month, day, clock: clockLabel(date) })
+}
+
+function namedClock(memory: MemoryItem): boolean {
+  const quotes = [memory.content, ...(memory.evidence ?? []).map((item) => item.quote)]
+  return quotes.some((quote) => hasExplicitClock(quote))
 }
 
 function prepKey(memory: MemoryItem): 'proactive.loop.prep_passport' | 'proactive.loop.prep_report' | 'proactive.loop.prep_generic' {
@@ -89,8 +107,8 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
   const dueMs = memory.loopDueAt ? Date.parse(memory.loopDueAt) : Number.NaN
   if (!Number.isFinite(dueMs)) return null
   const quote = memory.evidence?.[0]?.quote || memory.content
-  const when = formatLoopWhen(memory.loopDueAt ?? '')
   const where = memory.loopPlace?.trim() ?? ''
+  const when = formatLoopWhen(memory.loopDueAt ?? '', namedClock(memory), t)
   const what = memory.content.trim()
   const why: LoopOutreachWhy = {
     summary: what,
@@ -103,6 +121,7 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
     if (memory.loopCheckAskedAt) return null
     return {
       phase: 'check',
+      mode: 'ask',
       text: t('proactive.loop.check', { what }),
       why,
       offer: null,
@@ -110,25 +129,27 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
     }
   }
   const night = nightBeforeIso(memory.loopDueAt ?? '')
+  const offer = night ? { memoryId: memory.id, title: what.slice(0, 80), nightBeforeAt: night } : null
+  const booked = loopPlanReading(memory) === 'clear' && Boolean(memory.loopReminderTaskId)
+  if (booked) {
+    const text = where
+      ? t('proactive.loop.confirmed', { when, where })
+      : t('proactive.loop.confirmed_no_place', { when })
+    return { phase: 'preview', mode: 'confirm', text, why, offer, check: null }
+  }
   const placeBit = where ? t('proactive.loop.place', { where }) : ''
   const text = joinSentences([
     t('proactive.loop.preview', { what, when, place: placeBit }),
     t(prepKey(memory)),
     t('proactive.loop.offer'),
   ])
-  return {
-    phase: 'preview',
-    text,
-    why,
-    offer: night ? { memoryId: memory.id, title: what.slice(0, 80), nightBeforeAt: night } : null,
-    check: null,
-  }
+  return { phase: 'preview', mode: 'ask', text, why, offer, check: null }
 }
 
 /**
- * Reminder created only after the user accepts the card.
- * If the evening before has already passed, the reminder is one hour before
- * the due time, and only when that is still in the future.
+ * Night-before reminder for a clear plan, or the reminder created when the
+ * user accepts an ask card. If that evening has already passed, the reminder
+ * is one hour before the due time, and only when that is still in the future.
  */
 export function loopReminderDraft(memory: MemoryItem, nowMs: number): ReminderTaskDraftInput | null {
   if (!memory.loopDueAt) return null
@@ -148,6 +169,51 @@ export function loopReminderDraft(memory: MemoryItem, nowMs: number): ReminderTa
     enabled: true,
     schedule: { kind: 'at', at: new Date(atMs).toISOString() },
   }
+}
+
+export interface ClearPlanReminderDraft {
+  memoryId: string
+  draft: ReminderTaskDraftInput
+}
+
+/**
+ * Drafts for clear plans that do not have a reminder yet.
+ * A second call is empty once `loopReminderTaskId` is set.
+ */
+export function clearPlanReminderDrafts(memories: readonly MemoryItem[], nowMs: number): ClearPlanReminderDraft[] {
+  const drafts: ClearPlanReminderDraft[] = []
+  for (const memory of memories) {
+    if (memory.loopReminderTaskId) continue
+    if (loopPlanReading(memory) !== 'clear') continue
+    const draft = loopReminderDraft(memory, nowMs)
+    if (!draft) continue
+    drafts.push({ memoryId: memory.id, draft })
+  }
+  return drafts
+}
+
+/**
+ * Create the night-before reminder for each clear plan and stamp its id.
+ * Returns the same array when there is nothing new to book.
+ */
+export function bookClearPlanReminders(
+  memories: readonly MemoryItem[],
+  nowMs: number,
+  create: (draft: ReminderTaskDraftInput) => { id: string } | null | undefined,
+): MemoryItem[] {
+  const drafts = clearPlanReminderDrafts(memories, nowMs)
+  if (!drafts.length) return memories as MemoryItem[]
+  const ids = new Map<string, string>()
+  for (const item of drafts) {
+    const created = create(item.draft)
+    if (created?.id) ids.set(item.memoryId, created.id)
+  }
+  if (!ids.size) return memories as MemoryItem[]
+  const stamp = new Date(nowMs).toISOString()
+  return memories.map((memory) => {
+    const taskId = ids.get(memory.id)
+    return taskId ? { ...memory, loopReminderTaskId: taskId, updatedAt: stamp } : memory
+  })
 }
 
 /** True when the line is a question and does not claim the user forgot. */

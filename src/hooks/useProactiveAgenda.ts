@@ -35,8 +35,8 @@ import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { appendMemoryOpLog } from '../lib/storage/memoryOpLog.ts'
 import { saveMemoryRunSnapshot } from '../lib/storage/memoryRunSnapshot.ts'
-import { applyLoopCardAction, type LoopCardAction } from '../features/memory/loopCardActions.ts'
-import { buildLoopOutreach, loopReminderDraft } from '../features/memory/loopOutreach.ts'
+import { applyBookedLoopAction, applyLoopCardAction, type LoopBookedAction, type LoopCardAction } from '../features/memory/loopCardActions.ts'
+import { bookClearPlanReminders, buildLoopOutreach, loopReminderDraft } from '../features/memory/loopOutreach.ts'
 import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
 import type { ChatMessage } from '../types/chat.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/schedule.ts'
@@ -67,6 +67,12 @@ type LoopCheckDetail = {
   quote?: string
 }
 
+type LoopBookedDetail = {
+  memoryId?: string
+  action?: LoopBookedAction
+  quote?: string
+}
+
 export function useProactiveAgenda(options: {
   enabled: boolean
   settingsRef: React.RefObject<AppSettings>
@@ -81,6 +87,7 @@ export function useProactiveAgenda(options: {
   t: Translator
   onLog: (title: string, detail: string) => void
   addReminderTask?: (input: ReminderTaskDraftInput) => { id: string } | null
+  removeReminderTask?: (id: string) => { id: string } | null
   setMessages?: (updater: (current: ChatMessage[]) => ChatMessage[]) => void
 }) {
   const optionsRef = useRef(options)
@@ -202,10 +209,19 @@ export function useProactiveAgenda(options: {
     if (!current.enabled) return
     const settings = current.settingsRef.current
     if (!settings?.proactiveAgendaEnabled || settings.memoryPaused) return
-    if (current.busyRef?.current) return
     try {
-      await refreshFullscreen()
       const nowMs = appNowMs()
+      const booked = bookClearPlanReminders(
+        current.memoriesRef.current,
+        nowMs,
+        (draft) => current.addReminderTask?.(draft) ?? null,
+      )
+      if (booked !== current.memoriesRef.current) {
+        current.memoriesRef.current = booked
+        current.setMemories(booked)
+      }
+      if (current.busyRef?.current) return
+      await refreshFullscreen()
       const state = syncProactiveAgenda(current.memoriesRef.current, nowMs)
       const etiquette = evaluateProactiveEtiquette({
         nowMs,
@@ -252,7 +268,12 @@ export function useProactiveAgenda(options: {
         bubbleContent: text,
         dedupeKey: `agenda:${item.id}:${outreach?.phase ?? 'note'}:${localDayKey(nowMs)}`,
         ...(outreach?.why ? { proactiveWhy: outreach.why } : {}),
-        ...(outreach?.offer ? { loopOffer: { ...outreach.offer, status: 'pending' as const } } : {}),
+        ...(outreach?.offer ? {
+          loopOffer: {
+            ...outreach.offer,
+            status: outreach.mode === 'confirm' ? 'booked' as const : 'pending' as const,
+          },
+        } : {}),
         ...(outreach?.check ? { loopCheck: { memoryId: outreach.check.memoryId, status: 'pending' as const } } : {}),
       })
       const hidden = typeof document !== 'undefined' && (document.hidden || !document.hasFocus())
@@ -334,6 +355,9 @@ export function useProactiveAgenda(options: {
         current.memoriesRef.current = next
         current.setMemories(next)
       }
+      if (outreach?.mode === 'confirm') {
+        return `The user already has this reminder set. If it fits this turn, confirm it in one sentence: "${outreach.text}" Do not ask whether to remind them, and do not assert that they forgot.`
+      }
       if (outreach) {
         return `The user has an unfinished commitment. If it fits this turn, ask once, as a question, and do not assert that they forgot: "${outreach.text}" If they say it is done, or not to remind them, accept that and drop it.`
       }
@@ -401,6 +425,37 @@ export function useProactiveAgenda(options: {
         }
       }))
     }
+    const onBooked = (event: Event) => {
+      const detail = (event as CustomEvent<LoopBookedDetail>).detail
+      if (!detail?.memoryId || (detail.action !== 'cancel' && detail.action !== 'reschedule')) return
+      const current = optionsRef.current
+      const result = applyBookedLoopAction(
+        current.memoriesRef.current,
+        detail.memoryId,
+        detail.action,
+        new Date(appNowMs()).toISOString(),
+        detail.quote ?? '',
+      )
+      if (!result.op) return
+      if (result.reminderTaskId) current.removeReminderTask?.(result.reminderTaskId)
+      current.memoriesRef.current = result.memories
+      current.setMemories(result.memories)
+      appendMemoryOpLog([result.op])
+      const status = detail.action === 'cancel' ? 'cancelled' as const : 'rescheduled' as const
+      current.setMessages?.((messages) => messages.map((message) => {
+        const offer = message.loopOffer
+        if (!offer || offer.memoryId !== detail.memoryId) return message
+        return {
+          ...message,
+          loopOffer: {
+            memoryId: offer.memoryId,
+            title: offer.title,
+            nightBeforeAt: offer.nightBeforeAt,
+            status,
+          },
+        }
+      }))
+    }
     const onCheck = (event: Event) => {
       const detail = (event as CustomEvent<LoopCheckDetail>).detail
       if (!detail?.memoryId || !detail.action) return
@@ -430,11 +485,13 @@ export function useProactiveAgenda(options: {
     window.addEventListener('nexus:accept-loop-offer', onAccept)
     window.addEventListener('nexus:decline-loop-offer', onDecline)
     window.addEventListener('nexus:loop-check', onCheck)
+    window.addEventListener('nexus:loop-booked', onBooked)
     return () => {
       window.removeEventListener('nexus:focus-state', onFocus)
       window.removeEventListener('nexus:accept-loop-offer', onAccept)
       window.removeEventListener('nexus:decline-loop-offer', onDecline)
       window.removeEventListener('nexus:loop-check', onCheck)
+      window.removeEventListener('nexus:loop-booked', onBooked)
     }
   }, [deliverReturn])
 

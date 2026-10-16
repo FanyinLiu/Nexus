@@ -87,11 +87,22 @@ export function applyClock(text: string, due: Date): Date {
   return next
 }
 
+const PLACE_LEAD = /^(?:我|已经|已|选择了|选了|约了|去了|到了|在|去|到|下(?:周|星期)|明[天日]|后[天日]|今[天晚日]|今晚|上午|下午|晚上|早上|凌晨|中午|傍晚|(?:周|星期)[一二三四五六日天]|[零〇一二两三兩四五六七八九十0-9]{1,3}(?:点|點|时|時)(?:半|一刻|[0-9]{1,2})?)/u
+
+/** Drop the clock and the verb that the hall pattern swallowed. */
+function trimPlaceLead(value: string): string {
+  let place = value.replace(/的/gu, '')
+  for (let guard = 0; guard < 8 && place.length > 2 && PLACE_LEAD.test(place); guard += 1) {
+    place = place.replace(PLACE_LEAD, '')
+  }
+  return place.trim()
+}
+
 /** A hall, center, or station the user named. Leading verbs and 的 are dropped. */
 export function findPlace(text: string): string | undefined {
   const match = PLACE_ZH.exec(text)
   if (!match?.[1]) return undefined
-  const stripped = match[1].replace(/的/gu, '').replace(/^(?:我)?(?:已经|已)?(?:选择了|选了|约了|去了|到了|在)/u, '').trim()
+  const stripped = trimPlaceLead(match[1])
   const place = stripped.length >= 2 ? stripped : match[1].replace(/的/gu, '').trim()
   return place.length >= 2 ? place.slice(0, 40) : undefined
 }

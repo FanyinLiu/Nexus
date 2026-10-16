@@ -74,6 +74,7 @@ export type UseAutonomyControllerOptions = {
   }
   reminderTasksRef: React.RefObject<ReminderTask[]>
   addReminderTask?: (input: import('../../features/reminders/schedule.ts').ReminderTaskDraftInput) => { id: string } | null
+  removeReminderTask?: (id: string) => { id: string } | null
   goalsRef: React.RefObject<Goal[]>
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>
   /** Shared busy ref — when true, a chat LLM call is in progress. */
@@ -441,6 +442,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     busyRef: bridgeBusyRef,
     pushCompanionNotice: chat.pushCompanionNotice,
     addReminderTask: opts.addReminderTask,
+    removeReminderTask: opts.removeReminderTask,
     setMessages: chat.setMessages,
     t,
     onLog: (title, detail) => debugConsole.appendDebugConsoleEvent({

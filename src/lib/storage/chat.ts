@@ -261,7 +261,12 @@ function normalizeLoopOffer(value: unknown): ChatMessage['loopOffer'] {
   const nightBeforeAt = typeof record.nightBeforeAt === 'string' && Number.isFinite(Date.parse(record.nightBeforeAt))
     ? new Date(record.nightBeforeAt).toISOString()
     : ''
-  const status = record.status === 'accepted' || record.status === 'declined' || record.status === 'pending'
+  const status = record.status === 'accepted'
+    || record.status === 'declined'
+    || record.status === 'pending'
+    || record.status === 'booked'
+    || record.status === 'cancelled'
+    || record.status === 'rescheduled'
     ? record.status
     : 'pending'
   if (!memoryId || !title || !nightBeforeAt) return undefined
@@ -335,7 +340,8 @@ export function remoteApplyConsumedByLocalLine(
 }
 
 function loopOfferRank(status: NonNullable<ChatMessage['loopOffer']>['status'] | undefined): number {
-  if (status === 'accepted' || status === 'declined') return 2
+  if (status === 'cancelled' || status === 'rescheduled') return 3
+  if (status === 'accepted' || status === 'declined' || status === 'booked') return 2
   if (status === 'pending') return 1
   return 0
 }

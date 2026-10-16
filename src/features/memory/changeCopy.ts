@@ -23,6 +23,7 @@ export type MemoryChangeKey =
   | 'memory.change.removed'
   | 'memory.change.undone'
   | 'memory.change.updated'
+  | 'memory.change.cancelled'
 
 /** Drop a trailing "edited" marker so the row can show a tag instead. */
 export function displayMemoryText(content: string): string {
@@ -61,6 +62,7 @@ export function memoryChangeKey(entry: MemoryOpRecord): MemoryChangeKey {
   if (entry.reason === 'loop-later') return 'memory.change.later'
   if (entry.reason === 'loop-moved') return 'memory.change.moved'
   if (entry.reason === 'loop-detail') return 'memory.change.detail'
+  if (entry.reason === 'loop-cancel') return 'memory.change.cancelled'
   return 'memory.change.updated'
 }
 

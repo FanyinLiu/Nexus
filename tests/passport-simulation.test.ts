@@ -11,11 +11,13 @@ import {
 import { evaluateProactiveEtiquette } from '../src/features/autonomy/proactiveBudget.ts'
 import { curateMemories } from '../src/features/memory/curation.ts'
 import {
+  bookClearPlanReminders,
   buildLoopOutreach,
+  clearPlanReminderDrafts,
   loopReminderDraft,
   outreachAsks,
 } from '../src/features/memory/loopOutreach.ts'
-import { extractOpenLoopItems } from '../src/features/memory/openLoops.ts'
+import { extractOpenLoopItems, loopPlanReading } from '../src/features/memory/openLoops.ts'
 import { planTurnMemoryWrite } from '../src/features/memory/reconcile.ts'
 import { t } from '../src/i18n/runtime.ts'
 import type { MemoryItem } from '../src/types/memory.ts'
@@ -90,6 +92,27 @@ test('14 days: passport capture, night-before offer, one check, then silence', (
     loopPlace: undefined,
   }
   memories = [...memories, migrated]
+  assert.equal(loopPlanReading(passport!), 'clear')
+  const drafts = clearPlanReminderDrafts(memories, detailAt.getTime())
+  assert.equal(drafts.length, 1)
+  assert.equal(drafts[0]?.draft.schedule.kind, 'at')
+  if (drafts[0]?.draft.schedule.kind === 'at') {
+    const at = new Date(drafts[0].draft.schedule.at)
+    assert.equal(at.getDate(), 19)
+    assert.equal(at.getHours(), 20)
+  }
+  let bookedCount = 0
+  memories = bookClearPlanReminders(memories, detailAt.getTime(), () => {
+    bookedCount += 1
+    return { id: 'reminder-passport' }
+  })
+  assert.equal(bookedCount, 1)
+  assert.equal(memories.find((item) => item.id === passport?.id)?.loopReminderTaskId, 'reminder-passport')
+  memories = bookClearPlanReminders(memories, detailAt.getTime(), () => {
+    bookedCount += 1
+    return { id: 'reminder-again' }
+  })
+  assert.equal(bookedCount, 1)
 
   let agenda: ProactiveAgendaState = emptyAgendaState()
   const mentions: string[] = []
@@ -110,14 +133,17 @@ test('14 days: passport capture, night-before offer, one check, then silence', (
     assert.ok(memory)
     const outreach = buildLoopOutreach(memory, morning, t)
     assert.ok(outreach)
-    assert.equal(outreachAsks(outreach.text), true)
     assert.equal(outreach.text.includes('120'), false)
     assert.equal(outreach.text.includes('你忘了'), false)
     mentions.push(`${day}:${outreach.phase}`)
     if (outreach.phase === 'preview') {
       assert.equal(day, 19)
+      assert.equal(outreach.mode, 'confirm')
+      assert.equal(outreachAsks(outreach.text), false)
+      assert.match(outreach.text, /10月20日 9:00/)
       assert.match(outreach.text, /南山出入境大厅/)
-      assert.match(outreach.text, /要我前一晚提醒你吗/)
+      assert.match(outreach.text, /前一晚会提醒你/)
+      assert.equal(outreach.text.includes('要我前一晚提醒你吗'), false)
       assert.match(outreach.why.quote, /办护照|南山/)
       const draft = loopReminderDraft(memory, morning)
       assert.ok(draft)
@@ -133,6 +159,7 @@ test('14 days: passport capture, night-before offer, one check, then silence', (
     }
     if (outreach.phase === 'check') {
       assert.equal(day, 20)
+      assert.equal(outreachAsks(outreach.text), true)
       assert.match(outreach.text, /办好了吗/)
       assert.equal(outreach.offer, null)
     }

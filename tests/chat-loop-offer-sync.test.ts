@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { mergeRemoteChatMessages, remoteApplyConsumedByLocalLine } from '../src/lib/storage/chat.ts'
+import { mergeRemoteChatMessages, normalizeChatMessagesForStorage, remoteApplyConsumedByLocalLine } from '../src/lib/storage/chat.ts'
 import type { ChatMessage } from '../src/types/chat.ts'
 
 function message(patch: Partial<ChatMessage> & Pick<ChatMessage, 'id' | 'content'>): ChatMessage {
@@ -41,6 +41,43 @@ test('a local line in the same commit as a remote apply is still saved', () => {
   assert.equal(remoteApplyConsumedByLocalLine('2:preview:12::pending', '3:check:6::pending.-'), true)
   assert.equal(remoteApplyConsumedByLocalLine('2:preview:12::pending', '2:preview:12::pending'), false)
   assert.equal(remoteApplyConsumedByLocalLine(null, '1:hello:5::-'), false)
+})
+
+test('a booked reminder stays booked when the other window still asks', () => {
+  const local = [message({
+    id: 'preview',
+    content: '10月20日 9:00，南山出入境大厅。前一晚会提醒你。',
+    loopOffer: { ...offer, status: 'booked' },
+  })]
+  const remote = [message({
+    id: 'preview',
+    content: '要我前一晚提醒你吗？',
+    loopOffer: { ...offer, status: 'pending' },
+  })]
+  assert.equal(mergeRemoteChatMessages(local, remote)[0]?.loopOffer?.status, 'booked')
+})
+
+test('cancelling a booked reminder is not restored by the other window', () => {
+  const local = [message({
+    id: 'preview',
+    content: '已经撤掉。',
+    loopOffer: { ...offer, status: 'cancelled' },
+  })]
+  const remote = [message({
+    id: 'preview',
+    content: '10月20日 9:00，南山出入境大厅。前一晚会提醒你。',
+    loopOffer: { ...offer, status: 'booked' },
+  })]
+  assert.equal(mergeRemoteChatMessages(local, remote)[0]?.loopOffer?.status, 'cancelled')
+})
+
+test('a booked reminder card stays booked after reload', () => {
+  const [stored] = normalizeChatMessagesForStorage([message({
+    id: 'preview',
+    content: '10月20日 9:00，南山出入境大厅。前一晚会提醒你。',
+    loopOffer: { ...offer, status: 'booked' },
+  })])
+  assert.equal(stored?.loopOffer?.status, 'booked')
 })
 
 test('a remote decision still wins when this window has not answered', () => {
