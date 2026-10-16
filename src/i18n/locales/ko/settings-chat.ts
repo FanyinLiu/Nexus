@@ -149,4 +149,5 @@ export const koSettingsChat = {
   'settings.letters.active_days_label': '이번 주 활성 {n} 일',
   'settings.letters.export': '저장',
   'settings.letters.export_title': '이 편지를 단독 HTML 파일로 내보내기',
+  'settings.letters.save_dialog_title': '편지 저장',
 } as const satisfies Partial<TranslationDictionary>

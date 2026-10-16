@@ -17,11 +17,11 @@ function formatLetterDate(value: string, language: UiLanguage): string {
   }).format(new Date(timestamp))
 }
 
-async function exportLetter(letter: SavedLetter): Promise<void> {
+async function exportLetter(letter: SavedLetter, title: string): Promise<void> {
   try {
     const { buildLetterFilename, renderLetterHtml } = await import('../letter/letterExport')
     await saveTextFileWithFallback({
-      title: 'Save letter',
+      title,
       content: renderLetterHtml(letter),
       defaultFileName: buildLetterFilename(letter),
     })
@@ -80,7 +80,7 @@ export const LettersSectionV3 = memo(function LettersSectionV3({ active, uiLangu
                     </span>
                   </button>
                   <SettingsV3Toolbar>
-                    <button type="button" onClick={() => void exportLetter(letter)}>{ti('settings.letters.export')}</button>
+                    <button type="button" onClick={() => void exportLetter(letter, ti('settings.letters.save_dialog_title'))}>{ti('settings.letters.export')}</button>
                   </SettingsV3Toolbar>
                   {expanded ? (
                     <div id={bodyId} className="settings-v3-letter-body">

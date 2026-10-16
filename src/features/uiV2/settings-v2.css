@@ -353,7 +353,7 @@
   }
 
   .settings-v2__header {
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     min-height: 52px;
     padding: 4px 5px;
   }
@@ -362,15 +362,16 @@
     display: inline-flex;
     gap: 4px;
     justify-self: start;
-    max-width: 88px;
+    width: auto;
+    max-width: none;
     padding: 0 6px;
     color: var(--settings-v2-accent);
     font-size: 12px;
   }
 
   .settings-v2__mobile-back span {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
     white-space: nowrap;
   }
 
@@ -431,6 +432,16 @@
   .settings-v2__home-copy span,
   .settings-v2__home-copy small {
     font-size: 11px;
+  }
+
+  .settings-v2__home-copy > span {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: unset;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .settings-v2__draft-bar {

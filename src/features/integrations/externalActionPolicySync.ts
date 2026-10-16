@@ -2,6 +2,10 @@ import type { AppSettings, IntegrationPermissionMode } from '../../types'
 
 type ExternalActionIntegrationId = 'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp'
 
+const EXTERNAL_OPEN_UI_LANGUAGES = ['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko'] as const
+
+type ExternalOpenUiLanguage = (typeof EXTERNAL_OPEN_UI_LANGUAGES)[number]
+
 export type ExternalActionPolicySyncPayload = {
   policies: Record<ExternalActionIntegrationId, {
     mode: IntegrationPermissionMode
@@ -12,6 +16,12 @@ export type ExternalActionPolicySyncPayload = {
     clipboard: boolean
     screenshot: boolean
   }
+  toolOpenExternalRequiresConfirmation: boolean
+  uiLanguage?: ExternalOpenUiLanguage
+}
+
+function readExternalOpenUiLanguage(value: AppSettings['uiLanguage'] | undefined): ExternalOpenUiLanguage | undefined {
+  return EXTERNAL_OPEN_UI_LANGUAGES.find((language) => language === value)
 }
 
 function hasText(value: string | undefined): boolean {
@@ -20,6 +30,7 @@ function hasText(value: string | undefined): boolean {
 
 export function buildExternalActionPolicySyncPayload(settings: AppSettings): ExternalActionPolicySyncPayload {
   const contextAwarenessEnabled = settings.contextAwarenessEnabled === true
+  const uiLanguage = readExternalOpenUiLanguage(settings.uiLanguage)
   return {
     desktopContext: {
       activeWindow: contextAwarenessEnabled && settings.activeWindowContextEnabled === true,
@@ -50,6 +61,8 @@ export function buildExternalActionPolicySyncPayload(settings: AppSettings): Ext
         )),
       },
     },
+    toolOpenExternalRequiresConfirmation: settings.toolOpenExternalRequiresConfirmation !== false,
+    ...(uiLanguage ? { uiLanguage } : {}),
   }
 }
 

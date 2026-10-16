@@ -52,7 +52,7 @@ export const zhTWSettingsWindow = {
   'settings.window.synced': '桌面行為已同步',
   'settings.window.sync_failed': '桌面行為同步沒成功，再試一次？',
   'settings.pet.import_error': '本地形象模型沒能匯入，等一下再試試？',
-  'settings.pet.error.already_imported': '這個形象已經在本地庫裡，直接在下拉里選就行。',
+  'settings.pet.error.already_imported': '這個形象已經在本地庫裡，直接在下拉選單裡選就行。',
   'settings.pet.error.import_incomplete': '檔案進來了，但沒能在應用裡完成註冊。再試一次？',
   'settings.pet.error.unsupported_file': '請選擇 Live2D .model3.json，或精靈寵物的 pet.json / ZIP。',
   'settings.pet.error.gallery_input': '請貼上具體寵物詳情頁、slug 或 ZIP 下載地址。',

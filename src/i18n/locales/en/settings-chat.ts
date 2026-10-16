@@ -149,4 +149,5 @@ export const enSettingsChat = {
   'settings.letters.active_days_label': '{n} active days this week',
   'settings.letters.export': 'Save',
   'settings.letters.export_title': 'Export this letter as a self-contained HTML file',
+  'settings.letters.save_dialog_title': 'Save letter',
 } as const satisfies Partial<TranslationDictionary>

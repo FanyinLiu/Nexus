@@ -631,6 +631,8 @@ declare global {
           clipboard: boolean
           screenshot: boolean
         }
+        toolOpenExternalRequiresConfirmation?: boolean
+        uiLanguage?: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja' | 'ko'
       }) => Promise<{
         policy: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>
         changes: Array<{ integration: string; from: string; to: string; active: boolean }>

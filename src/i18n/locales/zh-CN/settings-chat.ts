@@ -147,4 +147,5 @@ export const zhCNSettingsChat = {
   'settings.letters.active_days_label': '本周活跃 {n} 天',
   'settings.letters.export': '保存',
   'settings.letters.export_title': '把这封信导出为独立的 HTML 文件',
+  'settings.letters.save_dialog_title': '保存这封信',
 } as const satisfies Record<string, string>

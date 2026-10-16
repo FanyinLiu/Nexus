@@ -149,4 +149,5 @@ export const zhTWSettingsChat = {
   'settings.letters.active_days_label': '本週活躍 {n} 天',
   'settings.letters.export': '保存',
   'settings.letters.export_title': '把這封信匯出為獨立的 HTML 檔案',
+  'settings.letters.save_dialog_title': '儲存這封信',
 } as const satisfies Partial<TranslationDictionary>

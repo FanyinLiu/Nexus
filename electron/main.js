@@ -37,6 +37,9 @@ import { initModelManager } from './services/modelManager.js'
 import { ensurePythonRuntimeStatus, getPythonRuntimeStatus } from './services/pythonRuntime.js'
 import { initializeLocalDataStore } from './services/localDataStore.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
+import { createRendererReloadGuard, shouldReloadAfterRendererGone } from './crashRecovery.js'
+import { crashDialogCopy, rendererStuckDialogCopy } from './userFacingDialogs.js'
+import { getExternalOpenConfirmation } from './services/externalOpenConfirmation.js'
 
 // ── Console safety: suppress broken-pipe errors on stdout/stderr ──
 
@@ -75,10 +78,57 @@ for (const stream of [process.stdout, process.stderr]) {
   })
 }
 
+function readProcessLocale() {
+  try {
+    const saved = getExternalOpenConfirmation().uiLanguage
+    if (saved) return saved
+  } catch {
+    // The preference file is optional. The OS locale is the fallback.
+  }
+  try {
+    return app.getLocale()
+  } catch {
+    return 'en-US'
+  }
+}
+
+function showFriendlyDialog(copy) {
+  try {
+    dialog.showErrorBox(copy.title, copy.message)
+  } catch (dialogError) {
+    console.error('[main] crash dialog failed:', getRedactedErrorMessage(dialogError))
+  }
+}
+
+const rendererReloadGuard = createRendererReloadGuard()
+
 process.on('uncaughtException', (err) => {
   if (isBrokenPipeConsoleError(err)) return
-  dialog.showErrorBox('Uncaught Exception', err?.stack || String(err))
+  console.error('[main] uncaught exception:', getRedactedErrorMessage(err))
+  showFriendlyDialog(crashDialogCopy(readProcessLocale()))
   app.exit(1)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[main] unhandled rejection:', getRedactedErrorMessage(reason))
+})
+
+app.on('render-process-gone', (_event, webContents, details) => {
+  const reason = details && typeof details.reason === 'string' ? details.reason : 'unknown'
+  console.error('[main] render-process-gone:', getRedactedErrorMessage(reason))
+  if (!shouldReloadAfterRendererGone(details)) return
+  if (!webContents || webContents.isDestroyed()) return
+  const guardId = typeof webContents.id === 'number' ? webContents.id : 'renderer'
+  if (!rendererReloadGuard.allow(guardId)) {
+    console.error('[main] renderer reload skipped after repeated failures')
+    showFriendlyDialog(rendererStuckDialogCopy(readProcessLocale()))
+    return
+  }
+  try {
+    webContents.reload()
+  } catch (error) {
+    console.error('[main] renderer reload failed:', getRedactedErrorMessage(error))
+  }
 })
 
 // ── Paths & feature flags ──

@@ -16,6 +16,7 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^factorio:(?:connect|execute)$/,
   /^file:/,
   /^external-action-policy:sync$/,
+  /^integrations:inspect$/,
   /^local-data:chat-(?:comparison-preview|migration-(?:apply|rollback)|session-mirror|sessions-read)$/,
   /^local-data:memory-(?:read|migration-(?:apply|rollback))$/,
   /^local-data:companion-(?:read|comparison-preview|dataset-mirror|migration-(?:apply|rollback))$/,

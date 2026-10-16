@@ -6,7 +6,7 @@ export const jaSettingsWindow = {
   'settings.appearance.black': '漆黒',
   'settings.appearance.night': '夜',
   'settings.appearance.day': '昼',
-  'settings.appearance.warm_day': '暖白',
+  'settings.appearance.warm_day': 'ウォーム',
   'settings.window.group_scene': '表示',
   'settings.window.group_scene_hint': '背景、天気アニメーション、時間帯',
   'settings.window.group_weather': '実天気',

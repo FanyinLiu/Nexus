@@ -198,13 +198,13 @@ export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ activ
           <input value={telegram ? draft.ownerTelegramChatIds : draft.ownerDiscordUserIds} onChange={(event) => setDraft((prev) => telegram ? { ...prev, ownerTelegramChatIds: event.target.value } : { ...prev, ownerDiscordUserIds: event.target.value })} />
         </SettingsV3Field>
         <SettingsV3Row label={telegram ? ti('settings.integrations.telegram.announce_incoming') : ti('settings.integrations.discord.announce_incoming')}>
-          <SettingsV3Switch label={`${title} announce`} checked={telegram ? draft.telegramAnnounceIncomingEnabled : draft.discordAnnounceIncomingEnabled} onChange={(value) => setDraft((prev) => telegram ? { ...prev, telegramAnnounceIncomingEnabled: value } : { ...prev, discordAnnounceIncomingEnabled: value })} />
+          <SettingsV3Switch label={telegram ? ti('settings.integrations.telegram.announce_incoming') : ti('settings.integrations.discord.announce_incoming')} checked={telegram ? draft.telegramAnnounceIncomingEnabled : draft.discordAnnounceIncomingEnabled} onChange={(value) => setDraft((prev) => telegram ? { ...prev, telegramAnnounceIncomingEnabled: value } : { ...prev, discordAnnounceIncomingEnabled: value })} />
         </SettingsV3Row>
         <SettingsV3Row label={telegram ? ti('settings.integrations.telegram.announce_preview') : ti('settings.integrations.discord.announce_preview')}>
-          <SettingsV3Switch label={`${title} preview`} disabled={telegram ? !draft.telegramAnnounceIncomingEnabled : !draft.discordAnnounceIncomingEnabled} checked={telegram ? draft.telegramAnnounceMessagePreview : draft.discordAnnounceMessagePreview} onChange={(value) => setDraft((prev) => telegram ? { ...prev, telegramAnnounceMessagePreview: value } : { ...prev, discordAnnounceMessagePreview: value })} />
+          <SettingsV3Switch label={telegram ? ti('settings.integrations.telegram.announce_preview') : ti('settings.integrations.discord.announce_preview')} disabled={telegram ? !draft.telegramAnnounceIncomingEnabled : !draft.discordAnnounceIncomingEnabled} checked={telegram ? draft.telegramAnnounceMessagePreview : draft.discordAnnounceMessagePreview} onChange={(value) => setDraft((prev) => telegram ? { ...prev, telegramAnnounceMessagePreview: value } : { ...prev, discordAnnounceMessagePreview: value })} />
         </SettingsV3Row>
         <SettingsV3Row label={telegram ? ti('settings.integrations.telegram.auto_reply') : ti('settings.integrations.discord.auto_reply')}>
-          <SettingsV3Switch label={`${title} auto reply`} checked={telegram ? draft.telegramAutoReplyEnabled : draft.discordAutoReplyEnabled} onChange={(value) => setDraft((prev) => telegram ? { ...prev, telegramAutoReplyEnabled: value } : { ...prev, discordAutoReplyEnabled: value })} />
+          <SettingsV3Switch label={telegram ? ti('settings.integrations.telegram.auto_reply') : ti('settings.integrations.discord.auto_reply')} checked={telegram ? draft.telegramAutoReplyEnabled : draft.discordAutoReplyEnabled} onChange={(value) => setDraft((prev) => telegram ? { ...prev, telegramAutoReplyEnabled: value } : { ...prev, discordAutoReplyEnabled: value })} />
         </SettingsV3Row>
         {telegram ? (
           <SettingsV3Field label={ti('settings.integrations.telegram.voice_reply_mode')}>
