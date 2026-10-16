@@ -10,6 +10,7 @@ import {
   isLocaleDefaultUserName,
   pickTranslatedUiText,
 } from '../../../lib/uiLanguage.ts'
+import type { ApiProviderPreset } from '../../models/providerCatalog.ts'
 import type { AppSettings } from '../../../types/app.ts'
 import type { TranslationKey, UiLanguage } from '../../../types/i18n.ts'
 import {
@@ -93,18 +94,25 @@ function formatOnboardingIssue(issue: OnboardingStepIssue) {
     : issue.message
 }
 
+/** One short line under the provider. Addresses and model ids stay out of it. */
+export function getOnboardingProviderNote(provider: ApiProviderPreset, uiLanguage: UiLanguage) {
+  const key: TranslationKey = provider.id === 'ollama'
+    ? 'onboarding.text.note.local'
+    : provider.id === 'custom'
+      ? 'onboarding.text.note.custom'
+      : provider.region === 'china'
+        ? 'onboarding.text.note.china'
+        : 'onboarding.text.note.global'
+  return pickTranslatedUiText(uiLanguage, key)
+}
+
 export function getOnboardingMissingApiKeyHint(
   draft: AppSettings,
   textProviderRequiresApiKey: boolean,
   uiLanguage: UiLanguage,
 ): string | null {
   if (!(textProviderRequiresApiKey && !draft.apiKey.trim())) return null
-  const preflightFail = getTextConnectionPreflightFailure(draft, uiLanguage)
-  const repairHint = preflightFail?.status === 'needs_key'
-    ? preflightFail.recommendation
-    : undefined
-  const baseHint = pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.missing_api_key')
-  return repairHint ? `${baseHint} ${repairHint}` : baseHint
+  return pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.missing_api_key')
 }
 
 export function getOnboardingFinishHint(

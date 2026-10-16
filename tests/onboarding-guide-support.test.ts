@@ -12,10 +12,12 @@ import {
   buildOnboardingSteps,
   getOnboardingFinishHint,
   getOnboardingMissingApiKeyHint,
+  getOnboardingProviderNote,
   getOnboardingStepError,
   getOnboardingStepIssue,
   resolveOnboardingFinishGate,
 } from '../src/features/onboarding/components/onboardingGuideSupport.ts'
+import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
 import { detectPreferredUiLanguage } from '../src/lib/uiLanguage.ts'
 import type { AppSettings } from '../src/types/app.ts'
 import type { TranslationDictionary } from '../src/types/i18n.ts'
@@ -144,7 +146,7 @@ test('applying onboarding repair reruns clean local preflight even without cloud
   assert.equal(remainingIssue, null)
 })
 
-test('onboarding finish hint includes DeepSeek first-run repair path without blocking save', () => {
+test('onboarding finish hint stays one sentence when the key is empty', () => {
   const hint = getOnboardingFinishHint(
     makeSettings({
       apiProviderId: 'deepseek',
@@ -156,9 +158,8 @@ test('onboarding finish hint includes DeepSeek first-run repair path without blo
     'zh-CN',
   )
 
-  assert.match(hint, /密钥还空着/)
-  assert.match(hint, /https:\/\/api\.deepseek\.com/)
-  assert.match(hint, /deepseek-flash/)
+  assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
+  assert.doesNotMatch(hint, /https?:\/\//)
 })
 
 test('missing API key hint is for the model step and stays empty for keyless providers', () => {
@@ -176,7 +177,7 @@ test('missing API key hint is for the model step and stays empty for keyless pro
     true,
     'zh-CN',
   )
-  assert.match(hint ?? '', /密钥还空着/)
+  assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
 })
 
 test('an untested model warns once, then finish can proceed', () => {
@@ -286,6 +287,13 @@ test('onboarding voice and readiness copy stays plain across locales', () => {
     'onboarding.step.language.title',
     'onboarding.step.language.description',
     'onboarding.step.voice.title',
+    'onboarding.step.voice.description',
+    'onboarding.voice.ready',
+    'onboarding.text.note.china',
+    'onboarding.text.note.global',
+    'onboarding.text.note.local',
+    'onboarding.text.note.custom',
+    'onboarding.finish_hint.missing_api_key',
     'onboarding.readiness.summary.ready',
     'onboarding.readiness.summary.warning',
     'onboarding.readiness.voice.blocked',
@@ -293,7 +301,7 @@ test('onboarding voice and readiness copy stays plain across locales', () => {
     'onboarding.finish_hint.unverified_model',
     'onboarding.repair.applied_text_defaults',
   ] as const
-  const jargon = /链路|鏈路|pipeline|パイプライン|파이프라인|preflight|预检|預檢/
+  const jargon = /链路|鏈路|pipeline|パイプライン|파이프라인|preflight|预检|預檢|https?:\/\/|SenseVoice|MeloTTS|测试模型|測試模型|test model|テストモデル/
 
   for (const dictionary of dictionaries) {
     for (const key of keys) {
@@ -301,6 +309,16 @@ test('onboarding voice and readiness copy stays plain across locales', () => {
       assert.doesNotMatch(dictionary[key], jargon, key)
     }
   }
+})
+
+test('built-in provider notes stay a short line without addresses', () => {
+  for (const id of ['deepseek', 'openai', 'ollama', 'custom'] as const) {
+    const note = getOnboardingProviderNote(getApiProviderPreset(id), 'zh-CN')
+    assert.ok(note.length > 0 && note.length < 40, note)
+    assert.doesNotMatch(note, /https?:\/\/|[a-z0-9-]{8,}/i)
+  }
+  assert.equal(getOnboardingProviderNote(getApiProviderPreset('deepseek'), 'zh-CN'), '适合国内网络')
+  assert.equal(enMessages['onboarding.text.note.local'], 'Runs on this computer. No key needed.')
 })
 
 test('unsupported system languages fall back to English', () => {

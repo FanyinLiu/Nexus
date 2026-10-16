@@ -1,7 +1,6 @@
 export * from './AiDisclosureStep.tsx'
 export * from './CompanionStep.tsx'
 export * from './LanguageStep.tsx'
-export * from './LocalVoiceModelsStatus.tsx'
 export * from './TextStep.tsx'
 export * from './types.ts'
 export * from './VoiceStep.tsx'

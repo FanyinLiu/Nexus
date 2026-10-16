@@ -287,7 +287,7 @@ export const jaCore = {
   'pet.model.hiyori.label': '桃瀬ひより',
   'pet.model.hiyori.description': '全身の待機モーションが豊富なLive2D公式オリジナルサンプルキャラクターです。',
   'pet.model.mao.label': 'Mao マジカルガール',
-  'pet.model.mao.description': '現在の内蔵テストモデル。口パク、視線追随、インタラクションに既に対応しています。',
+  'pet.model.mao.description': '話せて、こちらを見て、やり取りできます',
   'character.preset.mao.hero_eyebrow': 'Nexus · Companion UI',
   'character.preset.mao.dialogue_eyebrow': 'デスクトップコンパニオン',
   'character.preset.mao.tag.0': 'コンパニオンレイアウト',

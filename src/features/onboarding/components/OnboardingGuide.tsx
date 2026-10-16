@@ -8,18 +8,6 @@ import {
   apiProviderRequiresApiKey,
 } from '../../models/providerCatalog.ts'
 import type { ApiProviderPreset } from '../../models/providerCatalog.ts'
-import {
-  getFallbackSpeechOutputVoices,
-  getSpeechInputModelOptions,
-  getSpeechInputProviderPreset,
-  getSpeechOutputModelOptions,
-  getSpeechOutputProviderPreset,
-  isVolcengineSpeechOutputProvider,
-} from '../../../lib/audioProviders.ts'
-import {
-  switchSpeechInputProvider,
-  switchSpeechOutputProvider,
-} from '../../../lib/speechProviderProfiles.ts'
 import { switchTextProvider } from '../../../lib/textProviderProfiles.ts'
 import type { AppSettings, PlatformProfile, WindowView } from '../../../types'
 import type { PetModelDefinition } from '../../pet'
@@ -63,6 +51,7 @@ export type OnboardingGuideProps = {
   /** Persist the language choice without finishing the guide. */
   onPersistUiLanguage?: (settings: AppSettings) => Promise<void>
   onTestTextConnection?: (settings: AppSettings) => Promise<import('../../../components/settingsDrawerSupport').ConnectionResult>
+  onPreviewSpeech?: (settings: AppSettings, text: string) => Promise<{ message: string }>
 }
 
 export function OnboardingGuide({
@@ -75,6 +64,7 @@ export function OnboardingGuide({
   onSave,
   onPersistUiLanguage,
   onTestTextConnection,
+  onPreviewSpeech,
 }: OnboardingGuideProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const [draft, setDraft] = useState(settings)
@@ -107,12 +97,6 @@ export function OnboardingGuide({
   const step = onboardingSteps[stepIndex] ?? onboardingSteps[0]
   const isAiDisclosureStep = step.id === 'ai_disclosure'
   const lastStepIndex = onboardingSteps.length - 1
-  const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
-  const speechOutputProvider = getSpeechOutputProviderPreset(draft.speechOutputProviderId)
-  const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
-  const speechOutputModelOptions = getSpeechOutputModelOptions(draft.speechOutputProviderId)
-  const speechOutputVoiceOptions = getFallbackSpeechOutputVoices(draft.speechOutputProviderId)
-  const isVolcengineSpeechOutput = isVolcengineSpeechOutputProvider(draft.speechOutputProviderId)
   const selectedPetModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
   const missingApiKeyHint = getOnboardingMissingApiKeyHint(
     draft,
@@ -266,18 +250,6 @@ export function OnboardingGuide({
     setRepairNotice(null)
   }
 
-  function applySpeechInputPreset(providerId: string) {
-    setDraft((current) => switchSpeechInputProvider(current, providerId))
-    setError(null)
-    setRepairNotice(null)
-  }
-
-  function applySpeechOutputPreset(providerId: string) {
-    setDraft((current) => switchSpeechOutputProvider(current, providerId))
-    setError(null)
-    setRepairNotice(null)
-  }
-
   function applyOnboardingRepair(repair: OnboardingStepIssue['repair']) {
     if (!repair) return
     if (step.id === 'text') {
@@ -390,15 +362,7 @@ export function OnboardingGuide({
         return (
           <VoiceStep
             draft={draft}
-            setDraft={updateDraftFromStep}
-            speechInputProvider={speechInputProvider}
-            speechOutputProvider={speechOutputProvider}
-            speechInputModelOptions={speechInputModelOptions}
-            speechOutputModelOptions={speechOutputModelOptions}
-            speechOutputVoiceOptions={speechOutputVoiceOptions}
-            isVolcengineSpeechOutput={isVolcengineSpeechOutput}
-            onApplySpeechInputPreset={applySpeechInputPreset}
-            onApplySpeechOutputPreset={applySpeechOutputPreset}
+            onPreviewSpeech={onPreviewSpeech}
           />
         )
       case 'companion':

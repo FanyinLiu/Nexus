@@ -287,7 +287,7 @@ export const enCore = {
   'pet.model.hiyori.label': 'Hiyori Momose',
   'pet.model.hiyori.description': 'An official original Live2D sample character with a richer set of full-body idle motions.',
   'pet.model.mao.label': 'Mao the Magical Girl',
-  'pet.model.mao.description': 'Current built-in test model — already tuned for lip-sync, gaze tracking, and interactive motions.',
+  'pet.model.mao.description': 'She can talk, look at you, and respond.',
   'character.preset.mao.hero_eyebrow': 'Nexus · Companion UI',
   'character.preset.mao.dialogue_eyebrow': 'Desktop companion',
   'character.preset.mao.tag.0': 'Companion layout',

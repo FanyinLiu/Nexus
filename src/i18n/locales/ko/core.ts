@@ -287,7 +287,7 @@ export const koCore = {
   'pet.model.hiyori.label': '모모세 히요리',
   'pet.model.hiyori.description': '전신 대기 모션이 풍부한 Live2D 공식 오리지널 샘플 캐릭터입니다.',
   'pet.model.mao.label': 'Mao 마법소녀',
-  'pet.model.mao.description': '현재 내장 테스트 모델이며, 말할 때 입 모양, 시선 추적, 상호작용 동작이 이미 조정되어 있습니다.',
+  'pet.model.mao.description': '말하고, 당신을 보고, 반응해요',
   'character.preset.mao.hero_eyebrow': 'Nexus · Companion UI',
   'character.preset.mao.dialogue_eyebrow': '데스크톱 컴패니언',
   'character.preset.mao.tag.0': '컴패니언 레이아웃',

@@ -23,7 +23,7 @@ import {
   withConnectionCheckedAt,
 } from '../../../models/connectionTestFreshness.ts'
 import type { TranslationKey } from '../../../../types'
-import { getLocalizedApiProviderNote } from '../../../models/providerNotes.ts'
+import { getOnboardingProviderNote } from '../onboardingGuideSupport.ts'
 import type { ConnectionResult } from '../../../../components/settingsDrawerSupport.ts'
 import type { AppSettings } from '../../../../types'
 import type { OnboardingDraftSetter } from './types.ts'
@@ -61,6 +61,7 @@ export function TextStep({
   const currentPreset = getApiProviderPreset(draft.apiProviderId)
   const hasModelOptions = currentPreset.models.length > 0
 
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<ConnectionResult | null>(null)
   const [repairNotice, setRepairNotice] = useState<string | null>(null)
@@ -181,6 +182,7 @@ export function TextStep({
 
   // The currently-selected provider stays visible regardless of the active tab.
   const region = regionTab ?? getDefaultOnboardingRegion(draft.uiLanguage)
+  const showEndpointFields = currentPreset.region === 'custom' || advancedOpen
   const providerOptions = useMemo(
     () => getOnboardingTextProviderOptionsByRegion(region, draft.apiProviderId),
     [region, draft.apiProviderId],
@@ -261,57 +263,7 @@ export function TextStep({
         </select>
       </label>
 
-      <p className="onboarding-tip">{getLocalizedApiProviderNote(currentPreset, draft.uiLanguage)}</p>
-
-      <div className="onboarding-grid onboarding-grid--two">
-        <label>
-          <span>{ti('onboarding.text.api_base_label')}</span>
-          <input
-            value={draft.apiBaseUrl}
-            onChange={(event) => {
-              clearTextConnectionResult()
-              setDraft((current) => ({
-                ...current,
-                apiBaseUrl: event.target.value,
-              }))
-            }}
-          />
-        </label>
-
-        <label>
-          <span>{ti('onboarding.text.model_label')}</span>
-          {hasModelOptions ? (
-            <select
-              value={draft.model}
-              onChange={(event) => {
-                clearTextConnectionResult()
-                setDraft((current) => ({
-                  ...current,
-                  model: event.target.value,
-                }))
-              }}
-            >
-              {currentPreset.models.map((model) => (
-                <option key={model} value={model}>{model}</option>
-              ))}
-              {!currentPreset.models.includes(draft.model) && draft.model && (
-                <option value={draft.model}>{draft.model} {ti('onboarding.text.model_custom_suffix')}</option>
-              )}
-            </select>
-          ) : (
-            <input
-              value={draft.model}
-              onChange={(event) => {
-                clearTextConnectionResult()
-                setDraft((current) => ({
-                  ...current,
-                  model: event.target.value,
-                }))
-              }}
-            />
-          )}
-        </label>
-      </div>
+      <p className="onboarding-tip">{getOnboardingProviderNote(currentPreset, draft.uiLanguage)}</p>
 
       <label>
         <span>{ti('onboarding.text.api_key_label')}</span>
@@ -331,6 +283,69 @@ export function TextStep({
 
       {missingApiKeyHint ? (
         <p className="onboarding-tip onboarding-tip--strong">{missingApiKeyHint}</p>
+      ) : null}
+
+      {currentPreset.region === 'custom' ? null : (
+        <button
+          type="button"
+          className="ghost-button"
+          aria-expanded={advancedOpen}
+          onClick={() => setAdvancedOpen((open) => !open)}
+        >
+          {ti('onboarding.text.advanced')}
+        </button>
+      )}
+
+      {showEndpointFields ? (
+        <div className="onboarding-grid onboarding-grid--two">
+          <label>
+            <span>{ti('onboarding.text.api_base_label')}</span>
+            <input
+              value={draft.apiBaseUrl}
+              onChange={(event) => {
+                clearTextConnectionResult()
+                setDraft((current) => ({
+                  ...current,
+                  apiBaseUrl: event.target.value,
+                }))
+              }}
+            />
+          </label>
+
+          <label>
+            <span>{ti('onboarding.text.model_label')}</span>
+            {hasModelOptions ? (
+              <select
+                value={draft.model}
+                onChange={(event) => {
+                  clearTextConnectionResult()
+                  setDraft((current) => ({
+                    ...current,
+                    model: event.target.value,
+                  }))
+                }}
+              >
+                {currentPreset.models.map((model) => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+                {!currentPreset.models.includes(draft.model) && draft.model && (
+                  <option value={draft.model}>{draft.model} {ti('onboarding.text.model_custom_suffix')}</option>
+                )}
+              </select>
+            ) : (
+              <input
+                value={draft.model}
+                onChange={(event) => {
+                  clearTextConnectionResult()
+                  setDraft((current) => ({
+                    ...current,
+                    model: event.target.value,
+                  }))
+                }}
+              />
+            )}
+          </label>
+        </div>
       ) : null}
 
       {onTestConnection ? (
