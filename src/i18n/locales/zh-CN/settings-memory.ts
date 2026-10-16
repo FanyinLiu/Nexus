@@ -271,6 +271,7 @@ export const zhCNSettingsMemory = {
   'memory.portrait.summary': '{count} 条长期记忆',
   'memory.portrait.summary_empty': '{count} 条长期记忆，日记还是空的',
   'memory.portrait.recent': '最近：{name}',
+  'memory.portrait.stamp': '{month}月{day}日',
   'memory.topic.passport': '办护照',
   'memory.topic.report': '交报告',
   'memory.topic.interview': '面试',

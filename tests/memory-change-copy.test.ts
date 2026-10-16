@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   displayMemoryText,
+  formatPortraitDate,
   memoryChangeKey,
   memoryTopicToken,
   plainMemoryName,
@@ -33,6 +34,14 @@ function entry(patch: Partial<MemoryOpRecord>): MemoryOpRecord {
     ...patch,
   }
 }
+
+test('a portrait card writes the month and day in the locale template', () => {
+  const iso = new Date(2026, 9, 20, 12).toISOString()
+  assert.equal(formatPortraitDate(iso, '{month}月{day}日'), '10月20日')
+  assert.equal(formatPortraitDate(iso, '{month}/{day}'), '10/20')
+  assert.equal(formatPortraitDate('', '{month}月{day}日'), '')
+  assert.equal(formatPortraitDate(iso, '{month}月{day}日').includes('.'), false)
+})
 
 test('edited markers stay off the visible wording', () => {
   assert.equal(displayMemoryText('下周二去办护照（改过）'), '下周二去办护照')

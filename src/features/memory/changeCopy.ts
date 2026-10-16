@@ -73,6 +73,19 @@ export function memoryChangeSource(entry: MemoryOpRecord, memories: readonly Mem
   return ''
 }
 
+/**
+ * Month and day for a portrait card. `template` is the locale string,
+ * for example `{month}月{day}日`, so the card does not show `10.20.26`.
+ */
+export function formatPortraitDate(iso: string | null, template: string): string {
+  if (!iso || !template) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return template
+    .replaceAll('{month}', String(date.getMonth() + 1))
+    .replaceAll('{day}', String(date.getDate()))
+}
+
 /** Local month/day for a change row, such as 10/16. */
 export function memoryChangeDate(iso: string): string {
   const date = new Date(iso)
