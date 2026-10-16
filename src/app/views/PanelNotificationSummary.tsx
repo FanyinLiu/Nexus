@@ -1,6 +1,5 @@
 import { getNotificationCardPrimaryActions, type NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions.ts'
 import { getNotificationCardBadge } from '../../features/notifications/notificationCardSession.ts'
-import { shorten } from '../../lib'
 import { formatLocaleClockTime } from '../../lib/localDate.ts'
 import type { NotificationMessage, TranslationKey, TranslationParams } from '../../types'
 
@@ -20,10 +19,10 @@ type PanelNotificationSummaryProps = {
   translate: Translate
 }
 
-function formatNotificationPriority(message: NotificationMessage): string {
-  if (message.importance === 'critical' || message.isImportant) return '!!!'
-  if (message.importance === 'high') return '!!'
-  return ''
+function isNotificationMarked(message: NotificationMessage): boolean {
+  return Boolean(message.isImportant)
+    || message.importance === 'critical'
+    || message.importance === 'high'
 }
 
 function getNotificationTitle(message: { sender?: string; channelName: string; title: string }): string {
@@ -111,22 +110,24 @@ export function PanelNotificationSummary({
         <ul className="panel-notification-summary__list">
           {messages.map((message) => {
             const preview = (message.summary || message.body || '').trim()
-            const priority = formatNotificationPriority(message)
             const menuActions = getNotificationCardPrimaryActions(message)
             return (
               <li key={message.id} className="panel-notification-summary__item">
-                <p className="panel-notification-summary__item-title">
+                <div className="panel-notification-summary__item-row">
                   <NotificationCardMark message={message} />
-                  {priority ? (
-                    <span className="panel-notification-summary__item-priority">{priority}</span>
-                  ) : null}
-                  <strong>{getNotificationTitle(message)}</strong>
-                  <small>{formatLocaleClockTime(message.receivedAt, locale)}</small>
-                </p>
-                {preview ? (
-                  <p className="panel-notification-summary__item-body">{shorten(preview, 120)}</p>
-                ) : null}
-                <div className="panel-notification-summary__item-actions">
+                  <div className="panel-notification-summary__item-copy">
+                    <p className="panel-notification-summary__item-title">
+                      {isNotificationMarked(message) ? (
+                        <span className="panel-notification-summary__tag">{translate('panel.notification.important_tag')}</span>
+                      ) : null}
+                      <strong>{getNotificationTitle(message)}</strong>
+                      <small>{formatLocaleClockTime(message.receivedAt, locale)}</small>
+                    </p>
+                    {preview ? (
+                      <p className="panel-notification-summary__item-body">{preview}</p>
+                    ) : null}
+                  </div>
+                  <div className="panel-notification-summary__item-actions">
                   {canReplyToNotification(message) ? (
                     <button
                       type="button"
@@ -167,6 +168,7 @@ export function PanelNotificationSummary({
                       ))}
                     </div>
                   </details>
+                  </div>
                 </div>
               </li>
             )

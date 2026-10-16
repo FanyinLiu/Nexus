@@ -202,6 +202,25 @@
 
 .nexus-panel-v2__caption svg { width: 18px; height: 18px; }
 
+.nexus-panel-v2__caption--dismissible {
+  cursor: default;
+}
+
+.nexus-panel-v2__caption-dismiss {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--v2-ink);
+  font-size: 16px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
 .nexus-panel-v2__notices {
   position: absolute;
   z-index: 9;
@@ -241,7 +260,7 @@
 }
 
 .nexus-panel-v2__notices .panel-notification-summary__item-title {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
 }
 
@@ -256,8 +275,9 @@
   background: var(--nx-v2-accent);
 }
 
-.nexus-panel-v2__notices .panel-notification-summary__item-priority {
-  color: var(--nx-v2-danger);
+.nexus-panel-v2__notices .panel-notification-summary__tag {
+  color: var(--nx-v2-accent);
+  background: var(--nx-v2-accent-soft);
 }
 
 .nexus-panel-v2__notices .panel-notification-summary__menu {
@@ -286,6 +306,12 @@
   color: var(--nx-v2-on-accent);
   background: var(--nx-v2-accent);
   border-color: var(--nx-v2-accent);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__item-actions .ghost-button {
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: 12px;
 }
 
 .nexus-panel-v2__safety-layer {

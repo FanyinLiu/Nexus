@@ -57,6 +57,7 @@ export type CompanionPanelV2Props = {
     error: string | null
     assistantActivity: AssistantRuntimeActivity
     setInput: (value: string) => void
+    setError: (value: string | null) => void
     sendMessage: () => Promise<unknown>
     cancelActiveTurn: () => void
   }
@@ -272,20 +273,34 @@ export function CompanionPanelV2({
         </Suspense>}
       </div>
       {!chatSheetOpen && latestCaption ? (
-        <button
-          ref={captionButtonRef}
-          type="button"
-          className="nexus-panel-v2__caption"
-          onClick={() => openChatSheet(captionButtonRef.current)}
-          onPointerEnter={() => setCaptionPaused(true)}
-          onPointerLeave={() => setCaptionPaused(false)}
-          onFocus={() => setCaptionPaused(true)}
-          onBlur={() => setCaptionPaused(false)}
-          aria-label={ti('ui_v2.chat.open_reply', { reply: latestCaption })}
-        >
-          <span>{latestCaption}</span>
-          <PetControlIcon name="expand" />
-        </button>
+        chat.error ? (
+          <div className="nexus-panel-v2__caption nexus-panel-v2__caption--dismissible" role="status">
+            <span>{chat.error}</span>
+            <button
+              type="button"
+              className="nexus-panel-v2__caption-dismiss"
+              aria-label={ti('common.close')}
+              onClick={() => chat.setError(null)}
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          <button
+            ref={captionButtonRef}
+            type="button"
+            className="nexus-panel-v2__caption"
+            onClick={() => openChatSheet(captionButtonRef.current)}
+            onPointerEnter={() => setCaptionPaused(true)}
+            onPointerLeave={() => setCaptionPaused(false)}
+            onFocus={() => setCaptionPaused(true)}
+            onBlur={() => setCaptionPaused(false)}
+            aria-label={ti('ui_v2.chat.open_reply', { reply: latestCaption })}
+          >
+            <span>{latestCaption}</span>
+            <PetControlIcon name="expand" />
+          </button>
+        )
       ) : null}
       {!chatSheetOpen && notificationCards ? (
         <div className="nexus-panel-v2__notices">

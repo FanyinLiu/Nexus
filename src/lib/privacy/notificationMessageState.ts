@@ -26,6 +26,31 @@ export function sanitizeNotificationMessageSnapshot(value: unknown): Notificatio
   )
 }
 
+export type NotificationPreviewMemory = ReadonlyMap<string, { body: string; summary?: string }>
+
+/**
+ * A stored snapshot has an empty body. The card can still show one preview
+ * line from a body that is only in memory for the same id. Nothing here is
+ * written back to storage.
+ */
+export function retainNotificationPreview(
+  snapshot: readonly NotificationMessage[],
+  current: readonly NotificationMessage[],
+  remembered: NotificationPreviewMemory,
+): NotificationMessage[] {
+  if (snapshot.length === 0) return [...snapshot]
+  const currentById = new Map(current.map((message) => [message.id, message]))
+  return snapshot.map((message) => {
+    if (message.body.trim() || message.summary?.trim()) return message
+    const previous = currentById.get(message.id)
+    const memory = remembered.get(message.id)
+    const body = previous?.body.trim() || memory?.body || ''
+    const summary = previous?.summary?.trim() || memory?.summary
+    if (!body && !summary) return message
+    return { ...message, body, summary }
+  })
+}
+
 export function prependNotificationMessage(
   messages: readonly NotificationMessage[],
   message: NotificationMessage,

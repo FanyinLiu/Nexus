@@ -6,6 +6,7 @@ import {
   clearExpiredNotificationSnoozes,
   commitNotificationMessages,
   prependNotificationMessage,
+  retainNotificationPreview,
   sanitizeNotificationMessageSnapshot,
 } from '../src/lib/privacy/notificationMessageState.ts'
 import type { NotificationMessage } from '../src/types/autonomy.ts'
@@ -73,6 +74,26 @@ test('local incoming notification commits once while keeping raw body only in me
   assert.equal(persisted[0]?.summary, undefined)
   assert.equal(applied[0]?.body, message.body)
   assert.equal(applied[0]?.summary, message.summary)
+})
+
+test('a stored snapshot keeps an in-memory body for the card preview', () => {
+  const live = makeMessage({ body: 'Can we move the review to 3pm?', summary: undefined })
+  const stored = sanitizeNotificationMessageSnapshot([live])
+  const remembered = new Map([[live.id, { body: live.body }]])
+
+  const restored = retainNotificationPreview(stored, [], remembered)
+  assert.equal(restored[0]?.body, live.body)
+  assert.equal(stored[0]?.body, '')
+
+  const fromCurrent = retainNotificationPreview(stored, [live], new Map())
+  assert.equal(fromCurrent[0]?.body, live.body)
+
+  const empty = retainNotificationPreview(
+    [makeMessage({ id: 'blank', body: '', summary: undefined })],
+    [],
+    new Map(),
+  )
+  assert.equal(empty[0]?.body, '')
 })
 
 test('remote snapshots are sanitized and apply without persistence or notification side effects', () => {

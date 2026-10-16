@@ -46,6 +46,7 @@
 
 .panel-notification-summary__list {
   list-style: none;
+  min-width: 0;
   margin: 0;
   padding: 0;
   display: grid;
@@ -53,17 +54,31 @@
 }
 
 .panel-notification-summary__item {
+  min-width: 0;
   border-radius: 7px;
   padding: 7px 8px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.5);
 }
 
+.panel-notification-summary__item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.panel-notification-summary__item-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .panel-notification-summary__item-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
   color: #cbd5e1;
 }
 
@@ -87,35 +102,55 @@
   height: 16px;
 }
 
-.panel-notification-summary__item-priority {
-  color: #fca5a5;
-  font-weight: 700;
-  text-align: center;
+.panel-notification-summary__tag {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 16px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
 .panel-notification-summary__item-title strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   font-size: 12px;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-notification-summary__item-title small {
+  flex: 0 0 auto;
   font-size: 11px;
   color: #94a3b8;
 }
 
 .panel-notification-summary__item-body {
-  margin: 0;
+  margin: 2px 0 0;
+  overflow: hidden;
   color: #e2e8f0;
-  overflow-wrap: anywhere;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-notification-summary__item-actions {
-  margin-top: 6px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
   align-items: center;
   justify-content: flex-end;
+}
+
+.panel-notification-summary__item-actions .ghost-button {
+  min-height: 24px;
+  padding: 0 7px;
+  font-size: 12px;
 }
 
 .panel-notification-summary__more {
