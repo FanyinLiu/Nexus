@@ -15,86 +15,108 @@ export type SettingsCardIconKey =
   | 'autonomy'
   | 'onboarding'
 
+/**
+ * Stroke icons, same weight as the line icons already used in the panel.
+ * Filled marks were easy to read as a character inside the small badge.
+ */
+function lineIcon(children: ReactNode) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  )
+}
+
 export function renderSettingsCardIcon(iconKey: SettingsCardIconKey): ReactNode {
   switch (iconKey) {
     case 'console':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M16 4a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm5.74 8.88-6.6 7.44a1.25 1.25 0 0 1-1.83.05l-3.1-3.1a1.25 1.25 0 1 1 1.76-1.77l2.16 2.16 5.74-6.47a1.25 1.25 0 0 1 1.87 1.66Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <path d="m8.5 12.2 2.2 2.2 4.8-5" />
+        </>,
       )
     case 'model':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M16 4a1.5 1.5 0 0 1 1.3.76l2.38 4.12 4.62 1.1a1.5 1.5 0 0 1 .83 2.46L21.8 16l1.02 4.72a1.5 1.5 0 0 1-2.17 1.58L16 19.8l-4.65 2.5a1.5 1.5 0 0 1-2.17-1.58L10.2 16l-3.33-3.56a1.5 1.5 0 0 1 .83-2.46l4.62-1.1 2.38-4.12A1.5 1.5 0 0 1 16 4Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <path d="M12 3.2 13.5 8.1 18.4 9.6 13.5 11.1 12 16 10.5 11.1 5.6 9.6 10.5 8.1Z" />
+          <path d="M18 14.2 18.7 16.4 18.9 16.6 20.8 17.3 18.7 18 18 20.2 17.3 18 15.2 17.3 17.3 16.6Z" />
+        </>,
       )
     case 'chat':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M7 6a4 4 0 0 0-4 4v10a4 4 0 0 0 4 4h2v4a1 1 0 0 0 1.6.8L16 24h9a4 4 0 0 0 4-4V10a4 4 0 0 0-4-4H7Zm4 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z" />
-        </svg>
+      return lineIcon(
+        <path d="M21 15a2 2 0 0 1-2 2H8l-4 3.5V6a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />,
       )
     case 'history':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M16 4C9.37 4 4 9.37 4 16s5.37 12 12 12 12-5.37 12-12S22.63 4 16 4Zm1 5a1 1 0 1 0-2 0v7a1 1 0 0 0 .45.83l4 2.67a1 1 0 0 0 1.1-1.67L17 15.56V9Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M12 8v4.2l2.8 1.8" />
+        </>,
       )
     case 'letters':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M7 5.5A3.5 3.5 0 0 0 3.5 9v14A3.5 3.5 0 0 0 7 26.5h18a3.5 3.5 0 0 0 3.5-3.5V9A3.5 3.5 0 0 0 25 5.5H7Zm-.55 4.12a1 1 0 0 1 1.4-.18L16 15.56l8.15-6.12a1 1 0 1 1 1.2 1.6l-8.75 6.56a1 1 0 0 1-1.2 0l-8.75-6.56a1 1 0 0 1-.2-1.42Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+          <path d="m4 7 8 6 8-6" />
+        </>,
       )
     case 'memory':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M16 4a1 1 0 0 1 .86.5C18.5 7.5 22 11.24 22 15a6 6 0 0 1-5 5.91V24h3a1 1 0 1 1 0 2h-3v2a1 1 0 1 1-2 0v-2h-3a1 1 0 1 1 0-2h3v-3.09A6 6 0 0 1 10 15c0-3.76 3.5-7.5 5.14-10.5A1 1 0 0 1 16 4Z" />
-        </svg>
+      return lineIcon(
+        <path d="M12 20.2s-6.4-3.7-6.4-8.4a3.7 3.7 0 0 1 6.4-2.5 3.7 3.7 0 0 1 6.4 2.5c0 4.7-6.4 8.4-6.4 8.4z" />,
       )
     case 'lorebooks':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M7 4h16a4 4 0 0 1 4 4v18a2 2 0 0 1-2 2H9a4 4 0 0 1-4-4V8a4 4 0 0 1 2-3.46V4Zm2 3a1 1 0 0 0-1 1v12.13c.32-.09.65-.13 1-.13h15V8a1 1 0 0 0-1-1H9Zm0 16a1 1 0 1 0 0 2h15v-2H9Zm3-12h8a1 1 0 1 1 0 2h-8a1 1 0 1 1 0-2Zm0 4h6a1 1 0 1 1 0 2h-6a1 1 0 1 1 0-2Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5z" />
+          <path d="M5 5.5A2.5 2.5 0 0 1 7.5 8H19" />
+          <path d="M9 12h6M9 15h4" />
+        </>,
       )
     case 'voice':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <rect fill="currentColor" x="11" y="4" width="10" height="14" rx="5" />
-          <path fill="currentColor" d="M7 15a1 1 0 0 1 2 0 7 7 0 0 0 14 0 1 1 0 1 1 2 0 9 9 0 0 1-8 8.94V27h3a1 1 0 1 1 0 2h-8a1 1 0 1 1 0-2h3v-3.06A9 9 0 0 1 7 15Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <rect x="9" y="3.5" width="6" height="10" rx="3" />
+          <path d="M6.5 11a5.5 5.5 0 0 0 11 0" />
+          <path d="M12 16.5V20" />
+          <path d="M9 20h6" />
+        </>,
       )
     case 'window':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm4-1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm4 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM4 12h24v12a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V12Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+          <path d="M3.5 9h17" />
+        </>,
       )
     case 'integrations':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M14 4a1 1 0 0 0-1 1v4.05A3.5 3.5 0 0 1 9.05 13H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4.05A3.5 3.5 0 0 1 13 22.95V27a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4.05A3.5 3.5 0 0 1 22.95 19H27a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-4.05A3.5 3.5 0 0 1 19 9.05V5a1 1 0 0 0-1-1h-4Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <path d="M9 12a4 4 0 0 1 0-6l1.5-1.5a4 4 0 0 1 5.7 5.6L15 11" />
+          <path d="M15 12a4 4 0 0 1 0 6l-1.5 1.5a4 4 0 0 1-5.7-5.6L9 13" />
+        </>,
       )
     case 'tools':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M14 4a10 10 0 1 0 6.32 17.74l5.47 5.47a1.5 1.5 0 0 0 2.12-2.12l-5.47-5.47A10 10 0 0 0 14 4Zm0 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m16 16 4 4" />
+        </>,
       )
     case 'autonomy':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M16 3a1 1 0 0 1 .87.5l2.5 4.33 4.96 1.17a1 1 0 0 1 .58 1.62L21.5 14.5l.78 5.13a1 1 0 0 1-1.45 1.05L16 18l-4.83 2.68a1 1 0 0 1-1.45-1.05l.78-5.13-3.41-3.88a1 1 0 0 1 .58-1.62l4.96-1.17 2.5-4.33A1 1 0 0 1 16 3ZM8 24a1 1 0 1 0 0 2h16a1 1 0 1 0 0-2H8Zm2 4a1 1 0 1 0 0 2h12a1 1 0 1 0 0-2H10Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <path d="M12 3.2 13.2 7.4 17.5 8.6 13.2 9.8 12 14 10.8 9.8 6.5 8.6 10.8 7.4Z" />
+          <path d="M6 16h12" />
+          <path d="M8 19.5h8" />
+        </>,
       )
     case 'onboarding':
-      return (
-        <svg viewBox="0 0 32 32" aria-hidden="true">
-          <path fill="currentColor" d="M8 5a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h16a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3H8Zm0 3h16v3H8V8Zm0 6h7v10H8V14Zm10 0h6v2h-6v-2Zm0 4h6v2h-6v-2Zm0 4h4v2h-4v-2Z" />
-        </svg>
+      return lineIcon(
+        <>
+          <circle cx="12" cy="12" r="8" />
+          <path d="m15.8 8.2-1.6 4.6-4.6 1.6 1.6-4.6z" />
+        </>,
       )
     default:
       return null

@@ -89,17 +89,25 @@ html[data-companion-theme] .settings-v2__section-tabs button {
   border-radius: var(--nx-radius-control);
 }
 
-html[data-companion-theme] .settings-v2__home-icon {
+html[data-companion-theme] .settings-v2__home-icon,
+html[data-companion-theme] .settings-v3-row__icon {
   background: var(--color-accent-soft);
   color: var(--color-accent);
   box-shadow: none;
 }
 
+html[data-companion-theme] .settings-v3-row__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nx-radius-control);
+}
+
 html[data-companion-theme] .settings-v2__home-icon svg,
-html[data-companion-theme] .settings-v2__nav-icon svg {
+html[data-companion-theme] .settings-v2__nav-icon svg,
+html[data-companion-theme] .settings-v3-row__icon svg {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   overflow: visible;
 }
 
@@ -120,11 +128,6 @@ html[data-companion-theme='system'] .settings-v2__home-card:first-child {
 
 html[data-companion-theme='system'] .settings-v2__home-card:last-child {
   border-radius: 0 0 var(--nx-radius-card) var(--nx-radius-card);
-}
-
-html[data-companion-theme='system'] .settings-v2__home-icon {
-  background: transparent;
-  color: var(--color-text-primary);
 }
 
 html[data-companion-theme='system'] .settings-drawer--v2 > .settings-v2,

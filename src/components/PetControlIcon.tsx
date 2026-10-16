@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react'
+import type { ReactNode, SVGProps } from 'react'
 
 export type PetControlIconName =
   | 'chat'
@@ -34,9 +34,109 @@ export type PetControlIconName =
 
 type PetControlIconProps = SVGProps<SVGSVGElement> & {
   name: PetControlIconName
+  /** Stroke mark for settings badges. The pet chrome keeps the filled marks. */
+  variant?: 'line'
 }
 
-export function PetControlIcon({ name, ...props }: PetControlIconProps) {
+function lineIcon(children: ReactNode, props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      {children}
+    </svg>
+  )
+}
+
+function lineMark(name: PetControlIconName): ReactNode | null {
+  switch (name) {
+    case 'chat':
+      return <path d="M21 15a2 2 0 0 1-2 2H8l-4 3.5V6a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
+    case 'clipboard':
+      return (
+        <>
+          <rect x="4" y="5" width="16" height="15" rx="2" />
+          <path d="M8 3.5v3M16 3.5v3M4 9.5h16" />
+        </>
+      )
+    case 'settings':
+      return (
+        <>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6" />
+        </>
+      )
+    case 'tuning':
+      return (
+        <>
+          <path d="M4 7h16M4 12h16M4 17h16" />
+          <circle cx="8" cy="7" r="2" />
+          <circle cx="15" cy="12" r="2" />
+          <circle cx="10" cy="17" r="2" />
+        </>
+      )
+    case 'pin':
+      return <path d="M12 21v-6M8 8.5 12 3l4 5.5-2.2 1.2V15H10.2V9.7Z" />
+    case 'pointer':
+      return <path d="M5 3.5 19 11l-6.2 1.6L11 19.5 5 3.5z" />
+    case 'image':
+      return (
+        <>
+          <rect x="3.5" y="5" width="17" height="14" rx="2" />
+          <circle cx="8.5" cy="9.5" r="1.4" />
+          <path d="m4.5 16 4.2-4 3 2.8 2.2-2 5.6 4.2" />
+        </>
+      )
+    case 'mic':
+      return (
+        <>
+          <rect x="9" y="3.5" width="6" height="10" rx="3" />
+          <path d="M6.5 11a5.5 5.5 0 0 0 11 0" />
+          <path d="M12 16.5V20M9 20h6" />
+        </>
+      )
+    case 'speaker':
+      return (
+        <>
+          <path d="M4 9.5h3.2L11 6.2v11.6L7.2 14.5H4z" />
+          <path d="M14.5 9.2a3.2 3.2 0 0 1 0 5.6" />
+          <path d="M16.8 7a6 6 0 0 1 0 10" />
+        </>
+      )
+    case 'sparkles':
+      return (
+        <>
+          <path d="M12 3.2 13.3 8 18.2 9.3 13.3 10.6 12 15.4 10.7 10.6 5.8 9.3 10.7 8Z" />
+          <path d="M18 14.2 18.6 16.2 20.6 16.8 18.6 17.4 18 19.4 17.4 17.4 15.4 16.8 17.4 16.2Z" />
+        </>
+      )
+    case 'thought':
+      return <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z" />
+    case 'continuous':
+      return (
+        <>
+          <path d="M20 8V4.5h-3.5" />
+          <path d="M20 4.5A8 8 0 0 0 6.2 7.2" />
+          <path d="M4 16v3.5h3.5" />
+          <path d="M4 19.5A8 8 0 0 0 17.8 16.8" />
+        </>
+      )
+    case 'external-link':
+      return (
+        <>
+          <path d="M14 5h5v5" />
+          <path d="M19 5 10.5 13.5" />
+          <path d="M17 13.5V18a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 5 18V8.5A1.5 1.5 0 0 1 6.5 7H11" />
+        </>
+      )
+    default:
+      return null
+  }
+}
+
+export function PetControlIcon({ name, variant, ...props }: PetControlIconProps) {
+  if (variant === 'line') {
+    const mark = lineMark(name)
+    if (mark) return lineIcon(mark, props)
+  }
   switch (name) {
     case 'chat':
       return (

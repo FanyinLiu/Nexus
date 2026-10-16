@@ -17,7 +17,7 @@ release. `package.json` may be `0.4.8-beta.N` during beta. Notes for the
 first prerelease stay in
 [`docs/RELEASE-NOTES-v0.4.8-beta.1.md`](docs/RELEASE-NOTES-v0.4.8-beta.1.md).
 
-- Appearance: Settings can switch among Warm companion, System look, and A little character. Warm companion is the default. Each look has a light and a dark version and changes without reopening the app. On a Mac, System look uses the desktop blur; other computers keep a translucent panel.
+- Appearance: Settings can switch among Warm companion, System look, and A little character. Warm companion is the default. Each look has a light and a dark version and changes without reopening the app. On a Mac, System look uses the desktop blur; other computers keep a translucent panel. Settings cards and rows use a line icon in a soft badge.
 - Stability: updates flush your data and wait until you confirm install.
   Each window only receives the capabilities that belong to it. The app
   runs on Electron 43.7.11. First-use setup opens in the panel, and a failed
