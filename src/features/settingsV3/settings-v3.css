@@ -83,6 +83,10 @@
 .settings-v3-row[data-disabled='true'] { color: color-mix(in srgb, var(--sv3-muted) 68%, transparent); }
 .settings-v3-row__icon { display: grid; width: 24px; height: 24px; place-items: center; color: var(--sv3-muted); }
 .settings-v3-row__icon svg { width: 20px; height: 20px; }
+.settings-v3-choice-row { display: flex; gap: 4px; padding: 8px 14px 12px; }
+.settings-v3-choice-row button { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: var(--sv3-soft); color: var(--sv3-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.settings-v3-choice-row button[aria-checked='true'] { background: var(--sv3-accent-soft); color: var(--sv3-accent); }
+.settings-v3-section__body > p { margin: 8px 14px 0; color: var(--sv3-muted); font-size: 12px; line-height: 1.45; }
 .settings-v3-row__copy { display: grid; gap: 2px; min-width: 0; }
 .settings-v3-row__copy strong { font-size: 13px; font-weight: 680; }
 .settings-v3-row__copy span,

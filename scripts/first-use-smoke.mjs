@@ -239,14 +239,16 @@ async function openSettings(page) {
 
 async function openModelSettings(page) {
   await openSettings(page)
-  await page.locator('.settings-v2__home-card[data-focus-return-group="advanced"]').click()
-  await page.locator('.settings-v2[data-settings-v2-destination="advanced"]').waitFor()
-  await page.getByLabel('Provider', { exact: true }).waitFor()
+  await page.locator('.settings-v2__home-card[data-focus-return-group="connect"]').click()
+  await page.locator('.settings-v2[data-settings-v2-destination="connect"]').waitFor()
+  await page.getByLabel('Service', { exact: true }).waitFor()
 }
 
 async function openGuideFromSettings(page) {
   await openSettings(page)
-  const entry = page.locator('.settings-v2__home-card:not([data-focus-return-group])')
+  await page.locator('.settings-v2__home-card[data-focus-return-group="about"]').click()
+  await page.locator('.settings-v2[data-settings-v2-destination="about"]').waitFor()
+  const entry = page.locator('[data-settings-guide]')
   assert.ok((await entry.getAttribute('aria-label'))?.trim(), 'Guide entry must have a localized accessible name')
   await entry.click()
   await waitForVisibleGuide(page)
@@ -314,14 +316,14 @@ async function run() {
 
   await record('settings save rejection is visible inside model settings and retains the draft', async () => {
     await openModelSettings(panel)
-    await panel.getByLabel(/^Text API key/).fill(`${FAKE_KEY}-retry`)
+    await panel.getByLabel('Key', { exact: true }).fill(`${FAKE_KEY}-retry`)
     await application.evaluate(() => { globalThis.__nexusFirstUseSmoke.rejectNextVaultWrite = true })
     await panel.locator('.settings-v2__draft-button--primary').click()
     const error = panel.locator('.settings-v3-page > .settings-v3-notice.is-error[role="alert"]')
     await error.waitFor()
-    assert.equal(await panel.getByLabel(/^Text API key/).inputValue(), `${FAKE_KEY}-retry`)
-    assert.equal(await panel.getByLabel('Text endpoint URL', { exact: true }).inputValue(), provider.baseUrl)
-    assert.equal(await panel.getByLabel('Text model', { exact: true }).inputValue(), provider.model)
+    assert.equal(await panel.getByLabel('Key', { exact: true }).inputValue(), `${FAKE_KEY}-retry`)
+    assert.equal(await panel.getByLabel('Address', { exact: true }).inputValue(), provider.baseUrl)
+    assert.equal(await panel.getByLabel('Model', { exact: true }).inputValue(), provider.model)
     const visible = await error.evaluate((element) => new Promise((resolve) => {
       const observer = new IntersectionObserver(([entry]) => {
         observer.disconnect()
@@ -341,9 +343,9 @@ async function run() {
     await panel.locator('.nexus-panel-v2').waitFor()
     await dismissOptionalSetup(panel)
     await openModelSettings(panel)
-    assert.equal(await panel.getByLabel('Provider', { exact: true }).inputValue(), 'custom')
-    assert.equal(await panel.getByLabel('Text endpoint URL', { exact: true }).inputValue(), provider.baseUrl)
-    assert.equal(await panel.getByLabel('Text model', { exact: true }).inputValue(), provider.model)
+    assert.equal(await panel.getByLabel('Service', { exact: true }).inputValue(), 'custom')
+    assert.equal(await panel.getByLabel('Address', { exact: true }).inputValue(), provider.baseUrl)
+    assert.equal(await panel.getByLabel('Model', { exact: true }).inputValue(), provider.model)
     const vault = JSON.parse(await fs.readFile(path.join(profile, 'vault.json'), 'utf8'))
     assert.equal(vault['settings:apiKey']?.p === `${FAKE_KEY}-retry`, true, 'Retried synthetic key must persist after reload')
     await screenshot(panel, '05-settings-retry-reloaded')
@@ -409,7 +411,8 @@ async function run() {
           window.setSize(size.width, size.height)
         }, { width, height })
         await openSettings(panel)
-        const entry = panel.locator('.settings-v2__home-card:not([data-focus-return-group])')
+        await panel.locator('.settings-v2__home-card[data-focus-return-group="about"]').click()
+        const entry = panel.locator('[data-settings-guide]')
         await entry.scrollIntoViewIfNeeded()
         await screenshot(panel, `09-guide-entry-${language}-${viewport}`)
         await openGuideFromSettings(panel)

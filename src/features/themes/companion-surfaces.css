@@ -85,9 +85,20 @@ html[data-companion-theme] .settings-v3-voice-models__row {
 
 html[data-companion-theme] .settings-v2__home-icon,
 html[data-companion-theme] .settings-v2__nav-item,
-html[data-companion-theme] .settings-v2__draft-button,
-html[data-companion-theme] .settings-v2__section-tabs button {
+html[data-companion-theme] .settings-v2__draft-button {
   border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .settings-v2__home-icon[data-tone='success'],
+html[data-companion-theme] .settings-v3-row__icon[data-tone='success'] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 18%, var(--nx-card-bg));
+}
+
+html[data-companion-theme] .settings-v2__home-icon[data-tone='warning'],
+html[data-companion-theme] .settings-v3-row__icon[data-tone='warning'] {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 22%, var(--nx-card-bg));
 }
 
 html[data-companion-theme] .settings-v2__home-icon,

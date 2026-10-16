@@ -1,49 +1,31 @@
 import type { KeyboardEventHandler, ReactNode, RefObject } from 'react'
 import { SettingsShellV2, type SettingsV2Destination, type SettingsV2Group } from '../features/uiV2/SettingsShellV2.tsx'
-import { getSettingsV2NavigationIntent } from '../features/uiV2/settingsNavigationIntent.ts'
-import { getSettingsTabScrollLeft } from '../features/uiV2/settingsTabScroll.ts'
-import type { Translator } from '../types/index.ts'
+import {
+  SETTINGS_SIMPLE_PAGE_SECTIONS,
+  settingsPageForSection,
+  type SettingsSimplePageId,
+} from '../features/settingsSimplify/index.ts'
+import type { AppSettings, Translator } from '../types/index.ts'
 import { ConfirmDialog } from './ConfirmDialog.tsx'
-import { PetControlIcon } from './PetControlIcon.tsx'
-import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
+import { settingsSimpleGroupCopy } from './settingsSimple/settingsSimpleCopy.ts'
 import type { ConfirmOptions } from './useConfirm.ts'
 import type { SettingsSectionId } from './settingsDrawerSupport.ts'
 
-type SettingsSectionOption = {
-  id: SettingsSectionId
-  label: string
-}
-
-const SETTINGS_V2_SECTIONS: Record<Exclude<SettingsV2Destination, 'home'>, readonly SettingsSectionId[]> = {
-  companion: ['chat', 'letters', 'window', 'autonomy'],
-  voice: ['voice'],
-  privacy: ['memory', 'lorebooks'],
-  advanced: ['model', 'integrations', 'tools', 'history', 'console'],
-}
-
-const SETTINGS_V2_DEFAULT_SECTION: Record<Exclude<SettingsV2Destination, 'home'>, SettingsSectionId> = {
-  companion: 'chat',
-  voice: 'voice',
-  privacy: 'memory',
-  advanced: 'model',
+const SETTINGS_V2_DEFAULT_SECTION: Record<SettingsSimplePageId, SettingsSectionId> = {
+  appearance: SETTINGS_SIMPLE_PAGE_SECTIONS.appearance[0],
+  voice: SETTINGS_SIMPLE_PAGE_SECTIONS.voice[0],
+  memory: SETTINGS_SIMPLE_PAGE_SECTIONS.memory[0],
+  connect: SETTINGS_SIMPLE_PAGE_SECTIONS.connect[0],
+  about: SETTINGS_SIMPLE_PAGE_SECTIONS.about[0],
 }
 
 function getSettingsV2Destination(sectionId: SettingsSectionId): Exclude<SettingsV2Destination, 'home'> {
-  for (const [destination, sectionIds] of Object.entries(SETTINGS_V2_SECTIONS)) {
-    if (sectionIds.includes(sectionId)) {
-      return destination as Exclude<SettingsV2Destination, 'home'>
-    }
-  }
-  return 'companion'
+  return settingsPageForSection(sectionId)
 }
 
 export type SettingsDrawerV2Props = {
   settingsView: 'home' | 'section'
   activeSectionId: SettingsSectionId
-  activeSectionLabel: string
-  activeSectionDescription: string
-  voiceSectionDescription: string
-  settingsSectionOptions: readonly SettingsSectionOption[]
   settingsBackdropClassName: string
   settingsDrawerClassName: string
   settingsDialogRef: RefObject<HTMLElement | null>
@@ -51,14 +33,14 @@ export type SettingsDrawerV2Props = {
   activeSectionHeadingRef: RefObject<HTMLHeadingElement | null>
   onDialogKeyDown: KeyboardEventHandler<HTMLElement>
   companionName: string
+  draft: AppSettings
   dirty: boolean
   saving: boolean
   ti: Translator
-  renderActiveSettingsSection: () => ReactNode
+  renderPage: () => ReactNode
   confirmOptions: ConfirmOptions | null
   onReturnToSettingsHome: (moveFocus?: boolean) => void
   onOpenSettingsSection: (sectionId: SettingsSectionId, moveFocus?: boolean) => void
-  onOpenOnboardingGuide: () => void
   onClose: () => void
   onDiscardDraft: () => void
   onSaveDraft: () => void | Promise<void>
@@ -69,10 +51,6 @@ export type SettingsDrawerV2Props = {
 export function SettingsDrawerV2({
   settingsView,
   activeSectionId,
-  activeSectionLabel,
-  activeSectionDescription,
-  voiceSectionDescription,
-  settingsSectionOptions,
   settingsBackdropClassName,
   settingsDrawerClassName,
   settingsDialogRef,
@@ -80,14 +58,14 @@ export function SettingsDrawerV2({
   activeSectionHeadingRef,
   onDialogKeyDown,
   companionName,
+  draft,
   dirty,
   saving,
   ti,
-  renderActiveSettingsSection,
+  renderPage,
   confirmOptions,
   onReturnToSettingsHome,
   onOpenSettingsSection,
-  onOpenOnboardingGuide,
   onClose,
   onDiscardDraft,
   onSaveDraft,
@@ -97,35 +75,7 @@ export function SettingsDrawerV2({
   const activeDestination: SettingsV2Destination = settingsView === 'home'
     ? 'home'
     : getSettingsV2Destination(activeSectionId)
-  const settingsV2Groups: readonly SettingsV2Group[] = [
-    {
-      id: 'companion',
-      label: ti('ui_v2.settings.companion'),
-      description: ti('ui_v2.settings.companion_hint'),
-      icon: 'chat',
-    },
-    {
-      id: 'voice',
-      label: ti('settings.section.voice'),
-      description: voiceSectionDescription,
-      icon: 'voice',
-    },
-    {
-      id: 'privacy',
-      label: ti('ui_v2.settings.privacy'),
-      description: ti('ui_v2.settings.privacy_hint'),
-      icon: 'memory',
-    },
-    {
-      id: 'advanced',
-      label: ti('ui_v2.settings.advanced'),
-      description: ti('ui_v2.settings.advanced_hint'),
-      icon: 'model',
-    },
-  ]
-  const activeV2Sections = activeDestination === 'home'
-    ? []
-    : SETTINGS_V2_SECTIONS[activeDestination]
+  const settingsV2Groups: readonly SettingsV2Group[] = settingsSimpleGroupCopy(draft)
 
   return (
     <div className={`${settingsBackdropClassName} settings-backdrop--v2`} onClick={onClose}>
@@ -156,7 +106,7 @@ export function SettingsDrawerV2({
           }}
           dirty={dirty}
           saving={saving}
-          activeHeadingRef={activeV2Sections.length === 1 ? activeSectionHeadingRef : undefined}
+          activeHeadingRef={activeSectionHeadingRef}
           onNavigate={(destination, intent) => {
             if (destination === 'home') {
               onReturnToSettingsHome(false)
@@ -167,65 +117,9 @@ export function SettingsDrawerV2({
           onClose={onClose}
           onDiscardDraft={onDiscardDraft}
           onSaveDraft={onSaveDraft}
-          homeActions={(
-            <button
-              type="button"
-              className="settings-v2__home-card"
-              aria-label={ti('settings.home.onboarding.aria_label')}
-              disabled={saving}
-              onClick={onOpenOnboardingGuide}
-            >
-              <span className="settings-v2__home-icon" aria-hidden="true">
-                {renderSettingsCardIcon('onboarding')}
-              </span>
-              <span className="settings-v2__home-copy">
-                <strong>{ti('settings.home.onboarding.title')}</strong>
-                <span>{ti('settings.home.onboarding.value')}</span>
-              </span>
-              <PetControlIcon name="chevron-down" className="settings-v2__home-chevron" aria-hidden="true" />
-            </button>
-          )}
         >
-          {activeV2Sections.length > 1 ? <nav className="settings-v2__section-tabs" aria-label={activeSectionLabel}>
-            {settingsSectionOptions
-              .filter((section) => activeV2Sections.includes(section.id))
-              .map((section) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  className={section.id === activeSectionId ? 'is-active' : ''}
-                  aria-current={section.id === activeSectionId ? 'page' : undefined}
-                  ref={(node) => {
-                    if (!node || section.id !== activeSectionId) return
-                    const tabs = node.parentElement
-                    if (!(tabs instanceof HTMLElement)) return
-                    const tabsRect = tabs.getBoundingClientRect()
-                    const tabRect = node.getBoundingClientRect()
-                    const nextScrollLeft = getSettingsTabScrollLeft({
-                      navScrollLeft: tabs.scrollLeft,
-                      navClientWidth: tabs.clientWidth,
-                      tabOffsetLeft: tabRect.left - tabsRect.left + tabs.scrollLeft,
-                      tabWidth: tabRect.width,
-                    })
-                    if (nextScrollLeft !== tabs.scrollLeft) tabs.scrollLeft = nextScrollLeft
-                  }}
-                  onClick={(event) => {
-                    const intent = getSettingsV2NavigationIntent(event.detail)
-                    onOpenSettingsSection(section.id, intent.moveFocus)
-                  }}
-                >
-                  {section.label}
-                </button>
-              ))}
-          </nav> : null}
-          <div className="settings-v2__active-section">
-            {activeV2Sections.length > 1 ? <header className="settings-v2__active-heading">
-              <h2 ref={activeSectionHeadingRef} tabIndex={-1}>{activeSectionLabel}</h2>
-              {activeSectionDescription ? <p>{activeSectionDescription}</p> : null}
-            </header> : null}
-            <div className="settings-drawer__content settings-drawer__sections" ref={settingsSectionsRef}>
-              {renderActiveSettingsSection()}
-            </div>
+          <div className="settings-drawer__content settings-drawer__sections" ref={settingsSectionsRef}>
+            {renderPage()}
           </div>
         </SettingsShellV2>
       </aside>

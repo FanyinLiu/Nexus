@@ -404,8 +404,12 @@ interface IntegrationSettings {
   mcpPermissionMode: IntegrationPermissionMode
 }
 
+export type CompanionInitiative = 'quiet' | 'sometimes' | 'often' | 'custom'
+
 interface SettingsSchema {
   settingsSchemaVersion: number
+  /** Pace chosen on the appearance page. Behavior still comes from the older switches. */
+  companionInitiative: CompanionInitiative
 }
 
 export type AppSettings =

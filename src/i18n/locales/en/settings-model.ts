@@ -50,7 +50,7 @@ export const enSettingsModel = {
   'settings.model.custom': '(custom)',
   'settings.model.advanced_settings': 'Advanced model settings',
   'settings.model.failover_toggle': 'Enable chat model failover',
-  'settings.model.failover_hint': 'Falls back to a backup provider and gives the troubled one a break.',
+  'settings.model.failover_hint': 'If this service cannot connect, try another and come back later.',
   'settings.model.extra_keys': 'Additional API keys (one per line, used for auto-rotation)',
   'settings.model.extra_keys_hint': 'These keys join the primary key in the failover rotation pool.',
   'settings.model.extra_keys_error': 'Only paste the raw key. Remove spaces, line breaks, Chinese notes, model names, or plan descriptions.',

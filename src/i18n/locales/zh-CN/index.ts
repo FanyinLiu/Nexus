@@ -5,6 +5,7 @@
  */
 import { zhCNCore } from './core.ts'
 import { zhCNSettingsShell } from './settings-shell.ts'
+import { zhCNSettingsSimple } from './settings-simple.ts'
 import { zhCNSettingsMemory } from './settings-memory.ts'
 import { zhCNSettingsConsole } from './settings-console.ts'
 import { zhCNSettingsHistory } from './settings-history.ts'
@@ -22,6 +23,7 @@ import { zhCNPanel } from './panel.ts'
 export const zhCNMessages = {
   ...zhCNCore,
   ...zhCNSettingsShell,
+  ...zhCNSettingsSimple,
   ...zhCNSettingsMemory,
   ...zhCNSettingsConsole,
   ...zhCNSettingsHistory,

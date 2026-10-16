@@ -77,7 +77,7 @@ async function snapshot(window) {
       const settingsV2 = document.querySelector('.settings-v2')
       const settingsV2Home = document.querySelector('.settings-v2__home')
       const settingsV2HomeCards = Array.from(document.querySelectorAll('.settings-v2__home-card'))
-      const settingsV2AdvancedCard = document.querySelector('.settings-v2__home-card[data-focus-return-group="advanced"]')
+      const settingsV2ConnectCard = document.querySelector('.settings-v2__home-card[data-focus-return-group="connect"]')
       const settingsHome = document.querySelector('.settings-home')
       const modelCard = document.querySelector('.settings-home-card[data-section="model"]')
       const modelPage = document.querySelector('.settings-page[data-section="model"]')
@@ -107,13 +107,13 @@ async function snapshot(window) {
           .filter((element) => isVisible(element) && !element.disabled)
         : []
       const modelV3TestButton = modelV3Page
-        ? Array.from(modelV3Page.querySelectorAll('.settings-v3-toolbar button'))
+        ? Array.from(modelV3Page.querySelectorAll('.settings-v3-toolbar button, button.settings-v3-action'))
           .find((element) => isVisible(element) && !element.disabled)
         : null
       const hasV3ModelContent = Boolean(isVisible(modelV3Page) && modelV3Fields.length >= 2)
       const settingsV2Destination = settingsV2?.getAttribute('data-settings-v2-destination') ?? null
       const hasV2ModelContent = Boolean(
-        settingsV2Destination === 'advanced'
+        settingsV2Destination === 'connect'
         && (isVisible(activeModelSection) || modelGrid || modelDetail || hasV3ModelContent),
       )
       const panelSurface = v2Root ? 'v2' : (root || panel ? 'legacy' : 'unknown')
@@ -140,7 +140,7 @@ async function snapshot(window) {
         hasSettingsDrawer: Boolean(settingsDrawer),
         hasSettingsV2: Boolean(settingsV2),
         hasSettingsV2Home: Boolean(settingsV2Home),
-        hasSettingsV2AdvancedCard: Boolean(settingsV2Home && settingsV2AdvancedCard),
+        hasSettingsV2AdvancedCard: Boolean(settingsV2Home && settingsV2ConnectCard),
         settingsV2HomeCardCount: settingsV2HomeCards.length,
         settingsV2Destination,
         hasV2ModelContent,
@@ -224,7 +224,7 @@ function isSettingsEntryReady(state) {
   const v2Ready = state.hasSettingsV2
     && (
       (state.hasSettingsV2Home && state.hasSettingsV2AdvancedCard)
-      || (state.settingsV2Destination === 'advanced' && state.hasV2ModelContent)
+      || (state.settingsV2Destination === 'connect' && state.hasV2ModelContent)
     )
   const legacyReady = state.hasSettingsHome && state.hasModelCard
     || state.hasModelPage && !state.hasSettingsV2
@@ -296,7 +296,7 @@ async function main() {
     const settingsSurface = settingsEntry.hasSettingsV2 ? 'v2' : 'legacy'
 
     if (settingsSurface === 'v2' && settingsEntry.hasSettingsV2Home) {
-      await click(window, '.settings-v2__home-card[data-focus-return-group="advanced"]', 'open V2 advanced settings')
+      await click(window, '.settings-v2__home-card[data-focus-return-group="connect"]', 'open V2 connect settings')
     } else if (settingsSurface === 'legacy' && !settingsEntry.hasModelPage) {
       await click(window, '.settings-home-card[data-section="model"]', 'open legacy model settings')
     }

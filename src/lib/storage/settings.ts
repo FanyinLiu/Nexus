@@ -10,6 +10,7 @@ import {
   resolveSpeechInputModel,
 } from '../audioProviders.ts'
 import { inferApiProviderId } from '../../features/models/providerCatalog.ts'
+import { inferCompanionInitiative } from '../../features/settingsSimplify/companionInitiative.ts'
 import {
   normalizePetSceneLocation,
   normalizePetTimePreview,
@@ -55,6 +56,7 @@ import {
 
 const defaultSettings: AppSettings = {
   settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+  companionInitiative: 'quiet',
   petModelId: DEFAULT_PET_MODEL_ID,
   uiLanguage: 'zh-CN',
   themeId: 'warm',
@@ -339,6 +341,12 @@ function readStoredMcpServers(stored: Record<string, unknown>) {
   return []
 }
 
+function resolveCompanionInitiative(stored: Partial<AppSettings>): AppSettings['companionInitiative'] {
+  const value = stored.companionInitiative
+  if (value === 'quiet' || value === 'sometimes' || value === 'often' || value === 'custom') return value
+  return inferCompanionInitiative(stored as Record<string, unknown>)
+}
+
 function resolveThemeId(storedThemeId: unknown, storedColorScheme: unknown): AppSettings['themeId'] {
   return mapStoredCompanionTheme(storedThemeId, storedColorScheme).themeId
 }
@@ -452,6 +460,7 @@ export function loadSettings(): AppSettings {
     settingsSchemaVersion: storedVersion > CURRENT_SETTINGS_SCHEMA_VERSION
       ? storedVersion
       : CURRENT_SETTINGS_SCHEMA_VERSION,
+    companionInitiative: resolveCompanionInitiative(stored),
     uiLanguage: resolvedUiLanguage,
     themeId: resolveThemeId(stored.themeId, stored.themeColorScheme),
     themeColorScheme: resolveThemeColorScheme(stored.themeId, stored.themeColorScheme),

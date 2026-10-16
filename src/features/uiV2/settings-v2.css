@@ -37,7 +37,9 @@
 
 .settings-v2__sidebar {
   min-width: 0;
+  min-height: 0;
   padding: 18px 10px;
+  overflow: auto;
   background: var(--settings-v2-soft);
   border-right: 1px solid var(--settings-v2-line);
 }
@@ -272,7 +274,7 @@
 
 .settings-v2__section {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
   min-width: 0;
   min-height: 0;
@@ -292,7 +294,7 @@
   grid-row: 1 / -1;
 }
 
-.settings-drawer--v2 .settings-v2__active-section > .settings-drawer__sections {
+.settings-drawer--v2 .settings-v2__section > .settings-drawer__sections {
   display: block;
   height: 100%;
   min-height: 0;
@@ -504,42 +506,6 @@
   }
 }
 
-.settings-v2__section-tabs {
-  display: flex;
-  gap: 6px;
-  padding: 0 0 12px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.settings-v2__section-tabs button {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 7px 12px;
-  color: var(--settings-v2-muted-strong);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  cursor: pointer;
-}
-
-.settings-v2__section-tabs button.is-active {
-  color: var(--settings-v2-accent);
-  background: var(--settings-v2-accent-soft);
-  border-color: color-mix(in srgb, var(--settings-v2-accent) 12%, var(--settings-v2-line));
-}
-
-.settings-v2__active-heading { padding: 0 2px 12px; }
-.settings-v2__active-heading h2,
-.settings-v2__active-heading p { margin: 0; }
-.settings-v2__active-heading h2 { font-size: 17px; line-height: 1.35; }
-.settings-v2__active-heading p {
-  margin-top: 4px;
-  color: var(--settings-v2-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .settings-drawer--v2 {
   grid-template-rows: minmax(0, 1fr);
   width: min(760px, calc(100vw - 48px));
@@ -609,22 +575,6 @@ html[data-theme] .settings-drawer.settings-drawer--v2 {
   html[data-theme] .settings-drawer.settings-drawer--v2 {
     width: calc(100vw - 16px);
     height: calc(100vh - 16px);
-  }
-  .settings-v2__section-tabs {
-    flex-wrap: nowrap;
-    gap: 4px;
-    padding-bottom: 8px;
-    overflow-x: auto;
-    scroll-padding-inline: 10px;
-    scroll-snap-type: none;
-    mask-image: linear-gradient(to right, transparent 0, black 10px, black calc(100% - 10px), transparent 100%);
-  }
-  .settings-v2__section-tabs button {
-    flex: 0 0 auto;
-    min-width: max-content;
-    padding-inline: 9px;
-    scroll-margin-inline: 10px;
-    scroll-snap-align: none;
   }
   .settings-drawer--v2 .settings-voice-control-grid { grid-template-columns: 1fr !important; }
   .settings-drawer--v2 .settings-voice-control { min-height: 64px; }

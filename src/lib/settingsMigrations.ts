@@ -9,11 +9,13 @@
  *   1. Bump CURRENT_SETTINGS_SCHEMA_VERSION
  *   2. Append a SettingsMigration entry to `migrations`
  *
- * Versions 16–19 are left unused on purpose. Other in-flight changes
- * reserved those numbers, so the companion-theme migration is 20.
+ * Versions 16–19 are left unused on purpose. The companion-theme
+ * migration is 20. Version 21 only records which companionship pace
+ * already matches the stored switches.
  */
 
 import type { UiLanguage } from '../types'
+import { inferCompanionInitiative } from '../features/settingsSimplify/companionInitiative.ts'
 import { mapStoredCompanionTheme } from '../features/themes/companionThemes.ts'
 import { inferApiProviderId } from '../features/models/providerCatalog.ts'
 import { migrateVoiceLanguageValue } from '../features/voiceProfile/voiceLanguages.ts'
@@ -391,7 +393,7 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 20
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 21
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -586,6 +588,14 @@ const migrations: SettingsMigration[] = [
       next.themeColorScheme = mapped.colorScheme
       return next
     },
+  },
+  {
+    toVersion: 21,
+    description: 'Record which companionship pace matches the existing switches, without changing those switches',
+    migrate: (raw) => ({
+      ...raw,
+      companionInitiative: inferCompanionInitiative(raw),
+    }),
   },
 ]
 
