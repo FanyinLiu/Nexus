@@ -2,6 +2,7 @@
  * Companion looks read the token layer written on <html>.
  * `.nx-companion-card` is the shared card for reminder and memory
  * posters other screens can reuse without inventing a second palette.
+ * Notification cards on the companion stage use the same card tokens.
  */
 
 html[data-companion-theme] .sd,
@@ -201,6 +202,91 @@ html[data-companion-theme] .chat-sheet-v2__back {
   max-width: 44px;
   padding: 0;
   border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices {
+  padding-bottom: 6px;
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary,
+html[data-companion-theme] .nexus-panel-v2__caption {
+  border-radius: var(--nx-card-radius);
+  background: var(--nx-card-bg);
+  color: var(--nx-card-fg);
+  border-color: var(--nx-card-border);
+  box-shadow: var(--nx-card-shadow);
+  font-family: var(--nx-font-family);
+}
+
+html[data-companion-theme='system'] .nexus-panel-v2__notices .panel-notification-summary,
+html[data-companion-theme='system'] .nexus-panel-v2__caption {
+  background: var(--color-surface-glass);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__title,
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__item-title,
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__item-title strong,
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__item-body,
+html[data-companion-theme] .nexus-panel-v2__caption {
+  color: var(--nx-card-fg);
+  font-size: var(--nx-type-body);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__hint,
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__empty,
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__item-title small {
+  color: var(--nx-card-muted);
+  font-size: var(--nx-type-meta);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__item {
+  border-color: var(--nx-card-border);
+  border-radius: var(--nx-radius-control);
+  background: var(--color-surface);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__avatar {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__tag {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .panel-notification-summary__menu {
+  color: var(--nx-card-fg);
+  background: var(--nx-card-bg);
+  border-color: var(--nx-card-border);
+  border-radius: var(--nx-radius-control);
+  box-shadow: var(--nx-card-shadow);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .ghost-button {
+  color: var(--nx-card-fg);
+  background: var(--color-surface-elevated);
+  border-color: var(--nx-card-border);
+  border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .nexus-panel-v2__notices .ghost-button.panel-notification-summary__action--primary {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: transparent;
+}
+
+html[data-companion-theme] .chat-sheet-v2__reply {
+  color: var(--nx-card-fg);
+  background: var(--color-accent-soft);
+  border-color: var(--nx-card-border);
+  border-radius: var(--nx-radius-control);
+  font-family: var(--nx-font-family);
+}
+
+html[data-companion-theme] .chat-sheet-v2__reply button {
+  color: var(--nx-card-fg);
+  background: var(--color-surface-elevated);
 }
 
 html[data-companion-theme] .chat-sheet-v2__back span {
