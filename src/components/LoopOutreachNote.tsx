@@ -80,7 +80,7 @@ export function LoopOutreachNote({
       data-loop-offer={loopOffer?.status}
       data-loop-check={loopCheck?.status}
     >
-      <div className="loop-outreach__card">
+      <div className="loop-outreach__card nx-companion-card">
         <p className="loop-outreach__title">{heading}</p>
         {body ? <p className="loop-outreach__body">{body}</p> : null}
         {loopOffer?.status === 'pending' ? (

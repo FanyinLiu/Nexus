@@ -517,16 +517,17 @@
   margin: 4px 0;
 }
 
-.loop-outreach__card {
+.loop-outreach__card.nx-companion-card {
   display: grid;
   gap: 10px;
   min-width: 0;
   max-width: 100%;
   padding: 14px;
-  border: 1px solid var(--chat-sheet-v2-line, var(--color-border));
-  border-radius: 16px;
-  background: var(--chat-sheet-v2-surface, var(--color-surface-elevated));
-  box-shadow: 0 8px 22px var(--chat-sheet-v2-shadow, var(--color-shadow));
+  border: 1px solid var(--nx-card-border, var(--color-border));
+  border-radius: var(--nx-card-radius, 16px);
+  background: var(--nx-card-bg, var(--color-surface-elevated));
+  color: var(--nx-card-fg, var(--color-text-primary));
+  box-shadow: var(--nx-card-shadow, var(--color-shadow));
 }
 
 .loop-outreach__title,
@@ -539,13 +540,15 @@
 }
 
 .loop-outreach__title {
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--nx-card-fg, var(--color-text-primary));
+  font-size: var(--nx-type-title, 13px);
+  font-weight: var(--nx-font-weight, 700);
 }
 
 .loop-outreach__body,
 .loop-outreach__status {
-  font-size: 14px;
+  color: var(--nx-card-muted, var(--color-text-muted));
+  font-size: var(--nx-type-body, 14px);
   line-height: 1.55;
 }
 
@@ -560,36 +563,36 @@
   flex: 1 1 120px;
   min-height: 36px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--nx-radius-control, 999px);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--nx-type-meta, 13px);
   cursor: pointer;
 }
 
 .loop-outreach__accept {
   border: 0;
-  background: var(--chat-sheet-v2-accent-strong, var(--color-accent));
-  color: var(--chat-sheet-v2-on-accent, var(--color-on-accent));
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .loop-outreach__decline {
-  border: 1px solid var(--chat-sheet-v2-line, var(--color-border));
+  border: 1px solid var(--nx-card-border, var(--color-border));
   background: transparent;
-  color: inherit;
+  color: var(--nx-card-fg, inherit);
 }
 
 .chat-sheet-v2 .loop-outreach__accept:hover {
-  background: color-mix(in srgb, var(--chat-sheet-v2-accent-strong) 82%, var(--chat-sheet-v2-ink));
+  background: var(--color-accent-hover, var(--color-accent));
 }
 
 .chat-sheet-v2 .loop-outreach__decline:hover {
-  background: color-mix(in srgb, var(--chat-sheet-v2-lavender) 10%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .loop-outreach__why {
   min-width: 0;
   max-width: 100%;
-  color: var(--chat-sheet-v2-muted, var(--color-text-muted));
+  color: var(--nx-card-muted, var(--color-text-muted));
   font-size: 12px;
   line-height: 1.5;
 }

@@ -1,17 +1,16 @@
 /*
  * SOUL and 记忆 summary cards.
- * Colors come from --nx-theme-soul and --nx-theme-memory so the theme layer
- * can reskin them. Until that layer lands they fall back to the settings
- * success and accent tokens. This file stays out of the shared settings
- * rule budget, which is already full.
+ * Color, radius, and type come from the companion theme tokens
+ * (--nx-poster-soul, --nx-poster-memory, --nx-poster-ink, --nx-card-radius).
+ * This file stays out of the shared settings rule budget, which is already full.
  */
 
 .memory-portrait {
-  --memory-portrait-soul: var(--nx-theme-soul, color-mix(in srgb, var(--sv3-success, var(--settings-v2-success)) 68%, var(--sv3-ink, var(--settings-v2-ink)) 32%));
-  --memory-portrait-memory: var(--nx-theme-memory, color-mix(in srgb, var(--sv3-accent, var(--settings-v2-accent)) 76%, var(--sv3-ink, var(--settings-v2-ink)) 24%));
-  --memory-portrait-on: var(--nx-theme-on-card, var(--settings-v2-on-accent, var(--color-on-accent)));
+  --memory-portrait-soul: var(--nx-poster-soul);
+  --memory-portrait-memory: var(--nx-poster-memory);
+  --memory-portrait-on: var(--nx-poster-ink);
   display: grid;
-  gap: 12px;
+  gap: var(--nx-space-stack, 12px);
 }
 
 .memory-portrait__privacy {
@@ -27,7 +26,7 @@
   gap: 10px;
 }
 
-.memory-portrait__card {
+.memory-portrait__card.nx-companion-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -35,8 +34,9 @@
   margin: 0;
   padding: 14px;
   border: 0;
-  border-radius: 18px;
+  border-radius: var(--nx-card-radius, 18px);
   color: var(--memory-portrait-on);
+  box-shadow: var(--nx-card-shadow, none);
   font: inherit;
   text-align: start;
   cursor: pointer;
@@ -51,8 +51,9 @@
 }
 
 .memory-portrait__kicker {
-  font-size: 13px;
-  font-weight: 720;
+  color: var(--nx-poster-ink);
+  font-size: var(--nx-type-meta, 13px);
+  font-weight: var(--nx-font-weight, 700);
   letter-spacing: 0.04em;
 }
 
@@ -61,7 +62,8 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-  font-size: 13px;
+  color: var(--nx-poster-ink);
+  font-size: var(--nx-type-body, 13px);
   line-height: 1.45;
 }
 
@@ -118,7 +120,7 @@
   max-height: min(78vh, 640px);
   overflow: auto;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: var(--nx-radius-card, 18px);
   background: var(--sv3-surface, var(--settings-v2-surface));
   color: var(--sv3-ink, var(--settings-v2-ink));
 }
@@ -161,7 +163,7 @@
   min-height: 32px;
   padding: 4px 10px;
   border: 1px solid var(--sv3-line, var(--settings-v2-line));
-  border-radius: 999px;
+  border-radius: var(--nx-radius-control, 999px);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -174,7 +176,7 @@
   min-height: 96px;
   padding: 10px 12px;
   border: 1px solid var(--sv3-line, var(--settings-v2-line));
-  border-radius: 12px;
+  border-radius: var(--nx-radius-control, 12px);
   background: var(--sv3-field, var(--sv3-surface, var(--settings-v2-surface)));
   color: inherit;
   font: inherit;
