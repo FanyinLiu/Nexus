@@ -13,7 +13,7 @@ export const zhTWVoice = {
   'voice_pipeline.reply_received': '已收到回覆',
   'voice_pipeline.reply_failed': '回覆沒送出去',
   'voice_trigger.direct_send.label': '辨識後直接發送',
-  'voice_trigger.direct_send.hint': '辨識到完整句子後立刻發送，語音往返延遲最低。',
+  'voice_trigger.direct_send.hint': '說完一句就發送，回應最快。',
   'voice_trigger.wake_word.label': '命中喚醒詞再發送',
   'voice_trigger.wake_word.hint': '只有偵測到喚醒詞時，轉寫結果才會繼續發給模型。',
   'voice_trigger.manual_confirm.label': '只填入輸入框',

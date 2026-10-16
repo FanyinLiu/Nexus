@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   buildLocalModelRows,
   countLocalModelsStillNeeded,
+  localModelCopy,
   localModelCanResume,
   localModelDiskBlocksDownload,
   localModelDownloadAction,
@@ -94,7 +95,10 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
     )
   }
 
-  const rows = buildLocalModelRows(inventory.models, progress)
+  const rows = buildLocalModelRows(inventory.models, progress).map((row) => ({
+    ...row,
+    label: localModelCopy(row, ti).label,
+  }))
   const missingCount = inventory.missingRequired.length
   const stillNeeded = countLocalModelsStillNeeded(rows)
   const busyPercent = rows.find((row) => row.status === 'downloading')?.percent
@@ -201,8 +205,9 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
         {action !== 'none' ? (
           <button
             type="button"
-            className="primary-button"
+            className="primary-button settings-v3-voice-models__download"
             onClick={startDownload}
+            aria-busy={busy ? 'true' : undefined}
             disabled={busy || diskBlocked || !window.desktopPet?.modelsDownloadMissing}
           >
             {busy ? ti('settings.voice.local_models_downloading', { percent: busyPercent ?? 0 }) : actionLabel}

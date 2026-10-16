@@ -5,6 +5,8 @@ export const koOnboarding = {
   'model_setup.eyebrow': '첫 실행',
   'model_setup.title': '로컬 음성 모델 설치',
   'model_setup.body_prefix': '음성으로 깨우고 받아쓰려면 로컬 모델 몇 개를 먼저 받아야 합니다.',
+  'model_setup.model.vad.name': '말하기 감지',
+  'model_setup.model.vad.purpose': '말을 시작하고 멈추는 때를 듣습니다.',
   'model_setup.dismiss': '나중에',
   'model_setup.network_hf_unreachable': 'HuggingFace 에 직접 접근할 수 없어 GitHub Releases / ModelScope 미러를 우선 사용합니다.',
   'model_setup.required_heading': '필수 모델',

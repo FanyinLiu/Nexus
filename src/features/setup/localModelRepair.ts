@@ -7,6 +7,7 @@
  * existing catalog calls.
  */
 
+import type { TranslationKey } from '../../types/i18n.ts'
 import {
   getModelProgressPercent,
   isModelProgressActive,
@@ -77,6 +78,30 @@ const OPTIONAL_LABEL_SUFFIX = /(?:\s*[（(]\s*(?:可选|可選|optional)\s*[）)
  */
 export function localModelDisplayLabel(label: string): string {
   return label.replace(OPTIONAL_LABEL_SUFFIX, '').trim()
+}
+
+function localModelNameKey(id: string): TranslationKey | null {
+  return id === 'vad' ? 'model_setup.model.vad.name' : null
+}
+
+function localModelPurposeKey(id: string): TranslationKey | null {
+  return id === 'vad' ? 'model_setup.model.vad.purpose' : null
+}
+
+/**
+ * A few catalog names are engine labels. The screens use a plain name
+ * and description instead, looked up by id so every locale can say it.
+ */
+export function localModelCopy(
+  model: { id: string; label: string; purpose?: string },
+  translate: (key: TranslationKey) => string,
+): { label: string; purpose: string } {
+  const nameKey = localModelNameKey(model.id)
+  const purposeKey = localModelPurposeKey(model.id)
+  return {
+    label: localModelDisplayLabel(nameKey ? translate(nameKey) : model.label),
+    purpose: purposeKey ? translate(purposeKey) : (model.purpose ?? ''),
+  }
 }
 
 /**

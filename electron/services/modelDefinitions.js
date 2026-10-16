@@ -88,7 +88,7 @@ export const MODEL_CATALOG = [
   },
   {
     id: 'vad',
-    label: 'Silero VAD v5（语音端点检测）',
+    label: '说话检测模型',
     sizeLabel: '~2 MB',
     required: true,
     kind: 'standalone',
@@ -105,7 +105,7 @@ export const MODEL_CATALOG = [
         sha256: 'a4a068cd6cf1ea8355b84327595838ca748ec29a25bc91fc82e6c299ccdc5808',
       },
     },
-    purpose: '判断用户开始/结束说话，给 SenseVoice 切段',
+    purpose: '听出你什么时候开始和停止说话',
   },
   {
     id: 'paraformer-zh-en',

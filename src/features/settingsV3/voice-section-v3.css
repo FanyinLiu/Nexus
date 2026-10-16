@@ -23,6 +23,16 @@
 .settings-v3-voice-models__size,
 .settings-v3-voice-models__status { color: var(--sv3-muted); font-size: 12px; }
 .settings-v3-voice-models progress { width: 100%; height: 6px; }
+.settings-v3-section .settings-v3-toolbar button.primary-button.settings-v3-voice-models__download:disabled,
+.settings-v3-section .settings-v3-toolbar button.primary-button.settings-v3-voice-models__download:disabled:hover {
+  cursor: not-allowed;
+  opacity: 1;
+  color: var(--sv3-ink);
+  -webkit-text-fill-color: var(--sv3-ink);
+  background: var(--sv3-soft);
+  border-color: var(--sv3-line);
+  box-shadow: none;
+}
 
 @media (max-width: 719px) {
   .settings-v3-provider__grid { grid-template-columns: minmax(0, 1fr); }

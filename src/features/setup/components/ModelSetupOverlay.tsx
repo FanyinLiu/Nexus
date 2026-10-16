@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
-import { localModelDisplayLabel } from '../localModelRepair.ts'
+import { localModelCopy } from '../localModelRepair.ts'
 import {
   MODEL_SETUP_DISMISSED_STORAGE_KEY,
   getModelProgressPercent,
@@ -245,7 +245,8 @@ export function ModelSetupOverlay({
     const isComplete = isModelProgressComplete(p)
     const hasError = isModelProgressError(p)
     const isInstalled = model.present || isComplete
-    const label = localModelDisplayLabel(model.label)
+    const copy = localModelCopy(model, t)
+    const label = copy.label
 
     return (
       <div key={model.id} className="model-setup__row" data-state={isInstalled ? 'done' : hasError ? 'error' : isActive ? 'active' : 'pending'}>
@@ -254,7 +255,7 @@ export function ModelSetupOverlay({
             <strong>{label}</strong>
             <span className="model-setup__size">{model.sizeLabel}</span>
           </div>
-          <div className="model-setup__row-desc">{model.purpose}</div>
+          <div className="model-setup__row-desc">{copy.purpose}</div>
           {isInstalled ? (
             <div className="model-setup__row-status model-setup__row-status--ok">{t('model_setup.installed')}</div>
           ) : isActive ? (

@@ -251,7 +251,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
 
       <SettingsV3Section title={ti('settings.voice.trigger_mode')} description={triggerOption.hint.trim()}>
         <div className="settings-v3-editor">
-          <SettingsV3Field label={ti('settings.voice.trigger_mode')} hint={triggerOption.hint.trim()}>
+          <SettingsV3Field label={ti('settings.voice.trigger_mode')}>
             <select
               value={draft.voiceTriggerMode}
               onChange={(event) => {

@@ -13,7 +13,7 @@ export const enVoice = {
   'voice_pipeline.reply_received': 'Reply received',
   'voice_pipeline.reply_failed': 'Reply didn\'t come through',
   'voice_trigger.direct_send.label': 'Send right after recognition',
-  'voice_trigger.direct_send.hint': 'Send the message as soon as a complete sentence is recognized for the lowest latency.',
+  'voice_trigger.direct_send.hint': 'Sends as soon as you finish a sentence, so the reply comes fastest.',
   'voice_trigger.wake_word.label': 'Send only after wake word',
   'voice_trigger.wake_word.hint': 'Only transcripts that include a detected wake word will be forwarded to the model.',
   'voice_trigger.manual_confirm.label': 'Fill the composer only',

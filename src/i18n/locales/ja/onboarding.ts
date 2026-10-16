@@ -5,6 +5,8 @@ export const jaOnboarding = {
   'model_setup.eyebrow': '初回起動',
   'model_setup.title': 'ローカル音声モデルのインストール',
   'model_setup.body_prefix': '音声で呼び出すにも、話した内容を文字にするにも、先にいくつかのローカルモデルが必要です。',
+  'model_setup.model.vad.name': '発話検出',
+  'model_setup.model.vad.purpose': '話し始めと話し終わりを聞き取ります。',
   'model_setup.dismiss': 'あとで',
   'model_setup.network_hf_unreachable': 'HuggingFace に直接アクセスできないため、GitHub Releases / ModelScope ミラーを優先します。',
   'model_setup.required_heading': '必須モデル',

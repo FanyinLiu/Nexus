@@ -5,6 +5,8 @@ export const enOnboarding = {
   'model_setup.eyebrow': 'First launch',
   'model_setup.title': 'Install local voice models',
   'model_setup.body_prefix': 'Wake word and transcription need a few local models downloaded first.',
+  'model_setup.model.vad.name': 'Speech detection',
+  'model_setup.model.vad.purpose': 'Hears when you start and stop talking.',
   'model_setup.dismiss': 'Maybe later',
   'model_setup.network_hf_unreachable': 'HuggingFace is not directly reachable — we will prefer GitHub Releases / ModelScope mirrors.',
   'model_setup.required_heading': 'Required models',

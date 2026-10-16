@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { localModelCopy } from '../../../setup/localModelRepair.ts'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
 import { humanizeError } from '../../../../lib/humanizeError.ts'
 import type { UiLanguage } from '../../../../types'
@@ -145,7 +146,7 @@ export function LocalVoiceModelsStatus({ uiLanguage }: LocalVoiceModelsStatusPro
         {missing.map((m) => (
           <li className="onboarding-local-models__item" key={m.id}>
             <span className="onboarding-local-models__dot" aria-hidden="true" />
-            <span className="onboarding-local-models__label">{m.label}</span>
+            <span className="onboarding-local-models__label">{localModelCopy(m, ti).label}</span>
             <span className="onboarding-local-models__size">{m.sizeLabel}</span>
           </li>
         ))}

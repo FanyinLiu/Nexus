@@ -6,6 +6,7 @@ import {
   buildLocalModelRows,
   countLocalModelsStillNeeded,
   localModelCanResume,
+  localModelCopy,
   localModelDiskBlocksDownload,
   localModelDisplayLabel,
   localModelDownloadAction,
@@ -60,6 +61,22 @@ test('optional stays on the status, and the remaining count follows finished row
   )
   assert.equal(rows.find((row) => row.id === 'paraformer')?.label, 'Paraformer')
   assert.equal(countLocalModelsStillNeeded(rows), 1)
+})
+
+test('speech detection uses a plain name instead of the engine label', () => {
+  const copy = localModelCopy(
+    {
+      id: 'vad',
+      label: 'Silero VAD v5（语音端点检测）',
+      purpose: '判断用户开始/结束说话，给 SenseVoice 切段',
+    },
+    (key) => key === 'model_setup.model.vad.name'
+      ? '说话检测模型'
+      : '听出你什么时候开始和停止说话。',
+  )
+  assert.equal(copy.label, '说话检测模型')
+  assert.equal(copy.purpose, '听出你什么时候开始和停止说话。')
+  assert.equal(localModelCopy({ id: 'kws-en', label: '英文唤醒词模型（可选）' }, () => 'unused').label, '英文唤醒词模型')
 })
 
 test('download action resumes a partial, retries a failure, and stops when nothing is missing', () => {

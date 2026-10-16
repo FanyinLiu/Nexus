@@ -5,6 +5,8 @@ export const zhTWOnboarding = {
   'model_setup.eyebrow': '首次啟動',
   'model_setup.title': '安裝本機語音模型',
   'model_setup.body_prefix': '語音喚醒和轉寫需要先下載幾個本機模型。',
+  'model_setup.model.vad.name': '說話偵測模型',
+  'model_setup.model.vad.purpose': '聽出你什麼時候開始和停止說話。',
   'model_setup.dismiss': '稍後再說',
   'model_setup.network_hf_unreachable': '偵測到 HuggingFace 無法直連，將優先使用 GitHub Releases / ModelScope 鏡像。',
   'model_setup.required_heading': '必需模型',
