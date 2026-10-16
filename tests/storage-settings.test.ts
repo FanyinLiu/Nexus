@@ -841,7 +841,7 @@ test('schema 11 retires a selected MiniMax-M2.7 and the custom OpenAI STT defaul
   assert.equal(coding.model, 'MiniMax-M3.1-Flash-Preview')
   const profiles = coding.textProviderProfiles as Record<string, { model: string }>
   assert.equal(profiles['minimax-coding-global']?.model, 'MiniMax-M3.1-Flash-Preview')
-  assert.equal(profiles.minimax?.model, 'MiniMax-M2.7-highspeed')
+  assert.equal(profiles.minimax?.model, 'MiniMax-M3')
   assert.equal(profiles['minimax-global']?.model, 'MiniMax-M2.5')
   assert.equal(coding.speechInputModel, 'gpt-transcribe')
   const speechProfiles = coding.speechInputProviderProfiles as Record<string, { model: string }>
@@ -859,6 +859,7 @@ test('schema 11 retires a selected MiniMax-M2.7 and the custom OpenAI STT defaul
   assert.equal(getSpeechInputProvider('custom-openai-stt').defaultModel, 'gpt-transcribe')
   for (const providerId of ['minimax', 'minimax-global', 'minimax-coding', 'minimax-coding-global']) {
     assert.ok(!getApiProviderPreset(providerId).models.includes('MiniMax-M2.7'))
+    assert.ok(!getApiProviderPreset(providerId).models.includes('MiniMax-M2.7-highspeed'))
   }
 })
 
@@ -933,7 +934,7 @@ test('an explicit companion backdrop choice survives the migration', () => {
 test('a newer schema version is left untouched and stays newer after save', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      settingsSchemaVersion: 15,
+      settingsSchemaVersion: 16,
       apiProviderId: 'siliconflow',
       apiBaseUrl: 'https://api.siliconflow.cn/v1',
       model: 'deepseek-ai/DeepSeek-V4-Flash',
@@ -947,7 +948,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
   })
 
   const settings = loadSettings()
-  assert.equal(settings.settingsSchemaVersion, 15)
+  assert.equal(settings.settingsSchemaVersion, 16)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
 
   saveSettings(settings, { silent: true })
@@ -955,7 +956,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
     settingsSchemaVersion?: number
     model?: string
   }
-  assert.equal(saved.settingsSchemaVersion, 15)
+  assert.equal(saved.settingsSchemaVersion, 16)
   assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 

@@ -128,8 +128,8 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 > **尚未打 tag，不是稳定版。** 当前稳定入口仍是 v0.4.7。候选说明见 [English release notes](docs/RELEASE-NOTES-v0.4.8-beta.1.md)。
 
 - #139 的 2026 年 10 月目录刷新已经在 main 上：设置 schema v10，以及 v8–v10 迁移和新的模型默认值。
-- `MiniMax-M2.7` 在 2026-11-18 退役前移出选择列表。已保存的选择会迁到 PAYG 的 `MiniMax-M3`，或 Token Plan 的 `MiniMax-M3.1-Flash-Preview`。
-- 自定义 OpenAI 兼容 STT 的默认模型改为 `gpt-transcribe`。
+- `MiniMax-M2.7` 和 `MiniMax-M2.7-highspeed` 在 2026-11-18 退役前移出选择列表。已保存的选择会迁到 `MiniMax-M3`，原来的套餐不变。更早的 Token Plan `MiniMax-M2.7` 仍迁到 `MiniMax-M3.1-Flash-Preview`。
+- 自定义 OpenAI 兼容 STT 的默认模型是 `gpt-transcribe`。只有仍停在旧默认 `gpt-4o-mini-transcribe` 的配置会跟着迁，自己填写的模型名保持不变。
 - #137 已包含：桌面端首次使用在面板里打开引导，设置可以重新打开引导，模型保存失败会显示错误。#133 已包含：恢复引导里的消息操作示例样式，发行审计保持 README 稳定入口停在公开稳定版。
 
 ## 本次稳定更新 — v0.4.7
