@@ -136,16 +136,20 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   assert.ok(observedStoreUrl, 'The active renderer must request companionSummaryStore before the lifecycle proof.')
   const storeUrl = observedStoreUrl
 
-  const memorySwitch = page.getByRole('checkbox', { name: '全部记忆召回和学习', exact: true })
+  const memorySwitch = page.getByRole('checkbox', { name: '暂停所有记忆', exact: true })
   const memoryStatusRow = memorySwitch.locator(
     'xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " settings-v3-row ")][1]',
   )
   await memorySwitch.waitFor({ state: 'visible' })
-  assert.equal(await memorySwitch.isChecked(), true, 'memoryPaused=false should expose the enabled checkbox value')
-  assert.match(await memoryStatusRow.textContent() ?? '', /运行中/)
+  assert.equal(await memorySwitch.isChecked(), false, 'memoryPaused=false should leave the pause switch off')
+  const stablePauseCopy = await memoryStatusRow.textContent() ?? ''
+  assert.match(stablePauseCopy, /暂停所有记忆/)
+  assert.match(stablePauseCopy, /打开后，聊天时不翻记忆、不写日记/)
+  assert.doesNotMatch(stablePauseCopy, /全部记忆已暂停/)
   await memorySwitch.press('Space')
-  assert.equal(await memorySwitch.isChecked(), false, 'memoryPaused=true should expose the disabled checkbox value')
-  assert.match(await memoryStatusRow.textContent() ?? '', /全部记忆已暂停/)
+  assert.equal(await memorySwitch.isChecked(), true, 'memoryPaused=true should turn the pause switch on')
+  assert.match(await memoryStatusRow.textContent() ?? '', /暂停所有记忆/)
+  assert.doesNotMatch(await memoryStatusRow.textContent() ?? '', /全部记忆已暂停/)
   await page.waitForFunction(() => {
     const raw = window.localStorage.getItem('nexus:settings')
     if (!raw) return false
@@ -156,8 +160,8 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
     }
   })
   await memorySwitch.press('Space')
-  assert.equal(await memorySwitch.isChecked(), true)
-  assert.match(await memoryStatusRow.textContent() ?? '', /运行中/)
+  assert.equal(await memorySwitch.isChecked(), false)
+  assert.match(await memoryStatusRow.textContent() ?? '', /暂停所有记忆/)
   await page.waitForFunction(() => {
     const raw = window.localStorage.getItem('nexus:settings')
     if (!raw) return false

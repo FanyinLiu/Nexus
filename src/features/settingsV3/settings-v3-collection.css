@@ -8,6 +8,13 @@
 .settings-v3-collection-row__title { font-weight: 680; }
 .settings-v3-collection-row__preview { overflow: hidden; color: var(--sv3-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .settings-v3-collection-row__meta { color: var(--sv3-muted); font-size: 11px; }
+.settings-v3-collection-row .settings-v3-toolbar button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  padding: 0;
+}
+.settings-v3-collection-row .settings-v3-toolbar button svg { width: 18px; height: 18px; }
 .settings-v3-letter-body { grid-column: 1 / -1; padding: 12px 4px 4px; border-top: 1px solid var(--sv3-line); user-select: text; }
 .settings-v3-letter-body p { margin: 0 0 10px; line-height: 1.65; }
 .settings-v3-chip-line { display: flex; flex-wrap: wrap; gap: 5px; min-height: 18px; }

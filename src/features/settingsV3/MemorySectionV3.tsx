@@ -274,28 +274,24 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
       <SettingsV3Section title={ti('settings.memory.transparency.title')} hideHeader>
         <SettingsV3Row
           icon="thought"
-          label={draft.memoryPaused
-            ? ti('settings.memory.transparency.status_paused')
-            : ti('settings.memory.transparency.status_active')}
-          hint={draft.memoryPaused
-            ? ti('settings.memory.transparency.paused_effect')
-            : ti('settings.memory.transparency.active_effect')}
+          label={ti('settings.memory.transparency.pause')}
+          hint={ti('settings.memory.transparency.paused_effect')}
         >
           <SettingsV3Switch
-            checked={!draft.memoryPaused}
-            label={ti('settings.memory.transparency.enabled_label')}
-            onChange={(enabled) => onCommitMemoryPaused(!enabled)}
+            checked={draft.memoryPaused}
+            label={ti('settings.memory.transparency.pause')}
+            onChange={onCommitMemoryPaused}
           />
         </SettingsV3Row>
         <SettingsV3Row
           icon="sparkles"
           label={ti('settings.memory.transparency.active_long_term')}
-          meta={transparency.activeLongTermCount.toLocaleString(uiLanguage)}
+          meta={ti('settings.memory.transparency.count_value', { count: transparency.activeLongTermCount })}
         />
         <SettingsV3Row
           icon="clipboard"
           label={ti('settings.memory.transparency.daily_entries')}
-          meta={transparency.dailyEntryCount.toLocaleString(uiLanguage)}
+          meta={ti('settings.memory.transparency.count_value', { count: transparency.dailyEntryCount })}
         />
         <SettingsV3Row
           icon="continuous"
@@ -314,9 +310,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
         uiLanguage={uiLanguage}
       />
 
-      <SettingsV3Notice title={ti('settings.memory.transparency.storage_note')}>
-        {ti('settings.memory.long_term.archive_note')}
-      </SettingsV3Notice>
+      <SettingsV3Notice title={ti('settings.memory.transparency.storage_note')} />
 
       {focusedCount ? (
         <SettingsV3Notice tone="success" title={ti('memory_panel.focused_badge')} announce>
@@ -523,26 +517,25 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
                           {focused ? <span>{ti('memory_panel.focused_badge')}</span> : null}
                         </span>
                         <span className="settings-v3-collection-row__title">{memory.content}</span>
-                        <span className="settings-v3-collection-row__meta">{memory.source}</span>
                       </div>
                       <SettingsV3Toolbar>
                         <button
                           type="button"
-                          title={`${ti('memory_panel.edit')}: ${snippet(memory.content)}`}
-                          aria-label={`${ti('memory_panel.edit')}: ${snippet(memory.content)}`}
+                          title={ti('memory_panel.edit')}
+                          aria-label={ti('memory_panel.edit')}
                           onClick={() => startEdit(memory.id, memory.content)}
                         ><PetControlIcon name="tuning" aria-hidden="true" /></button>
                         <button
                           type="button"
-                          title={`${enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}: ${snippet(memory.content)}`}
-                          aria-label={`${enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}: ${snippet(memory.content)}`}
+                          title={enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}
+                          aria-label={enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}
                           onClick={() => onSetMemoryEnabled(memory.id, !enabled)}
                         ><PetControlIcon name={enabled ? 'pause' : 'play'} aria-hidden="true" /></button>
                         <button
                           type="button"
                           className="is-danger"
-                          title={`${ti('memory_panel.delete')}: ${snippet(memory.content)}`}
-                          aria-label={`${ti('memory_panel.delete')}: ${snippet(memory.content)}`}
+                          title={ti('memory_panel.delete')}
+                          aria-label={ti('memory_panel.delete')}
                           onClick={() => void removeItem(memory.id)}
                         ><PetControlIcon name="trash" aria-hidden="true" /></button>
                       </SettingsV3Toolbar>
@@ -557,7 +550,9 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
 
       <SettingsV3Disclosure
         title={ti('memory_panel.diary_preview_title')}
-        description={`${dailyMemoryEntries.length.toLocaleString(uiLanguage)} · ${ti('memory_panel.diary_hint')}`}
+        description={dailyMemoryEntries.length
+          ? ti('settings.memory.transparency.count_value', { count: dailyMemoryEntries.length })
+          : ti('memory_panel.diary_hint')}
       >
         {dailyMemoryEntries.length ? (
           <ul className="settings-v3-collection">

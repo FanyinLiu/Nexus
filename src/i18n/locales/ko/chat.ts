@@ -14,7 +14,7 @@ export const koChat = {
   'message_bubble.run_status.error_recoverable': '다시 시도 가능',
   'message_bubble.memory_trace.used': '이번 답변에 기억 참고 · 장기 {longTerm} · 일기 {daily} · 의미 {semantic}',
   'message_bubble.memory_trace.none': '기억은 켜져 있지만 이번 답변에는 불러온 내용이 없어요.',
-  'message_bubble.memory_trace.paused': '이번 답변에서는 기억을 일시 중지했어요.',
+  'message_bubble.memory_trace.paused': '이 답변은 기억을 쓰지 않았어요',
   'message_bubble.memory_trace.long_term': '장기 기억',
   'message_bubble.memory_trace.daily': '일기 기억',
   'message_bubble.memory_trace.semantic': '의미 검색',
