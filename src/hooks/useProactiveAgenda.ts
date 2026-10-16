@@ -173,6 +173,7 @@ export function useProactiveAgenda(options: {
         sinceMs: Number.isFinite(sinceMs) ? sinceMs : null,
         complete,
         runId,
+        memoryPaused: current.settingsRef.current?.memoryPaused === true,
       })
       if (revision !== getMemoryReconcileRevision() || current.busyRef?.current) {
         current.onLog('Daily consolidation skipped', 'chat moved on')
