@@ -7,6 +7,20 @@
  * months, another using one-indexed).
  */
 
+/**
+ * Short clock time in the UI locale. Passing the locale keeps zh-CN from
+ * rendering an English AM/PM marker when the runtime locale is English.
+ */
+export function formatLocaleClockTime(timestamp: string, locale: string): string {
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.valueOf())) return ''
+  const resolved = locale.trim()
+  return date.toLocaleTimeString(resolved ? [resolved] : [], {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 /** `YYYY-MM-DD`-shaped key for the local-time day a timestamp falls in. */
 export function localDayKey(ms: number): string {
   const d = new Date(ms)

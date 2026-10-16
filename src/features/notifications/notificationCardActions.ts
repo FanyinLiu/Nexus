@@ -8,15 +8,14 @@ export type NotificationCardPrimaryAction = {
   titleKey?: TranslationKey
 }
 
+/**
+ * Overflow actions. Reply and mark-read stay on the card; drafting a reply
+ * happens inside the reply composer, so it is not a separate button.
+ */
 export function getNotificationCardPrimaryActions(
   message: Pick<NotificationMessage, 'isImportant'>,
 ): NotificationCardPrimaryAction[] {
   return [
-    {
-      id: 'draft_reply',
-      labelKey: 'panel.notification.action.draft_reply',
-      titleKey: 'panel.notification.draft_reply',
-    },
     {
       id: 'mark_important',
       labelKey: message.isImportant

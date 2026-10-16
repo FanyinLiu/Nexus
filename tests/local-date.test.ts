@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  formatLocaleClockTime,
   isSameLocalDay,
   isSameLocalWeek,
   localDayKey,
@@ -67,4 +68,13 @@ test('isSameLocalWeek: same Sunday twice', () => {
   const morning = new Date('2026-04-26T08:00:00').getTime()
   const night = new Date('2026-04-26T23:00:00').getTime()
   assert.equal(isSameLocalWeek(morning, night), true)
+})
+
+test('formatLocaleClockTime follows the UI locale and skips an English meridiem in zh-CN', () => {
+  const stamp = '2026-10-16T17:18:00.000Z'
+  const zh = formatLocaleClockTime(stamp, 'zh-CN')
+  assert.match(zh, /\d{1,2}:\d{2}/)
+  assert.doesNotMatch(zh, /AM|PM/)
+  assert.match(formatLocaleClockTime(stamp, 'en-US'), /\d{1,2}:\d{2}/)
+  assert.equal(formatLocaleClockTime('not-a-date', 'zh-CN'), '')
 })

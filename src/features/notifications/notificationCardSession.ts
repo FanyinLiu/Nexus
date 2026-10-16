@@ -1,9 +1,8 @@
 /**
  * Notification card decisions shared by the legacy panel and the default
- * companion panel. Cards are the actionable list (read, snooze, important,
- * reply). Chat history and the pet bubble stay as announcements. A companion
- * caption that already names a visible card is hidden so the same notice is
- * not painted again on the stage.
+ * companion panel. Cards are the list (reply, read, and a small menu for
+ * later / important). The same arrival is not copied into the chat
+ * transcript. A stage caption that already names a visible card is hidden.
  */
 import type { NotificationMessage, TranslationKey, TranslationParams } from '../../types'
 import { buildNotificationReplyDraftText } from '../../lib/privacy/notificationPrivacy.ts'
@@ -100,17 +99,31 @@ export function createNotificationReplyTarget(
 }
 
 /**
- * Prefills the composer the same way the legacy reply button does. The
- * fullwidth colon is part of that existing prompt, not a translated sentence.
+ * The reply chip already names who the message is for, so the composer
+ * starts empty. A drafted reply, when one exists, is typed into that box
+ * rather than prefixed with another "replying to" label.
  */
-export function buildNotificationReplyComposerText(
-  sourceLabel: string,
-  translate: Translate,
-): string {
-  const mention = sourceLabel
-    ? `${translate('panel.notification.reply_to', { source: sourceLabel })}：`
-    : translate('panel.notification.reply')
-  return `${mention} `
+export function buildNotificationReplyComposerText(): string {
+  return ''
+}
+
+/** Telegram and Discord cards show an app mark; everything else uses a letter. */
+export function getNotificationCardBadge(
+  message: Pick<NotificationMessage, 'sourceId' | 'sourceName' | 'sender' | 'title' | 'channelName'>,
+): { kind: 'telegram' | 'discord' | 'initial'; letter: string } {
+  const seed = (message.sender || message.title || message.channelName || message.sourceName || '?').trim()
+  const letter = Array.from(seed)[0] || '?'
+  const source = getNotificationReplySource(message)
+  if (source === 'telegram' || source === 'discord') return { kind: source, letter }
+  return { kind: 'initial', letter }
+}
+
+/**
+ * Each notice already has a card. Writing one chat line per arrival repeats
+ * it in the transcript, so the mirror stays off.
+ */
+export function shouldAppendNotificationChatLine(): boolean {
+  return false
 }
 
 export function planNotificationPrimaryAction(
@@ -136,13 +149,12 @@ export function planNotificationPrimaryAction(
 
 export function planNotificationReplyCompose(
   message: NotificationMessage,
-  translate: Translate,
 ): Extract<NotificationCardPlan, { type: 'compose' }> | null {
   const reply = createNotificationReplyTarget(message)
   if (!reply) return null
   return {
     type: 'compose',
-    text: buildNotificationReplyComposerText(getNotificationCardSourceLabel(message), translate),
+    text: buildNotificationReplyComposerText(),
     reply,
   }
 }

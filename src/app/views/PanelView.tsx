@@ -91,6 +91,7 @@ export function PanelView({
             onMarkAllRead={notifications.summary.onMarkAllRead}
             onMarkNotificationRead={notifications.summary.onMarkNotificationRead}
             onNotificationPrimaryAction={notifications.summary.onNotificationPrimaryAction}
+            locale={notifications.summary.locale}
             onReplyToNotification={notifications.summary.onReplyToNotification}
             totalMessageCount={notifications.summary.totalMessageCount}
             translate={notifications.summary.translate}

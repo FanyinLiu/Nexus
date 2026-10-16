@@ -51,6 +51,7 @@ export type CompanionNotificationSummaryBindings = {
   totalMessageCount: number
   canReplyToNotification: (message: NotificationMessage) => boolean
   getNotificationSourceLabel: (message: NotificationMessage) => string
+  locale: string
   onClearNotifications: () => void
   onMarkAllRead: () => void
   onMarkNotificationRead: (messageId: string) => void
@@ -120,10 +121,10 @@ export function useCompanionNotificationCards({
   }, [markImportant, markRead, openComposer, snoozeMessage, translate])
 
   const onReplyToNotification = useCallback((message: NotificationMessage) => {
-    const plan = planNotificationReplyCompose(message, translate)
+    const plan = planNotificationReplyCompose(message)
     if (!plan) return
     openComposer(plan.text, plan.reply)
-  }, [openComposer, translate])
+  }, [openComposer])
 
   const cancelReply = useCallback(() => {
     setActiveReply(null)
@@ -162,6 +163,7 @@ export function useCompanionNotificationCards({
       totalMessageCount: messages.length,
       canReplyToNotification: (message) => canReplyToNotificationCard(message, availability),
       getNotificationSourceLabel: getNotificationCardSourceLabel,
+      locale: uiLanguage,
       onClearNotifications: () => { void clearMessages() },
       onMarkAllRead: () => { void markAllRead() },
       onMarkNotificationRead: markRead,
@@ -170,9 +172,14 @@ export function useCompanionNotificationCards({
       translate,
     }
 
+  const replyMessage = replyTarget
+    ? messages.find((message) => message.id === replyTarget.notificationMessageId)
+    : undefined
   const reply: CompanionNotificationReplySession | null = replyTarget
     ? {
-      hint: translate('panel.notification.replying_to'),
+      hint: translate('panel.notification.reply_chip', {
+        source: replyMessage ? getNotificationCardSourceLabel(replyMessage) : '',
+      }),
       sendLabel: translate('panel.notification.send_reply'),
       cancelLabel: translate('common.cancel'),
       onCancel: cancelReply,

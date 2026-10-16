@@ -41,7 +41,6 @@ import {
 } from '../../features/memory/traceDetails.ts'
 import type { NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions.ts'
 import {
-  buildNotificationReplyComposerText,
   canReplyToNotificationCard,
   createNotificationReplyTarget,
   deliverNotificationReply,
@@ -362,7 +361,7 @@ export function LegacyPanelView({
     if (!target) return
 
     setActiveNotificationReply(target)
-    chat.setInput(buildNotificationReplyComposerText(getNotificationSourceLabel(message), ti))
+    chat.setInput('')
     focusNotificationComposer()
   }
 
@@ -408,8 +407,15 @@ export function LegacyPanelView({
     : isNotificationReplying()
       ? ti('panel.notification.send_reply')
       : ti('panel.composer.send_message')
+  const activeNotificationReplyMessage = activeNotificationReply
+    ? notificationBridge?.messages.find((message) => message.id === activeNotificationReply.notificationMessageId)
+    : undefined
   const notificationReplyHintLabel = activeNotificationReply
-    ? ti('panel.notification.replying_to')
+    ? ti('panel.notification.reply_chip', {
+      source: activeNotificationReplyMessage
+        ? getNotificationCardSourceLabel(activeNotificationReplyMessage)
+        : '',
+    })
     : null
   const composerPlaceholder = ti('panel.composer.placeholder_compact')
   const image4SuggestionText = image4PreviewMode
@@ -683,6 +689,7 @@ export function LegacyPanelView({
               <PanelNotificationSummary
                 canReplyToNotification={canReplyToNotification}
                 getNotificationSourceLabel={getNotificationSourceLabel}
+                locale={settings.uiLanguage}
                 messages={unreadNotifications}
                 onClearNotifications={handleClearNotifications}
                 onMarkAllRead={handleMarkAllRead}
@@ -884,9 +891,10 @@ export function LegacyPanelView({
                         <button
                           type="button"
                           className="ghost-button ghost-button--compact composer__hint-action"
+                          aria-label={ti('common.cancel')}
                           onClick={handleCancelNotificationReply}
                         >
-                          {ti('common.cancel')}
+                          ×
                         </button>
                       </span>
                     ) : null}

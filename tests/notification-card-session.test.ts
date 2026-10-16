@@ -12,12 +12,13 @@ import {
   captionRepeatsVisibleNotification,
   createNotificationReplyTarget,
   deliverNotificationReply,
-  getNotificationCardSourceLabel,
+  getNotificationCardBadge,
   getNotificationReplySource,
   NOTIFICATION_CARD_SNOOZE_MINUTES,
   planNotificationPrimaryAction,
   planNotificationReplyCompose,
   selectVisibleNotificationCards,
+  shouldAppendNotificationChatLine,
   shouldCompleteNotificationReply,
   VISIBLE_NOTIFICATION_CARD_LIMIT,
 } from '../src/features/notifications/notificationCardSession.ts'
@@ -107,12 +108,12 @@ test('reply target keeps bridge ids and the card actions do not copy message con
     assert.doesNotMatch(draft.text, /private dinner|one-time code|private summary/)
   }
 
-  const reply = planNotificationReplyCompose(message, translate)
+  const reply = planNotificationReplyCompose(message)
   assert.ok(reply)
   assert.equal(reply?.reply.source, 'telegram')
-  assert.match(reply?.text ?? '', /panel\.notification\.reply_to/)
-  assert.match(buildNotificationReplyComposerText(getNotificationCardSourceLabel(message), translate), /Alice · Telegram/)
-  assert.doesNotMatch(reply?.text ?? '', /private dinner|private summary/)
+  assert.equal(reply?.text, '')
+  assert.equal(buildNotificationReplyComposerText(), '')
+  assert.doesNotMatch(reply?.text ?? '', /private dinner|private summary|reply_to/)
 
   const important = planNotificationPrimaryAction('mark_important', message, translate)
   assert.deepEqual(important, { type: 'toggle_important', messageId: 'msg-1' })
@@ -175,4 +176,21 @@ test('announcement captions in every locale repeat a visible card, other lines d
   )
   assert.equal(captionRepeatsVisibleNotification('Alice sent a note', []), false)
   assert.equal(captionRepeatsVisibleNotification(undefined, [card]), false)
+})
+
+test('cards show an app mark for telegram and discord, and a letter otherwise', () => {
+  assert.equal(getNotificationCardBadge(makeMessage()).kind, 'telegram')
+  assert.equal(getNotificationCardBadge(makeMessage({ sourceId: 'discord', sourceName: 'Discord' })).kind, 'discord')
+  assert.deepEqual(
+    getNotificationCardBadge(makeMessage({
+      sourceId: 'wechat',
+      sourceName: '微信',
+      sender: '林夏',
+    })),
+    { kind: 'initial', letter: '林' },
+  )
+})
+
+test('a notification is not copied into the chat transcript', () => {
+  assert.equal(shouldAppendNotificationChatLine(), false)
 })

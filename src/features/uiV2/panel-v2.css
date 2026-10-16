@@ -251,8 +251,20 @@
   overflow-wrap: anywhere;
 }
 
+.nexus-panel-v2__notices .panel-notification-summary__avatar {
+  color: var(--nx-v2-on-accent);
+  background: var(--nx-v2-accent);
+}
+
 .nexus-panel-v2__notices .panel-notification-summary__item-priority {
   color: var(--nx-v2-danger);
+}
+
+.nexus-panel-v2__notices .panel-notification-summary__menu {
+  color: var(--v2-ink);
+  background: var(--nx-v2-surface);
+  border-color: var(--v2-line);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--nx-v2-shadow) 76%, transparent);
 }
 
 .nexus-panel-v2__notices .panel-notification-summary__item {
@@ -268,6 +280,12 @@
   background: color-mix(in srgb, var(--nx-v2-surface) 92%, transparent);
   border-color: var(--v2-line);
   box-shadow: none;
+}
+
+.nexus-panel-v2__notices .ghost-button.panel-notification-summary__action--primary {
+  color: var(--nx-v2-on-accent);
+  background: var(--nx-v2-accent);
+  border-color: var(--nx-v2-accent);
 }
 
 .nexus-panel-v2__safety-layer {

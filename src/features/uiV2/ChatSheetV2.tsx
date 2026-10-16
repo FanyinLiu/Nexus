@@ -359,8 +359,8 @@ export function ChatSheetV2({
           {replyMode ? (
             <div className="chat-sheet-v2__reply">
               <span>{replyMode.hint}</span>
-              <button type="button" onClick={replyMode.onCancel}>
-                {replyMode.cancelLabel}
+              <button type="button" aria-label={replyMode.cancelLabel} onClick={replyMode.onCancel}>
+                ×
               </button>
             </div>
           ) : null}
