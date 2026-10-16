@@ -283,8 +283,8 @@ function pinProviderIdForDefaultRemap(
  * default, so a schema 10 store can still have this id selected, including
  * on a Token Plan preset. Every remaining copy is rewritten. PAYG goes to
  * MiniMax-M3; Token Plan goes to MiniMax-M3.1-Flash-Preview, which is where
- * MiniMax routes those plan requests. MiniMax-M2.7-highspeed and MiniMax-M2.5
- * stay listed and are not rewritten.
+ * MiniMax routes those plan requests. MiniMax-M2.7-highspeed is left for
+ * v15. MiniMax-M2.5 stays listed and is not rewritten.
  *
  * A bare PAYG id is pinned before the model becomes MiniMax-M3, because host
  * inference treats MiniMax-M3 as Token Plan when no provider id is stored.
@@ -308,6 +308,55 @@ const V11_RETIRED_MODEL_IDS: Record<string, Record<string, string>> = {
  */
 const V11_RETIRED_SPEECH_INPUT_DEFAULTS: Record<string, { from: string; to: string }> = {
   'custom-openai-stt': { from: 'gpt-4o-mini-transcribe', to: 'gpt-transcribe' },
+}
+
+/**
+ * MiniMax-M2.7 and MiniMax-M2.7-highspeed leave every MiniMax picker.
+ * New accounts could not call them after 2026-10-19; both retire on
+ * 2026-11-18. v11 already rewrote MiniMax-M2.7, so v15 also catches a
+ * copy that is still stored and rewrites highspeed, which v11 left alone.
+ * Both become MiniMax-M3, the current PAYG default, including on Token
+ * Plan where MiniMax-M3 stays listed. MiniMax-M2.5 is not rewritten.
+ *
+ * A bare PAYG id is pinned before the model string becomes MiniMax-M3.
+ * Host inference treats MiniMax-M3 as Token Plan when no provider id is
+ * stored, which would move a PAYG user onto the coding preset.
+ */
+const V15_RETIRED_MINIMAX_IDS = new Set([
+  'MiniMax-M2.7',
+  'MiniMax-M2.7-highspeed',
+])
+
+const V15_RETIRED_MODEL_IDS: Record<string, Record<string, string>> = {
+  minimax: {
+    'MiniMax-M2.7': 'MiniMax-M3',
+    'MiniMax-M2.7-highspeed': 'MiniMax-M3',
+  },
+  'minimax-global': {
+    'MiniMax-M2.7': 'MiniMax-M3',
+    'MiniMax-M2.7-highspeed': 'MiniMax-M3',
+  },
+  'minimax-coding': {
+    'MiniMax-M2.7': 'MiniMax-M3',
+    'MiniMax-M2.7-highspeed': 'MiniMax-M3',
+  },
+  'minimax-coding-global': {
+    'MiniMax-M2.7': 'MiniMax-M3',
+    'MiniMax-M2.7-highspeed': 'MiniMax-M3',
+  },
+}
+
+function pinBarePaygBeforeRetiredMinimax(raw: Record<string, unknown>) {
+  const next = { ...raw }
+  if (typeof next.apiProviderId === 'string' && next.apiProviderId.trim()) return next
+  const storedModel = typeof next.model === 'string' ? next.model : ''
+  if (!V15_RETIRED_MINIMAX_IDS.has(storedModel)) return next
+  const storedBaseUrl = typeof next.apiBaseUrl === 'string' ? next.apiBaseUrl : ''
+  const providerId = inferApiProviderId(storedBaseUrl, storedModel)
+  if (providerId === 'minimax' || providerId === 'minimax-global') {
+    next.apiProviderId = providerId
+  }
+  return next
 }
 
 const REMOVED_BUNDLED_SPRITE_PET_IDS = new Set(['codex', 'qiyi'])
@@ -338,7 +387,7 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 14
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 15
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -509,6 +558,19 @@ const migrations: SettingsMigration[] = [
     toVersion: 14,
     description: 'Canonicalize voice language tags without changing providers or voices',
     migrate: migrateVoiceLanguageFields,
+  },
+  {
+    toVersion: 15,
+    description: 'Retire MiniMax-M2.7 and MiniMax-M2.7-highspeed onto MiniMax-M3, and keep the custom OpenAI STT default move',
+    migrate: (raw) => remapSpeechInputDefaults(
+      remapStoredModelIds(
+        pinBarePaygBeforeRetiredMinimax(raw),
+        V15_RETIRED_MODEL_IDS,
+      ),
+      // Same frozen pair as v11. A schema 14 store can still hold the old
+      // default if it was written back after that pass. Any other name stays.
+      V11_RETIRED_SPEECH_INPUT_DEFAULTS,
+    ),
   },
 ]
 

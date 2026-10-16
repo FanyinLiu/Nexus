@@ -1,8 +1,9 @@
 # Nexus v0.4.8-beta.1 — October 2026 catalog follow-up
 
-**Status: Prepared beta candidate. No tag and no GitHub Release yet.**
+**Status: Published GitHub pre-release on 2026-10-15.**
 v0.4.7 remains the current public stable release. The README stable entry
-stays on v0.4.7. This document does not publish the beta.
+stays on v0.4.7. The tag `v0.4.8-beta.1` is spent; the next package on this
+line is `0.4.8-beta.2`.
 
 The candidate carries the October 2026 provider catalog that landed in #139,
 then removes `MiniMax-M2.7` before its 2026-11-18 retirement and points the
@@ -91,11 +92,10 @@ vulnerable `sharp` and `adm-zip` dependencies.
 
 ## Beta validation boundary
 
-The owner tags `v0.4.8-beta.1` only after this commit is on `main`, CI is
-green on that commit, and `npm run prerelease-check -- v0.4.8-beta.1` passes.
-The protected tag workflow publishes the pre-release. Do not run
+`v0.4.8-beta.1` was published by the protected tag workflow on 2026-10-15.
+Do not reuse that tag. The next package is `0.4.8-beta.2`. Do not run
 `gh release create` by hand, and do not switch the README stable entry from
-v0.4.7 until a later stable promotion.
+v0.4.7 until the v0.4.8 stable promotion.
 
 ## macOS unsigned auto-update limitation
 
