@@ -79,15 +79,15 @@ export function MemoryPortraitCardsV3({
   const ongoing = active.filter((memory) => (
     memory.kind === 'open_loop' && (memory.loopStatus ?? 'open') !== 'dismissed'
   )).slice(0, 8)
-  const preview = [...ongoing, ...about].slice(0, 3)
   const changes = useMemo(() => {
     void logTick
     return loadMemoryOpLog().filter((entry) => entry.op !== 'NOOP').slice(-8).reverse()
   }, [logTick])
-  const latestChange = changes[0]?.at ?? active[0]?.updatedAt ?? active[0]?.createdAt ?? null
   const memorySummary = diaryCount === 0
     ? t('memory.portrait.summary_empty', { count: active.length })
     : t('memory.portrait.summary', { count: active.length })
+  const recent = ongoing[0] ?? about[0] ?? null
+  const recentName = recent ? plainMemoryName(recent.content) : ''
 
   const saveSoul = () => {
     const note = saveCompanionSoul(soulDraft, new Date().toISOString())
@@ -179,22 +179,14 @@ export function MemoryPortraitCardsV3({
         <button type="button" className="memory-portrait__card memory-portrait__card--memory nx-companion-card nx-companion-card--memory" onClick={() => setSheet('memory')}>
           <p className="memory-portrait__kicker">{t('memory.portrait.title')}</p>
           <p className="memory-portrait__summary">{memorySummary}</p>
+          {recentName ? (
+            <p className="memory-portrait__summary">{t('memory.portrait.recent', { name: recentName })}</p>
+          ) : null}
           <span className="memory-portrait__meta">
-            <span>{portraitStamp(latestChange)}</span>
             <span>{t('memory.portrait.open')}</span>
           </span>
         </button>
       </div>
-      {preview.length ? (
-        <ul className="memory-portrait__notes">
-          {preview.map((memory) => (
-            <li key={memory.id}>
-              {displayMemoryText(memory.content)}
-              {memory.userEdited ? <span className="memory-portrait__tag">{t('memory.portrait.edited')}</span> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
 
       {sheet ? (
         <div className="memory-portrait__sheet" role="dialog" aria-modal="true" aria-label={sheet === 'soul' ? t('memory.soul.title') : t('memory.portrait.title')}>
