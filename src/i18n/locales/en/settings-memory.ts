@@ -298,4 +298,5 @@ export const enSettingsMemory = {
   'memory.change.undone': 'Undid the change to "{name}"',
   'memory.change.updated': 'Updated "{name}"',
   'memory.change.cancelled': 'Removed the reminder for "{name}"',
+  'memory.change.deleted': 'Deleted one memory',
 } as const satisfies Partial<TranslationDictionary>

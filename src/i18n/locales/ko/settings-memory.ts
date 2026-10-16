@@ -298,4 +298,5 @@ export const koSettingsMemory = {
   'memory.change.undone': '「{name}」 변경을 되돌림',
   'memory.change.updated': '「{name}」을 고침',
   'memory.change.cancelled': '「{name}」 알림을 취소했어',
+  'memory.change.deleted': '기억 하나를 지웠어',
 } as const satisfies Partial<TranslationDictionary>

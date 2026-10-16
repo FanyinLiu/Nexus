@@ -24,6 +24,7 @@ export type MemoryChangeKey =
   | 'memory.change.undone'
   | 'memory.change.updated'
   | 'memory.change.cancelled'
+  | 'memory.change.deleted'
 
 /** Drop a trailing "edited" marker so the row can show a tag instead. */
 export function displayMemoryText(content: string): string {
@@ -53,6 +54,7 @@ export function plainMemoryName(content: string): string {
  * and is never returned.
  */
 export function memoryChangeKey(entry: MemoryOpRecord): MemoryChangeKey {
+  if (entry.reason === 'user-deleted') return 'memory.change.deleted'
   if (entry.op === 'UNDO') return 'memory.change.undone'
   if (entry.op === 'ADD') return 'memory.change.added'
   if (entry.op === 'MERGE') return 'memory.change.merged'
