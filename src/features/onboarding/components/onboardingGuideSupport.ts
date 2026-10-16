@@ -1,8 +1,15 @@
+import { syncWakeWordWithCompanionNameChange } from '../../hearing/companionWakeWordSync.ts'
 import {
   isSenseVoiceSpeechInputProvider,
   isSpeechOutputKeyless,
 } from '../../../lib/audioProviders.ts'
-import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
+import {
+  getDefaultCompanionName,
+  getDefaultUserName,
+  isLocaleDefaultCompanionName,
+  isLocaleDefaultUserName,
+  pickTranslatedUiText,
+} from '../../../lib/uiLanguage.ts'
 import type { AppSettings } from '../../../types/app.ts'
 import type { TranslationKey, UiLanguage } from '../../../types/i18n.ts'
 import {
@@ -29,16 +36,33 @@ const ONBOARDING_STEP_KEYS: Array<{
   titleKey: TranslationKey
   descriptionKey: TranslationKey
 }> = [
-  // SB 243 / NY companion-AI / EU AI Act require an initial "clear
-  // and conspicuous" disclosure before chat begins. Step 0 is the
-  // place where the user can't have skipped it accidentally.
+  // Language is first so the rest of the guide, the panel, and the pet
+  // follow the same choice. The disclosure stays before chat: it is the
+  // next step, and finishing still records the acknowledgement.
+  { id: 'language', titleKey: 'onboarding.step.language.title', descriptionKey: 'onboarding.step.language.description' },
   { id: 'ai_disclosure', titleKey: 'onboarding.step.ai_disclosure.title', descriptionKey: 'onboarding.step.ai_disclosure.description' },
   { id: 'welcome', titleKey: 'onboarding.step.welcome.title', descriptionKey: 'onboarding.step.welcome.description' },
   { id: 'text', titleKey: 'onboarding.step.text.title', descriptionKey: 'onboarding.step.text.description' },
   { id: 'voice', titleKey: 'onboarding.step.voice.title', descriptionKey: 'onboarding.step.voice.description' },
   { id: 'companion', titleKey: 'onboarding.step.companion.title', descriptionKey: 'onboarding.step.companion.description' },
-  { id: 'message_action_demo', titleKey: 'onboarding.step.message_action_demo.title', descriptionKey: 'onboarding.step.message_action_demo.description' },
 ]
+
+/** Apply a language pick, including locale-default names and the wake word. */
+export function applyOnboardingLanguageChoice(
+  draft: AppSettings,
+  nextLanguage: UiLanguage,
+): AppSettings {
+  return syncWakeWordWithCompanionNameChange(draft, {
+    ...draft,
+    uiLanguage: nextLanguage,
+    companionName: isLocaleDefaultCompanionName(draft.companionName)
+      ? getDefaultCompanionName(nextLanguage)
+      : draft.companionName,
+    userName: isLocaleDefaultUserName(draft.userName)
+      ? getDefaultUserName(nextLanguage)
+      : draft.userName,
+  })
+}
 
 export function buildOnboardingSteps(uiLanguage: UiLanguage): OnboardingStep[] {
   return ONBOARDING_STEP_KEYS.map(({ id, titleKey, descriptionKey }) => ({
@@ -69,21 +93,44 @@ function formatOnboardingIssue(issue: OnboardingStepIssue) {
     : issue.message
 }
 
+export function getOnboardingMissingApiKeyHint(
+  draft: AppSettings,
+  textProviderRequiresApiKey: boolean,
+  uiLanguage: UiLanguage,
+): string | null {
+  if (!(textProviderRequiresApiKey && !draft.apiKey.trim())) return null
+  const preflightFail = getTextConnectionPreflightFailure(draft, uiLanguage)
+  const repairHint = preflightFail?.status === 'needs_key'
+    ? preflightFail.recommendation
+    : undefined
+  const baseHint = pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.missing_api_key')
+  return repairHint ? `${baseHint} ${repairHint}` : baseHint
+}
+
 export function getOnboardingFinishHint(
   draft: AppSettings,
   textProviderRequiresApiKey: boolean,
   uiLanguage: UiLanguage,
 ) {
-  if (textProviderRequiresApiKey && !draft.apiKey.trim()) {
-    const preflightFail = getTextConnectionPreflightFailure(draft, uiLanguage)
-    const repairHint = preflightFail?.status === 'needs_key'
-      ? preflightFail.recommendation
-      : undefined
-    const baseHint = pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.missing_api_key')
-    return repairHint ? `${baseHint} ${repairHint}` : baseHint
-  }
+  return getOnboardingMissingApiKeyHint(draft, textProviderRequiresApiKey, uiLanguage)
+    ?? pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.default')
+}
 
-  return pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.default')
+/**
+ * A model that has never tested OK gets one warning. The next finish proceeds.
+ */
+export function resolveOnboardingFinishGate(input: {
+  textConnectionVerified: boolean
+  acknowledgedUnverified: boolean
+  uiLanguage: UiLanguage
+}): { proceed: true } | { proceed: false; warning: string } {
+  if (input.textConnectionVerified || input.acknowledgedUnverified) {
+    return { proceed: true }
+  }
+  return {
+    proceed: false,
+    warning: pickTranslatedUiText(input.uiLanguage, 'onboarding.finish_hint.unverified_model'),
+  }
 }
 
 export function getOnboardingStepError(

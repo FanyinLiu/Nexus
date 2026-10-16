@@ -56,8 +56,9 @@ function readOnboardingRaw(): unknown {
 function composeOnboardingRecord(
   completion: OnboardingState | null,
   deferral: GuideDeferral | null,
+  inProgress: boolean,
 ): Record<string, unknown> | null {
-  if (!completion && !deferral) return null
+  if (!completion && !deferral && !inProgress) return null
   return {
     ...(completion ? {
       completedAt: completion.completedAt,
@@ -66,6 +67,7 @@ function composeOnboardingRecord(
         firstConversationElapsedMs: completion.firstConversationElapsedMs,
       } : {}),
     } : {}),
+    ...(inProgress && !completion ? { status: 'in-progress' } : {}),
     ...(deferral ? {
       guideDismissedAt: deferral.dismissedAt,
       guideDismissCount: deferral.dismissCount,
@@ -74,8 +76,12 @@ function composeOnboardingRecord(
   }
 }
 
-function writeOnboardingRecord(completion: OnboardingState | null, deferral: GuideDeferral | null) {
-  const payload = composeOnboardingRecord(completion, deferral)
+function writeOnboardingRecord(
+  completion: OnboardingState | null,
+  deferral: GuideDeferral | null,
+  inProgress: boolean,
+) {
+  const payload = composeOnboardingRecord(completion, deferral, inProgress)
   if (!payload) {
     window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
     mirrorOnboardingState(null)
@@ -102,13 +108,23 @@ function mirrorOnboardingState(state: OnboardingState | null) {
   })
 }
 
+/**
+ * Saved settings from a half-finished guide. The legacy backfill below treats
+ * any settings blob as an upgrade that already finished setup. This marker
+ * keeps a language pick from being read that way.
+ */
+function isOnboardingInProgressRecord(raw: unknown): boolean {
+  return isObject(raw) && raw.status === 'in-progress' && typeof raw.completedAt === 'undefined'
+}
+
 export function loadOnboardingState() {
   if (typeof window === 'undefined' || !window.localStorage) return null
 
   const stored = readOnboardingRaw()
   const normalized = normalizeOnboardingState(stored)
   const deferral = normalizeGuideDeferral(stored)
-  if (!normalized && !deferral) {
+  const inProgress = isOnboardingInProgressRecord(stored)
+  if (!normalized && !deferral && !inProgress) {
     if (stored !== null) {
       window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
       mirrorOnboardingState(null)
@@ -116,7 +132,7 @@ export function loadOnboardingState() {
     return null
   }
 
-  const payload = composeOnboardingRecord(normalized, deferral)
+  const payload = composeOnboardingRecord(normalized, deferral, inProgress)
   if (JSON.stringify(payload) !== JSON.stringify(stored)) {
     writeJson(ONBOARDING_STORAGE_KEY, payload)
   }
@@ -140,7 +156,11 @@ export function recordGuideDismiss(dismissedAt = new Date()): GuideDeferral | nu
 
   const stored = readOnboardingRaw()
   const next = nextGuideDeferral(normalizeGuideDeferral(stored), dismissedAt.toISOString())
-  writeOnboardingRecord(normalizeOnboardingState(stored), next)
+  writeOnboardingRecord(
+    normalizeOnboardingState(stored),
+    next,
+    isOnboardingInProgressRecord(stored),
+  )
   return next
 }
 
@@ -152,14 +172,32 @@ export function markGuideReshown(reshownAt = new Date()): GuideDeferral | null {
   if (!current) return null
   const next = withGuideReshown(current, reshownAt.toISOString())
   if (next === current) return current
-  writeOnboardingRecord(normalizeOnboardingState(stored), next)
+  writeOnboardingRecord(
+    normalizeOnboardingState(stored),
+    next,
+    isOnboardingInProgressRecord(stored),
+  )
   return next
+}
+
+/**
+ * Remember that setup is still open so a mid-guide settings write does not
+ * count as a finished upgrade.
+ */
+export function markOnboardingInProgress() {
+  if (typeof window === 'undefined' || !window.localStorage) return
+  const stored = readOnboardingRaw()
+  if (normalizeOnboardingState(stored) || isOnboardingInProgressRecord(stored)) return
+  writeOnboardingRecord(null, normalizeGuideDeferral(stored), true)
 }
 
 export function loadOnboardingCompleted() {
   if (loadOnboardingState()) {
     return true
   }
+
+  const stored = readJson<unknown>(ONBOARDING_STORAGE_KEY, null)
+  if (isOnboardingInProgressRecord(stored)) return false
 
   // Backfill: any pre-existing user data implies onboarding was already done in
   // an older build that didn't yet record the flag explicitly.

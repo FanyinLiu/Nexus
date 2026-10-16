@@ -36,13 +36,14 @@ type TextStepProps = {
    * Lifted to OnboardingGuide so the choice survives leaving and re-entering
    * this step (the guide unmounts inactive steps). null = the user hasn't
    * picked a tab yet; we fall back to the uiLanguage default, which keeps
-   * tracking the language chosen on the welcome step until first click.
+   * tracking the language chosen on the language step until first click.
    */
   regionTab: ApiProviderPreset['region'] | null
   onRegionTabChange: (region: ApiProviderPreset['region']) => void
   onTestConnection?: (settings: AppSettings) => Promise<ConnectionResult>
   /** Clear or replace the parent verification record (fingerprint/evidence/time). */
   onTextConnectionVerificationChange: (record: ConnectionVerificationRecord | null) => void
+  missingApiKeyHint?: string | null
 }
 
 export function TextStep({
@@ -53,6 +54,7 @@ export function TextStep({
   onRegionTabChange,
   onTestConnection,
   onTextConnectionVerificationChange,
+  missingApiKeyHint = null,
 }: TextStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -326,6 +328,10 @@ export function TextStep({
           placeholder={ti('onboarding.text.api_key_placeholder')}
         />
       </label>
+
+      {missingApiKeyHint ? (
+        <p className="onboarding-tip onboarding-tip--strong">{missingApiKeyHint}</p>
+      ) : null}
 
       {onTestConnection ? (
         <div className="onboarding-test-connection">

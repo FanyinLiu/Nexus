@@ -20,6 +20,7 @@ import {
   loadGuideDeferral,
   loadOnboardingCompleted,
   markGuideReshown,
+  markOnboardingInProgress,
   recordGuideDismiss,
   normalizeSpeechOutputApiBaseUrl,
   resolveWebSearchApiBaseUrl,
@@ -304,6 +305,11 @@ export function useAppOverlays({
       toolWebSearchApiBaseUrl: normalizedWebSearchApiBaseUrl,
       launchOnStartup,
     })), options.baselineSettings)
+    const shouldCompleteOnboarding = options?.completeOnboarding ?? onboardingPending
+    if (!shouldCompleteOnboarding && onboardingPending) {
+      markOnboardingInProgress()
+    }
+
     const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
     setSettings(committedSettings)
 
@@ -311,7 +317,7 @@ export function useAppOverlays({
       closeSettingsSurface()
     }
 
-    if (options?.completeOnboarding ?? onboardingPending) {
+    if (shouldCompleteOnboarding) {
       saveOnboardingCompleted(true)
       setOnboardingPending(false)
       setOnboardingOpen(false)
@@ -587,6 +593,19 @@ export function useAppOverlays({
         baselineSettings: settings,
         closeSettings: false,
         completeOnboarding: true,
+      })
+    },
+    onPersistUiLanguage: async (nextSettings) => {
+      await applySettingsSave({
+        ...settings,
+        uiLanguage: nextSettings.uiLanguage,
+        companionName: nextSettings.companionName,
+        userName: nextSettings.userName,
+        wakeWord: nextSettings.wakeWord,
+      }, {
+        baselineSettings: settings,
+        closeSettings: false,
+        completeOnboarding: false,
       })
     },
     onTestTextConnection: async (draftSettings) => {

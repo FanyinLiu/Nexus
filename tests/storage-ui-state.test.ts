@@ -14,6 +14,7 @@ import {
 import {
   loadOnboardingCompleted,
   markOnboardingFirstConversationCompleted,
+  markOnboardingInProgress,
   normalizeOnboardingState,
   saveOnboardingCompleted,
 } from '../src/lib/storage/onboarding.ts'
@@ -28,6 +29,7 @@ import {
   readJsonValidated,
   LOREBOOK_ENTRIES_STORAGE_KEY,
   ONBOARDING_STORAGE_KEY,
+  SETTINGS_STORAGE_KEY,
   writeJson,
 } from '../src/lib/storage/core.ts'
 
@@ -209,6 +211,28 @@ test('loadOnboardingCompleted compacts valid state and removes invalid explicit 
   storage.setItem(CHAT_STORAGE_KEY, JSON.stringify([]))
   assert.equal(loadOnboardingCompleted(), true)
   assert.equal(storage.getItem(ONBOARDING_STORAGE_KEY), null)
+})
+
+test('a mid-guide settings write stays unfinished until setup is completed', () => {
+  const storage = installStorage({
+    [SETTINGS_STORAGE_KEY]: JSON.stringify({ uiLanguage: 'en-US' }),
+  })
+
+  assert.equal(loadOnboardingCompleted(), true)
+
+  storage.removeItem(SETTINGS_STORAGE_KEY)
+  markOnboardingInProgress()
+  storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ uiLanguage: 'ja' }))
+  assert.equal(loadOnboardingCompleted(), false)
+  assert.deepEqual(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}'), {
+    status: 'in-progress',
+  })
+
+  saveOnboardingCompleted(true, new Date('2026-06-04T09:00:00Z'))
+  assert.equal(loadOnboardingCompleted(), true)
+  assert.deepEqual(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}'), {
+    completedAt: '2026-06-04T09:00:00.000Z',
+  })
 })
 
 test('saveOnboardingCompleted writes or removes the explicit completion flag', () => {

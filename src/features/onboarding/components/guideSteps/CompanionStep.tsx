@@ -22,7 +22,6 @@ type CompanionStepProps = {
   petModelPresets: PetModelDefinition[]
   selectedPetModel: PetModelDefinition | undefined
   launchOnStartupSupported: boolean
-  finishHint: string
   textConnectionVerified: boolean
 }
 
@@ -32,7 +31,6 @@ export function CompanionStep({
   petModelPresets,
   selectedPetModel,
   launchOnStartupSupported,
-  finishHint,
   textConnectionVerified,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
@@ -171,8 +169,6 @@ export function CompanionStep({
           ))}
         </ul>
       </div>
-
-      <p className="onboarding-tip onboarding-tip--strong">{finishHint}</p>
     </div>
   )
 }

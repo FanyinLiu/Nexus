@@ -135,5 +135,7 @@ export function detectPreferredUiLanguage(): UiLanguage {
     if (lower.startsWith('ko')) return 'ko'
     if (lower.startsWith('en')) return 'en-US'
   }
-  return 'zh-CN'
+  // French, German, and other unsupported system languages use English.
+  // A missing navigator is not a system language; that path stays zh-CN.
+  return 'en-US'
 }

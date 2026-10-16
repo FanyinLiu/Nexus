@@ -20,6 +20,13 @@ const FIRST_PROMPT = 'First use deterministic message 731.'
 const RETRY_PROMPT = 'Retry deterministic message 947.'
 const FAKE_KEY = 'nexus-smoke-synthetic-key'
 const LANGUAGES = ['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko']
+const LANGUAGE_LABELS = {
+  'zh-CN': '简体中文',
+  'zh-TW': '繁體中文',
+  'en-US': 'English',
+  ja: '日本語',
+  ko: '한국어',
+}
 const results = []
 const screenshots = []
 let application = null
@@ -98,8 +105,20 @@ async function nextGuideStep(page) {
   await page.locator('.onboarding-card__actions .primary-button').click()
   await page.waitForFunction((old) => {
     const current = document.querySelector('.onboarding-disclosure__progress')
-    return !current || current.textContent.trim() !== old
+    if (!current) return true
+    if (current.textContent.trim() !== old) return true
+    return Boolean(document.getElementById('onboarding-finish-warning'))
   }, before)
+}
+
+async function chooseGuideLanguage(page, language) {
+  const label = LANGUAGE_LABELS[language]
+  const option = page.getByRole('radio', { name: label, exact: true })
+  await option.click()
+  await page.waitForFunction((expected) => {
+    const selected = document.querySelector('.onboarding-relationship__chip[aria-checked="true"]')
+    return selected?.textContent?.trim() === expected
+  }, label)
 }
 
 async function waitForVisibleGuide(page) {
@@ -113,8 +132,16 @@ async function waitForVisibleGuide(page) {
 }
 
 async function finishRemainingGuide(page) {
-  for (let count = 0; count < 6 && await page.locator('.onboarding-card').isVisible(); count += 1) {
+  for (let count = 0; count < 8 && await page.locator('.onboarding-card').isVisible(); count += 1) {
+    if (await page.locator('#onboarding-finish-warning').isVisible()) {
+      await page.locator('.onboarding-card__actions .primary-button').click()
+      break
+    }
     await nextGuideStep(page)
+    if (await page.locator('#onboarding-finish-warning').isVisible()) {
+      await page.locator('.onboarding-card__actions .primary-button').click()
+      break
+    }
   }
   await page.locator('.onboarding-card').waitFor({ state: 'hidden' })
 }
@@ -246,8 +273,9 @@ async function run() {
   })
 
   await record('configure provider, verify connection and save through default first-use UI', async () => {
+    await chooseGuideLanguage(panel, 'en-US')
     await nextGuideStep(panel)
-    await panel.locator('.onboarding-card select').first().selectOption('en-US')
+    await nextGuideStep(panel)
     await nextGuideStep(panel)
     await panel.locator('.onboarding-region-tabs__tab').last().click()
     await panel.locator('.onboarding-card select').first().selectOption('custom')
@@ -359,8 +387,7 @@ async function run() {
     petPage = await launch()
     panel = await openPanel(petPage)
     await openGuideFromSettings(panel)
-    await nextGuideStep(panel)
-    await panel.locator('.onboarding-card select').first().selectOption(language)
+    await chooseGuideLanguage(panel, language)
     await finishRemainingGuide(panel)
     const before = await readSavedModel(panel)
     assert.equal(before.uiLanguage, language)

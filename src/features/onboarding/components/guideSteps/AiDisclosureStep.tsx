@@ -1,7 +1,6 @@
 // Read-only onboarding step that fulfills the SB 243 / NY companion-AI
-// "clear and conspicuous" initial-disclosure requirement. Sits as
-// step 1 of the onboarding flow so users see it before naming the
-// companion or wiring providers.
+// "clear and conspicuous" initial-disclosure requirement. It follows
+// language selection and still appears before names, providers, or chat.
 
 import { useState } from 'react'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
