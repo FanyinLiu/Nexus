@@ -90,7 +90,11 @@ export function PetDialogBubble({ bubble, assistantName }: PetDialogBubbleProps)
       ) : null}
 
       {bubble.toolResult ? <ToolResultCard toolResult={bubble.toolResult} variant="pet" /> : null}
-      <LoopOutreachNote loopOffer={bubble.loopOffer} proactiveWhy={bubble.proactiveWhy} />
+      <LoopOutreachNote
+        loopOffer={bubble.loopOffer}
+        loopCheck={bubble.loopCheck}
+        proactiveWhy={bubble.proactiveWhy}
+      />
     </aside>
   )
 }

@@ -100,6 +100,7 @@ function toChatSheetMessages(
       content: message.content,
       ...(memoryTraceLabel ? { memoryTraceLabel } : {}),
       ...(message.loopOffer ? { loopOffer: message.loopOffer } : {}),
+      ...(message.loopCheck ? { loopCheck: message.loopCheck } : {}),
       ...(message.proactiveWhy ? { proactiveWhy: message.proactiveWhy } : {}),
     }]
   })

@@ -1,0 +1,199 @@
+/*
+ * SOUL and 记忆 summary cards.
+ * Colors come from --nx-theme-soul and --nx-theme-memory so the theme layer
+ * can reskin them. Until that layer lands they fall back to the settings
+ * success and accent tokens. This file stays out of the shared settings
+ * rule budget, which is already full.
+ */
+
+.memory-portrait {
+  --memory-portrait-soul: var(--nx-theme-soul, color-mix(in srgb, var(--sv3-success, var(--settings-v2-success)) 68%, var(--sv3-ink, var(--settings-v2-ink)) 32%));
+  --memory-portrait-memory: var(--nx-theme-memory, color-mix(in srgb, var(--sv3-accent, var(--settings-v2-accent)) 76%, var(--sv3-ink, var(--settings-v2-ink)) 24%));
+  --memory-portrait-on: var(--nx-theme-on-card, var(--settings-v2-on-accent, var(--color-on-accent)));
+  display: grid;
+  gap: 12px;
+}
+
+.memory-portrait__privacy {
+  margin: 0;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.memory-portrait__pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.memory-portrait__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 148px;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+  border-radius: 18px;
+  color: var(--memory-portrait-on);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.memory-portrait__card--soul { background: var(--memory-portrait-soul); }
+.memory-portrait__card--memory { background: var(--memory-portrait-memory); }
+
+.memory-portrait__kicker,
+.memory-portrait__summary {
+  margin: 0;
+}
+
+.memory-portrait__kicker {
+  font-size: 13px;
+  font-weight: 720;
+  letter-spacing: 0.04em;
+}
+
+.memory-portrait__summary {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.memory-portrait__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  font-size: 12px;
+  opacity: 0.92;
+}
+
+.memory-portrait__notes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-portrait__notes li,
+.memory-portrait__line {
+  margin: 0;
+  color: var(--sv3-ink, var(--settings-v2-ink));
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.memory-portrait__tag {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  background: color-mix(in srgb, var(--sv3-line, var(--settings-v2-line)) 70%, transparent);
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
+.memory-portrait__sheet {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  align-items: end;
+  padding: 12px;
+  background: color-mix(in srgb, var(--sv3-ink, var(--settings-v2-ink)) 28%, transparent);
+}
+
+.memory-portrait__sheet-card {
+  display: grid;
+  gap: 12px;
+  max-height: min(78vh, 640px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--sv3-surface, var(--settings-v2-surface));
+  color: var(--sv3-ink, var(--settings-v2-ink));
+}
+
+.memory-portrait__sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.memory-portrait__sheet-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.memory-portrait__label {
+  margin: 4px 0 0;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.memory-portrait__row {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--sv3-line, var(--settings-v2-line)) 70%, transparent);
+}
+
+.memory-portrait__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-portrait__actions button,
+.memory-portrait__sheet-head button,
+.memory-portrait__save {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--sv3-line, var(--settings-v2-line));
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.memory-portrait__editor {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--sv3-line, var(--settings-v2-line));
+  border-radius: 12px;
+  background: var(--sv3-field, var(--sv3-surface, var(--settings-v2-surface)));
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.memory-portrait__change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.memory-portrait__change p {
+  margin: 0;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}

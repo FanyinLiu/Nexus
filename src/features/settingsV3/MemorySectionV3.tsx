@@ -309,6 +309,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
 
       <MemoryPortraitCardsV3
         memories={memories}
+        diaryCount={transparency.dailyEntryCount}
         onPatchMemory={onPatchMemory}
         onRemoveMemory={onRemoveMemory}
       />

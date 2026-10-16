@@ -83,6 +83,11 @@ export interface ChatMessage {
     nightBeforeAt: string
     status: 'pending' | 'accepted' | 'declined'
   }
+  /** Post-due "did it get done" answers on the same card. */
+  loopCheck?: {
+    memoryId: string
+    status: 'pending' | 'done' | 'later' | 'moved'
+  }
   /** Why a proactive line was raised: the agenda item, quote, and date. */
   proactiveWhy?: {
     summary: string
@@ -99,6 +104,7 @@ export interface PetDialogBubbleState {
   streaming?: boolean
   createdAt?: string
   loopOffer?: ChatMessage['loopOffer']
+  loopCheck?: ChatMessage['loopCheck']
   proactiveWhy?: ChatMessage['proactiveWhy']
 }
 
