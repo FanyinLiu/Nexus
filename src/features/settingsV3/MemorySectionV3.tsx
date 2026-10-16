@@ -524,20 +524,20 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
                           title={ti('memory_panel.edit')}
                           aria-label={ti('memory_panel.edit')}
                           onClick={() => startEdit(memory.id, memory.content)}
-                        ><PetControlIcon name="tuning" aria-hidden="true" /></button>
+                        ><PetControlIcon name="tuning" width={18} height={18} aria-hidden="true" /></button>
                         <button
                           type="button"
                           title={enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}
                           aria-label={enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}
                           onClick={() => onSetMemoryEnabled(memory.id, !enabled)}
-                        ><PetControlIcon name={enabled ? 'pause' : 'play'} aria-hidden="true" /></button>
+                        ><PetControlIcon name={enabled ? 'pause' : 'play'} width={18} height={18} aria-hidden="true" /></button>
                         <button
                           type="button"
                           className="is-danger"
                           title={ti('memory_panel.delete')}
                           aria-label={ti('memory_panel.delete')}
                           onClick={() => void removeItem(memory.id)}
-                        ><PetControlIcon name="trash" aria-hidden="true" /></button>
+                        ><PetControlIcon name="trash" width={18} height={18} aria-hidden="true" /></button>
                       </SettingsV3Toolbar>
                     </>
                   )}
