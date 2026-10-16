@@ -162,14 +162,44 @@ function readGazeExpression() {
   })()`
 }
 
-async function sampleGaze(session, x, y, expectNegative) {
-  execFileSync('xdotool', ['mousemove', String(x), String(y)])
+function readPetWindow() {
+  return listVisibleNexusWindows().find((item) => item.width >= 200 && item.width < 420 && item.height >= 300) ?? null
+}
+
+function pinPet(pet) {
+  if (!pet) return null
+  // Locomotion can walk a free-mode pet toward the pointer. Put it back
+  // before each sample so the cursor stays on the side we just chose.
+  try { execFileSync('xdotool', ['windowmove', pet.id, '420', '160']) } catch { /* read back whatever stuck */ }
+  return listVisibleNexusWindows().find((item) => item.id === pet.id) ?? readPetWindow() ?? pet
+}
+
+function cursorBeside(pet, side, jitter) {
+  const midY = Math.round(pet.y + Math.min(pet.height, 400) / 2)
+  // Farther than the 260px cursor-tease radius around the pet center, and
+  // still on a 1280-wide smoke display when the pet sits at x=420.
+  const x = side === 'left'
+    ? Math.max(8, pet.x - 360)
+    : pet.x + pet.width + 360
+  return { x: x + jitter, y: midY }
+}
+
+async function sampleGaze(session, side) {
+  // The Linux cursor hook only learns positions from motion after it
+  // subscribes. Electron's own query stays stale, so one move that races
+  // startup is invisible and the pet keeps looking at the old point.
+  // Moving again on every poll gives a late hook a fresh sample.
   let last = null
-  for (let attempt = 0; attempt < 16; attempt += 1) {
-    await sleep(250)
-    last = await evaluate(session, readGazeExpression())
-    if (!last || typeof last.gazeX !== 'number') continue
-    if (expectNegative ? last.gazeX < 0 : last.gazeX > 0) return last
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const pet = pinPet(readPetWindow())
+    if (!pet) break
+    const point = cursorBeside(pet, side, attempt % 2 === 0 ? -8 : 8)
+    execFileSync('xdotool', ['mousemove', String(point.x), String(point.y)])
+    await sleep(200)
+    const gaze = await evaluate(session, readGazeExpression())
+    last = { ...gaze, pet, cursorX: point.x, cursorY: point.y }
+    if (!gaze || typeof gaze.gazeX !== 'number') continue
+    if (side === 'left' ? gaze.gazeX < 0 : gaze.gazeX > 0) return last
   }
   return last
 }
@@ -263,12 +293,9 @@ try {
   const gazeSession = await connect(reloaded.webSocketDebuggerUrl)
   await sleep(1200)
   const pet = await revealPet()
-  const midY = Math.round(pet.y + Math.min(pet.height, 400) / 2)
-  const leftX = Math.max(8, pet.x - 140)
-  const rightX = pet.x + pet.width + 140
-  const left = await sampleGaze(gazeSession, leftX, midY, true)
-  const right = await sampleGaze(gazeSession, rightX, midY, false)
-  console.log('[packaged-gaze-smoke]', JSON.stringify({ pet, left, right, leftX, rightX, midY }))
+  const left = await sampleGaze(gazeSession, 'left')
+  const right = await sampleGaze(gazeSession, 'right')
+  console.log('[packaged-gaze-smoke]', JSON.stringify({ pet, left, right }))
   if (!left || typeof left.gazeX !== 'number' || !right || typeof right.gazeX !== 'number') {
     throw new Error(`gaze samples missing: ${JSON.stringify({ left, right })}`)
   }
