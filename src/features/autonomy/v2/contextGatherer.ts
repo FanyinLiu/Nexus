@@ -107,6 +107,13 @@ export interface AutonomyContextV2 {
     category: string
     importanceScore: number
   }>
+  /** Open commitments the decision prompt may ask about. */
+  openLoops?: Array<{
+    id: string
+    content: string
+    dueAt: string | null
+    place: string | null
+  }>
 
   // ── Explicit tasks + goals ──
   /** Reminders scheduled to fire within the next hour OR already overdue. */
@@ -237,6 +244,24 @@ export function gatherAutonomyContext(input: ContextGathererInput): AutonomyCont
     importanceScore: m.importanceScore ?? 1,
   }))
 
+  const openLoops = input.memories
+    .filter((memory) => (
+      memory.kind === 'open_loop'
+      && memory.migrated !== true
+      && memory.enabled !== false
+      && memory.status !== 'archived'
+      && memory.status !== 'superseded'
+      && (memory.loopStatus ?? 'open') === 'open'
+    ))
+    .sort((left, right) => Date.parse(left.loopDueAt ?? '') - Date.parse(right.loopDueAt ?? ''))
+    .slice(0, 3)
+    .map((memory) => ({
+      id: memory.id,
+      content: memory.content,
+      dueAt: memory.loopDueAt ?? null,
+      place: memory.loopPlace ?? null,
+    }))
+
   // ── Reminders firing soon ──
   const nearReminders = input.pendingReminders
     .filter((r) => r.enabled !== false)
@@ -294,6 +319,7 @@ export function gatherAutonomyContext(input: ContextGathererInput): AutonomyCont
 
     recentMessages,
     topMemories,
+    openLoops,
     nearReminders,
     activeGoals,
 

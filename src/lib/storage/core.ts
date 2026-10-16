@@ -24,6 +24,10 @@ export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'
 export const MEMORY_V1_BACKUP_STORAGE_KEY = 'nexus:memory:v1-backup'
 /** Append-only reconcile and cap decisions. */
 export const MEMORY_OP_LOG_STORAGE_KEY = 'nexus:memory:op-log'
+/** Pre-images taken before each daily memory run. */
+export const MEMORY_RUN_SNAPSHOT_STORAGE_KEY = 'nexus:memory:run-snapshots'
+/** User-edited companion portrait shown on the SOUL card. */
+export const COMPANION_SOUL_STORAGE_KEY = 'nexus:companion:soul'
 export const MEMORY_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:memory:local-data-authority-consent'
 export const COMPANION_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:companion:local-data-authority-consent'
 export const SETTINGS_STORAGE_KEY = 'nexus:settings'
@@ -347,6 +351,18 @@ if (typeof window !== 'undefined') {
       publishDurableUpdateSnapshot(null)
     }
   })
+}
+
+/**
+ * Drop a debounced write that has not landed yet.
+ * Used when another window already persisted a newer copy, so the pending
+ * local payload must not overwrite it when the timer fires.
+ */
+export function cancelDebouncedWrite(key: string): void {
+  const existing = debouncedTimers.get(key)
+  if (existing) window.clearTimeout(existing)
+  debouncedTimers.delete(key)
+  pendingValues.delete(key)
 }
 
 export function writeJsonDebounced<T>(key: string, value: T, delayMs = 500): void {

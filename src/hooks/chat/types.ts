@@ -3,6 +3,7 @@ import type { PetPerformanceCue } from '../../features/pet/performance.ts'
 import type { StreamingSpeechOutputController } from '../voice/types.ts'
 import type {
   AppSettings,
+  ChatMessage,
   ChatToolResult,
   DailyMemoryEntry,
   DailyMemoryStore,
@@ -182,4 +183,6 @@ export type CompanionNoticePayload = {
   autoHideMs?: number
   toolResult?: ChatToolResult
   shouldResumeContinuousVoice?: boolean
+  loopOffer?: ChatMessage['loopOffer']
+  proactiveWhy?: ChatMessage['proactiveWhy']
 }

@@ -68,6 +68,8 @@ export function useCompanionNotices({
         content: chatContent,
         toolResult: options.toolResult,
         createdAt,
+        ...(options.loopOffer ? { loopOffer: options.loopOffer } : {}),
+        ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
       })
     }
 
@@ -78,6 +80,8 @@ export function useCompanionNotices({
           toolResult: options.toolResult,
           streaming: false,
           createdAt,
+          ...(options.loopOffer ? { loopOffer: options.loopOffer } : {}),
+          ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
         },
         { autoHideMs: options.autoHideMs ?? 14_000 },
       )

@@ -10,6 +10,13 @@
 import { createId } from '../../lib/storage/core.ts'
 import type { LoopStatus, MemoryItem } from '../../types/memory.ts'
 import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
+import {
+  applyClock,
+  commitmentSlotKey,
+  evidenceFromUtterance,
+  findPlace,
+  hasExplicitClock,
+} from './loopDetails.ts'
 
 const SNOOZE_MS = 4 * 60 * 60 * 1000
 
@@ -44,11 +51,21 @@ function atLocalHour(now: Date, dayOffset: number): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, 18, 0, 0, 0)
 }
 
+/**
+ * 下周 / 来週 is the weekday in the next Monday-based week.
+ * On Friday 16 Oct, 下周二 is 20 Oct, not the Tuesday after that.
+ */
+function nextCalendarWeekday(now: Date, target: number): Date {
+  const sinceMonday = (now.getDay() + 6) % 7
+  const daysUntilNextMonday = 7 - sinceMonday
+  const fromMonday = target === 0 ? 6 : target - 1
+  return atLocalHour(now, daysUntilNextMonday + fromMonday)
+}
+
 function weekdayDate(now: Date, target: number, mode: 'upcoming' | 'following-week' | 'named-next'): Date {
+  if (mode === 'following-week') return nextCalendarWeekday(now, target)
   let delta = (target - now.getDay() + 7) % 7
-  if (mode === 'following-week') {
-    delta = delta === 0 ? 7 : delta + 7
-  } else if (mode === 'named-next' && delta === 0) {
+  if (mode === 'named-next' && delta === 0) {
     delta = 7
   } else if (delta === 0 && now.getHours() >= 18) {
     delta = 7
@@ -117,7 +134,8 @@ function findDue(text: string, now: Date): { at: string; text: string } | null {
   hits.sort((left, right) => left.index - right.index)
   const best = hits[0]
   if (!best) return null
-  return { at: best.at.toISOString(), text: best.text }
+  const at = hasExplicitClock(text) ? applyClock(text, best.at) : best.at
+  return { at: at.toISOString(), text: best.text }
 }
 
 function splitSegments(content: string): string[] {
@@ -132,7 +150,7 @@ function looksLikeCommitment(text: string): boolean {
   const commitment = /(?:\b(?:i'll|i will|i'm going to|i am going to|i need to|i have to|i gotta|i should|i plan to)\b|我(?:要|得|会|将|准备|打算)|回头(?:我)?|提醒我|しなきゃ|する予定|やらなきゃ|해야\s*해|해야지|보낼\s*게|할\s*예정)/iu.test(text)
   const timed = /(?:\b(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next week)\b|今天|今晚|明天|后天|下周|周[一二三四五六日天]|星期[一二三四五六日天]|回头|今日|明日|来週|月曜|火曜|水曜|木曜|金曜|土曜|日曜|あとで|後で|오늘|내일|모레|다음\s*주|[월화수목금토일]요일)/iu.test(text)
   const event = /(?:interview|meeting|deadline|appointment|面试|会面|截止|会議|面談|面接|면접|회의|마감)/iu.test(text)
-  const task = /(?:\b(?:send|finish|submit|email|book|pay|write)\b|发给|发出|发你|提交|交报告|写完|打电话|看一下|送る|電話|見ておく|面接|보내|제출)/iu.test(text)
+  const task = /(?:\b(?:send|finish|submit|email|book|pay|write)\b|发给|发出|发你|提交|交报告|写完|打电话|看一下|办护照|辦護照|去办|去辦|护照|護照|送る|電話|見ておく|面接|보내|제출)/iu.test(text)
   return (commitment && (timed || event || task)) || (event && timed) || (task && timed)
 }
 
@@ -165,7 +183,12 @@ function isOpenLoop(memory: MemoryItem): boolean {
  * Pull commitment segments out of one utterance. Completion and dismiss
  * lines are not new loops; the resolver handles those.
  */
-export function extractOpenLoopItems(text: string, createdAt: string, idFor: (prefix: string) => string = createId): MemoryItem[] {
+export function extractOpenLoopItems(
+  text: string,
+  createdAt: string,
+  idFor: (prefix: string) => string = createId,
+  messageId?: string,
+): MemoryItem[] {
   const now = new Date(createdAt)
   const clock = Number.isNaN(now.getTime()) ? new Date() : now
   const stamp = Number.isNaN(now.getTime()) ? new Date().toISOString() : createdAt
@@ -177,6 +200,7 @@ export function extractOpenLoopItems(text: string, createdAt: string, idFor: (pr
     if (seen.has(key)) continue
     seen.add(key)
     const due = findDue(segment, clock)
+    const place = findPlace(segment)
     items.push({
       id: idFor('memory'),
       content: segment,
@@ -190,7 +214,11 @@ export function extractOpenLoopItems(text: string, createdAt: string, idFor: (pr
       createdAt: stamp,
       updatedAt: stamp,
       loopStatus: 'open',
+      slotKey: commitmentSlotKey(segment),
+      sourceRef: messageId,
+      evidence: [evidenceFromUtterance(segment, stamp, messageId)],
       ...(due ? { loopDueAt: due.at, loopDueText: due.text } : {}),
+      ...(place ? { loopPlace: place } : {}),
     })
   }
   return items
@@ -204,8 +232,8 @@ function sameText(left: string, right: string): boolean {
  * Upgrade an extracted row when it is a commitment, and append commitments
  * the keyword extractor missed (for example "I'll send the report Friday").
  */
-export function attachOpenLoops(items: MemoryItem[], text: string, createdAt: string): MemoryItem[] {
-  const loops = extractOpenLoopItems(text, createdAt)
+export function attachOpenLoops(items: MemoryItem[], text: string, createdAt: string, messageId?: string): MemoryItem[] {
+  const loops = extractOpenLoopItems(text, createdAt, createId, messageId)
   if (!loops.length) return items
   const used = new Set<string>()
   const next = items.map((item) => {
@@ -217,7 +245,11 @@ export function attachOpenLoops(items: MemoryItem[], text: string, createdAt: st
       kind: 'open_loop' as const,
       category: item.category === 'profile' ? 'goal' as const : item.category,
       loopStatus: 'open' as const,
+      slotKey: loop.slotKey ?? item.slotKey,
+      evidence: loop.evidence ?? item.evidence,
+      sourceRef: loop.sourceRef ?? item.sourceRef,
       ...(loop.loopDueAt ? { loopDueAt: loop.loopDueAt, loopDueText: loop.loopDueText } : {}),
+      ...(loop.loopPlace ? { loopPlace: loop.loopPlace } : {}),
     }
   })
   for (const loop of loops) {

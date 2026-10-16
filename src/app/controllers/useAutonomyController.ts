@@ -47,7 +47,10 @@ type ChatBridge = {
     speechContent?: string
     dedupeKey?: string
     autoHideMs?: number
+    loopOffer?: ChatMessage['loopOffer']
+    proactiveWhy?: ChatMessage['proactiveWhy']
   }) => Promise<void>
+  setMessages?: (updater: (current: ChatMessage[]) => ChatMessage[]) => void
   sendMessage?: (text?: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'; traceId?: string }) => Promise<unknown>
 }
 
@@ -70,6 +73,7 @@ export type UseAutonomyControllerOptions = {
     setMemories: (updater: (prev: MemoryItem[]) => MemoryItem[]) => void
   }
   reminderTasksRef: React.RefObject<ReminderTask[]>
+  addReminderTask?: (input: import('../../features/reminders/schedule.ts').ReminderTaskDraftInput) => { id: string } | null
   goalsRef: React.RefObject<Goal[]>
   setGoals: React.Dispatch<React.SetStateAction<Goal[]>>
   /** Shared busy ref — when true, a chat LLM call is in progress. */
@@ -436,6 +440,8 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     idleSecondsRef: focusAwareness.idleSecondsRef,
     busyRef: bridgeBusyRef,
     pushCompanionNotice: chat.pushCompanionNotice,
+    addReminderTask: opts.addReminderTask,
+    setMessages: chat.setMessages,
     t,
     onLog: (title, detail) => debugConsole.appendDebugConsoleEvent({
       source: 'autonomy',

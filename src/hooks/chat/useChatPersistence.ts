@@ -4,7 +4,7 @@ import {
   inferSessionTitle,
   upsertChatSession,
 } from '../../lib'
-import { mirrorChatSessionToLocalData, saveChatMessages, takePendingGreeting } from '../../lib/storage.ts'
+import { cancelDebouncedWrite, CHAT_STORAGE_KEY, mergeRemoteChatMessages, mirrorChatSessionToLocalData, remoteApplyConsumedByLocalLine, saveChatMessages, takePendingGreeting } from '../../lib/storage.ts'
 import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { ChatMessage } from '../../types'
@@ -13,7 +13,10 @@ import type { ChatSession } from '../../lib/storage.ts'
 function messagesSignature(msgs: ChatMessage[]): string {
   if (!msgs.length) return '0:'
   const last = msgs[msgs.length - 1]
-  return `${msgs.length}:${last.id}:${last.content.length}:${last.tone ?? ''}`
+  // Offer status lives on an earlier card once a later line arrives, so the
+  // signature has to see every card or an accept never gets written.
+  const offers = msgs.map((message) => message.loopOffer?.status ?? '-').join('.')
+  return `${msgs.length}:${last.id}:${last.content.length}:${last.tone ?? ''}:${offers}`
 }
 
 export function useChatPersistence({
@@ -30,34 +33,43 @@ export function useChatPersistence({
   const sessionIdRef = useRef<string | null>(null)
   const mirroredMessageIdsRef = useRef<Set<string>>(new Set())
   const messagesSaveSkipRef = useRef(true)
+  const remoteApplySignatureRef = useRef<string | null>(null)
   const lastSavedMessagesSignatureRef = useRef<string>('')
   const runtimeMirrorTimerRef = useRef<number | null>(null)
   const pendingRuntimeMirrorSessionRef = useRef<ChatSession | null>(null)
 
   const applyRemoteMessages = useCallback((next: ChatMessage[]) => {
-    messagesSaveSkipRef.current = true
     setMessages((current) => {
-      const localById = new Map(current.map((message) => [message.id, message]))
-      const merged = next.map((remote) => {
-        const local = localById.get(remote.id)
-        if (local?.images?.length && !remote.images?.length) {
-          return { ...remote, images: local.images }
-        }
-        return remote
-      })
-      lastSavedMessagesSignatureRef.current = messagesSignature(merged)
+      const merged = mergeRemoteChatMessages(current, next)
+      const mergedSignature = messagesSignature(merged)
+      const remoteSignature = messagesSignature(next)
+      if (mergedSignature === remoteSignature) {
+        messagesSaveSkipRef.current = true
+        remoteApplySignatureRef.current = mergedSignature
+        // A local accept may still be waiting out the debounce. The other
+        // window's list is already stored, so that older payload must not land.
+        cancelDebouncedWrite(CHAT_STORAGE_KEY)
+      } else {
+        // The local card decision is newer than the broadcast. Let the save
+        // effect write it back so the other window stops reverting the card.
+        messagesSaveSkipRef.current = false
+      }
       return merged
     })
   }, [setMessages])
 
   useEffect(() => {
+    const signature = messagesSignature(messages)
     if (messagesSaveSkipRef.current) {
       messagesSaveSkipRef.current = false
-      lastSavedMessagesSignatureRef.current = messagesSignature(messages)
-      return
+      const remoteSignature = remoteApplySignatureRef.current
+      remoteApplySignatureRef.current = null
+      if (!remoteApplyConsumedByLocalLine(remoteSignature, signature)) {
+        lastSavedMessagesSignatureRef.current = signature
+        return
+      }
     }
 
-    const signature = messagesSignature(messages)
     if (signature === lastSavedMessagesSignatureRef.current) {
       return
     }

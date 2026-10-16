@@ -18,7 +18,9 @@ import type {
   MemoryReconcileOpName,
 } from '../../types/memory.ts'
 import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
+import { absorbLoopFollowUp } from './loopDetails.ts'
 import { normalizeText, scoreContainment, scoreLexicalSimilarity } from './memory.ts'
+import { destructiveOpCap, isSensitiveMemoryText, lacksEvidence } from './memoryRules.ts'
 import { resolveOpenLoops } from './openLoops.ts'
 import { cosineSimilarity, embedLocalHashMemoryText } from './vectorSearch.ts'
 
@@ -27,7 +29,6 @@ const CONTAINMENT_DUPLICATE = 0.85
 const EMBEDDING_DUPLICATE = 0.92
 const MAX_PROMPT_MEMORIES = 40
 const MAX_OPS = 40
-const LOSS_FRACTION = 0.2
 
 export type MemoryTextEmbedder = (text: string) => readonly number[] | null
 
@@ -47,6 +48,8 @@ interface DraftOp {
   reason: string
   candidateId?: string
   loopStatus?: LoopStatus
+  evidenceQuote?: string
+  messageRef?: string
 }
 
 export interface TurnMemoryWritePlan {
@@ -94,6 +97,19 @@ function isMoreSpecific(candidate: string, existing: string): boolean {
     && scoreContainment(existing, candidate) >= CONTAINMENT_DUPLICATE
 }
 
+function evidenceOf(candidate: MemoryItem): { evidenceQuote: string; messageRef: string } {
+  const quote = candidate.evidence?.[0]?.quote || candidate.content
+  const messageRef = candidate.evidence?.[0]?.messageId || candidate.sourceRef || candidate.id
+  return {
+    evidenceQuote: quote.trim().slice(0, 240),
+    messageRef: messageRef.trim().slice(0, 120),
+  }
+}
+
+function withEvidence(candidate: MemoryItem, draft: Omit<DraftOp, 'evidenceQuote' | 'messageRef'>): DraftOp {
+  return { ...draft, ...evidenceOf(candidate) }
+}
+
 function pickSurvivor(matches: readonly MemoryItem[]): MemoryItem {
   const protectedMatches = matches.filter((memory) => isProtectedMemory(memory))
   const pool = protectedMatches.length ? protectedMatches : matches
@@ -116,32 +132,32 @@ export function buildFallbackReconcileOps(
     if (!content) continue
     const matches = active.filter((memory) => isNearDuplicate(memory.content, content, embed))
     if (matches.length === 0) {
-      ops.push({
+      ops.push(withEvidence(candidate, {
         op: 'ADD',
         targetIds: [],
         content,
         reason: 'new',
         candidateId: candidate.id,
-      })
+      }))
       continue
     }
     if (matches.length === 1) {
       const match = matches[0]!
       if (!isProtectedMemory(match) && isMoreSpecific(content, match.content)) {
-        ops.push({
+        ops.push(withEvidence(candidate, {
           op: 'UPDATE',
           targetIds: [match.id],
           content,
           reason: 'more-specific-duplicate',
           candidateId: candidate.id,
-        })
+        }))
       } else {
-        ops.push({
+        ops.push(withEvidence(candidate, {
           op: 'NOOP',
           targetIds: [match.id],
           reason: 'duplicate',
           candidateId: candidate.id,
-        })
+        }))
       }
       continue
     }
@@ -151,13 +167,13 @@ export function buildFallbackReconcileOps(
       : [content, ...matches.map((memory) => memory.content)].reduce((best, text) => (
         text.trim().length >= best.trim().length ? text.trim() : best.trim()
       ))
-    ops.push({
+    ops.push(withEvidence(candidate, {
       op: 'MERGE',
       targetIds: matches.map((memory) => memory.id),
       content: mergedContent,
       reason: 'duplicate',
       candidateId: candidate.id,
-    })
+    }))
   }
   return ops
 }
@@ -213,6 +229,7 @@ export function applyReconcileOps(
     candidates?: readonly MemoryItem[]
     createId?: (prefix: string) => string
     createOpId?: (index: number) => string
+    runId?: string
   },
 ): { memories: MemoryItem[]; ops: MemoryOpRecord[] } {
   const now = options.now
@@ -223,11 +240,33 @@ export function applyReconcileOps(
   let memories = existing.map((memory) => ({ ...memory }))
   const ops: MemoryOpRecord[] = []
 
-  const push = (op: MemoryReconcileOpName, targetIds: string[], reason: string) => {
-    ops.push(stampOp(actor, now, ops.length, op, targetIds, reason, createOpId))
+  const push = (
+    op: MemoryReconcileOpName,
+    targetIds: string[],
+    reason: string,
+    extra?: Partial<MemoryOpRecord>,
+  ) => {
+    const before = extra?.before?.map((memory) => ({ ...memory }))
+    ops.push({
+      ...stampOp(actor, now, ops.length, op, targetIds, reason, createOpId),
+      ...(extra?.evidenceQuote ? { evidenceQuote: extra.evidenceQuote.slice(0, 240) } : {}),
+      ...(extra?.messageRef ? { messageRef: extra.messageRef.slice(0, 120) } : {}),
+      ...(before?.length ? { before } : {}),
+      ...(options.runId ? { runId: options.runId } : {}),
+    })
   }
 
+  const traced = (draft: DraftOp, before?: MemoryItem[]): Partial<MemoryOpRecord> => ({
+    ...(draft.evidenceQuote ? { evidenceQuote: draft.evidenceQuote } : {}),
+    ...(draft.messageRef ? { messageRef: draft.messageRef } : {}),
+    ...(before?.length ? { before } : {}),
+  })
+
   for (const draft of drafts.slice(0, MAX_OPS)) {
+    if (draft.op !== 'NOOP' && lacksEvidence(draft)) {
+      push('NOOP', draft.targetIds, 'missing-evidence')
+      continue
+    }
     if (draft.op === 'ADD') {
       const content = draft.content?.trim() ?? ''
       if (!content) {
@@ -263,7 +302,7 @@ export function applyReconcileOps(
         source: seed?.source ?? 'chat',
       })
       memories = [created, ...memories]
-      push('ADD', [id], draft.reason || 'new')
+      push('ADD', [id], draft.reason || 'new', traced(draft))
       continue
     }
 
@@ -276,7 +315,7 @@ export function applyReconcileOps(
             : memory
         ))
       }
-      push('NOOP', draft.targetIds, draft.reason || 'noop')
+      push('NOOP', draft.targetIds, draft.reason || 'noop', traced(draft))
       continue
     }
 
@@ -291,7 +330,7 @@ export function applyReconcileOps(
     if (draft.op === 'UPDATE') {
       const target = targets[0]!
       if (isProtectedMemory(target) && !draft.loopStatus) {
-        push('NOOP', [target.id], 'protected')
+        push('NOOP', [target.id], 'protected', traced(draft, [target]))
         continue
       }
       const content = draft.content?.trim()
@@ -309,18 +348,18 @@ export function applyReconcileOps(
           })
           : memory
       ))
-      push('UPDATE', [target.id], draft.reason || 'update')
+      push('UPDATE', [target.id], draft.reason || 'update', traced(draft, [target]))
       continue
     }
 
     if (draft.op === 'DELETE') {
       const target = targets[0]!
       if (isProtectedMemory(target)) {
-        push('NOOP', [target.id], 'protected')
+        push('NOOP', [target.id], 'protected', traced(draft, [target]))
         continue
       }
       if (target.status === 'archived') {
-        push('NOOP', [target.id], 'already-archived')
+        push('NOOP', [target.id], 'already-archived', traced(draft, [target]))
         continue
       }
       memories = memories.map((memory) => (
@@ -331,7 +370,7 @@ export function applyReconcileOps(
           })
           : memory
       ))
-      push('DELETE', [target.id], draft.reason || 'delete')
+      push('DELETE', [target.id], draft.reason || 'delete', traced(draft, [target]))
       continue
     }
 
@@ -339,7 +378,7 @@ export function applyReconcileOps(
       const target = targets[0]!
       const content = draft.content?.trim() ?? ''
       if (isProtectedMemory(target)) {
-        push('NOOP', [target.id], 'protected')
+        push('NOOP', [target.id], 'protected', traced(draft, [target]))
         continue
       }
       if (!content) {
@@ -387,7 +426,7 @@ export function applyReconcileOps(
           })
           : memory
       ))
-      push('SUPERSEDE', [target.id, winnerId], draft.reason || 'supersede')
+      push('SUPERSEDE', [target.id, winnerId], draft.reason || 'supersede', traced(draft, [target]))
       continue
     }
 
@@ -398,8 +437,8 @@ export function applyReconcileOps(
       }
       const survivor = pickSurvivor(targets)
       const retired = targets.filter((memory) => memory.id !== survivor.id)
-      if (retired.some((memory) => isProtectedMemory(memory))) {
-        push('NOOP', draft.targetIds, 'protected')
+      if (retired.some((memory) => isProtectedMemory(memory)) || isProtectedMemory(survivor)) {
+        push('NOOP', draft.targetIds, 'protected', traced(draft, targets))
         continue
       }
       const content = isProtectedMemory(survivor)
@@ -426,7 +465,7 @@ export function applyReconcileOps(
         }
         return memory
       })
-      push('MERGE', [survivor.id, ...retired.map((memory) => memory.id)], draft.reason || 'duplicate')
+      push('MERGE', [survivor.id, ...retired.map((memory) => memory.id)], draft.reason || 'duplicate', traced(draft, targets))
     }
   }
 
@@ -452,9 +491,9 @@ function destructiveCount(drafts: readonly DraftOp[], memories: readonly MemoryI
 }
 
 function exceedsLossGuard(drafts: readonly DraftOp[], memories: readonly MemoryItem[]): boolean {
-  const vulnerable = vulnerableMemories(memories).length
-  if (vulnerable === 0) return false
-  const limit = Math.max(1, Math.floor(vulnerable * LOSS_FRACTION))
+  const active = activeMemories(memories).length
+  const limit = destructiveOpCap(active)
+  if (limit <= 0) return destructiveCount(drafts, memories) > 0
   return destructiveCount(drafts, memories) > limit
 }
 
@@ -473,15 +512,20 @@ function withLoopResolution(
     const resolved = resolveOpenLoops(applied.memories, utterance, now)
     if (!resolved.changes.length) return applied
     const createOpId = (index: number) => `memory-op-${index}-${Date.parse(now) || index}`
-    const extra = resolved.changes.map((change, index) => stampOp(
-      'turn',
-      now,
-      applied.ops.length + index,
-      'UPDATE',
-      [change.id],
-      change.snoozeUntil ? 'loop-snoozed' : `loop-${change.status}`,
-      createOpId,
-    ))
+    const quote = utterance.trim().slice(0, 240)
+    const extra = resolved.changes.map((change, index) => ({
+      ...stampOp(
+        'turn',
+        now,
+        applied.ops.length + index,
+        'UPDATE',
+        [change.id],
+        change.snoozeUntil ? 'loop-snoozed' : `loop-${change.status}`,
+        createOpId,
+      ),
+      ...(quote ? { evidenceQuote: quote, messageRef: `utterance:${now}` } : {}),
+      before: applied.memories.filter((memory) => memory.id === change.id).map((memory) => ({ ...memory })),
+    }))
     return { memories: resolved.memories, ops: [...applied.ops, ...extra] }
   } catch {
     return applied
@@ -550,11 +594,17 @@ export function parseReconcileResponse(responseContent: string): { ok: true; ops
         || record.loopStatus === 'dismissed'
         ? record.loopStatus
         : undefined
+      const evidenceQuote = [record.evidenceQuote, record.quote, record.evidence]
+        .find((value) => typeof value === 'string' && value.trim())
+      const messageRef = [record.messageRef, record.messageId, record.evidenceId]
+        .find((value) => typeof value === 'string' && value.trim())
       ops.push({
         op: opName as MemoryReconcileOpName,
         targetIds,
         ...(content ? { content } : {}),
         ...(loopStatus ? { loopStatus } : {}),
+        ...(typeof evidenceQuote === 'string' ? { evidenceQuote: evidenceQuote.trim().slice(0, 240) } : {}),
+        ...(typeof messageRef === 'string' ? { messageRef: messageRef.trim().slice(0, 120) } : {}),
         reason,
       })
     }
@@ -606,7 +656,9 @@ Return strict JSON only, no markdown. Use only the operations ADD, UPDATE, MERGE
 Every UPDATE, MERGE, SUPERSEDE, DELETE, and NOOP must copy target ids exactly from the id= values below. Never invent an id.
 SUPERSEDE when a candidate replaces an older fact. MERGE when two stored rows say the same thing. DELETE only when a candidate retracts a stored fact. NOOP when nothing should change.
 When a candidate shows an open_loop is finished, UPDATE that id with loopStatus "done" and do not ADD a duplicate. Use loopStatus "dismissed" when the user says not to bring it up.
-Do not modify pinned or user-confirmed memories, except to set loopStatus when the user resolved that loop.
+Do not modify pinned, user-edited, or user-confirmed memories, except to set loopStatus when the user resolved that loop.
+Do not invent a task the user did not state. Every ADD, UPDATE, MERGE, SUPERSEDE, and DELETE must include evidenceQuote (a short quote from the user) and messageRef (the message id). Ops without both are rejected.
+Never store health details, account numbers, passwords, government id numbers, a street address, or someone else's private details.
 {"ops":[{"op":"ADD","content":"...","reason":"..."},{"op":"UPDATE","targetId":"...","content":"...","loopStatus":"done","reason":"..."},{"op":"MERGE","targetIds":["..."],"content":"...","reason":"..."},{"op":"SUPERSEDE","targetId":"...","content":"...","reason":"..."},{"op":"DELETE","targetId":"...","reason":"..."},{"op":"NOOP","targetId":"...","reason":"..."}]}`
   const user = `Existing memories:\n${existingSection}\n\nNew candidates:\n${candidateSection}`
   return { system, user }
@@ -667,7 +719,12 @@ export function reconcileFromModelText(
       return fallbackResult(existing, candidates, now, 'invalid-response', options?.embed, options?.createId, utterance)
     }
     if (exceedsLossGuard(parsed.ops, existing)) {
-      return fallbackResult(existing, candidates, now, 'loss-guard', options?.embed, options?.createId, utterance)
+      return {
+        memories: [...existing],
+        ops: [],
+        decisionSource: 'fallback',
+        fallbackReason: 'loss-guard',
+      }
     }
     const applied = withLoopResolution(
       applyReconcileOps(existing, parsed.ops, {
@@ -698,22 +755,37 @@ export function planTurnMemoryWrite(input: {
   createId?: (prefix: string) => string
   /** Full user turn. Resolution still runs when extraction found nothing. */
   utterance?: string
+  messageId?: string
 }): TurnMemoryWritePlan {
   if (input.memoryPaused) {
     return { paused: true, memories: [...input.existing], evicted: [], ops: [] }
   }
-  if (!input.candidates.length && !input.utterance?.trim()) {
+  const utterance = input.utterance?.trim() ?? ''
+  const safeCandidates = input.candidates.filter((candidate) => !isSensitiveMemoryText(candidate.content))
+  const held = input.candidates.length - safeCandidates.length
+  if (!safeCandidates.length && !utterance) {
+    return { paused: false, memories: [...input.existing], evicted: [], ops: [] }
+  }
+  if (utterance && isSensitiveMemoryText(utterance) && !safeCandidates.length) {
     return { paused: false, memories: [...input.existing], evicted: [], ops: [] }
   }
   const now = input.now ?? new Date().toISOString()
-  const drafted = input.candidates.length
+  const drafted = safeCandidates.length
     ? applyReconcileOps(
       input.existing,
-      buildFallbackReconcileOps(input.existing, input.candidates, input.embed),
-      { now, actor: 'turn', candidates: input.candidates, createId: input.createId },
+      buildFallbackReconcileOps(input.existing, safeCandidates, input.embed),
+      { now, actor: 'turn', candidates: safeCandidates, createId: input.createId },
     )
     : { memories: [...input.existing], ops: [] as MemoryOpRecord[] }
-  const reconciled = withLoopResolution(drafted, utteranceText(input.utterance, input.candidates), now)
+  if (held > 0) {
+    drafted.ops.push(stampOp('turn', now, drafted.ops.length, 'NOOP', [], 'sensitive-held', (index) => `memory-op-${index}-sensitive`))
+  }
+  const reconciled = withLoopResolution(drafted, utteranceText(utterance, safeCandidates), now)
+  const absorbed = utterance && !isSensitiveMemoryText(utterance)
+    ? absorbLoopFollowUp(reconciled.memories, utterance, now, input.messageId)
+    : { memories: reconciled.memories, ops: [] as MemoryOpRecord[] }
+  reconciled.memories = absorbed.memories
+  reconciled.ops = [...reconciled.ops, ...absorbed.ops]
   const capped = applyLongTermMemoryCap(reconciled.memories)
   const ops = [...reconciled.ops]
   if (capped.evicted.length) {
