@@ -273,6 +273,7 @@ export const koSettingsMemory = {
   'memory.portrait.summary': '오래 기억하는 일이 {count}개',
   'memory.portrait.summary_empty': '오래 기억하는 일이 {count}개, 일기는 아직 비어 있어요',
   'memory.portrait.recent': '최근: {name}',
+  'memory.portrait.stamp': '{month}월 {day}일',
   'memory.topic.passport': '여권',
   'memory.topic.report': '보고서',
   'memory.topic.interview': '면접',

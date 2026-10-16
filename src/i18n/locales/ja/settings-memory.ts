@@ -273,6 +273,7 @@ export const jaSettingsMemory = {
   'memory.portrait.summary': '長期の記憶が {count} 件',
   'memory.portrait.summary_empty': '長期の記憶が {count} 件、日記はまだ空',
   'memory.portrait.recent': '最近：{name}',
+  'memory.portrait.stamp': '{month}月{day}日',
   'memory.topic.passport': 'パスポート',
   'memory.topic.report': 'レポート',
   'memory.topic.interview': '面接',

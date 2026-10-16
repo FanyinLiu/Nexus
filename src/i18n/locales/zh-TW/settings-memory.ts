@@ -273,6 +273,7 @@ export const zhTWSettingsMemory = {
   'memory.portrait.summary': '{count} 條長期記憶',
   'memory.portrait.summary_empty': '{count} 條長期記憶，日記還是空的',
   'memory.portrait.recent': '最近：{name}',
+  'memory.portrait.stamp': '{month}月{day}日',
   'memory.topic.passport': '辦護照',
   'memory.topic.report': '交報告',
   'memory.topic.interview': '面試',

@@ -273,6 +273,7 @@ export const enSettingsMemory = {
   'memory.portrait.summary': 'Long-term memory: {count}',
   'memory.portrait.summary_empty': 'Long-term memory: {count}, diary still empty',
   'memory.portrait.recent': 'Recent: {name}',
+  'memory.portrait.stamp': '{month}/{day}',
   'memory.topic.passport': 'Passport',
   'memory.topic.report': 'Report',
   'memory.topic.interview': 'Interview',

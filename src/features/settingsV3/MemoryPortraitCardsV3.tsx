@@ -13,6 +13,7 @@ import { loadMemoryOpLog, appendMemoryOpLog } from '../../lib/storage/memoryOpLo
 import { undoMemoryOp } from '../memory/memoryUndo.ts'
 import {
   displayMemoryText,
+  formatPortraitDate,
   memoryChangeDate,
   memoryChangeKey,
   memoryChangeSource,
@@ -32,15 +33,6 @@ type MemoryPortraitCardsV3Props = {
 
 function replaceMemories(next: MemoryItem[]) {
   window.dispatchEvent(new CustomEvent('nexus:memories-replaced', { detail: next }))
-}
-
-function portraitStamp(iso: string | null): string {
-  if (!iso) return ''
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${month}.${day}.${String(date.getFullYear()).slice(-2)}`
 }
 
 function topicName(
@@ -88,6 +80,10 @@ export function MemoryPortraitCardsV3({
     : t('memory.portrait.summary', { count: active.length })
   const recent = ongoing[0] ?? about[0] ?? null
   const recentName = recent ? plainMemoryName(recent.content) : ''
+  const latestChange = changes[0]?.at ?? active[0]?.updatedAt ?? active[0]?.createdAt ?? null
+  const dateTemplate = t('memory.portrait.stamp')
+  const soulStamp = formatPortraitDate(soul.updatedAt, dateTemplate)
+  const memoryStamp = formatPortraitDate(latestChange, dateTemplate)
 
   const saveSoul = () => {
     const note = saveCompanionSoul(soulDraft, new Date().toISOString())
@@ -172,7 +168,7 @@ export function MemoryPortraitCardsV3({
           <p className="memory-portrait__kicker">{t('memory.soul.title')}</p>
           <p className="memory-portrait__summary">{savedSoul}</p>
           <span className="memory-portrait__meta">
-            <span>{portraitStamp(soul.updatedAt)}</span>
+            {soulStamp ? <span>{soulStamp}</span> : null}
             <span>{t('memory.portrait.open')}</span>
           </span>
         </button>
@@ -183,6 +179,7 @@ export function MemoryPortraitCardsV3({
             <p className="memory-portrait__summary">{t('memory.portrait.recent', { name: recentName })}</p>
           ) : null}
           <span className="memory-portrait__meta">
+            {memoryStamp ? <span>{memoryStamp}</span> : null}
             <span>{t('memory.portrait.open')}</span>
           </span>
         </button>
