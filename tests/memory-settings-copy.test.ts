@@ -38,6 +38,10 @@ test('memory controls use stable labels and keep the count with its unit', () =>
   assert.equal(zhCNCore['memory_panel.diary_hint'], '还没有内容')
   assert.equal(zhCNCore['memory_panel.pause'], '暂停这条')
   assert.equal(zhCNChat['message_bubble.memory_trace.paused'], '本条未使用记忆')
+  assert.equal(zhCNSettingsMemory['settings.memory.long_term.import_title'], '导入记忆')
+  assert.equal(zhCNSettingsMemory['settings.memory.long_term.import_hint'], '会替换现有的长期记忆和日记')
+  assert.equal(zhCNSettingsMemory['settings.memory.long_term.search_mode'], '怎么找回记忆')
+  assert.equal(zhCNCore['memory_search.hybrid.hint'], '自动（推荐）')
 
   for (const locale of locales) {
     const hint = locale.memory['settings.memory.transparency.paused_effect']
@@ -55,5 +59,11 @@ test('memory controls use stable labels and keep the count with its unit', () =>
     assert.equal(/pipeline|链路|鏈路|パイプライン|파이프라인|上下文读取|コンテキスト読み取り/.test(
       `${locale.memory['settings.memory.transparency.context_status']} ${locale.memory['settings.memory.transparency.active_long_term']}`,
     ), false)
+    const importHint = locale.memory['settings.memory.long_term.import_hint']
+    const importTitle = locale.memory['settings.memory.long_term.import_title']
+    assert.equal(importHint.endsWith('.') || importHint.endsWith('。'), false)
+    assert.equal(importTitle.endsWith('.') || importTitle.endsWith('。'), false)
+    assert.notEqual(importTitle, locale.memory['settings.memory.long_term.archive_note'])
+    assert.equal(locale.core['memory_search.hybrid.hint'].endsWith('.') || locale.core['memory_search.hybrid.hint'].endsWith('。'), false)
   }
 })

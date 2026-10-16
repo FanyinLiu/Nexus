@@ -74,7 +74,7 @@ export const jaCore = {
   'memory_search.keyword.label': 'キーワード検索',
   'memory_search.keyword.hint': 'キーワードと直近のコンテキストを併用。最速かつ最も安定。',
   'memory_search.hybrid.label': 'ハイブリッド検索',
-  'memory_search.hybrid.hint': 'キーワード再現と埋め込み類似度を組み合わせ、バランス重視。',
+  'memory_search.hybrid.hint': '自動（おすすめ）',
   'memory_search.vector.label': 'ベクトル検索',
   'memory_search.vector.hint': '意味的な類似度を重視。近い表現の内容を呼び出すのに向きます。',
   'reminder_template.hydrate.label': '毎時の水分補給',

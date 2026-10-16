@@ -74,7 +74,7 @@ export const zhTWCore = {
   'memory_search.keyword.label': '關鍵字檢索',
   'memory_search.keyword.hint': '基於關鍵字和近期上下文，速度最快也最穩定。',
   'memory_search.hybrid.label': '混合檢索',
-  'memory_search.hybrid.hint': '同時結合關鍵字召回和向量相似度，平衡最好。',
+  'memory_search.hybrid.hint': '自動（推薦）',
   'memory_search.vector.label': '向量檢索',
   'memory_search.vector.hint': '更偏向語義相似度，適合回憶表達方式接近的內容。',
   'reminder_template.hydrate.label': '每小時喝水',

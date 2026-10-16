@@ -74,7 +74,7 @@ export const enCore = {
   'memory_search.keyword.label': 'Keyword search',
   'memory_search.keyword.hint': 'Uses keywords plus recent context. It is the fastest and most stable mode.',
   'memory_search.hybrid.label': 'Hybrid search',
-  'memory_search.hybrid.hint': 'Combines keyword recall with embedding similarity for the best balance.',
+  'memory_search.hybrid.hint': 'Automatic (recommended)',
   'memory_search.vector.label': 'Vector search',
   'memory_search.vector.hint': 'Prioritizes semantic similarity, which helps recall content with similar meaning.',
   'reminder_template.hydrate.label': 'Hourly hydration',

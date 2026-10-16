@@ -524,7 +524,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
                           title={ti('memory_panel.edit')}
                           aria-label={ti('memory_panel.edit')}
                           onClick={() => startEdit(memory.id, memory.content)}
-                        ><PetControlIcon name="tuning" width={18} height={18} aria-hidden="true" /></button>
+                        ><PetControlIcon name="pencil" width={18} height={18} aria-hidden="true" /></button>
                         <button
                           type="button"
                           title={enabled ? ti('memory_panel.pause') : ti('memory_panel.resume')}
@@ -586,7 +586,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
                         <span className="settings-v3-collection-row__meta">{entry.day} · {entry.source}</span>
                       </div>
                       <SettingsV3Toolbar>
-                        {onUpdateDailyEntry ? <button type="button" aria-label={`${ti('memory_panel.edit')}: ${snippet(entry.content)}`} title={`${ti('memory_panel.edit')}: ${snippet(entry.content)}`} onClick={() => startEdit(entry.id, entry.content)}><PetControlIcon name="tuning" aria-hidden="true" /></button> : null}
+                        {onUpdateDailyEntry ? <button type="button" aria-label={`${ti('memory_panel.edit')}: ${snippet(entry.content)}`} title={`${ti('memory_panel.edit')}: ${snippet(entry.content)}`} onClick={() => startEdit(entry.id, entry.content)}><PetControlIcon name="pencil" width={18} height={18} aria-hidden="true" /></button> : null}
                         {onRemoveDailyEntry ? <button type="button" className="is-danger" aria-label={`${ti('memory_panel.delete')}: ${snippet(entry.content)}`} title={`${ti('memory_panel.delete')}: ${snippet(entry.content)}`} onClick={() => void removeItem(entry.id, entry.day)}><PetControlIcon name="trash" aria-hidden="true" /></button> : null}
                       </SettingsV3Toolbar>
                     </>
@@ -650,8 +650,8 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
       </SettingsV3Disclosure>
 
       <SettingsV3Disclosure
-        title={ti('settings.memory.long_term.archive_note')}
-        description={ti('settings.memory.transparency.storage_note')}
+        title={ti('settings.memory.long_term.import_title')}
+        description={ti('settings.memory.long_term.import_hint')}
       >
         <SettingsV3Toolbar>
           <button type="button" disabled={exportingMemoryArchive} onClick={onExportMemoryArchive}>{exportingMemoryArchive ? ti('settings.memory.long_term.exporting') : ti('settings.memory.long_term.export')}</button>

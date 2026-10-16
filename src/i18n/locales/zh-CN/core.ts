@@ -72,7 +72,7 @@ export const zhCNCore = {
   'memory_search.keyword.label': '关键词检索',
   'memory_search.keyword.hint': '基于关键词和近期上下文，速度最快也最稳定。',
   'memory_search.hybrid.label': '混合检索',
-  'memory_search.hybrid.hint': '同时结合关键词召回和向量相似度，平衡最好。',
+  'memory_search.hybrid.hint': '自动（推荐）',
   'memory_search.vector.label': '向量检索',
   'memory_search.vector.hint': '更偏向语义相似度，适合回忆表达方式接近的内容。',
   'reminder_template.hydrate.label': '每小时喝水',

@@ -74,7 +74,7 @@ export const koCore = {
   'memory_search.keyword.label': '키워드 검색',
   'memory_search.keyword.hint': '키워드와 최근 컨텍스트를 조합해 가장 빠르고 안정적입니다.',
   'memory_search.hybrid.label': '하이브리드 검색',
-  'memory_search.hybrid.hint': '키워드 회상과 임베딩 유사도를 결합해 균형을 잡습니다.',
+  'memory_search.hybrid.hint': '자동 (추천)',
   'memory_search.vector.label': '벡터 검색',
   'memory_search.vector.hint': '의미적 유사도 중심으로, 유사한 표현의 내용을 회상하는 데 적합합니다.',
   'reminder_template.hydrate.label': '매시 물 마시기',
