@@ -191,6 +191,31 @@
   white-space: pre-wrap;
 }
 
+.chat-sheet-v2__reply {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  color: var(--chat-sheet-v2-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.chat-sheet-v2__reply span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chat-sheet-v2__reply button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  color: var(--chat-sheet-v2-ink);
+  background: transparent;
+  border-radius: 8px;
+}
+
 .chat-sheet-v2__composer-zone {
   flex: 0 0 auto;
   padding: 8px 12px 12px;

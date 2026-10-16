@@ -1,7 +1,9 @@
 import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { CrisisHotlinePanel } from '../../features/safety'
 import { modelSupportsVision } from '../../lib/modelCapabilities.ts'
+import { useCompanionNotificationCards } from '../../hooks/useCompanionNotificationCards.ts'
 import { CompanionPanelV2 } from '../../features/uiV2/CompanionPanelV2.tsx'
+import { PanelNotificationSummary } from './PanelNotificationSummary.tsx'
 import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const LegacyPanelView = lazy(() => import('./LegacyPanelView'))
@@ -40,6 +42,19 @@ export function PanelView({
 }: PanelViewProps) {
   const visionEnabled = modelSupportsVision(settings.model)
   const { pendingImage, setPendingImage } = chat
+  const notifications = useCompanionNotificationCards({
+    uiLanguage: settings.uiLanguage,
+    messages: notificationBridge?.messages ?? [],
+    markAllRead: () => notificationBridge?.markAllRead(),
+    clearMessages: () => notificationBridge?.clearMessages(),
+    markRead: (messageId) => notificationBridge?.markRead(messageId),
+    markImportant: (messageId) => notificationBridge?.markImportant?.(messageId),
+    snoozeMessage: (messageId, delayMinutes) => notificationBridge?.snoozeMessage?.(messageId, delayMinutes),
+    replyToTelegram,
+    replyToDiscord,
+    setInput: chat.setInput,
+    setError: chat.setError,
+  })
 
   useEffect(() => {
     if (!visionEnabled && pendingImage) {
@@ -67,6 +82,23 @@ export function PanelView({
         onboardingGuide={onboardingGuide}
         modelSetupOverlayOpen={modelSetupOverlayOpen}
         safetyLayer={<CrisisHotlinePanel locale={settings.uiLanguage} />}
+        notificationCards={notifications.summary ? (
+          <PanelNotificationSummary
+            canReplyToNotification={notifications.summary.canReplyToNotification}
+            getNotificationSourceLabel={notifications.summary.getNotificationSourceLabel}
+            messages={notifications.summary.messages}
+            onClearNotifications={notifications.summary.onClearNotifications}
+            onMarkAllRead={notifications.summary.onMarkAllRead}
+            onMarkNotificationRead={notifications.summary.onMarkNotificationRead}
+            onNotificationPrimaryAction={notifications.summary.onNotificationPrimaryAction}
+            onReplyToNotification={notifications.summary.onReplyToNotification}
+            totalMessageCount={notifications.summary.totalMessageCount}
+            translate={notifications.summary.translate}
+          />
+        ) : null}
+        notificationMessages={notifications.visibleMessages}
+        notificationReply={notifications.reply}
+        notificationComposerRequestId={notifications.composerRequestId}
       />
     )
   }

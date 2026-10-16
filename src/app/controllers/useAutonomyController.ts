@@ -31,7 +31,7 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile.ts'
 import type { DailyMemoryStore, Goal, ReminderTask } from '../../types'
 import { buildLocalMessagingAnnouncementContent } from './localMessagingAnnouncement.ts'
-import { isNotificationBridgeEnabled } from './notificationBridgeActivation.ts'
+import { isNotificationBridgeEnabled, shouldPanelArmNotificationBridge } from './notificationBridgeActivation.ts'
 import {
   buildNotificationHistorySafeNoticeContent,
   buildNotificationMessageChatForwardText,
@@ -332,6 +332,18 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     enabled: isNotificationBridgeEnabled(settings),
     runtimeOwner: backgroundRuntimeEnabled,
   })
+
+  const panelArmsNotificationBridge = shouldPanelArmNotificationBridge(
+    backgroundRuntimeEnabled,
+    isNotificationBridgeEnabled(settings),
+  )
+  useEffect(() => {
+    if (!panelArmsNotificationBridge) return
+    void window.desktopPet?.startNotificationBridge?.()
+    return () => {
+      void window.desktopPet?.stopNotificationBridge?.()
+    }
+  }, [panelArmsNotificationBridge])
 
   // Keep the in-app macOS Notification Center watcher in sync with settings.
   // It rides the same master switch as the rest of the notification bridge.

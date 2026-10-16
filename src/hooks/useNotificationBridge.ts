@@ -133,12 +133,16 @@ export function useNotificationBridge({
 
   // ── Bridge lifecycle ───────────────────────────────────────────────────────
 
-  // Start/stop the bridge based on settings — re-runs when enabled changes
+  // Start/stop follows the owner. notification:start is panel-only, so this
+  // call is rejected there; the catch keeps that rejection off the console.
+  // The panel window arms the bridge instead.
   useEffect(() => {
     if (!runtimeOwner) return
     if (!enabled) return
 
-    void window.desktopPet?.startNotificationBridge?.()
+    void window.desktopPet?.startNotificationBridge?.().catch(() => {
+      // The panel window arms the bridge; this owner call is panel-only.
+    })
 
     return () => {
       void window.desktopPet?.stopNotificationBridge?.()

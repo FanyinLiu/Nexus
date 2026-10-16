@@ -41,6 +41,18 @@ import {
 } from '../../features/memory/traceDetails.ts'
 import type { NotificationCardPrimaryActionId } from '../../features/notifications/notificationCardActions.ts'
 import {
+  buildNotificationReplyComposerText,
+  canReplyToNotificationCard,
+  createNotificationReplyTarget,
+  deliverNotificationReply,
+  getNotificationCardSourceLabel,
+  getNotificationReplySource,
+  planNotificationPrimaryAction,
+  selectVisibleNotificationCards,
+  shouldCompleteNotificationReply,
+  type NotificationReplyTarget,
+} from '../../features/notifications/notificationCardSession.ts'
+import {
   formatCompanionElapsedBucket,
   type CompanionElapsedBucket,
 } from '../../features/context/companionTimeLanguage.ts'
@@ -88,13 +100,6 @@ type PanelViewProps = UseAppControllerResult['panelView'] & {
   modelSetupOverlayOpen: boolean
   replyToTelegram?: (text: string, conversationId?: number | string, messageId?: number | string) => Promise<boolean> | boolean
   replyToDiscord?: (text: string, conversationId?: string, messageId?: string) => Promise<boolean> | boolean
-}
-
-type NotificationReplyTarget = {
-  source: 'telegram' | 'discord'
-  conversationId?: string
-  messageId?: string
-  notificationMessageId: string
 }
 
 export function LegacyPanelView({
@@ -278,9 +283,7 @@ export function LegacyPanelView({
   } as CSSProperties
   const unreadNotifications = useMemo(() => {
     if (!notificationBridge) return []
-    return [...notificationBridge.messages]
-      .filter((message) => !message.read && !message.snoozedUntil)
-      .slice(0, 3)
+    return selectVisibleNotificationCards(notificationBridge.messages)
   }, [notificationBridge])
 
   const pendingNotificationCount = unreadNotifications.length
@@ -309,90 +312,38 @@ export function LegacyPanelView({
   }
 
   function getNotificationSourceLabel(message: NotificationMessage): string {
-    if (message.sender) {
-      return `${message.sender} · ${message.sourceName || message.channelName || message.title || message.sourceId || ''}`.trim()
-    }
-    return message.sourceName || message.channelName || message.title || 'Unknown source'
-  }
-
-  function getNotificationReplySource(message: NotificationMessage): 'telegram' | 'discord' | null {
-    const raw = (message.sourceId || message.sourceName || '').trim().toLowerCase()
-    if (raw === 'telegram') return 'telegram'
-    if (raw === 'discord') return 'discord'
-    if (raw === 'tg') return 'telegram'
-    return null
+    return getNotificationCardSourceLabel(message)
   }
 
   function canReplyToNotification(message: NotificationMessage) {
-    if (message.kind !== 'message') {
-      return false
-    }
-
-    const source = getNotificationReplySource(message)
-    if (source === 'telegram') {
-      return Boolean(replyToTelegram)
-    }
-    if (source === 'discord') {
-      return Boolean(replyToDiscord)
-    }
-    return false
+    return canReplyToNotificationCard(message, {
+      telegram: Boolean(replyToTelegram),
+      discord: Boolean(replyToDiscord),
+    })
   }
 
   async function handleSendNotificationReply(message: NotificationReplyTarget, text: string) {
-    const trimmed = text.trim()
-    if (!trimmed) {
+    const outcome = await deliverNotificationReply(message, text, {
+      telegram: replyToTelegram
+        ? (body, conversationId, messageId) => replyToTelegram(body, conversationId, messageId)
+        : undefined,
+      discord: replyToDiscord
+        ? (body, conversationId, messageId) => replyToDiscord(body, conversationId, messageId)
+        : undefined,
+    })
+    if (outcome === 'empty') return
+    if (!shouldCompleteNotificationReply(outcome)) {
+      chat.setError(ti(outcome === 'unsupported'
+        ? 'panel.notification.reply_not_supported'
+        : 'panel.notification.reply_failed'))
       return
     }
-
-    const source = message.source
-    if (source === 'telegram' && replyToTelegram) {
-      // replyTo reports whether the message actually went out (permission
-      // gate, missing target and API failures all return false) — only a
-      // real send may mark the notification read and clear the composer.
-      const sent = await replyToTelegram(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
-      if (!sent) {
-        chat.setError(ti('panel.notification.reply_failed'))
-        return
-      }
-      handleMarkNotificationRead(message.notificationMessageId)
-      setActiveNotificationReply(null)
-      chat.setInput('')
-      return
-    }
-    if (source === 'discord' && replyToDiscord) {
-      const sent = await replyToDiscord(trimmed, message.conversationId ?? undefined, message.messageId ?? undefined)
-      if (!sent) {
-        chat.setError(ti('panel.notification.reply_failed'))
-        return
-      }
-      handleMarkNotificationRead(message.notificationMessageId)
-      setActiveNotificationReply(null)
-      chat.setInput('')
-      return
-    }
-
-    chat.setError(ti('panel.notification.reply_not_supported'))
+    handleMarkNotificationRead(message.notificationMessageId)
+    setActiveNotificationReply(null)
+    chat.setInput('')
   }
 
-  function handleReplyToNotification(message: NotificationMessage) {
-    const source = getNotificationReplySource(message)
-    if (!source) return
-
-    const conversationId = message.conversationId?.trim() || undefined
-    const messageId = message.messageId?.trim() || undefined
-    setActiveNotificationReply({
-      source,
-      conversationId,
-      messageId,
-      notificationMessageId: message.id,
-    })
-
-    const sourceName = getNotificationSourceLabel(message)
-    const mention = sourceName
-      ? `${ti('panel.notification.reply_to', { source: sourceName })}：`
-      : ti('panel.notification.reply')
-    chat.setInput(`${mention} `)
-
+  function focusNotificationComposer() {
     window.requestAnimationFrame(() => {
       const composer = composerTextareaRef.current
       if (!composer) {
@@ -402,6 +353,17 @@ export function LegacyPanelView({
       const cursorPosition = composer.value.length
       composer.setSelectionRange(cursorPosition, cursorPosition)
     })
+  }
+
+  function handleReplyToNotification(message: NotificationMessage) {
+    const source = getNotificationReplySource(message)
+    if (!source) return
+    const target = createNotificationReplyTarget(message)
+    if (!target) return
+
+    setActiveNotificationReply(target)
+    chat.setInput(buildNotificationReplyComposerText(getNotificationSourceLabel(message), ti))
+    focusNotificationComposer()
   }
 
   function handleCancelNotificationReply() {
@@ -410,16 +372,7 @@ export function LegacyPanelView({
 
   function handleNotificationDraft(message: NotificationMessage) {
     chat.setInput(buildNotificationReplyDraftText(message, ti))
-
-    window.requestAnimationFrame(() => {
-      const composer = composerTextareaRef.current
-      if (!composer) {
-        return
-      }
-      composer.focus()
-      const cursorPosition = composer.value.length
-      composer.setSelectionRange(cursorPosition, cursorPosition)
-    })
+    focusNotificationComposer()
   }
 
   function handleMarkImportant(messageId: string) {
@@ -432,17 +385,18 @@ export function LegacyPanelView({
   }
 
   function handleNotificationPrimaryAction(actionId: NotificationCardPrimaryActionId, message: NotificationMessage) {
-    if (actionId === 'draft_reply') {
+    const plan = planNotificationPrimaryAction(actionId, message, ti)
+    if (plan.type === 'compose') {
       handleNotificationDraft(message)
       return
     }
 
-    if (actionId === 'mark_important') {
-      handleMarkImportant(message.id)
+    if (plan.type === 'toggle_important') {
+      handleMarkImportant(plan.messageId)
       return
     }
 
-    handleSnoozeNotification(message.id, 30)
+    handleSnoozeNotification(plan.messageId, plan.delayMinutes)
   }
 
   function isNotificationReplying() {
