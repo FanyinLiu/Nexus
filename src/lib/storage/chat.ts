@@ -234,6 +234,8 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
   const reasoning = typeof value.reasoning_content === 'string' && value.reasoning_content
     ? value.reasoning_content
     : undefined
+  const loopOffer = normalizeLoopOffer(value.loopOffer)
+  const proactiveWhy = normalizeProactiveWhy(value.proactiveWhy)
 
   return {
     id,
@@ -244,6 +246,43 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     ...(toolResult ? { toolResult } : {}),
     ...(memoryTrace ? { memoryTrace } : {}),
     ...(reasoning ? { reasoning_content: reasoning } : {}),
+    ...(loopOffer ? { loopOffer } : {}),
+    ...(proactiveWhy ? { proactiveWhy } : {}),
+  }
+}
+
+function normalizeLoopOffer(value: unknown): ChatMessage['loopOffer'] {
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  const memoryId = typeof record.memoryId === 'string' ? record.memoryId.trim() : ''
+  const title = typeof record.title === 'string' ? record.title.trim() : ''
+  const nightBeforeAt = typeof record.nightBeforeAt === 'string' && Number.isFinite(Date.parse(record.nightBeforeAt))
+    ? new Date(record.nightBeforeAt).toISOString()
+    : ''
+  const status = record.status === 'accepted' || record.status === 'declined' || record.status === 'pending'
+    ? record.status
+    : 'pending'
+  if (!memoryId || !title || !nightBeforeAt) return undefined
+  return { memoryId, title: title.slice(0, 80), nightBeforeAt, status }
+}
+
+function normalizeProactiveWhy(value: unknown): ChatMessage['proactiveWhy'] {
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  const summary = typeof record.summary === 'string' ? record.summary.trim() : ''
+  const quote = typeof record.quote === 'string' ? record.quote.trim() : ''
+  const at = typeof record.at === 'string' && Number.isFinite(Date.parse(record.at))
+    ? new Date(record.at).toISOString()
+    : ''
+  if (!summary || !quote || !at) return undefined
+  const place = typeof record.place === 'string' ? record.place.trim() : ''
+  const dueText = typeof record.dueText === 'string' ? record.dueText.trim() : ''
+  return {
+    summary: summary.slice(0, 240),
+    quote: quote.slice(0, 240),
+    at,
+    ...(place ? { place: place.slice(0, 80) } : {}),
+    ...(dueText ? { dueText: dueText.slice(0, 80) } : {}),
   }
 }
 
@@ -267,6 +306,52 @@ export function loadChatMessages(): ChatMessage[] {
     writeJson(CHAT_STORAGE_KEY, normalized)
   }
   return normalized
+}
+
+/**
+ * A remote apply and a local line can land in one commit. The apply asks
+ * the save effect to stay quiet, but that must not drop the local line.
+ * Returns true when the effect should persist instead of treating the
+ * commit as a pure remote apply.
+ */
+export function remoteApplyConsumedByLocalLine(
+  remoteSignature: string | null,
+  nextSignature: string,
+): boolean {
+  return remoteSignature != null && remoteSignature !== nextSignature
+}
+
+function loopOfferRank(status: NonNullable<ChatMessage['loopOffer']>['status'] | undefined): number {
+  if (status === 'accepted' || status === 'declined') return 2
+  if (status === 'pending') return 1
+  return 0
+}
+
+/**
+ * Fold a broadcast message list onto the local thread.
+ * A night-before card the user already accepted or declined stays decided
+ * when the other window still has the pending copy. Inline images stay
+ * local because they are not written to storage.
+ */
+export function mergeRemoteChatMessages(
+  local: readonly ChatMessage[],
+  remote: readonly ChatMessage[],
+): ChatMessage[] {
+  const localById = new Map(local.map((message) => [message.id, message]))
+  return remote.map((incoming) => {
+    const current = localById.get(incoming.id)
+    if (!current) return incoming
+    let next = incoming
+    if (current.images?.length && !incoming.images?.length) {
+      next = { ...next, images: current.images }
+    }
+    const localOffer = current.loopOffer
+    const remoteOffer = incoming.loopOffer
+    if (localOffer && loopOfferRank(localOffer.status) > loopOfferRank(remoteOffer?.status)) {
+      next = { ...next, loopOffer: localOffer }
+    }
+    return next
+  })
 }
 
 export function saveChatMessages(messages: ChatMessage[]) {

@@ -99,6 +99,8 @@ function toChatSheetMessages(
       role: message.role,
       content: message.content,
       ...(memoryTraceLabel ? { memoryTraceLabel } : {}),
+      ...(message.loopOffer ? { loopOffer: message.loopOffer } : {}),
+      ...(message.proactiveWhy ? { proactiveWhy: message.proactiveWhy } : {}),
     }]
   })
 }

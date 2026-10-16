@@ -36,6 +36,13 @@ type UseMemoryParams = {
   settings: AppSettings
 }
 
+/** Enough of each row that a remote copy does not write itself back. */
+function memorySyncSignature(items: readonly MemoryItem[]): string {
+  return items.map((item) => (
+    `${item.id}:${item.updatedAt ?? ''}:${item.status ?? ''}:${item.loopStatus ?? ''}:${item.loopDueAt ?? ''}:${item.loopPlace ?? ''}:${item.content.length}`
+  )).join('|')
+}
+
 export function useMemory({ settings }: UseMemoryParams) {
   const { t } = useTranslation()
   const [memories, setMemories] = useState<MemoryItem[]>(() => applyLongTermMemoryCap(loadMemories()).kept)
@@ -76,6 +83,7 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [memories])
 
   const memoriesSaveSkipRef = useRef(true)
+  const lastSavedMemorySignatureRef = useRef('')
   const dailyMemoriesSaveSkipRef = useRef(true)
 
   useEffect(() => {
@@ -83,10 +91,14 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [dailyMemories])
 
   useEffect(() => {
+    const signature = memorySyncSignature(memories)
     if (memoriesSaveSkipRef.current) {
       memoriesSaveSkipRef.current = false
+      lastSavedMemorySignatureRef.current = signature
       return
     }
+    if (signature === lastSavedMemorySignatureRef.current) return
+    lastSavedMemorySignatureRef.current = signature
     saveMemories(memories)
   }, [memories])
 
@@ -158,6 +170,18 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [memories])
 
   useEffect(() => {
+    const onReplace = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail
+      if (!Array.isArray(detail)) return
+      const next = detail as MemoryItem[]
+      memoriesRef.current = next
+      setMemories(next)
+    }
+    window.addEventListener('nexus:memories-replaced', onReplace)
+    return () => window.removeEventListener('nexus:memories-replaced', onReplace)
+  }, [])
+
+  useEffect(() => {
     if (settings.memorySearchMode === 'keyword') return
 
     // Defer warmup to avoid blocking startup render
@@ -204,7 +228,7 @@ export function useMemory({ settings }: UseMemoryParams) {
 
   const patchMemory = useCallback((
     id: string,
-    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'loopSurfacedCount' | 'loopLastSurfacedAt'>>,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'loopSurfacedCount' | 'loopLastSurfacedAt' | 'pinned' | 'userEdited' | 'importance'>>,
   ) => {
     setMemories((current) => {
       const nextMemories = current.map((memory) => {
@@ -215,6 +239,7 @@ export function useMemory({ settings }: UseMemoryParams) {
           ...memory,
           ...patch,
           content,
+          ...(typeof patch.content === 'string' ? { userEdited: true } : {}),
           updatedAt: new Date().toISOString(),
         }
       })
@@ -235,6 +260,7 @@ export function useMemory({ settings }: UseMemoryParams) {
           ? {
               ...memory,
               content: normalizedContent,
+              userEdited: true,
               lastUsedAt: new Date().toISOString(),
             }
           : memory
@@ -343,6 +369,13 @@ export function useMemory({ settings }: UseMemoryParams) {
     }
   }, [t])
 
+  const applyRemoteMemories = useCallback((next: MemoryItem[]) => {
+    memoriesSaveSkipRef.current = true
+    lastSavedMemorySignatureRef.current = memorySyncSignature(next)
+    memoriesRef.current = next
+    setMemories(next)
+  }, [])
+
   const clearMemoryArchive = useCallback(async () => {
     memoriesRef.current = []
     dailyMemoriesRef.current = {}
@@ -368,6 +401,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     dailyMemoriesRef,
     recentDailyMemoryEntries,
     setMemories,
+    applyRemoteMemories,
     setDailyMemories,
     appendDailyMemoryEntries,
     addManualMemory,
@@ -386,6 +420,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     dailyMemories,
     recentDailyMemoryEntries,
     setMemories,
+    applyRemoteMemories,
     setDailyMemories,
     appendDailyMemoryEntries,
     addManualMemory,

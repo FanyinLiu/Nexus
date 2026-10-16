@@ -29,7 +29,7 @@ const MAX_ATTEMPTS = 2
 const SNOOZE_MS = 4 * 60 * 60 * 1000
 
 export function emptyAgendaState(): ProactiveAgendaState {
-  return { items: [], firedAt: [], lastConsolidationAt: null }
+  return { items: [], firedAt: [], dismissedAt: [], lastConsolidationAt: null }
 }
 
 export function agendaItemId(kind: AgendaKind, sourceId: string): string {
@@ -55,6 +55,7 @@ function keepUserState(previous: AgendaItem | undefined, built: AgendaItem): Age
 function loopItem(memory: MemoryItem, nowMs: number, previous: AgendaItem | undefined): AgendaItem | null {
   if (memory.kind !== 'open_loop') return null
   if (memory.enabled === false) return null
+  if (memory.migrated === true) return null
   if (memory.status === 'archived' || memory.status === 'superseded') return null
   const id = agendaItemId('open_loop', memory.id)
   const loopStatus = memory.loopStatus ?? 'open'
@@ -82,6 +83,10 @@ function loopItem(memory: MemoryItem, nowMs: number, previous: AgendaItem | unde
   let priority = 1
   let notBefore: number
   let deliverOn: AgendaDeliverOn
+  if (Number.isFinite(due) && due <= nowMs && memory.loopCheckAskedAt) {
+    if (!previous) return null
+    return { ...previous, summary: memory.content, state: 'done' }
+  }
   if (Number.isFinite(due)) {
     if (due <= nowMs) {
       priority = 3
@@ -102,6 +107,7 @@ function loopItem(memory: MemoryItem, nowMs: number, previous: AgendaItem | unde
     deliverOn = 'next_turn'
   }
   const snoozed = Number.isFinite(snooze) && snooze > nowMs
+  const checkWindow = Number.isFinite(due) && due <= nowMs && !memory.loopCheckAskedAt
   const built: AgendaItem = {
     id,
     kind: 'open_loop',
@@ -113,9 +119,17 @@ function loopItem(memory: MemoryItem, nowMs: number, previous: AgendaItem | unde
     state: snoozed ? 'snoozed' : 'pending',
     attempts: memory.loopSurfacedCount ?? 0,
     ...(snoozed ? { snoozeUntil: snooze } : {}),
-    ...(memory.loopLastSurfacedAt ? { firedAt: Date.parse(memory.loopLastSurfacedAt) } : {}),
+    // A preview the day before must not eat the post-due check. The check
+    // is asked once via loopCheckAskedAt; the day gap still applies before due.
+    ...(!checkWindow && memory.loopLastSurfacedAt ? { firedAt: Date.parse(memory.loopLastSurfacedAt) } : {}),
   }
-  return keepUserState(previous, built)
+  const kept = keepUserState(previous, built)
+  if (!checkWindow || kept.firedAt == null || kept.firedAt >= due) return kept
+  // The day-before preview is what stamped firedAt. Drop that stamp so the
+  // post-due check can be asked once. A firing at or after the due time stays.
+  const withoutPreviewFire = { ...kept }
+  delete withoutPreviewFire.firedAt
+  return withoutPreviewFire
 }
 
 function followUpItem(entry: MessageFollowUpEntry, nowMs: number, previous: AgendaItem | undefined): AgendaItem | null {
@@ -187,6 +201,7 @@ export function projectAgenda(input: {
   return {
     items,
     firedAt: input.previous.firedAt.filter((stamp) => input.nowMs - stamp <= 2 * DAY_MS),
+    dismissedAt: (input.previous.dismissedAt ?? []).filter((stamp) => input.nowMs - stamp <= 14 * DAY_MS),
     lastConsolidationAt: input.previous.lastConsolidationAt,
   }
 }
@@ -269,7 +284,10 @@ export function applyAgendaUserAction(
       updatedAt: nowIso,
     }
   })
-  return { state: { ...state, items: nextItems }, memories: nextMemories }
+  const dismissedAt = action === 'dismiss'
+    ? [...(state.dismissedAt ?? []), nowMs].filter((stamp) => nowMs - stamp <= 14 * DAY_MS)
+    : state.dismissedAt
+  return { state: { ...state, items: nextItems, ...(dismissedAt ? { dismissedAt } : {}) }, memories: nextMemories }
 }
 
 export function buildAgendaPrompt(item: AgendaItem, followUps: readonly MessageFollowUpEntry[]): string {
@@ -302,7 +320,12 @@ export function syncProactiveAgenda(memories: readonly MemoryItem[], nowMs: numb
   return next
 }
 
-export function recordLoopSurfaced(memories: readonly MemoryItem[], memoryId: string, nowIso: string): MemoryItem[] {
+export function recordLoopSurfaced(
+  memories: readonly MemoryItem[],
+  memoryId: string,
+  nowIso: string,
+  phase?: 'preview' | 'check',
+): MemoryItem[] {
   return memories.map((memory) => (
     memory.id === memoryId
       ? {
@@ -310,6 +333,7 @@ export function recordLoopSurfaced(memories: readonly MemoryItem[], memoryId: st
         loopSurfacedCount: (memory.loopSurfacedCount ?? 0) + 1,
         loopLastSurfacedAt: nowIso,
         updatedAt: nowIso,
+        ...(phase === 'check' ? { loopCheckAskedAt: nowIso } : {}),
       }
       : memory
   ))

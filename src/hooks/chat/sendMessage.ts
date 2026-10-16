@@ -235,6 +235,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
         candidates,
         now: userMessage.createdAt,
         utterance: content,
+        messageId: userMessage.id,
       })
       let nextMemories = plan.memories
       let nextDailyMemories = ctx.dailyMemoriesRef.current

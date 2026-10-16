@@ -18,6 +18,9 @@ export function useFocusAwareness({ settingsRef, enabled }: UseFocusAwarenessOpt
   const [idleSeconds, setIdleSeconds] = useState(0)
   const focusStateRef = useRef<FocusState>('active')
   const idleSecondsRef = useRef(0)
+  // Bumped when the user comes back so an idle read that started earlier
+  // cannot overwrite that return. The sample is only applied if it is still current.
+  const idleSampleGenRef = useRef(0)
 
   // Poll system idle time — re-runs when enabled changes
   useEffect(() => {
@@ -27,9 +30,10 @@ export function useFocusAwareness({ settingsRef, enabled }: UseFocusAwarenessOpt
 
     async function poll() {
       if (cancelled) return
+      const sampleGen = idleSampleGenRef.current
       try {
         const seconds = await window.desktopPet?.getSystemIdleTime?.() ?? 0
-        if (cancelled) return
+        if (cancelled || sampleGen !== idleSampleGenRef.current) return
 
         idleSecondsRef.current = seconds
         setIdleSeconds(seconds)
@@ -84,11 +88,23 @@ export function useFocusAwareness({ settingsRef, enabled }: UseFocusAwarenessOpt
   }, [enabled, settingsRef])
 
   const markActive = useCallback(() => {
+    idleSampleGenRef.current += 1
     focusStateRef.current = 'active'
     idleSecondsRef.current = 0
     setFocusState('active')
     setIdleSeconds(0)
   }, [])
+
+  // An explicit return is the same as a click: drop the idle sample already in flight.
+  useEffect(() => {
+    const onFocus = (event: Event) => {
+      const next = (event as CustomEvent<string>).detail
+      if (next !== 'active') return
+      markActive()
+    }
+    window.addEventListener('nexus:focus-state', onFocus)
+    return () => window.removeEventListener('nexus:focus-state', onFocus)
+  }, [markActive])
 
   return {
     focusState,

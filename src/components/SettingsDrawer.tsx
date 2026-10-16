@@ -136,7 +136,7 @@ export type SettingsDrawerProps = {
   onUpdateMemory: (id: string, content: string) => void
   onPatchMemory?: (
     id: string,
-    patch: Partial<Pick<import('../types').MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
+    patch: Partial<Pick<import('../types').MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'pinned' | 'userEdited' | 'importance'>>,
   ) => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onCommitMemoryPaused: (paused: boolean) => void

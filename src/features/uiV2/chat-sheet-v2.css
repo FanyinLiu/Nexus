@@ -489,3 +489,9 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+.loop-outreach { display: grid; gap: 8px; margin-top: 8px; }
+.loop-outreach__card, .loop-outreach__why { padding: 10px 12px; border: 1px solid var(--chat-sheet-v2-line, #ded7d2); border-radius: 12px; background: color-mix(in srgb, var(--chat-sheet-v2-surface, #fff) 92%, transparent); }
+.loop-outreach__title, .loop-outreach__status { margin: 0 0 6px; }
+.loop-outreach__actions { display: flex; gap: 8px; }
+.loop-outreach__accept, .loop-outreach__decline { min-height: 32px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--chat-sheet-v2-line, #ded7d2); background: transparent; color: inherit; }

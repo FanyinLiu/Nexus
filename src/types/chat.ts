@@ -76,6 +76,21 @@ export interface ChatMessage {
    * without duplicating private memory text into chat history.
    */
   memoryTrace?: ChatMemoryTrace
+  /** Night-before reminder offer attached to a proactive line. */
+  loopOffer?: {
+    memoryId: string
+    title: string
+    nightBeforeAt: string
+    status: 'pending' | 'accepted' | 'declined'
+  }
+  /** Why a proactive line was raised: the agenda item, quote, and date. */
+  proactiveWhy?: {
+    summary: string
+    quote: string
+    at: string
+    place?: string
+    dueText?: string
+  }
 }
 
 export interface PetDialogBubbleState {
@@ -83,6 +98,8 @@ export interface PetDialogBubbleState {
   toolResult?: ChatToolResult
   streaming?: boolean
   createdAt?: string
+  loopOffer?: ChatMessage['loopOffer']
+  proactiveWhy?: ChatMessage['proactiveWhy']
 }
 
 export interface PetThoughtBubbleState {

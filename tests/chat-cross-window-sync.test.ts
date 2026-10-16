@@ -302,6 +302,25 @@ test('applying remote chat messages does not echo back into storage or the sync 
   env.cleanup(unsubscribe)
 })
 
+test('a newer remote thread cancels a debounced local save that would drop it', async () => {
+  const env = await setup()
+  env.render()
+  const unsubscribe = env.subscribeRemoteChat()
+  const preview = makeMessage('preview', 'assistant', '要我前一晚提醒你吗？', 1_000)
+  env.rerenderWith([preview])
+  const remote = [
+    preview,
+    makeMessage('check', 'assistant', '办好了吗？', 2_000),
+  ]
+  env.simulateRemoteWrite(remote)
+  env.resetCounts()
+  await sleep(DEBOUNCE_GRACE_MS)
+  assert.equal(env.current.length, 2)
+  assert.equal(env.current[1]?.content, '办好了吗？')
+  assert.equal(env.chatWrites, 0, 'the stale local save must not overwrite the remote thread')
+  env.cleanup(unsubscribe)
+})
+
 test('re-render with an unchanged message signature does not re-save or re-broadcast', async () => {
   const env = await setup()
   const initial = [
@@ -319,8 +338,8 @@ test('re-render with an unchanged message signature does not re-save or re-broad
   assert.equal(env.chatWrites, 0)
   assert.equal(env.chatBroadcasts, 0)
 
-  // The signature only covers length + last message (id, content length,
-  // tone). Editing an earlier message leaves it unchanged and must not save.
+  // The signature covers length, the last message, and every card status.
+  // Editing an earlier message's wording leaves it unchanged and must not save.
   env.rerenderWith([makeMessage('initial-1', 'user', 'first local turn, edited in place', 1_000), initial[1]])
   await sleep(DEBOUNCE_GRACE_MS)
   assert.equal(env.chatWrites, 0)

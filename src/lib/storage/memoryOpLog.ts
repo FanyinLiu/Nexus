@@ -8,9 +8,10 @@ import { isObject } from '../guards.ts'
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { normalizeBoundedText } from '../normalize.ts'
 import { MEMORY_OP_LOG_STORAGE_KEY, readJson, writeJson } from './core.ts'
+import { normalizeMemoryItem } from './memory.ts'
 
 const MAX_OP_LOG_ENTRIES = 2_000
-const OPS = new Set<MemoryReconcileOpName>(['ADD', 'UPDATE', 'MERGE', 'SUPERSEDE', 'DELETE', 'NOOP'])
+const OPS = new Set<MemoryReconcileOpName>(['ADD', 'UPDATE', 'MERGE', 'SUPERSEDE', 'DELETE', 'NOOP', 'UNDO'])
 const ACTORS = new Set<MemoryOpActor>(['turn', 'dream', 'user', 'migration', 'cap'])
 
 function normalizeTimestamp(value: unknown): string | null {
@@ -46,6 +47,15 @@ export function normalizeMemoryOpLog(raw: unknown): MemoryOpRecord[] {
       : []
     const reason = normalizeBoundedText(value.reason, 240, true)
     const id = normalizeBoundedText(value.id, 160, true) || `memory-op-recovered-${index}`
+    const evidenceQuote = normalizeBoundedText(value.evidenceQuote, 240, true)
+    const messageRef = normalizeBoundedText(value.messageRef, 160, true)
+    const runId = normalizeBoundedText(value.runId, 160, true)
+    const before = Array.isArray(value.before)
+      ? value.before
+        .map((row, rowIndex) => normalizeMemoryItem(row, rowIndex))
+        .filter((row): row is NonNullable<typeof row> => Boolean(row))
+        .slice(0, 20)
+      : []
     entries.push({
       id,
       at,
@@ -53,6 +63,10 @@ export function normalizeMemoryOpLog(raw: unknown): MemoryOpRecord[] {
       op,
       targetIds,
       ...(reason ? { reason } : {}),
+      ...(evidenceQuote ? { evidenceQuote } : {}),
+      ...(messageRef ? { messageRef } : {}),
+      ...(runId ? { runId } : {}),
+      ...(before.length ? { before } : {}),
     })
   }
   return entries.slice(-MAX_OP_LOG_ENTRIES)
