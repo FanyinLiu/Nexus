@@ -1,4 +1,5 @@
 import { memo, useState } from 'react'
+import { PetControlIcon } from '../../components/PetControlIcon.tsx'
 import { useUpdater } from '../../features/updater/useUpdater.ts'
 import { CURRENT_RELEASE_SPOTLIGHT } from '../../features/releaseNotes/index.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
@@ -134,7 +135,8 @@ export const AboutPanel = memo(function AboutPanel({
               }}
             >
               <summary className="settings-about-panel__faq-question">
-                {ti(qKey)}
+                <span>{ti(qKey)}</span>
+                <PetControlIcon name="chevron-down" className="settings-about-panel__faq-chevron" />
               </summary>
               <p className="settings-about-panel__faq-answer">{ti(aKey)}</p>
             </details>
