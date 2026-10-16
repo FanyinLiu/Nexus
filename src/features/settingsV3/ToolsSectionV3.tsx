@@ -13,9 +13,10 @@ type ToolsSectionV3Props = {
   active: boolean
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
+  surface?: 'full' | 'rest'
 }
 
-export const ToolsSectionV3 = memo(function ToolsSectionV3({ active, draft, setDraft }: ToolsSectionV3Props) {
+export const ToolsSectionV3 = memo(function ToolsSectionV3({ active, draft, setDraft, surface = 'full' }: ToolsSectionV3Props) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(draft.uiLanguage, key)
   const provider = getWebSearchProviderPreset(draft.toolWebSearchProviderId)
   const storedKey = draft.toolWebSearchApiKey.startsWith('vault://')
@@ -76,20 +77,22 @@ export const ToolsSectionV3 = memo(function ToolsSectionV3({ active, draft, setD
       ) : null}
 
       {draft.toolWeatherEnabled ? (
-        <SettingsV3Section title={ti('settings.tools.weather')} description={ti('settings.tools.weather_location_hint')}>
-          <div className="settings-v3-editor">
-            <SettingsV3Field label={ti('settings.tools.weather_location')} hint={ti('settings.tools.weather_location_hint')}>
-              <input
-                value={draft.toolWeatherDefaultLocation}
-                placeholder={ti('settings.tools.weather_location_placeholder')}
-                onChange={(event) => setDraft((current) => ({ ...current, toolWeatherDefaultLocation: event.target.value }))}
-              />
-            </SettingsV3Field>
-          </div>
-          <SettingsV3Notice title={ti('settings.tools.weather_privacy_title')}>
-            {ti('settings.tools.weather_privacy_note')}
-          </SettingsV3Notice>
-        </SettingsV3Section>
+        surface === 'rest' ? null : (
+          <SettingsV3Section title={ti('settings.tools.weather')} description={ti('settings.tools.weather_location_hint')}>
+            <div className="settings-v3-editor">
+              <SettingsV3Field label={ti('settings.tools.weather_location')} hint={ti('settings.tools.weather_location_hint')}>
+                <input
+                  value={draft.toolWeatherDefaultLocation}
+                  placeholder={ti('settings.tools.weather_location_placeholder')}
+                  onChange={(event) => setDraft((current) => ({ ...current, toolWeatherDefaultLocation: event.target.value }))}
+                />
+              </SettingsV3Field>
+            </div>
+            <SettingsV3Notice title={ti('settings.tools.weather_privacy_title')}>
+              {ti('settings.tools.weather_privacy_note')}
+            </SettingsV3Notice>
+          </SettingsV3Section>
+        )
       ) : null}
 
       <SettingsV3Disclosure title={ti('settings.tools.backend_title')} description={ti('settings.tools.backend_hint')}>

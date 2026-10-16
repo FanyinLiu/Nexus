@@ -118,6 +118,7 @@ export type SettingsDrawerActiveSectionProps = {
   voiceActionPending: boolean
   voiceTrace: VoiceTraceEntry[]
   windowState: WindowState
+  surface?: 'full' | 'rest'
 }
 
 export function SettingsDrawerActiveSection({
@@ -176,6 +177,7 @@ export function SettingsDrawerActiveSection({
   voiceActionPending,
   voiceTrace,
   windowState,
+  surface = 'full',
 }: SettingsDrawerActiveSectionProps) {
   const routeParams = new URLSearchParams(window.location.search)
   const isPetView = routeParams.get('view') === 'pet'
@@ -194,6 +196,7 @@ export function SettingsDrawerActiveSection({
       return (
         <ModelSectionV3
           active
+          surface={surface}
           draft={draft}
           setDraft={setDraft}
           testingTarget={connectionTests.isTesting('text') ? 'text' : null}
@@ -208,6 +211,7 @@ export function SettingsDrawerActiveSection({
       return (
         <ChatSectionV3
           active
+          surface={surface}
           confirm={confirm}
           draft={draft}
           setDraft={setDraft}
@@ -251,6 +255,7 @@ export function SettingsDrawerActiveSection({
       return (
         <MemorySectionV3
           active
+          surface={surface}
           confirm={confirm}
           draft={draft}
           platformProfile={platformProfile}
@@ -292,6 +297,7 @@ export function SettingsDrawerActiveSection({
       return (
         <VoiceSectionV3
           active
+          surface={surface}
           audioSmokeStatus={speechVoices.audioSmokeStatus}
           draft={draft}
           dirty={isDirty}
@@ -371,6 +377,7 @@ export function SettingsDrawerActiveSection({
       return (
         <ToolsSectionV3
           active
+          surface={surface}
           draft={draft}
           setDraft={setDraft}
         />

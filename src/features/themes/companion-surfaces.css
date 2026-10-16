@@ -46,6 +46,15 @@ html[data-companion-theme] .settings-drawer--v2 > .settings-v2 {
   font-family: var(--nx-font-family);
 }
 
+/* `.sd input` sets font-family: inherit, which on warm is the serif
+   companion face, so model names and digits paint in Palatino.
+   Product controls use the UI sans in every theme, and a label's
+   620 weight must not bold the value. */
+html[data-companion-theme] .sd.settings-drawer--v2 .settings-v3-page :is(button, input, select, textarea, option) {
+  font-family: var(--font-sans);
+  font-weight: 450;
+}
+
 html[data-companion-theme] .settings-v2 {
   border-radius: var(--nx-radius-window);
   background:
@@ -85,9 +94,20 @@ html[data-companion-theme] .settings-v3-voice-models__row {
 
 html[data-companion-theme] .settings-v2__home-icon,
 html[data-companion-theme] .settings-v2__nav-item,
-html[data-companion-theme] .settings-v2__draft-button,
-html[data-companion-theme] .settings-v2__section-tabs button {
+html[data-companion-theme] .settings-v2__draft-button {
   border-radius: var(--nx-radius-control);
+}
+
+html[data-companion-theme] .settings-v2__home-icon[data-tone='success'],
+html[data-companion-theme] .settings-v3-row__icon[data-tone='success'] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 18%, var(--nx-card-bg));
+}
+
+html[data-companion-theme] .settings-v2__home-icon[data-tone='warning'],
+html[data-companion-theme] .settings-v3-row__icon[data-tone='warning'] {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 22%, var(--nx-card-bg));
 }
 
 html[data-companion-theme] .settings-v2__home-icon,

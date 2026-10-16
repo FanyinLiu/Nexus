@@ -26,6 +26,17 @@ async function reservePort(): Promise<number> {
   })
 }
 
+async function openMemoryAdvanced(page: Page): Promise<void> {
+  const advanced = page.locator('details.settings-v3-disclosure').filter({
+    has: page.locator('summary', { hasText: '高级' }),
+  })
+  await advanced.waitFor({ state: 'visible' })
+  if (await advanced.getAttribute('open') === null) {
+    await advanced.locator('summary').click()
+  }
+  await page.locator('.settings-v3-memory:not(.is-hidden)').waitFor({ state: 'visible' })
+}
+
 async function waitForServer(url: string, process: ChildProcess): Promise<void> {
   const deadline = Date.now() + 20_000
   while (Date.now() < deadline) {
@@ -132,7 +143,7 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   // navigation wait itself can consume the whole test budget. The memory
   // section locator below is the readiness check.
   await page.goto(`${baseUrl}/?view=panel&section=settings&settingsSection=memory`, { waitUntil: 'load' })
-  await page.locator('.settings-v3-memory:not(.is-hidden)').waitFor({ state: 'visible' })
+  await openMemoryAdvanced(page)
   assert.ok(observedStoreUrl, 'The active renderer must request companionSummaryStore before the lifecycle proof.')
   const storeUrl = observedStoreUrl
 
@@ -173,7 +184,7 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   })
 
   await page.locator('.settings-v2__nav-item', { hasText: '语音' }).click()
-  await page.locator('.settings-v3-voice:not(.is-hidden)').waitFor({ state: 'visible' })
+  await page.locator('.settings-v2[data-settings-v2-destination="voice"]').waitFor({ state: 'visible' })
 
   const saved = await page.evaluate(async (moduleUrl) => {
     const store = await import(moduleUrl)
@@ -199,10 +210,11 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   assert.deepEqual(saved, { summary: true, decision: true })
 
   await page.locator('.settings-v2__nav-item', { hasText: '记忆与隐私' }).click()
-  await page.locator('.settings-v3-memory:not(.is-hidden)').waitFor({ state: 'visible' })
+  await openMemoryAdvanced(page)
 
-  const continuityDisclosure = page.locator('details.settings-v3-disclosure', { hasText: '陪伴连续感' }).first()
-  await continuityDisclosure.locator('summary').click()
+  const continuitySummary = page.locator('summary').filter({ hasText: /^陪伴连续感/ })
+  const continuityDisclosure = continuitySummary.locator('xpath=ancestor::details[1]')
+  await continuitySummary.click()
   const loadedBeforePause = await page.evaluate(async (moduleUrl) => {
     const store = await import(moduleUrl)
     return {
@@ -276,12 +288,12 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   }, storeUrl)
 
   await page.locator('.settings-v2__nav-item', { hasText: '语音' }).click()
-  await page.locator('.settings-v3-voice:not(.is-hidden)').waitFor({ state: 'visible' })
+  await page.locator('.settings-v2[data-settings-v2-destination="voice"]').waitFor({ state: 'visible' })
   await page.locator('.settings-v2__nav-item', { hasText: '记忆与隐私' }).click()
-  await page.locator('.settings-v3-memory:not(.is-hidden)').waitFor({ state: 'visible' })
+  await openMemoryAdvanced(page)
 
-  const sourcesDisclosure = page.locator('details.settings-v3-disclosure', { hasText: '桌面感知来源' }).first()
-  await sourcesDisclosure.locator('summary').click()
+  const sourcesSummary = page.locator('summary').filter({ hasText: /^桌面感知来源/ })
+  await sourcesSummary.click()
   const awarenessInput = page.getByRole('checkbox', { name: '启用上下文感知' })
   assert.equal(await awarenessInput.isChecked(), true)
 

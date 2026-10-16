@@ -9,13 +9,13 @@ import {
   getCompanionAppearance,
   mapStoredCompanionTheme,
 } from '../src/features/themes/companionThemes.ts'
-import { migrateSettings } from '../src/lib/settingsMigrations.ts'
+import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
 
 test('companion theme migration maps stock, custom, and unknown values without throwing', () => {
   const stock = migrateSettings({ settingsSchemaVersion: 15, themeId: 'nexus-default' }, 15)
   assert.equal(stock.themeId, 'warm')
   assert.equal(stock.themeColorScheme, 'light')
-  assert.equal(stock.settingsSchemaVersion, 20)
+  assert.equal(stock.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
 
   const warmDay = migrateSettings({ settingsSchemaVersion: 15, themeId: 'warm-day' }, 15)
   assert.equal(warmDay.themeId, 'warm')
@@ -34,7 +34,7 @@ test('companion theme migration maps stock, custom, and unknown values without t
 
   const reserved = migrateSettings({ settingsSchemaVersion: 16, themeId: 'soft' }, 16)
   assert.equal(reserved.themeId, 'warm')
-  assert.equal(reserved.settingsSchemaVersion, 20)
+  assert.equal(reserved.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
 
   assert.doesNotThrow(() => mapStoredCompanionTheme('not-a-theme', { bad: true }))
   assert.deepEqual(mapStoredCompanionTheme('not-a-theme', { bad: true }), {

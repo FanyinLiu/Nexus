@@ -83,6 +83,7 @@ export type MemorySectionV3Props = {
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onRemoveDailyEntry?: (id: string, day: string) => void
+  surface?: 'full' | 'rest'
 }
 
 const CATEGORY_KEYS: Record<MemoryItem['category'], TranslationKey> = {
@@ -130,6 +131,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
   onClearDailyMemory,
   onUpdateDailyEntry,
   onRemoveDailyEntry,
+  surface = 'full',
 }: MemorySectionV3Props) {
   const ti = (key: TranslationKey, params?: Parameters<typeof pickTranslatedUiText>[2]) =>
     pickTranslatedUiText(uiLanguage, key, params)
@@ -272,17 +274,19 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
   return (
     <SettingsV3Page className={active ? 'settings-v3-memory' : 'settings-v3-memory is-hidden'}>
       <SettingsV3Section title={ti('settings.memory.transparency.title')} hideHeader>
-        <SettingsV3Row
-          icon="thought"
-          label={ti('settings.memory.transparency.pause')}
-          hint={ti('settings.memory.transparency.paused_effect')}
-        >
-          <SettingsV3Switch
-            checked={draft.memoryPaused}
+        {surface === 'rest' ? null : (
+          <SettingsV3Row
+            icon="thought"
             label={ti('settings.memory.transparency.pause')}
-            onChange={onCommitMemoryPaused}
-          />
-        </SettingsV3Row>
+            hint={ti('settings.memory.transparency.paused_effect')}
+          >
+            <SettingsV3Switch
+              checked={draft.memoryPaused}
+              label={ti('settings.memory.transparency.pause')}
+              onChange={onCommitMemoryPaused}
+            />
+          </SettingsV3Row>
+        )}
         <SettingsV3Row
           icon="sparkles"
           label={ti('settings.memory.transparency.active_long_term')}

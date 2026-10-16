@@ -30,6 +30,7 @@ type Props = {
   onApplyTextProviderPreset: (providerId: string) => void
   onRunTextConnectionTest: () => void
   connectionEvidence: SettingsV3ConnectionEvidenceValue | null
+  surface?: 'full' | 'rest'
 }
 
 function ExtraKeys({ providerId, uiLanguage }: { providerId: string; uiLanguage: UiLanguage }) {
@@ -86,6 +87,7 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
   onApplyTextProviderPreset,
   onRunTextConnectionTest,
   connectionEvidence,
+  surface = 'full',
 }: Props) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const preset = getApiProviderPreset(draft.apiProviderId)
@@ -113,6 +115,7 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
 
   return (
     <SettingsV3Page>
+      {surface === 'rest' ? null : <>
       {saveError ? <SettingsV3Notice tone="error" title={ti('settings.save_failed_fallback')} /> : null}
       <SettingsV3Notice tone={keyError ? 'error' : 'info'} title={`${preset.label} · ${draft.model || ti('settings.model.custom')}`}>
         {keyError || `${secretState} · ${ti('settings.model.test_endpoint')}`}
@@ -180,6 +183,7 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
           <SettingsV3ConnectionEvidence evidence={connectionEvidence} />
         </div>
       </SettingsV3Section>
+      </>}
 
       <SettingsV3Disclosure title={ti('settings.model.advanced_settings')} description={ti('settings.model.failover_hint')}>
         <SettingsV3Row label={ti('settings.model.failover_toggle')} hint={ti('settings.model.failover_hint')}>

@@ -68,8 +68,8 @@ test('Settings Escape respects dirty confirmation and V2 single-section heading 
   assert.match(languageHook, /event\.preventDefault\(\)[\s\S]*?event\.stopPropagation\(\)[\s\S]*?closeLanguageMenuAndRestoreFocus\(\)/)
   assert.match(drawerV2, /onDialogKeyDown: KeyboardEventHandler<HTMLElement>/)
   assert.match(drawerV2, /onKeyDown=\{onDialogKeyDown\}/)
-  assert.match(drawerV2, /activeV2Sections\.length === 1 \? activeSectionHeadingRef : undefined/)
-  assert.match(drawerV2, /activeV2Sections\.length > 1 \? <header[\s\S]*?<h2 ref=\{activeSectionHeadingRef\} tabIndex=\{-1\}/)
+  assert.match(drawerV2, /activeHeadingRef=\{activeSectionHeadingRef\}/)
+  assert.doesNotMatch(drawerV2, /settings-v2__section-tabs/)
   assert.match(shellV2, /activeHeadingRef\?: RefObject<HTMLHeadingElement \| null>/)
   assert.match(shellV2, /ref=\{!isHome \? activeHeadingRef : undefined\}/)
   assert.match(shellV2, /tabIndex=\{!isHome && activeHeadingRef \? -1 : undefined\}/)
@@ -94,10 +94,7 @@ test('Settings V2 moves route context focus only for keyboard or assistive activ
   )
   assert.match(drawerV2, /onNavigate=\{\(destination, intent\) => \{[\s\S]*?onReturnToSettingsHome\(false\)[\s\S]*?onOpenSettingsSection\(SETTINGS_V2_DEFAULT_SECTION\[destination\], intent\.moveFocus\)/)
   assert.doesNotMatch(drawerV2, /onReturnToSettingsHome\(intent\.moveFocus\)/)
-  assert.match(
-    drawerV2,
-    /onClick=\{\(event\) => \{[\s\S]*?const intent = getSettingsV2NavigationIntent\(event\.detail\)[\s\S]*?onOpenSettingsSection\(section\.id, intent\.moveFocus\)/,
-  )
+  assert.doesNotMatch(drawerV2, /settings-v2__section-tabs/)
   assert.match(shellV2, /const homeCardRefs = useRef<Partial<Record<SettingsV2GroupId, HTMLButtonElement \| null>>>\(\{\}\)/)
   assert.match(shellV2, /const pendingHomeFocusGroupRef = useRef<SettingsV2GroupId \| null>\(null\)/)
   assert.match(shellV2, /pendingHomeFocusGroupRef\.current = !isHome && intent\.moveFocus \? activeDestination : null/)

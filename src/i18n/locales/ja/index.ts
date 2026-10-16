@@ -6,6 +6,7 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 import { jaCore } from './core.ts'
 import { jaSettingsShell } from './settings-shell.ts'
+import { jaSettingsSimple } from './settings-simple.ts'
 import { jaSettingsMemory } from './settings-memory.ts'
 import { jaSettingsConsole } from './settings-console.ts'
 import { jaSettingsHistory } from './settings-history.ts'
@@ -23,6 +24,7 @@ import { jaPanel } from './panel.ts'
 export const jaMessages = {
   ...jaCore,
   ...jaSettingsShell,
+  ...jaSettingsSimple,
   ...jaSettingsMemory,
   ...jaSettingsConsole,
   ...jaSettingsHistory,

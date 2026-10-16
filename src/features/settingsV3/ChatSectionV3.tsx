@@ -43,6 +43,7 @@ export type ChatSectionV3Props = {
   onImportPetModel: () => void
   onImportCodexPetGallery: (input: string) => void
   onLoadCodexPetGallery: (query?: string) => void
+  surface?: 'full' | 'rest'
 }
 
 export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Props) {
@@ -58,71 +59,82 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
     || petModel?.label
     || ti('settings.chat.sprite_pet_fallback_label')
   const importStatus = props.petModelStatus ?? props.codexPetCatalogStatus
+  const rest = props.surface === 'rest'
   function selectRelationshipType(value: CompanionRelationshipType) {
     setDraft((prev) => ({ ...prev, companionRelationshipType: value }))
   }
 
   return (
     <SettingsV3Page className="settings-v3-chat">
-      <SettingsV3Section title={ti('settings.appearance.label')}>
-        <CompanionThemePicker
-          themeId={draft.themeId}
-          colorScheme={draft.themeColorScheme}
-          language={draft.uiLanguage}
-          onChange={(next) => setDraft((prev) => ({
-            ...prev,
-            themeId: next.themeId,
-            themeColorScheme: next.colorScheme,
-          }))}
-        />
-      </SettingsV3Section>
-      <SettingsV3Section
-        title={ti('settings.chat.companion_name')}
-      >
-        <div className="settings-v3-editor settings-v3-chat-identity">
-          <SettingsV3Field label={ti('settings.chat.companion_name')}>
-            <input
-              value={draft.companionName}
-              onChange={(event) => setDraft((prev) => setCompanionNameWithWakeWordSync(prev, event.target.value))}
+      {rest ? null : (
+        <>
+          <SettingsV3Section title={ti('settings.appearance.label')}>
+            <CompanionThemePicker
+              themeId={draft.themeId}
+              colorScheme={draft.themeColorScheme}
+              language={draft.uiLanguage}
+              onChange={(next) => setDraft((prev) => ({
+                ...prev,
+                themeId: next.themeId,
+                themeColorScheme: next.colorScheme,
+              }))}
             />
-          </SettingsV3Field>
-          <SettingsV3Field label={ti('settings.chat.user_name')}>
-            <input
-              value={draft.userName}
-              onChange={(event) => setDraft((prev) => ({ ...prev, userName: event.target.value }))}
-            />
-          </SettingsV3Field>
-        </div>
-      </SettingsV3Section>
-
-      <SettingsV3Section
-        title={ti('settings.chat.live2d_model')}
-        description={ti('settings.chat.model_import_hint')}
-      >
-        <SettingsV3Row
-          icon="image"
-          label={petModelLabel}
-          hint={translatePetText(petModel?.description)}
-        >
-          <SettingsV3Field label={ti('settings.chat.live2d_model')}>
-            <select
-              aria-label={ti('settings.chat.live2d_model')}
-              value={draft.petModelId}
-              onChange={(event) => setDraft((prev) => ({ ...prev, petModelId: event.target.value }))}
-            >
-              {petModelPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {translatePetText(preset.label) || preset.label}
-                </option>
+          </SettingsV3Section>
+          <SettingsV3Section title={ti('settings.chat.companion_name')}>
+            <div className="settings-v3-editor settings-v3-chat-identity">
+              <SettingsV3Field label={ti('settings.chat.companion_name')}>
+                <input
+                  value={draft.companionName}
+                  onChange={(event) => setDraft((prev) => setCompanionNameWithWakeWordSync(prev, event.target.value))}
+                />
+              </SettingsV3Field>
+              <SettingsV3Field label={ti('settings.chat.user_name')}>
+                <input
+                  value={draft.userName}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, userName: event.target.value }))}
+                />
+              </SettingsV3Field>
+            </div>
+          </SettingsV3Section>
+          <SettingsV3Section title={ti('settings.chat.live2d_model')} description={ti('settings.chat.model_import_hint')}>
+            <SettingsV3Row icon="image" label={petModelLabel} hint={translatePetText(petModel?.description)}>
+              <SettingsV3Field label={ti('settings.chat.live2d_model')}>
+                <select
+                  aria-label={ti('settings.chat.live2d_model')}
+                  value={draft.petModelId}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, petModelId: event.target.value }))}
+                >
+                  {petModelPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {translatePetText(preset.label) || preset.label}
+                    </option>
+                  ))}
+                </select>
+              </SettingsV3Field>
+            </SettingsV3Row>
+          </SettingsV3Section>
+          <SettingsV3Section title={ti('settings.chat.relationship_type_label')}>
+            <div className="settings-v3-choice-grid" role="radiogroup" aria-label={ti('settings.chat.relationship_type_label')}>
+              {RELATIONSHIP_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className="settings-v3-choice"
+                  data-selected={draft.companionRelationshipType === option.value ? 'true' : undefined}
+                  role="radio"
+                  aria-checked={draft.companionRelationshipType === option.value}
+                  onClick={() => selectRelationshipType(option.value)}
+                >
+                  {ti(option.labelKey)}
+                </button>
               ))}
-            </select>
-          </SettingsV3Field>
-        </SettingsV3Row>
-        <SettingsV3Row
-          icon="image"
-          label={ti('settings.chat.import_model')}
-          hint={ti('settings.chat.model_import_hint')}
-        >
+            </div>
+          </SettingsV3Section>
+        </>
+      )}
+
+      <SettingsV3Section title={ti('settings.chat.live2d_model')} description={ti('settings.chat.model_import_hint')}>
+        <SettingsV3Row icon="image" label={ti('settings.chat.import_model')} hint={ti('settings.chat.model_import_hint')}>
           <button
             type="button"
             className="settings-v3-action"
@@ -132,26 +144,6 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
             {props.importingPetModel ? ti('settings.chat.importing_model') : ti('settings.chat.import_model')}
           </button>
         </SettingsV3Row>
-      </SettingsV3Section>
-
-      <SettingsV3Section
-        title={ti('settings.chat.relationship_type_label')}
-      >
-        <div className="settings-v3-choice-grid" role="radiogroup" aria-label={ti('settings.chat.relationship_type_label')}>
-          {RELATIONSHIP_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className="settings-v3-choice"
-              data-selected={draft.companionRelationshipType === option.value ? 'true' : undefined}
-              role="radio"
-              aria-checked={draft.companionRelationshipType === option.value}
-              onClick={() => selectRelationshipType(option.value)}
-            >
-              {ti(option.labelKey)}
-            </button>
-          ))}
-        </div>
       </SettingsV3Section>
 
       <SettingsV3Disclosure
@@ -196,16 +188,18 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
         <ChatStudioV3 {...props} />
       </SettingsV3Disclosure>
 
-      <SettingsV3Disclosure title={ti('settings.chat.character_voice')} description={ti('settings.chat.character_voice_hint')}>
-        <SettingsV3Field label={ti('settings.chat.speaking_instructions')} hint={ti('settings.chat.speaking_instructions_placeholder')}>
-          <textarea
-            rows={3}
-            value={draft.speechOutputInstructions}
-            placeholder={ti('settings.chat.speaking_instructions_placeholder')}
-            onChange={(event) => setDraft((prev) => ({ ...prev, speechOutputInstructions: event.target.value }))}
-          />
-        </SettingsV3Field>
-      </SettingsV3Disclosure>
+      {rest ? null : (
+        <SettingsV3Disclosure title={ti('settings.chat.character_voice')} description={ti('settings.chat.character_voice_hint')}>
+          <SettingsV3Field label={ti('settings.chat.speaking_instructions')} hint={ti('settings.chat.speaking_instructions_placeholder')}>
+            <textarea
+              rows={3}
+              value={draft.speechOutputInstructions}
+              placeholder={ti('settings.chat.speaking_instructions_placeholder')}
+              onChange={(event) => setDraft((prev) => ({ ...prev, speechOutputInstructions: event.target.value }))}
+            />
+          </SettingsV3Field>
+        </SettingsV3Disclosure>
+      )}
 
       <SettingsV3Disclosure title={ti('settings.chat.vts_title')} description={ti('settings.chat.vts_hint')}>
         <SettingsV3Row label={ti('settings.chat.vts_enabled')} hint={ti('settings.chat.vts_hint')}>

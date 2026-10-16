@@ -29,7 +29,8 @@ import type {
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
-import { SettingsDrawerActiveSection } from './SettingsDrawerActiveSection.tsx'
+import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
+import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
 import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
 import {
@@ -750,68 +751,80 @@ export function SettingsDrawer({
     void handleDismiss()
   }
 
+  function settingsSectionProps(): SettingsDrawerActiveSectionProps {
+    return {
+      activeSectionId,
+      chatBusy,
+      chatHistory,
+      chatMessageCount,
+      connectionTests,
+      continuousVoiceActive,
+      confirm,
+      currentChatSessionId,
+      dailyMemoryEntries,
+      debugConsoleEvents,
+      draft,
+      isDirty,
+      liveTranscript,
+      loadingLabel: ti('settings.section.loading'),
+      memories,
+      memoryArchive,
+      memoryFocus,
+      memorySearchModeOptions,
+      notificationChannels,
+      notificationChannelsLoading,
+      onAddManualMemory,
+      onAddNotificationChannel,
+      onApplySpeechOutputPreset: applySpeechOutputPreset,
+      onApplyTextProviderPreset: applyTextProviderPreset,
+      onClearDailyMemory,
+      onClearDebugConsole,
+      onOpenSettingsSection: handleOpenSettingsSection,
+      onRemoveDailyEntry,
+      onRemoveMemory,
+      onRemoveNotificationChannel,
+      onStartVoiceConversation: handleStartVoiceConversation,
+      onStopVoiceConversation,
+      onCancelVoiceTurn,
+      onSetMemoryEnabled,
+      onCommitMemoryPaused: (paused) => {
+        patchCommittedField('memoryPaused', paused)
+        onCommitMemoryPaused(paused)
+      },
+      onUpdateDailyEntry,
+      onUpdateMemory,
+      onPatchMemory,
+      onUpdateNotificationChannel,
+      petModel,
+      petModelImport: petModel_,
+      petModelPresets,
+      platformProfile,
+      reminderTasks,
+      selectedMemorySearchMode,
+      saveError,
+      saving,
+      setDraft,
+      speechLevelSource,
+      speechVoices,
+      uiLanguage,
+      voicePipeline,
+      voiceState,
+      voiceActionPending,
+      voiceTrace,
+      windowState,
+    }
+  }
+
   function renderActiveSettingsSection() {
+    return <SettingsDrawerActiveSection {...settingsSectionProps()} />
+  }
+
+  function renderSimpleSettings() {
     return (
-      <SettingsDrawerActiveSection
-        activeSectionId={activeSectionId}
-        chatBusy={chatBusy}
-        chatHistory={chatHistory}
-        chatMessageCount={chatMessageCount}
-        connectionTests={connectionTests}
-        continuousVoiceActive={continuousVoiceActive}
-        confirm={confirm}
-        currentChatSessionId={currentChatSessionId}
-        dailyMemoryEntries={dailyMemoryEntries}
-        debugConsoleEvents={debugConsoleEvents}
-        draft={draft}
-        isDirty={isDirty}
-        liveTranscript={liveTranscript}
-        loadingLabel={ti('settings.section.loading')}
-        memories={memories}
-        memoryArchive={memoryArchive}
-        memoryFocus={memoryFocus}
-        memorySearchModeOptions={memorySearchModeOptions}
-        notificationChannels={notificationChannels}
-        notificationChannelsLoading={notificationChannelsLoading}
-        onAddManualMemory={onAddManualMemory}
-        onAddNotificationChannel={onAddNotificationChannel}
-        onApplySpeechOutputPreset={applySpeechOutputPreset}
-        onApplyTextProviderPreset={applyTextProviderPreset}
-        onClearDailyMemory={onClearDailyMemory}
-        onClearDebugConsole={onClearDebugConsole}
-        onOpenSettingsSection={handleOpenSettingsSection}
-        onRemoveDailyEntry={onRemoveDailyEntry}
-        onRemoveMemory={onRemoveMemory}
-        onRemoveNotificationChannel={onRemoveNotificationChannel}
-        onStartVoiceConversation={handleStartVoiceConversation}
-        onStopVoiceConversation={onStopVoiceConversation}
-        onCancelVoiceTurn={onCancelVoiceTurn}
-        onSetMemoryEnabled={onSetMemoryEnabled}
-        onCommitMemoryPaused={(paused) => {
-          patchCommittedField('memoryPaused', paused)
-          onCommitMemoryPaused(paused)
-        }}
-        onUpdateDailyEntry={onUpdateDailyEntry}
-        onUpdateMemory={onUpdateMemory}
-        onPatchMemory={onPatchMemory}
-        onUpdateNotificationChannel={onUpdateNotificationChannel}
-        petModel={petModel}
-        petModelImport={petModel_}
-        petModelPresets={petModelPresets}
-        platformProfile={platformProfile}
-        reminderTasks={reminderTasks}
-        selectedMemorySearchMode={selectedMemorySearchMode}
-        saveError={saveError}
-        saving={saving}
-        setDraft={setDraft}
-        speechLevelSource={speechLevelSource}
-        speechVoices={speechVoices}
-        uiLanguage={uiLanguage}
-        voicePipeline={voicePipeline}
-        voiceState={voiceState}
-        voiceActionPending={voiceActionPending}
-        voiceTrace={voiceTrace}
-        windowState={windowState}
+      <SettingsSimplePages
+        {...settingsSectionProps()}
+        onOpenOnboarding={handleOpenOnboardingGuide}
+        onSelectLanguage={handleSelectLanguage}
       />
     )
   }
@@ -850,23 +863,19 @@ export function SettingsDrawer({
       <SettingsDrawerV2
         settingsView={settingsView}
         activeSectionId={activeSectionId}
-        activeSectionLabel={activeSectionLabel}
-        activeSectionDescription={activeSectionDescription}
-        voiceSectionDescription={settingsSectionMetaById.voice.description}
-        settingsSectionOptions={settingsSectionOptions}
         settingsBackdropClassName={settingsBackdropClassName}
         settingsDrawerClassName={settingsDrawerClassName}
         settingsDialogRef={settingsDialogRef}
         settingsSectionsRef={settingsSectionsRef}
         activeSectionHeadingRef={activeSectionHeadingRef}
         companionName={draft.companionName}
+        draft={draft}
         dirty={isDirty}
         ti={ti}
-        renderActiveSettingsSection={renderActiveSettingsSection}
+        renderPage={renderSimpleSettings}
         confirmOptions={confirmOptions}
         onReturnToSettingsHome={handleReturnToSettingsHome}
         onOpenSettingsSection={handleOpenSettingsSection}
-        onOpenOnboardingGuide={handleOpenOnboardingGuide}
         onClose={handleDismiss}
         onDialogKeyDown={handleSettingsDialogKeyDown}
         onDiscardDraft={() => {

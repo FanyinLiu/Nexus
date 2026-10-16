@@ -48,7 +48,7 @@ export const zhCNSettingsModel = {
   'settings.model.custom': '(自定义)',
   'settings.model.advanced_settings': '高级模型设置',
   'settings.model.failover_toggle': '启用聊天模型自动切换',
-  'settings.model.failover_hint': '主链路不通时自动切换备用并短暂冷却故障方。',
+  'settings.model.failover_hint': '这个服务连不上时，先换另一个，过一会儿再试回来。',
   'settings.model.extra_keys': '附加接口密钥（一行一个，用于自动轮换）',
   'settings.model.extra_keys_hint': '这些密钥与主密钥共享轮换池，限流或报错时自动切换。',
   'settings.model.extra_keys_error': '这里只能填写控制台生成的原始 Key。请去掉空格、换行、中文备注、模型名或套餐说明。',

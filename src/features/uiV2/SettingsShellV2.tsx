@@ -8,19 +8,22 @@ import {
   getSettingsV2NavigationIntent,
   type SettingsV2NavigationIntent,
 } from './settingsNavigationIntent.ts'
+import { getSettingsTabScrollLeft } from './settingsTabScroll.ts'
 import './settings-v2.css'
 
 export type { SettingsV2NavigationIntent } from './settingsNavigationIntent.ts'
 
-export type SettingsV2GroupId = 'companion' | 'voice' | 'privacy' | 'advanced'
+export type SettingsV2GroupId = 'appearance' | 'voice' | 'memory' | 'connect' | 'about'
 export type SettingsV2Destination = 'home' | SettingsV2GroupId
 
 export type SettingsV2Group = {
   id: SettingsV2GroupId
   label: string
   description: string
+  detail?: string
   icon: SettingsCardIconKey
   summary?: string
+  tone?: 'accent' | 'success' | 'warning'
 }
 
 export type SettingsShellV2Labels = {
@@ -76,9 +79,11 @@ export function SettingsShellV2({
   onSaveDraft,
 }: SettingsShellV2Props) {
   const activeGroup = groups.find((group) => group.id === activeDestination)
+  const pageHint = activeGroup?.detail || activeGroup?.description
   const isHome = activeDestination === 'home'
   const homeCardRefs = useRef<Partial<Record<SettingsV2GroupId, HTMLButtonElement | null>>>({})
   const pendingHomeFocusGroupRef = useRef<SettingsV2GroupId | null>(null)
+  const navRef = useRef<HTMLElement | null>(null)
   const canDiscard = dirty && !saving && Boolean(onDiscardDraft)
   const canSave = dirty && !saving && !saveDisabled && Boolean(onSaveDraft)
 
@@ -89,6 +94,21 @@ export function SettingsShellV2({
     pendingHomeFocusGroupRef.current = null
     homeCardRefs.current[returnGroupId]?.focus()
   }, [isHome])
+
+  useLayoutEffect(() => {
+    const nav = navRef.current
+    const active = nav?.querySelector<HTMLElement>('.settings-v2__nav-item.is-active')
+    if (!nav || !active) return
+    const navRect = nav.getBoundingClientRect()
+    const tabRect = active.getBoundingClientRect()
+    const nextScrollTop = getSettingsTabScrollLeft({
+      navScrollLeft: nav.scrollTop,
+      navClientWidth: nav.clientHeight,
+      tabOffsetLeft: tabRect.top - navRect.top + nav.scrollTop,
+      tabWidth: tabRect.height,
+    })
+    if (nextScrollTop !== nav.scrollTop) nav.scrollTop = nextScrollTop
+  }, [activeDestination])
 
   const handleReturnToHome = (eventDetail: number) => {
     const intent = getSettingsV2NavigationIntent(eventDetail)
@@ -109,7 +129,7 @@ export function SettingsShellV2({
     >
       <aside className="settings-v2__sidebar">
         <div className="settings-v2__sidebar-title">{labels.settings}</div>
-        <nav className="settings-v2__nav" aria-label={labels.navigationLabel}>
+        <nav ref={navRef} className="settings-v2__nav" aria-label={labels.navigationLabel}>
           <button
             type="button"
             className={joinClassNames('settings-v2__nav-item', isHome && 'is-active')}
@@ -160,7 +180,7 @@ export function SettingsShellV2({
             >
               {isHome ? labels.settings : activeGroup?.label}
             </h1>
-            {isHome || !activeGroup?.description ? null : <p>{activeGroup.description}</p>}
+            {isHome || !pageHint ? null : <p>{pageHint}</p>}
           </div>
 
           <div className="settings-v2__header-actions">
@@ -197,7 +217,7 @@ export function SettingsShellV2({
                   data-focus-return-group={group.id}
                   onClick={(event) => onNavigate(group.id, getSettingsV2NavigationIntent(event.detail))}
                 >
-                  <span className="settings-v2__home-icon" aria-hidden="true">
+                  <span className="settings-v2__home-icon" data-tone={group.tone} aria-hidden="true">
                     {renderSettingsCardIcon(group.icon)}
                   </span>
                   <span className="settings-v2__home-copy">

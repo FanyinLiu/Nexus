@@ -6,6 +6,7 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 import { zhTWCore } from './core.ts'
 import { zhTWSettingsShell } from './settings-shell.ts'
+import { zhTWSettingsSimple } from './settings-simple.ts'
 import { zhTWSettingsMemory } from './settings-memory.ts'
 import { zhTWSettingsConsole } from './settings-console.ts'
 import { zhTWSettingsHistory } from './settings-history.ts'
@@ -23,6 +24,7 @@ import { zhTWPanel } from './panel.ts'
 export const zhTWMessages = {
   ...zhTWCore,
   ...zhTWSettingsShell,
+  ...zhTWSettingsSimple,
   ...zhTWSettingsMemory,
   ...zhTWSettingsConsole,
   ...zhTWSettingsHistory,
