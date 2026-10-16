@@ -182,6 +182,10 @@
   color: color-mix(in srgb, var(--chat-sheet-v2-ink) 78%, var(--chat-sheet-v2-amber));
 }
 
+.chat-sheet-v2__bubble {
+  min-width: 0;
+}
+
 .chat-sheet-v2__message {
   min-width: 0;
   color: var(--chat-sheet-v2-ink);
@@ -225,6 +229,13 @@
   line-height: 1;
   background: color-mix(in srgb, var(--chat-sheet-v2-surface) 70%, transparent);
   border-radius: 50%;
+}
+
+.chat-sheet-v2__memory-trace {
+  margin: 6px 0 0;
+  color: var(--chat-sheet-v2-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .chat-sheet-v2__composer-zone {

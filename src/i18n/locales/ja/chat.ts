@@ -19,7 +19,7 @@ export const jaChat = {
   'message_bubble.memory_trace.daily': '日記',
   'message_bubble.memory_trace.semantic': '意味ヒット',
   'message_bubble.memory_trace.missing': '見つかりません',
-  'message_bubble.memory_trace.disabled': '一時停止中',
+  'message_bubble.memory_trace.disabled': 'この記憶は停止中',
   'message_bubble.memory_trace.manage': '記憶を管理',
   'message_bubble.memory_trace.search_meta': '呼び出し方式: {mode} · {vector}',
   'message_bubble.memory_trace.vector_on': 'ベクトル使用可',

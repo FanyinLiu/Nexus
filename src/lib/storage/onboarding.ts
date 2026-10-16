@@ -1,3 +1,9 @@
+import {
+  normalizeGuideDeferral,
+  nextGuideDeferral,
+  withGuideReshown,
+  type GuideDeferral,
+} from '../../features/onboarding/guideDeferral.ts'
 import { isObject } from '../guards.ts'
 import {
   CHAT_STORAGE_KEY,
@@ -43,6 +49,42 @@ export function normalizeOnboardingState(raw: unknown): OnboardingState | null {
   return normalized
 }
 
+function readOnboardingRaw(): unknown {
+  return readJson<unknown>(ONBOARDING_STORAGE_KEY, null)
+}
+
+function composeOnboardingRecord(
+  completion: OnboardingState | null,
+  deferral: GuideDeferral | null,
+): Record<string, unknown> | null {
+  if (!completion && !deferral) return null
+  return {
+    ...(completion ? {
+      completedAt: completion.completedAt,
+      ...(completion.firstConversationAt ? {
+        firstConversationAt: completion.firstConversationAt,
+        firstConversationElapsedMs: completion.firstConversationElapsedMs,
+      } : {}),
+    } : {}),
+    ...(deferral ? {
+      guideDismissedAt: deferral.dismissedAt,
+      guideDismissCount: deferral.dismissCount,
+      ...(deferral.reshownAt ? { guideReshownAt: deferral.reshownAt } : {}),
+    } : {}),
+  }
+}
+
+function writeOnboardingRecord(completion: OnboardingState | null, deferral: GuideDeferral | null) {
+  const payload = composeOnboardingRecord(completion, deferral)
+  if (!payload) {
+    window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
+    mirrorOnboardingState(null)
+    return
+  }
+  writeJson(ONBOARDING_STORAGE_KEY, payload)
+  if (completion) mirrorOnboardingState(completion)
+}
+
 function mirrorOnboardingState(state: OnboardingState | null) {
   if (typeof window === 'undefined') return
   const bridge = window.desktopPet?.localDataMirrorOnboarding
@@ -63,21 +105,55 @@ function mirrorOnboardingState(state: OnboardingState | null) {
 export function loadOnboardingState() {
   if (typeof window === 'undefined' || !window.localStorage) return null
 
-  const stored = readJson<unknown>(ONBOARDING_STORAGE_KEY, null)
+  const stored = readOnboardingRaw()
   const normalized = normalizeOnboardingState(stored)
-  if (normalized) {
-    if (JSON.stringify(normalized) !== JSON.stringify(stored)) {
-      writeJson(ONBOARDING_STORAGE_KEY, normalized)
+  const deferral = normalizeGuideDeferral(stored)
+  if (!normalized && !deferral) {
+    if (stored !== null) {
+      window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
+      mirrorOnboardingState(null)
     }
-    mirrorOnboardingState(normalized)
-    return normalized
-  }
-  if (stored !== null) {
-    window.localStorage.removeItem(ONBOARDING_STORAGE_KEY)
-    mirrorOnboardingState(null)
+    return null
   }
 
-  return null
+  const payload = composeOnboardingRecord(normalized, deferral)
+  if (JSON.stringify(payload) !== JSON.stringify(stored)) {
+    writeJson(ONBOARDING_STORAGE_KEY, payload)
+  }
+  if (normalized) mirrorOnboardingState(normalized)
+  return normalized
+}
+
+/** Dismissal stored beside completion. A dismissal alone does not finish setup. */
+export function loadGuideDeferral(): GuideDeferral | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null
+  return normalizeGuideDeferral(readOnboardingRaw())
+}
+
+/**
+ * Record "Maybe later" without finishing setup.
+ * The first dismissal still allows one later launch to show the guide.
+ */
+export function recordGuideDismiss(dismissedAt = new Date()): GuideDeferral | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null
+  if (loadOnboardingCompleted()) return loadGuideDeferral()
+
+  const stored = readOnboardingRaw()
+  const next = nextGuideDeferral(normalizeGuideDeferral(stored), dismissedAt.toISOString())
+  writeOnboardingRecord(normalizeOnboardingState(stored), next)
+  return next
+}
+
+/** Remember that the one later showing has already happened. */
+export function markGuideReshown(reshownAt = new Date()): GuideDeferral | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null
+  const stored = readOnboardingRaw()
+  const current = normalizeGuideDeferral(stored)
+  if (!current) return null
+  const next = withGuideReshown(current, reshownAt.toISOString())
+  if (next === current) return current
+  writeOnboardingRecord(normalizeOnboardingState(stored), next)
+  return next
 }
 
 export function loadOnboardingCompleted() {

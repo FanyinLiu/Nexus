@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
+import { describeChatMemoryTrace } from '../src/features/memory/memoryTraceLabel.ts'
 import { buildChatMemoryTrace } from '../src/features/memory/recallTrace.ts'
 import type { MemoryRecallContext } from '../src/types/memory.ts'
 
@@ -64,4 +65,8 @@ test('buildChatMemoryTrace makes paused turns explicit and empty', () => {
     dailyEntryIds: [],
     semanticIds: [],
   })
+  assert.deepEqual(describeChatMemoryTrace({ role: 'assistant', memoryTrace: trace }), {
+    key: 'message_bubble.memory_trace.paused',
+  })
+  assert.equal(describeChatMemoryTrace({ role: 'user', memoryTrace: trace }), null)
 })

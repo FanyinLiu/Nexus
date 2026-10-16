@@ -19,7 +19,7 @@ export const zhTWChat = {
   'message_bubble.memory_trace.daily': '日記記憶',
   'message_bubble.memory_trace.semantic': '語義命中',
   'message_bubble.memory_trace.missing': '已不存在',
-  'message_bubble.memory_trace.disabled': '已暫停',
+  'message_bubble.memory_trace.disabled': '這條已暫停',
   'message_bubble.memory_trace.manage': '管理記憶',
   'message_bubble.memory_trace.search_meta': '召回方式：{mode} · {vector}',
   'message_bubble.memory_trace.vector_on': '向量可用',

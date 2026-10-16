@@ -19,7 +19,7 @@ export const koChat = {
   'message_bubble.memory_trace.daily': '일기 기억',
   'message_bubble.memory_trace.semantic': '의미 검색',
   'message_bubble.memory_trace.missing': '없음',
-  'message_bubble.memory_trace.disabled': '일시 중지',
+  'message_bubble.memory_trace.disabled': '이 기억 정지됨',
   'message_bubble.memory_trace.manage': '기억 관리',
   'message_bubble.memory_trace.search_meta': '검색 방식: {mode} · {vector}',
   'message_bubble.memory_trace.vector_on': '벡터 사용 가능',

@@ -136,7 +136,7 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   assert.ok(observedStoreUrl, 'The active renderer must request companionSummaryStore before the lifecycle proof.')
   const storeUrl = observedStoreUrl
 
-  const memorySwitch = page.getByRole('checkbox', { name: '记忆召回和学习', exact: true })
+  const memorySwitch = page.getByRole('checkbox', { name: '全部记忆召回和学习', exact: true })
   const memoryStatusRow = memorySwitch.locator(
     'xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " settings-v3-row ")][1]',
   )
@@ -145,10 +145,28 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   assert.match(await memoryStatusRow.textContent() ?? '', /运行中/)
   await memorySwitch.press('Space')
   assert.equal(await memorySwitch.isChecked(), false, 'memoryPaused=true should expose the disabled checkbox value')
-  assert.match(await memoryStatusRow.textContent() ?? '', /已暂停/)
+  assert.match(await memoryStatusRow.textContent() ?? '', /全部记忆已暂停/)
+  await page.waitForFunction(() => {
+    const raw = window.localStorage.getItem('nexus:settings')
+    if (!raw) return false
+    try {
+      return JSON.parse(raw).memoryPaused === true
+    } catch {
+      return false
+    }
+  })
   await memorySwitch.press('Space')
   assert.equal(await memorySwitch.isChecked(), true)
   assert.match(await memoryStatusRow.textContent() ?? '', /运行中/)
+  await page.waitForFunction(() => {
+    const raw = window.localStorage.getItem('nexus:settings')
+    if (!raw) return false
+    try {
+      return JSON.parse(raw).memoryPaused === false
+    } catch {
+      return false
+    }
+  })
 
   await page.locator('.settings-v2__nav-item', { hasText: '语音' }).click()
   await page.locator('.settings-v3-voice:not(.is-hidden)').waitFor({ state: 'visible' })

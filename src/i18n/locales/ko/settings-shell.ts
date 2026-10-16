@@ -65,7 +65,7 @@ export const koSettingsShell = {
   'settings.preview.started': '현재 음성과 파라미터로 미리 듣기를 시작했어요.',
   'settings.language_menu.aria_label': 'UI 언어 변경',
   'settings.section_eyebrow.integrations': '연결',
-  'settings.section_eyebrow.lorebooks': '배경',
+  'settings.section_eyebrow.lorebooks': '배경과 자주 쓰는 표현',
   'settings.section_desc.lorebooks': '트리거 단어로 배경과 자주 쓰는 표현을 기억하고, 관련 주제가 나올 때만 반영합니다.',
   'settings.preview.autonomy.on': '켜짐',
   'settings.preview.autonomy.off': '꺼짐',
@@ -79,7 +79,7 @@ export const koSettingsShell = {
   'settings.section.letters': '편지',
   'settings.section_desc.integrations': 'MCP 도구, Telegram, Discord 같은 외부 연결을 관리합니다.',
   'settings.section_desc.letters': '매주 일요일 저녁에 도착하는 짧은 편지 — 이번 주 대화를 보관해두는 작은 기념품.',
-  'settings.section.autonomy': '동행',
+  'settings.section.autonomy': '능동적 동행',
   'settings.section_desc.autonomy': '유휴 인사, 자리 비움 알림, 백그라운드 능동 동작.',
-  'settings.section_eyebrow.autonomy': '능동',
+  'settings.section_eyebrow.autonomy': '능동적 동행',
 } as const satisfies Partial<TranslationDictionary>

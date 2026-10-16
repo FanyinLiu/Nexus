@@ -19,7 +19,7 @@ export const enChat = {
   'message_bubble.memory_trace.daily': 'Daily',
   'message_bubble.memory_trace.semantic': 'Semantic',
   'message_bubble.memory_trace.missing': 'Missing',
-  'message_bubble.memory_trace.disabled': 'Paused',
+  'message_bubble.memory_trace.disabled': 'This memory paused',
   'message_bubble.memory_trace.manage': 'Manage memories',
   'message_bubble.memory_trace.search_meta': 'Recall mode: {mode} · {vector}',
   'message_bubble.memory_trace.vector_on': 'vector available',

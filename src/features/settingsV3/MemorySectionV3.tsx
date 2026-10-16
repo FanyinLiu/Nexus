@@ -78,6 +78,7 @@ export type MemorySectionV3Props = {
     patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
   ) => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
+  onCommitMemoryPaused: (paused: boolean) => void
   onRemoveMemory: (id: string) => void
   onClearDailyMemory: () => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
@@ -124,6 +125,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
   onUpdateMemory,
   onPatchMemory,
   onSetMemoryEnabled,
+  onCommitMemoryPaused,
   onRemoveMemory,
   onClearDailyMemory,
   onUpdateDailyEntry,
@@ -282,7 +284,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
           <SettingsV3Switch
             checked={!draft.memoryPaused}
             label={ti('settings.memory.transparency.enabled_label')}
-            onChange={(enabled) => setDraft((previous) => ({ ...previous, memoryPaused: !enabled }))}
+            onChange={(enabled) => onCommitMemoryPaused(!enabled)}
           />
         </SettingsV3Row>
         <SettingsV3Row

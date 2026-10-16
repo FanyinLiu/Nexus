@@ -65,7 +65,7 @@ export const jaSettingsShell = {
   'settings.preview.started': '現在の音色とパラメータでプレビューを開始しました。',
   'settings.language_menu.aria_label': '表示言語を切り替える',
   'settings.section_eyebrow.integrations': '接続',
-  'settings.section_eyebrow.lorebooks': '背景',
+  'settings.section_eyebrow.lorebooks': '背景とよく使う表現',
   'settings.section_desc.lorebooks': 'トリガー語で背景やよく使う表現を覚え、関連する話題のときだけ反映します。',
   'settings.preview.autonomy.on': 'オン',
   'settings.preview.autonomy.off': 'オフ',
@@ -79,7 +79,7 @@ export const jaSettingsShell = {
   'settings.section.letters': '手紙',
   'settings.section_desc.integrations': 'MCP ツール、Telegram、Discord などの外部接続を管理します。',
   'settings.section_desc.letters': '毎週日曜の夕方に届く短い手紙 — 今週の会話を読み返せる小さな贈り物として。',
-  'settings.section.autonomy': '寄り添い',
+  'settings.section.autonomy': '能動的な寄り添い',
   'settings.section_desc.autonomy': 'アイドル時の声かけ、離席通知、バックグラウンドの能動動作。',
-  'settings.section_eyebrow.autonomy': '能動的',
+  'settings.section_eyebrow.autonomy': '能動的な寄り添い',
 } as const satisfies Partial<TranslationDictionary>

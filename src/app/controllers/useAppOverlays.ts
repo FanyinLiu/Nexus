@@ -13,10 +13,14 @@ import {
   type ChatMemoryTraceFocusTarget,
 } from '../../features/memory/traceDetails.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide.tsx'
+import { resolveGuideLaunch } from '../../features/onboarding/guideDeferral.ts'
 import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
 import type { PetModelDefinition } from '../../features/pet'
 import {
+  loadGuideDeferral,
   loadOnboardingCompleted,
+  markGuideReshown,
+  recordGuideDismiss,
   normalizeSpeechOutputApiBaseUrl,
   resolveWebSearchApiBaseUrl,
   saveOnboardingCompleted,
@@ -38,6 +42,31 @@ import type {
 } from '../../types'
 
 type MemoryController = ReturnType<typeof import('../../hooks/useMemory').useMemory>
+
+// Strict-mode remounts this hook after the reshow flag is written. The latch
+// keeps that second mount showing the guide the user is already looking at.
+let guideReshowLatched = false
+
+function readInitialFirstUseGuide(view: 'pet' | 'panel') {
+  const canOpenPanel = typeof window.desktopPet?.openPanel === 'function'
+  if (guideReshowLatched) {
+    return resolveFirstUseGuideHost({ pending: true, view, canOpenPanel })
+  }
+  const decision = resolveGuideLaunch({
+    completed: loadOnboardingCompleted(),
+    deferral: loadGuideDeferral(),
+  })
+  const host = resolveFirstUseGuideHost({
+    pending: decision.show,
+    view,
+    canOpenPanel,
+  })
+  if (host === 'local' && decision.consumeReshow) {
+    guideReshowLatched = true
+    markGuideReshown()
+  }
+  return host
+}
 type ChatController = ReturnType<typeof import('../../hooks/useChat').useChat>
 type PetController = ReturnType<typeof import('../../hooks/usePetBehavior').usePetBehavior>
 type VoiceController = ReturnType<typeof import('../../hooks/useVoice').useVoice>
@@ -197,11 +226,7 @@ export function useAppOverlays({
   const { t } = useTranslation()
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
-  const [firstUseGuideHost] = useState(() => resolveFirstUseGuideHost({
-    pending: onboardingPendingInitial,
-    view,
-    canOpenPanel: typeof window.desktopPet?.openPanel === 'function',
-  }))
+  const [firstUseGuideHost] = useState(() => readInitialFirstUseGuide(view))
   const [onboardingOpen, setOnboardingOpen] = useState(firstUseGuideHost === 'local')
   const [openFirstUsePanel] = useState(() => createFirstUsePanelHandoff({
     openPanel: () => window.desktopPet!.openPanel('chat'),
@@ -377,6 +402,11 @@ export function useAppOverlays({
     onUpdateMemory: memory.updateMemory,
     onPatchMemory: memory.patchMemory,
     onSetMemoryEnabled: memory.setMemoryEnabled,
+    onCommitMemoryPaused: (paused) => {
+      void commitSettingsUpdate((current) => (
+        current.memoryPaused === paused ? current : { ...current, memoryPaused: paused }
+      ), setSettings)
+    },
     onRemoveMemory: memory.removeMemory,
     onClearDailyMemory: memory.clearTodayDailyMemory,
     onUpdateDailyEntry: memory.updateDailyEntry,
@@ -548,7 +578,10 @@ export function useAppOverlays({
     settings,
     platformProfile,
     petModelPresets,
-    onDismiss: () => setOnboardingOpen(false),
+    onDismiss: () => {
+      if (!loadOnboardingCompleted()) recordGuideDismiss()
+      setOnboardingOpen(false)
+    },
     onSave: async (nextSettings) => {
       await applySettingsSave(nextSettings, {
         baselineSettings: settings,

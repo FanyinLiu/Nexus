@@ -65,7 +65,7 @@ export const zhTWSettingsShell = {
   'settings.preview.started': '已經開始試聽目前音色和參數。',
   'settings.language_menu.aria_label': '切換介面語言',
   'settings.section_eyebrow.integrations': '連接',
-  'settings.section_eyebrow.lorebooks': '背景',
+  'settings.section_eyebrow.lorebooks': '背景與常用表達',
   'settings.section_desc.lorebooks': '按觸發詞記住背景和常用表達，聊到相關話題時再帶入。',
   'settings.preview.autonomy.on': '已開啟',
   'settings.preview.autonomy.off': '已關閉',

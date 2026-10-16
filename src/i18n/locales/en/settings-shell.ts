@@ -65,7 +65,7 @@ export const enSettingsShell = {
   'settings.preview.started': 'Preview has started with the current voice and parameters.',
   'settings.language_menu.aria_label': 'Change UI language',
   'settings.section_eyebrow.integrations': 'Connections',
-  'settings.section_eyebrow.lorebooks': 'Background',
+  'settings.section_eyebrow.lorebooks': 'Background & Phrases',
   'settings.section_desc.lorebooks': 'Remember background and recurring phrases by trigger word, then include them only when the topic comes up.',
   'settings.preview.autonomy.on': 'On',
   'settings.preview.autonomy.off': 'Off',
@@ -79,7 +79,7 @@ export const enSettingsShell = {
   'settings.section.letters': 'Letters',
   'settings.section_desc.integrations': 'Manage external connections such as MCP tools, Telegram, and Discord.',
   'settings.section_desc.letters': 'Short Sunday letters — your week’s conversations kept as something you can read back.',
-  'settings.section.autonomy': 'Presence',
+  'settings.section.autonomy': 'Proactive',
   'settings.section_desc.autonomy': 'Idle greetings, away reminders, and background proactive behavior.',
   'settings.section_eyebrow.autonomy': 'Proactive',
 } as const satisfies Partial<TranslationDictionary>

@@ -29,7 +29,7 @@ export function createInitialTickState(): AutonomyTickState {
  *   awake  → drowsy   when idle for > sleepAfterIdleMinutes / 2
  *   drowsy → sleeping when idle for > sleepAfterIdleMinutes
  *   sleeping → dreaming (triggered externally by dream module)
- *   any    → awake    when user interacts (wakeOnInput)
+ *   any    → awake    when user interacts, if wake-on-input is on
  */
 export function computeNextPhase(
   state: AutonomyTickState,
@@ -38,6 +38,7 @@ export function computeNextPhase(
     | 'autonomySleepAfterIdleMinutes'
     | 'autonomyQuietHoursStart'
     | 'autonomyQuietHoursEnd'
+    | 'autonomyWakeOnInput'
   >,
 ): AutonomyPhase {
   const currentHour = new Date().getHours()
@@ -50,8 +51,8 @@ export function computeNextPhase(
     return state.phase === 'dreaming' ? 'dreaming' : 'sleeping'
   }
 
-  // User came back → wake up
-  if (focusState === 'active' && state.phase !== 'awake') {
+  // User came back → wake up, unless they turned that off
+  if (settings.autonomyWakeOnInput !== false && focusState === 'active' && state.phase !== 'awake') {
     return 'awake'
   }
 

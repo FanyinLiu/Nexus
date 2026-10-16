@@ -17,6 +17,7 @@ import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { PetPerformanceCue } from '../pet/types.ts'
 import { SpritePetCanvas } from '../pet/components/SpritePetCanvas.tsx'
+import { describeChatMemoryTrace } from '../memory/memoryTraceLabel.ts'
 import { ChatSheetV2, type ChatSheetV2Message } from './ChatSheetV2.tsx'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
@@ -84,11 +85,21 @@ export type CompanionPanelV2Props = {
 
 function toChatSheetMessages(
   messages: ChatMessage[],
+  uiLanguage: AppSettings['uiLanguage'],
 ): ChatSheetV2Message[] {
   return messages.flatMap((message) => {
     if (message.role !== 'user' && message.role !== 'assistant') return []
     if (typeof message.content !== 'string' || !message.content.trim()) return []
-    return [{ id: message.id, role: message.role, content: message.content }]
+    const trace = describeChatMemoryTrace(message)
+    const memoryTraceLabel = trace
+      ? pickTranslatedUiText(uiLanguage, trace.key, trace.params)
+      : undefined
+    return [{
+      id: message.id,
+      role: message.role,
+      content: message.content,
+      ...(memoryTraceLabel ? { memoryTraceLabel } : {}),
+    }]
   })
 }
 
@@ -153,7 +164,10 @@ export function CompanionPanelV2({
     () => buildMotionSafeModelDefinition(petModel),
     [petModel],
   )
-  const messages = useMemo(() => toChatSheetMessages(chat.messages), [chat.messages])
+  const messages = useMemo(
+    () => toChatSheetMessages(chat.messages, settings.uiLanguage),
+    [chat.messages, settings.uiLanguage],
+  )
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
   const resolvedCaption = resolveCompanionSurfaceCaption({
     phase,

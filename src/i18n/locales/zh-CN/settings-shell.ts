@@ -63,7 +63,7 @@ export const zhCNSettingsShell = {
   'settings.preview.started': '已经开始试听当前音色和参数。',
   'settings.language_menu.aria_label': '切换界面语言',
   'settings.section_eyebrow.integrations': '连接',
-  'settings.section_eyebrow.lorebooks': '背景',
+  'settings.section_eyebrow.lorebooks': '背景与常用表达',
   'settings.section_desc.lorebooks': '按触发词记住背景和常用表达，聊到相关话题时再带入。',
   'settings.preview.autonomy.on': '已开启',
   'settings.preview.autonomy.off': '已关闭',

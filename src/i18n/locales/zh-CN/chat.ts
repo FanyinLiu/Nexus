@@ -17,7 +17,7 @@ export const zhCNChat = {
   'message_bubble.memory_trace.daily': '日记记忆',
   'message_bubble.memory_trace.semantic': '语义命中',
   'message_bubble.memory_trace.missing': '已不存在',
-  'message_bubble.memory_trace.disabled': '已暂停',
+  'message_bubble.memory_trace.disabled': '这条已暂停',
   'message_bubble.memory_trace.manage': '管理记忆',
   'message_bubble.memory_trace.search_meta': '召回方式：{mode} · {vector}',
   'message_bubble.memory_trace.vector_on': '向量可用',
