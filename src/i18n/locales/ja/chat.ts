@@ -12,7 +12,7 @@ export const jaChat = {
   'message_bubble.run_status.tool_result_preview': '結果あり',
   'message_bubble.run_status.interrupted': '一時停止',
   'message_bubble.run_status.error_recoverable': '再試行できます',
-  'message_bubble.memory_trace.used': 'この返信で記憶を参照 · 長期 {longTerm} · 日記 {daily} · 意味 {semantic}',
+  'message_bubble.memory_trace.used': '記憶を {count} 件使った',
   'message_bubble.memory_trace.none': '記憶はオンですが、この返信では呼び出されませんでした。',
   'message_bubble.memory_trace.paused': 'この返信は記憶を使っていません',
   'message_bubble.memory_trace.long_term': '長期記憶',

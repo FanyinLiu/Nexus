@@ -66,7 +66,9 @@ const WARM_METRICS: CompanionMetrics = {
   typeBody: '15px',
   typeMeta: '13px',
   fontWeight: '560',
-  fontFamily: '"Iowan Old Style", Palatino, "Songti SC", "Noto Serif CJK SC", "Noto Sans CJK SC", serif',
+  // Serif CJK faces include Latin, so a line stays one style. A Latin-only
+  // serif before a sans CJK face would mix the two on the same line.
+  fontFamily: '"Songti SC", "Source Han Serif SC", "Noto Serif CJK SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", "Noto Sans", "WenQuanYi Micro Hei", sans-serif',
   motion: '200ms',
 }
 

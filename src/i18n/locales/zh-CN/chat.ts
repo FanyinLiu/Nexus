@@ -10,7 +10,7 @@ export const zhCNChat = {
   'message_bubble.run_status.tool_result_preview': '已有结果',
   'message_bubble.run_status.interrupted': '已暂停',
   'message_bubble.run_status.error_recoverable': '可重试',
-  'message_bubble.memory_trace.used': '这次参考了记忆 · 长期 {longTerm} · 日记 {daily} · 语义 {semantic}',
+  'message_bubble.memory_trace.used': '用到了 {count} 条记忆',
   'message_bubble.memory_trace.none': '记忆开着，但这次没有召回到内容。',
   'message_bubble.memory_trace.paused': '本条未使用记忆',
   'message_bubble.memory_trace.long_term': '长期记忆',

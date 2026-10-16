@@ -11,6 +11,7 @@
   --memory-portrait-on: var(--nx-poster-ink);
   display: grid;
   gap: var(--nx-space-stack, 12px);
+  font-family: var(--nx-font-family, "Noto Sans", "WenQuanYi Micro Hei", sans-serif);
 }
 
 .memory-portrait__privacy {
@@ -75,6 +76,10 @@
   margin-top: auto;
   font-size: 12px;
   opacity: 0.92;
+}
+
+.memory-portrait__meta > :last-child {
+  margin-inline-start: auto;
 }
 
 .memory-portrait__notes {
