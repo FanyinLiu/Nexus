@@ -45,6 +45,14 @@ retired by the model or the daily pass. An ordinary open loop is protected
 from cap eviction, and may still receive a due-date repair or a detail the
 user added later.
 
+## Global pause
+
+`memoryPaused` (暂停所有记忆) stops the hot path and the daily pass. Chat
+does not capture a new loop or update an existing one, and the daily pass
+does not read the diary, merge rows, or retire anything. A pause that lands
+after the scheduler has already chosen to run still returns the current
+list with no ops.
+
 ## Open loops
 
 A commitment the user stated becomes one open loop, with the due date taken
