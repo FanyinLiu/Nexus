@@ -24,7 +24,7 @@ export const zhTWSettingsSimple = {
   'settings.simple.initiative_often': '常在',
   'settings.simple.initiative_custom': '按你之前的設定',
   'settings.simple.initiative_sometimes_hint': '空下來時說一句。深夜到早上不出聲。',
-  'settings.simple.initiative_often_hint': '她會更常出現，背景也會定時看一看。',
+  'settings.simple.initiative_often_hint': '她會更常出現，離開時說一聲，每週還有一封信。',
   'settings.simple.quiet_hours': '這幾小時別出聲',
   'settings.simple.quiet_split': '兩套時間不一樣，在進階裡分開改。',
   'settings.simple.away': '離開一會兒說一聲',

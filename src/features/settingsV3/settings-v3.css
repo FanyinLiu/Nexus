@@ -156,14 +156,15 @@
 .settings-v3-disclosure[open] summary svg { transform: rotate(180deg); }
 .settings-v3-disclosure__body { display: grid; gap: 12px; padding: 0 14px 14px; border-top: 1px solid var(--sv3-line); }
 
-.settings-v3-field { display: grid; gap: 6px; min-width: 0; padding-top: 12px; color: var(--sv3-ink); font-weight: 620; }
+.settings-v3-field { display: grid; gap: 6px; min-width: 0; padding: 10px 14px; color: var(--sv3-ink); font-weight: 620; }
+.settings-v3-section__body > .companion-theme-picker { padding: 0 14px 14px; }
 /* The hour stays on the same row as its label so scrolling cannot leave a bare number. */
 .settings-v3-hour-fields { display: grid; gap: 0; padding: 0 14px 12px; }
 .settings-v3-hour-fields .settings-v3-field {
   grid-template-columns: minmax(0, 1fr) 5.5rem;
   align-items: center;
   gap: 12px;
-  padding-top: 10px;
+  padding: 10px 0 0;
 }
 .settings-v3-field :is(input, select, textarea) { width: 100%; min-height: 44px; padding: 9px 11px; color: var(--sv3-ink); background: var(--sv3-field, var(--sv3-surface)); border: 1px solid var(--sv3-line); border-radius: 10px; font: inherit; }
 .settings-v3-field textarea { min-height: 108px; resize: vertical; }
@@ -183,6 +184,8 @@
 @media (max-width: 719px) {
   .settings-v3-page { gap: 20px; padding: 2px 0 24px; }
   .settings-v3-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
+  .settings-v3-field { padding: 10px 12px; }
+  .settings-v3-section__body > .companion-theme-picker { padding: 0 12px 12px; }
   .settings-v3-row__meta { grid-column: 2 / -1; }
   .settings-v3-row__control { grid-column: 3; grid-row: 1 / span 2; }
   .settings-v3-section__header p { font-size: 12px; line-height: 1.5; }

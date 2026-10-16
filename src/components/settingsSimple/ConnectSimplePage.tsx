@@ -73,10 +73,7 @@ export function ConnectSimplePage({
             />
           )}
         </SettingsV3Field>
-        <SettingsV3Field
-          label={ti('settings.simple.connect_key')}
-          hint={preset.requiresApiKey ? undefined : ti('settings.simple.connect_key_local')}
-        >
+        <SettingsV3Field label={ti('settings.simple.connect_key')}>
           <input
             type="password"
             aria-label={ti('settings.simple.connect_key')}
@@ -121,7 +118,7 @@ export function ConnectSimplePage({
           </SimpleRow>
         )}
         {lookup ? (
-          <SettingsV3Field label={ti('settings.simple.connect_city')} hint={ti('settings.simple.connect_city_hint')}>
+          <SettingsV3Field label={ti('settings.simple.connect_city')}>
             <input
               value={draft.toolWeatherDefaultLocation}
               placeholder={ti('settings.simple.connect_city_hint')}

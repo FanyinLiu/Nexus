@@ -72,7 +72,7 @@ test('schema 15 with a custom pace stays custom and keeps the interval', () => {
   assert.equal(next.autonomyEnabled, false)
 })
 
-test('schema 20 keeps an already mapped theme and records often without changing switches', () => {
+test('schema 20 with the autonomy tick on stays custom and does not clear that tick', () => {
   const stored = {
     settingsSchemaVersion: 20,
     themeId: 'system',
@@ -88,15 +88,37 @@ test('schema 20 keeps an already mapped theme and records often without changing
   const before = Object.fromEntries(behaviorKeys.map((key) => [key, stored[key as keyof typeof stored]]))
   const next = migrateSettings(stored, 20)
   assert.equal(next.settingsSchemaVersion, 21)
-  assert.equal(next.companionInitiative, 'often')
+  assert.equal(next.companionInitiative, 'custom')
   assert.equal(next.themeId, 'system')
   assert.equal(next.themeColorScheme, 'dark')
+  assert.equal(next.autonomyEnabled, true)
   assert.equal(next.proactiveBracketEnabled, true)
   assert.equal(next.proactiveAgendaEnabled, false)
   for (const key of behaviorKeys) {
     if (stored[key as keyof typeof stored] === undefined) continue
     assert.equal(next[key], before[key], key)
   }
+})
+
+test('schema 20 without the autonomy tick records often and leaves the tick off', () => {
+  const stored = {
+    settingsSchemaVersion: 20,
+    themeId: 'warm',
+    themeColorScheme: 'light',
+    autonomyEnabled: false,
+    proactivePresenceEnabled: true,
+    proactivePresenceIntervalMinutes: 15,
+    proactiveAwayNotificationsEnabled: true,
+    proactiveBracketEnabled: false,
+    proactiveLetterEnabled: true,
+    proactiveFrequency: 'normal',
+    proactiveAgendaEnabled: false,
+  }
+  const next = migrateSettings(stored, 20)
+  assert.equal(next.companionInitiative, 'often')
+  assert.equal(next.autonomyEnabled, false)
+  assert.equal(next.proactiveFrequency, 'normal')
+  assert.equal(next.proactiveAgendaEnabled, false)
 })
 
 test('schema 21 is left in place when migrated again', () => {

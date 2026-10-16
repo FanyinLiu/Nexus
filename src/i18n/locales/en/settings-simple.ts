@@ -24,7 +24,7 @@ export const enSettingsSimple = {
   'settings.simple.initiative_often': 'Often',
   'settings.simple.initiative_custom': 'As you set it before',
   'settings.simple.initiative_sometimes_hint': 'A line when you are free. Quiet from late night until morning.',
-  'settings.simple.initiative_often_hint': 'She shows up more, and checks in on a timer.',
+  'settings.simple.initiative_often_hint': 'She shows up more, says something when you have been away, and still sends the weekly letter.',
   'settings.simple.quiet_hours': 'Stay quiet these hours',
   'settings.simple.quiet_split': 'The two quiet times differ. Change them separately in Advanced.',
   'settings.simple.away': 'Say something if you have been away',

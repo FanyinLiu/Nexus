@@ -24,7 +24,7 @@ export const jaSettingsSimple = {
   'settings.simple.initiative_often': 'よく来る',
   'settings.simple.initiative_custom': '前の設定のまま',
   'settings.simple.initiative_sometimes_hint': '手が空いたときに一言。夜遅くから朝までは黙っています。',
-  'settings.simple.initiative_often_hint': 'もっと顔を出します。裏でも時々様子を見ます。',
+  'settings.simple.initiative_often_hint': 'もっと顔を出します。離席すると一声かけ、週に一通の手紙も届きます。',
   'settings.simple.quiet_hours': 'この時間は黙る',
   'settings.simple.quiet_split': '二つの静かな時間が違います。詳細で別々に変えてください。',
   'settings.simple.away': '席を外したら一声',

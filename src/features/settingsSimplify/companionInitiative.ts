@@ -1,12 +1,16 @@
 /**
  * Maps the simple “how often she comes to you” choice onto the switches
- * that already drive presence, letters, and the autonomy tick.
+ * that already drive presence, letters, and the agenda cap.
  *
  * Reading a draft never writes. A pace is applied only when the person
  * picks one. Anything that does not match a pace stays custom.
+ *
+ * Often does not turn on the autonomy tick. That tick stops for the day
+ * after about 50 minutes until the 0.4.8 budget fix lands.
  */
 
 import type { CompanionInitiative } from '../../types/app.ts'
+import type { ProactiveFrequencyPreset } from '../../types/proactive.ts'
 
 export type InitiativeFlags = {
   autonomyEnabled: boolean
@@ -30,6 +34,10 @@ function minutes(raw: Record<string, unknown>, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
+function agendaCap(raw: Record<string, unknown>): ProactiveFrequencyPreset {
+  return raw.proactiveFrequency === 'low' ? 'low' : 'normal'
+}
+
 /**
  * Infer a pace from stored switches. Missing fields use the factory
  * defaults so an older file is not treated as a custom mix.
@@ -49,7 +57,9 @@ export function inferCompanionInitiative(raw: object): CompanionInitiative {
     return 'sometimes'
   }
 
-  if (autonomyEnabled && presence && interval === OFTEN_INTERVAL_MINUTES && away && letter) {
+  // TODO(0.4.8): often can include autonomyEnabled again once the
+  // autonomy budget no longer ends the day after about 50 minutes.
+  if (!autonomyEnabled && presence && interval === OFTEN_INTERVAL_MINUTES && away && letter && agendaCap(source) === 'normal') {
     return 'often'
   }
 
@@ -57,13 +67,13 @@ export function inferCompanionInitiative(raw: object): CompanionInitiative {
 }
 
 /**
- * Switches written when a person picks a pace. Unfinished-items and
- * morning/evening greetings are left alone except on quiet, which turns
- * greetings off. Sometimes deliberately leaves the autonomy tick off.
+ * Switches written when a person picks a pace. Unfinished-items stay as
+ * they are; often only raises their daily cap. Quiet turns greetings off.
+ * Sometimes and often both leave the autonomy tick off.
  */
 export function companionInitiativePatch(
   pace: Exclude<CompanionInitiative, 'custom'>,
-): Partial<InitiativeFlags> {
+): Partial<InitiativeFlags & { proactiveFrequency: ProactiveFrequencyPreset }> {
   if (pace === 'quiet') {
     return {
       autonomyEnabled: false,
@@ -82,11 +92,15 @@ export function companionInitiativePatch(
       proactiveLetterEnabled: true,
     }
   }
+  // TODO(0.4.8): do not set autonomyEnabled here until the budget fix
+  // lands. Often is presence, away, the weekly letter, and the higher
+  // agenda cap (normal, still inside the hard ceiling of 3).
   return {
-    autonomyEnabled: true,
+    autonomyEnabled: false,
     proactivePresenceEnabled: true,
     proactivePresenceIntervalMinutes: OFTEN_INTERVAL_MINUTES,
     proactiveAwayNotificationsEnabled: true,
     proactiveLetterEnabled: true,
+    proactiveFrequency: 'normal',
   }
 }

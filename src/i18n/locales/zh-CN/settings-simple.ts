@@ -22,7 +22,7 @@ export const zhCNSettingsSimple = {
   'settings.simple.initiative_often': '常在',
   'settings.simple.initiative_custom': '按你之前的设置',
   'settings.simple.initiative_sometimes_hint': '空下来时说一句。深夜到早上不出声。',
-  'settings.simple.initiative_often_hint': '她会更常出现，后台也会定时看一看。',
+  'settings.simple.initiative_often_hint': '她会更常出现，离开时说一声，每周还有一封信。',
   'settings.simple.quiet_hours': '这几小时别出声',
   'settings.simple.quiet_split': '两套时间不一样，在高级里分开改。',
   'settings.simple.away': '离开一会儿说一声',

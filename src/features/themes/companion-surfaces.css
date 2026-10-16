@@ -46,6 +46,17 @@ html[data-companion-theme] .settings-drawer--v2 > .settings-v2 {
   font-family: var(--nx-font-family);
 }
 
+/* Warm's companion face is a serif, so font: inherit on a control
+   paints Ollama, model ids, and digits in Palatino. Product controls
+   stay on the UI sans in every theme. Weight stays with the control
+   so a label's 620 does not bold the value. */
+html[data-companion-theme] .settings-v3-page :is(button, input, select, textarea, option) {
+  font-family: var(--font-sans);
+}
+html[data-companion-theme] .settings-v3-page :is(input, select, textarea) {
+  font-weight: 450;
+}
+
 html[data-companion-theme] .settings-v2 {
   border-radius: var(--nx-radius-window);
   background:

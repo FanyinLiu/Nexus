@@ -24,7 +24,7 @@ export const koSettingsSimple = {
   'settings.simple.initiative_often': '자주',
   'settings.simple.initiative_custom': '예전 설정 그대로',
   'settings.simple.initiative_sometimes_hint': '한가할 때 한 마디. 밤늦게부터 아침까지는 조용합니다.',
-  'settings.simple.initiative_often_hint': '더 자주 나타나고, 뒤에서 가끔 살핍니다.',
+  'settings.simple.initiative_often_hint': '더 자주 나타나고, 자리를 비우면 말하며, 매주 편지도 옵니다.',
   'settings.simple.quiet_hours': '이 시간에는 조용히',
   'settings.simple.quiet_split': '두 조용한 시간이 다릅니다. 고급에서 따로 바꾸세요.',
   'settings.simple.away': '자리를 비우면 한 마디',
