@@ -168,7 +168,7 @@ export function MemoryPortraitCardsV3({
     <div className="memory-portrait">
       <p className="memory-portrait__privacy">{t('memory.portrait.privacy')}</p>
       <div className="memory-portrait__pair">
-        <button type="button" className="memory-portrait__card memory-portrait__card--soul" data-soul-card="true" onClick={openSoul}>
+        <button type="button" className="memory-portrait__card memory-portrait__card--soul nx-companion-card nx-companion-card--soul" data-soul-card="true" onClick={openSoul}>
           <p className="memory-portrait__kicker">{t('memory.soul.title')}</p>
           <p className="memory-portrait__summary">{savedSoul}</p>
           <span className="memory-portrait__meta">
@@ -176,7 +176,7 @@ export function MemoryPortraitCardsV3({
             <span>{t('memory.portrait.open')}</span>
           </span>
         </button>
-        <button type="button" className="memory-portrait__card memory-portrait__card--memory" onClick={() => setSheet('memory')}>
+        <button type="button" className="memory-portrait__card memory-portrait__card--memory nx-companion-card nx-companion-card--memory" onClick={() => setSheet('memory')}>
           <p className="memory-portrait__kicker">{t('memory.portrait.title')}</p>
           <p className="memory-portrait__summary">{memorySummary}</p>
           <span className="memory-portrait__meta">
