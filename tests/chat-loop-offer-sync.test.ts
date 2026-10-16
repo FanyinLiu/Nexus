@@ -60,6 +60,31 @@ test('a remote decision still wins when this window has not answered', () => {
   assert.deepEqual(merged[0]?.images, ['data:image/png;base64,abc'])
 })
 
+test('a stale shorter transcript does not drop the local reminder card', () => {
+  const local = [
+    message({ id: 'user', role: 'user', content: '下周二去办护照' }),
+    message({
+      id: 'preview',
+      content: '要我前一晚提醒你吗？',
+      loopOffer: { ...offer, status: 'pending' },
+    }),
+  ]
+  const remote = [
+    message({ id: 'user', role: 'user', content: '下周二去办护照' }),
+  ]
+  const merged = mergeRemoteChatMessages(local, remote)
+  assert.equal(merged.length, 2)
+  assert.equal(merged[1]?.id, 'preview')
+  assert.equal(merged[1]?.loopOffer?.status, 'pending')
+})
+
+test('an empty remote transcript still clears the local thread', () => {
+  const local = [
+    message({ id: 'user', role: 'user', content: '下周二去办护照' }),
+  ]
+  assert.deepEqual(mergeRemoteChatMessages(local, []), [])
+})
+
 test('a decided check card is not put back to pending by the other window', () => {
   const local = [message({
     id: 'check',

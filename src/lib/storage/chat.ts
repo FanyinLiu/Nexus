@@ -351,13 +351,17 @@ function loopCheckRank(status: NonNullable<ChatMessage['loopCheck']>['status'] |
  * A night-before card the user already accepted or declined stays decided
  * when the other window still has the pending copy. Inline images stay
  * local because they are not written to storage.
+ * A shorter remote list that is still a prefix of this thread is a stale
+ * write from the other window. Dropping the local tail there deletes a
+ * reminder card that was only appended on this side. An empty remote list
+ * is a real clear and replaces the thread.
  */
 export function mergeRemoteChatMessages(
   local: readonly ChatMessage[],
   remote: readonly ChatMessage[],
 ): ChatMessage[] {
   const localById = new Map(local.map((message) => [message.id, message]))
-  return remote.map((incoming) => {
+  const mergedRemote = remote.map((incoming) => {
     const current = localById.get(incoming.id)
     if (!current) return incoming
     let next = incoming
@@ -376,6 +380,12 @@ export function mergeRemoteChatMessages(
     }
     return next
   })
+  const stalePrefix = remote.length > 0
+    && remote.length < local.length
+    && remote.every((message, index) => local[index]?.id === message.id)
+  if (!stalePrefix) return mergedRemote
+  const remoteIds = new Set(remote.map((message) => message.id))
+  return [...mergedRemote, ...local.filter((message) => !remoteIds.has(message.id))]
 }
 
 export function saveChatMessages(messages: ChatMessage[]) {
