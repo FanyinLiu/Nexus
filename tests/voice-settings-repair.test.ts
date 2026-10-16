@@ -4,8 +4,10 @@ import test from 'node:test'
 import { formatTencentHotwordList } from '../src/features/hearing/tencentHotwords.ts'
 import {
   buildLocalModelRows,
+  countLocalModelsStillNeeded,
   localModelCanResume,
   localModelDiskBlocksDownload,
+  localModelDisplayLabel,
   localModelDownloadAction,
 } from '../src/features/setup/localModelRepair.ts'
 import { resolveSherpaStreamIdleTimeoutMs } from '../src/features/voice/sherpaIdleTimeout.ts'
@@ -39,6 +41,25 @@ test('local model rows follow install, failure, and download progress', () => {
     ['vad', 'installed', null],
     ['sensevoice', 'failed', 10],
   ])
+})
+
+test('optional stays on the status, and the remaining count follows finished rows', () => {
+  assert.equal(localModelDisplayLabel('Paraformer 流式中英识别（可选）'), 'Paraformer 流式中英识别')
+  assert.equal(localModelDisplayLabel('Local MeloTTS (optional)'), 'Local MeloTTS')
+  const rows = buildLocalModelRows(
+    [
+      { ...model, label: 'English wake word' },
+      { ...model, id: 'kws-zh', present: true },
+      { ...model, id: 'vad' },
+      { ...model, id: 'paraformer', label: 'Paraformer（可选）', required: false },
+    ],
+    {
+      'kws-en': { phase: 'installed', downloaded: 100, total: 100 },
+      vad: { phase: 'downloading', downloaded: 100, total: 100 },
+    },
+  )
+  assert.equal(rows.find((row) => row.id === 'paraformer')?.label, 'Paraformer')
+  assert.equal(countLocalModelsStillNeeded(rows), 1)
 })
 
 test('download action resumes a partial, retries a failure, and stops when nothing is missing', () => {

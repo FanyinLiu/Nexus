@@ -69,10 +69,29 @@ export function buildLocalModelRows(
   })
 }
 
+const OPTIONAL_LABEL_SUFFIX = /(?:\s*[（(]\s*(?:可选|可選|optional)\s*[）)])+\s*$/i
+
+/**
+ * Catalog names sometimes end with "optional". The row status already says
+ * that, so the title should not repeat it.
+ */
+export function localModelDisplayLabel(label: string): string {
+  return label.replace(OPTIONAL_LABEL_SUFFIX, '').trim()
+}
+
+/**
+ * Required models that are not installed yet. Progress can mark a row
+ * installed before the inventory refresh, so the header must follow the
+ * rows instead of the last inventory count.
+ */
+export function countLocalModelsStillNeeded(rows: LocalModelRowView[]): number {
+  return rows.filter((row) => row.required && row.status !== 'installed').length
+}
+
 function rowBase(model: LocalModelEntry) {
   return {
     id: model.id,
-    label: model.label,
+    label: localModelDisplayLabel(model.label),
     sizeLabel: model.sizeLabel,
     required: model.required,
   }

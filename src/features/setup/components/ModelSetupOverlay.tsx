@@ -1,23 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { formatConsoleTimestamp, type ConnectionResult } from '../../../components/settingsDrawerSupport.ts'
-import {
-  buildConnectionTestFingerprint,
-  getConnectionTestResultPresentation,
-  getNextConnectionResultExpiryMs,
-  resolveConnectionResultMessage,
-  resolveConnectionResultRecommendation,
-  shouldAcceptConnectionTestResult,
-  withConnectionCheckedAt,
-} from '../../models/connectionTestFreshness.ts'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
-import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
-import type { AppSettings } from '../../../types/app.ts'
-import type { TranslationKey } from '../../../types'
+import { localModelDisplayLabel } from '../localModelRepair.ts'
 import {
   MODEL_SETUP_DISMISSED_STORAGE_KEY,
-  buildTextModelSetupSnapshot,
   getModelProgressPercent,
   isModelProgressActive,
   isModelProgressComplete,
@@ -34,9 +21,6 @@ type Props = {
   /** Hide the overlay even when inventory is incomplete — used while the pet view is active. */
   suppressed?: boolean
   onVisibilityChange?: (visible: boolean) => void
-  settings?: AppSettings
-  onOpenOnboardingGuide?: () => void
-  onTestTextConnection?: (settings: AppSettings) => Promise<ConnectionResult>
 }
 
 function readModelSetupDismissed(): boolean {
@@ -54,20 +38,11 @@ function formatBytes(bytes: number): string {
 export function ModelSetupOverlay({
   suppressed = false,
   onVisibilityChange,
-  settings,
-  onOpenOnboardingGuide,
-  onTestTextConnection,
 }: Props) {
   const { t } = useTranslation()
   const [inventory, setInventory] = useState<Inventory | null>(null)
   const [progress, setProgress] = useState<Record<string, PerModelProgress>>({})
   const [busy, setBusy] = useState(false)
-  const [textConnectionBusy, setTextConnectionBusy] = useState(false)
-  const [textConnectionResult, setTextConnectionResult] = useState<{
-    fingerprint: string
-    result: ConnectionResult
-  } | null>(null)
-  const [connectionFreshnessTick, setConnectionFreshnessTick] = useState(0)
   const [dismissed, setDismissed] = useState(readModelSetupDismissed)
   const [coverSeen, setCoverSeen] = useState(suppressed)
   if (coverSeen !== suppressed) {
@@ -93,125 +68,7 @@ export function ModelSetupOverlay({
   const overlayVisibilityRef = useRef<boolean | null>(null)
   const overlayWasVisibleRef = useRef(false)
   const openerRef = useRef<HTMLElement | null>(null)
-  const mountedRef = useRef(true)
-  const connectionGenerationRef = useRef(0)
   const refreshInventoryRef = useRef<() => Promise<void>>(() => Promise.resolve())
-  const textModelSetup = useMemo(
-    () => settings ? buildTextModelSetupSnapshot(settings) : null,
-    [settings],
-  )
-
-  const textConnectionFingerprint = settings
-    ? buildConnectionTestFingerprint('text', settings)
-    : ''
-
-  const displayedTextConnection = textConnectionResult?.result ?? null
-  const textConnectionFingerprintMatches = Boolean(
-    textConnectionResult
-    && textConnectionResult.fingerprint === textConnectionFingerprint,
-  )
-  const textConnectionPresentation = displayedTextConnection
-    ? getConnectionTestResultPresentation({
-      result: displayedTextConnection,
-      fingerprintMatches: textConnectionFingerprintMatches,
-      capability: 'text',
-    })
-    : null
-  const preflightTextConnection = !displayedTextConnection && textModelSetup?.message
-    ? {
-        ok: false,
-        message: textModelSetup.message,
-        recommendation: textModelSetup.recommendation,
-      }
-    : null
-  const activeTextConnection = displayedTextConnection ?? preflightTextConnection
-  const textConnectionVerified = Boolean(textConnectionPresentation?.verified)
-  const textConnectionToneClass = textConnectionPresentation
-    ? textConnectionPresentation.tone === 'success'
-      ? 'is-ok'
-      : `is-${textConnectionPresentation.tone}`
-    : activeTextConnection
-      ? 'is-error'
-      : ''
-  const textConnectionLooksFailed = Boolean(
-    activeTextConnection
-    && !textConnectionVerified
-    && (
-      textConnectionPresentation
-        ? textConnectionPresentation.tone === 'error'
-        : !activeTextConnection.ok
-    ),
-  )
-  const translateConnection = (
-    language: AppSettings['uiLanguage'],
-    key: string,
-    params?: Record<string, string | number | boolean | null | undefined>,
-  ) => pickTranslatedUiText(language, key as TranslationKey, params)
-  const activeTextConnectionMessage = displayedTextConnection && settings && textConnectionPresentation
-    ? textConnectionPresentation.tone === 'stale'
-      ? pickTranslatedUiText(
-        settings.uiLanguage,
-        textConnectionPresentation.freshness === 'config-stale'
-          ? 'settings.test_connection.stale'
-          : textConnectionPresentation.freshness === 'time-stale'
-            ? 'settings.test_connection.expired'
-            : 'settings.test_connection.unverified',
-      )
-      : textConnectionPresentation.tone === 'partial' && !displayedTextConnection.messageKey
-        ? pickTranslatedUiText(settings.uiLanguage, 'settings.test_connection.partial')
-        : resolveConnectionResultMessage(
-          displayedTextConnection,
-          settings.uiLanguage,
-          translateConnection,
-        )
-    : activeTextConnection?.message
-  const activeTextConnectionRecommendation = displayedTextConnection
-    && settings
-    && textConnectionPresentation
-    && textConnectionPresentation.tone !== 'stale'
-    ? resolveConnectionResultRecommendation(
-      displayedTextConnection,
-      settings.uiLanguage,
-      translateConnection,
-    )
-    : activeTextConnection?.recommendation
-
-  void connectionFreshnessTick
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-      connectionGenerationRef.current += 1
-    }
-  }, [])
-
-  useEffect(() => {
-    const nextExpiry = getNextConnectionResultExpiryMs([displayedTextConnection])
-    if (nextExpiry === null) return undefined
-    const timer = window.setTimeout(
-      () => {
-        if (mountedRef.current) setConnectionFreshnessTick((current) => current + 1)
-      },
-      Math.max(0, nextExpiry - Date.now()) + 25,
-    )
-    return () => window.clearTimeout(timer)
-  }, [displayedTextConnection, connectionFreshnessTick])
-
-  useEffect(() => {
-    const refresh = () => {
-      if (mountedRef.current) setConnectionFreshnessTick((current) => current + 1)
-    }
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') refresh()
-    }
-    window.addEventListener('focus', refresh)
-    document.addEventListener('visibilitychange', refreshWhenVisible)
-    return () => {
-      window.removeEventListener('focus', refresh)
-      document.removeEventListener('visibilitychange', refreshWhenVisible)
-    }
-  }, [])
 
   const fetchInventory = useCallback(async (): Promise<Inventory | null> => {
     try {
@@ -278,49 +135,10 @@ export function ModelSetupOverlay({
     }
   }, [refreshInventory])
 
-  const testTextConnection = useCallback(async () => {
-    if (!settings || !onTestTextConnection) return
-    const generation = connectionGenerationRef.current + 1
-    connectionGenerationRef.current = generation
-    const fingerprint = buildConnectionTestFingerprint('text', settings)
-    setTextConnectionBusy(true)
-    setTextConnectionResult(null)
-    try {
-      const result = withConnectionCheckedAt(await onTestTextConnection(settings))
-      if (!mountedRef.current || !shouldAcceptConnectionTestResult({
-        requestGeneration: generation,
-        activeGeneration: connectionGenerationRef.current,
-      })) return
-      setTextConnectionResult({ fingerprint, result })
-    } catch (err) {
-      if (!mountedRef.current || !shouldAcceptConnectionTestResult({
-        requestGeneration: generation,
-        activeGeneration: connectionGenerationRef.current,
-      })) return
-      setTextConnectionResult({
-        fingerprint,
-        result: withConnectionCheckedAt<ConnectionResult>({
-          ok: false,
-          message: humanizeError(err, 'chat'),
-          messageKey: 'settings.test_connection.failed',
-        }),
-      })
-    } finally {
-      if (mountedRef.current && shouldAcceptConnectionTestResult({
-        requestGeneration: generation,
-        activeGeneration: connectionGenerationRef.current,
-      })) setTextConnectionBusy(false)
-    }
-  }, [onTestTextConnection, settings])
-
   const handleDismiss = useCallback(() => {
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
     setDismissed(true)
   }, [])
-
-  const openModelGuide = useCallback(() => {
-    onOpenOnboardingGuide?.()
-  }, [onOpenOnboardingGuide])
 
   const overlayVisible = shouldRestoreModelSetupAfterGuide({
     dismissed,
@@ -416,18 +234,9 @@ export function ModelSetupOverlay({
 
   const requiredModels = inventory.models.filter(m => m.required)
   const optionalModels = inventory.models.filter(m => !m.required)
-  const modelSetupDescription = t('model_setup.body_prefix', { path: inventory.primaryDir })
-  const modelPathIndex = modelSetupDescription.indexOf(inventory.primaryDir)
-  const modelDescriptionBeforePath = modelPathIndex >= 0
-    ? modelSetupDescription.slice(0, modelPathIndex)
-    : ''
-  const modelDescriptionAfterPath = modelPathIndex >= 0
-    ? modelSetupDescription.slice(modelPathIndex + inventory.primaryDir.length)
-    : ''
-  const pathTrailingPunctuation = modelDescriptionAfterPath.match(/^[。．.,，、]/)?.[0] ?? ''
-  const modelDescriptionAfterStyledPath = pathTrailingPunctuation
-    ? modelDescriptionAfterPath.slice(pathTrailingPunctuation.length)
-    : modelDescriptionAfterPath
+  const optionalStatus = (required: boolean) => (
+    required ? '' : ` · ${t('model_setup.optional_tag')}`
+  )
 
   const renderRow = (model: ModelEntry) => {
     const p = progress[model.id]
@@ -436,14 +245,14 @@ export function ModelSetupOverlay({
     const isComplete = isModelProgressComplete(p)
     const hasError = isModelProgressError(p)
     const isInstalled = model.present || isComplete
+    const label = localModelDisplayLabel(model.label)
 
     return (
       <div key={model.id} className="model-setup__row" data-state={isInstalled ? 'done' : hasError ? 'error' : isActive ? 'active' : 'pending'}>
         <div className="model-setup__row-main">
           <div className="model-setup__row-title">
-            <strong>{model.label}</strong>
+            <strong>{label}</strong>
             <span className="model-setup__size">{model.sizeLabel}</span>
-            {!model.required ? <span className="model-setup__tag">{t('model_setup.optional_tag')}</span> : null}
           </div>
           <div className="model-setup__row-desc">{model.purpose}</div>
           {isInstalled ? (
@@ -452,13 +261,18 @@ export function ModelSetupOverlay({
             <div className="model-setup__row-status" role="status" aria-live="polite" aria-atomic="true">
               {pct !== null ? `${pct}% · ${formatBytes(p.downloaded)} / ${formatBytes(p.total)}` : t('model_setup.downloading')}
               {p?.fileName ? <span className="model-setup__row-file"> · {p.fileName}</span> : null}
+              {optionalStatus(model.required)}
             </div>
           ) : hasError ? (
             <div className="model-setup__row-status model-setup__row-status--error" role="alert" aria-live="assertive" aria-atomic="true">
               {p?.message ? t('model_setup.failed_with_message', { message: p.message }) : t('model_setup.failed')}
+              {optionalStatus(model.required)}
             </div>
           ) : (
-            <div className="model-setup__row-status model-setup__row-status--pending">{t('model_setup.pending')}</div>
+            <div className="model-setup__row-status model-setup__row-status--pending">
+              {t('model_setup.pending')}
+              {optionalStatus(model.required)}
+            </div>
           )}
         </div>
 
@@ -480,7 +294,7 @@ export function ModelSetupOverlay({
             className="model-setup__progress"
             value={pct}
             max={100}
-            aria-label={`${model.label} ${t('model_setup.downloading')}`}
+            aria-label={`${label} ${t('model_setup.downloading')}`}
           />
         ) : null}
       </div>
@@ -503,15 +317,7 @@ export function ModelSetupOverlay({
             <p className="eyebrow">{t('model_setup.eyebrow')}</p>
             <h2 id="model-setup-title">{t('model_setup.title')}</h2>
             <p id="model-setup-description" className="model-setup-card__copy">
-              {modelPathIndex >= 0 ? (
-                <>
-                  {modelDescriptionBeforePath}
-                  <span className="model-setup-card__path">
-                    {inventory.primaryDir}{pathTrailingPunctuation}
-                  </span>
-                  {modelDescriptionAfterStyledPath}
-                </>
-              ) : modelSetupDescription}
+              {t('model_setup.body_prefix')}
             </p>
           </div>
           <button ref={dismissButtonRef} className="ghost-button" type="button" onClick={handleDismiss} disabled={busy}>
@@ -529,65 +335,6 @@ export function ModelSetupOverlay({
           {errorBanner ? (
             <div className="model-setup__error" role="alert" aria-live="assertive" aria-atomic="true">
               {errorBanner}
-            </div>
-          ) : null}
-
-          {textModelSetup ? (
-            <div
-              className={`model-setup__text-check${textConnectionToneClass ? ` ${textConnectionToneClass}` : ''}`}
-            >
-              <div className="model-setup__text-check-main">
-                <strong>{t('model_setup.text_check_title')}</strong>
-                <p>
-                  {t('model_setup.text_check_current', {
-                    provider: textModelSetup.providerLabel,
-                    model: textModelSetup.modelLabel,
-                  })}
-                </p>
-                {activeTextConnection ? (
-                  <div
-                    className={`model-setup__text-check-status ${textConnectionToneClass || 'is-error'}`}
-                    role={textConnectionLooksFailed ? 'alert' : 'status'}
-                    aria-live={textConnectionLooksFailed ? 'assertive' : 'polite'}
-                  >
-                    {activeTextConnectionMessage}
-                    {activeTextConnectionRecommendation ? (
-                      <span>{activeTextConnectionRecommendation}</span>
-                    ) : null}
-                    {displayedTextConnection?.checkedAt && settings ? (
-                      <time dateTime={displayedTextConnection.checkedAt}>
-                        {pickTranslatedUiText(settings.uiLanguage, 'settings.test_connection.checked_at', {
-                          time: formatConsoleTimestamp(displayedTextConnection.checkedAt, settings.uiLanguage),
-                        })}
-                      </time>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="model-setup__text-check-status" role="status" aria-live="polite">
-                    {t('model_setup.text_check_ready')}
-                  </div>
-                )}
-              </div>
-              <div className="model-setup__text-check-actions">
-                <button
-                  type="button"
-                  className="model-setup__inline-btn"
-                  onClick={testTextConnection}
-                  disabled={textConnectionBusy || !onTestTextConnection}
-                >
-                  {textConnectionBusy ? t('model_setup.text_check_testing') : t('model_setup.text_check_action')}
-                </button>
-                {onOpenOnboardingGuide ? (
-                  <button
-                    type="button"
-                    className="model-setup__inline-btn model-setup__inline-btn--secondary"
-                    onClick={openModelGuide}
-                    disabled={textConnectionBusy}
-                  >
-                    {t('model_setup.text_check_open_guide')}
-                  </button>
-                ) : null}
-              </div>
             </div>
           ) : null}
 

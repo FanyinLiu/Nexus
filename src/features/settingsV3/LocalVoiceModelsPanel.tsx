@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   buildLocalModelRows,
+  countLocalModelsStillNeeded,
   localModelCanResume,
   localModelDiskBlocksDownload,
   localModelDownloadAction,
@@ -95,6 +96,8 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
 
   const rows = buildLocalModelRows(inventory.models, progress)
   const missingCount = inventory.missingRequired.length
+  const stillNeeded = countLocalModelsStillNeeded(rows)
+  const busyPercent = rows.find((row) => row.status === 'downloading')?.percent
   const diskBlocked = localModelDiskBlocksDownload(inventory.disk)
   const action = localModelDownloadAction({
     missingCount,
@@ -162,9 +165,9 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
       {inventory.ready && !error ? (
         <SettingsV3Notice tone="success" title={ti('settings.voice.local_models_ready')} />
       ) : null}
-      {!inventory.ready ? (
+      {!inventory.ready && stillNeeded > 0 ? (
         <p className="settings-v3-voice-models__summary">
-          {ti('settings.voice.local_models_missing', { count: missingCount })}
+          {ti('settings.voice.local_models_missing', { count: stillNeeded })}
         </p>
       ) : null}
       <ul className="settings-v3-voice-models">
@@ -202,7 +205,7 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
             onClick={startDownload}
             disabled={busy || diskBlocked || !window.desktopPet?.modelsDownloadMissing}
           >
-            {busy ? ti('settings.voice.local_models_downloading', { percent: 0 }) : actionLabel}
+            {busy ? ti('settings.voice.local_models_downloading', { percent: busyPercent ?? 0 }) : actionLabel}
           </button>
         ) : null}
         <button type="button" onClick={() => void refresh()} disabled={busy}>
