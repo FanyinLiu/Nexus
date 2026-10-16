@@ -23,7 +23,7 @@ export const zhCNPanel = {
   'panel.activity.blocked': '需要留意',
   'panel.greeting.remembered': '你之前说的"{memory}"，我一直记着。想接着聊也好，只是坐一会儿也好，我都在。',
   'panel.greeting.welcome': '{companionName} 在这儿陪着你。哪怕只是说句今天怎么样，我也想听。',
-  'panel.audio_smoke_test_hint': '建议先打开设置页跑一次音频自检，确认输入输出链路都正常。',
+  'panel.audio_smoke_test_hint': '可以先到设置里听一句，确认麦克风和说话都正常。',
   'panel.quickstart.continue_label': '继续上次话题',
   'panel.quickstart.wrap_today_label': '整理今日重点',
   'panel.quickstart.continue_prompt': '继续我们刚才关于"{topic}"的话题，先给我一个简短总结，再告诉我下一步。',

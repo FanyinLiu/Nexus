@@ -6,6 +6,7 @@ export type PetControlIconName =
   | 'calendar-clock'
   | 'settings'
   | 'tuning'
+  | 'check'
   | 'menu'
   | 'back'
   | 'expand'
@@ -168,6 +169,12 @@ export function PetControlIcon({ name, variant, ...props }: PetControlIconProps)
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
           <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.05.05a2 2 0 0 1-2.83 2.83l-.05-.05A1.65 1.65 0 0 0 15.08 19a1.65 1.65 0 0 0-1 .6l-.04.05a2 2 0 0 1-4.08 0l-.04-.05A1.65 1.65 0 0 0 8.92 19a1.65 1.65 0 0 0-1.82.65l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1-.99h-.07a2 2 0 0 1 0-4.02h.07a1.65 1.65 0 0 0 1-.99 1.65 1.65 0 0 0-.33-1.82l-.05-.05A2 2 0 1 1 7.05 4.3l.05.05A1.65 1.65 0 0 0 8.92 5a1.65 1.65 0 0 0 1-.6l.04-.05a2 2 0 0 1 4.08 0l.04.05a1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.65l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.65 1.65 0 0 0 19.4 9c.15.45.51.81.99.99h.07a2 2 0 0 1 0 4.02h-.07a1.65 1.65 0 0 0-.99.99Z" />
+        </svg>
+      )
+    case 'check':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M5 12.5 9.2 17 19 7" />
         </svg>
       )
     case 'tuning':

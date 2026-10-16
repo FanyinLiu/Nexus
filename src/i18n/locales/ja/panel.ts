@@ -25,7 +25,7 @@ export const jaPanel = {
   'panel.activity.blocked': '確認が必要',
   'panel.greeting.remembered': '「{memory}」のこと、ずっと覚えてるよ。続きを話してもいいし、ただ少し座っていてもいい。私はここにいるから。',
   'panel.greeting.welcome': '{companionName}、ここであなたのそばにいるよ。「今日はどうだった？」の一言でも、聞きたいな。',
-  'panel.audio_smoke_test_hint': 'まず設定ページから音声セルフチェックを実行し、入出力が正常か確認することをおすすめします。',
+  'panel.audio_smoke_test_hint': '先に設定でひとこと聞いて、マイクと声が大丈夫か確かめてみて。',
   'panel.quickstart.continue_label': '前回の話題を続ける',
   'panel.quickstart.wrap_today_label': '今日をまとめる',
   'panel.quickstart.continue_prompt': 'さっきの「{topic}」の話を続けましょう。まず短くまとめてから、次にやることを教えて。',

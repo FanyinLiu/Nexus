@@ -486,7 +486,7 @@ export async function runAudioSmokeTestRuntime(
     if (!inputCheck.ok) {
       return {
         ok: false,
-        message: options.ti('voice.diagnostics.input_prefix', { message: inputCheck.message }),
+        message: inputCheck.message,
       }
     }
 

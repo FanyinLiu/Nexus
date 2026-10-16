@@ -46,7 +46,7 @@ export const koSettingsShell = {
   'settings.section.voice': '음성',
   'settings.section.memory': '기억',
   'settings.section.history': '대화 기록',
-  'settings.section_desc.console': '모델, 미리보기 주소, 실행 상태를 확인합니다.',
+  'settings.section_desc.console': '각 항목이 괜찮은지 봐요',
   'settings.section_desc.model': '텍스트 모델, API 공급자, 키, 로컬 엔드포인트를 선택합니다.',
   'settings.section_desc.chat': '동반자 이름, 당신을 부르는 이름, 성격, 미니멀 아바타를 조정합니다.',
   'settings.section_desc.window': '데스크톱 상주와 상호작용을 제어합니다.',

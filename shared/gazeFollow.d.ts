@@ -57,6 +57,12 @@ export function normalizeCursorToDip(
   } | null | undefined,
 ): GazeTargetPoint
 
+export function selectGazeCursor(input: {
+  platform?: string
+  hookPoint?: { x?: number; y?: number } | null
+  electronPoint?: { x?: number; y?: number } | null
+}): { source: 'hook'; physical: GazeTargetPoint } | { source: 'electron'; dip: GazeTargetPoint } | null
+
 export function cursorRelativeToWindow(input: {
   cursor: { x: number; y: number }
   windowBounds: WindowDipBounds

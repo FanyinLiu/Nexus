@@ -25,7 +25,7 @@ export const enPanel = {
   'panel.activity.blocked': 'Needs attention',
   'panel.greeting.remembered': 'I\'ve kept what you said about "{memory}" close. Pick it back up, or just sit here a while — I\'m here either way.',
   'panel.greeting.welcome': '{companionName} is right here with you. Even just a "how was today?" — I\'d love to hear it.',
-  'panel.audio_smoke_test_hint': 'Try a quick audio check in Settings first, to confirm listening and speaking both work.',
+  'panel.audio_smoke_test_hint': 'Try a short listen in Settings first, so the microphone and voice both feel right.',
   'panel.quickstart.continue_label': 'Continue last topic',
   'panel.quickstart.wrap_today_label': 'Wrap up today',
   'panel.quickstart.continue_prompt': 'Let\'s continue our earlier thread on "{topic}". Give me a short recap first, then what to do next.',

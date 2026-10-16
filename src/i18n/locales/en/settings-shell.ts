@@ -46,7 +46,7 @@ export const enSettingsShell = {
   'settings.section.voice': 'Voice',
   'settings.section.memory': 'Memory',
   'settings.section.history': 'History',
-  'settings.section_desc.console': 'Check model, preview URL, and runtime status.',
+  'settings.section_desc.console': 'See if everything looks all right',
   'settings.section_desc.model': 'Choose the text model, API provider, key, and local endpoint.',
   'settings.section_desc.chat': 'Tune the companion name, user name, personality, and minimal avatar.',
   'settings.section_desc.window': 'Control desktop presence and interaction.',

@@ -318,6 +318,11 @@
   border-radius: 8px;
   border: 1px solid rgba(120, 160, 230, 0.18);
   background: rgba(20, 24, 36, 0.4);
+  /* Warm's companion face is a serif stack, so Latin names such as
+     Telegram pick Palatino while the Chinese beside them stays sans.
+     About is product chrome and uses the same sans stack as the
+     onboarding controls. */
+  font-family: system-ui, "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK", sans-serif;
 }
 
 .settings-about-panel__header,
@@ -485,25 +490,37 @@
   display: none;
 }
 
-.settings-about-panel__faq-question::before {
+.settings-about-panel__faq-question::before,
+.settings-about-panel__faq-question::after,
+.settings-about-panel__faq-question::marker {
   content: none;
 }
 
-.settings-about-panel__faq-question::after {
-  content: '';
+/* The mask left a solid square of the question's ink when the mask
+   image did not apply. This is the same stroke chevron as the other
+   settings rows. The open About disclosure rotates every summary svg
+   inside it, so a closed row has to cancel that turn. */
+.settings-v3-disclosure .settings-about-panel__faq-question .settings-about-panel__faq-chevron,
+.settings-about-panel__faq-question .settings-about-panel__faq-chevron {
   flex: 0 0 auto;
   margin-left: auto;
   width: 16px;
   height: 16px;
   color: currentColor;
-  background: currentColor;
-  -webkit-mask: var(--nx-chevron-right-mask) center / 16px 16px no-repeat;
-  mask: var(--nx-chevron-right-mask) center / 16px 16px no-repeat;
-  display: inline-block;
-  transition: transform 0.15s;
+  fill: none;
+  stroke: currentColor;
+  transform: none;
+  transition: transform 0.15s ease;
 }
 
-.settings-about-panel__faq-item[open] .settings-about-panel__faq-question::after,
+.settings-v3-disclosure[open] .settings-about-panel__faq-item:not([open]) .settings-about-panel__faq-chevron {
+  transform: none;
+}
+
+.settings-about-panel__faq-item[open] .settings-about-panel__faq-chevron {
+  transform: rotate(180deg);
+}
+
 .settings-model-advanced[open] summary::after {
   transform: rotate(90deg);
 }
@@ -2895,6 +2912,37 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 .sd-day-section .sp[data-section='window'] .settings-window-section .settings-control-card > .settings-toggle > span {
   color: rgba(23, 32, 42, 0.82);
   -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
+}
+
+/* An earlier day block paints this card in night ink. Warm, system, and
+   playful all wear sd-day on a light card, so the ink has to follow the
+   active theme tokens instead of one hardcoded palette. */
+.sd-day .settings-about-panel__title,
+.sd-day .settings-about-panel__spotlight-title,
+.sd-day .settings-about-panel__section-title,
+.sd-day .settings-about-panel__faq-question,
+.sd-day .settings-about-panel__credits-list strong,
+.sd-day .settings-about-panel__spotlight-list strong {
+  color: var(--nx-card-fg, var(--color-text-primary));
+  -webkit-text-fill-color: var(--nx-card-fg, var(--color-text-primary));
+}
+
+.sd-day .settings-about-panel__tagline,
+.sd-day .settings-about-panel__version,
+.sd-day .settings-about-panel__spotlight-summary,
+.sd-day .settings-about-panel__spotlight-list span,
+.sd-day .settings-about-panel__faq-answer,
+.sd-day .settings-about-panel__credits-intro,
+.sd-day .settings-about-panel__credits-list {
+  color: var(--nx-card-muted, var(--color-text-muted));
+  -webkit-text-fill-color: var(--nx-card-muted, var(--color-text-muted));
+}
+
+.sd-day .settings-about-panel__spotlight-actions .ghost-button {
+  border-color: var(--nx-card-border, var(--color-border));
+  background: var(--nx-card-bg, var(--color-surface-elevated));
+  color: var(--nx-card-fg, var(--color-text-primary));
+  -webkit-text-fill-color: var(--nx-card-fg, var(--color-text-primary));
 }
 
 .sd-warm-section label > span,

@@ -15,8 +15,10 @@
     "onnxruntime-web"
   ],
   "ignoreBinaries": [
+    "Xvfb",
     "osascript",
     "pgrep",
-    "playerctl"
+    "playerctl",
+    "xdotool"
   ]
 }
