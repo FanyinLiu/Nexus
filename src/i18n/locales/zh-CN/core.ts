@@ -285,7 +285,7 @@ export const zhCNCore = {
   'pet.model.hiyori.label': '桃濑日和 Hiyori',
   'pet.model.hiyori.description': 'Live2D 官方原创样例角色，拥有更丰富的全身待机动作。',
   'pet.model.mao.label': 'Mao 魔法少女',
-  'pet.model.mao.description': '当前内置测试模型，已经适配了说话嘴型、视线跟随和互动动作。',
+  'pet.model.mao.description': '会说话、会看着你、会互动',
   'character.preset.mao.hero_eyebrow': 'Nexus · Companion UI',
   'character.preset.mao.dialogue_eyebrow': '桌面陪伴',
   'character.preset.mao.tag.0': '陪伴布局',

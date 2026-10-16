@@ -1,20 +1,24 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { buildOnboardingMessageActionDemo } from '../src/features/onboarding/messageActionDemo.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
 import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
 import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 import {
+  applyOnboardingLanguageChoice,
   applyOnboardingStepRepairDraft,
   buildOnboardingSteps,
   getOnboardingFinishHint,
+  getOnboardingMissingApiKeyHint,
+  getOnboardingProviderNote,
   getOnboardingStepError,
   getOnboardingStepIssue,
+  resolveOnboardingFinishGate,
 } from '../src/features/onboarding/components/onboardingGuideSupport.ts'
+import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
+import { detectPreferredUiLanguage } from '../src/lib/uiLanguage.ts'
 import type { AppSettings } from '../src/types/app.ts'
 import type { TranslationDictionary } from '../src/types/i18n.ts'
 
@@ -142,7 +146,7 @@ test('applying onboarding repair reruns clean local preflight even without cloud
   assert.equal(remainingIssue, null)
 })
 
-test('onboarding finish hint includes DeepSeek first-run repair path without blocking save', () => {
+test('onboarding finish hint stays one sentence when the key is empty', () => {
   const hint = getOnboardingFinishHint(
     makeSettings({
       apiProviderId: 'deepseek',
@@ -154,9 +158,48 @@ test('onboarding finish hint includes DeepSeek first-run repair path without blo
     'zh-CN',
   )
 
-  assert.match(hint, /保存后仍可先体验/)
-  assert.match(hint, /https:\/\/api\.deepseek\.com/)
-  assert.match(hint, /deepseek-flash/)
+  assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
+  assert.doesNotMatch(hint, /https?:\/\//)
+})
+
+test('missing API key hint is for the model step and stays empty for keyless providers', () => {
+  assert.equal(
+    getOnboardingMissingApiKeyHint(makeSettings({ apiKey: '' }), false, 'zh-CN'),
+    null,
+  )
+  const hint = getOnboardingMissingApiKeyHint(
+    makeSettings({
+      apiProviderId: 'deepseek',
+      apiBaseUrl: 'https://api.deepseek.com',
+      apiKey: '',
+      model: 'deepseek-v4-flash',
+    }),
+    true,
+    'zh-CN',
+  )
+  assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
+})
+
+test('an untested model warns once, then finish can proceed', () => {
+  const first = resolveOnboardingFinishGate({
+    textConnectionVerified: false,
+    acknowledgedUnverified: false,
+    uiLanguage: 'zh-CN',
+  })
+  assert.equal(first.proceed, false)
+  if (!first.proceed) assert.match(first.warning, /再点一次/)
+
+  assert.deepEqual(resolveOnboardingFinishGate({
+    textConnectionVerified: false,
+    acknowledgedUnverified: true,
+    uiLanguage: 'zh-CN',
+  }), { proceed: true })
+
+  assert.deepEqual(resolveOnboardingFinishGate({
+    textConnectionVerified: true,
+    acknowledgedUnverified: false,
+    uiLanguage: 'en-US',
+  }), { proceed: true })
 })
 
 test('onboarding text step shows provider-aware missing model guidance', () => {
@@ -201,53 +244,38 @@ test('onboarding custom provider keeps endpoint repairs manual', () => {
   assert.equal(issue?.repair, undefined)
 })
 
-test('onboarding keeps message action demo as a separate final step', () => {
+test('onboarding starts with language and keeps the AI disclosure before chat', () => {
   const steps = buildOnboardingSteps('en').map((step) => step.id)
 
   assert.deepEqual(steps, [
+    'language',
     'ai_disclosure',
     'welcome',
     'text',
     'voice',
     'companion',
-    'message_action_demo',
   ])
+  assert.equal(getOnboardingStepIssue(makeSettings(), 'language', 'zh-CN'), null)
 })
 
-test('onboarding message action demo stays static and schema-free', () => {
-  const demo = buildOnboardingMessageActionDemo()
-  const secondDemo = buildOnboardingMessageActionDemo()
-  const serialized = JSON.stringify(demo)
+test('a language choice updates locale-default names and leaves custom names alone', () => {
+  const switched = applyOnboardingLanguageChoice(makeSettings({ wakeWord: '星绘' }), 'en-US')
+  assert.equal(switched.uiLanguage, 'en-US')
+  assert.equal(switched.companionName, 'Nexus')
+  assert.equal(switched.userName, 'you')
+  assert.equal(switched.wakeWord, 'Nexus')
 
-  assert.deepEqual(demo, secondDemo)
-  assert.deepEqual(demo.steps.map((step) => step.id), ['received', 'hint', 'decide'])
-  assert.deepEqual(demo.actions.map((action) => action.id), [
-    'snooze',
-    'mark_important',
-    'draft_reply',
-  ])
-  assert.doesNotMatch(serialized, /body|messageId|conversationId|userId|accountId/i)
-  assert.doesNotMatch(serialized, /timestamp|createdAt|updatedAt|exactTime|sequence/i)
-  assert.doesNotMatch(serialized, /notificationBridge|sendMessage|chat|autonomyController/i)
-})
-
-test('onboarding message action demo source has no runtime notification coupling', () => {
-  const helperSource = readFileSync(
-    new URL('../src/features/onboarding/messageActionDemo.ts', import.meta.url),
-    'utf8',
+  const custom = applyOnboardingLanguageChoice(
+    makeSettings({ userName: '阿宁', companionName: '小星', wakeWord: '小星' }),
+    'ja',
   )
-  const componentSource = readFileSync(
-    new URL('../src/features/onboarding/components/guideSteps/MessageActionDemoStep.tsx', import.meta.url),
-    'utf8',
-  )
-  const combined = `${helperSource}\n${componentSource}`
-
-  assert.doesNotMatch(combined, /NotificationMessage|notificationBridge|useNotificationBridge/)
-  assert.doesNotMatch(combined, /useAutonomyController|chat\.sendMessage|sendMessage\(/)
-  assert.doesNotMatch(combined, /message\.body|message\.summary|conversationId|messageId/)
+  assert.equal(custom.uiLanguage, 'ja')
+  assert.equal(custom.userName, '阿宁')
+  assert.equal(custom.companionName, '小星')
+  assert.equal(custom.wakeWord, '小星')
 })
 
-test('onboarding message action demo copy stays conceptual across locales', () => {
+test('onboarding voice and readiness copy stays plain across locales', () => {
   const dictionaries: TranslationDictionary[] = [
     enMessages,
     jaMessages,
@@ -256,19 +284,71 @@ test('onboarding message action demo copy stays conceptual across locales', () =
     zhTWMessages,
   ]
   const keys = [
-    'onboarding.message_action_demo.intro',
-    'onboarding.message_action_demo.step.received.description',
-    'onboarding.message_action_demo.step.hint.description',
-    'onboarding.message_action_demo.step.decide.description',
-    'onboarding.message_action_demo.privacy_note',
+    'onboarding.step.language.title',
+    'onboarding.step.language.description',
+    'onboarding.step.voice.title',
+    'onboarding.step.voice.description',
+    'onboarding.voice.ready',
+    'onboarding.text.note.china',
+    'onboarding.text.note.global',
+    'onboarding.text.note.local',
+    'onboarding.text.note.custom',
+    'onboarding.finish_hint.missing_api_key',
+    'onboarding.readiness.summary.ready',
+    'onboarding.readiness.summary.warning',
+    'onboarding.readiness.voice.blocked',
+    'onboarding.voice.volcano_hint',
+    'onboarding.finish_hint.unverified_model',
+    'onboarding.repair.applied_text_defaults',
   ] as const
+  const jargon = /链路|鏈路|pipeline|パイプライン|파이프라인|preflight|预检|預檢|https?:\/\/|SenseVoice|MeloTTS|测试模型|測試模型|test model|テストモデル/
 
   for (const dictionary of dictionaries) {
-    const copy = keys.map((key) => dictionary[key]).join('\n')
-
-    assert.doesNotMatch(copy, /schema|通知结构|通知結構|スキーマ|스키마/i)
-    assert.doesNotMatch(copy, /message body|消息正文|訊息正文|タイムスタンプ|타임스탬프/i)
-    assert.doesNotMatch(copy, /默认读取|預設讀取|normally reads|reads full/i)
-    assert.doesNotMatch(copy, /pipeline|preprocess|prepare|handling path|处理路径|處理路徑/i)
+    for (const key of keys) {
+      assert.equal(typeof dictionary[key], 'string', key)
+      assert.doesNotMatch(dictionary[key], jargon, key)
+    }
   }
+})
+
+test('built-in provider notes stay a short line without addresses', () => {
+  for (const id of ['deepseek', 'openai', 'ollama', 'custom'] as const) {
+    const note = getOnboardingProviderNote(getApiProviderPreset(id), 'zh-CN')
+    assert.ok(note.length > 0 && note.length < 40, note)
+    assert.doesNotMatch(note, /https?:\/\/|[a-z0-9-]{8,}/i)
+  }
+  assert.equal(getOnboardingProviderNote(getApiProviderPreset('deepseek'), 'zh-CN'), '适合国内网络')
+  assert.equal(enMessages['onboarding.text.note.local'], 'Runs on this computer. No key needed.')
+})
+
+test('unsupported system languages fall back to English', () => {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  function withNavigator(value: { languages: string[]; language: string }, run: () => void) {
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value })
+    try {
+      run()
+    } finally {
+      if (previous) Object.defineProperty(globalThis, 'navigator', previous)
+      else delete (globalThis as { navigator?: unknown }).navigator
+    }
+  }
+
+  withNavigator({ languages: ['fr-FR'], language: 'fr-FR' }, () => {
+    assert.equal(detectPreferredUiLanguage(), 'en-US')
+  })
+  withNavigator({ languages: ['de-DE', 'fr'], language: 'de-DE' }, () => {
+    assert.equal(detectPreferredUiLanguage(), 'en-US')
+  })
+  withNavigator({ languages: ['zh-CN', 'en-US'], language: 'zh-CN' }, () => {
+    assert.equal(detectPreferredUiLanguage(), 'zh-CN')
+  })
+  withNavigator({ languages: ['ja-JP'], language: 'ja-JP' }, () => {
+    assert.equal(detectPreferredUiLanguage(), 'ja')
+  })
+  withNavigator({ languages: ['en-GB'], language: 'en-GB' }, () => {
+    assert.equal(detectPreferredUiLanguage(), 'en-US')
+  })
+  withNavigator({ languages: ['fr-FR', 'zh-TW'], language: 'fr-FR' }, () => {
+    assert.equal(detectPreferredUiLanguage(), 'zh-TW')
+  })
 })

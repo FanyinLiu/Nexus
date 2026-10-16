@@ -20,6 +20,7 @@ import {
   loadGuideDeferral,
   loadOnboardingCompleted,
   markGuideReshown,
+  markOnboardingInProgress,
   recordGuideDismiss,
   normalizeSpeechOutputApiBaseUrl,
   resolveWebSearchApiBaseUrl,
@@ -304,6 +305,11 @@ export function useAppOverlays({
       toolWebSearchApiBaseUrl: normalizedWebSearchApiBaseUrl,
       launchOnStartup,
     })), options.baselineSettings)
+    const shouldCompleteOnboarding = options?.completeOnboarding ?? onboardingPending
+    if (!shouldCompleteOnboarding && onboardingPending) {
+      markOnboardingInProgress()
+    }
+
     const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
     setSettings(committedSettings)
 
@@ -311,7 +317,7 @@ export function useAppOverlays({
       closeSettingsSurface()
     }
 
-    if (options?.completeOnboarding ?? onboardingPending) {
+    if (shouldCompleteOnboarding) {
       saveOnboardingCompleted(true)
       setOnboardingPending(false)
       setOnboardingOpen(false)
@@ -364,6 +370,35 @@ export function useAppOverlays({
     }),
     [memory.dailyMemories, memory.recentDailyMemoryEntries, preferredMemoryFocus],
   )
+
+  const previewSpeech = useCallback(async (draftSettings: AppSettings, text: string) => {
+    if (chat.busyRef.current || voice.voiceStateRef.current === 'processing') {
+      throw new Error(t('settings.preview.busy_error'))
+    }
+
+    voice.stopActiveSpeechOutput()
+    chat.setError(null)
+
+    await voice.startSpeechOutput(text, draftSettings, {
+      onStart: () => {
+        voice.setVoiceState('speaking')
+        pet.setMood('happy')
+      },
+      onEnd: () => {
+        voice.setVoiceState('idle')
+        pet.setMood('idle')
+      },
+      onError: (message) => {
+        voice.setVoiceState('idle')
+        pet.setMood('idle')
+        chat.setError(message)
+      },
+    })
+
+    return {
+      message: t('settings.preview.started'),
+    }
+  }, [chat, pet, t, voice])
 
   const settingsDrawerProps: SettingsDrawerProps = {
     open: settingsOpen,
@@ -538,34 +573,7 @@ export function useAppOverlays({
         apiKey: draftSettings.speechOutputApiKey,
       })
     },
-    onPreviewSpeech: async (draftSettings, text) => {
-      if (chat.busyRef.current || voice.voiceStateRef.current === 'processing') {
-        throw new Error(t('settings.preview.busy_error'))
-      }
-
-      voice.stopActiveSpeechOutput()
-      chat.setError(null)
-
-      await voice.startSpeechOutput(text, draftSettings, {
-        onStart: () => {
-          voice.setVoiceState('speaking')
-          pet.setMood('happy')
-        },
-        onEnd: () => {
-          voice.setVoiceState('idle')
-          pet.setMood('idle')
-        },
-        onError: (message) => {
-          voice.setVoiceState('idle')
-          pet.setMood('idle')
-          chat.setError(message)
-        },
-      })
-
-      return {
-        message: t('settings.preview.started'),
-      }
-    },
+    onPreviewSpeech: previewSpeech,
     onRunAudioSmokeTest: async (draftSettings) => voice.runAudioSmokeTest(draftSettings),
     onClearDebugConsole: clearDebugConsoleEvents,
     onOpenOnboardingGuide: openOnboardingGuide,
@@ -589,6 +597,20 @@ export function useAppOverlays({
         completeOnboarding: true,
       })
     },
+    onPersistUiLanguage: async (nextSettings) => {
+      await applySettingsSave({
+        ...settings,
+        uiLanguage: nextSettings.uiLanguage,
+        companionName: nextSettings.companionName,
+        userName: nextSettings.userName,
+        wakeWord: nextSettings.wakeWord,
+      }, {
+        baselineSettings: settings,
+        closeSettings: false,
+        completeOnboarding: false,
+      })
+    },
+    onPreviewSpeech: previewSpeech,
     onTestTextConnection: async (draftSettings) => {
       if (!window.desktopPet?.testChatConnection) {
         return { ok: false, message: t('settings.test_connection.unsupported') }

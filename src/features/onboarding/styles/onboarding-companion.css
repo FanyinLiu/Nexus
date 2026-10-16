@@ -5,17 +5,44 @@
 
 html[data-companion-theme] .onboarding-backdrop,
 html[data-companion-theme] .onboarding-backdrop--pet {
+  /* The shell fades this element, which also fades the card and lets the
+     scrim show through it. The scrim fades on its own layer instead. */
+  background: transparent;
+  animation: none;
+}
+
+html[data-companion-theme] .onboarding-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background: var(--nx-scrim);
+  animation: onboarding-backdrop-in 200ms ease-out;
 }
 
 html[data-companion-theme] .onboarding-card,
 html[data-companion-theme] .onboarding-card--pet {
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--color-border);
   border-radius: var(--nx-radius-window);
   background: var(--color-surface-elevated);
   color: var(--color-text-primary);
   box-shadow: var(--nx-shadow-card);
   font-family: var(--nx-font-family);
+  backdrop-filter: none;
+  animation: onboarding-card-settle 240ms ease-out;
+}
+
+@keyframes onboarding-card-settle {
+  from { transform: scale(0.98); }
+  to { transform: scale(1); }
+}
+
+html[data-companion-theme] .onboarding-card :is(select, option),
+html[data-companion-theme] .onboarding-card .onboarding-disclosure__progress,
+html[data-companion-theme] .onboarding-card .onboarding-relationship__chip {
+  font-family: system-ui, "PingFang SC", "Noto Sans CJK SC", "Noto Sans CJK", sans-serif;
 }
 
 html[data-companion-theme] .onboarding-card :is(h1, h2, h3, h4, strong, label, legend) {
@@ -28,7 +55,7 @@ html[data-companion-theme] .onboarding-card :is(p, small, li) {
 
 html[data-companion-theme] .onboarding-card :is(input, select, textarea) {
   color: var(--color-text-primary);
-  background: var(--color-surface);
+  background-color: var(--color-surface);
   border-color: var(--color-border);
   border-radius: var(--nx-radius-control);
 }
@@ -90,7 +117,7 @@ html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--disclosu
 
 html[data-companion-theme] .desktop-pet-root .onboarding-card .primary-button,
 html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--disclosure .primary-button,
-html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--calm :is(.ghost-button, .primary-button) {
+html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--calm .primary-button {
   width: 100%;
   color: var(--color-on-accent);
   background: var(--color-accent);
@@ -153,4 +180,10 @@ html[data-companion-theme] .onboarding-card :is(.ghost-button, .onboarding-regio
 
 html[data-companion-theme] .onboarding-card :is(.onboarding-step, .onboarding-choice, .onboarding-card__step, .ai-disclosure-step) {
   border-radius: var(--nx-radius-card);
+}
+
+html[data-companion-theme] .onboarding-card :is(.onboarding-region-tabs__tab, .onboarding-relationship__chip).is-active {
+  color: var(--color-text-primary);
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
 }

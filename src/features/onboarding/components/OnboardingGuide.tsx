@@ -8,18 +8,6 @@ import {
   apiProviderRequiresApiKey,
 } from '../../models/providerCatalog.ts'
 import type { ApiProviderPreset } from '../../models/providerCatalog.ts'
-import {
-  getFallbackSpeechOutputVoices,
-  getSpeechInputModelOptions,
-  getSpeechInputProviderPreset,
-  getSpeechOutputModelOptions,
-  getSpeechOutputProviderPreset,
-  isVolcengineSpeechOutputProvider,
-} from '../../../lib/audioProviders.ts'
-import {
-  switchSpeechInputProvider,
-  switchSpeechOutputProvider,
-} from '../../../lib/speechProviderProfiles.ts'
 import { switchTextProvider } from '../../../lib/textProviderProfiles.ts'
 import type { AppSettings, PlatformProfile, WindowView } from '../../../types'
 import type { PetModelDefinition } from '../../pet'
@@ -31,21 +19,26 @@ import {
 import {
   AiDisclosureStep,
   CompanionStep,
-  MessageActionDemoStep,
+  LanguageStep,
   TextStep,
   VoiceStep,
   WelcomeStep,
 } from './guideSteps'
 import { recordDisclosureAck } from '../../safety/disclosureState.ts'
 import {
+  applyOnboardingLanguageChoice,
   applyOnboardingStepRepairDraft,
   buildOnboardingSteps,
-  getOnboardingFinishHint,
+  getOnboardingMissingApiKeyHint,
   getOnboardingStepIssue,
+  resolveOnboardingFinishGate,
   sanitizeOnboardingSettings,
   type OnboardingStepIssue,
 } from './onboardingGuideSupport.ts'
+import { ensureLocaleLoaded } from '../../../i18n/runtime.ts'
+import { getRedactedLogErrorMessage } from '../../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
+import type { UiLanguage } from '../../../types/i18n.ts'
 
 export type OnboardingGuideProps = {
   open: boolean
@@ -55,7 +48,10 @@ export type OnboardingGuideProps = {
   petModelPresets: PetModelDefinition[]
   onDismiss: () => void
   onSave: (settings: AppSettings) => Promise<void>
+  /** Persist the language choice without finishing the guide. */
+  onPersistUiLanguage?: (settings: AppSettings) => Promise<void>
   onTestTextConnection?: (settings: AppSettings) => Promise<import('../../../components/settingsDrawerSupport').ConnectionResult>
+  onPreviewSpeech?: (settings: AppSettings, text: string) => Promise<{ message: string }>
 }
 
 export function OnboardingGuide({
@@ -66,13 +62,17 @@ export function OnboardingGuide({
   petModelPresets,
   onDismiss,
   onSave,
+  onPersistUiLanguage,
   onTestTextConnection,
+  onPreviewSpeech,
 }: OnboardingGuideProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const [draft, setDraft] = useState(settings)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<OnboardingStepIssue | null>(null)
   const [repairNotice, setRepairNotice] = useState<string | null>(null)
+  const [finishNotice, setFinishNotice] = useState<string | null>(null)
+  const [unverifiedFinishAcknowledged, setUnverifiedFinishAcknowledged] = useState(false)
   // Store fingerprint/evidence/checkedAt so readiness is derived from the
   // current draft + wall clock (not a sticky boolean that outlives the TTL).
   const [textConnectionVerification, setTextConnectionVerification] = useState<ConnectionVerificationRecord | null>(null)
@@ -82,7 +82,12 @@ export function OnboardingGuide({
   // language default.
   const [textProviderRegion, setTextProviderRegion] = useState<ApiProviderPreset['region'] | null>(null)
   const dialogRef = useRef<HTMLElement | null>(null)
+  const draftRef = useRef(draft)
+  const languageRequestRef = useRef(0)
   useModalFocusTrap(dialogRef, open)
+  useEffect(() => {
+    draftRef.current = draft
+  }, [draft])
   const ti = (
     key: Parameters<typeof pickTranslatedUiText>[1],
     params?: Parameters<typeof pickTranslatedUiText>[2],
@@ -92,14 +97,8 @@ export function OnboardingGuide({
   const step = onboardingSteps[stepIndex] ?? onboardingSteps[0]
   const isAiDisclosureStep = step.id === 'ai_disclosure'
   const lastStepIndex = onboardingSteps.length - 1
-  const speechInputProvider = getSpeechInputProviderPreset(draft.speechInputProviderId)
-  const speechOutputProvider = getSpeechOutputProviderPreset(draft.speechOutputProviderId)
-  const speechInputModelOptions = getSpeechInputModelOptions(draft.speechInputProviderId)
-  const speechOutputModelOptions = getSpeechOutputModelOptions(draft.speechOutputProviderId)
-  const speechOutputVoiceOptions = getFallbackSpeechOutputVoices(draft.speechOutputProviderId)
-  const isVolcengineSpeechOutput = isVolcengineSpeechOutputProvider(draft.speechOutputProviderId)
   const selectedPetModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
-  const finishHint = getOnboardingFinishHint(
+  const missingApiKeyHint = getOnboardingMissingApiKeyHint(
     draft,
     apiProviderRequiresApiKey(draft.apiProviderId),
     draft.uiLanguage,
@@ -118,16 +117,19 @@ export function OnboardingGuide({
   // while open — render-time adjust keyed on an "open ? settings : null"
   // signal, replacing the synchronous effect-body setState. All reset values
   // match the initial useState values, so skipping the mount pass is a no-op.
-  const resetSignal = open ? settings : null
-  const [previousResetSignal, setPreviousResetSignal] = useState(resetSignal)
-  if (previousResetSignal !== resetSignal) {
-    setPreviousResetSignal(resetSignal)
-    if (resetSignal) {
-      setDraft(resetSignal)
+  // Reset only when the guide opens. A language choice saves settings while
+  // the guide stays open, and that save must not send the user back to step one.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (wasOpen !== open) {
+    setWasOpen(open)
+    if (open) {
+      setDraft(settings)
       setStepIndex(0)
       setSaving(false)
       setError(null)
       setRepairNotice(null)
+      setFinishNotice(null)
+      setUnverifiedFinishAcknowledged(false)
       setTextConnectionVerification(null)
       setVerificationFreshnessTick(0)
     }
@@ -194,23 +196,56 @@ export function OnboardingGuide({
     setDraft(next)
     setError(null)
     setRepairNotice(null)
+    setFinishNotice(null)
+  }
+
+  function updateTextConnectionVerification(record: ConnectionVerificationRecord | null) {
+    setTextConnectionVerification(record)
+    if (!record) {
+      setUnverifiedFinishAcknowledged(false)
+      setFinishNotice(null)
+    }
+  }
+
+  async function chooseLanguage(nextLanguage: UiLanguage) {
+    if (nextLanguage === draftRef.current.uiLanguage) return
+    const request = languageRequestRef.current + 1
+    languageRequestRef.current = request
+    try {
+      await ensureLocaleLoaded(nextLanguage)
+    } catch (error) {
+      console.error('[onboarding] Failed to load locale:', nextLanguage, getRedactedLogErrorMessage(error))
+    }
+    if (languageRequestRef.current !== request) return
+    const nextDraft = applyOnboardingLanguageChoice(draftRef.current, nextLanguage)
+    setDraft(nextDraft)
+    setError(null)
+    setRepairNotice(null)
+    setFinishNotice(null)
+    if (!onPersistUiLanguage) return
+    if (
+      nextDraft.uiLanguage === settings.uiLanguage
+      && nextDraft.companionName === settings.companionName
+      && nextDraft.userName === settings.userName
+      && nextDraft.wakeWord === settings.wakeWord
+    ) {
+      return
+    }
+    try {
+      await onPersistUiLanguage(nextDraft)
+    } catch (caught) {
+      if (languageRequestRef.current !== request) return
+      setError({
+        message: caught instanceof Error
+          ? caught.message
+          : pickTranslatedUiText(nextDraft.uiLanguage, 'onboarding.save_failed'),
+      })
+    }
   }
 
   function applyTextProviderPreset(providerId: string) {
-    setTextConnectionVerification(null)
+    updateTextConnectionVerification(null)
     setDraft((current) => switchTextProvider(current, providerId))
-    setError(null)
-    setRepairNotice(null)
-  }
-
-  function applySpeechInputPreset(providerId: string) {
-    setDraft((current) => switchSpeechInputProvider(current, providerId))
-    setError(null)
-    setRepairNotice(null)
-  }
-
-  function applySpeechOutputPreset(providerId: string) {
-    setDraft((current) => switchSpeechOutputProvider(current, providerId))
     setError(null)
     setRepairNotice(null)
   }
@@ -218,7 +253,7 @@ export function OnboardingGuide({
   function applyOnboardingRepair(repair: OnboardingStepIssue['repair']) {
     if (!repair) return
     if (step.id === 'text') {
-      setTextConnectionVerification(null)
+      updateTextConnectionVerification(null)
     }
     const nextDraft = applyOnboardingStepRepairDraft(draft, repair)
     const remainingIssue = getOnboardingStepIssue(nextDraft, step.id, nextDraft.uiLanguage)
@@ -241,6 +276,7 @@ export function OnboardingGuide({
 
     setError(null)
     setRepairNotice(null)
+    setFinishNotice(null)
     setStepIndex((current) => Math.min(lastStepIndex, current + 1))
   }
 
@@ -248,12 +284,26 @@ export function OnboardingGuide({
     const nextError = getOnboardingStepIssue(draft, step.id, draft.uiLanguage)
     if (nextError) {
       setError(nextError)
+      setFinishNotice(null)
+      return
+    }
+
+    const finishGate = resolveOnboardingFinishGate({
+      textConnectionVerified,
+      acknowledgedUnverified: unverifiedFinishAcknowledged,
+      uiLanguage: draft.uiLanguage,
+    })
+    if (!finishGate.proceed) {
+      setUnverifiedFinishAcknowledged(true)
+      setFinishNotice(finishGate.warning)
+      setError(null)
       return
     }
 
     setSaving(true)
     setError(null)
     setRepairNotice(null)
+    setFinishNotice(null)
 
     try {
       await onSave(sanitizeOnboardingSettings(draft, settings))
@@ -279,6 +329,13 @@ export function OnboardingGuide({
 
   function renderStepContent() {
     switch (step.id) {
+      case 'language':
+        return (
+          <LanguageStep
+            draft={draft}
+            onChooseLanguage={(language) => { void chooseLanguage(language) }}
+          />
+        )
       case 'ai_disclosure':
         return <AiDisclosureStep draft={draft} />
       case 'welcome':
@@ -297,26 +354,17 @@ export function OnboardingGuide({
             regionTab={textProviderRegion}
             onRegionTabChange={setTextProviderRegion}
             onTestConnection={onTestTextConnection ? testOnboardingTextConnection : undefined}
-            onTextConnectionVerificationChange={setTextConnectionVerification}
+            onTextConnectionVerificationChange={updateTextConnectionVerification}
+            missingApiKeyHint={missingApiKeyHint}
           />
         )
       case 'voice':
         return (
           <VoiceStep
             draft={draft}
-            setDraft={updateDraftFromStep}
-            speechInputProvider={speechInputProvider}
-            speechOutputProvider={speechOutputProvider}
-            speechInputModelOptions={speechInputModelOptions}
-            speechOutputModelOptions={speechOutputModelOptions}
-            speechOutputVoiceOptions={speechOutputVoiceOptions}
-            isVolcengineSpeechOutput={isVolcengineSpeechOutput}
-            onApplySpeechInputPreset={applySpeechInputPreset}
-            onApplySpeechOutputPreset={applySpeechOutputPreset}
+            onPreviewSpeech={onPreviewSpeech}
           />
         )
-      case 'message_action_demo':
-        return <MessageActionDemoStep uiLanguage={draft.uiLanguage} />
       case 'companion':
       default:
         return (
@@ -326,7 +374,6 @@ export function OnboardingGuide({
             petModelPresets={petModelPresets}
             selectedPetModel={selectedPetModel}
             launchOnStartupSupported={platformProfile.startup.supported}
-            finishHint={finishHint}
             textConnectionVerified={textConnectionVerified}
           />
         )
@@ -410,8 +457,14 @@ export function OnboardingGuide({
           </div>
         </div>
 
-        <div className={`onboarding-card__actions onboarding-card__actions--calm ${isAiDisclosureStep ? 'onboarding-card__actions--disclosure' : ''}`}>
-          {isAiDisclosureStep ? null : (
+        <div className="onboarding-grid onboarding-grid--stack">
+          {finishNotice ? (
+            <p id="onboarding-finish-warning" className="onboarding-tip onboarding-tip--strong" role="status">
+              {finishNotice}
+            </p>
+          ) : null}
+          <div className={`onboarding-card__actions onboarding-card__actions--calm ${isAiDisclosureStep ? 'onboarding-card__actions--disclosure' : ''}`}>
+          {stepIndex === 0 ? null : (
             <button
               className="ghost-button"
               type="button"
@@ -419,8 +472,9 @@ export function OnboardingGuide({
                 setStepIndex((current) => Math.max(0, current - 1))
                 setError(null)
                 setRepairNotice(null)
+                setFinishNotice(null)
               }}
-              disabled={stepIndex === 0 || saving}
+              disabled={saving}
             >
               {ti('onboarding.prev')}
             </button>
@@ -435,6 +489,7 @@ export function OnboardingGuide({
               {saving ? ti('onboarding.finishing') : ti('onboarding.finish')}
             </button>
           )}
+        </div>
         </div>
       </section>
     </div>

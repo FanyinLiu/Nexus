@@ -11,9 +11,10 @@ import {
   loadGuideDeferral,
   loadOnboardingCompleted,
   markGuideReshown,
+  markOnboardingInProgress,
   recordGuideDismiss,
 } from '../src/lib/storage/onboarding.ts'
-import { ONBOARDING_STORAGE_KEY } from '../src/lib/storage/core.ts'
+import { ONBOARDING_STORAGE_KEY, SETTINGS_STORAGE_KEY } from '../src/lib/storage/core.ts'
 
 const FIRST = '2026-10-16T00:00:00.000Z'
 const LATER = '2026-10-17T00:00:00.000Z'
@@ -80,6 +81,44 @@ test('dismissal is stored without looking like a finished setup', () => {
   recordGuideDismiss(new Date(LATER))
   assert.equal(loadGuideDeferral()?.dismissCount, 2)
   assert.equal(normalizeGuideDeferral(JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}'))?.dismissCount, 2)
+})
+
+test('a language save still leaves one later showing', () => {
+  const storage = installStorage()
+  markOnboardingInProgress()
+  storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ uiLanguage: 'en-US' }))
+
+  const saved = recordGuideDismiss(new Date(FIRST))
+  assert.equal(saved?.dismissCount, 1)
+  assert.equal(loadOnboardingCompleted(), false)
+  const stored = JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}')
+  assert.equal(stored.status, 'in-progress')
+  assert.equal(stored.guideDismissCount, 1)
+  assert.equal(stored.completedAt, undefined)
+
+  assert.deepEqual(resolveGuideLaunch({
+    completed: loadOnboardingCompleted(),
+    deferral: loadGuideDeferral(),
+  }), { show: true, consumeReshow: true })
+
+  markGuideReshown(new Date(LATER))
+  const afterReshow = JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}')
+  assert.equal(afterReshow.status, 'in-progress')
+  assert.equal(afterReshow.guideReshownAt, LATER)
+  assert.deepEqual(resolveGuideLaunch({
+    completed: loadOnboardingCompleted(),
+    deferral: loadGuideDeferral(),
+  }), { show: false, consumeReshow: false })
+
+  recordGuideDismiss(new Date(LATER))
+  const afterSecondDismiss = JSON.parse(storage.getItem(ONBOARDING_STORAGE_KEY) ?? '{}')
+  assert.equal(afterSecondDismiss.status, 'in-progress')
+  assert.equal(afterSecondDismiss.guideDismissCount, 2)
+  assert.equal(loadOnboardingCompleted(), false)
+  assert.deepEqual(resolveGuideLaunch({
+    completed: loadOnboardingCompleted(),
+    deferral: loadGuideDeferral(),
+  }), { show: false, consumeReshow: false })
 })
 
 test('a later dismissal does not erase a finished setup', () => {
