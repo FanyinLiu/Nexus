@@ -296,4 +296,5 @@ export const zhCNSettingsMemory = {
   'memory.change.undone': '撤销了对「{name}」的修改',
   'memory.change.updated': '改了「{name}」',
   'memory.change.cancelled': '撤掉了「{name}」的提醒',
+  'memory.change.deleted': '已删除一条记忆',
 } as const satisfies Record<string, string>

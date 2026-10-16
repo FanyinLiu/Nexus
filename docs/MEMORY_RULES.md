@@ -16,11 +16,18 @@ op, and is the one delete that does not carry a quote.
 
 ## Undo
 
-The op log is append-only. Each mutating op stores a `before` image of the
-rows it touched. Each daily run stores a snapshot of the list before the run
-(`nexus:memory:run-snapshots`). One-tap undo restores that image. Undoing a
-run restores the snapshot. Neither path rewrites history; the undo itself is
+The op log is append-only for curation. Each mutating op stores a `before`
+image of the rows it touched. Each daily run stores a snapshot of the list
+before the run (`nexus:memory:run-snapshots`, the latest 20). One-tap undo
+restores that image. Undoing a run restores the snapshot. The undo itself is
 another op.
+
+A user delete is different. Once it is confirmed, the wording is removed from
+the live row, every run snapshot, op-log `before` copies, evidence quotes,
+reminder text, and the other memory files this feature writes. The op-log row
+stays, with the quote replaced by a redacted note. Clear-all does the same
+for every current memory and diary line. Undo of that delete can use a copy
+held in the session only; that copy is not written back to disk.
 
 ## Loss guard
 

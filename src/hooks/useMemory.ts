@@ -24,6 +24,7 @@ import {
   readMemoryFromLocalData,
   syncMemoryToLocalData,
 } from '../lib/index.ts'
+import { purgeClearedMemories, purgeDeletedMemory } from '../lib/storage/purgeMemoryStores.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type {
   AppSettings,
@@ -219,11 +220,12 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [])
 
   const removeMemory = useCallback((id: string) => {
-    setMemories((current) => {
-      const nextMemories = current.filter((memory) => memory.id !== id)
-      memoriesRef.current = nextMemories
-      return nextMemories
-    })
+    const current = memoriesRef.current
+    const target = current.find((memory) => memory.id === id)
+    const nextMemories = current.filter((memory) => memory.id !== id)
+    memoriesRef.current = nextMemories
+    setMemories(nextMemories)
+    if (target) purgeDeletedMemory(target)
   }, [])
 
   const patchMemory = useCallback((
@@ -377,6 +379,9 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [])
 
   const clearMemoryArchive = useCallback(async () => {
+    const currentMemories = memoriesRef.current
+    const currentDaily = dailyMemoriesRef.current
+    purgeClearedMemories(currentMemories, currentDaily)
     memoriesRef.current = []
     dailyMemoriesRef.current = {}
     setMemories([])

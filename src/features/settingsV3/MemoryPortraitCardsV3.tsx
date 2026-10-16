@@ -5,11 +5,13 @@
  * changes are sentences with one undo each. Op codes stay in the log.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { TranslationKey } from '../../types/i18n.ts'
 import { loadCompanionSoul, saveCompanionSoul } from '../../lib/storage/companionSoul.ts'
 import { loadMemoryOpLog, appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
+import { MEMORY_OP_LOG_CHANGED_EVENT } from '../../lib/storage/purgeMemoryStores.ts'
+import { peekDeletedMemory, takeDeletedMemory } from '../memory/deletedMemorySession.ts'
 import { undoMemoryOp } from '../memory/memoryUndo.ts'
 import {
   displayMemoryText,
@@ -75,6 +77,11 @@ export function MemoryPortraitCardsV3({
     void logTick
     return loadMemoryOpLog().filter((entry) => entry.op !== 'NOOP').slice(-8).reverse()
   }, [logTick])
+  useEffect(() => {
+    const bump = () => setLogTick((value) => value + 1)
+    window.addEventListener(MEMORY_OP_LOG_CHANGED_EVENT, bump)
+    return () => window.removeEventListener(MEMORY_OP_LOG_CHANGED_EVENT, bump)
+  }, [])
   const memorySummary = diaryCount === 0
     ? t('memory.portrait.summary_empty', { count: active.length })
     : t('memory.portrait.summary', { count: active.length })
@@ -90,7 +97,13 @@ export function MemoryPortraitCardsV3({
     setSoul(note)
   }
   const undo = (entry: MemoryOpRecord) => {
-    replaceMemories(undoMemoryOp(memories, entry))
+    const sessionRows = entry.reason === 'user-deleted'
+      ? entry.targetIds.map((id) => takeDeletedMemory(id)).filter((row) => row !== null)
+      : []
+    const restored = sessionRows.length
+      ? { ...entry, before: sessionRows }
+      : entry
+    replaceMemories(undoMemoryOp(memories, restored))
     appendMemoryOpLog([{
       id: `memory-op-undo-${entry.id}`,
       at: new Date().toISOString(),
@@ -98,7 +111,9 @@ export function MemoryPortraitCardsV3({
       op: 'UNDO',
       targetIds: entry.targetIds,
       reason: 'undo',
-      evidenceQuote: entry.evidenceQuote || entry.before?.[0]?.content || t('memory.portrait.undo'),
+      evidenceQuote: entry.reason === 'user-deleted'
+        ? t('memory.change.deleted')
+        : entry.evidenceQuote || entry.before?.[0]?.content || t('memory.portrait.undo'),
       messageRef: entry.messageRef || entry.id,
     }])
     setLogTick((value) => value + 1)
@@ -220,7 +235,7 @@ export function MemoryPortraitCardsV3({
                           {' · '}
                           {memoryChangeDate(entry.at)}
                         </p>
-                        {entry.op !== 'UNDO' && entry.before?.length ? (
+                        {entry.op !== 'UNDO' && (entry.before?.length || (entry.reason === 'user-deleted' && entry.targetIds.some((id) => peekDeletedMemory(id)))) ? (
                           <button type="button" onClick={() => undo(entry)}>{t('memory.portrait.undo')}</button>
                         ) : null}
                       </li>

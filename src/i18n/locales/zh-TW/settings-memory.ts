@@ -298,4 +298,5 @@ export const zhTWSettingsMemory = {
   'memory.change.undone': '復原了對「{name}」的修改',
   'memory.change.updated': '改了「{name}」',
   'memory.change.cancelled': '撤掉了「{name}」的提醒',
+  'memory.change.deleted': '已刪除一條記憶',
 } as const satisfies Partial<TranslationDictionary>

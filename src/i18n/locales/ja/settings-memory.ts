@@ -298,4 +298,5 @@ export const jaSettingsMemory = {
   'memory.change.undone': '「{name}」の変更を戻した',
   'memory.change.updated': '「{name}」を直した',
   'memory.change.cancelled': '「{name}」の知らせを取り消した',
+  'memory.change.deleted': '記憶を1件削除した',
 } as const satisfies Partial<TranslationDictionary>

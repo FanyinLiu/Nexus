@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { scrubChatMessages } from '../../features/memory/purgeMemoryText.ts'
+import { MEMORY_PLAINTEXT_PURGED_EVENT } from '../../lib/storage/purgeMemoryStores.ts'
 import {
   createId,
   inferSessionTitle,
@@ -58,6 +60,19 @@ export function useChatPersistence({
       }
       return merged
     })
+  }, [setMessages])
+
+  useEffect(() => {
+    const onPurge = (event: Event) => {
+      const needles = (event as CustomEvent<{ needles?: string[] }>).detail?.needles ?? []
+      if (!needles.length) return
+      setMessages((current) => {
+        const next = scrubChatMessages(current, needles)
+        return JSON.stringify(next) === JSON.stringify(current) ? current : next
+      })
+    }
+    window.addEventListener(MEMORY_PLAINTEXT_PURGED_EVENT, onPurge)
+    return () => window.removeEventListener(MEMORY_PLAINTEXT_PURGED_EVENT, onPurge)
   }, [setMessages])
 
   useEffect(() => {
