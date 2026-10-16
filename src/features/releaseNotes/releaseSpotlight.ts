@@ -1,26 +1,7 @@
 import type { TranslationKey } from '../../types/i18n.ts'
 
 export type ReleaseSpotlightBullet = {
-  id:
-    | 'companion_presence'
-    | 'transparent_surface'
-    | 'text_chat_support'
-    | 'voice_settings'
-    | 'companion_boundary'
-    | 'toolchain_refresh'
-    | 'security_hardening'
-    | 'code_health'
-    | 'quality_gates'
-    | 'release_pipeline'
-    | 'transparent_compositing'
-    | 'content_security'
-    | 'context_recovery'
-    | 'graceful_fallback'
-    | 'import_validation'
-    | 'repair_guidance'
-    | 'limited_compatibility'
-    | 'private_diagnostics'
-    | 'runtime_proof'
+  id: 'gaze' | 'messages' | 'voice' | 'updates'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -47,29 +28,24 @@ export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'import_validation',
-      titleKey: 'about.release_spotlight.bullet.import_validation.title',
-      bodyKey: 'about.release_spotlight.bullet.import_validation.body',
+      id: 'gaze',
+      titleKey: 'about.release_spotlight.bullet.gaze.title',
+      bodyKey: 'about.release_spotlight.bullet.gaze.body',
     },
     {
-      id: 'repair_guidance',
-      titleKey: 'about.release_spotlight.bullet.repair_guidance.title',
-      bodyKey: 'about.release_spotlight.bullet.repair_guidance.body',
+      id: 'messages',
+      titleKey: 'about.release_spotlight.bullet.messages.title',
+      bodyKey: 'about.release_spotlight.bullet.messages.body',
     },
     {
-      id: 'limited_compatibility',
-      titleKey: 'about.release_spotlight.bullet.limited_compatibility.title',
-      bodyKey: 'about.release_spotlight.bullet.limited_compatibility.body',
+      id: 'voice',
+      titleKey: 'about.release_spotlight.bullet.voice.title',
+      bodyKey: 'about.release_spotlight.bullet.voice.body',
     },
     {
-      id: 'private_diagnostics',
-      titleKey: 'about.release_spotlight.bullet.private_diagnostics.title',
-      bodyKey: 'about.release_spotlight.bullet.private_diagnostics.body',
-    },
-    {
-      id: 'runtime_proof',
-      titleKey: 'about.release_spotlight.bullet.runtime_proof.title',
-      bodyKey: 'about.release_spotlight.bullet.runtime_proof.body',
+      id: 'updates',
+      titleKey: 'about.release_spotlight.bullet.updates.title',
+      bodyKey: 'about.release_spotlight.bullet.updates.body',
     },
   ],
   actions: [

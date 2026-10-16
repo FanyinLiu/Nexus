@@ -26,13 +26,7 @@ test('current release spotlight keeps the package version explicit', () => {
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
-    [
-      'import_validation',
-      'repair_guidance',
-      'limited_compatibility',
-      'private_diagnostics',
-      'runtime_proof',
-    ],
+    ['gaze', 'messages', 'voice', 'updates'],
   )
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.actions.map((item) => [item.id, item.targetSectionId]),
@@ -43,7 +37,7 @@ test('current release spotlight keeps the package version explicit', () => {
   )
   assert.ok(
     getReleaseSpotlightTranslationKeys().includes(
-      'about.release_spotlight.bullet.import_validation.title',
+      'about.release_spotlight.bullet.gaze.title',
     ),
   )
 })
@@ -67,18 +61,16 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes the v0.4.7 stable compatibility release and keeps historical keys', async () => {
+test('current release spotlight describes what 0.4.8 brings and keeps historical keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'A safer path from model folder to companion.')
-  assert.match(en['about.release_spotlight.summary'], /v0\.4\.7 is the current stable release/i)
-  assert.match(en['about.release_spotlight.summary'], /unsigned macOS builds.*manually.*release page/i)
-  assert.match(en['about.release_spotlight.bullet.import_validation.body'], /Moc.*textures.*declared local resource.*before/i)
-  assert.match(en['about.release_spotlight.bullet.repair_guidance.body'], /Five localized messages.*missing textures.*unsafe paths/i)
-  assert.match(en['about.release_spotlight.bullet.limited_compatibility.body'], /without motions or expressions.*still display/i)
-  assert.match(en['about.release_spotlight.bullet.private_diagnostics.body'], /categories and counts.*never private local file paths/i)
-  assert.match(en['about.release_spotlight.bullet.runtime_proof.body'], /Three-model cold starts.*Moc.*texture.*motion.*expression counts/i)
+  assert.equal(en['about.release_spotlight.title'], 'Your pet stays closer.')
+  assert.match(en['about.release_spotlight.summary'], /follows your gaze/i)
+  assert.match(en['about.release_spotlight.bullet.gaze.body'], /follows your cursor/i)
+  assert.match(en['about.release_spotlight.bullet.messages.body'], /Telegram and Discord/i)
+  assert.match(en['about.release_spotlight.bullet.voice.body'], /suggest a voice for this computer/i)
+  assert.match(en['about.release_spotlight.bullet.updates.body'], /saves your data first/i)
   assert.equal(en['about.release_spotlight.action.open_voice'], 'Open Voice Settings')
   assert.equal(en['about.release_spotlight.action.preview_companion'], 'Preview Companion')
 
@@ -93,14 +85,12 @@ test('current release spotlight describes the v0.4.7 stable compatibility releas
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
-  assert.equal(zhCN['about.release_spotlight.title'], '从模型文件夹到桌面伙伴，切换更安全。')
-  assert.match(zhCN['about.release_spotlight.summary'], /v0\.4\.7 是当前稳定版/)
-  assert.match(zhCN['about.release_spotlight.summary'], /macOS 构建未签名.*发布页.*手动/)
-  assert.match(zhCN['about.release_spotlight.bullet.import_validation.body'], /Moc.*纹理.*本地资源.*再切换/)
-  assert.match(zhCN['about.release_spotlight.bullet.repair_guidance.body'], /五语言.*纹理.*动作.*表情.*不安全路径/)
-  assert.match(zhCN['about.release_spotlight.bullet.limited_compatibility.body'], /没有动作或表情.*仍可显示/)
-  assert.match(zhCN['about.release_spotlight.bullet.private_diagnostics.body'], /资源类别和数量.*不暴露.*路径/)
-  assert.match(zhCN['about.release_spotlight.bullet.runtime_proof.body'], /三模型.*Moc.*纹理.*动作.*表情数量/)
+  assert.equal(zhCN['about.release_spotlight.title'], '桌宠更会陪在你身边。')
+  assert.match(zhCN['about.release_spotlight.summary'], /跟着你的视线/)
+  assert.match(zhCN['about.release_spotlight.bullet.gaze.body'], /看向哪里/)
+  assert.match(zhCN['about.release_spotlight.bullet.messages.body'], /Telegram 和 Discord/)
+  assert.match(zhCN['about.release_spotlight.bullet.voice.body'], /推荐语音/)
+  assert.match(zhCN['about.release_spotlight.bullet.updates.body'], /先保存你的数据/)
   assert.equal(zhCN['about.release_spotlight.action.open_voice'], '打开语音设置')
   assert.equal(zhCN['about.release_spotlight.action.preview_companion'], '预览伙伴')
 
@@ -116,26 +106,30 @@ test('current release spotlight describes the v0.4.7 stable compatibility releas
   assert.match(zhCN['about.release_spotlight.bullet.voice_settings.body'], /无框伙伴与桌宠/)
 })
 
-test('release spotlight presents v0.4.7 as stable and keeps unsigned macOS updates explicit', async () => {
-  const contracts = [
-    ['en-US', /v0\.4\.7 is the current stable release/i, /unsigned macOS builds.*manually.*release page/i],
-    ['zh-CN', /v0\.4\.7 是当前稳定版/, /macOS 构建未签名.*发布页.*手动/],
-    ['zh-TW', /v0\.4\.7 是目前穩定版/, /macOS 建置未簽署.*發布頁.*手動/],
-    ['ja', /v0\.4\.7 が現在の安定版/, /署名なし macOS ビルド.*リリースページ.*手動/],
-    ['ko', /v0\.4\.7이 현재 안정 버전/, /서명되지 않은 macOS 빌드.*릴리스 페이지.*수동/],
+test('current release spotlight stays plain and does not claim a stable version', async () => {
+  const devSpeak = /稳定版|安定版|안정 버전|current stable|Moc|烟测|煙霧|smoke report|Cubism|WebGL|Pixi|probe|pipeline|链路|鏈路|自检|自檢/i
+  const highlights = [
+    ['en-US', /follows your gaze/i, /Telegram and Discord/i],
+    ['zh-CN', /跟着你的视线/, /Telegram 和 Discord/],
+    ['zh-TW', /跟著你的視線/, /Telegram 和 Discord/],
+    ['ja', /視線を追い/, /Telegram と Discord/],
+    ['ko', /시선을 따라오고/, /Telegram과 Discord/],
   ] as const
 
-  for (const [locale, releaseStatePattern, unsignedUpdatePattern] of contracts) {
+  for (const [locale, gazePattern, messagePattern] of highlights) {
     const dictionary = await ensureLocaleLoaded(locale)
     const copy = [
+      dictionary['about.release_spotlight.title'],
       dictionary['about.release_spotlight.summary'],
       ...CURRENT_RELEASE_SPOTLIGHT.bullets.flatMap((item) => [
         dictionary[item.titleKey],
         dictionary[item.bodyKey],
       ]),
     ].join(' ')
-    assert.match(copy, releaseStatePattern, `${locale} must keep the v0.4.7 stable entry explicit`)
-    assert.match(copy, unsignedUpdatePattern, `${locale} must keep the unsigned macOS manual-update boundary`)
+    assert.match(copy, gazePattern, `${locale} must describe gaze follow`)
+    assert.match(copy, messagePattern, `${locale} must describe message cards`)
+    assert.doesNotMatch(copy, devSpeak, `${locale} spotlight must stay plain`)
+    assert.doesNotMatch(copy, /v0\.4\.[0-9]/, `${locale} spotlight must not pin a version claim`)
   }
 })
 

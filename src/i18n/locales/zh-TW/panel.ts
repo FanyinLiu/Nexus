@@ -25,7 +25,7 @@ export const zhTWPanel = {
   'panel.activity.blocked': '需要留意',
   'panel.greeting.remembered': '你之前說的「{memory}」，我一直記著。想接著聊也好，只是坐一會兒也好，我都在。',
   'panel.greeting.welcome': '{companionName} 在這邊陪著你。就算只是說句今天過得怎樣，我也想聽。',
-  'panel.audio_smoke_test_hint': '建議先打開設定頁跑一次音訊自檢，確認輸入輸出鏈路都正常。',
+  'panel.audio_smoke_test_hint': '可以先到設定裡聽一句，確認麥克風和說話都正常。',
   'panel.quickstart.continue_label': '繼續上次話題',
   'panel.quickstart.wrap_today_label': '整理今日重點',
   'panel.quickstart.continue_prompt': '繼續剛才關於「{topic}」的話題，先給我一個簡短總結，再告訴我下一步。',

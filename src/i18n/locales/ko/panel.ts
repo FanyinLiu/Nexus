@@ -25,7 +25,7 @@ export const koPanel = {
   'panel.activity.blocked': '확인이 필요함',
   'panel.greeting.remembered': '전에 "{memory}" 얘기한 거, 계속 마음에 담아 두고 있어요. 이어가도 좋고, 그냥 잠깐 앉아 있어도 좋아요 — 어느 쪽이든 저는 여기 있어요.',
   'panel.greeting.welcome': '{companionName} 이(가) 여기서 함께 있어요. 그냥 오늘 어땠는지 한마디라도, 저는 듣고 싶어요.',
-  'panel.audio_smoke_test_hint': '먼저 설정에서 오디오 자가 점검을 실행해 입출력 경로가 정상인지 확인해 보세요.',
+  'panel.audio_smoke_test_hint': '설정에서 한 마디 들어 보고, 마이크와 목소리가 괜찮은지 확인해 보세요.',
   'panel.quickstart.continue_label': '지난 주제 이어가기',
   'panel.quickstart.wrap_today_label': '오늘 정리',
   'panel.quickstart.continue_prompt': '조금 전 "{topic}" 얘기를 이어서, 먼저 짧게 요약하고 다음 단계를 알려줘.',
