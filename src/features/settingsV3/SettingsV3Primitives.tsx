@@ -47,7 +47,7 @@ export function SettingsV3Row({
 }) {
   return (
     <div className="settings-v3-row" data-disabled={disabled ? 'true' : undefined}>
-      {icon ? <span className="settings-v3-row__icon" aria-hidden="true"><PetControlIcon name={icon} /></span> : null}
+      {icon ? <span className="settings-v3-row__icon" aria-hidden="true"><PetControlIcon name={icon} variant="line" /></span> : null}
       <div className="settings-v3-row__copy">
         <strong>{label}</strong>
         {hint ? <span>{hint}</span> : null}

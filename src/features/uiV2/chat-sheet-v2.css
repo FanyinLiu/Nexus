@@ -1,16 +1,16 @@
 .chat-sheet-v2 {
-  --chat-sheet-v2-fog: var(--nx-v2-fog, var(--color-surface-muted, #f7f3ee));
-  --chat-sheet-v2-surface: var(--nx-v2-surface, var(--color-surface-elevated, #fffdfc));
-  --chat-sheet-v2-surface-soft: var(--nx-v2-surface-soft, var(--color-surface, #f1ece7));
-  --chat-sheet-v2-ink: var(--nx-v2-ink, var(--color-text-primary, #302b32));
-  --chat-sheet-v2-muted: var(--nx-v2-muted, var(--color-text-muted, #716a70));
-  --chat-sheet-v2-line: var(--nx-v2-line, var(--color-border, #ded7d2));
-  --chat-sheet-v2-lavender: var(--nx-v2-accent, var(--color-accent, #8274c9));
-  --chat-sheet-v2-amber: var(--nx-v2-secondary, var(--color-accent-secondary, var(--color-accent-hover, #d98b58)));
-  --chat-sheet-v2-shadow: var(--nx-v2-shadow, var(--color-shadow, rgb(49 39 47 / 8%)));
-  --chat-sheet-v2-on-accent: var(--nx-v2-on-accent, var(--color-on-accent, #fff));
+  --chat-sheet-v2-fog: var(--nx-v2-fog, var(--color-surface-muted));
+  --chat-sheet-v2-surface: var(--nx-v2-surface, var(--color-surface-elevated));
+  --chat-sheet-v2-surface-soft: var(--nx-v2-surface-soft, var(--color-surface));
+  --chat-sheet-v2-ink: var(--nx-v2-ink, var(--color-text-primary));
+  --chat-sheet-v2-muted: var(--nx-v2-muted, var(--color-text-muted));
+  --chat-sheet-v2-line: var(--nx-v2-line, var(--color-border));
+  --chat-sheet-v2-lavender: var(--nx-v2-accent, var(--color-accent));
+  --chat-sheet-v2-amber: var(--nx-v2-secondary, var(--color-accent-secondary, var(--color-accent-hover)));
+  --chat-sheet-v2-shadow: var(--nx-v2-shadow, var(--color-shadow));
+  --chat-sheet-v2-on-accent: var(--nx-v2-on-accent, var(--color-on-accent));
   --chat-sheet-v2-ink-strong: color-mix(in srgb, var(--chat-sheet-v2-ink) 86%, var(--chat-sheet-v2-muted));
-  --chat-sheet-v2-focus: color-mix(in srgb, var(--chat-sheet-v2-ink) 78%, var(--chat-sheet-v2-lavender));
+  --chat-sheet-v2-focus: color-mix(in srgb, var(--chat-sheet-v2-lavender) 48%, transparent);
   --chat-sheet-v2-accent-strong: color-mix(in srgb, var(--chat-sheet-v2-ink) 66%, var(--chat-sheet-v2-lavender));
   --chat-sheet-v2-placeholder: color-mix(in srgb, var(--chat-sheet-v2-ink) 72%, var(--chat-sheet-v2-muted));
   position: absolute;

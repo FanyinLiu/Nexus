@@ -1,4 +1,9 @@
+export type CompanionThemeId = 'warm' | 'system' | 'playful'
+
+export type ThemeColorScheme = 'light' | 'dark'
+
 export type ThemeId =
+  | CompanionThemeId
   | 'nexus-default'
   | 'system-day'
   | 'warm-day'
@@ -32,10 +37,17 @@ export interface ThemeDefinition {
   tokens: ThemeTokens
 }
 
+export interface CompanionAppearanceSelection {
+  themeId: ThemeId
+  colorScheme: ThemeColorScheme
+}
+
 export interface ThemeContextValue {
   themeId: ThemeId
+  colorScheme: ThemeColorScheme
   setTheme: (themeId: ThemeId) => void
   previewTheme: (themeId: ThemeId) => void
+  previewCompanionAppearance: (selection: CompanionAppearanceSelection) => void
   theme: ThemeDefinition
   availableThemes: ThemeDefinition[]
 }

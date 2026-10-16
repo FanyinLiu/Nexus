@@ -3,7 +3,7 @@ import type { AppLocale } from './i18n.ts'
 import type { MemorySearchMode } from './memory.ts'
 import type { ProactiveFrequencyPreset } from './proactive.ts'
 import type { CompanionPresenceState, PetMood } from './pet.ts'
-import type { ThemeId } from './theme.ts'
+import type { ThemeColorScheme, ThemeId } from './theme.ts'
 import type { WebSearchProviderId } from './tools.ts'
 import type { RuntimeStateSnapshotFieldName } from '../../shared/runtimeStateSnapshot.js'
 import type {
@@ -87,6 +87,8 @@ interface IdentitySettings {
 interface AppearanceSettings {
   uiLanguage: AppLocale
   themeId: ThemeId
+  /** Light or dark palette for the selected companion look. */
+  themeColorScheme: ThemeColorScheme
   /**
    * Compact corner chip in the chat panel that shows current temperature
    * + condition label, plus the animated weather layer behind the pet.

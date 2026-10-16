@@ -6,14 +6,14 @@
   --settings-v2-surface: var(--nx-settings-surface);
   --settings-v2-soft: var(--nx-settings-surface-soft);
   --settings-v2-accent: var(--color-accent, var(--nx-settings-accent));
-  --nx-v2-focus-ring: color-mix(in srgb, var(--settings-v2-ink) 78%, var(--settings-v2-accent) 22%);
+  --nx-v2-focus-ring: color-mix(in srgb, var(--settings-v2-accent) 48%, transparent);
   --settings-v2-accent-soft: var(--color-accent-soft, var(--nx-settings-accent-soft));
   --settings-v2-field: var(--nx-settings-field);
   --settings-v2-hover: var(--nx-settings-surface-hover);
   --settings-v2-danger: var(--nx-settings-danger);
   --settings-v2-success: var(--nx-settings-success);
   --settings-v2-warning: var(--nx-settings-warning);
-  --settings-v2-on-accent: var(--color-on-accent, #fff);
+  --settings-v2-on-accent: var(--color-on-accent);
   --settings-v2-shadow: color-mix(in srgb, var(--settings-v2-ink) 14%, transparent);
   --settings-v2-shadow-soft: color-mix(in srgb, var(--settings-v2-ink) 7%, transparent);
   display: grid;
@@ -360,19 +360,23 @@
 
   .settings-v2__mobile-back {
     display: inline-flex;
-    gap: 4px;
     justify-self: start;
-    width: auto;
-    max-width: none;
-    padding: 0 6px;
+    width: 44px;
+    max-width: 44px;
+    padding: 0;
     color: var(--settings-v2-accent);
-    font-size: 12px;
   }
 
   .settings-v2__mobile-back span {
-    overflow: visible;
-    text-overflow: clip;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
+    border: 0;
   }
 
   .settings-v2__heading {
@@ -577,7 +581,7 @@ html[data-theme] .settings-drawer.settings-drawer--v2 {
 
 .settings-drawer--v2 :is(h1, h2, h3, h4)[tabindex]:focus-visible {
   outline: 3px solid var(--nx-v2-focus-ring);
-  outline-offset: -3px;
+  outline-offset: 2px;
   border-radius: 5px;
 }
 

@@ -1,3 +1,4 @@
+import { playfulTheme, systemTheme, warmTheme } from './companionThemes.ts'
 import { softTheme } from './presets/soft.ts'
 import { editorialTheme } from './presets/editorial.ts'
 import { highContrastTheme } from './presets/high-contrast.ts'
@@ -9,6 +10,9 @@ import { warmDayTheme } from './presets/warm-day.ts'
 import type { ThemeDefinition, ThemeId } from '../../types/theme.ts'
 
 const themeMap: Record<ThemeId, ThemeDefinition> = {
+  warm: warmTheme,
+  system: systemTheme,
+  playful: playfulTheme,
   'nexus-default': nexusDefaultTheme,
   soft: softTheme,
   'high-contrast': highContrastTheme,

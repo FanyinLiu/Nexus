@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),
   closeSettings: () => ipcRenderer.invoke('window:close-settings'),
+  setSystemVibrancy: (enabled) => ipcRenderer.invoke('window:set-system-vibrancy', { enabled: enabled === true }),
   getPanelWindowState: () => ipcRenderer.invoke('panel-window:get-state'),
   setPanelWindowState: (state) => ipcRenderer.invoke('panel-window:set-state', state),
   isPanelWindow: () => ipcRenderer.invoke('window:get-view-kind').then((kind) => kind === 'panel'),

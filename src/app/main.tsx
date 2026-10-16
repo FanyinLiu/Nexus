@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import '../index.css'
+import '../features/themes/companion-surfaces.css'
 import App from './App.tsx'
 import { AppProviders } from './providers'
 import { ErrorBoundary } from './ErrorBoundary.tsx'

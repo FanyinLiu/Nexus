@@ -6,7 +6,7 @@ import {
   resolveTheme,
 } from '../features/themes/registry.ts'
 import type { TranslationKey } from '../types/i18n.ts'
-import type { ThemeId } from '../types/theme.ts'
+import type { ThemeColorScheme, ThemeId } from '../types/theme.ts'
 import type {
   DebugConsoleEvent,
   ConnectionEvidence,
@@ -64,6 +64,9 @@ const MEMORY_SEARCH_MODE_KEYS: Record<MemorySearchMode, { label: TranslationKey;
 export type SettingsAppearanceTone = 'black' | 'night' | 'day' | 'warm-day'
 
 const THEME_TONE_BY_ID: Record<ThemeId, SettingsAppearanceTone> = {
+  warm: 'warm-day',
+  system: 'day',
+  playful: 'day',
   'nexus-default': 'day',
   soft: 'day',
   'high-contrast': 'day',
@@ -92,13 +95,21 @@ function buildAppearanceOption(
 }
 
 export const SETTINGS_APPEARANCE_OPTIONS = [
-  buildAppearanceOption('system-black', 'settings.appearance.black', 'black'),
-  buildAppearanceOption('system-dark', 'settings.appearance.night', 'night'),
-  buildAppearanceOption('system-day', 'settings.appearance.day', 'day'),
-  buildAppearanceOption('warm-day', 'settings.appearance.warm_day', 'warm-day'),
+  buildAppearanceOption('warm', 'settings.appearance.warm', 'warm-day'),
+  buildAppearanceOption('system', 'settings.appearance.system', 'day'),
+  buildAppearanceOption('playful', 'settings.appearance.playful', 'day'),
 ]
 
-export function getSettingsThemeTone(themeId: ThemeId): SettingsAppearanceTone {
+export function getSettingsThemeTone(
+  themeId: ThemeId,
+  colorScheme?: ThemeColorScheme,
+): SettingsAppearanceTone {
+  if (
+    colorScheme === 'dark'
+    && (themeId === 'warm' || themeId === 'system' || themeId === 'playful')
+  ) {
+    return 'night'
+  }
   return THEME_TONE_BY_ID[themeId] ?? 'night'
 }
 

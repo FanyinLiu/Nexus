@@ -8,9 +8,13 @@
  * To add a new migration:
  *   1. Bump CURRENT_SETTINGS_SCHEMA_VERSION
  *   2. Append a SettingsMigration entry to `migrations`
+ *
+ * Versions 16–19 are left unused on purpose. Other in-flight changes
+ * reserved those numbers, so the companion-theme migration is 20.
  */
 
 import type { UiLanguage } from '../types'
+import { mapStoredCompanionTheme } from '../features/themes/companionThemes.ts'
 import { inferApiProviderId } from '../features/models/providerCatalog.ts'
 import { migrateVoiceLanguageValue } from '../features/voiceProfile/voiceLanguages.ts'
 import { normalizeUiLanguage } from './uiLanguage.ts'
@@ -387,7 +391,7 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 15
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 20
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -571,6 +575,17 @@ const migrations: SettingsMigration[] = [
       // default if it was written back after that pass. Any other name stays.
       V11_RETIRED_SPEECH_INPUT_DEFAULTS,
     ),
+  },
+  {
+    toVersion: 20,
+    description: 'Map the stored theme onto warm, system, or playful, with a light or dark scheme',
+    migrate: (raw) => {
+      const next = { ...raw }
+      const mapped = mapStoredCompanionTheme(next.themeId, next.themeColorScheme)
+      next.themeId = mapped.themeId
+      next.themeColorScheme = mapped.colorScheme
+      return next
+    },
   },
 ]
 

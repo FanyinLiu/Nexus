@@ -1,20 +1,20 @@
 .nexus-panel-v2 {
-  --nx-v2-fog: var(--color-surface-muted, #f7f3ee);
-  --nx-v2-surface: var(--color-surface-elevated, #fffdfc);
-  --nx-v2-surface-soft: var(--color-surface, #f1ece7);
-  --nx-v2-ink: var(--color-text-primary, #302b32);
-  --nx-v2-muted: var(--color-text-muted, #716a70);
-  --nx-v2-line: var(--color-border, #ded7d2);
-  --nx-v2-line-strong: var(--color-border-strong, #cfc6c0);
-  --nx-v2-accent: var(--color-accent, #8274c9);
-  --nx-v2-focus-ring: color-mix(in srgb, var(--nx-v2-ink) 78%, var(--nx-v2-accent) 22%);
-  --nx-v2-accent-soft: var(--color-accent-soft, rgb(130 116 201 / 9%));
-  --nx-v2-accent-hover: var(--color-accent-hover, #6f61b9);
-  --nx-v2-secondary: var(--color-accent-secondary, var(--color-accent-hover, #d98b58));
-  --nx-v2-shadow: var(--color-shadow, rgb(49 39 47 / 8%));
-  --nx-v2-shadow-accent: var(--color-shadow-accent, rgb(130 116 201 / 18%));
-  --nx-v2-danger: var(--color-danger, #a95f5b);
-  --nx-v2-on-accent: var(--color-on-accent, #fff);
+  --nx-v2-fog: var(--color-surface-muted);
+  --nx-v2-surface: var(--color-surface-elevated);
+  --nx-v2-surface-soft: var(--color-surface);
+  --nx-v2-ink: var(--color-text-primary);
+  --nx-v2-muted: var(--color-text-muted);
+  --nx-v2-line: var(--color-border);
+  --nx-v2-line-strong: var(--color-border-strong);
+  --nx-v2-accent: var(--color-accent);
+  --nx-v2-focus-ring: color-mix(in srgb, var(--nx-v2-accent) 48%, transparent);
+  --nx-v2-accent-soft: var(--color-accent-soft);
+  --nx-v2-accent-hover: var(--color-accent-hover);
+  --nx-v2-secondary: var(--color-accent-secondary, var(--color-accent-hover));
+  --nx-v2-shadow: var(--color-shadow);
+  --nx-v2-shadow-accent: var(--color-shadow-accent);
+  --nx-v2-danger: var(--color-danger);
+  --nx-v2-on-accent: var(--color-on-accent);
   --v2-fog: var(--nx-v2-fog);
   --v2-surface: var(--nx-v2-surface);
   --v2-ink: var(--nx-v2-ink);
@@ -166,8 +166,8 @@
 
 .nexus-panel-v2__live2d :is(.live2d-canvas, .sprite-pet, .portrait-puppet) {
   filter:
-    drop-shadow(0 1px 1px rgb(255 255 255 / 16%))
-    drop-shadow(0 -1px 1px rgb(28 22 33 / 14%));
+    drop-shadow(0 1px 1px color-mix(in srgb, var(--color-surface-elevated) 16%, transparent))
+    drop-shadow(0 -1px 1px color-mix(in srgb, var(--color-text-primary) 14%, transparent));
 }
 
 .nexus-panel-v2__caption {
