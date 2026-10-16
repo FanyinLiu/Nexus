@@ -1,8 +1,9 @@
 // electron-rebuild only skips compiling libuiohook when it sees
-// node.napi[.armvN].node. Those files are copies of uiohook-napi.node,
-// which is the name node-gyp-build actually loads. afterPack deletes the
-// copies from the packaged tree so the installer does not ship them twice.
-// The source tree aliases stay, because the next rebuild still needs them.
+// node.napi[.armvN].node. Those files are copies of uiohook-napi.node.
+// Electron's require.addon (what node-gyp-build uses inside the app) loads
+// node.napi.node. afterPack drops the other name so the installer does not
+// ship the same binary twice. The source tree keeps both, because the next
+// rebuild still looks for the napi alias.
 
 const { readdirSync, realpathSync, rmSync, statSync } = require('node:fs')
 const { join } = require('node:path')
@@ -63,18 +64,15 @@ function stripAliasCopies(prebuildsDir) {
     } catch {
       continue
     }
-    const realBinary = files.includes('uiohook-napi.node')
-    for (const file of files) {
-      if (!ALIAS_NAME.test(file)) continue
-      if (!realBinary) continue
-      const target = join(dir, file)
-      try {
-        if (!statSync(target).isFile()) continue
-        rmSync(target)
-        removed.push(target)
-      } catch {
-        // A file that disappears mid-pack is not a reason to fail the build.
-      }
+    const alias = files.find((file) => ALIAS_NAME.test(file))
+    if (!alias || !files.includes('uiohook-napi.node')) continue
+    const target = join(dir, 'uiohook-napi.node')
+    try {
+      if (!statSync(target).isFile()) continue
+      rmSync(target)
+      removed.push(target)
+    } catch {
+      // A file that disappears mid-pack is not a reason to fail the build.
     }
   }
   return removed
@@ -89,7 +87,7 @@ async function afterPack(context) {
   const prebuildDirs = []
   findPrebuildDirs(root, prebuildDirs)
   const removed = prebuildDirs.flatMap((dir) => stripAliasCopies(dir))
-  console.log(`[uiohook] removed ${removed.length} prebuild alias ${removed.length === 1 ? 'copy' : 'copies'}`)
+  console.log(`[uiohook] removed ${removed.length} duplicate prebuild ${removed.length === 1 ? 'name' : 'names'}`)
 }
 
 module.exports = afterPack

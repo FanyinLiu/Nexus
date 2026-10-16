@@ -147,6 +147,36 @@ export function normalizeCursorToDip(cursor, converters) {
 }
 
 /**
+ * Pick the cursor the sampler should follow.
+ * On Linux, Electron's cursor query stays at the last point delivered to a
+ * BrowserWindow, so motion across the rest of the desktop never becomes a
+ * gaze sample. A global hook point is already in root-window pixels and
+ * wins there. Other platforms keep the DIP query, which is global.
+ * @param {{
+ *   platform?: string,
+ *   hookPoint?: { x?: number, y?: number } | null,
+ *   electronPoint?: { x?: number, y?: number } | null,
+ * }} input
+ * @returns {{ source: 'hook', physical: { x: number, y: number } } | { source: 'electron', dip: { x: number, y: number } } | null}
+ */
+export function selectGazeCursor(input) {
+  const hook = input?.hookPoint
+  const hookX = Number(hook?.x)
+  const hookY = Number(hook?.y)
+  const hookOk = Number.isFinite(hookX) && Number.isFinite(hookY)
+  const electron = input?.electronPoint
+  const electronX = Number(electron?.x)
+  const electronY = Number(electron?.y)
+  const electronOk = Number.isFinite(electronX) && Number.isFinite(electronY)
+  if (input?.platform === 'linux' && hookOk) {
+    return { source: 'hook', physical: { x: hookX, y: hookY } }
+  }
+  if (electronOk) return { source: 'electron', dip: { x: electronX, y: electronY } }
+  if (hookOk) return { source: 'hook', physical: { x: hookX, y: hookY } }
+  return null
+}
+
+/**
  * Cursor position relative to a window's DIP content origin.
  * Pass `cursorIsPhysical` only when the cursor is still in device pixels;
  * Electron's `getCursorScreenPoint` is already DIP.

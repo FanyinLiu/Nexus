@@ -63,7 +63,7 @@ jobs:
 
       - name: Install Linux Electron smoke dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libdrm2 libgbm1
+        run: sudo apt-get update && sudo apt-get install -y xvfb xdotool libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0 libdrm2 libgbm1
 
       - run: npm run core-path:smoke:built
         name: Core path smoke
