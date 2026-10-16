@@ -2897,16 +2897,17 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
 }
 
-/* The day about card is a light surface, but an earlier day block still
-   paints this copy in night ink, which disappears on the card. */
+/* An earlier day block paints this card in night ink. Warm, system, and
+   playful all wear sd-day on a light card, so the ink has to follow the
+   active theme tokens instead of one hardcoded palette. */
 .sd-day .settings-about-panel__title,
 .sd-day .settings-about-panel__spotlight-title,
 .sd-day .settings-about-panel__section-title,
 .sd-day .settings-about-panel__faq-question,
 .sd-day .settings-about-panel__credits-list strong,
 .sd-day .settings-about-panel__spotlight-list strong {
-  color: #17202a;
-  -webkit-text-fill-color: #17202a;
+  color: var(--nx-card-fg, var(--color-text-primary));
+  -webkit-text-fill-color: var(--nx-card-fg, var(--color-text-primary));
 }
 
 .sd-day .settings-about-panel__tagline,
@@ -2916,23 +2917,15 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 .sd-day .settings-about-panel__faq-answer,
 .sd-day .settings-about-panel__credits-intro,
 .sd-day .settings-about-panel__credits-list {
-  color: rgba(23, 32, 42, 0.72);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.72);
+  color: var(--nx-card-muted, var(--color-text-muted));
+  -webkit-text-fill-color: var(--nx-card-muted, var(--color-text-muted));
 }
 
 .sd-day .settings-about-panel__spotlight-actions .ghost-button {
-  border-color: rgba(30, 42, 58, 0.12);
-  background: rgba(255, 255, 255, 0.72);
-  color: rgba(23, 32, 42, 0.82);
-  -webkit-text-fill-color: rgba(23, 32, 42, 0.82);
-}
-
-.sd-warm .settings-about-panel__spotlight-actions .ghost-button,
-.sd-warm-section .settings-about-panel__spotlight-actions .ghost-button {
-  border-color: rgba(72, 53, 40, 0.14);
-  background: rgba(255, 252, 247, 0.72);
-  color: rgba(72, 53, 40, 0.82);
-  -webkit-text-fill-color: rgba(72, 53, 40, 0.82);
+  border-color: var(--nx-card-border, var(--color-border));
+  background: var(--nx-card-bg, var(--color-surface-elevated));
+  color: var(--nx-card-fg, var(--color-text-primary));
+  -webkit-text-fill-color: var(--nx-card-fg, var(--color-text-primary));
 }
 
 .sd-warm-section label > span,
