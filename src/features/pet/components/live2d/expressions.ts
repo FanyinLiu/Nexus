@@ -59,6 +59,47 @@ export function resolveExpressionSlot(
   }
 }
 
+/**
+ * One expression write at a time.
+ * A turn can request thinking, then idle, then the reply mood before the
+ * first write finishes. Running them in parallel lets the earlier face land
+ * last.
+ */
+export type ExpressionWriteQueue = {
+  request: (name: string | undefined) => Promise<void>
+  reset: () => void
+}
+
+export function createExpressionWriteQueue(
+  apply: (name: string) => Promise<unknown> | unknown,
+): ExpressionWriteQueue {
+  let desired: string | null = null
+  let applied: string | null = null
+  let chain: Promise<void> = Promise.resolve()
+
+  return {
+    request(name) {
+      if (!name || (desired === name && applied === name)) return Promise.resolve()
+      desired = name
+      chain = chain.then(async () => {
+        const next = desired
+        if (!next || applied === next) return
+        applied = next
+        try {
+          await apply(next)
+        } catch {
+          if (desired === next) applied = null
+        }
+      })
+      return chain
+    },
+    reset() {
+      desired = null
+      applied = null
+    },
+  }
+}
+
 export function resolveMotionGroup(
   modelDefinition: PetModelDefinition,
   expressionSlot: PetExpressionSlot,
