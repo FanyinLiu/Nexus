@@ -17,6 +17,8 @@ import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d
 import {
   createLive2DApplicationOptions,
   planLive2DContextRecovery,
+  planLive2DVisibilityRecovery,
+  resolveLive2DBootFrameWait,
 } from './live2d/rendering.ts'
 import { clamp } from '../../../lib/common.ts'
 import { typingIntensityFromRate } from '../../desktopPresence/typingPresence.ts'
@@ -361,7 +363,7 @@ export function Live2DCanvas({
       return promise
     }
 
-    function waitForAnimationFrame() {
+    function waitForAnimationFrame(timeoutMs = Number.POSITIVE_INFINITY) {
       const { promise, settle } = ownership.createTrackedWait()
       const rafId = trackLive2DAsyncHandle(
         pendingRafIds,
@@ -370,7 +372,36 @@ export function Live2DCanvas({
           settle()
         }),
       )
+      let timeoutId: number | null = null
+      if (Number.isFinite(timeoutMs)) {
+        timeoutId = trackLive2DAsyncHandle(
+          pendingTimeoutIds,
+          window.setTimeout(() => {
+            pendingTimeoutIds.delete(timeoutId as number)
+            settle()
+          }, timeoutMs),
+        )
+      }
+      // Release the losing handle as soon as either path settles. Both
+      // settle() and the handle sets are idempotent, so dispose stays safe.
+      void promise.then(() => {
+        if (pendingRafIds.delete(rafId)) window.cancelAnimationFrame(rafId)
+        if (timeoutId !== null && pendingTimeoutIds.delete(timeoutId)) {
+          window.clearTimeout(timeoutId)
+        }
+      })
       return promise
+    }
+
+    async function waitForBootFrame() {
+      const wait = resolveLive2DBootFrameWait({
+        visibilityState: document.visibilityState,
+      })
+      if (!wait.awaitFrame) {
+        await waitForTimeout(wait.timeoutMs)
+        return
+      }
+      await waitForAnimationFrame(wait.timeoutMs)
     }
 
     function destroyOwnedRuntime(deferUntilNextFrame = false) {
@@ -467,7 +498,7 @@ export function Live2DCanvas({
             if (attempt > 1) {
               await waitForTimeout(attempt * 300)
             } else {
-              await waitForAnimationFrame()
+              await waitForBootFrame()
             }
 
             if (shouldAbortLive2DBoot(isDisposed(), Boolean(containerRef.current))) {
@@ -658,8 +689,17 @@ export function Live2DCanvas({
           throw new Error('PIXI Application did not expose a canvas view.')
         }
         containerAfterApp.appendChild(canvas)
-        const handleContextLost = (event: Event) => {
-          event.preventDefault()
+        const isContextLost = () => {
+          try {
+            const renderer = app.renderer as {
+              gl?: { isContextLost?: () => boolean }
+            } | null
+            return renderer?.gl?.isContextLost?.() === true
+          } catch {
+            return false
+          }
+        }
+        const recoverContext = () => {
           if (isDisposed() || appRef.current !== app) return
 
           const decision = planLive2DContextRecovery(contextRecoveryAttemptsRef.current)
@@ -690,12 +730,34 @@ export function Live2DCanvas({
           setError(recoveryError)
           setModelReady(false)
         }
+        const handleContextLost = (event: Event) => {
+          // preventDefault keeps Chromium eligible to restore the context; we
+          // still rebuild the runtime rather than reusing invalid handles.
+          event.preventDefault()
+          recoverContext()
+        }
         canvas.addEventListener('webglcontextlost', handleContextLost)
         detachContextLossListener = () => {
           canvas.removeEventListener('webglcontextlost', handleContextLost)
         }
         handleVisibilityChange = () => {
-          syncPlayback(app, isDisposed())
+          const action = planLive2DVisibilityRecovery({
+            disposed: isDisposed(),
+            visibilityState: document.visibilityState,
+            paused: pausedRef.current,
+            contextLost: isContextLost(),
+          })
+          if (action === 'stop') {
+            app.stop()
+            return
+          }
+          if (action === 'restart') {
+            // Electron can restore an occluded window after the GPU process
+            // dropped the context without a fresh webglcontextlost delivery.
+            recoverContext()
+            return
+          }
+          app.start()
         }
         document.addEventListener('visibilitychange', handleVisibilityChange)
         // Respect the document's current visibility; do not invent a visible start
@@ -834,7 +896,6 @@ export function Live2DCanvas({
     layoutModel,
     resolvedModelPath,
     runtimeRevision,
-    syncPlayback,
   ])
 
   useEffect(() => {
