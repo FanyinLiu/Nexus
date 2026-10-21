@@ -81,6 +81,7 @@ type UseDesktopBridgeOptions = {
     | 'publishAmbientPresence'
     | 'markPresenceActivity'
     | 'setMood'
+    | 'applyRemoteMood'
     | 'setPetHotspotActive'
     | 'petHotspotActive'
     | 'setAmbientPresence'
