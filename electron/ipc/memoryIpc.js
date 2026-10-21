@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import * as memoryVectorStore from '../services/memoryVectorStore.js'
+import { clearMemoryLocalDataContent } from '../services/localDataMemoryStore.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateMemoryHybridSearchPayload,
@@ -47,6 +48,17 @@ export function register() {
   ipcMain.handle('memory:vector-stats', async (event) => {
     requireTrustedSender(event)
     return memoryVectorStore.getStats()
+  })
+
+  ipcMain.handle('memory:clear-user-data', async (event) => {
+    requireTrustedSender(event)
+    const removed = await memoryVectorStore.clearAllEntries()
+    const localData = await clearMemoryLocalDataContent()
+    return {
+      ok: true,
+      removed,
+      localDataCleared: localData.ok === true,
+    }
   })
 
   ipcMain.handle('memory:keyword-search', async (event, payload) => {

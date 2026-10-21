@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  buildMcpSpawnEnv,
   formatMcpHostLogLabel,
+  normalizeMcpServerEnv,
   parseArgsString,
   summarizeMcpCommandForLog,
   summarizeMcpOutputLineForLog,
@@ -193,6 +195,47 @@ test('isPluginCommandTrusted: returns true when hash matches', () => {
   const hash = hashCommand('npx', ['serve'])
   const approved = new Map([['bar', hash]])
   assert.equal(isPluginCommandTrusted(plugin, approved), true)
+})
+
+test('buildMcpSpawnEnv keeps a baseline and user server vars and drops parent secrets', () => {
+  const env = buildMcpSpawnEnv(
+    {
+      PATH: '/usr/bin',
+      HOME: '/home/me',
+      TEMP: '/tmp',
+      LANG: 'en_US.UTF-8',
+      OPENAI_API_KEY: 'sk-parent-secret',
+      AWS_SECRET_ACCESS_KEY: 'aws-secret',
+      NEXUS_API_KEY: 'nexus-secret',
+    },
+    { MY_TOOL_TOKEN: 'user-token', 'BAD NAME': 'nope', '1INVALID': 'nope' },
+  )
+  assert.equal(env.PATH, '/usr/bin')
+  assert.equal(env.HOME, '/home/me')
+  assert.equal(env.TEMP, '/tmp')
+  assert.equal(env.LANG, 'en_US.UTF-8')
+  assert.equal(env.MY_TOOL_TOKEN, 'user-token')
+  assert.equal(env.OPENAI_API_KEY, undefined)
+  assert.equal(env.AWS_SECRET_ACCESS_KEY, undefined)
+  assert.equal(env.NEXUS_API_KEY, undefined)
+  assert.equal('BAD NAME' in env, false)
+  assert.equal('1INVALID' in env, false)
+})
+
+test('buildMcpSpawnEnv lets the server env override an allowlisted name and keeps parent casing', () => {
+  const overridden = buildMcpSpawnEnv({ PATH: '/usr/bin' }, { PATH: '/custom/bin' })
+  assert.equal(overridden.PATH, '/custom/bin')
+
+  const windows = buildMcpSpawnEnv({ Path: 'C:\\Windows', SystemRoot: 'C:\\Windows' }, {})
+  assert.equal(windows.Path, 'C:\\Windows')
+  assert.equal(windows.SystemRoot, 'C:\\Windows')
+})
+
+test('normalizeMcpServerEnv drops non-strings and caps values', () => {
+  const env = normalizeMcpServerEnv({ OK: 'yes', n: 1, LONG: 'x'.repeat(9000) })
+  assert.equal(env.OK, 'yes')
+  assert.equal('n' in env, false)
+  assert.equal(env.LONG.length, 8192)
 })
 
 test('isPluginCommandTrusted: returns false when command changed', () => {

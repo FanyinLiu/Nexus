@@ -149,6 +149,7 @@ const mcpSyncServersSchema = {
           command: { type: 'string', maxLength: PATH_TEXT_MAX },
           args: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX },
           enabled: { type: 'boolean' },
+          env: { type: 'any', optional: true },
         },
       },
     },

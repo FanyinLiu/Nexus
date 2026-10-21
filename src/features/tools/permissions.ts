@@ -107,8 +107,8 @@ export async function confirmBuiltInToolExecution(tool: MatchedBuiltInTool, poli
   }
 
   if (typeof window.confirm !== 'function') {
-    console.warn('[Tools] No confirmation mechanism available, auto-allowing tool:', tool.id)
-    return true
+    console.warn('[Tools] No confirmation mechanism available, denying tool:', tool.id)
+    return false
   }
 
   return window.confirm(buildConfirmationMessage(tool))

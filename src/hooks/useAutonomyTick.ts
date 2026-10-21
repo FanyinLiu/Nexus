@@ -4,6 +4,7 @@ import {
   computeNextPhase,
   createInitialTickState,
   shouldTick,
+  spendAutonomyLlmCall,
   wakeUpState,
 } from '../features/autonomy/tickLoop.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
@@ -106,11 +107,24 @@ export function useAutonomyTick({
   // Exit dreaming (back to sleeping)
   const exitDreaming = useCallback(() => setPhase('dreaming', 'sleeping'), [setPhase])
 
+  const tryConsumeLlmBudget = useCallback(() => {
+    const decision = spendAutonomyLlmCall(
+      autonomyStateRef.current,
+      settingsRef.current,
+    )
+    if (decision.state !== autonomyStateRef.current) {
+      autonomyStateRef.current = decision.state
+      setAutonomyState(decision.state)
+    }
+    return decision.allowed
+  }, [settingsRef])
+
   return {
     autonomyState,
     autonomyStateRef,
     wakeUp,
     enterDreaming,
     exitDreaming,
+    tryConsumeLlmBudget,
   }
 }

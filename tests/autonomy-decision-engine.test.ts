@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { buildDecisionPrompt } from '../src/features/autonomy/v2/decisionPrompt.ts'
+import { buildDecisionPrompt, formatDecisionLocalDateTime } from '../src/features/autonomy/v2/decisionPrompt.ts'
 import {
   extractDecisionJson,
   runDecisionEngine,
@@ -68,6 +68,32 @@ function makePersona(overrides: Partial<LoadedPersona> = {}): LoadedPersona {
 }
 
 // ── Prompt builder ──────────────────────────────────────────────────────
+
+test('formatDecisionLocalDateTime uses local fields even when toISOString is UTC', () => {
+  const stub = {
+    getFullYear: () => 2026,
+    getMonth: () => 3,
+    getDate: () => 19,
+    getHours: () => 18,
+    getMinutes: () => 42,
+    toISOString: () => '2026-04-19T10:42:00.000Z',
+  } as Date
+  assert.equal(formatDecisionLocalDateTime(stub), '2026-04-19 18:42')
+  assert.equal(stub.toISOString().slice(11, 16), '10:42')
+})
+
+test('buildDecisionPrompt shows the local clock next to the local hour', () => {
+  const timestamp = '2026-04-19T10:42:00.000Z'
+  const msgs = buildDecisionPrompt(
+    makeContext({ timestamp, hour: 18, dayOfWeek: 0 }),
+    makePersona(),
+    { uiLanguage: 'en-US' },
+  )
+  const user = msgs.at(-1)?.content ?? ''
+  const local = formatDecisionLocalDateTime(new Date(timestamp))
+  assert.ok(user.includes(`Time: ${local} (Sun, 18:00)`), user)
+  assert.equal(user.includes(timestamp), false)
+})
 
 test('buildDecisionPrompt emits system + few-shot + user in that order', () => {
   const msgs = buildDecisionPrompt(makeContext(), makePersona())
