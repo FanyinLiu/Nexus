@@ -73,6 +73,7 @@ export type VoiceSectionV3Props = {
   uiLanguage: UiLanguage
   voiceActionPending: boolean
   voiceState: VoiceState
+  surface?: 'full' | 'rest'
 }
 
 export const VoiceSectionV3 = memo(function VoiceSectionV3({
@@ -109,6 +110,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   uiLanguage,
   voiceActionPending,
   voiceState,
+  surface = 'full',
 }: VoiceSectionV3Props) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const tiParam = (
@@ -187,10 +189,10 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   return (
     <SettingsV3Page className={active ? 'settings-v3-voice' : 'is-hidden settings-v3-voice'}>
       {platformHint ? <SettingsV3Notice tone="warning" title={platformHint} /> : null}
-      <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />
+      {surface === 'rest' ? null : <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />}
       <LocalVoiceModelsPanel uiLanguage={uiLanguage} />
 
-      <SettingsV3Section title={ti('settings.voice.loop_title')}>
+      {surface === 'rest' ? null : <SettingsV3Section title={ti('settings.voice.loop_title')}>
         <SettingsV3Row
           icon="mic"
           label={ti('settings.voice.enable_input')}
@@ -217,7 +219,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             onChange={(value) => setSetting('speechOutputEnabled', value)}
           />
         </SettingsV3Row>
-      </SettingsV3Section>
+      </SettingsV3Section>}
 
       <SettingsV3Notice
         tone={audioSmokeStatus && !audioSmokeStatus.ok ? 'error' : 'success'}
@@ -249,7 +251,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         {runtimeVoiceLabel}
       </span>
 
-      <SettingsV3Section title={ti('settings.voice.trigger_mode')} description={triggerOption.hint.trim()}>
+      {surface === 'rest' ? null : <SettingsV3Section title={ti('settings.voice.trigger_mode')} description={triggerOption.hint.trim()}>
         <div className="settings-v3-editor">
           <SettingsV3Field label={ti('settings.voice.trigger_mode')}>
             <select
@@ -288,7 +290,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             </SettingsV3Field>
           ) : null}
         </div>
-      </SettingsV3Section>
+      </SettingsV3Section>}
 
       {draft.voiceTriggerMode === 'wake_word' && !isWakeWordSupported(draft.wakeWord) ? (
         <SettingsV3Notice tone="error" title={ti('settings.voice.wake_word_chinese_only')} announce />

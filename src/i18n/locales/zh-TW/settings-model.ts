@@ -50,7 +50,7 @@ export const zhTWSettingsModel = {
   'settings.model.custom': '(自訂)',
   'settings.model.advanced_settings': '進階模型設定',
   'settings.model.failover_toggle': '啟用聊天模型自動切換',
-  'settings.model.failover_hint': '主鏈路不通時自動切換備用並短暫冷卻故障方。',
+  'settings.model.failover_hint': '這個服務連不上時，先換另一個，過一會兒再試回來。',
   'settings.model.extra_keys': '附加介面密鑰（一行一個，用於自動輪換）',
   'settings.model.extra_keys_hint': '這些金鑰與主金鑰共享輪換池，限流或報錯時自動切換。',
   'settings.model.extra_keys_error': '這裡只能填寫控制台生成的原始 Key。請去掉空格、換行、中文備註、模型名或套餐說明。',

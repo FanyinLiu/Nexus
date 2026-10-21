@@ -6,6 +6,7 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 import { koCore } from './core.ts'
 import { koSettingsShell } from './settings-shell.ts'
+import { koSettingsSimple } from './settings-simple.ts'
 import { koSettingsMemory } from './settings-memory.ts'
 import { koSettingsConsole } from './settings-console.ts'
 import { koSettingsHistory } from './settings-history.ts'
@@ -23,6 +24,7 @@ import { koPanel } from './panel.ts'
 export const koMessages = {
   ...koCore,
   ...koSettingsShell,
+  ...koSettingsSimple,
   ...koSettingsMemory,
   ...koSettingsConsole,
   ...koSettingsHistory,

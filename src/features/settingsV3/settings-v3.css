@@ -83,6 +83,10 @@
 .settings-v3-row[data-disabled='true'] { color: color-mix(in srgb, var(--sv3-muted) 68%, transparent); }
 .settings-v3-row__icon { display: grid; width: 24px; height: 24px; place-items: center; color: var(--sv3-muted); }
 .settings-v3-row__icon svg { width: 20px; height: 20px; }
+.settings-v3-choice-row { display: flex; gap: 4px; padding: 8px 14px 12px; }
+.settings-v3-choice-row button { flex: 1; min-height: 44px; border: 0; border-radius: 10px; background: var(--sv3-soft); color: var(--sv3-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.settings-v3-choice-row button[aria-checked='true'] { background: var(--sv3-accent-soft); color: var(--sv3-accent); }
+.settings-v3-section__body > p { margin: 8px 14px 0; color: var(--sv3-muted); font-size: 12px; line-height: 1.45; }
 .settings-v3-row__copy { display: grid; gap: 2px; min-width: 0; }
 .settings-v3-row__copy strong { font-size: 13px; font-weight: 680; }
 .settings-v3-row__copy span,
@@ -152,14 +156,15 @@
 .settings-v3-disclosure[open] summary svg { transform: rotate(180deg); }
 .settings-v3-disclosure__body { display: grid; gap: 12px; padding: 0 14px 14px; border-top: 1px solid var(--sv3-line); }
 
-.settings-v3-field { display: grid; gap: 6px; min-width: 0; padding-top: 12px; color: var(--sv3-ink); font-weight: 620; }
+.settings-v3-field { display: grid; gap: 6px; min-width: 0; padding: 10px 14px; color: var(--sv3-ink); font-weight: 620; }
+.settings-v3-section__body > .companion-theme-picker { padding: 0 14px 14px; }
 /* The hour stays on the same row as its label so scrolling cannot leave a bare number. */
 .settings-v3-hour-fields { display: grid; gap: 0; padding: 0 14px 12px; }
 .settings-v3-hour-fields .settings-v3-field {
   grid-template-columns: minmax(0, 1fr) 5.5rem;
   align-items: center;
   gap: 12px;
-  padding-top: 10px;
+  padding: 10px 0 0;
 }
 .settings-v3-field :is(input, select, textarea) { width: 100%; min-height: 44px; padding: 9px 11px; color: var(--sv3-ink); background: var(--sv3-field, var(--sv3-surface)); border: 1px solid var(--sv3-line); border-radius: 10px; font: inherit; }
 .settings-v3-field textarea { min-height: 108px; resize: vertical; }
@@ -179,6 +184,8 @@
 @media (max-width: 719px) {
   .settings-v3-page { gap: 20px; padding: 2px 0 24px; }
   .settings-v3-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; }
+  .settings-v3-field { padding: 10px 12px; }
+  .settings-v3-section__body > .companion-theme-picker { padding: 0 12px 12px; }
   .settings-v3-row__meta { grid-column: 2 / -1; }
   .settings-v3-row__control { grid-column: 3; grid-row: 1 / span 2; }
   .settings-v3-section__header p { font-size: 12px; line-height: 1.5; }

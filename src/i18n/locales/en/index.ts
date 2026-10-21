@@ -6,6 +6,7 @@
 import type { TranslationDictionary } from '../../../types/i18n.ts'
 import { enCore } from './core.ts'
 import { enSettingsShell } from './settings-shell.ts'
+import { enSettingsSimple } from './settings-simple.ts'
 import { enSettingsMemory } from './settings-memory.ts'
 import { enSettingsConsole } from './settings-console.ts'
 import { enSettingsHistory } from './settings-history.ts'
@@ -23,6 +24,7 @@ import { enPanel } from './panel.ts'
 export const enMessages = {
   ...enCore,
   ...enSettingsShell,
+  ...enSettingsSimple,
   ...enSettingsMemory,
   ...enSettingsConsole,
   ...enSettingsHistory,
