@@ -197,17 +197,35 @@ html[data-companion-theme] .chat-sheet-v2__speaker {
   font-size: var(--nx-type-meta);
 }
 
+/* The cap has to be on the bubble. A percentage max-width on the message
+   is cyclic: the bubble shrink-wraps that message, so min(86%, 280px)
+   collapses a short reply onto a second line while the column is still empty. */
+html[data-companion-theme] .chat-sheet-v2__bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: max-content;
+  max-width: 80%;
+}
+
+html[data-companion-theme] .chat-sheet-v2__turn[data-role='user'] .chat-sheet-v2__bubble {
+  align-items: flex-end;
+}
+
 html[data-companion-theme] .chat-sheet-v2__message {
-  max-width: min(86%, 280px);
+  width: max-content;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--nx-radius-card);
   background: var(--nx-bubble-assistant);
   color: var(--nx-bubble-assistant-ink);
   font-size: var(--nx-type-body);
+  overflow-wrap: break-word;
 }
 
 html[data-companion-theme] .chat-sheet-v2__turn[data-role='user'] .chat-sheet-v2__message {
+  max-width: 100%;
   border-color: transparent;
   background: var(--nx-bubble-user);
   color: var(--nx-bubble-user-ink);

@@ -211,7 +211,7 @@
   color: var(--chat-sheet-v2-ink);
   font-size: 14px;
   line-height: 1.65;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   white-space: pre-wrap;
 }
 
