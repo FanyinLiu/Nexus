@@ -11,7 +11,7 @@ import {
 import type { PetPerformanceCue } from '../performance.ts'
 import { createBlinkPair } from './live2d/blink.ts'
 import { createSaccadeState } from '../idleSaccades.ts'
-import { resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions.ts'
+import { createExpressionWriteQueue, resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions.ts'
 import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender.ts'
 import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout.ts'
 import {
@@ -96,6 +96,12 @@ export function Live2DCanvas({
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
   const cleanupBeforeModelUpdateRef = useRef<(() => void) | null>(null)
   const currentExpressionRef = useRef<string | null>(null)
+  const expressionQueueRef = useRef(createExpressionWriteQueue((name) => {
+    const model = modelRef.current
+    if (!model) return undefined
+    currentExpressionRef.current = name
+    return model.expression(name)
+  }))
   const currentExpressionSlotRef = useRef<PetExpressionSlot>('idle')
   const lastMotionKeyRef = useRef('')
   const lastMotionAtRef = useRef(0)
@@ -162,10 +168,7 @@ export function Live2DCanvas({
   }
 
   const applyExpression = useCallback((name: string | undefined) => {
-    const model = modelRef.current
-    if (!model || !name || currentExpressionRef.current === name) return
-    currentExpressionRef.current = name
-    void model.expression(name)
+    void expressionQueueRef.current.request(name)
   }, [])
 
   const triggerMotion = useCallback((expressionSlot: PetExpressionSlot, options?: { force?: boolean }) => {
@@ -601,6 +604,7 @@ export function Live2DCanvas({
         bootContainer.dataset.live2dModelId = modelDefinitionAtBoot.id
         bootContainer.dataset.live2dError = '0'
         currentExpressionRef.current = null
+        expressionQueueRef.current.reset()
         activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinitionAtBoot)
 
         await ensureLive2DVendorScripts()
@@ -878,6 +882,7 @@ export function Live2DCanvas({
       clearPendingBootWork()
       destroyOwnedRuntime(true)
       currentExpressionRef.current = null
+      expressionQueueRef.current.reset()
       currentExpressionSlotRef.current = 'idle'
       lastMotionKeyRef.current = ''
       lastMotionAtRef.current = 0
