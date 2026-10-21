@@ -15,6 +15,14 @@ import type {
   ThemeTokens,
 } from '../../types/theme.ts'
 
+/**
+ * Body, chat, and cards share this stack in every look.
+ * PingFang and Noto Sans CJK draw Latin and CJK from one face.
+ * A Latin serif is not used here: without a CJK serif on the machine,
+ * digits would be serif and the Chinese sans.
+ */
+const BODY_FONT_FAMILY = '"PingFang SC", system-ui, "Noto Sans CJK SC", "Noto Sans CJK", "Microsoft YaHei", "Noto Sans", "WenQuanYi Micro Hei", sans-serif'
+
 export interface CompanionMetrics {
   radiusWindow: string
   radiusCard: string
@@ -66,7 +74,7 @@ const WARM_METRICS: CompanionMetrics = {
   typeBody: '15px',
   typeMeta: '13px',
   fontWeight: '560',
-  fontFamily: '"Iowan Old Style", Palatino, "Songti SC", "Noto Serif CJK SC", "Noto Sans CJK SC", serif',
+  fontFamily: BODY_FONT_FAMILY,
   motion: '200ms',
 }
 
@@ -81,7 +89,7 @@ const SYSTEM_METRICS: CompanionMetrics = {
   typeBody: '13px',
   typeMeta: '12px',
   fontWeight: '500',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif',
+  fontFamily: BODY_FONT_FAMILY,
   motion: '160ms',
 }
 
@@ -96,7 +104,7 @@ const PLAYFUL_METRICS: CompanionMetrics = {
   typeBody: '16px',
   typeMeta: '13.5px',
   fontWeight: '650',
-  fontFamily: '"Avenir Next", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+  fontFamily: BODY_FONT_FAMILY,
   motion: '320ms',
 }
 

@@ -40,6 +40,7 @@ import {
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 import { CompanionMigrationAdapterV3, MemoryMigrationAdapterV3 } from './MemoryMigrationAdaptersV3.tsx'
+import { MemoryPortraitCardsV3 } from './MemoryPortraitCardsV3.tsx'
 import { OpenLoopAgendaV3 } from './OpenLoopAgendaV3.tsx'
 import './settings-v3-collection.css'
 
@@ -75,7 +76,7 @@ export type MemorySectionV3Props = {
   onUpdateMemory: (id: string, content: string) => void
   onPatchMemory?: (
     id: string,
-    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'pinned' | 'userEdited' | 'importance'>>,
   ) => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
   onCommitMemoryPaused: (paused: boolean) => void
@@ -305,6 +306,13 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
             : ti('settings.memory.transparency.context_off')}
         />
       </SettingsV3Section>
+
+      <MemoryPortraitCardsV3
+        memories={memories}
+        diaryCount={transparency.dailyEntryCount}
+        onPatchMemory={onPatchMemory}
+        onRemoveMemory={onRemoveMemory}
+      />
 
       <OpenLoopAgendaV3
         draft={draft}

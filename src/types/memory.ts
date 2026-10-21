@@ -17,7 +17,15 @@ export const MEMORY_RECORD_SCHEMA_VERSION = 2
 
 export type MemoryStatus = 'active' | 'superseded' | 'archived'
 
-export type MemoryReconcileOpName = 'ADD' | 'UPDATE' | 'MERGE' | 'SUPERSEDE' | 'DELETE' | 'NOOP'
+export type MemoryReconcileOpName = 'ADD' | 'UPDATE' | 'MERGE' | 'SUPERSEDE' | 'DELETE' | 'NOOP' | 'UNDO'
+
+/** A short quote from the message that justified a write. */
+export interface MemoryEvidence {
+  messageId?: string
+  day: string
+  quote: string
+  at: string
+}
 
 export type MemoryOpActor = 'turn' | 'dream' | 'user' | 'migration' | 'cap'
 
@@ -29,6 +37,14 @@ export interface MemoryOpRecord {
   op: MemoryReconcileOpName
   targetIds: string[]
   reason?: string
+  /** Quote copied from the source message. Required for mutating ops. */
+  evidenceQuote?: string
+  /** Id of the message the quote came from. */
+  messageRef?: string
+  /** Daily-run id, so one tap can undo the whole pass. */
+  runId?: string
+  /** Rows as they were before this op. Undo restores them. */
+  before?: MemoryItem[]
 }
 
 export type MemoryKind = 'preference' | 'fact' | 'relationship' | 'knowledge' | 'open_loop'
@@ -129,6 +145,28 @@ export interface MemoryItem {
   loopSurfacedCount?: number
   /** ISO time of the last proactive handoff. */
   loopLastSurfacedAt?: string
+  /** Set once the overdue "did it get done?" ask has been sent. */
+  loopCheckAskedAt?: string
+  /** Place the user named, such as a hall or office. */
+  loopPlace?: string
+  /** Reminder booked for a clear plan, or when the user accepts an ask. */
+  loopReminderTaskId?: string
+  /**
+   * Groups a commitment with later details. "办护照" and a follow-up
+   * about the same errand share one key.
+   */
+  slotKey?: string
+  /** Up to five quotes, newest first. */
+  evidence?: MemoryEvidence[]
+  /** The user pinned this row. Automatic passes leave it alone. */
+  pinned?: boolean
+  /** The user edited the wording. Automatic passes leave it alone. */
+  userEdited?: boolean
+  /**
+   * True for rows that arrived through migration. They stay in the store
+   * and are never handed to a proactive channel.
+   */
+  migrated?: boolean
 }
 
 export interface DailyMemoryEntry {

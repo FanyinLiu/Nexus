@@ -24,6 +24,7 @@ import {
   readMemoryFromLocalData,
   syncMemoryToLocalData,
 } from '../lib/index.ts'
+import { purgeClearedMemories, purgeDeletedMemory } from '../lib/storage/purgeMemoryStores.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type {
   AppSettings,
@@ -34,6 +35,13 @@ import type {
 
 type UseMemoryParams = {
   settings: AppSettings
+}
+
+/** Enough of each row that a remote copy does not write itself back. */
+function memorySyncSignature(items: readonly MemoryItem[]): string {
+  return items.map((item) => (
+    `${item.id}:${item.updatedAt ?? ''}:${item.status ?? ''}:${item.loopStatus ?? ''}:${item.loopDueAt ?? ''}:${item.loopPlace ?? ''}:${item.content.length}`
+  )).join('|')
 }
 
 export function useMemory({ settings }: UseMemoryParams) {
@@ -76,6 +84,7 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [memories])
 
   const memoriesSaveSkipRef = useRef(true)
+  const lastSavedMemorySignatureRef = useRef('')
   const dailyMemoriesSaveSkipRef = useRef(true)
 
   useEffect(() => {
@@ -83,10 +92,14 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [dailyMemories])
 
   useEffect(() => {
+    const signature = memorySyncSignature(memories)
     if (memoriesSaveSkipRef.current) {
       memoriesSaveSkipRef.current = false
+      lastSavedMemorySignatureRef.current = signature
       return
     }
+    if (signature === lastSavedMemorySignatureRef.current) return
+    lastSavedMemorySignatureRef.current = signature
     saveMemories(memories)
   }, [memories])
 
@@ -158,6 +171,18 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [memories])
 
   useEffect(() => {
+    const onReplace = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail
+      if (!Array.isArray(detail)) return
+      const next = detail as MemoryItem[]
+      memoriesRef.current = next
+      setMemories(next)
+    }
+    window.addEventListener('nexus:memories-replaced', onReplace)
+    return () => window.removeEventListener('nexus:memories-replaced', onReplace)
+  }, [])
+
+  useEffect(() => {
     if (settings.memorySearchMode === 'keyword') return
 
     // Defer warmup to avoid blocking startup render
@@ -195,16 +220,17 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [])
 
   const removeMemory = useCallback((id: string) => {
-    setMemories((current) => {
-      const nextMemories = current.filter((memory) => memory.id !== id)
-      memoriesRef.current = nextMemories
-      return nextMemories
-    })
+    const current = memoriesRef.current
+    const target = current.find((memory) => memory.id === id)
+    const nextMemories = current.filter((memory) => memory.id !== id)
+    memoriesRef.current = nextMemories
+    setMemories(nextMemories)
+    if (target) purgeDeletedMemory(target)
   }, [])
 
   const patchMemory = useCallback((
     id: string,
-    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'loopSurfacedCount' | 'loopLastSurfacedAt'>>,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'loopSurfacedCount' | 'loopLastSurfacedAt' | 'pinned' | 'userEdited' | 'importance'>>,
   ) => {
     setMemories((current) => {
       const nextMemories = current.map((memory) => {
@@ -215,6 +241,7 @@ export function useMemory({ settings }: UseMemoryParams) {
           ...memory,
           ...patch,
           content,
+          ...(typeof patch.content === 'string' ? { userEdited: true } : {}),
           updatedAt: new Date().toISOString(),
         }
       })
@@ -235,6 +262,7 @@ export function useMemory({ settings }: UseMemoryParams) {
           ? {
               ...memory,
               content: normalizedContent,
+              userEdited: true,
               lastUsedAt: new Date().toISOString(),
             }
           : memory
@@ -343,7 +371,17 @@ export function useMemory({ settings }: UseMemoryParams) {
     }
   }, [t])
 
+  const applyRemoteMemories = useCallback((next: MemoryItem[]) => {
+    memoriesSaveSkipRef.current = true
+    lastSavedMemorySignatureRef.current = memorySyncSignature(next)
+    memoriesRef.current = next
+    setMemories(next)
+  }, [])
+
   const clearMemoryArchive = useCallback(async () => {
+    const currentMemories = memoriesRef.current
+    const currentDaily = dailyMemoriesRef.current
+    purgeClearedMemories(currentMemories, currentDaily)
     memoriesRef.current = []
     dailyMemoriesRef.current = {}
     setMemories([])
@@ -368,6 +406,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     dailyMemoriesRef,
     recentDailyMemoryEntries,
     setMemories,
+    applyRemoteMemories,
     setDailyMemories,
     appendDailyMemoryEntries,
     addManualMemory,
@@ -386,6 +425,7 @@ export function useMemory({ settings }: UseMemoryParams) {
     dailyMemories,
     recentDailyMemoryEntries,
     setMemories,
+    applyRemoteMemories,
     setDailyMemories,
     appendDailyMemoryEntries,
     addManualMemory,

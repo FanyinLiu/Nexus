@@ -72,6 +72,29 @@ function diary(content: string, createdAt: string): DailyMemoryEntry {
   }
 }
 
+test('a paused pass does not capture a loop or curate existing rows', async () => {
+  const createdAt = new Date(atLocal(2026, 10, 15, 10)).toISOString()
+  const kept: MemoryItem = {
+    id: 'kept',
+    content: 'lives in Shanghai',
+    category: 'profile',
+    source: 'chat',
+    kind: 'fact',
+    createdAt,
+    updatedAt: createdAt,
+  }
+  const paused = await consolidateDailyMemory({
+    memories: [kept],
+    diaryEntries: [diary("I'll send the report Friday", createdAt)],
+    sinceMs: null,
+    now: createdAt,
+    memoryPaused: true,
+  })
+  assert.equal(paused.ops.length, 0)
+  assert.equal(paused.memories.length, 1)
+  assert.equal(paused.memories[0], kept)
+})
+
 test('a day pass without a model still records an open loop and can close it later', async () => {
   const createdAt = new Date(atLocal(2026, 10, 15, 10)).toISOString()
   const added = await consolidateDailyMemory({

@@ -47,6 +47,17 @@ test('companion theme migration maps stock, custom, and unknown values without t
   })
 })
 
+test('body text uses one sans stack in every companion look', () => {
+  const families = COMPANION_THEME_IDS.map((themeId) => (
+    getCompanionAppearance(themeId, 'light').metrics.fontFamily
+  ))
+  assert.equal(new Set(families).size, 1)
+  assert.match(families[0], /PingFang SC/)
+  assert.match(families[0], /system-ui/)
+  const faces = families[0].split(',').map((face) => face.trim().replaceAll('"', ''))
+  assert.ok(faces.every((face) => face === 'sans-serif' || !/serif|Iowan|Palatino|Songti|Avenir/i.test(face)))
+})
+
 test('switching companion looks changes tokens for light and dark', () => {
   const warmLight = getCompanionAppearance('warm', 'light')
   const warmDark = getCompanionAppearance('warm', 'dark')

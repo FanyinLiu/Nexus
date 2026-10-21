@@ -152,6 +152,15 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
   const loopSnoozeUntil = normalizeIsoTimestamp(value.loopSnoozeUntil)
   const loopSurfacedCount = normalizeNonNegativeInteger(value.loopSurfacedCount)
   const loopLastSurfacedAt = normalizeIsoTimestamp(value.loopLastSurfacedAt)
+  const loopCheckAskedAt = normalizeIsoTimestamp(value.loopCheckAskedAt)
+  const loopPlace = normalizeBoundedText(value.loopPlace, 80, true)
+  const loopReminderTaskId = normalizeBoundedText(value.loopReminderTaskId, 120, true)
+  const slotKey = normalizeBoundedText(value.slotKey, 80, true)
+  const pinned = value.pinned === true
+  const userEdited = value.userEdited === true
+  const migrated = value.migrated === true
+    || (kind === 'open_loop' && value.schemaVersion !== MEMORY_RECORD_SCHEMA_VERSION)
+  const evidence = normalizeEvidence(value.evidence)
 
   return {
     id,
@@ -189,7 +198,31 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
     ...(loopSnoozeUntil ? { loopSnoozeUntil } : {}),
     ...(loopSurfacedCount !== undefined ? { loopSurfacedCount } : {}),
     ...(loopLastSurfacedAt ? { loopLastSurfacedAt } : {}),
+    ...(loopCheckAskedAt ? { loopCheckAskedAt } : {}),
+    ...(loopPlace ? { loopPlace } : {}),
+    ...(loopReminderTaskId ? { loopReminderTaskId } : {}),
+    ...(slotKey ? { slotKey } : {}),
+    ...(evidence ? { evidence } : {}),
+    ...(pinned ? { pinned: true } : {}),
+    ...(userEdited ? { userEdited: true } : {}),
+    ...(migrated ? { migrated: true } : {}),
   }
+}
+
+function normalizeEvidence(value: unknown): MemoryItem['evidence'] {
+  if (!Array.isArray(value)) return undefined
+  const items: NonNullable<MemoryItem['evidence']> = []
+  for (const raw of value) {
+    if (!isObject(raw)) continue
+    const quote = normalizeBoundedText(raw.quote, 240, true)
+    const at = normalizeIsoTimestamp(raw.at)
+    const day = normalizeBoundedText(raw.day, 32, true)
+    if (!quote || !at || !day) continue
+    const messageId = normalizeBoundedText(raw.messageId, 120, true)
+    items.push({ quote, at, day, ...(messageId ? { messageId } : {}) })
+    if (items.length >= 5) break
+  }
+  return items.length ? items : undefined
 }
 
 export function normalizeMemoryItemsForStorage(raw: unknown): MemoryItem[] {

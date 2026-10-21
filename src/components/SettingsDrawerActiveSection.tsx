@@ -98,7 +98,7 @@ export type SettingsDrawerActiveSectionProps = {
   onUpdateMemory: (id: string, content: string) => void
   onPatchMemory?: (
     id: string,
-    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil'>>,
+    patch: Partial<Pick<MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'pinned' | 'userEdited' | 'importance'>>,
   ) => void
   onUpdateNotificationChannel?: (id: string, patch: Partial<NotificationChannel>) => Promise<void>
   petModel: PetModelDefinition

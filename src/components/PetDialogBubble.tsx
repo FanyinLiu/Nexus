@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type { PetDialogBubbleState } from '../types'
+import { LoopOutreachNote } from './LoopOutreachNote.tsx'
 import { ToolResultCard } from './ToolResultCard.tsx'
 
 type PetDialogBubbleProps = {
@@ -89,6 +90,11 @@ export function PetDialogBubble({ bubble, assistantName }: PetDialogBubbleProps)
       ) : null}
 
       {bubble.toolResult ? <ToolResultCard toolResult={bubble.toolResult} variant="pet" /> : null}
+      <LoopOutreachNote
+        loopOffer={bubble.loopOffer}
+        loopCheck={bubble.loopCheck}
+        proactiveWhy={bubble.proactiveWhy}
+      />
     </aside>
   )
 }

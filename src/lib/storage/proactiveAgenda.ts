@@ -12,7 +12,7 @@ const STATES = new Set(['pending', 'snoozed', 'done', 'dismissed'])
 const DELIVER = new Set(['return', 'next_turn', 'either'])
 
 function emptyState(): ProactiveAgendaState {
-  return { items: [], firedAt: [], lastConsolidationAt: null }
+  return { items: [], firedAt: [], dismissedAt: [], lastConsolidationAt: null }
 }
 
 function normalizeItem(value: unknown): AgendaItem | null {
@@ -78,7 +78,10 @@ export function normalizeProactiveAgenda(value: unknown): ProactiveAgendaState {
   const lastConsolidationAt = typeof record.lastConsolidationAt === 'string' && Number.isFinite(Date.parse(record.lastConsolidationAt))
     ? new Date(record.lastConsolidationAt).toISOString()
     : null
-  return { items: unique, firedAt, lastConsolidationAt }
+  const dismissedAt = Array.isArray(record.dismissedAt)
+    ? record.dismissedAt.filter((stamp): stamp is number => typeof stamp === 'number' && Number.isFinite(stamp))
+    : []
+  return { items: unique, firedAt, dismissedAt, lastConsolidationAt }
 }
 
 export function loadProactiveAgenda(): ProactiveAgendaState {

@@ -30,11 +30,36 @@ export interface ProactiveEtiquetteInput {
   channel: ProactiveChannel
   /** When the focus state last became active. Return delivery waits out the grace. */
   resumedAtMs?: number | null
+  /**
+   * How long a return waits after the user comes back.
+   * Omitted means the 20s default. A pinned walkthrough clock passes 0
+   * so the wait is not measured in frozen app time.
+   */
+  resumeGraceMs?: number
+  /** Dismissal timestamps. Two inside three days drop the day cap to one. */
+  dismissedAt?: readonly number[]
 }
 
 export interface ProactiveEtiquetteDecision {
   allow: boolean
   reason: string
+}
+
+const DISMISS_BACKOFF_MS = 3 * 24 * 60 * 60 * 1000
+
+/**
+ * After two dismissals, the next three days allow one mention.
+ * Otherwise the preset cap applies, still never above the hard cap.
+ */
+export function dismissalBackoffCap(
+  preset: ProactiveFrequencyPreset,
+  dismissedAt: readonly number[],
+  nowMs: number,
+): number {
+  const recent = dismissedAt.filter((stamp) => nowMs - stamp <= DISMISS_BACKOFF_MS && stamp <= nowMs)
+  const cap = proactiveDailyCap(preset)
+  if (recent.length >= 2) return Math.min(cap, 1)
+  return cap
 }
 
 /** Low is one mention a day. Normal is the hard cap. Nothing exceeds 3. */
@@ -75,14 +100,15 @@ export function evaluateProactiveEtiquette(input: ProactiveEtiquetteInput): Proa
   if (isQuietHour(hour, input.quietStart, input.quietEnd)) {
     return { allow: false, reason: 'quiet-hours' }
   }
+  const graceMs = input.resumeGraceMs ?? PROACTIVE_RESUME_GRACE_MS
   if (
     input.channel === 'return'
     && input.resumedAtMs != null
-    && input.nowMs - input.resumedAtMs < PROACTIVE_RESUME_GRACE_MS
+    && input.nowMs - input.resumedAtMs < graceMs
   ) {
     return { allow: false, reason: 'resume-grace' }
   }
-  const cap = proactiveDailyCap(input.preset)
+  const cap = dismissalBackoffCap(input.preset, input.dismissedAt ?? [], input.nowMs)
   const today = input.firedAt.filter((stamp) => isSameLocalDay(stamp, input.nowMs))
   if (today.length >= cap) return { allow: false, reason: 'daily-cap' }
   const last = input.firedAt.reduce((max, stamp) => Math.max(max, stamp), 0)

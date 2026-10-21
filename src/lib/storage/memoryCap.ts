@@ -17,6 +17,8 @@ export const MAX_LONG_TERM_MEMORIES = 500
  */
 export function isProtectedMemory(memory: MemoryItem): boolean {
   return memory.importance === 'pinned'
+    || memory.pinned === true
+    || memory.userEdited === true
     || memory.userConfirmed === true
     || memory.source === 'manual'
     || (memory.kind === 'open_loop' && (memory.loopStatus ?? 'open') === 'open')

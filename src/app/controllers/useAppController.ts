@@ -478,6 +478,8 @@ export function useAppController() {
     messagesRef,
     memory,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
+    addReminderTask: reminderTaskStore.addReminderTask,
+    removeReminderTask: reminderTaskStore.removeReminderTask,
     goalsRef,
     setGoals,
     busyRef,
