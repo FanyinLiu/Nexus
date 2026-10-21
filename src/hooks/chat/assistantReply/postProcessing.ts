@@ -7,7 +7,7 @@ import {
 import { buildChatMemoryTrace } from '../../../features/memory/recallTrace.ts'
 import { shouldGenerateSkill, generateAndSaveSkill } from '../../../features/skills/autoSkillGenerator.ts'
 import { captureUserAffectSample } from '../../../features/autonomy/userAffectTimeline.ts'
-import { userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../../features/autonomy/emotionModel.ts'
+import { petMoodForAssistantReply, userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../../features/autonomy/emotionModel.ts'
 import { recordFirstConversationTelemetry } from '../../../features/onboarding/firstConversationTelemetry.ts'
 import { PUBLIC_GESTURE_NAMES } from '../../../features/pet/models.ts'
 import {
@@ -246,7 +246,10 @@ export async function postProcessAssistantReply(
     ...inlineExpressionOverrideCues,
     ...inlineGestureCues,
   ])
-  dependencies.ctx.setMood('happy')
+  const replyMood = petMoodForAssistantReply({
+    replyText: `${assistantMessageContent}\n${assistantSpeechOutput}`,
+    moodWord: inlineMoodCues[0]?.mood ?? null,
+  })
 
   // Auto-generate skill document if the response was complex enough
   const toolCallNames = [
@@ -388,6 +391,12 @@ export async function postProcessAssistantReply(
     } else {
       dependencies.ctx.busEmit({ type: 'session:completed' })
     }
+    // session:completed, and the turn finally that emits it again while
+    // voice is still 'processing', both force idle before this async
+    // function's caller resumes. The reply mood has to land after those
+    // resets or a sad reply snaps back to the idle face.
+    const moodToApply = replyMood ?? 'idle'
+    window.setTimeout(() => dependencies.ctx.setMood(moodToApply), 0)
   }
 
   return true

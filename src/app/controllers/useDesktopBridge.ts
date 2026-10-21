@@ -355,19 +355,20 @@ export function useDesktopBridge({
   }, [applyRemoteMessages, applyRemoteMemories])
 
   // Runtime-state bridge: listens for cross-window snapshot pushes and writes
-  // them into local state. Depends only on `pet.setMood` — not the whole
-  // `pet` object. `pet` is `usePetBehavior`'s useMemo return, whose identity
-  // changes whenever `mood` (and other inputs) changes. Depending on `pet`
-  // here used to self-feed: pet.setMood inside → mood changes → pet re-memos
-  // → effect re-subscribes → pending promise fires again → setMood called
-  // again. `pet.setMood` is a React useState setter and referentially stable
-  // by contract — safe to depend on.
+  // them into local state. Depends only on `pet.applyRemoteMood` — not the
+  // whole `pet` object. `pet` is `usePetBehavior`'s useMemo return, whose
+  // identity changes whenever `mood` (and other inputs) changes. Depending
+  // on `pet` here used to self-feed: applying a mood → mood changes → pet
+  // re-memos → effect re-subscribes → pending promise fires again.
+  // `applyRemoteMood` is a stable callback. It updates the face without
+  // publishing the snapshot back, so the two windows do not chase.
+  const applyRemoteMood = pet.applyRemoteMood
   useBridgeSubscription<RuntimeStateSnapshot>({
     apply: (state) => {
       setRuntimeSnapshotState(state)
 
       if (state.mood) {
-        pet.setMood(state.mood)
+        applyRemoteMood(state.mood)
       }
 
       setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
@@ -375,7 +376,7 @@ export function useDesktopBridge({
     },
     getInitial: () => window.desktopPet?.getRuntimeState?.(),
     subscribe: (listener) => window.desktopPet?.subscribeRuntimeState?.(listener),
-  }, [pet.setMood])
+  }, [applyRemoteMood])
 
   useEffect(() => {
     const beat = () => {

@@ -3,8 +3,9 @@
  *
  * The op log keeps a redacted row. Run snapshots, evidence quotes, reminder
  * copies, and the other memory files lose the text. A session-only buffer
- * can still undo one delete until reload. Vector removal calls the current
- * index hook, and `memoryVectorClear` when the store wipe lands.
+ * can still undo one delete until reload. One row goes through
+ * `memoryVectorRemove`. Clearing the archive goes through `memoryVectorClear`,
+ * which flushes the vector snapshot and vacuums local-data pages.
  */
 
 import { formatMemoriesForPersonaFile } from '../../features/memory/memoryPersistence.ts'
@@ -159,13 +160,12 @@ async function refreshPersona(needles: readonly string[]): Promise<void> {
 }
 
 /**
- * Ask the vector store to drop the ids. `memoryVectorClear` is the wipe
- * the 0.4.8 store will expose; until then the index remove is the hook.
+ * Ask the vector store to drop the ids. Clear-all uses the wipe hook so
+ * the snapshot and the database free pages go with the rows. A single
+ * delete only removes those ids.
  */
 function requestVectorPurge(ids: readonly string[], clearAll: boolean): void {
-  const pet = window.desktopPet as (NonNullable<typeof window.desktopPet> & {
-    memoryVectorClear?: () => Promise<unknown>
-  }) | undefined
+  const pet = window.desktopPet
   if (!pet) return
   if (clearAll && typeof pet.memoryVectorClear === 'function') {
     void pet.memoryVectorClear().catch(() => undefined)

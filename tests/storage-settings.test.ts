@@ -129,7 +129,7 @@ test('clamps out-of-range autonomy numerics on load (no 0ms busy-loop, no negati
   assert.equal(settings.autonomyTickIntervalSeconds, 10)
   assert.equal(settings.autonomySleepAfterIdleMinutes, 5)
   assert.equal(settings.autonomyIdleThresholdSeconds, 60)
-  // Negative would make shouldTick always-false (autonomy silently dead).
+  // Negative would make the daily model budget unusable.
   assert.equal(settings.autonomyCostLimitDailyTicks, 10)
   // Quiet-hours must stay within 0..23 or night suppression breaks.
   assert.equal(settings.autonomyQuietHoursStart, 23)

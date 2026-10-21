@@ -79,6 +79,10 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   const [petHotspotActive, setPetHotspotActive] = useState(false)
 
   const moodRef = useRef<PetMood>(loadPetRuntimeState().mood)
+  // A snapshot pushed by the other window must update the face here
+  // without publishing it back. Publishing the applied value is what
+  // makes the two windows chase each other's last mood.
+  const publishMoodRef = useRef(true)
   const idleControllerRef = useRef<IdleSequenceController | null>(null)
   const performanceCueTimerRef = useRef<number | null>(null)
   const performanceCueQueueRef = useRef<PetPerformanceCue[]>([])
@@ -96,9 +100,18 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   }, [mood])
 
   useEffect(() => {
+    const shouldPublish = publishMoodRef.current
+    publishMoodRef.current = true
     savePetRuntimeState({ mood })
+    if (!shouldPublish) return
     window.desktopPet?.updateRuntimeState?.({ mood }).catch(() => undefined)
   }, [mood])
+
+  const applyRemoteMood = useCallback((next: PetMood) => {
+    if (moodRef.current === next) return
+    publishMoodRef.current = false
+    setMood(next)
+  }, [])
 
   useEffect(() => () => {
     if (performanceCueTimerRef.current) {
@@ -368,6 +381,7 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   return useMemo(() => ({
     mood,
     setMood,
+    applyRemoteMood,
     moodRef,
     gazeTarget,
     setGazeTarget,
@@ -396,6 +410,7 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   }), [
     mood,
     setMood,
+    applyRemoteMood,
     gazeTarget,
     setGazeTarget,
     typingActivity,

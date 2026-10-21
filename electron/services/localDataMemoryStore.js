@@ -2,6 +2,8 @@
  * Memory-domain local-data operations (migration plan/apply/rollback, status, readback).
  * Mirrors the chat-domain module structure so the SQLite foundation stays in core.
  */
+import { access } from 'node:fs/promises'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 import {
   LOCAL_DATA_AUDIT_DOMAIN_ID,
   LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID,
@@ -180,6 +182,64 @@ export async function rollbackMemoryLocalDataMigration(options = {}) {
   } catch (error) {
     setLocalDataRuntimeStatus(statusFromError(error))
     return { ok: false, targetDomainIds: domains, recordsDeleted: 0, auditRecordId: null, errorKind: 'local-data-memory-migration-failed', errorMessage: 'Memory migration rollback could not be completed.' }
+  } finally {
+    if (db) db.close()
+  }
+}
+
+/**
+ * Delete long-term and diary rows and rewrite the database file so the
+ * removed text does not stay in free pages. A missing database is a no-op.
+ * Failures are warned and returned; they do not throw.
+ * @param {{ userDataPath?: string, now?: Date | string | number }} [options]
+ * @returns {Promise<{ ok: boolean, recordsDeleted: number }>}
+ */
+export async function clearMemoryLocalDataContent(options = {}) {
+  const domains = targetDomainIds()
+  let databasePath = ''
+  try {
+    ;({ databasePath } = await resolveLocalDataPaths(options))
+    await access(databasePath)
+  } catch (error) {
+    const missing = error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT'
+    if (missing || !databasePath) return { ok: true, recordsDeleted: 0 }
+    console.warn('[memory] local-data clear skipped:', getRedactedErrorMessage(error))
+    return { ok: false, recordsDeleted: 0 }
+  }
+
+  let db = null
+  try {
+    const clearedAt = nowIso(options.now)
+    const { manifestPath } = await resolveLocalDataPaths(options)
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
+
+    const existing = db.prepare('SELECT COUNT(*) AS count FROM local_data_records WHERE domain_id IN (?, ?)').get(...domains)?.count ?? 0
+    const auditId = auditRecordId('memory-content-cleared', clearedAt)
+    db.exec('BEGIN')
+    try {
+      db.prepare('DELETE FROM local_data_records WHERE domain_id IN (?, ?)').run(...domains)
+      insertLocalDataAuditRecord(db, auditId, {
+        action: 'memory-content-cleared',
+        clearedAt,
+        recordsDeleted: existing,
+      }, clearedAt)
+      setMeta(db, 'updatedAt', clearedAt)
+      db.exec('COMMIT')
+    } catch (error) {
+      try { db.exec('ROLLBACK') } catch {}
+      throw error
+    }
+
+    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)') } catch {}
+    try { db.exec('VACUUM') } catch {}
+
+    const state = readSqliteState(db)
+    await atomicWriteJson(manifestPath, manifestFromSqliteState(state))
+    return { ok: true, recordsDeleted: existing }
+  } catch (error) {
+    console.warn('[memory] local-data clear failed:', getRedactedErrorMessage(error))
+    return { ok: false, recordsDeleted: 0 }
   } finally {
     if (db) db.close()
   }

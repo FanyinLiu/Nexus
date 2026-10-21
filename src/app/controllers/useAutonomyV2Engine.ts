@@ -85,6 +85,8 @@ export type UseAutonomyV2EngineOptions = {
   triggerIdleGesture?: (gestureName: string) => void
   /** Only the background owner may load persona or consume V2 cadence. */
   enabled?: boolean
+  /** Spend one daily model call. Absent means the caller has no budget. */
+  tryConsumeLlmBudget?: () => boolean
   onDebugEvent?: (event: {
     source: DebugConsoleEventSource
     title: string
@@ -248,6 +250,9 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
           })
         }
         throw new Error(`background chat blocked: ${gate.reason}`)
+      }
+      if (opts.tryConsumeLlmBudget && !opts.tryConsumeLlmBudget()) {
+        throw new Error('daily check-in limit reached')
       }
       const lease = acquireBackgroundChatLease()
       if (!lease) throw new Error('background chat lease busy')
