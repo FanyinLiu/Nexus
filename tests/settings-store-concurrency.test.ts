@@ -308,12 +308,16 @@ test('permission policy drain sends the latest commit after a slow earlier sync'
 
 test('functional mutations serialize latest state across a delayed first vault write', async () => {
   const firstVaultWrite = deferred()
+  const firstVaultWriteStarted = deferred()
   let vaultWriteCalls = 0
   const environment = installWindow({
     vaultStore: async () => undefined,
     vaultStoreMany: async () => {
       vaultWriteCalls += 1
-      if (vaultWriteCalls === 1) await firstVaultWrite.promise
+      if (vaultWriteCalls === 1) {
+        firstVaultWriteStarted.release()
+        await firstVaultWrite.promise
+      }
     },
     vaultRetrieveMany: async () => ({ 'settings:apiKey': 'hydrated-secret' }),
   })
@@ -335,7 +339,7 @@ test('functional mutations serialize latest state across a delayed first vault w
       return { ...current, userName: 'second mutation' }
     })
 
-    for (let index = 0; index < 8; index += 1) await Promise.resolve()
+    await firstVaultWriteStarted.promise
     assert.equal(vaultWriteCalls, 1)
     assert.equal(secondUpdaterStarted, false)
     firstVaultWrite.release()

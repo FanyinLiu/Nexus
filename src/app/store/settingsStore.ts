@@ -12,6 +12,7 @@ import {
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
 import { syncExternalActionPolicyToMain } from '../../features/integrations/externalActionPolicySync.ts'
+import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { AppSettings } from '../../types/index.ts'
 import { withSettingsMutationLock } from './settingsMutationLock.ts'
@@ -87,8 +88,10 @@ function commitSettingsCache(settings: AppSettings): AppSettings {
   return settings
 }
 
-function hasDesktopVault(): boolean {
-  return typeof window !== 'undefined' && window.desktopPet?.vaultStore != null
+async function hasDesktopVault(): Promise<boolean> {
+  if (typeof window === 'undefined' || window.desktopPet?.vaultStore == null) return false
+  // Vault reads/writes are panel-only; the pet window must never issue them.
+  return canUsePanelOnlyBridge()
 }
 
 const SETTINGS_SECRET_FIELDS = [
@@ -246,7 +249,8 @@ async function runLocalSettingsMutation(
       }
 
       let authoritative = latestPersisted
-      if (hasDesktopVault()) {
+      const useDesktopVault = await hasDesktopVault()
+      if (useDesktopVault) {
         try {
           authoritative = await hydrateSettingsKeys(latestPersisted)
         } catch (err) {
@@ -273,7 +277,7 @@ async function runLocalSettingsMutation(
       pendingHydration = null
       // Dehydrate keys to vault first, then write stripped settings to localStorage.
       // Only one write — never persists plaintext keys.
-      const stripped = hasDesktopVault()
+      const stripped = useDesktopVault
         ? await dehydrateSettingsKeys(nextSettings)
         : nextSettings
       // The local renderer hydrates the persisted result explicitly below. The
@@ -283,7 +287,7 @@ async function runLocalSettingsMutation(
 
       let committed: AppSettings
       try {
-        committed = hasDesktopVault()
+        committed = useDesktopVault
           ? await hydrateSettingsKeys(loadSettings())
           : loadSettings()
       } catch (err) {
@@ -355,8 +359,9 @@ export async function initializeSettingsWithVault(): Promise<AppSettings> {
     // Initialization participates in the same cross-window authority as a
     // normal mutation. Never start from this renderer's cached snapshot.
     let settings = loadSettings()
+    const useDesktopVault = await hasDesktopVault()
 
-    if (!vaultMigrationDone) {
+    if (useDesktopVault && !vaultMigrationDone) {
       const hasPlaintextKeys = [
         settings.apiKey,
         settings.speechInputApiKey,
