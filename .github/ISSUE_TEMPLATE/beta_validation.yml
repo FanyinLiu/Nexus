@@ -41,7 +41,7 @@ body:
     id: scope
     attributes:
       label: What did you test?
-      placeholder: "Desktop companion awareness, memory transparency, setup, model connection, or sprite pet preview."
+      placeholder: "Desktop companion awareness, memory transparency, setup, model connection, or Live2D model preview."
     validations:
       required: true
 

@@ -2166,15 +2166,13 @@ html[data-theme='system-day'] .sd-warm .primary-button {
 
 .sd-warm-section .settings-page__back,
 .sd-warm-section .settings-section .ghost-button,
-.sd-warm-section .settings-about-panel__link,
-.sd-warm-section .settings-sprite-preview__states button {
+.sd-warm-section .settings-about-panel__link {
   border-color: rgba(72, 53, 40, 0.1);
   background: rgba(255, 253, 249, 0.72);
   color: rgba(72, 53, 40, 0.76);
   box-shadow: none;
 }
 
-.sd-warm-section .settings-sprite-preview__states button.is-active,
 .sd-warm-section .settings-relationship__chip.is-active {
   border-color: rgba(199, 102, 69, 0.34);
   background: rgba(199, 102, 69, 0.14);
@@ -2205,13 +2203,6 @@ html[data-theme='system-day'] .sd-warm .primary-button {
   border-color: rgba(176, 48, 48, 0.36);
   background: rgba(176, 48, 48, 0.12);
   color: rgba(98, 24, 24, 0.96);
-}
-
-.sd-warm-section .settings-sprite-preview__stage {
-  border-color: rgba(72, 53, 40, 0.1);
-  background:
-    linear-gradient(180deg, rgba(255, 253, 249, 0.9), rgba(246, 239, 229, 0.72)),
-    rgba(255, 252, 247, 0.78);
 }
 
 .sd-warm-section .settings-community-links {

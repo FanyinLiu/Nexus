@@ -22,7 +22,7 @@ const behaviorKeys = [
   'themeColorScheme',
 ] as const
 
-test('schema 15 migrates to 21 and records quiet without rewriting stored switches', () => {
+test('schema 15 migrates to the current schema and records quiet without rewriting stored switches', () => {
   const stored = {
     settingsSchemaVersion: 15,
     themeId: 'warm-day',
@@ -43,7 +43,7 @@ test('schema 15 migrates to 21 and records quiet without rewriting stored switch
   }
   const next = migrateSettings(stored, 15)
   assert.equal(next.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 21)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 22)
   assert.equal(next.companionInitiative, 'quiet')
   assert.equal(next.themeId, 'warm')
   assert.equal(next.autonomyQuietHoursEnd, 6)
@@ -87,7 +87,7 @@ test('schema 20 with the autonomy tick on stays custom and does not clear that t
   }
   const before = Object.fromEntries(behaviorKeys.map((key) => [key, stored[key as keyof typeof stored]]))
   const next = migrateSettings(stored, 20)
-  assert.equal(next.settingsSchemaVersion, 21)
+  assert.equal(next.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
   assert.equal(next.companionInitiative, 'custom')
   assert.equal(next.themeId, 'system')
   assert.equal(next.themeColorScheme, 'dark')

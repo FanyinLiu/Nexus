@@ -31,8 +31,6 @@ import {
   validatePluginBusTopicPayload,
   validatePluginIdPayload,
   validatePetWindowStatePayload,
-  validatePetModelGalleryImportPayload,
-  validatePetModelGalleryListPayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
   validateServiceConnectionTestPayload,
@@ -993,28 +991,6 @@ test('IPC local data chat migration schema bounds content-bearing packages', () 
       },
     }),
     /payload\.session\.messages\[0\]\.content must be at most 200000 characters/,
-  )
-})
-
-test('IPC pet model schemas bound local artifact payloads', () => {
-  assert.equal(
-    validatePetModelGalleryImportPayload('  https://codex-pet.example/pet.zip  '),
-    'https://codex-pet.example/pet.zip',
-  )
-  assert.deepEqual(
-    validatePetModelGalleryListPayload({ query: '  solid box  ', limit: 12, ignored: true }),
-    {
-      query: 'solid box',
-      limit: 12,
-    },
-  )
-  assert.throws(
-    () => validatePetModelGalleryImportPayload(''),
-    /payload must be a non-empty string/,
-  )
-  assert.throws(
-    () => validatePetModelGalleryListPayload({ limit: 0 }),
-    /payload\.limit must be >= 1/,
   )
 })
 

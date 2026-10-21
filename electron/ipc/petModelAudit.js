@@ -6,28 +6,17 @@ function resultPathSummary(result = {}) {
   return {
     packageDirectoryLength: textLength(result?.packageDirectory ?? result?.directoryPath),
     manifestPathLength: textLength(result?.manifestPath),
-    spritesheetPathLength: textLength(result?.spritesheetPath),
     visualAuditPathLength: textLength(result?.visualAuditPath),
     archivePathLength: textLength(result?.archivePath),
   }
 }
 
 export function summarizePetModelRequest(channel, payload = {}) {
+  // Renderer payloads can carry a local path. The audit record stays metadata-only.
+  void payload
   switch (channel) {
     case 'pet-model:import':
       return { channel, dialogBacked: true }
-    case 'pet-model:import-codex-gallery':
-      return {
-        channel,
-        inputLength: textLength(payload),
-        looksLikeUrl: /^https?:\/\//i.test(String(payload ?? '').trim()),
-      }
-    case 'pet-model:list-codex-gallery':
-      return {
-        channel,
-        queryLength: textLength(payload?.query),
-        limitPresent: typeof payload?.limit === 'number',
-      }
     default:
       return { channel }
   }
@@ -49,11 +38,6 @@ export function summarizePetModelResult(channel, result = {}, error = null) {
   }
 }
 
-export function petModelActionNeedsConfirmation(channel) {
-  switch (channel) {
-    case 'pet-model:import-codex-gallery':
-      return true
-    default:
-      return false
-  }
+export function petModelActionNeedsConfirmation() {
+  return false
 }

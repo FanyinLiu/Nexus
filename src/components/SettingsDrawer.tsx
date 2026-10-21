@@ -22,10 +22,7 @@ import {
   pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
-import type {
-  CodexPetGalleryCatalogResult,
-  PetModelDefinition,
-} from '../features/pet/index.ts'
+import type { PetModelDefinition } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
@@ -153,11 +150,6 @@ export type SettingsDrawerProps = {
   onRemoveReminderTask: (id: string) => void
   onImportPetModel: () => Promise<import('../features/pet').PetModelImportResult | null>
   onSelectImportedPetModel?: (petModelId: string) => Promise<void> | void
-  onImportCodexPetGallery?: (input: string) => Promise<{
-    model: PetModelDefinition
-    message: string
-  }>
-  onListCodexPetGallery?: (query?: string) => Promise<CodexPetGalleryCatalogResult>
   onTestConnection: (
     capability: ServiceConnectionCapability,
     settings: AppSettings,
@@ -219,9 +211,7 @@ export function SettingsDrawer({
   onUpdateDailyEntry,
   onRemoveDailyEntry,
   onImportPetModel,
-  onImportCodexPetGallery,
   onSelectImportedPetModel,
-  onListCodexPetGallery,
   onTestConnection,
   onLoadSpeechVoices,
   onPreviewSpeech,
@@ -372,8 +362,6 @@ export function SettingsDrawer({
 
   const petModel_ = usePetModelImport({
     onImportPetModel,
-    onImportCodexPetGallery,
-    onListCodexPetGallery,
     onSelectImportedPetModel,
     setDraft,
   })

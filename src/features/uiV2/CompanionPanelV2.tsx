@@ -16,7 +16,6 @@ import { captionRepeatsVisibleNotification } from '../notifications/notification
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { PetPerformanceCue } from '../pet/types.ts'
-import { SpritePetCanvas } from '../pet/components/SpritePetCanvas.tsx'
 import { describeChatMemoryTrace } from '../memory/memoryTraceLabel.ts'
 import { ChatSheetV2, type ChatSheetV2Message } from './ChatSheetV2.tsx'
 import { useReadableCaption } from './caption.ts'
@@ -259,20 +258,6 @@ export function CompanionPanelV2({
       <div className="nexus-panel-v2__live2d">
         {settings.vtsEnabled ? (
           <span className="nexus-v2-sr-only">VTube Studio</span>
-        ) : petModel.spriteAtlas ? (
-          <SpritePetCanvas
-            atlas={petModel.spriteAtlas}
-            mood={pet.mood}
-            touchZone={pet.petTapActive ? pet.petTouchZone : null}
-            isListening={phase === 'listening'}
-            isSpeaking={phase === 'speaking'}
-            isBusy={phase === 'thinking'}
-            speechLevelSource={voice.speechLevelSource}
-            gazeTarget={pet.gazeTarget}
-            performanceCue={pet.petPerformanceCue ?? null}
-            placement="pet-stage"
-            label={settings.companionName}
-          />
         ) : <Suspense fallback={null}>
           <Live2DCanvas
             modelDefinition={motionSafeModel}

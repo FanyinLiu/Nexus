@@ -24,7 +24,7 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^minecraft:(?:connect|send-command)$/,
   /^models:download$/,
   /^notification:(?:set-channels|start)$/,
-  /^pet-model:import(?:-codex-gallery)?$/,
+  /^pet-model:import$/,
   /^plugin:(?:approve|disable|enable|restart|revoke|start|stop)$/,
   /^plugin-bus:(?:publish|subscribe|unsubscribe)$/,
   /^persona:(?:save-|open-dir$|init$|import-card$|profile-dir$)/,

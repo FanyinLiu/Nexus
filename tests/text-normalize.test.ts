@@ -31,16 +31,13 @@ test('decodeHtmlEntities covers numeric, nbsp, and typographic named entities', 
 
 test('electron consumers import the shared decoder and XML escaper', () => {
   const helpers = readFileSync(new URL('../electron/webSearchHelpers.js', import.meta.url), 'utf8')
-  const gallery = readFileSync(new URL('../electron/services/codexPetGallery.js', import.meta.url), 'utf8')
   const edgeTts = readFileSync(new URL('../electron/services/edgeTts.js', import.meta.url), 'utf8')
   const bridge = readFileSync(new URL('../electron/services/notificationBridge.js', import.meta.url), 'utf8')
   assert.match(helpers, /import \{ decodeHtmlEntities, normalizeWhitespace, stripHtml \}/)
   assert.match(helpers, /import \{ normalizeBaseUrl \} from '\.\/netHelpers\.js'/)
   assert.doesNotMatch(helpers, /function normalizeBaseUrl/)
-  assert.match(gallery, /import \{ decodeHtmlEntities \} from '\.\.\/textNormalize\.js'/)
   assert.match(edgeTts, /import \{ escapeXml \} from '\.\.\/textNormalize\.js'/)
   assert.match(bridge, /import \{ decodeHtmlEntities, stripHtml \}/)
   assert.doesNotMatch(helpers, /function decodeHtmlEntities/)
-  assert.doesNotMatch(gallery, /function decodeHtmlEntities/)
   assert.doesNotMatch(edgeTts, /const escapeXml = /)
 })

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react'
+import { Suspense, lazy, useMemo, type ReactNode } from 'react'
 import { resolveCharacterPreset } from '../../features/character/presets.ts'
 import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface.tsx'
 import type { UseAppControllerResult } from '../controllers/useAppController.ts'
@@ -40,20 +40,11 @@ export function PetView({
   onboardingGuide,
 }: PetViewProps) {
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
-  const roamCapable = petModelSelectionResolved
-    && !settings.vtsEnabled
-    && Boolean(petModel.spriteAtlas)
-
-  useEffect(() => {
-    const pending = window.desktopPet?.updatePetWindowState?.({ roamCapable })
-    pending?.catch(() => undefined)
-  }, [roamCapable])
 
   const hasModalOverlay = Boolean(settingsDrawer) || Boolean(onboardingGuide)
   const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
     && petModelSelectionResolved
     && !settings.vtsEnabled
-    && !petModel.spriteAtlas
     && Boolean(petModel.modelPath)
 
   return (

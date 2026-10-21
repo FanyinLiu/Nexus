@@ -17,12 +17,8 @@ let _isDev = false
 let _useDevServer = false
 let _devServerUrl = 'http://127.0.0.1:47821'
 let _getImportedPetModelsRoot = () => ''
-let _getImportedSpritePetModelsRoot = () => ''
-let _getCodexCustomSpritePetModelsRoot = () => ''
 let _isPathInsideRoot = () => false
 let _importedPetModelsRoute = '/__imported_live2d__'
-let _importedSpritePetModelsRoute = '/__imported_sprite_pets__'
-let _codexCustomSpritePetModelsRoute = '/__codex_sprite_pets__'
 
 export function initRendererServer({
   isDev,
@@ -30,24 +26,16 @@ export function initRendererServer({
   devServerUrl,
   getPanelSection,
   getImportedPetModelsRoot,
-  getImportedSpritePetModelsRoot,
-  getCodexCustomSpritePetModelsRoot,
   isPathInsideRoot,
   importedPetModelsRoute,
-  importedSpritePetModelsRoute,
-  codexCustomSpritePetModelsRoute,
 }) {
   _isDev = isDev
   _useDevServer = useDevServer
   _devServerUrl = devServerUrl
   _getPanelSection = getPanelSection
   _getImportedPetModelsRoot = getImportedPetModelsRoot
-  _getImportedSpritePetModelsRoot = getImportedSpritePetModelsRoot
-  _getCodexCustomSpritePetModelsRoot = getCodexCustomSpritePetModelsRoot
   _isPathInsideRoot = isPathInsideRoot
   _importedPetModelsRoute = importedPetModelsRoute
-  _importedSpritePetModelsRoute = importedSpritePetModelsRoute
-  _codexCustomSpritePetModelsRoute = codexCustomSpritePetModelsRoute
 }
 
 let _getPanelSection = () => 'chat'
@@ -134,8 +122,6 @@ export async function ensureRendererServer() {
 
   const rendererRoot = path.resolve(__dirname, '..', 'dist')
   const importedRoot = _getImportedPetModelsRoot()
-  const importedSpriteRoot = _getImportedSpritePetModelsRoot()
-  const codexCustomSpriteRoot = _getCodexCustomSpritePetModelsRoot()
 
   function createRendererServerInstance() {
     return http.createServer(async (request, response) => {
@@ -151,20 +137,6 @@ export async function ensureRendererServer() {
           const normalizedImportedPath = path.normalize(rawImportedPath).replace(/^(\.\.(\/|\\|$))+/, '')
           filePath = path.resolve(importedRoot, normalizedImportedPath)
           servedRoot = importedRoot
-        } else if (requestUrl.pathname.startsWith(`${_importedSpritePetModelsRoute}/`)) {
-          const rawImportedPath = decodeURIComponent(
-            requestUrl.pathname.slice(_importedSpritePetModelsRoute.length + 1),
-          )
-          const normalizedImportedPath = path.normalize(rawImportedPath).replace(/^(\.\.(\/|\\|$))+/, '')
-          filePath = path.resolve(importedSpriteRoot, normalizedImportedPath)
-          servedRoot = importedSpriteRoot
-        } else if (requestUrl.pathname.startsWith(`${_codexCustomSpritePetModelsRoute}/`)) {
-          const rawCodexPath = decodeURIComponent(
-            requestUrl.pathname.slice(_codexCustomSpritePetModelsRoute.length + 1),
-          )
-          const normalizedCodexPath = path.normalize(rawCodexPath).replace(/^(\.\.(\/|\\|$))+/, '')
-          filePath = path.resolve(codexCustomSpriteRoot, normalizedCodexPath)
-          servedRoot = codexCustomSpriteRoot
         } else {
           const rawPath = decodeURIComponent(requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname)
           const normalizedPath = path.normalize(rawPath).replace(/^(\.\.(\/|\\|$))+/, '')

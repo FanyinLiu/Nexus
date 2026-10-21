@@ -233,7 +233,7 @@
   box-shadow: 0 1px 4px color-mix(in srgb, var(--nx-settings-ink) 14%, transparent);
 }
 
-.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-companion-state-preview__states button) {
   min-height: var(--nx-settings-segment-height);
   border: 1px solid transparent;
   border-radius: var(--nx-settings-radius-control);
@@ -252,7 +252,7 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nx-settings-accent) 14%, transparent);
 }
 
-.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-companion-state-preview__states button):is(:hover, :focus-visible):not(.is-active) {
   border-color: color-mix(in srgb, var(--nx-settings-accent) 20%, var(--nx-settings-line));
   background: color-mix(in srgb, var(--nx-settings-accent) 7%, transparent);
   color: var(--nx-settings-ink);

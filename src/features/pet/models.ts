@@ -4,8 +4,7 @@ import type {
   Live2dImportMessageKey,
   Live2dImportRecommendationKey,
 } from '../../../shared/live2dModelResources.js'
-import type { PetImportMessageKey } from '../../../shared/petErrorCodes.js'
-import type { PetExpressionSlot, SpritePetAtlasDefinition } from './types.ts'
+import type { PetExpressionSlot } from './types.ts'
 
 /** @deprecated Import from `./types` — re-exported for backward compatibility. */
 export type { PetExpressionSlot } from './types.ts'
@@ -55,7 +54,6 @@ export interface PetModelDefinition {
   description: string
   modelPath: string
   fallbackImagePath: string
-  spriteAtlas?: SpritePetAtlasDefinition
   motionGroups: {
     idle?: string
     interaction?: string
@@ -156,7 +154,7 @@ export interface Live2dModelCompatibility {
 export interface PetModelImportResult {
   model: PetModelDefinition | null
   message: string
-  messageKey?: Live2dImportMessageKey | PetImportMessageKey
+  messageKey?: Live2dImportMessageKey
   messageParams?: TranslationParams
   recommendationKey?: Live2dImportRecommendationKey
   compatibility?: Live2dModelCompatibility
@@ -231,9 +229,8 @@ const DEFAULT_RIG_PARAMS = {
   breath: 'ParamBreath',
 } as const
 
-// Live2D 星绘 (mao) is the default face of the companion — the soul and the
-// model match. Haru and Hiyori are the other official Live2D samples.
-// Bundled sprite pets are not shipped; imported sprite packages still play.
+// Mao is the default companion. Haru and Hiyori are the other built-in
+// Live2D models. Imported Live2D models are discovered beside these three.
 export const DEFAULT_PET_MODEL_ID = 'mao'
 
 // Gesture names surfaced to the LLM via system prompt. Per-model coverage
@@ -491,9 +488,7 @@ export function shouldRepairPetModelSelection(
 
 /**
  * Point a missing companion selection at Mao after discovery.
- * Imported models that are still in the library are left alone. Portrait
- * packages and assembler-marked sprite pets are not discovered, so they
- * land here together with the removed bundled sprite ids.
+ * Imported Live2D models that are still in the library are left alone.
  */
 export function repairDiscoveredPetModelSelection<T extends {
   petModelId: string

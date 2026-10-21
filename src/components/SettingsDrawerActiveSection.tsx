@@ -181,11 +181,11 @@ export function SettingsDrawerActiveSection({
 }: SettingsDrawerActiveSectionProps) {
   const routeParams = new URLSearchParams(window.location.search)
   const isPetView = routeParams.get('view') === 'pet'
-  const supportsPanelCompanionV2 = draft.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath)
+  const supportsPanelCompanionV2 = draft.vtsEnabled || Boolean(petModel.modelPath)
   // PetView can only use V2 for a local Live2D model. Settings intentionally
   // treats configured VTS as legacy even before its asynchronous bridge becomes
-  // ready, so VTS/sprite users never lose controls that their active path uses.
-  const supportsPetCompanionV2 = !draft.vtsEnabled && !petModel.spriteAtlas && Boolean(petModel.modelPath)
+  // ready, so VTS users never lose controls that their active path uses.
+  const supportsPetCompanionV2 = !draft.vtsEnabled && Boolean(petModel.modelPath)
   const supportsCompanionV2 = isPetView ? supportsPetCompanionV2 : supportsPanelCompanionV2
   const showLegacyEnvironmentControls = routeParams.get('uiV2') === '0' || !supportsCompanionV2
   const typingStatus = useDesktopTypingStatus()
@@ -218,12 +218,7 @@ export function SettingsDrawerActiveSection({
           petModelPresets={petModelPresets}
           importingPetModel={petModelImport.importingPetModel}
           petModelStatus={petModelImport.petModelStatus}
-          codexPetCatalog={petModelImport.codexPetCatalog}
-          codexPetCatalogLoading={petModelImport.codexPetCatalogLoading}
-          codexPetCatalogStatus={petModelImport.codexPetCatalogStatus}
           onImportPetModel={() => void petModelImport.handleImportPetModel()}
-          onImportCodexPetGallery={(input) => void petModelImport.handleImportCodexPetGallery(input)}
-          onLoadCodexPetGallery={(query) => void petModelImport.handleLoadCodexPetGallery(query)}
         />
       )
     case 'history':

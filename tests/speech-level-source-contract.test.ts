@@ -55,16 +55,13 @@ test('explicit termination resets immediately and effect replay cannot dispose t
 })
 
 test('visual amplitude leaves subscribe to the throttled snapshot only', async () => {
-  const [sprite, petView, consoleSection, consoleV3, vts] = await Promise.all([
-    read('src/features/pet/components/SpritePetCanvas.tsx'),
+  const [petView, consoleSection, consoleV3, vts] = await Promise.all([
     read('src/app/views/LegacyPetView.tsx'),
     read('src/features/settingsV3/ConsoleSectionV3.tsx'),
     read('src/features/settingsV3/ConsoleSectionV3.tsx'),
     read('src/features/pet/vts/useVTSBridge.ts'),
   ])
 
-  assert.match(sprite, /useSpeechLevelSnapshot\(/)
-  assert.match(sprite, /const clampedSpeechLevel = isSpeaking[\s\S]*subscribedSpeechLevel[\s\S]*:\s*0/)
   assert.match(petView, /function PetMicBars[\s\S]*useSpeechLevelSnapshot\(/)
   assert.match(consoleSection, /function ConsoleSpeechLevelMeta[\s\S]*useSpeechLevelSnapshot\(source\)/)
   assert.doesNotMatch(consoleSection.slice(consoleSection.indexOf('export const ConsoleSectionV3')), /useSpeechLevelSnapshot\(/)

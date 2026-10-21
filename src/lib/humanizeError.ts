@@ -46,7 +46,7 @@ export type HumanizeContext =
   | 'stt'       // STT-specific (recognizer init, mic stream)
   | 'model'     // model download / inventory error
   | 'memory'    // memory store IO error
-  | 'pet'       // Live2D / sprite pet import
+  | 'pet'       // Live2D model import
   | 'generic'   // anything else
 
 interface KnownPattern {
@@ -86,9 +86,6 @@ const PET_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
   [PET_IPC_ERROR_CODES.ALREADY_IMPORTED]: { key: 'settings.pet.error.already_imported' },
   [PET_IPC_ERROR_CODES.IMPORT_INCOMPLETE]: { key: 'settings.pet.error.import_incomplete' },
   [PET_IPC_ERROR_CODES.UNSUPPORTED_FILE]: { key: 'settings.pet.error.unsupported_file' },
-  [PET_IPC_ERROR_CODES.GALLERY_INPUT]: { key: 'settings.pet.error.gallery_input' },
-  [PET_IPC_ERROR_CODES.GALLERY_FAILED]: { key: 'settings.pet.error.gallery_failed' },
-  [PET_IPC_ERROR_CODES.NETWORK]: { key: 'settings.pet.error.network' },
 }
 
 const SPEECH_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {

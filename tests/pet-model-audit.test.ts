@@ -17,14 +17,13 @@ function readSource(relativePath: string) {
 }
 
 test('pet model audit summaries exclude paths urls slugs and model content', () => {
-  const gallery = summarizePetModelRequest(
-    'pet-model:import-codex-gallery',
-    'https://codex-pet.example/private-pet?token=secret',
+  const request = summarizePetModelRequest(
+    'pet-model:import',
+    'https://example.invalid/private-pet?token=secret',
   )
-  assert.deepEqual(gallery, {
-    channel: 'pet-model:import-codex-gallery',
-    inputLength: 50,
-    looksLikeUrl: true,
+  assert.deepEqual(request, {
+    channel: 'pet-model:import',
+    dialogBacked: true,
   })
 
   const result = summarizePetModelResult('pet-model:import', {
@@ -47,9 +46,9 @@ test('pet model audit summaries exclude paths urls slugs and model content', () 
   assert.equal(result.visualAuditPathLength, 59)
   assert.equal(result.archivePathLength, 57)
 
-  const serialized = JSON.stringify({ gallery, result })
+  const serialized = JSON.stringify({ request, result })
   for (const privateValue of [
-    'codex-pet.example',
+    'example.invalid',
     'private-pet',
     'token=secret',
     '/Users/me/Documents/private-kit',
@@ -68,7 +67,6 @@ test('pet model import keeps display-path redaction and does not embed raw artif
   const serviceSource = readSource('electron/services/petModelService.js')
 
   assert.match(pathSource, /USER_DATA_DISPLAY_ROOT = 'app-user-data'/)
-  assert.match(pathSource, /CODEX_HOME_DISPLAY_ROOT = 'codex-home'/)
   assert.match(pathSource, /export function getPetArtifactDisplayPath\(targetPath\)/)
   assert.match(pathSource, /return `\.\.\.\/\$\{path\.basename\(resolvedTarget\) \|\| 'path'\}`/)
 
@@ -91,7 +89,6 @@ test('pet model error summaries omit private error messages', () => {
   assert.ok(!JSON.stringify(summary).includes('/Users/me/private-kit/pet.json'))
 })
 
-test('pet model confirmation policy distinguishes dialog-backed and direct actions', () => {
+test('pet model import is dialog-backed and does not ask for a second confirmation', () => {
   assert.equal(petModelActionNeedsConfirmation('pet-model:import'), false)
-  assert.equal(petModelActionNeedsConfirmation('pet-model:import-codex-gallery'), true)
 })

@@ -934,7 +934,7 @@ test('an explicit companion backdrop choice survives the migration', () => {
 test('a newer schema version is left untouched and stays newer after save', () => {
   const localStorage = createLocalStorageMock({
     [SETTINGS_STORAGE_KEY]: JSON.stringify({
-      settingsSchemaVersion: 21,
+      settingsSchemaVersion: 23,
       apiProviderId: 'siliconflow',
       apiBaseUrl: 'https://api.siliconflow.cn/v1',
       model: 'deepseek-ai/DeepSeek-V4-Flash',
@@ -948,7 +948,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
   })
 
   const settings = loadSettings()
-  assert.equal(settings.settingsSchemaVersion, 21)
+  assert.equal(settings.settingsSchemaVersion, 23)
   assert.equal(settings.model, 'deepseek-ai/DeepSeek-V4-Flash')
 
   saveSettings(settings, { silent: true })
@@ -956,7 +956,7 @@ test('a newer schema version is left untouched and stays newer after save', () =
     settingsSchemaVersion?: number
     model?: string
   }
-  assert.equal(saved.settingsSchemaVersion, 21)
+  assert.equal(saved.settingsSchemaVersion, 23)
   assert.equal(saved.model, 'deepseek-ai/DeepSeek-V4-Flash')
 })
 

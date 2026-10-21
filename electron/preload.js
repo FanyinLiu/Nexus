@@ -58,8 +58,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
     return () => ipcRenderer.removeListener('pet-model:library-changed', handler)
   },
   importPetModel: () => ipcRenderer.invoke('pet-model:import'),
-  importCodexPetGallery: (input) => ipcRenderer.invoke('pet-model:import-codex-gallery', input),
-  listCodexPetGallery: (payload) => ipcRenderer.invoke('pet-model:list-codex-gallery', payload),
   showConfirmDialog: (message) => ipcRenderer.invoke('dialog:confirm', message),
   saveTextFile: (payload) => ipcRenderer.invoke('file:save-text', payload),
   openTextFile: (payload) => ipcRenderer.invoke('file:open-text', payload),

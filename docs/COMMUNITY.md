@@ -78,17 +78,11 @@ Start with [Persona Contribution Template](PERSONA_CONTRIBUTION_TEMPLATE.md).
 Include sample dialogues for normal use, permission boundaries, tool failure,
 and memory transparency.
 
-### Sprite Pet or Avatar
+### Live2D model
 
-Start with [Adding Sprite Pet](ADDING_SPRITE_PET.md). Include:
-
-- Original source or license.
-- `pet.json` and spritesheet package.
-- A short preview or screenshot.
-- Notes about motion states that feel wrong.
+Built-in companions are Mao, Haru, and Hiyori. Mao is the default. A contributed model is a Cubism folder whose `.model3.json` only references files inside that folder. Include the license and a short preview.
 
 Do not submit private app assets or copied community art as bundled Nexus art.
-User-selected imports can be documented; bundled assets need explicit permission.
 
 ### Model Configuration Recipe
 
@@ -162,5 +156,4 @@ Nexus community work should pass these questions:
 - [Nexus Companion Prompt Baseline](NEXUS_COMPANION_PROMPT.md)
 - [Persona Contribution Template](PERSONA_CONTRIBUTION_TEMPLATE.md)
 - [Contributing Guide](../CONTRIBUTING.md)
-- [Adding Sprite Pet](ADDING_SPRITE_PET.md)
 - [Executable Optimization Tasks](EXECUTABLE_OPTIMIZATION_TASKS.md)

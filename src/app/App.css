@@ -264,8 +264,7 @@
 }
 
 .pet-window__mascot .live2d-shell,
-.pet-window__mascot .live2d-canvas,
-.pet-window__mascot .sprite-pet-shell {
+.pet-window__mascot .live2d-canvas {
   width: 100%;
   height: 100%;
   min-height: 100%;
@@ -365,101 +364,6 @@
   top: auto;
   bottom: 28px;
   transform: translateX(-50%);
-}
-
-.sprite-pet-shell {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: end center;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.sprite-pet {
-  width: var(--sprite-pet-size, min(68%, 360px));
-  min-width: var(--sprite-pet-min-size, min(40vw, 180px));
-  max-width: var(--sprite-pet-max-size, none);
-  aspect-ratio: var(--sprite-pet-aspect, 192 / 208);
-  background-repeat: no-repeat;
-  image-rendering: var(--sprite-pet-image-rendering, pixelated);
-  transform:
-    translate(var(--sprite-pet-gaze-x, 0), var(--sprite-pet-gaze-y, 0))
-    scale(var(--sprite-pet-speech-scale, 1));
-  transform-origin: center bottom;
-  filter: none;
-  transition:
-    filter 0.18s ease,
-    transform 0.08s linear;
-}
-
-.sprite-pet-shell--pet-stage .sprite-pet {
-  --sprite-pet-size: var(--sprite-pet-stage-size, clamp(112px, 18vmin, 154px));
-  --sprite-pet-min-size: var(--sprite-pet-stage-min-size, 112px);
-  --sprite-pet-max-size: var(--sprite-pet-stage-max-size, 154px);
-  margin-bottom: var(--sprite-pet-stage-margin-bottom, clamp(44px, 8vh, 72px));
-}
-
-.sprite-pet--waiting,
-.sprite-pet--running,
-.sprite-pet--review {
-  filter: none;
-}
-
-.sprite-pet--failed {
-  filter: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sprite-pet {
-    animation: none !important;
-  }
-}
-
-.portrait-puppet-shell {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: end center;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.portrait-puppet {
-  position: relative;
-  width: var(--portrait-puppet-size, min(68%, 280px));
-  min-width: var(--portrait-puppet-min-size, min(40vw, 160px));
-  aspect-ratio: 3 / 4;
-  transform-origin: center bottom;
-  contain: layout paint;
-}
-
-.portrait-puppet-shell--pet-stage .portrait-puppet {
-  --portrait-puppet-size: clamp(168px, 28vmin, 220px);
-  --portrait-puppet-min-size: 168px;
-  margin-bottom: clamp(44px, 8vh, 72px);
-}
-
-.portrait-puppet__canvas,
-.portrait-puppet__fallback {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.portrait-puppet__fallback {
-  object-fit: contain;
-  object-position: center bottom;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .portrait-puppet {
-    transform: none !important;
-  }
 }
 
 .panel-window__hint {
@@ -2832,39 +2736,32 @@
   filter: none;
 }
 
-.pet-window__stage-shell[data-companion-motion] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion] .pet-window__mascot .live2d-shell {
   transform-origin: center bottom;
   will-change: transform;
 }
 
-.pet-window__stage-shell[data-companion-motion="breathe"] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion="breathe"] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion="breathe"] .pet-window__mascot .live2d-shell {
   animation: pet-presence-breathe 5.8s ease-in-out infinite;
 }
 
-.pet-window__stage-shell[data-companion-motion="think"] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion="think"] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion="think"] .pet-window__mascot .live2d-shell {
   animation: pet-presence-think 1.7s ease-in-out infinite;
 }
 
-.pet-window__stage-shell[data-companion-motion="listen"] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion="listen"] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion="listen"] .pet-window__mascot .live2d-shell {
   animation: pet-presence-listen 2.4s ease-in-out infinite;
 }
 
-.pet-window__stage-shell[data-companion-motion="speak"] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion="speak"] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion="speak"] .pet-window__mascot .live2d-shell {
   animation: pet-presence-speak 0.72s ease-in-out infinite;
 }
 
-.pet-window__stage-shell[data-companion-motion="wait"] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion="wait"] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion="wait"] .pet-window__mascot .live2d-shell {
   animation: pet-presence-wait 1.8s ease-in-out infinite;
 }
 
-.pet-window__stage-shell[data-companion-motion="offline"] .pet-window__mascot .live2d-shell,
-.pet-window__stage-shell[data-companion-motion="offline"] .pet-window__mascot .sprite-pet-shell {
+.pet-window__stage-shell[data-companion-motion="offline"] .pet-window__mascot .live2d-shell {
   opacity: 0.72;
 }
 
@@ -2922,7 +2819,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pet-window__stage-shell[data-companion-motion] .pet-window__mascot .live2d-shell,
-  .pet-window__stage-shell[data-companion-motion] .pet-window__mascot .sprite-pet-shell,
   .pet-window__stage-shell[data-companion-motion] .pet-window__floor-shadow {
     animation: none !important;
   }

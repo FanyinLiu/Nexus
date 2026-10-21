@@ -26,22 +26,11 @@ import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { useSpeechLevelSnapshot } from '../../hooks/voice/speechLevelPublishing.ts'
 import { clamp } from '../../lib'
 import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
-import {
-  pickTranslatedUiText,
-  pickTranslatedUiTextOrFallback,
-} from '../../lib/uiLanguage.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { PetTouchZone, SpeechLevelSource } from '../../types'
 import { useVTSBridge } from '../../features/pet/vts/useVTSBridge.ts'
 import { resolveCompanionActivityState } from '../../features/pet/activityState.ts'
 import { resolveExpressionSlot } from '../../features/pet/components/live2d/expressions.ts'
-import {
-  SpritePetCanvas,
-} from '../../features/pet/components/SpritePetCanvas.tsx'
-import {
-  getSpritePetDebugImagePathFromSearch,
-  getSpritePetDebugStateFromSearch,
-} from '../../features/pet/spriteDebug.ts'
-import type { SpritePetAnimationState } from '../../features/pet/spriteAtlas.ts'
 import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const Live2DCanvas = lazy(async () => {
@@ -56,16 +45,6 @@ type LegacyPetViewProps = UseAppControllerResult['petView'] & {
 const WAVE_SHAPE = [0.6, 0.9, 1.0, 0.9, 0.6] as const
 const MIC_BAR_SCALE_STEPS = 10
 const RAIL_COLLAPSE_DELAY_MS = 4200
-
-// Maps the coarse pet-window `locomotionActivity` (driven by the main-process
-// roam / edge-peek / gesture controller) onto existing sprite rows — no new art.
-const PET_LOCOMOTION_SPRITE_STATE: Record<string, SpritePetAnimationState> = {
-  'walk-left': 'running-left',
-  'walk-right': 'running-right',
-  peek: 'waiting',
-  wave: 'waving',
-  jump: 'jumping',
-}
 
 function getMicBarScaleClass(speechLevel: number, weight: number): string {
   const safeSpeechLevel = Number.isFinite(speechLevel) ? clamp(speechLevel, 0, 1) : 0
@@ -159,28 +138,6 @@ export function LegacyPetView({
   )
   const [autoTimeBand, setAutoTimeBand] = useState(() => getTimeOfDayBand())
   const [autoTimeBlend, setAutoTimeBlend] = useState(() => getTimeOfDayBlend())
-  const [spriteDebugState, setSpriteDebugState] = useState<SpritePetAnimationState | null>(
-    () => getSpritePetDebugStateFromSearch(window.location.search),
-  )
-  const [spriteDebugImagePath, setSpriteDebugImagePath] = useState<string | null>(
-    () => getSpritePetDebugImagePathFromSearch(window.location.search),
-  )
-  const [spriteDragState, setSpriteDragState] = useState<SpritePetAnimationState | null>(null)
-
-  // Desktop roam / edge-peek / spontaneous gestures: the main process moves the
-  // pet window and broadcasts `locomotionActivity`; we map it onto a sprite row.
-  // Real activity (talking / listening / touch) takes priority, so the pet
-  // animates its action instead of "walking" while the window happens to move.
-  const [petLocomotion, setPetLocomotion] = useState<string>('idle')
-  const [petFreeMode, setPetFreeMode] = useState(false)
-  useEffect(() => {
-    const apply = (state: { locomotionActivity?: string; freeMode?: boolean }) => {
-      setPetLocomotion(state?.locomotionActivity ?? 'idle')
-      setPetFreeMode(Boolean(state?.freeMode))
-    }
-    void window.desktopPet?.getPetWindowState?.()?.then(apply).catch(() => undefined)
-    return window.desktopPet?.subscribePetWindowState?.(apply)
-  }, [])
   const companionActivity = useMemo(() => resolveCompanionActivityState({
     mood: pet.mood,
     voiceState: voice.voiceState,
@@ -198,9 +155,6 @@ export function LegacyPetView({
     runtimeSnapshot?.wakewordPhase,
     voice.voiceState,
   ])
-  const petLocomotionBusy =
-    !companionActivity.isIdle ||
-    (pet.petTapActive && Boolean(pet.petTouchZone))
   const petStageStatusLabel = companionActivity.isIdle && settings.continuousVoiceModeEnabled
     ? ti('pet.status.standby')
     : ti(companionActivity.displayStatusKey)
@@ -225,26 +179,6 @@ export function LegacyPetView({
   const petStageStatusLabelWithNotifications = hasUnreadNotifications
     ? `${petStageStatusLabel} · ${notificationStatusText}`
     : petStageStatusLabel
-  const petLocomotionOverride: SpritePetAnimationState | null = petLocomotionBusy
-    ? null
-    : PET_LOCOMOTION_SPRITE_STATE[petLocomotion] ?? null
-
-  const isSpriteAvatar = Boolean(petModel.spriteAtlas)
-  const spritePetLabel = pickTranslatedUiTextOrFallback(settings.uiLanguage, petModel.label)
-
-  useEffect(() => {
-    const updateDebugState = () => {
-      setSpriteDebugState(getSpritePetDebugStateFromSearch(window.location.search))
-      setSpriteDebugImagePath(getSpritePetDebugImagePathFromSearch(window.location.search))
-    }
-
-    window.addEventListener('popstate', updateDebugState)
-    window.addEventListener('hashchange', updateDebugState)
-    return () => {
-      window.removeEventListener('popstate', updateDebugState)
-      window.removeEventListener('hashchange', updateDebugState)
-    }
-  }, [])
 
   useEffect(() => {
     const update = () => {
@@ -426,16 +360,12 @@ export function LegacyPetView({
     const deltaY = event.screenY - dragStateRef.current.y
     if (deltaX || deltaY) {
       void window.desktopPet?.dragBy({ x: deltaX, y: deltaY })
-      if (Math.abs(deltaX) > 1) {
-        setSpriteDragState(deltaX > 0 ? 'running-right' : 'running-left')
-      }
       dragStateRef.current = { x: event.screenX, y: event.screenY }
     }
   }
 
   function handleMascotPointerUp() {
     dragStateRef.current = null
-    setSpriteDragState(null)
   }
 
   function handleMascotPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -498,15 +428,11 @@ export function LegacyPetView({
               data-companion-display-action={companionActivity.displayAction}
               data-companion-motion={companionActivity.motionToken}
             >
-              {(!petFreeMode || !isSpriteAvatar) && (
-                <>
-                  <div className="pet-window__stage-backdrop" aria-hidden="true" />
-                  <SunlightTint timePreview={settings.petTimePreview}>
-                    <SceneBackdrop location={settings.petSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
-                    <WeatherAmbient condition={weatherCondition} />
-                  </SunlightTint>
-                </>
-              )}
+              <div className="pet-window__stage-backdrop" aria-hidden="true" />
+              <SunlightTint timePreview={settings.petTimePreview}>
+                <SceneBackdrop location={settings.petSceneLocation} timeBand={timeBand} timeBlend={timeBlend} />
+                <WeatherAmbient condition={weatherCondition} />
+              </SunlightTint>
 
               {/* stage-copy removed to avoid blocking Live2D character */}
 
@@ -554,7 +480,7 @@ export function LegacyPetView({
             </div>
 
             <div
-              className={`pet-window__controls-island ${petFreeMode && isSpriteAvatar && !pet.petHotspotActive ? 'is-tucked' : ''}`}
+              className="pet-window__controls-island"
               onPointerEnter={handleRailEnter}
               onPointerLeave={handleRailLeave}
             >
@@ -691,25 +617,6 @@ export function LegacyPetView({
                   <div className="pet-window__vts-indicator">
                     VTS: {vtsBridge.modelName || ti('pet.vts.connected')}
                   </div>
-                ) : petModel.spriteAtlas ? (
-                  <SpritePetCanvas
-                    atlas={
-                      spriteDebugImagePath
-                        ? { ...petModel.spriteAtlas, imagePath: spriteDebugImagePath }
-                        : petModel.spriteAtlas
-                    }
-                    mood={pet.mood}
-                    touchZone={pet.petTapActive ? pet.petTouchZone : null}
-                    isListening={companionActivity.isListening}
-                    isSpeaking={companionActivity.isSpeaking}
-                    isBusy={companionActivity.isThinking || companionActivity.isWaiting}
-                    speechLevelSource={voice.speechLevelSource}
-                    gazeTarget={pet.gazeTarget}
-                    performanceCue={pet.petPerformanceCue}
-                    overrideState={spriteDebugState ?? spriteDragState ?? petLocomotionOverride ?? companionActivity.spriteState}
-                    placement="pet-stage"
-                    label={spritePetLabel}
-                  />
                 ) : (
                   <Suspense fallback={null}>
                     <Live2DCanvas

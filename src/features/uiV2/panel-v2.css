@@ -150,21 +150,14 @@
 }
 
 .nexus-panel-v2__live2d .live2d-shell,
-.nexus-panel-v2__live2d .live2d-canvas,
-.nexus-panel-v2__live2d .sprite-pet-shell {
+.nexus-panel-v2__live2d .live2d-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
-.nexus-panel-v2__live2d .sprite-pet {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.nexus-panel-v2__live2d :is(.live2d-canvas, .sprite-pet, .portrait-puppet) {
+.nexus-panel-v2__live2d .live2d-canvas {
   filter:
     drop-shadow(0 1px 1px color-mix(in srgb, var(--color-surface-elevated) 16%, transparent))
     drop-shadow(0 -1px 1px color-mix(in srgb, var(--color-text-primary) 14%, transparent));

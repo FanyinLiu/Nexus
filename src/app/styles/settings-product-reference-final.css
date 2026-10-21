@@ -392,7 +392,7 @@ html[data-theme] .sd-section .settings-segmented-control__option.is-active {
 .sd-section .sp.sp textarea {
   min-height: 88px;
 }
-.sd-section .sp.sp :is(.settings-appearance-switch__control, .settings-relationship__options, .settings-sprite-preview__states, .settings-companion-state-preview__states) {
+.sd-section .sp.sp :is(.settings-appearance-switch__control, .settings-relationship__options, .settings-companion-state-preview__states) {
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--nx-settings-line);
@@ -400,7 +400,7 @@ html[data-theme] .sd-section .settings-segmented-control__option.is-active {
   background: var(--nx-settings-segment-surface);
   box-shadow: none;
 }
-.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-sprite-preview__states button, .settings-companion-state-preview__states button) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option, .settings-relationship__chip, .settings-companion-state-preview__states button) {
   min-height: 28px;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -408,7 +408,7 @@ html[data-theme] .sd-section .settings-segmented-control__option.is-active {
   color: var(--nx-settings-muted);
   box-shadow: none;
 }
-.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .settings-relationship__chip.is-active, .settings-sprite-preview__states button.is-active, .settings-companion-state-preview__states button.is-active) {
+.sd-section .sp.sp :is(.settings-appearance-switch__option.is-active, .settings-relationship__chip.is-active, .settings-companion-state-preview__states button.is-active) {
   border-color: var(--nx-settings-line);
   background: var(--nx-settings-segment-active);
   color: var(--nx-settings-ink);

@@ -37,11 +37,6 @@ const SINGLE_SOURCE_CONTRACTS: Array<{ name: string; canonicalFile: string; lite
     literals: ['SECRET_LINE_PATTERNS', 'SECRET_VALUE_PATTERNS'],
   },
   {
-    name: 'sprite pet atlas contract',
-    canonicalFile: 'shared/spriteAtlasContract.js',
-    literals: ['SPRITE_PET_CELL_WIDTH = 192', 'durationsMs: [280, 110, 110, 140, 140, 320]'],
-  },
-  {
     name: 'model capability heuristics',
     canonicalFile: 'shared/modelCapabilities.js',
     literals: ['gpt-4o(?!-mini-tts|-mini-transcribe|-transcribe)', '/glm-4v/i', 'grok-4\\.20'],

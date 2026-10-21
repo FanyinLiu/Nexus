@@ -11,7 +11,8 @@
  *
  * Versions 16–19 are left unused on purpose. The companion-theme
  * migration is 20. Version 21 only records which companionship pace
- * already matches the stored switches.
+ * already matches the stored switches. Version 22 points a saved sprite
+ * or portrait selection at Live2D Mao.
  */
 
 import type { UiLanguage } from '../types'
@@ -393,7 +394,56 @@ function migrateRemovedBundledPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 21
+const RETIRED_NON_LIVE2D_PET_MODEL_IDS = new Set([
+  'codex',
+  'qiyi',
+  'sprite',
+  'sprite-pet',
+  'portrait',
+  'portrait-puppet',
+])
+
+/**
+ * Sprite pets and portrait puppets are no longer a pet type. Built-in
+ * Live2D ids and imported Live2D ids stay. Anything else that looks like
+ * a retired sprite or portrait selection becomes Mao.
+ */
+function isRetiredNonLive2dPetModelId(modelId: unknown): boolean {
+  if (typeof modelId !== 'string') return false
+  const id = modelId.trim().toLowerCase()
+  if (!id) return false
+  if (id === 'mao' || id === 'haru' || id === 'hiyori') return false
+  if (id.startsWith('imported-')) return false
+  if (RETIRED_NON_LIVE2D_PET_MODEL_IDS.has(id)) return true
+  if (id.startsWith('sprite-') || id.startsWith('sprite_')) return true
+  if (id.startsWith('codex-') || id.startsWith('codex_')) return true
+  if (id.startsWith('portrait-') || id.startsWith('portrait_')) return true
+  if (id.includes('portrait-puppet') || id.includes('portrait_puppet')) return true
+  return false
+}
+
+function remapRetiredNonLive2dPetModelId(modelId: unknown): unknown {
+  if (typeof modelId !== 'string') return modelId
+  return isRetiredNonLive2dPetModelId(modelId) ? 'mao' : modelId
+}
+
+function migrateRetiredNonLive2dPetModels(raw: Record<string, unknown>) {
+  const next = { ...raw }
+  if ('petModelId' in next) {
+    next.petModelId = remapRetiredNonLive2dPetModelId(next.petModelId)
+  }
+  if (Array.isArray(next.characterProfiles)) {
+    next.characterProfiles = next.characterProfiles.map((profile) => {
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return profile
+      if (!('petModelId' in profile)) return profile
+      const petModelId = remapRetiredNonLive2dPetModelId(profile.petModelId)
+      return petModelId === profile.petModelId ? profile : { ...profile, petModelId }
+    })
+  }
+  return next
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 22
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -596,6 +646,11 @@ const migrations: SettingsMigration[] = [
       ...raw,
       companionInitiative: inferCompanionInitiative(raw),
     }),
+  },
+  {
+    toVersion: 22,
+    description: 'Fall back to Live2D Mao when a saved pet is a sprite or portrait puppet',
+    migrate: migrateRetiredNonLive2dPetModels,
   },
 ]
 

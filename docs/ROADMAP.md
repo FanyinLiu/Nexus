@@ -55,8 +55,8 @@ The larger product steps are:
   imported Cubism resources before activation, explain missing
   textures/motions/expressions, surface actionable repair guidance, and retain
   packaged switch diagnostics. Portrait Puppet v4 shipped in v0.4.7 and is
-  removed from this tree. Official Live2D samples are Mao, Haru, and Hiyori;
-  sprite pets are import-only. Grok speech and Qwen 3.8-max / GLM-5.3 catalog
+  removed from this tree, along with sprite pets. Official Live2D samples are
+  Mao, Haru, and Hiyori, with Mao as the default. Grok speech and Qwen 3.8-max / GLM-5.3 catalog
   defaults are included. The 2026-08-10 `v0.4.7-beta.1` preparation record remains
   historical. This remains a compatibility/catalog release, not a v0.5
   behavior release.
@@ -70,7 +70,8 @@ The larger product steps are:
   and one proactive agenda. This line also carries the Electron 43.7.11
   runtime, window-bound capabilities, and crash-safe updates. The
   image-to-pet route is dropped. Bundled characters are the official Live2D
-  samples (Mao, Haru, and Hiyori); sprite pets stay import-only. Minecraft
+  samples (Mao, Haru, and Hiyori). Sprite pets and portrait puppets are
+  removed, and a saved choice of either becomes Mao. Minecraft
   and Factorio stay hidden. Inputs stay derived and content-free, with
   explicit pause/permission controls. `package.json` may be `0.4.8-beta.N`
   during beta. The README stable entry stays on v0.4.7 until the stable
@@ -518,7 +519,7 @@ Goal: the companion's visible state reflects what Nexus is actually doing.
   than task execution. See
   [Milestone 6 Slice 12 Design](MILESTONE-6-DESKTOP-PRESENCE-ARCHITECTURE-ALIGNMENT-DESIGN-2026-06-20.md).
 - Bind chat, voice, setup, tool, and error flows to that contract.
-- Keep Live2D/sprite-heavy rendering lazy and budgeted.
+- Keep Live2D rendering lazy and budgeted.
 - Rollback: state mapping is additive and can fall back to current pet behavior.
 
 ### M7 - Voice basics with resource budgets

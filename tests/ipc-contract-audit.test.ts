@@ -16,8 +16,8 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 195)
-  assert.equal(report.counts.mainHandlerChannels, 195)
+  assert.equal(report.counts.preloadInvokeChannels, 193)
+  assert.equal(report.counts.mainHandlerChannels, 193)
   assert.equal(report.counts.preloadSubscriptionChannels, 22)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)
@@ -267,7 +267,6 @@ test('IPC contract audit keeps pet model artifact channels out of high-risk warn
 
   for (const channel of [
     'pet-model:import',
-    'pet-model:import-codex-gallery',
   ]) {
     assert.ok(!highRiskWarnings.includes(channel), `${channel} should have audit and confirmation coverage`)
     assert.ok(!payloadWarnings.includes(channel), `${channel} should validate payloads or carry no renderer payload`)

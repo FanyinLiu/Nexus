@@ -1,8 +1,7 @@
 /**
  * Shared pet leaf types.
- * Kept separate from models/performance/spriteAtlas so those modules can
- * depend on this file without forming a cycle:
- * models → spriteAtlas → performance → models.
+ * Kept separate from models and performance so those modules can depend
+ * on this file without forming a cycle.
  */
 
 export type PetExpressionSlot =
@@ -44,20 +43,4 @@ export type PetPerformancePlan = {
 
 export type PetPerformanceCue = PetPerformancePlan & {
   id: string
-}
-
-export interface SpritePetAtlasDefinition {
-  imagePath: string
-  columns?: number
-  rows?: number
-  cellWidth?: number
-  cellHeight?: number
-  imageRendering?: 'pixelated' | 'auto'
-  stageSize?: string
-  stageMinSize?: string
-  stageMaxSize?: string
-  stageMarginBottom?: string
-  previewSize?: string
-  previewMinSize?: string
-  previewMaxSize?: string
 }

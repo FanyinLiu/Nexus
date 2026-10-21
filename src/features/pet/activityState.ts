@@ -6,8 +6,6 @@ import type {
   TranslationKey,
   VoiceState,
 } from '../../types/index.ts'
-import type { SpritePetAnimationState } from './spriteAtlas.ts'
-
 export type CompanionActivityPhase =
   | 'idle'
   | 'thinking'
@@ -92,7 +90,6 @@ export interface CompanionActivityState extends CompanionPresenceState {
   displayActionSource: CompanionActivityDisplayActionSource
   displayStatusKey: TranslationKey
   motionToken: CompanionActivityMotion
-  spriteState: SpritePetAnimationState | null
   statusKey: TranslationKey
 }
 
@@ -105,7 +102,6 @@ const ACTIVE_ASSISTANT_ACTIVITIES = new Set<AssistantRuntimeActivity>([
 
 type CompanionActivityMetadata = {
   motionToken: CompanionActivityMotion
-  spriteState: SpritePetAnimationState | null
   statusKey: TranslationKey
 }
 
@@ -117,37 +113,30 @@ type CompanionActivityDisplayActionMetadata = {
 const COMPANION_ACTIVITY_METADATA: Record<CompanionActivityPhase, CompanionActivityMetadata> = {
   idle: {
     motionToken: 'breathe',
-    spriteState: null,
     statusKey: 'pet.status.ready',
   },
   thinking: {
     motionToken: 'think',
-    spriteState: 'thinking',
     statusKey: 'pet.status.thinking',
   },
   listening: {
     motionToken: 'listen',
-    spriteState: 'listening',
     statusKey: 'voice_state.listening',
   },
   speaking: {
     motionToken: 'speak',
-    spriteState: 'speaking',
     statusKey: 'voice_state.speaking',
   },
   waiting: {
     motionToken: 'wait',
-    spriteState: 'waiting',
     statusKey: 'pet.status.waiting_confirmation',
   },
   error: {
     motionToken: 'error',
-    spriteState: 'failed',
     statusKey: 'pet.status.error',
   },
   offline: {
     motionToken: 'offline',
-    spriteState: 'waiting',
     statusKey: 'pet.status.offline',
   },
 }

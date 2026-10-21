@@ -470,7 +470,7 @@ export const enCore = {
   'about.faq.q.3': 'Voice doesn\'t work — no sound when she speaks.',
   'about.faq.a.3': 'Check Settings → Speech Output → confirm "Enable speech output" is on. If using a paid TTS provider, verify the API key. If voice is on but sound never plays, check macOS System Settings → Sound → output device.',
   'about.faq.q.4': 'How do I import an avatar model I already have?',
-  'about.faq.a.4': 'In Chat → Companion Profile, scroll to "Avatar" and click the file picker. For Live2D, select `.model3.json`; for Sprite pets, select a `pet.json` with `spritesheetPath` or a downloaded Codex pet ZIP. Nexus copies it into the local model library so you can move/delete the original.',
+  'about.faq.a.4': 'In Chat → Companion Profile, scroll to Avatar and click the file picker. Choose a Live2D model file (.model3.json). Nexus copies it into the local model library, so you can move or delete the original.',
   'about.faq.q.5': 'Where is my data stored?',
   'about.faq.a.5': 'Everything stays on your machine. macOS: ~/Library/Application Support/nexus. Windows: %APPDATA%/nexus. Includes API keys (encrypted), chat history, memory, persona files, audit log. Nothing is sent to any backend.',
   'about.faq.q.6': 'I want to use a local model (Ollama, LM Studio).',

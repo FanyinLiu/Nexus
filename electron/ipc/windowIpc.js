@@ -25,8 +25,6 @@ import {
 import {
   listAvailablePetModels,
   importPetModelFromDialog,
-  importSpritePetModelFromCodexGallery,
-  listCodexPetGalleryCatalog,
   saveTextFileFromDialog,
   openTextFileFromDialog,
 } from '../services/petModelService.js'
@@ -67,8 +65,6 @@ import {
   validateMediaSessionControlPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
-  validatePetModelGalleryImportPayload,
-  validatePetModelGalleryListPayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
@@ -301,24 +297,6 @@ export function register() {
       () => importPetModelFromDialog(),
       { notifyLibraryChanged: true },
     )
-  })
-
-  ipcMain.handle('pet-model:import-codex-gallery', async (event, input) => {
-    requireTrustedSender(event)
-    input = validatePetModelGalleryImportPayload(input)
-    return runAuditedPetModelAction(
-      event,
-      'pet-model:import-codex-gallery',
-      input,
-      () => importSpritePetModelFromCodexGallery(input),
-      { notifyLibraryChanged: true },
-    )
-  })
-
-  ipcMain.handle('pet-model:list-codex-gallery', async (event, payload = {}) => {
-    requireTrustedSender(event)
-    payload = validatePetModelGalleryListPayload(payload)
-    return listCodexPetGalleryCatalog(payload)
   })
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
