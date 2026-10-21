@@ -560,7 +560,6 @@ const REQUIRED_CONTRACTS = [
       'input:not([type=\'checkbox\']):not([type=\'radio\']):not([type=\'range\']):not([type=\'file\'])',
       '.settings-form-row__validation',
       '.settings-test-result.is-error',
-      '.settings-sprite-preview__states',
       '.settings-companion-state-preview__states',
       '--nx-settings-segment-surface',
       '--nx-settings-segment-active',

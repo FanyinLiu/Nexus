@@ -7,19 +7,7 @@ import { savePendingGreeting } from '../../lib/storage/pendingGreeting.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { CharacterProfile } from '../../types'
 import type { ChatSectionV3Props } from './ChatSectionV3.tsx'
-import { SettingsV3Empty, SettingsV3Field, SettingsV3Notice, SettingsV3Toolbar } from './SettingsV3Primitives.tsx'
-
-const COMMUNITY_SOURCES = [
-  ['https://codex-pet.com/', 'settings.chat.codex_pet_source_gallery'],
-  ['https://codex-pet.org/', 'settings.chat.codex_pet_source_directory'],
-  ['https://codexpets.net/gallery', 'settings.chat.codex_pet_source_checked'],
-  ['https://openpets.app/pets', 'settings.chat.codex_pet_source_verified'],
-  ['https://openpets.dev/', 'settings.chat.codex_pet_source_openpets'],
-  ['https://codingpets.com/', 'settings.chat.codex_pet_source_downloads'],
-  ['https://www.getyourownpet.com/', 'settings.chat.codex_pet_source_petforge'],
-  ['https://spritesheep.com/', 'settings.chat.codex_pet_source_sprite_editor'],
-  ['https://www.codingpets.dev/', 'settings.chat.codex_pet_source_generator'],
-] as const
+import { SettingsV3Empty, SettingsV3Notice, SettingsV3Toolbar } from './SettingsV3Primitives.tsx'
 
 type StatusMessage = { ok: boolean; message: string } | null
 
@@ -28,8 +16,6 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1], params?: Parameters<typeof pickTranslatedUiText>[2]) => pickTranslatedUiText(draft.uiLanguage, key, params)
   const [importingCard, setImportingCard] = useState(false)
   const [cardStatus, setCardStatus] = useState<StatusMessage>(null)
-  const [galleryInput, setGalleryInput] = useState('')
-  const [galleryQuery, setGalleryQuery] = useState('')
   const activeProfile = draft.characterProfiles.find((profile) => profile.id === draft.activeCharacterProfileId)
 
   function createProfile() {
@@ -132,32 +118,6 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
         </SettingsV3Toolbar>
         {cardStatus ? <SettingsV3Notice tone={cardStatus.ok ? 'success' : 'error'} title={cardStatus.message} announce /> : null}
       </div>
-
-      <section className="settings-v3-studio-pane" aria-labelledby="settings-v3-gallery-title">
-        <header><strong id="settings-v3-gallery-title">{ti('settings.chat.codex_pet_import')}</strong><span>{ti('settings.chat.codex_pet_import_hint')}</span></header>
-        <nav className="settings-v3-source-links" aria-label={ti('settings.chat.codex_pet_sources')}>
-          {COMMUNITY_SOURCES.map(([href, label]) => <a key={href} href={href} target="_blank" rel="noreferrer">{ti(label)} ↗</a>)}
-        </nav>
-        <div className="settings-v3-studio-fields">
-          <SettingsV3Field label={ti('settings.chat.codex_pet_import')}><input value={galleryInput} placeholder={ti('settings.chat.codex_pet_placeholder')} onChange={(event) => setGalleryInput(event.target.value)} /></SettingsV3Field>
-          <button type="button" className="settings-v3-action" disabled={props.importingPetModel || !galleryInput.trim()} onClick={() => props.onImportCodexPetGallery(galleryInput.trim())}>{ti('settings.chat.import_codex_pet')}</button>
-        </div>
-        <div className="settings-v3-studio-fields">
-          <SettingsV3Field label={ti('settings.chat.codex_pet_catalog_search_label')}><input value={galleryQuery} placeholder={ti('settings.chat.codex_pet_catalog_query_placeholder')} onChange={(event) => setGalleryQuery(event.target.value)} /></SettingsV3Field>
-          <button type="button" className="settings-v3-action" disabled={props.codexPetCatalogLoading} onClick={() => props.onLoadCodexPetGallery(galleryQuery.trim())}>{props.codexPetCatalogLoading ? ti('settings.chat.codex_pet_catalog_loading') : ti('settings.chat.codex_pet_catalog_load')}</button>
-        </div>
-        {props.codexPetCatalogStatus ? <SettingsV3Notice tone={props.codexPetCatalogStatus.ok ? 'success' : 'error'} title={props.codexPetCatalogStatus.message} announce /> : null}
-        {props.codexPetCatalog?.pets.length ? (
-          <ul className="settings-v3-collection">
-            {props.codexPetCatalog.pets.map((pet) => (
-              <li key={`${pet.sourceName ?? 'gallery'}:${pet.slug}`} className="settings-v3-collection-row">
-                <div className="settings-v3-collection-row__main"><span className="settings-v3-collection-row__title">{pet.displayName}</span><span className="settings-v3-collection-row__preview">{pet.description || `${pet.sourceName ?? ''} · ${pet.slug}`}</span></div>
-                <button type="button" className="settings-v3-action" disabled={props.importingPetModel} onClick={() => props.onImportCodexPetGallery(pet.downloadUrl || pet.sourceUrl)}>{ti('settings.chat.codex_pet_catalog_import')}</button>
-              </li>
-            ))}
-          </ul>
-        ) : props.codexPetCatalog ? <SettingsV3Empty title={ti('settings.chat.codex_pet_catalog_empty')} /> : null}
-      </section>
     </div>
   )
 }

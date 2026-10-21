@@ -468,7 +468,7 @@ export const zhCNCore = {
   'about.faq.q.3': '语音用不了 —— 她说话没声音。',
   'about.faq.a.3': '检查「设置 → 语音输出」→ 确认「启用语音输出」是开的。如果用付费 TTS，验证接口密钥。如果语音开了但还是没声，检查 macOS「系统设置 → 声音 → 输出设备」。',
   'about.faq.q.4': '怎么导入已有的形象模型？',
-  'about.faq.a.4': '在「聊天 → 伙伴资料」里滚到「伙伴形象」，点文件选择器。Live2D 选择 `.model3.json`；Sprite 宠物选择带 `spritesheetPath` 的 `pet.json`，也可以直接选择下载好的 Codex 宠物 ZIP。Nexus 会复制到本地模型库，原文件可以删/移动。',
+  'about.faq.a.4': '在「聊天 → 伙伴资料」里滚到「伙伴形象」，点文件选择器，选择 Live2D 模型文件（.model3.json）。Nexus 会复制到本地模型库，原文件可以删或移动。',
   'about.faq.q.5': '我的数据存在哪？',
   'about.faq.a.5': '全部在你本机。macOS：~/Library/Application Support/nexus。Windows：%APPDATA%/nexus。包括接口密钥（加密）、聊天记录、记忆、人格文件、审计日志。没有任何数据上传到后端。',
   'about.faq.q.6': '我想用本地大模型（Ollama / LM Studio）。',

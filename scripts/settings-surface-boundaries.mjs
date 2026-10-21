@@ -158,7 +158,6 @@ export const SETTINGS_VISUAL_SYSTEM_COVERAGE = [
       '.settings-segmented-control {',
       '.settings-segmented-control__option {',
       '.settings-segmented-control__option.is-active {',
-      '.settings-sprite-preview__states',
       '.settings-companion-state-preview__states',
       '--nx-settings-segment-surface',
       '--nx-settings-segment-active',

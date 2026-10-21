@@ -489,18 +489,6 @@ export function useAppOverlays({
         model: refreshedModels.find((model) => model.id === importedModel.id) ?? importedModel,
       }
     },
-    onImportCodexPetGallery: async (input) => {
-      if (!window.desktopPet?.importCodexPetGallery) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      const result = await window.desktopPet.importCodexPetGallery(input)
-      const refreshedModels = await loadPetModels()
-      return {
-        ...result,
-        model: refreshedModels.find((model) => model.id === result.model.id) ?? result.model,
-      }
-    },
     onSelectImportedPetModel: async (petModelId) => {
       await commitSettingsUpdate((current) => {
         if (current.petModelId === petModelId) {
@@ -512,16 +500,6 @@ export function useAppOverlays({
           petModelId,
         }
       }, setSettings)
-    },
-    onListCodexPetGallery: async (query = '') => {
-      if (!window.desktopPet?.listCodexPetGallery) {
-        throw new Error(t('settings.import_pet_model_unsupported'))
-      }
-
-      return window.desktopPet.listCodexPetGallery({
-        query,
-        limit: 12,
-      })
     },
     onTestConnection: async (capability, draftSettings) => {
       if (capability === 'text') {

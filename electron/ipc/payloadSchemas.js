@@ -83,10 +83,6 @@ export {
   validateSkillSearchPayload,
 } from './memorySkillPayloadSchemas.js'
 export {
-  validatePetModelGalleryImportPayload,
-  validatePetModelGalleryListPayload,
-} from './petModelPayloadSchemas.js'
-export {
   validatePluginBusRecentPayload,
   validatePluginBusTopicPayload,
   validatePluginIdPayload,

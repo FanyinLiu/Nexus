@@ -5,7 +5,7 @@
 
 ## 0. 系统总览
 
-Nexus 是 Electron 桌面伴侣应用（Live2D/sprite 宠物 + 聊天 + 语音 + 记忆 + 本地优先）。
+Nexus 是 Electron 桌面伴侣应用（Live2D 宠物 + 聊天 + 语音 + 记忆 + 本地优先）。
 
 - **主进程**（`electron/`，CommonJS .js）：窗口、IPC、密钥库、模型管理、TTS/STT 本地服务、网关（Telegram/Discord）、MCP/plugin 宿主、审计。**持久状态和敏感能力的权威端。**
 - **渲染进程**（`src/`，TS/TSX，Vite 构建）：React 应用壳、聊天面板、宠物渲染、设置、语音 UI。
@@ -48,12 +48,12 @@ Nexus 是 Electron 桌面伴侣应用（Live2D/sprite 宠物 + 聊天 + 语音 +
 - `src/features/memory/`（`memory.ts` 核心、`recall.ts`、`vectorSearch.ts`、`clustering.ts`、`decay.ts`、`narrativeMemory.ts`、`reflectionGenerator.ts`、`coldArchive.ts`、`onThisDay*.ts`）
 - 主进程：`electron/services/localDataMemoryStore.js`、`memoryVectorStore.js`、`vectorSearchWorker.js`、`bm25Search.js`、`electron/ipc/memoryIpc.js`
 
-### 宠物 / Live2D / sprite 渲染
-- 行为：宠物渲染、Live2D 模型加载、表情/眨眼/帧渲染、sprite 宠物、移动、VTube Studio 桥
-- 渲染：`src/features/pet/`（`spriteRuntime.ts`、`presence.ts`、`activityState.ts`、`idleSequence.ts`、`performance.ts`）
+### 宠物 / Live2D 渲染
+- 行为：宠物渲染、Live2D 模型加载、表情/眨眼/帧渲染、VTube Studio 桥
+- 渲染：`src/features/pet/`（`presence.ts`、`activityState.ts`、`idleSequence.ts`、`performance.ts`）
 - Live2D：`src/features/pet/components/live2d/`（`lifecycle.ts` 加载生命周期、`frameRender.ts`、`expressions.ts`、`blink.ts`、`vendor.ts` — **pixi.js 8 + jannchie Live2D 包**，见 §3）
 - VTS：`src/features/pet/vts/`、`electron/services/vtsBridge.js`、`electron/ipc/vtsBridgeIpc.js`
-- 主进程模型服务：`electron/services/petModelService.js`、`live2dModelDiscoveryService.js`、`spritePet*.js`、`electron/petLocomotion.js`、`petWindowInstances.js`
+- 主进程模型服务：`electron/services/petModelService.js`、`live2dModelDiscoveryService.js`、`petImportPolicy.js`、`electron/petLocomotion.js`、`petWindowInstances.js`
 
 ### 工具 / MCP / 插件
 - 行为：内置工具执行、web 搜索、天气、MCP 服务器宿主、插件宿主与消息总线

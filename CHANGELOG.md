@@ -23,8 +23,8 @@ first prerelease stay in
   runs on Electron 43.7.11. First-use setup opens in the panel, and a failed
   model save shows an error you can retry.
 - Slimdown: bundled characters are the official Live2D samples (Mao, Haru,
-  and Hiyori). Making a pet from a picture is dropped, and the old bundled
-  sprite pets are gone. A sprite you imported yourself still works.
+  and Hiyori), and Mao is the default. Picture pets and sprite pets are
+  removed. A saved choice of either becomes Mao.
   SenseVoice downloads when you choose it, instead of shipping inside the
   installer. Minecraft and Factorio stay hidden until a later release.
 - Presence: the pet follows your cursor across the screen and notices when

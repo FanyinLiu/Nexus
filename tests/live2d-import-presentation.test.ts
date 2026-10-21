@@ -143,19 +143,19 @@ test('Live2D import presentation formats limited and ready compatibility evidenc
   }])
 })
 
-test('keyed pet import success messages localize a nested source fragment', () => {
+test('keyed pet import messages localize a nested source fragment', () => {
   const { calls, translate } = createRecordingTranslator()
   assert.equal(formatPetModelImportPresentation({
-    message: 'settings.pet.success.imported_from',
-    messageKey: 'settings.pet.success.imported_from',
+    message: 'settings.pet.error.already_imported',
+    messageKey: 'settings.pet.error.already_imported',
     messageParams: {
       name: 'Mini',
-      sourceKey: 'settings.pet.success.source.community_zip',
+      sourceKey: 'settings.pet.error.import_incomplete',
     },
-  }, translate).message, 'translated:settings.pet.success.imported_from')
+  }, translate).message, 'translated:settings.pet.error.already_imported')
   assert.deepEqual(calls.map((call) => call.key), [
-    'settings.pet.success.source.community_zip',
-    'settings.pet.success.imported_from',
+    'settings.pet.error.import_incomplete',
+    'settings.pet.error.already_imported',
   ])
 })
 
@@ -163,11 +163,11 @@ test('non-Live2D import messages remain untouched', () => {
   const { calls, translate } = createRecordingTranslator()
   const result = {
     model: null,
-    message: 'legacy sprite result',
+    message: 'legacy import result',
   } satisfies PetModelImportResult
 
   assert.deepEqual(formatPetModelImportPresentation(result, translate), {
-    message: 'legacy sprite result',
+    message: 'legacy import result',
   })
   assert.deepEqual(calls, [])
 })

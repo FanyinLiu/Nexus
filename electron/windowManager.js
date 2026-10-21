@@ -327,8 +327,6 @@ export function closePanelWindow() {
 export function showPetContextMenu(sourceWindow = mainWindow) {
   if (!sourceWindow || sourceWindow.isDestroyed()) return
 
-  const inst = getPetInstanceForWindow(sourceWindow)
-
   const menu = Menu.buildFromTemplate([
     {
       label: '对话',
@@ -351,14 +349,6 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
         const nextX = workArea.x + Math.round((workArea.width - bounds.width) / 2)
         const nextY = workArea.y + Math.round((workArea.height - bounds.height) / 2)
         mainWindow.setPosition(nextX, nextY)
-      },
-    },
-    {
-      label: inst?.state.freeMode
-        ? '固定模式（带背景 · 待原地）'
-        : '自由模式（满屏走 · 无背景）',
-      click: () => {
-        if (inst) inst.loco.setFreeMode(!inst.state.freeMode)
       },
     },
     {

@@ -1,7 +1,7 @@
 # Nexus — Feature Inventory
 
-> Electron + React + TypeScript desktop AI companion. Live2D character by default,
-> Portrait Puppet v4 and lightweight sprite pets as alternative paths.
+> Electron + React + TypeScript desktop AI companion. Live2D is the only pet
+> type. Built-in models are Mao, Haru, and Hiyori, and Mao is the default.
 > This file is a broad capability inventory, not the Phase 1 build scope.
 > For the active MVP scope, see
 > [Nexus 升级整合计划](docs/NEXUS_UPGRADE_INTEGRATION_PLAN.md).
@@ -26,9 +26,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 | Feature | Description |
 |---|---|
-| Live2D Avatar | Default desktop companion with idle animation, lip-sync, mood expressions, and import validation before activation |
-| Portrait Puppet v4 | Layered portrait packs (`preview.png` + `parts/`) as the default in-app picture path; single-portrait v3 remains a fallback |
-| Sprite Pet | Lightweight atlas pets remain importable; Creator Kit authors packages outside Nexus |
+| Live2D Avatar | The only desktop companion type, with idle animation, lip-sync, mood expressions, and import validation before activation. Built-ins are Mao, Haru, and Hiyori; Mao is the default |
 | Character Profiles | Multiple persona presets — each with name, system prompt, model, voice |
 | SOUL.md Persona | File-based identity system (`userData/persona/SOUL.md`), hot-reload, overrides `systemPrompt` |
 | Persona MEMORY.md | Companion-side persistent memory file injected alongside SOUL.md |

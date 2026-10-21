@@ -36,7 +36,7 @@ const ACTIVE_ROUTE_CONTRACTS = [
     fragments: [
       "new URLSearchParams(window.location.search).get('uiV2') !== '0'",
       'const useCompanionV2',
-      '&& (settings.vtsEnabled || Boolean(petModel.spriteAtlas) || Boolean(petModel.modelPath))',
+      '&& (settings.vtsEnabled || Boolean(petModel.modelPath))',
       '<CompanionPanelV2',
       '<LegacyPanelView',
     ],
@@ -48,7 +48,6 @@ const ACTIVE_ROUTE_CONTRACTS = [
       "new URLSearchParams(window.location.search).get('uiV2') !== '0'",
       'const useCompanionV2',
       '&& !settings.vtsEnabled',
-      '&& !petModel.spriteAtlas',
       '&& Boolean(petModel.modelPath)',
       '<FramelessCompanionSurface',
       '<LegacyPetView',

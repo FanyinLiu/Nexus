@@ -2,10 +2,7 @@ import { memo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { RELATIONSHIP_OPTIONS } from '../../lib/relationshipTypes.ts'
 import { ChatStudioV3 } from './ChatStudioV3.tsx'
-import type {
-  CodexPetGalleryCatalogResult,
-  PetModelDefinition,
-} from '../pet'
+import type { PetModelDefinition } from '../pet'
 import { pickTranslatedUiText, pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
 import { setCompanionNameWithWakeWordSync } from '../hearing/companionWakeWordSync.ts'
 import type { AppSettings, CompanionRelationshipType } from '../../types'
@@ -37,12 +34,7 @@ export type ChatSectionV3Props = {
   petModelPresets: PetModelDefinition[]
   importingPetModel: boolean
   petModelStatus: StatusMessage
-  codexPetCatalog: CodexPetGalleryCatalogResult | null
-  codexPetCatalogLoading: boolean
-  codexPetCatalogStatus: StatusMessage
   onImportPetModel: () => void
-  onImportCodexPetGallery: (input: string) => void
-  onLoadCodexPetGallery: (query?: string) => void
   surface?: 'full' | 'rest'
 }
 
@@ -57,8 +49,8 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
   const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
   const petModelLabel = translatePetText(petModel?.label)
     || petModel?.label
-    || ti('settings.chat.sprite_pet_fallback_label')
-  const importStatus = props.petModelStatus ?? props.codexPetCatalogStatus
+    || ti('settings.chat.live2d_model')
+  const importStatus = props.petModelStatus
   const rest = props.surface === 'rest'
   function selectRelationshipType(value: CompanionRelationshipType) {
     setDraft((prev) => ({ ...prev, companionRelationshipType: value }))

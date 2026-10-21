@@ -25,7 +25,6 @@ test('resolveCompanionActivityState prioritizes unavailable and blocking states'
 
   assert.equal(offline.phase, 'offline')
   assert.equal(offline.isOffline, true)
-  assert.equal(offline.spriteState, 'waiting')
   assert.equal(offline.motionToken, 'offline')
   assert.equal(offline.statusKey, 'pet.status.offline')
   assert.equal(offline.displayAction, 'offline')
@@ -43,7 +42,6 @@ test('resolveCompanionActivityState prioritizes unavailable and blocking states'
   assert.equal(error.phase, 'error')
   assert.equal(error.isError, true)
   assert.equal(error.motionToken, 'error')
-  assert.equal(error.spriteState, 'failed')
   assert.equal(error.displayAction, 'failed')
   assert.equal(error.displayActionSource, 'task_state')
   assert.equal(error.statusKey, 'pet.status.error')
@@ -77,7 +75,6 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
   assert.equal(speaking.phase, 'speaking')
   assert.equal(speaking.isSpeaking, true)
   assert.equal(speaking.motionToken, 'speak')
-  assert.equal(speaking.spriteState, 'speaking')
   assert.equal(speaking.displayAction, 'speaking')
 
   const listening = resolveCompanionActivityState({
@@ -89,7 +86,6 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
   assert.equal(listening.phase, 'listening')
   assert.equal(listening.isListening, true)
   assert.equal(listening.motionToken, 'listen')
-  assert.equal(listening.spriteState, 'listening')
 
   const thinking = resolveCompanionActivityState({
     mood: 'curious',
@@ -101,7 +97,6 @@ test('resolveCompanionActivityState keeps confirmation, voice, and thinking prio
   assert.equal(thinking.displayAction, 'summarizing')
   assert.equal(thinking.displayActionSource, 'assistant_activity')
   assert.equal(thinking.motionToken, 'think')
-  assert.equal(thinking.spriteState, 'thinking')
   assert.equal(thinking.statusKey, 'pet.status.thinking')
   assert.equal(thinking.displayStatusKey, 'pet.status.summarizing')
 })
@@ -178,7 +173,6 @@ test('resolveCompanionActivityState returns idle with trimmed task label when no
   assert.equal(state.phase, 'idle')
   assert.equal(state.isIdle, true)
   assert.equal(state.motionToken, 'breathe')
-  assert.equal(state.spriteState, null)
   assert.equal(state.activeTaskLabel, 'evening reminder')
   assert.equal(state.statusKey, 'pet.status.ready')
 })
@@ -203,7 +197,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: state.displayActionSource,
       displayStatusKey: state.displayStatusKey,
       motionToken: state.motionToken,
-      spriteState: state.spriteState,
       statusKey: state.statusKey,
       updatedAt: state.updatedAt,
     }
@@ -217,7 +210,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'runtime_reflection',
       displayStatusKey: 'pet.status.ready',
       motionToken: 'breathe',
-      spriteState: null,
       statusKey: 'pet.status.ready',
       updatedAt: now,
     },
@@ -228,7 +220,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'runtime_reflection',
       displayStatusKey: 'pet.status.thinking',
       motionToken: 'think',
-      spriteState: 'thinking',
       statusKey: 'pet.status.thinking',
       updatedAt: now,
     },
@@ -239,7 +230,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'runtime_reflection',
       displayStatusKey: 'voice_state.listening',
       motionToken: 'listen',
-      spriteState: 'listening',
       statusKey: 'voice_state.listening',
       updatedAt: now,
     },
@@ -250,7 +240,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'runtime_reflection',
       displayStatusKey: 'voice_state.speaking',
       motionToken: 'speak',
-      spriteState: 'speaking',
       statusKey: 'voice_state.speaking',
       updatedAt: now,
     },
@@ -261,7 +250,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'task_state',
       displayStatusKey: 'pet.status.waiting_confirmation',
       motionToken: 'wait',
-      spriteState: 'waiting',
       statusKey: 'pet.status.waiting_confirmation',
       updatedAt: now,
     },
@@ -272,7 +260,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'task_state',
       displayStatusKey: 'pet.status.failed',
       motionToken: 'error',
-      spriteState: 'failed',
       statusKey: 'pet.status.error',
       updatedAt: now,
     },
@@ -283,7 +270,6 @@ test('resolveCompanionActivityPreviewState covers every desktop presence state',
       displayActionSource: 'runtime_reflection',
       displayStatusKey: 'pet.status.offline',
       motionToken: 'offline',
-      spriteState: 'waiting',
       statusKey: 'pet.status.offline',
       updatedAt: now,
     },

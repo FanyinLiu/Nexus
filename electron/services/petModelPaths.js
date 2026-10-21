@@ -1,7 +1,7 @@
-// Filesystem roots + id-slug helper for pet models (Live2D + sprite),
-// extracted from petModelService. getBundledAssetRoot must know whether assets
-// are served from the dev `public/` tree or the packaged `dist/` tree, so the
-// dev flags are injected via configurePetModelPaths (called from init).
+// Filesystem roots + id-slug helper for Live2D models.
+// getBundledAssetRoot must know whether assets are served from the dev
+// `public/` tree or the packaged `dist/` tree, so the dev flags are injected
+// via configurePetModelPaths (called from init).
 import { app } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,10 +10,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const IMPORTED_PET_MODELS_DIRECTORY = 'live2d-imports'
-const IMPORTED_SPRITE_PET_MODELS_DIRECTORY = 'sprite-pet-imports'
 const USER_DATA_DISPLAY_ROOT = 'app-user-data'
 const DOCUMENTS_DISPLAY_ROOT = 'Documents'
-const CODEX_HOME_DISPLAY_ROOT = 'codex-home'
 
 let _isDev = false
 let _useDevServer = false
@@ -35,10 +33,6 @@ export function getLive2dAssetRoot() {
   return getBundledAssetRoot('live2d')
 }
 
-export function getSpritePetAssetRoot() {
-  return getBundledAssetRoot('pets')
-}
-
 export function normalizeAssetRelativePath(rootPath, assetPath) {
   return path.relative(rootPath, assetPath).split(path.sep).join('/')
 }
@@ -47,37 +41,8 @@ export function getImportedPetModelsRoot() {
   return path.join(app.getPath('userData'), IMPORTED_PET_MODELS_DIRECTORY)
 }
 
-export function getImportedSpritePetModelsRoot() {
-  return path.join(app.getPath('userData'), IMPORTED_SPRITE_PET_MODELS_DIRECTORY)
-}
-
-function expandHomePath(value) {
-  const rawPath = String(value ?? '').trim()
-  if (!rawPath) {
-    return ''
-  }
-
-  if (rawPath === '~') {
-    return app.getPath('home')
-  }
-
-  if (rawPath.startsWith(`~${path.sep}`) || rawPath.startsWith('~/')) {
-    return path.join(app.getPath('home'), rawPath.slice(2))
-  }
-
-  return rawPath
-}
-
-function getCodexHomeRoot() {
-  const configuredHome = expandHomePath(process.env.CODEX_HOME)
-  return path.resolve(configuredHome || path.join(app.getPath('home'), '.codex'))
-}
-
-export function getCodexCustomSpritePetModelsRoot() {
-  return path.join(getCodexHomeRoot(), 'pets')
-}
-
-function isPathInsideRoot(rootPath, candidatePath) {
+/** True when candidatePath is rootPath or a descendant. */
+export function isPathInsideRoot(rootPath, candidatePath) {
   const relativePath = path.relative(rootPath, candidatePath)
   return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
 }
@@ -101,7 +66,6 @@ export function getLocalFileDisplayPath(targetPath) {
   const resolvedTarget = path.resolve(rawPath)
   const knownRootDisplays = [
     [app.getPath('userData'), USER_DATA_DISPLAY_ROOT],
-    [getCodexCustomSpritePetModelsRoot(), `${CODEX_HOME_DISPLAY_ROOT}/pets`],
     [app.getPath('documents'), DOCUMENTS_DISPLAY_ROOT],
     [app.getPath('home'), '~'],
   ]

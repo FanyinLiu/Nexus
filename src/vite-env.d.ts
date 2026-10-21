@@ -1,7 +1,6 @@
 /// <reference types="vite/client" />
 
 import type {
-  CodexPetGalleryCatalogResult,
   PetModelDefinition,
   PetModelImportResult,
 } from './features/pet'
@@ -532,11 +531,6 @@ declare global {
       listPetModels: () => Promise<PetModelDefinition[]>
       subscribePetModelLibraryChanged: (listener: () => void) => () => void
       importPetModel: () => Promise<PetModelImportResult | null>
-      importCodexPetGallery: (input: string) => Promise<{
-        model: PetModelDefinition
-        message: string
-      }>
-      listCodexPetGallery: (payload?: { query?: string; limit?: number }) => Promise<CodexPetGalleryCatalogResult>
       showConfirmDialog: (message: string) => Promise<boolean>
       saveTextFile: (payload: TextFileSaveRequest) => Promise<TextFileSaveResponse>
       openTextFile: (payload: TextFileOpenRequest) => Promise<TextFileOpenResponse>

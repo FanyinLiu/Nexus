@@ -470,7 +470,7 @@ export const zhTWCore = {
   'about.faq.q.3': '語音用不了 —— 她說話沒聲音。',
   'about.faq.a.3': '檢查「設定 → 語音輸出」→ 確認「啟用語音輸出」是開的。如果用付費 TTS，驗證介面密鑰。如果語音開了但還是沒聲，檢查 macOS「系統設定 → 聲音 → 輸出裝置」。',
   'about.faq.q.4': '怎麼匯入已有的形象模型？',
-  'about.faq.a.4': '在「聊天 → 夥伴資料」裡滾到「夥伴形象」，點檔案選擇器。Live2D 選 `.model3.json`；Sprite 寵物選帶 `spritesheetPath` 的 `pet.json`，也可以直接選下載好的 Codex 寵物 ZIP。Nexus 會複製到本地模型庫，原檔案可以刪/移動。',
+  'about.faq.a.4': '在「聊天 → 夥伴資料」裡滾到「夥伴形象」，點檔案選擇器，選擇 Live2D 模型檔（.model3.json）。Nexus 會複製到本地模型庫，原檔案可以刪或移動。',
   'about.faq.q.5': '我的資料存在哪？',
   'about.faq.a.5': '全部在你本機。macOS：~/Library/Application Support/nexus。Windows：%APPDATA%/nexus。包括介面密鑰（加密）、聊天記錄、記憶、人格檔案、稽核日誌。沒有任何資料上傳到後端。',
   'about.faq.q.6': '我想用本機大模型（Ollama / LM Studio）。',

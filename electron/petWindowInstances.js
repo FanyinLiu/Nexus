@@ -30,7 +30,7 @@ function makePetWindowState() {
     // out-of-box default. Users who explicitly chose free mode keep it (saved in
     // pet-prefs.json); only the unset default changed.
     freeMode: getSavedPetPref('freeMode') ?? false,
-    roamCapable: true,
+    roamCapable: false,
   }
 }
 

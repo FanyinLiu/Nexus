@@ -470,7 +470,7 @@ export const koCore = {
   'about.faq.q.3': '음성이 작동하지 않아요 — 그녀가 말해도 소리가 안 나요.',
   'about.faq.a.3': '「설정 → 음성 출력」 → 「음성 출력 활성화」가 켜져 있는지 확인. 유료 TTS를 사용하면 API 키를 확인. 음성이 켜져 있는데도 소리가 안 나면 macOS 「시스템 설정 → 소리 → 출력 장치」를 확인하세요.',
   'about.faq.q.4': '이미 가지고 있는 Live2D 모델을 어떻게 가져오나요?',
-  'about.faq.a.4': '「채팅 → 동반자 프로필」에서 「아바타」까지 스크롤하고 파일 선택기를 클릭하세요. Live2D는 `.model3.json`, Sprite 펫은 `spritesheetPath`가 있는 `pet.json` 또는 다운로드한 Codex 펫 ZIP을 선택합니다. Nexus가 로컬 모델 라이브러리에 복사하므로 원본 파일은 이동/삭제할 수 있습니다.',
+  'about.faq.a.4': '「채팅 → 동반자 프로필」에서 「아바타」까지 스크롤한 뒤 파일 선택기를 누르고 Live2D 모델 파일(.model3.json)을 고르세요. Nexus가 로컬 모델 라이브러리에 복사하므로 원본 파일은 옮기거나 지울 수 있습니다.',
   'about.faq.q.5': '내 데이터는 어디에 저장되나요?',
   'about.faq.a.5': '모든 것이 당신의 컴퓨터에 남아요. macOS: ~/Library/Application Support/nexus. Windows: %APPDATA%/nexus. API 키(암호화), 채팅 기록, 기억, 페르소나 파일, 감사 로그 포함. 어떠한 백엔드로도 전송되지 않아요.',
   'about.faq.q.6': '로컬 모델(Ollama, LM Studio)을 사용하고 싶어요.',
