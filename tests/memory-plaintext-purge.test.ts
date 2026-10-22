@@ -124,7 +124,7 @@ function filesContaining(dir: string, needle: string): string[] {
     .map(([name]) => name)
 }
 
-function installStorage(initial: Record<string, string> = {}) {
+function installStorage(initial: Record<string, string> = {}, bridge?: Record<string, unknown>) {
   const store = new Map(Object.entries(initial))
   const localStorage = {
     getItem: (key: string) => store.get(key) ?? null,
@@ -138,6 +138,7 @@ function installStorage(initial: Record<string, string> = {}) {
       dispatchEvent: () => true,
       setTimeout: globalThis.setTimeout.bind(globalThis),
       clearTimeout: globalThis.clearTimeout.bind(globalThis),
+      ...(bridge ? { desktopPet: bridge } : {}),
     },
     configurable: true,
     writable: true,
@@ -242,4 +243,27 @@ test('stored delete and clear all leave the wording out of the memory data dir',
   assert.deepEqual(filesContaining(clearedDir, PLACE), [])
   assert.deepEqual(filesContaining(clearedDir, KEPT), [])
   assert.equal(peekDeletedMemory('mem-secret'), null)
+})
+
+test('a delete drops the vector row and a clear asks the vector store for the wipe', () => {
+  const calls: Array<{ kind: 'remove', ids: string[] } | { kind: 'clear' }> = []
+  installStorage({}, {
+    memoryVectorRemove: (payload: { ids?: string[] }) => {
+      calls.push({ kind: 'remove', ids: payload.ids ?? [] })
+      return Promise.resolve({ ok: true, count: 1 })
+    },
+    memoryVectorClear: () => {
+      calls.push({ kind: 'clear' })
+      return Promise.resolve({ ok: true, removed: 0, localDataCleared: true })
+    },
+  })
+
+  const row = memory({ id: 'mem-vector', content: SECRET })
+  purgeDeletedMemory(row, AT)
+  purgeClearedMemories([row], {}, AT)
+
+  assert.deepEqual(calls, [
+    { kind: 'remove', ids: ['mem-vector'] },
+    { kind: 'clear' },
+  ])
 })

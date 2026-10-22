@@ -12,6 +12,7 @@ register(new URL('./helpers/memory-vector-electron-hooks.mjs', import.meta.url))
 
 const DELETE_SECRET = 'NEXUS_SECRET_DELETE_ONE_peanut'
 const CLEAR_SECRET = 'NEXUS_SECRET_CLEAR_ALL_diary'
+const VECTOR_SNAPSHOT_FILE = 'memory-vectors.json'
 
 async function readTree(root: string): Promise<string> {
   const chunks: string[] = []
@@ -35,6 +36,15 @@ async function readTree(root: string): Promise<string> {
   return chunks.join('\n')
 }
 
+async function readVectorEntries(root: string): Promise<Array<{ id: string, content: string }>> {
+  const raw = await fs.readFile(path.join(root, VECTOR_SNAPSHOT_FILE), 'utf8')
+  const parsed = JSON.parse(raw) as { entries?: Array<{ id?: string, content?: string }> }
+  return (parsed.entries ?? []).map((entry) => ({
+    id: String(entry.id ?? ''),
+    content: String(entry.content ?? ''),
+  }))
+}
+
 test('single delete and clear all remove memory plaintext from disk', async () => {
   const userDataPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-memory-delete-'))
   ;(globalThis as { __nexusMemoryVectorUserData?: string }).__nexusMemoryVectorUserData = userDataPath
@@ -44,10 +54,15 @@ test('single delete and clear all remove memory plaintext from disk', async () =
     await store.indexMemory('mem-delete', DELETE_SECRET, [0.2, 0.4, 0.6], 'long_term')
     await store.flush()
     assert.match(await readTree(userDataPath), new RegExp(DELETE_SECRET))
+    assert.deepEqual(
+      (await readVectorEntries(userDataPath)).map((entry) => entry.id),
+      ['mem-delete'],
+    )
 
     const removed = await store.removeMemory('mem-delete')
     assert.equal(removed, true)
     assert.equal((await readTree(userDataPath)).includes(DELETE_SECRET), false)
+    assert.deepEqual(await readVectorEntries(userDataPath), [])
 
     await store.indexMemory('mem-clear', CLEAR_SECRET, [0.1, 0.3], 'long_term')
     await store.indexMemory('diary-clear', `${CLEAR_SECRET}-note`, [0.5], 'daily')
@@ -90,6 +105,7 @@ test('single delete and clear all remove memory plaintext from disk', async () =
     const after = await readTree(userDataPath)
     assert.equal(after.includes(CLEAR_SECRET), false)
     assert.equal(after.includes(DELETE_SECRET), false)
+    assert.deepEqual(await readVectorEntries(userDataPath), [])
   } finally {
     await fs.rm(userDataPath, { recursive: true, force: true })
   }
