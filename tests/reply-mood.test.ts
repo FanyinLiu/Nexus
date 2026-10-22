@@ -35,3 +35,12 @@ test('a mood tag is mapped through emotionToPetMood and a plain reply does not i
   })
   assert.equal(supplied, 'worried')
 })
+
+test('sad wording wins over a happy mood tag', () => {
+  const mood = petMoodForAssistantReply({
+    replyText: "I'm sorry that happened.",
+    moodWord: 'happy',
+  })
+  assert.ok(mood)
+  assert.equal(SMILING.has(mood!), false, mood!)
+})
