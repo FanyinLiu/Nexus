@@ -122,7 +122,7 @@ export const enSettingsVoice = {
   'settings.speech_connection.output_empty_audio': 'The speech service returned success without usable audio. Check the endpoint, voice, and model.',
   'settings.speech_connection.identity_mismatch': 'The service responded, but the returned provider/model/voice does not match the requested target.',
   'settings.voice.local_models_title': 'Local voice models',
-  'settings.voice.local_models_hint': 'You can check and download them here after closing the first-launch window.',
+  'settings.voice.local_models_hint': 'If anything is missing, you’ll get a reminder when you use voice. You can also check and download here anytime.',
   'settings.voice.local_models_ready': 'The required local voice models are installed.',
   'settings.voice.local_models_missing': '{count} models still need to be downloaded.',
   'settings.voice.local_models_download': 'Download missing models',

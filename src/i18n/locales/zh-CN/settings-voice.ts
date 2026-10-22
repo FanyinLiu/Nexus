@@ -120,7 +120,7 @@ export const zhCNSettingsVoice = {
   'settings.speech_connection.output_empty_audio': '语音服务返回了成功状态，但没有收到有效音频。请检查接口、音色和模型设置。',
   'settings.speech_connection.identity_mismatch': '服务有响应，但返回的提供商/模型/音色与请求目标不一致。',
   'settings.voice.local_models_title': '本地语音模型',
-  'settings.voice.local_models_hint': '关掉首次安装窗口之后，仍可以在这里查看和下载。',
+  'settings.voice.local_models_hint': '缺模型的话，用语音时会提醒你装。也可以随时在这里查看和下载。',
   'settings.voice.local_models_ready': '需要的本地语音模型都已安装。',
   'settings.voice.local_models_missing': '还有 {count} 个模型需要下载。',
   'settings.voice.local_models_download': '下载缺失模型',

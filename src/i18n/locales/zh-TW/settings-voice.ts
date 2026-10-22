@@ -122,7 +122,7 @@ export const zhTWSettingsVoice = {
   'settings.speech_connection.output_empty_audio': '語音服務回傳了成功狀態，但沒有收到有效音訊。請檢查介面、音色和模型設定。',
   'settings.speech_connection.identity_mismatch': '服務有回應，但回傳的供應商/模型/音色與請求目標不一致。',
   'settings.voice.local_models_title': '本機語音模型',
-  'settings.voice.local_models_hint': '關掉首次安裝視窗之後，仍可以在這裡查看和下載。',
+  'settings.voice.local_models_hint': '缺模型的話，用語音時會提醒你裝。也可以隨時在這裡查看和下載。',
   'settings.voice.local_models_ready': '需要的本機語音模型都已安裝。',
   'settings.voice.local_models_missing': '還有 {count} 個模型需要下載。',
   'settings.voice.local_models_download': '下載缺失模型',

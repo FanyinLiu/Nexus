@@ -122,7 +122,7 @@ export const koSettingsVoice = {
   'settings.speech_connection.output_empty_audio': '음성 서비스가 성공을 반환했지만 유효한 오디오가 없어요. 엔드포인트, 보이스, 모델을 확인해 주세요.',
   'settings.speech_connection.identity_mismatch': '서비스가 응답했지만 반환된 제공자/모델/보이스가 요청 대상과 일치하지 않아요.',
   'settings.voice.local_models_title': '로컬 음성 모델',
-  'settings.voice.local_models_hint': '첫 실행 창을 닫은 뒤에도 여기서 확인하고 다운로드할 수 있습니다.',
+  'settings.voice.local_models_hint': '모델이 빠져 있으면 음성을 쓸 때 알려 드려요. 여기서도 언제든 확인하고 다운로드할 수 있어요.',
   'settings.voice.local_models_ready': '필요한 로컬 음성 모델이 설치되어 있습니다.',
   'settings.voice.local_models_missing': '모델 {count}개를 더 다운로드해야 합니다.',
   'settings.voice.local_models_download': '없는 모델 다운로드',

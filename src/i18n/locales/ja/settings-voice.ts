@@ -122,7 +122,7 @@ export const jaSettingsVoice = {
   'settings.speech_connection.output_empty_audio': '音声サービスは成功を返しましたが、有効な音声がありません。エンドポイント、ボイス、モデルを確認してください。',
   'settings.speech_connection.identity_mismatch': 'サービスは応答しましたが、返されたプロバイダー/モデル/ボイスが要求ターゲットと一致しません。',
   'settings.voice.local_models_title': 'ローカル音声モデル',
-  'settings.voice.local_models_hint': '初回起動の画面を閉じたあとも、ここで確認してダウンロードできます。',
+  'settings.voice.local_models_hint': '足りないモデルがあれば、音声を使うときにお知らせします。ここでもいつでも確認・ダウンロードできます。',
   'settings.voice.local_models_ready': '必要なローカル音声モデルはインストール済みです。',
   'settings.voice.local_models_missing': 'あと {count} 件のモデルをダウンロードする必要があります。',
   'settings.voice.local_models_download': '不足モデルをダウンロード',

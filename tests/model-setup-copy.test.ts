@@ -26,6 +26,8 @@ const DEV_WORDS = /int8|\bASR\b|\bpip\b|Python|HuggingFace|GitHub|ModelScope|req
 
 const FIRST_LAUNCH_WORDS = /首次启动|首次啟動|初回起動|첫 실행|first[- ]launch/i
 
+const FIRST_LAUNCH_WINDOW_WORDS = /首次安装|首次安裝|初回起動|첫 실행|first[- ]launch/i
+
 const STREAMING_WORDS = /流式|串流|streaming|ストリーミング|스트리밍/i
 
 /** One translated name and description per catalog model. */
@@ -91,5 +93,15 @@ test('every local model has a translated name and description in every locale', 
       assert.doesNotMatch(value, DEV_WORDS, `${locale}:${key}`)
       assert.doesNotMatch(value, /\bTTS\b/, `${locale}:${key}`)
     }
+  }
+})
+
+test('the local voice models hint points at the reminder, not at a launch window', async () => {
+  for (const locale of AVAILABLE_LOCALES) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    const hint = dictionary['settings.voice.local_models_hint']
+    assert.equal(typeof hint, 'string', `${locale}:settings.voice.local_models_hint`)
+    assert.ok(hint.trim().length > 0, `${locale}:settings.voice.local_models_hint`)
+    assert.doesNotMatch(hint, FIRST_LAUNCH_WINDOW_WORDS, `${locale}:settings.voice.local_models_hint`)
   }
 })
