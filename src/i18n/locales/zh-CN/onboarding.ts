@@ -3,6 +3,7 @@ export const zhCNOnboarding = {
   'model_setup.eyebrow': '首次启动',
   'model_setup.title': '安装本地语音模型',
   'model_setup.body_prefix': '语音唤醒和转写需要先下载几个本地模型。',
+  'model_setup.voice_invite': '想跟我说话的话，要先装一下语音模型。',
   'model_setup.model.vad.name': '说话检测模型',
   'model_setup.model.vad.purpose': '听出你什么时候开始和停止说话。',
   'model_setup.dismiss': '稍后再说',

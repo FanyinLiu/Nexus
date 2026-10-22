@@ -35,7 +35,7 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight.ts'
 import {
-  requestModelSetupOnVoiceUse,
+  requestModelSetupOnWakewordEnabled,
   shouldRequestModelSetupForWakewordChange,
 } from '../../features/setup/modelSetupRequests.ts'
 import type {
@@ -320,6 +320,8 @@ export function useAppOverlays({
     // Saving with a wake-word control switched on is a voice action, so that
     // window gets the same installer offer as pressing the mic button. This
     // runs only where the user saved, so a synced change elsewhere stays quiet.
+    // Deferred: the wake-word flag usually arrives together with the onboarding
+    // Finish click, and the pet view must appear before the installer does.
     if (shouldRequestModelSetupForWakewordChange(
       {
         wakewordAlwaysOn: options.baselineSettings.wakewordAlwaysOn,
@@ -330,7 +332,7 @@ export function useAppOverlays({
         voiceTriggerMode: committedSettings.voiceTriggerMode,
       },
     )) {
-      requestModelSetupOnVoiceUse()
+      requestModelSetupOnWakewordEnabled()
     }
 
     if (options?.closeSettings ?? true) {

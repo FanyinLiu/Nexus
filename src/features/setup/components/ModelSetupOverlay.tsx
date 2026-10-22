@@ -326,6 +326,9 @@ export function ModelSetupOverlay({
           <div>
             <p className="eyebrow">{t('model_setup.eyebrow')}</p>
             <h2 id="model-setup-title">{t('model_setup.title')}</h2>
+            <p className="model-setup-card__copy">
+              {t('model_setup.voice_invite')}
+            </p>
             <p id="model-setup-description" className="model-setup-card__copy">
               {t('model_setup.body_prefix')}
             </p>
