@@ -27,6 +27,7 @@ export function useMcpServerSync(mcpServers: McpServerConfig[] | undefined) {
       command: server.command,
       args: server.args,
       enabled: server.enabled,
+      ...(server.env ? { env: server.env } : {}),
     }))
     const signature = JSON.stringify(sanitized)
     if (signature === lastSignatureRef.current) return

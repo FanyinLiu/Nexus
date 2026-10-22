@@ -16,8 +16,8 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 197)
-  assert.equal(report.counts.mainHandlerChannels, 197)
+  assert.equal(report.counts.preloadInvokeChannels, 198)
+  assert.equal(report.counts.mainHandlerChannels, 198)
   assert.equal(report.counts.preloadSubscriptionChannels, 23)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)

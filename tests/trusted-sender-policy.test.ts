@@ -62,6 +62,10 @@ test('window capability matrix keeps high-impact channels on the panel', () => {
   assert.equal(isWindowChannelAllowed('integrations:inspect', 'pet'), false)
   assert.equal(isWindowChannelAllowed('integrations:inspect', 'unknown'), false)
   assert.equal(getRequiredWindowCapability('integrations:inspect'), 'panel')
+  assert.equal(getRequiredWindowCapability('memory:clear-user-data'), 'panel')
+  assert.equal(isWindowChannelAllowed('memory:clear-user-data', 'panel'), true)
+  assert.equal(isWindowChannelAllowed('memory:clear-user-data', 'pet'), false)
+  assert.equal(isWindowChannelAllowed('memory:clear-user-data', 'unknown'), false)
   assert.equal(isWindowChannelAllowed('chat:complete', 'pet'), true)
   assert.equal(isWindowChannelAllowed('persona:load-profile', 'pet'), true)
   assert.equal(isWindowChannelAllowed('persona:save-soul', 'pet'), false)
@@ -87,6 +91,10 @@ test('pet window cannot call panel-only channels after the url claims view=panel
       () => assertBoundWindowChannelAllowed(pet, 'file:save-text'),
       /panel capability is unavailable to pet window/,
     )
+    assert.throws(
+      () => assertBoundWindowChannelAllowed(pet, 'memory:clear-user-data'),
+      /panel capability is unavailable to pet window/,
+    )
     assert.doesNotThrow(() => assertBoundWindowChannelAllowed(pet, 'chat:complete'))
     assert.doesNotThrow(() => assertBoundWindowChannelAllowed(pet, 'desktop-context:get'))
   } finally {
@@ -102,6 +110,7 @@ test('panel window keeps panel-only channels', () => {
     assert.doesNotThrow(() => assertBoundWindowChannelAllowed(panel, 'persona:open-dir'))
     assert.doesNotThrow(() => assertBoundWindowChannelAllowed(panel, 'file:open-text'))
     assert.doesNotThrow(() => assertBoundWindowChannelAllowed(panel, 'updater:install'))
+    assert.doesNotThrow(() => assertBoundWindowChannelAllowed(panel, 'memory:clear-user-data'))
   } finally {
     unbindWindowCapability(panel)
   }

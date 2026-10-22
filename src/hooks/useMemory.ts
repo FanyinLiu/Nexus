@@ -225,6 +225,8 @@ export function useMemory({ settings }: UseMemoryParams) {
     const nextMemories = current.filter((memory) => memory.id !== id)
     memoriesRef.current = nextMemories
     setMemories(nextMemories)
+    // The shared purge scrubs snapshots, evidence, persona, and vectors.
+    // A second plaintext pass would race that write.
     if (target) purgeDeletedMemory(target)
   }, [])
 

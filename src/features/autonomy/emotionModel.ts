@@ -305,6 +305,58 @@ export function emotionToPetMood(state: EmotionState): PetMood {
   return 'idle'
 }
 
+const STRONG_SAD_REPLY_PATTERN = /(?:\b(?:sad|sadness|grief|grieving|heartbreak(?:ing|en)|depress(?:ed|ing)?|condolences|sorry to hear)\b|难过|伤心|悲伤|心疼|难受|想哭|哭了|心碎|节哀|不好受)/iu
+
+// A bare "I'm sorry" / "抱歉" is politeness. Sadness is the apology that is
+// actually about the person: hearing bad news, a loss, or something that happened to them.
+const EMPATHETIC_SORRY_PATTERN = /\b(?:i(?:['’]m| am) )?sorry\b(?:\s+\S+){0,6}\s+(?:going through|(?:this|that|it) happened|to hear|for your loss)\b/iu
+
+/** Polite apologies are not sadness. Grief, condolence, and 难过 still are. */
+export function assistantReplyExpressesSadness(text: string): boolean {
+  return STRONG_SAD_REPLY_PATTERN.test(text) || EMPATHETIC_SORRY_PATTERN.test(text)
+}
+
+const SAD_REPLY_EMOTION: EmotionState = {
+  energy: 0.32,
+  warmth: 0.48,
+  curiosity: 0.2,
+  concern: 0.84,
+}
+
+const MOOD_WORD_EMOTION: Record<UserMoodWord, EmotionState> = {
+  happy: { energy: 0.72, warmth: 0.8, curiosity: 0.4, concern: 0.1 },
+  excited: { energy: 0.88, warmth: 0.62, curiosity: 0.8, concern: 0.08 },
+  calm: { energy: 0.45, warmth: 0.55, curiosity: 0.35, concern: 0.12 },
+  neutral: { energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.15 },
+  tired: { energy: 0.12, warmth: 0.4, curiosity: 0.2, concern: 0.2 },
+  sad: { energy: 0.34, warmth: 0.5, curiosity: 0.22, concern: 0.78 },
+  anxious: { energy: 0.36, warmth: 0.48, curiosity: 0.3, concern: 0.8 },
+  frustrated: { energy: 0.4, warmth: 0.35, curiosity: 0.2, concern: 0.86 },
+  angry: { energy: 0.42, warmth: 0.3, curiosity: 0.18, concern: 0.9 },
+}
+
+/**
+ * Mood for the pet after an assistant reply.
+ * Uses emotionToPetMood when the reply carries an emotion (a mood tag, a
+ * caller-supplied state, or sad wording). Returns null when the reply has
+ * none, so the caller can leave the current mood or rest on neutral.
+ * Sad wording wins, so a sad reply does not leave a smiling pet.
+ * A polite apology does not count as sad wording.
+ */
+export function petMoodForAssistantReply(input: {
+  replyText?: string
+  moodWord?: UserMoodWord | null
+  emotion?: EmotionState | null
+}): PetMood | null {
+  const text = input.replyText ?? ''
+  if (assistantReplyExpressesSadness(text)) return emotionToPetMood(SAD_REPLY_EMOTION)
+  if (input.emotion) return emotionToPetMood(input.emotion)
+  if (input.moodWord && MOOD_WORD_EMOTION[input.moodWord]) {
+    return emotionToPetMood(MOOD_WORD_EMOTION[input.moodWord])
+  }
+  return null
+}
+
 // ── Message signal classification ──────────────────────────────────────────
 
 const EMOTION_SIGNAL_PATTERNS: ReadonlyArray<{ signal: EmotionSignal; pattern: RegExp }> = [

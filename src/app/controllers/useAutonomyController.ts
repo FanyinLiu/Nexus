@@ -133,6 +133,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const runDreamRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const evaluateTriggersRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const lastActiveWindowTitleRef = useRef<string | null>(null)
+  const consumeLlmBudgetRef = useRef<() => boolean>(() => true)
 
   const v2Engine = useAutonomyV2Engine({
     settingsRef,
@@ -148,6 +149,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     triggerIdleGesture: opts.triggerIdleGesture,
     onDebugEvent: debugConsole.appendDebugConsoleEvent,
     enabled: backgroundRuntimeEnabled,
+    tryConsumeLlmBudget: () => consumeLlmBudgetRef.current(),
   })
   const handleAutonomyTick = useCallback((tickState: AutonomyTickState) => {
     if (!backgroundRuntimeEnabled) return
@@ -182,6 +184,12 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     enabled: backgroundRuntimeEnabled && settings.autonomyEnabled,
     tickIntervalSeconds: settings.autonomyTickIntervalSeconds,
   })
+  // The engine is created before this hook, so the budget callback is
+  // published through a ref. Assigning it during render trips the
+  // refs lint rule; the tick interval cannot fire before this effect.
+  useEffect(() => {
+    consumeLlmBudgetRef.current = autonomyTick.tryConsumeLlmBudget
+  }, [autonomyTick.tryConsumeLlmBudget])
 
   const memoryDream = useMemoryDream({
     settingsRef,

@@ -1,7 +1,9 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain, session } from 'electron'
+import { clearMemoryUserData } from '../services/memoryUserDataClear.js'
 import * as memoryVectorStore from '../services/memoryVectorStore.js'
 import { requireTrustedSender } from './validate.js'
 import {
+  validateMemoryClearUserDataPayload,
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
   validateMemoryRemovePayload,
@@ -47,6 +49,23 @@ export function register() {
   ipcMain.handle('memory:vector-stats', async (event) => {
     requireTrustedSender(event)
     return memoryVectorStore.getStats()
+  })
+
+  ipcMain.handle('memory:clear-user-data', async (event, payload) => {
+    requireTrustedSender(event)
+    const parsed = validateMemoryClearUserDataPayload(payload)
+    const cleared = await clearMemoryUserData({
+      userDataPath: app.getPath('userData'),
+      needles: parsed?.needles ?? [],
+      // Flush first so the log scrub sees the renderer's already-scrubbed
+      // values and can drop the older records that still quote them.
+      flushStorage: () => session.defaultSession?.flushStorageData?.(),
+    })
+    return {
+      ok: true,
+      removed: cleared.removed,
+      localDataCleared: cleared.localDataCleared,
+    }
   })
 
   ipcMain.handle('memory:keyword-search', async (event, payload) => {

@@ -355,6 +355,8 @@ export interface McpServerConfig {
   command: string
   args: string
   enabled: boolean
+  /** Extra variables for this server only. They are not a settings-schema bump. */
+  env?: Record<string, string>
 }
 
 interface SystemSettings {

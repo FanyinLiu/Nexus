@@ -220,6 +220,15 @@ function formatEmotion(emotion: AutonomyContextV2['emotion'], strings: DecisionP
   return lean ? `${numbers}\n${lean}` : numbers
 }
 
+/**
+ * Local calendar time for the decision prompt. `toISOString` is UTC and
+ * would disagree with `context.hour`, which is the local hour.
+ */
+export function formatDecisionLocalDateTime(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 function formatContextSections(
   context: AutonomyContextV2,
   hints: DecisionPromptHints,
@@ -234,7 +243,7 @@ function formatContextSections(
   const date = new Date(context.timestamp)
   sections.push(
     strings.sectionNow({
-      datetime: date.toISOString().replace('T', ' ').slice(0, 16),
+      datetime: formatDecisionLocalDateTime(date),
       dayName: strings.dayNames[context.dayOfWeek] ?? String(context.dayOfWeek),
       hour: context.hour,
       activityWindow: strings.activityWindow(context.activityWindow),

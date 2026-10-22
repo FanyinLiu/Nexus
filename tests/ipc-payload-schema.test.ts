@@ -25,6 +25,7 @@ import {
   validateMcpCallToolPayload,
   validateMcpSyncServersPayload,
   validateMediaSessionControlPayload,
+  validateMemoryClearUserDataPayload,
   validateMemoryVectorIndexPayload,
   validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
@@ -451,6 +452,16 @@ test('IPC text file schemas bound file dialog payloads without reading files', (
 })
 
 test('IPC memory and workspace schemas reject malformed storage payloads', () => {
+  assert.deepEqual(validateMemoryClearUserDataPayload(undefined), {})
+  assert.deepEqual(
+    validateMemoryClearUserDataPayload({ needles: ['diary line'], extra: true }),
+    { needles: ['diary line'] },
+  )
+  assert.throws(
+    () => validateMemoryClearUserDataPayload({ needles: [1] }),
+    /needles\[0\] must be a string/,
+  )
+
   assert.deepEqual(
     validateMemoryVectorIndexPayload({
       id: 'memory-1',

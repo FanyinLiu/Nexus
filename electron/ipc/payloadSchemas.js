@@ -75,6 +75,7 @@ export {
   validateMcpCallToolPayload,
   validateMcpIdPayload,
   validateMcpSyncServersPayload,
+  validateMemoryClearUserDataPayload,
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
   validateMemoryRemovePayload,
