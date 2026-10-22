@@ -13,6 +13,7 @@ import {
   type ChatMemoryTraceFocusTarget,
 } from '../../features/memory/traceDetails.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide.tsx'
+import { settingsSavedForUiLanguageChoice } from '../../features/onboarding/components/onboardingGuideSupport.ts'
 import { resolveGuideLaunch } from '../../features/onboarding/guideDeferral.ts'
 import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
 import type { PetModelDefinition } from '../../features/pet'
@@ -127,6 +128,7 @@ function reuseUnchangedProviderProfileMaps(
 type UseAppOverlaysOptions = {
   view: 'pet' | 'panel'
   settings: AppSettings
+  settingsRef?: { current: AppSettings }
   platformProfile: PlatformProfile
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
@@ -204,6 +206,7 @@ type UseAppOverlaysOptions = {
 export function useAppOverlays({
   view,
   settings,
+  settingsRef,
   platformProfile,
   setSettings,
   settingsOpen,
@@ -317,6 +320,9 @@ export function useAppOverlays({
     }
 
     const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
+    // The voice start reads this ref in the same turn as the save. Waiting
+    // for the settings effect would let the click run against the old switches.
+    if (settingsRef) settingsRef.current = committedSettings
     setSettings(committedSettings)
 
     // Saving with a wake-word control switched on is a voice action, so that
@@ -374,7 +380,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings])
+  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings, settingsRef])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
@@ -478,11 +484,11 @@ export function useAppOverlays({
     onAddNotificationChannel,
     onUpdateNotificationChannel,
     onRemoveNotificationChannel,
-    onSave: async (nextSettings, baselineSettings) => {
+    onSave: async (nextSettings, baselineSettings, saveOptions) => {
       try {
         await applySettingsSave(nextSettings, {
           baselineSettings,
-          closeSettings: true,
+          closeSettings: saveOptions?.closeSettings !== false,
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : t('settings.save_failed_fallback')
@@ -600,13 +606,7 @@ export function useAppOverlays({
       })
     },
     onPersistUiLanguage: async (nextSettings) => {
-      await applySettingsSave({
-        ...settings,
-        uiLanguage: nextSettings.uiLanguage,
-        companionName: nextSettings.companionName,
-        userName: nextSettings.userName,
-        wakeWord: nextSettings.wakeWord,
-      }, {
+      await applySettingsSave(settingsSavedForUiLanguageChoice(settings, nextSettings), {
         baselineSettings: settings,
         closeSettings: false,
         completeOnboarding: false,

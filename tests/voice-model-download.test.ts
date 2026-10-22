@@ -554,6 +554,7 @@ test('models finishing does not turn voice on, and only the start click does', a
   assert.deepEqual(voiceStartClick(untouched, false), { enabled: false })
   const listeningOn = { speechInputEnabled: true, speechOutputEnabled: false }
   assert.deepEqual(voiceStartClick(listeningOn, true), { enabled: true })
+  assert.deepEqual(voiceStartClick(listeningOn, false), { enabled: false })
   assert.equal(listeningOn.speechOutputEnabled, false)
 
   const Inner = (VoiceSectionV3 as unknown as { type: (props: unknown) => unknown }).type
@@ -685,4 +686,30 @@ test('models finishing does not turn voice on, and only the start click does', a
     onStartVoiceConversation: async () => { started.push('early') },
   })
   assert.equal(startButton(waiting)?.props.disabled, true)
+
+  const dirtyDuringDownload = freshView.render({
+    ...base,
+    dirty: true,
+    draft: { ...draft, speechInputEnabled: true, speechOutputEnabled: true },
+    modelGapCount: 2,
+    setDraft: () => {},
+    onStartVoiceConversation: async () => { started.push('during-download') },
+  })
+  const combined = startButton(dirtyDuringDownload)
+  assert.match(String(combined?.props['aria-label'] ?? ''), /保存设置/)
+  assert.match(String(combined?.props['aria-label'] ?? ''), /开始语音/)
+  assert.equal(combined?.props.disabled, true)
+
+  const dirtyWhenReady = freshView.render({
+    ...base,
+    dirty: true,
+    draft: { ...draft, speechInputEnabled: true, speechOutputEnabled: true },
+    modelGapCount: 0,
+    setDraft: () => {},
+    onStartVoiceConversation: async () => { started.push('ready') },
+  })
+  const readyCombined = startButton(dirtyWhenReady)
+  assert.equal(readyCombined?.props.disabled, false)
+  ;(readyCombined?.props.onClick as () => void)()
+  assert.equal(started.includes('ready'), true)
 })

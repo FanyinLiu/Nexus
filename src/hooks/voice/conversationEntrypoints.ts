@@ -6,6 +6,11 @@ import {
 } from '../../lib/audioProviders.ts'
 import { resolveMissingSenseVoiceSpeechInput } from '../../features/voice/senseVoiceInstall.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import {
+  pendingVoiceCaptureAttempt,
+  releaseVoiceCaptureWithoutMicrophone,
+  withVoiceCaptureAttempt,
+} from '../../features/voice/voiceCaptureAttempt.ts'
 import { switchSpeechInputProvider } from '../../lib/speechProviderProfiles.ts'
 import { checkParaformerAvailability } from '../../features/hearing/localParaformer.ts'
 import { voiceDownloadGuidance } from '../../features/setup/voiceDownloadGuidance.ts'
@@ -189,6 +194,12 @@ export function startVoiceConversationEntrypoint(
   }
 
   let currentSettings = params.ensureSupportedSpeechInputSettings(true)
+  // Captured before any await. A hide during the availability check still
+  // belongs to this click, and a later getUserMedia must not outlive it.
+  const captureAttemptId = pendingVoiceCaptureAttempt()
+  const endCaptureWithoutMicrophone = () => {
+    releaseVoiceCaptureWithoutMicrophone(captureAttemptId)
+  }
 
   if (isParaformerSpeechInputProvider(currentSettings.speechInputProviderId)) {
     // Close the async window — a second entrypoint call during the
@@ -197,21 +208,31 @@ export function startVoiceConversationEntrypoint(
     params.paraformerStartingRef.current = true
     void checkParaformerAvailability().then(async (status) => {
       if (!isParaformerSpeechInputProvider(params.settingsRef.current.speechInputProviderId)) {
+        endCaptureWithoutMicrophone()
         return
       }
       if (!status.installed || !status.modelFound) {
-        if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
+        if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) {
+          endCaptureWithoutMicrophone()
+          return
+        }
         showMissingVoiceGuidance(params, voiceDownloadGuidance(params.ti, 'voice.provider.paraformer.model_missing'))
         console.warn('[Voice] Paraformer unavailable:', status)
+        endCaptureWithoutMicrophone()
         return
       }
       if (params.vadSessionRef.current || params.paraformerSessionRef.current || params.busyRef.current) {
+        endCaptureWithoutMicrophone()
         return
       }
-      if (!captureAllowed(params)) return
-      void params.startParaformerConversation(params.options)
+      if (!captureAllowed(params)) {
+        endCaptureWithoutMicrophone()
+        return
+      }
+      await withVoiceCaptureAttempt(captureAttemptId, () => params.startParaformerConversation(params.options))
     }).catch(() => {
       params.setError(params.ti('voice.provider.paraformer.unavailable'))
+      endCaptureWithoutMicrophone()
     }).finally(() => {
       params.paraformerStartingRef.current = false
     })
@@ -223,6 +244,7 @@ export function startVoiceConversationEntrypoint(
     params.sensevoiceStartingRef.current = true
     void checkSenseVoiceAvailability().then(async (status) => {
       if (!isSenseVoiceSpeechInputProvider(params.settingsRef.current.speechInputProviderId)) {
+        endCaptureWithoutMicrophone()
         return
       }
 
@@ -235,12 +257,17 @@ export function startVoiceConversationEntrypoint(
               params.settingsRef.current = next
               params.showPetStatus(params.ti('voice.provider.sensevoice.fallback_cloud'), 5_000)
               params.sensevoiceStartingRef.current = false
+              // The cloud path owns the same click. Releasing here would drop
+              // the microphone open that fallback is about to start.
               startVoiceConversationEntrypoint(params)
               return
             }
           }
         }
-        if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
+        if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) {
+          endCaptureWithoutMicrophone()
+          return
+        }
         showMissingVoiceGuidance(
           params,
           !status.installed
@@ -248,15 +275,21 @@ export function startVoiceConversationEntrypoint(
             : voiceDownloadGuidance(params.ti, 'voice.provider.sensevoice.not_installed'),
         )
         console.warn('[Voice] SenseVoice unavailable:', status)
+        endCaptureWithoutMicrophone()
         return
       }
       if (params.vadSessionRef.current || params.sensevoiceSessionRef.current || params.busyRef.current) {
+        endCaptureWithoutMicrophone()
         return
       }
-      if (!captureAllowed(params)) return
-      void params.startSenseVoiceConversation(params.options)
+      if (!captureAllowed(params)) {
+        endCaptureWithoutMicrophone()
+        return
+      }
+      await withVoiceCaptureAttempt(captureAttemptId, () => params.startSenseVoiceConversation(params.options))
     }).catch(() => {
       params.setError(params.ti('voice.provider.sensevoice.unavailable'))
+      endCaptureWithoutMicrophone()
     }).finally(() => {
       params.sensevoiceStartingRef.current = false
     })
@@ -272,10 +305,14 @@ export function startVoiceConversationEntrypoint(
       || params.tencentAsrSessionRef.current
       || params.voiceStateRef.current === 'processing'
     ) {
+      endCaptureWithoutMicrophone()
       return
     }
-    if (!captureAllowed(params)) return
-    void params.startTencentAsrConversation(params.options)
+    if (!captureAllowed(params)) {
+      endCaptureWithoutMicrophone()
+      return
+    }
+    void withVoiceCaptureAttempt(captureAttemptId, () => params.startTencentAsrConversation(params.options))
     return
   }
 
@@ -295,17 +332,21 @@ export function startVoiceConversationEntrypoint(
       'sensevoice:', Boolean(params.sensevoiceSessionRef.current),
       'tencent:', Boolean(params.tencentAsrSessionRef.current),
       'voiceState:', params.voiceStateRef.current)
+    endCaptureWithoutMicrophone()
     return
   }
 
-  if (!captureAllowed(params)) return
+  if (!captureAllowed(params)) {
+    endCaptureWithoutMicrophone()
+    return
+  }
 
   if (currentSettings.voiceActivityDetectionEnabled) {
-    void params.startVadVoiceConversation('api', params.options)
+    void withVoiceCaptureAttempt(captureAttemptId, () => params.startVadVoiceConversation('api', params.options))
     return
   }
 
-  void params.startApiVoiceConversation(params.options)
+  void withVoiceCaptureAttempt(captureAttemptId, () => params.startApiVoiceConversation(params.options))
 }
 
 export function stopVoiceConversationEntrypoint(

@@ -49,6 +49,27 @@ const ONBOARDING_STEP_KEYS: Array<{
   { id: 'companion', titleKey: 'onboarding.step.companion.title', descriptionKey: 'onboarding.step.companion.description' },
 ]
 
+/**
+ * Fields written when the guide saves a UI language. Speech recognition,
+ * speech output language, and the stock voice travel with that choice.
+ * Anything else in the draft stays out of this save.
+ */
+export function settingsSavedForUiLanguageChoice(
+  baseline: AppSettings,
+  next: AppSettings,
+): AppSettings {
+  return {
+    ...baseline,
+    uiLanguage: next.uiLanguage,
+    companionName: next.companionName,
+    userName: next.userName,
+    wakeWord: next.wakeWord,
+    speechRecognitionLang: next.speechRecognitionLang,
+    speechSynthesisLang: next.speechSynthesisLang,
+    speechOutputVoice: next.speechOutputVoice,
+  }
+}
+
 /** Apply a language pick, including locale-default names and the wake word. */
 export function applyOnboardingLanguageChoice(
   draft: AppSettings,

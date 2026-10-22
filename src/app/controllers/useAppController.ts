@@ -16,7 +16,7 @@ import type {
   VoiceState,
   WindowView,
 } from '../../types'
-import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
+import { showCompanionNoticeBubble } from '../../features/uiV2/caption.ts'
 import { useChat } from '../../hooks/useChat.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext.ts'
@@ -236,14 +236,7 @@ export function useAppController() {
     // The pet bubble belongs to the chat hook, which is created after this
     // one. The ref keeps the voice hook's context referentially stable.
     presentCompanionNotice: (content, options) => {
-      presentPetDialogBubbleRef.current(
-        {
-          content,
-          streaming: false,
-          ...(options?.replacesSurfaceError ? { replacesSurfaceError: true } : {}),
-        },
-        { autoHideMs: COMPANION_NOTICE_AUTO_HIDE_MS },
-      )
+      showCompanionNoticeBubble(presentPetDialogBubbleRef.current, content, options)
     },
     // Forward to the autonomy emotion model. Wired through a ref because
     // autonomy is created later in this hook and we need to keep useVoice's
@@ -622,6 +615,7 @@ export function useAppController() {
   const { overlays } = useAppOverlays({
     view,
     settings,
+    settingsRef,
     platformProfile,
     setSettings,
     settingsOpen,

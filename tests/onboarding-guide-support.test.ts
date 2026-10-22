@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 import { enMessages } from '../src/i18n/locales/en/index.ts'
@@ -8,6 +9,7 @@ import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
 import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 import {
   applyOnboardingLanguageChoice,
+  settingsSavedForUiLanguageChoice,
   applyOnboardingStepRepairDraft,
   buildOnboardingSteps,
   getOnboardingFinishHint,
@@ -287,6 +289,44 @@ test('a new UI language moves stock voice settings and leaves a saved voice alon
   assert.equal(custom.speechRecognitionLang, 'ja')
   assert.equal(custom.speechSynthesisLang, 'zh-CN')
   assert.equal(custom.speechOutputVoice, 'my-custom-voice')
+})
+
+test('choosing Simplified Chinese then skipping persists the speech language that followed it', async () => {
+  const seeded = makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'en-US',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'en-US-JennyNeural',
+  })
+  const chosen = applyOnboardingLanguageChoice(seeded, 'zh-CN')
+  const saved = settingsSavedForUiLanguageChoice(seeded, chosen)
+  assert.equal(saved.uiLanguage, 'zh-CN')
+  assert.equal(saved.speechRecognitionLang, 'zh-CN')
+  assert.equal(saved.speechSynthesisLang, 'zh-CN')
+  assert.equal(saved.speechOutputVoice, 'zh-CN-XiaoxiaoNeural')
+  assert.equal(saved.apiProviderId, seeded.apiProviderId)
+
+  const explicit = makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'ja',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'en-US-JennyNeural',
+  })
+  const kept = settingsSavedForUiLanguageChoice(explicit, applyOnboardingLanguageChoice(explicit, 'zh-CN'))
+  assert.equal(kept.speechRecognitionLang, 'ja')
+  assert.equal(kept.speechSynthesisLang, 'zh-CN')
+  assert.equal(kept.speechOutputVoice, 'zh-CN-XiaoxiaoNeural')
+
+  const overlays = await readFile(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url), 'utf8')
+  assert.match(overlays, /settingsSavedForUiLanguageChoice\(settings, nextSettings\)/)
 })
 
 test('a language choice updates locale-default names and leaves custom names alone', () => {

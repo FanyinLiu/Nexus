@@ -27,6 +27,10 @@ import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLanguages.ts'
+import {
+  runStartVoiceClick,
+  saveVoiceStartSwitches,
+} from '../features/voice/voiceCaptureAttempt.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
 import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
@@ -103,7 +107,11 @@ export type SettingsDrawerProps = {
   onStartVoiceConversation: () => void
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
-  onSave: (settings: AppSettings, baseline: AppSettings) => Promise<void>
+  onSave: (
+    settings: AppSettings,
+    baseline: AppSettings,
+    options?: { closeSettings?: boolean },
+  ) => Promise<void>
   onExportChatHistory: () => Promise<{
     canceled: boolean
     filePath?: string
@@ -615,7 +623,10 @@ export function SettingsDrawer({
     restoreSettingsOpenerFocus()
   }
 
-  function commitDraft(override?: AppSettings): Promise<void> {
+  function commitDraft(
+    override?: AppSettings,
+    options?: { closeSettings?: boolean },
+  ): Promise<void> {
     if (saveInFlightRef.current) return saveInFlightRef.current
 
     setSaveError(false)
@@ -623,7 +634,7 @@ export function SettingsDrawer({
     const savePromise = commitSettingsDraft({
       committed: baseline,
       draft: override ? buildSettingsSavePayload(override) : createSavePayload(),
-      onSave: (nextDraft) => onSave(nextDraft, baseline),
+      onSave: (nextDraft) => onSave(nextDraft, baseline, options),
       onContextAwarenessDisabled: () => {
         clearRecentCompanionCheckInDecision()
         clearRecentCompanionSummary()
@@ -659,15 +670,33 @@ export function SettingsDrawer({
     setVoiceActionPending(true)
     setSaveError(false)
     try {
-      if (patch || isDirty) {
-        await commitDraft(patch ? nextDraft : undefined)
-      } else {
-        onClose()
-      }
-
-      restoreSettingsOpenerFocus(() => {
-        window.requestAnimationFrame(() => onStartVoiceConversation())
+      // The save used to hide the window and then ask for the microphone on
+      // the next frame. Chromium holds that request until the window is
+      // shown again. Keep the window up until the stream is live, and if it
+      // hides first, drop the click instead of replaying it.
+      const outcome = await runStartVoiceClick({
+        visible: () => document.visibilityState !== 'hidden',
+        subscribeHidden: (onHidden) => {
+          const handleHide = () => {
+            if (document.visibilityState === 'hidden') onHidden()
+          }
+          document.addEventListener('visibilitychange', handleHide)
+          return () => document.removeEventListener('visibilitychange', handleHide)
+        },
+        saveSwitches: () => saveVoiceStartSwitches({
+          patch,
+          dirty: isDirty,
+          draft,
+          commitDraft: (draftToSave) => commitDraft(draftToSave, { closeSettings: false }),
+        }),
+        start: () => {
+          onStartVoiceConversation()
+        },
+        closeSurface: () => {
+          onClose()
+        },
       })
+      if (outcome !== 'cancelled') restoreSettingsOpenerFocus()
     } catch (error) {
       console.error('[SettingsDrawer] voice start save failed:', getRedactedLogErrorMessage(error))
     } finally {
