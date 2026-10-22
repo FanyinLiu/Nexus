@@ -1,8 +1,10 @@
 /**
- * Place, clock, and slot details on an open loop.
+ * Place, clock, due date, and slot details on an open loop.
  *
  * A later turn that only adds a hall or a clock updates the loop the user
- * already started. It does not invent a second commitment.
+ * already started. It does not invent a second commitment. The due words
+ * live here too, so a follow-up can read a new day without going through
+ * the capture path.
  */
 
 import { localDayKey } from '../../lib/localDate.ts'

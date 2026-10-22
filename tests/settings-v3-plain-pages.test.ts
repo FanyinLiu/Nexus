@@ -204,6 +204,21 @@ test('a preset service keeps its address editable in the advanced section', { ti
   await page.close()
 })
 
+test('a service the person fills in keeps its address on the plain page', { timeout: 150_000 }, async () => {
+  const page = await browser.newPage()
+  await openSettingsPage(page, 'model', {
+    apiProviderId: 'custom',
+    apiBaseUrl: 'https://proxy.example/v1',
+  })
+  await openAdvanced(page, '地址、Telegram、Discord、花费上限')
+
+  const address = page.getByLabel('地址', { exact: true })
+  await address.waitFor({ state: 'visible' })
+  assert.equal(await address.inputValue(), 'https://proxy.example/v1')
+  assert.equal(await page.getByLabel('文本接口地址').count(), 0)
+  await page.close()
+})
+
 test('the weather city stays editable when search and weather disagree', { timeout: 150_000 }, async () => {
   const page = await browser.newPage()
   await openSettingsPage(page, 'tools', {
