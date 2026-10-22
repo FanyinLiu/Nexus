@@ -58,6 +58,22 @@ export function lookupPatch(enabled: boolean) {
   }
 }
 
+export type WeatherCityPlacement = 'simple' | 'advanced' | null
+
+/**
+ * Where the weather city is edited. When search and weather agree the
+ * plain connection page owns it. When they disagree the plain page sends
+ * the person to the advanced tools section, so that section owns it.
+ * Weather off means no editor anywhere, and the stored city is kept.
+ */
+export function weatherCityPlacement(
+  searchEnabled: boolean,
+  weatherEnabled: boolean,
+): WeatherCityPlacement {
+  if (!weatherEnabled) return null
+  return searchEnabled ? 'simple' : 'advanced'
+}
+
 export type EndpointEditorPlacement = 'simple' | 'advanced'
 
 /**

@@ -12,8 +12,10 @@ export {
   sharedLookup,
   unifiedQuietHours,
   voiceLanguagesAfterSettingsOpen,
+  weatherCityPlacement,
   type EndpointEditorPlacement,
   type QuietHours,
+  type WeatherCityPlacement,
 } from './surfaceRules.ts'
 export {
   SETTINGS_SIMPLE_PAGE_SECTIONS,

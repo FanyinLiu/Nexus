@@ -6,6 +6,7 @@ import {
 } from '../../lib/webSearchProviders.ts'
 import { displaySecretInputValue } from '../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import { weatherCityPlacement } from '../settingsSimplify/index.ts'
 import type { AppSettings } from '../../types'
 import { SettingsV3Disclosure, SettingsV3Field, SettingsV3Notice, SettingsV3Page, SettingsV3Row, SettingsV3Section, SettingsV3Switch } from './SettingsV3Primitives.tsx'
 
@@ -77,7 +78,7 @@ export const ToolsSectionV3 = memo(function ToolsSectionV3({ active, draft, setD
       ) : null}
 
       {draft.toolWeatherEnabled ? (
-        surface === 'rest' ? null : (
+        surface === 'rest' && weatherCityPlacement(draft.toolWebSearchEnabled, draft.toolWeatherEnabled) !== 'advanced' ? null : (
           <SettingsV3Section title={ti('settings.tools.weather')} description={ti('settings.tools.weather_location_hint')}>
             <div className="settings-v3-editor">
               <SettingsV3Field label={ti('settings.tools.weather_location')} hint={ti('settings.tools.weather_location_hint')}>

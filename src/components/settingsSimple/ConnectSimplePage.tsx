@@ -6,7 +6,7 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../features/models/providerCatalog.ts'
-import { endpointEditorPlacement, lookupPatch, sharedLookup } from '../../features/settingsSimplify/index.ts'
+import { endpointEditorPlacement, lookupPatch, sharedLookup, weatherCityPlacement } from '../../features/settingsSimplify/index.ts'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { UrlInput } from '../../features/settingsV3/UrlInput.tsx'
 import { SettingsV3Field, SettingsV3Notice, SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
@@ -36,6 +36,7 @@ export function ConnectSimplePage({
   const lookup = sharedLookup(draft.toolWebSearchEnabled, draft.toolWeatherEnabled)
   const keyStored = isVaultRefString(draft.apiKey)
   const showAddress = endpointEditorPlacement(draft.apiProviderId) === 'simple'
+  const cityPlacement = weatherCityPlacement(draft.toolWebSearchEnabled, draft.toolWeatherEnabled)
   const showTest = !preset.requiresApiKey || Boolean(draft.apiKey.trim())
 
   return (
@@ -117,7 +118,7 @@ export function ConnectSimplePage({
             />
           </SimpleRow>
         )}
-        {lookup ? (
+        {cityPlacement === 'simple' ? (
           <SettingsV3Field label={ti('settings.simple.connect_city')}>
             <input
               value={draft.toolWeatherDefaultLocation}

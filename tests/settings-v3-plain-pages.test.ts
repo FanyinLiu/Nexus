@@ -203,3 +203,25 @@ test('a preset service keeps its address editable in the advanced section', { ti
   assert.equal(saved.apiProviderId, 'openai')
   await page.close()
 })
+
+test('the weather city stays editable when search and weather disagree', { timeout: 150_000 }, async () => {
+  const page = await browser.newPage()
+  await openSettingsPage(page, 'tools', {
+    toolWebSearchEnabled: false,
+    toolWeatherEnabled: true,
+    toolWeatherDefaultLocation: '深圳',
+  })
+  await openAdvanced(page, '地址、Telegram、Discord、花费上限')
+
+  const city = page.getByLabel('天气默认地点')
+  await city.waitFor({ state: 'visible' })
+  assert.equal(await city.count(), 1)
+  assert.equal(await city.inputValue(), '深圳')
+  assert.equal(await page.getByLabel('城市，可以空着', { exact: true }).count(), 0)
+
+  await city.fill('上海')
+  assert.equal(await city.inputValue(), '上海')
+  assert.equal(await page.getByRole('checkbox', { name: '天气查询' }).isChecked(), true)
+  assert.equal(await page.getByRole('checkbox', { name: '网页搜索' }).isChecked(), false)
+  await page.close()
+})

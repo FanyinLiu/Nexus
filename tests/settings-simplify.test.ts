@@ -13,6 +13,7 @@ import {
   unifiedQuietHours,
   voiceLanguagesAfterSettingsOpen,
   voiceTriggerPatch,
+  weatherCityPlacement,
   VOICE_TRIGGER_MODES,
 } from '../src/features/settingsSimplify/index.ts'
 import { API_PROVIDER_PRESETS } from '../src/features/models/providerCatalog.ts'
@@ -81,6 +82,14 @@ test('search and weather are not flipped together when they disagree', () => {
     toolWebSearchEnabled: true,
     toolWeatherEnabled: true,
   })
+})
+
+test('the weather city has one editor for every switch combination', () => {
+  assert.equal(weatherCityPlacement(true, true), 'simple')
+  assert.equal(weatherCityPlacement(false, true), 'advanced')
+  assert.equal(weatherCityPlacement(true, false), null)
+  assert.equal(weatherCityPlacement(false, false), null)
+  assert.equal(sharedLookup(true, true), true)
 })
 
 test('every service keeps exactly one place to edit its address', () => {
