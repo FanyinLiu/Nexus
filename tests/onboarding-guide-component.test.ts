@@ -141,10 +141,13 @@ function findFinishHint(tree: unknown): ElementLike | null {
   return findElements(tree, (element) => element.props.id === 'onboarding-finish-hint')[0] ?? null
 }
 
-function findReadinessWarningText(tree: unknown): ElementLike[] {
+function findReadinessText(
+  tree: unknown,
+  messageKey: keyof typeof enMessages,
+): ElementLike[] {
   return findElements(
     tree,
-    (element) => element.props.children === enMessages['onboarding.readiness.text.warning_unverified'],
+    (element) => element.props.children === enMessages[messageKey],
   )
 }
 
@@ -273,12 +276,48 @@ function createGuide(overrides: Partial<AppSettings> = {}) {
     return clicks
   }
 
-  const setTextConnectionVerified = () => {
+  const findTextStep = () => {
     const [textStep] = findElements(
       tree,
       (element) => typeof element.props.onTextConnectionVerificationChange === 'function',
     )
     assert.ok(textStep, 'missing text step')
+    return textStep
+  }
+
+  /** Walk backwards until the text step is visible again. */
+  const backToTextStep = () => {
+    let clicks = 0
+    while (findElements(
+      tree,
+      (element) => typeof element.props.onTextConnectionVerificationChange === 'function',
+    ).length === 0) {
+      const [back] = findElements(
+        tree,
+        (element) => (
+          element.type === 'button'
+          && element.props.children === enMessages['onboarding.prev']
+        ),
+      )
+      assert.ok(back, 'missing back button')
+      ;(back.props.onClick as () => void)()
+      render()
+      clicks += 1
+      assert.ok(clicks <= 10, 'guide never returned to the text step')
+    }
+  }
+
+  /** Fill the key without testing the connection. */
+  const setApiKey = (apiKey: string) => {
+    const textStep = findTextStep()
+    ;(textStep.props.setDraft as (updater: (current: AppSettings) => AppSettings) => void)(
+      (current) => ({ ...current, apiKey }),
+    )
+    render()
+  }
+
+  const setTextConnectionVerified = () => {
+    const textStep = findTextStep()
     ;(textStep.props.onTextConnectionVerificationChange as (record: unknown) => void)(
       createConnectionVerificationRecord('text', settings, {
         ok: true,
@@ -294,6 +333,8 @@ function createGuide(overrides: Partial<AppSettings> = {}) {
     render,
     clickPrimary,
     advanceToLastStep,
+    backToTextStep,
+    setApiKey,
     setTextConnectionVerified,
     unmount: renderer.unmount,
     get tree() { return tree },
@@ -341,11 +382,18 @@ test('the test-later hint appears only on the last step, and only while the conn
   // hides that one line while the hint is visible.
   const [companion] = findElements(
     untested.tree,
-    (element) => 'hideUnverifiedTextWarning' in element.props,
+    (element) => 'hiddenReadinessWarningKey' in element.props,
   )
   assert.ok(companion)
+  assert.equal(
+    companion.props.hiddenReadinessWarningKey,
+    'onboarding.readiness.text.warning_unverified',
+  )
   const companionTree = (companion.type as (props: unknown) => unknown)(companion.props)
-  assert.equal(findReadinessWarningText(companionTree).length, 0)
+  assert.equal(
+    findReadinessText(companionTree, 'onboarding.readiness.text.warning_unverified').length,
+    0,
+  )
   untested.unmount()
 
   const verified = createGuide()
@@ -373,18 +421,30 @@ test('the readiness list keeps the untested-connection warning when no last-step
 
   const [companion] = findElements(
     guide.tree,
-    (element) => 'hideUnverifiedTextWarning' in element.props,
+    (element) => 'hiddenReadinessWarningKey' in element.props,
   )
   assert.ok(companion)
-  assert.equal(companion.props.hideUnverifiedTextWarning, true)
-  const renderCompanion = (hideUnverifiedTextWarning: boolean) => (
+  assert.equal(
+    companion.props.hiddenReadinessWarningKey,
+    'onboarding.readiness.text.warning_unverified',
+  )
+  const renderCompanion = (hiddenReadinessWarningKey: string | null) => (
     companion.type as (props: unknown) => unknown
-  )({ ...companion.props, hideUnverifiedTextWarning })
+  )({ ...companion.props, hiddenReadinessWarningKey })
 
   // Without the last-step hint taking over the message, the readiness list
   // must still report the untested connection itself.
-  assert.equal(findReadinessWarningText(renderCompanion(false)).length, 1)
-  assert.equal(findReadinessWarningText(renderCompanion(true)).length, 0)
+  assert.equal(
+    findReadinessText(renderCompanion(null), 'onboarding.readiness.text.warning_unverified').length,
+    1,
+  )
+  assert.equal(
+    findReadinessText(
+      renderCompanion('onboarding.readiness.text.warning_unverified'),
+      'onboarding.readiness.text.warning_unverified',
+    ).length,
+    0,
+  )
   guide.unmount()
 })
 
@@ -397,7 +457,7 @@ test('the last-step readiness line drops the duration placeholder for warnings a
   // only materialises when the element itself is called.
   const [companion] = findElements(
     guide.tree,
-    (element) => 'hideUnverifiedTextWarning' in element.props,
+    (element) => 'hiddenReadinessWarningKey' in element.props,
   )
   assert.ok(companion)
   const renderCompanion = (overrides: Record<string, unknown>) => (
@@ -455,5 +515,88 @@ test('the missing API key reminder still shows on the model step and the last st
   guide.advanceToLastStep()
   const hint = findFinishHint(guide.tree)
   assert.equal(hint?.props.children, enMessages['onboarding.finish_hint.missing_api_key'])
+  guide.unmount()
+})
+
+test('the last-step missing-key hint hides the readiness line it repeats, and earlier steps keep it', () => {
+  const guide = createGuide({
+    apiProviderId: 'deepseek',
+    apiBaseUrl: 'https://api.deepseek.com',
+    apiKey: '',
+    model: 'deepseek-v4-flash',
+  })
+  guide.render()
+  guide.advanceToLastStep()
+
+  assert.equal(
+    findFinishHint(guide.tree)?.props.children,
+    enMessages['onboarding.finish_hint.missing_api_key'],
+  )
+
+  const [companion] = findElements(
+    guide.tree,
+    (element) => 'hiddenReadinessWarningKey' in element.props,
+  )
+  assert.ok(companion)
+  assert.equal(
+    companion.props.hiddenReadinessWarningKey,
+    'onboarding.readiness.text.warning_api_key',
+  )
+  const renderCompanion = (hiddenReadinessWarningKey: string | null) => (
+    companion.type as (props: unknown) => unknown
+  )({ ...companion.props, hiddenReadinessWarningKey })
+
+  // The hint owns the message on the last step...
+  assert.equal(
+    findReadinessText(
+      renderCompanion('onboarding.readiness.text.warning_api_key'),
+      'onboarding.readiness.text.warning_api_key',
+    ).length,
+    0,
+  )
+  // ...but earlier steps have no hint replacing it, so the line stays.
+  assert.equal(
+    findReadinessText(renderCompanion(null), 'onboarding.readiness.text.warning_api_key').length,
+    1,
+  )
+  guide.unmount()
+})
+
+test('the last-step hint switches from missing-key to untested-connection once the key is filled', () => {
+  const guide = createGuide({
+    apiProviderId: 'deepseek',
+    apiBaseUrl: 'https://api.deepseek.com',
+    apiKey: '',
+    model: 'deepseek-v4-flash',
+  })
+  guide.render()
+  guide.advanceToLastStep()
+  assert.equal(
+    findFinishHint(guide.tree)?.props.children,
+    enMessages['onboarding.finish_hint.missing_api_key'],
+  )
+
+  guide.backToTextStep()
+  guide.setApiKey('sk-test')
+  guide.advanceToLastStep()
+
+  assert.equal(
+    findFinishHint(guide.tree)?.props.children,
+    enMessages['onboarding.finish_hint.unverified_model'],
+  )
+  const [companion] = findElements(
+    guide.tree,
+    (element) => 'hiddenReadinessWarningKey' in element.props,
+  )
+  assert.ok(companion)
+  assert.equal(
+    companion.props.hiddenReadinessWarningKey,
+    'onboarding.readiness.text.warning_unverified',
+  )
+  const companionTree = (companion.type as (props: unknown) => unknown)(companion.props)
+  assert.equal(
+    findReadinessText(companionTree, 'onboarding.readiness.text.warning_unverified').length,
+    0,
+  )
   guide.unmount()
 })

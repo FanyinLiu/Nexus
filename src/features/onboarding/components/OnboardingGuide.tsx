@@ -38,7 +38,7 @@ import {
 import { ensureLocaleLoaded } from '../../../i18n/runtime.ts'
 import { getRedactedLogErrorMessage } from '../../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../../lib/uiLanguage.ts'
-import type { UiLanguage } from '../../../types/i18n.ts'
+import type { TranslationKey, UiLanguage } from '../../../types/i18n.ts'
 
 export type OnboardingGuideProps = {
   open: boolean
@@ -117,6 +117,13 @@ export function OnboardingGuide({
   // A missing key is the actionable reminder the last step always carried;
   // the untested-connection hint only fills in when the key is already set.
   const finishHint = missingApiKeyHint ?? unverifiedConnectionHint
+  // The last-step hint repeats whichever readiness line it already states, so
+  // that line is dropped from the list while the hint is visible.
+  const hiddenReadinessWarningKey: TranslationKey | null = missingApiKeyHint
+    ? 'onboarding.readiness.text.warning_api_key'
+    : unverifiedConnectionHint
+      ? 'onboarding.readiness.text.warning_unverified'
+      : null
 
   // Reset the wizard whenever it (re)opens or the underlying settings change
   // while open — render-time adjust keyed on an "open ? settings : null"
@@ -357,7 +364,7 @@ export function OnboardingGuide({
             selectedPetModel={selectedPetModel}
             launchOnStartupSupported={platformProfile.startup.supported}
             textConnectionVerified={textConnectionVerified}
-            hideUnverifiedTextWarning={Boolean(unverifiedConnectionHint) && !missingApiKeyHint}
+            hiddenReadinessWarningKey={hiddenReadinessWarningKey}
           />
         )
     }

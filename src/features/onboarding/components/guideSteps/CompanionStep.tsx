@@ -8,7 +8,7 @@ import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
 } from '../../../../lib/uiLanguage.ts'
-import type { AppSettings } from '../../../../types'
+import type { AppSettings, TranslationKey } from '../../../../types'
 import {
   buildCompanionReadiness,
   type CompanionReadinessStatus,
@@ -23,8 +23,8 @@ type CompanionStepProps = {
   selectedPetModel: PetModelDefinition | undefined
   launchOnStartupSupported: boolean
   textConnectionVerified: boolean
-  /** The last-step hint already says the connection is untested. */
-  hideUnverifiedTextWarning: boolean
+  /** The last-step hint already says this, so its readiness line is hidden. */
+  hiddenReadinessWarningKey: TranslationKey | null
 }
 
 export function CompanionStep({
@@ -34,7 +34,7 @@ export function CompanionStep({
   selectedPetModel,
   launchOnStartupSupported,
   textConnectionVerified,
-  hideUnverifiedTextWarning,
+  hiddenReadinessWarningKey,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -63,8 +63,8 @@ export function CompanionStep({
     warning: 'onboarding.readiness.warning',
     blocked: 'onboarding.readiness.blocked',
   }
-  const readinessItems = hideUnverifiedTextWarning
-    ? readiness.items.filter((item) => item.messageKey !== 'onboarding.readiness.text.warning_unverified')
+  const readinessItems = hiddenReadinessWarningKey
+    ? readiness.items.filter((item) => item.messageKey !== hiddenReadinessWarningKey)
     : readiness.items
 
   return (
