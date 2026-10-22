@@ -3,21 +3,11 @@
  * shell so the guide does not keep its own dark palette.
  */
 
-html[data-companion-theme] .onboarding-backdrop,
-html[data-companion-theme] .onboarding-backdrop--pet {
-  /* The shell fades this element, which also fades the card and lets the
-     scrim show through it. The scrim fades on its own layer instead. */
+html[data-companion-theme] .onboarding-backdrop {
+  /* The host window is transparent and the guide floats directly over the
+     desktop, so there is no scrim layer to fade. */
   background: transparent;
   animation: none;
-}
-
-html[data-companion-theme] .onboarding-backdrop::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: var(--nx-scrim);
-  animation: onboarding-backdrop-in 200ms ease-out;
 }
 
 html[data-companion-theme] .onboarding-card,
@@ -128,7 +118,12 @@ html[data-companion-theme] .desktop-pet-root .onboarding-card__actions--calm .pr
 
 html[data-companion-theme] .onboarding-disclosure__dismiss,
 html[data-companion-theme] .desktop-pet-root .onboarding-disclosure__dismiss {
-  color: var(--color-accent);
+  color: var(--color-text-muted);
+}
+
+html[data-companion-theme] .onboarding-disclosure__dismiss:hover:not(:disabled),
+html[data-companion-theme] .desktop-pet-root .onboarding-disclosure__dismiss:hover:not(:disabled) {
+  color: var(--color-text-primary);
 }
 
 html[data-companion-theme] .desktop-pet-root .onboarding-card--calm .onboarding-section__intro h2,

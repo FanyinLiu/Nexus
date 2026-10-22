@@ -20,7 +20,7 @@
     0 0 20px rgba(109, 168, 239, 0.14);
 }
 
-.desktop-pet-root .onboarding-card__header.onboarding-card__header--disclosure {
+.onboarding-card__header.onboarding-card__header--disclosure {
   flex-direction: row;
   align-items: center;
   gap: 12px;
@@ -37,19 +37,22 @@
 
 .onboarding-disclosure__dismiss {
   min-height: auto;
+  margin-left: auto;
+  align-self: center;
   border: 0;
   padding: 0;
   background: transparent;
-  color: #eab35e;
+  color: rgba(225, 231, 241, 0.62);
   font: inherit;
-  font-size: 14px;
-  font-weight: 680;
+  font-size: 13px;
+  font-weight: 560;
   line-height: 1.4;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .onboarding-disclosure__dismiss:hover:not(:disabled) {
-  color: #f2c779;
+  color: rgba(245, 247, 251, 0.92);
 }
 
 .onboarding-disclosure__dismiss:focus-visible,
@@ -218,7 +221,7 @@
   box-shadow: 0 20px 52px rgba(0, 7, 17, 0.66);
 }
 
-.desktop-pet-root .onboarding-card__header--calm {
+.onboarding-card__header--calm {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;

@@ -16,10 +16,21 @@
   to { opacity: 1; }
 }
 
+.onboarding-backdrop--calm {
+  /* First-use setup is hosted in both the pet and panel windows. Both are
+     transparent, so only the card should float over the desktop; a
+     window-filling scrim reads as a grey slab above and below it. */
+  background: transparent;
+  backdrop-filter: none;
+}
+
 .onboarding-backdrop--pet {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 34%),
-    rgba(8, 8, 10, 0.28);
+  /* Let empty space belong to the pet window instead of swallowing clicks. */
+  pointer-events: none;
+}
+
+.onboarding-backdrop--pet .onboarding-card {
+  pointer-events: auto;
 }
 
 .onboarding-card {

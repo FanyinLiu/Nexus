@@ -45,6 +45,16 @@
   container-type: inline-size;
 }
 
+.nexus-panel-v2[data-onboarding-open='true'] > :is(
+  .nexus-panel-v2__experience,
+  .nexus-panel-v2__safety-layer,
+  button
+) {
+  /* The first-use guide floats over a transparent window; hide the inert
+     panel surface so its utility chrome cannot leak through the gap. */
+  visibility: hidden;
+}
+
 .nexus-panel-v2__experience--collapsed .nexus-panel-v2__stage {
   visibility: hidden;
   pointer-events: none;

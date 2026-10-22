@@ -317,6 +317,7 @@ export function CompanionPanelV2({
       className={`nexus-panel-v2${panelCollapsed ? ' nexus-panel-v2--collapsed' : ''}`}
       data-phase={phase}
       data-utility-open={utilityOpen ? 'true' : 'false'}
+      data-onboarding-open={onboardingGuide ? 'true' : undefined}
     >
       <div
         className={`nexus-panel-v2__experience${panelCollapsed ? ' nexus-panel-v2__experience--collapsed' : ''}`}
