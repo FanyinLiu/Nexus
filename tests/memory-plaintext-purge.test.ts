@@ -246,14 +246,14 @@ test('stored delete and clear all leave the wording out of the memory data dir',
 })
 
 test('a delete drops the vector row and a clear asks the vector store for the wipe', () => {
-  const calls: Array<{ kind: 'remove', ids: string[] } | { kind: 'clear' }> = []
+  const calls: Array<{ kind: 'remove', ids: string[] } | { kind: 'clear', needles: string[] }> = []
   installStorage({}, {
     memoryVectorRemove: (payload: { ids?: string[] }) => {
       calls.push({ kind: 'remove', ids: payload.ids ?? [] })
       return Promise.resolve({ ok: true, count: 1 })
     },
-    memoryVectorClear: () => {
-      calls.push({ kind: 'clear' })
+    memoryVectorClear: (payload?: { needles?: string[] }) => {
+      calls.push({ kind: 'clear', needles: payload?.needles ?? [] })
       return Promise.resolve({ ok: true, removed: 0, localDataCleared: true })
     },
   })
@@ -264,6 +264,6 @@ test('a delete drops the vector row and a clear asks the vector store for the wi
 
   assert.deepEqual(calls, [
     { kind: 'remove', ids: ['mem-vector'] },
-    { kind: 'clear' },
+    { kind: 'clear', needles: [SECRET] },
   ])
 })

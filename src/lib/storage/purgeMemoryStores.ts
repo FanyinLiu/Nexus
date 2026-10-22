@@ -9,6 +9,8 @@
  */
 
 import { formatMemoriesForPersonaFile } from '../../features/memory/memoryPersistence.ts'
+import { scrubPendingGreetingResidue } from './pendingGreeting.ts'
+import { scrubPresenceMemoryResidue } from './presence.ts'
 import { ARCHIVE_STORAGE_KEY } from '../../features/memory/coldArchive.ts'
 import {
   clearDeletedMemorySession,
@@ -100,7 +102,7 @@ export function purgeClearedMemories(
   memories: readonly MemoryItem[],
   daily: DailyMemoryStore,
   at = new Date().toISOString(),
-): void {
+): Promise<unknown> | undefined {
   clearDeletedMemorySession()
   const needles = [
     ...memories.flatMap((memory) => memoryPlaintextNeedles(memory)),
@@ -115,7 +117,7 @@ export function purgeClearedMemories(
     at,
   })
   void refreshPersona(needles)
-  requestVectorPurge(memories.map((memory) => memory.id), true)
+  return requestVectorPurge(memories.map((memory) => memory.id), true, needles)
 }
 
 function applyPurge(request: MemoryPurgeRequest): void {
@@ -136,6 +138,8 @@ function applyPurge(request: MemoryPurgeRequest): void {
       storage.setItem(key, text)
     }
   }
+  scrubPresenceMemoryResidue(request.needles)
+  scrubPendingGreetingResidue(request.needles)
   window.dispatchEvent(new CustomEvent(MEMORY_PLAINTEXT_PURGED_EVENT, {
     detail: { ids: [...request.ids], needles: [...request.needles] },
   }))
@@ -164,14 +168,20 @@ async function refreshPersona(needles: readonly string[]): Promise<void> {
  * the snapshot and the database free pages go with the rows. A single
  * delete only removes those ids.
  */
-function requestVectorPurge(ids: readonly string[], clearAll: boolean): void {
+function requestVectorPurge(
+  ids: readonly string[],
+  clearAll: boolean,
+  needles: readonly string[] = [],
+): Promise<unknown> | undefined {
   const pet = window.desktopPet
-  if (!pet) return
+  if (!pet) return undefined
   if (clearAll && typeof pet.memoryVectorClear === 'function') {
-    void pet.memoryVectorClear().catch(() => undefined)
-    return
+    // The main process rewrites Chromium's storage logs. Without the
+    // needles it can empty the live rows and still leave the text on disk.
+    return pet.memoryVectorClear({ needles: [...needles] }).catch(() => undefined)
   }
   if (ids.length && pet.memoryVectorRemove) {
-    void pet.memoryVectorRemove({ ids: [...ids] }).catch(() => undefined)
+    return pet.memoryVectorRemove({ ids: [...ids] }).catch(() => undefined)
   }
+  return undefined
 }

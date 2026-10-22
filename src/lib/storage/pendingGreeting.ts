@@ -1,3 +1,4 @@
+import { textMentionsMemoryResidue } from '../../../shared/memoryResidue.js'
 import { readJson, writeJson } from './core.ts'
 
 const PENDING_GREETING_KEY = 'nexus:pending-companion-greeting'
@@ -24,4 +25,13 @@ export function takePendingGreeting(): string | null {
   }
   const text = stored?.greeting?.trim()
   return text || null
+}
+
+/** Drop a stashed card greeting that quotes a memory the user just cleared. */
+export function scrubPendingGreetingResidue(needles: readonly string[]): void {
+  if (typeof window === 'undefined' || !window.localStorage) return
+  const raw = window.localStorage.getItem(PENDING_GREETING_KEY)
+  if (raw && textMentionsMemoryResidue(raw, needles)) {
+    window.localStorage.removeItem(PENDING_GREETING_KEY)
+  }
 }

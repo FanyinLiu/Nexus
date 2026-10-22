@@ -61,6 +61,20 @@ const memoryHybridSearchSchema = {
   },
 }
 
+const memoryClearUserDataSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    needles: {
+      type: 'array',
+      optional: true,
+      maxItems: 2_000,
+      items: { type: 'string', maxLength: BODY_TEXT_MAX },
+    },
+  },
+}
+
 const memoryRemoveSchema = {
   type: 'object',
   optional: true,
@@ -178,6 +192,10 @@ export function validateMemoryHybridSearchPayload(payload) {
 
 export function validateMemoryRemovePayload(payload) {
   return validateIpcPayload('memory:vector-remove', payload, memoryRemoveSchema)
+}
+
+export function validateMemoryClearUserDataPayload(payload) {
+  return validateIpcPayload('memory:clear-user-data', payload, memoryClearUserDataSchema)
 }
 
 export function validateSkillSavePayload(payload) {
