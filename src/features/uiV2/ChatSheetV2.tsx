@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { LoopOutreachNote } from '../../components/LoopOutreachNote.tsx'
+import { loopNoteProps } from '../../components/loopNoteProps.ts'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
 import type { ChatMessage } from '../../types/chat.ts'
 import { useModalFocusTrap } from '../../hooks/useModalFocusTrap.ts'
@@ -331,10 +332,7 @@ export function ChatSheetV2({
                   {card ? (
                     <LoopOutreachNote
                       body={message.content}
-                      messageId={message.id}
-                      loopOffer={message.loopOffer}
-                      loopCheck={message.loopCheck}
-                      proactiveWhy={message.proactiveWhy}
+                      {...loopNoteProps(message)}
                     />
                   ) : (
                     <>
