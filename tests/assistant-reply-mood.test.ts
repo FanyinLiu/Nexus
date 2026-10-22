@@ -59,12 +59,30 @@ beforeEach(() => {
   })
 })
 
-function createRunner(replyContent: string) {
+type SpeechPath = 'off' | 'direct' | 'streaming'
+
+function createRunner(replyContent: string, speech: SpeechPath = 'off') {
   const moods: string[] = []
+  let resolveStream = () => {}
+  const streamDone = new Promise<void>((resolve) => { resolveStream = resolve })
+  let streamStarted = false
+  const streamingController = {
+    pushDelta() { streamStarted = true },
+    flushPending() {},
+    finish() {
+      streamStarted = true
+      resolveStream()
+    },
+    waitForCompletion() {
+      return streamDone.then(() => { moods.push('idle') })
+    },
+    hasStarted() { return streamStarted },
+    abort() { resolveStream() },
+  }
   const ctx = {
     loadDesktopContextSnapshot: async () => null,
     suppressVoiceReplyRef: { current: false },
-    beginStreamingSpeechReply: () => null,
+    beginStreamingSpeechReply: () => (speech === 'streaming' ? streamingController : null),
     setMood: (mood: string) => { moods.push(mood) },
     busEmit: () => {},
     updateVoicePipeline: () => {},
@@ -78,7 +96,13 @@ function createRunner(replyContent: string) {
     onAssistantReplyDelivered: () => {},
     settingsRef: { current: null },
     setSettings: () => {},
-    speakAssistantReply: async () => {},
+    speakAssistantReply: async () => {
+      // The voice bus forces a smile while audio plays, then idle when it ends.
+      if (speech === 'direct') {
+        moods.push('happy')
+        moods.push('idle')
+      }
+    },
   }
 
   const runner = createAssistantReplyRunner({
@@ -99,10 +123,10 @@ function createRunner(replyContent: string) {
   return { runner, moods }
 }
 
-function makeOptions() {
+function makeOptions(speech: SpeechPath = 'off') {
   const currentSettings: AppSettings = {
     ...loadSettings(),
-    speechOutputEnabled: false,
+    speechOutputEnabled: speech !== 'off',
     chatFailoverEnabled: false,
   }
   const nextMessages: ChatMessage[] = [{
@@ -127,10 +151,12 @@ function makeOptions() {
   }
 }
 
-async function runReply(replyContent: string) {
-  const { runner, moods } = createRunner(replyContent)
-  const result = await runner(makeOptions())
-  // The reply mood lands after the turn reset the face to idle.
+async function runReply(replyContent: string, speech: SpeechPath = 'off') {
+  const { runner, moods } = createRunner(replyContent, speech)
+  const result = await runner(makeOptions(speech))
+  // The reply mood is applied on a later turn so it wins over tts:completed.
+  // Streaming playback schedules that turn from a microtask, so wait twice.
+  await new Promise((resolve) => setTimeout(resolve, 0))
   await new Promise((resolve) => setTimeout(resolve, 0))
   return { result, moods }
 }
@@ -157,4 +183,30 @@ test('a reply that reads a happy user keeps a smiling face', async () => {
   assert.equal(result, true)
   assert.equal(moods.length, 1)
   assert.equal(SMILING.has(moods[0]), true, moods[0])
+})
+
+test('spoken replies wear the reply mood after playback resets the face', async () => {
+  const sad = await runReply("I'm sorry you're going through this. That sounds really hard.", 'direct')
+  assert.equal(sad.result, true)
+  assert.deepEqual(sad.moods, ['happy', 'idle', 'worried'])
+
+  const polite = await runReply("I'm sorry, I can't find that file.", 'direct')
+  assert.equal(polite.result, true)
+  assert.deepEqual(polite.moods, ['happy', 'idle', 'idle'])
+
+  const cheerful = await runReply('Nice to see you! [mood:happy]', 'direct')
+  assert.equal(cheerful.result, true)
+  assert.equal(SMILING.has(cheerful.moods.at(-1) ?? ''), true, cheerful.moods.join(','))
+  assert.notEqual(cheerful.moods.at(-1), 'idle')
+})
+
+test('streaming speech applies the reply mood after playback ends', async () => {
+  const { result, moods } = await runReply(
+    "I'm sorry you're going through this. That sounds really hard.",
+    'streaming',
+  )
+
+  assert.equal(result, true)
+  assert.equal(moods.at(-1), 'worried', moods.join(','))
+  assert.equal(moods.includes('idle'), true)
 })

@@ -279,6 +279,13 @@ export async function postProcessAssistantReply(
   const handledByStreamingTts = Boolean(activeStreamingTtsController)
   let shouldFallbackToDirectSpeech = false
   let ttsWaitTimedOut = false
+  // session:completed and tts:completed both force idle (tts:started forces
+  // happy while the voice is playing). The reply mood has to land after
+  // those resets, on every path, or the face depends on whether voice is on.
+  const moodToApply = replyMood ?? 'idle'
+  const applyReplyMood = () => {
+    window.setTimeout(() => dependencies.ctx.setMood(moodToApply), 0)
+  }
 
   if (handledByStreamingTts) {
     const streamingSpeechController = activeStreamingTtsController!
@@ -391,12 +398,19 @@ export async function postProcessAssistantReply(
     } else {
       dependencies.ctx.busEmit({ type: 'session:completed' })
     }
-    // session:completed, and the turn finally that emits it again while
-    // voice is still 'processing', both force idle before this async
-    // function's caller resumes. The reply mood has to land after those
-    // resets or a sad reply snaps back to the idle face.
-    const moodToApply = replyMood ?? 'idle'
-    window.setTimeout(() => dependencies.ctx.setMood(moodToApply), 0)
+  }
+
+  const streamingStillPlaying = handledByStreamingTts
+    && !shouldFallbackToDirectSpeech
+    && (ttsWaitTimedOut || activeStreamingTtsController?.hasStarted() === true)
+  if (streamingStillPlaying && activeStreamingTtsController) {
+    // The 12s wait can return while playback continues. Apply the face
+    // when playback actually ends, after tts:completed resets it to idle.
+    void activeStreamingTtsController.waitForCompletion()
+      .catch(() => undefined)
+      .then(applyReplyMood)
+  } else {
+    applyReplyMood()
   }
 
   return true
