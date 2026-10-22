@@ -2,13 +2,13 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 
 /** en messages — namespace `onboarding`. */
 export const enOnboarding = {
-  'model_setup.eyebrow': 'First launch',
-  'model_setup.title': 'Install local voice models',
-  'model_setup.body_prefix': 'Wake word and transcription need a few local models downloaded first.',
+  'model_setup.eyebrow': 'Voice',
+  'model_setup.title': 'Install voice models',
+  'model_setup.body_prefix': 'Once they’re in, I can hear you call me and understand what you say. They live on your computer, no account needed.',
   'model_setup.model.vad.name': 'Speech detection',
   'model_setup.model.vad.purpose': 'Hears when you start and stop talking.',
   'model_setup.dismiss': 'Maybe later',
-  'model_setup.network_hf_unreachable': 'HuggingFace is not directly reachable — we will prefer GitHub Releases / ModelScope mirrors.',
+  'model_setup.network_hf_unreachable': 'The usual download source isn’t reachable, so another one will be used automatically.',
   'model_setup.required_heading': 'Required models',
   'model_setup.optional_heading': 'Optional models',
   'model_setup.optional_tag': 'Optional',

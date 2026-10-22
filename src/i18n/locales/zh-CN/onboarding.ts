@@ -1,12 +1,12 @@
 /** zh-CN messages — namespace `onboarding`. */
 export const zhCNOnboarding = {
-  'model_setup.eyebrow': '首次启动',
-  'model_setup.title': '安装本地语音模型',
-  'model_setup.body_prefix': '语音唤醒和转写需要先下载几个本地模型。',
+  'model_setup.eyebrow': '语音',
+  'model_setup.title': '安装语音模型',
+  'model_setup.body_prefix': '装好后，你喊我、跟我说话，我都能听懂。模型就放在你的电脑上，不用注册账号。',
   'model_setup.model.vad.name': '说话检测模型',
   'model_setup.model.vad.purpose': '听出你什么时候开始和停止说话。',
   'model_setup.dismiss': '稍后再说',
-  'model_setup.network_hf_unreachable': '检测到 HuggingFace 不可直连，将优先使用 GitHub Releases / ModelScope 国内镜像。',
+  'model_setup.network_hf_unreachable': '默认的下载地址连不上，会自动换一个连得上的。',
   'model_setup.required_heading': '必需模型',
   'model_setup.optional_heading': '可选模型',
   'model_setup.optional_tag': '可选',

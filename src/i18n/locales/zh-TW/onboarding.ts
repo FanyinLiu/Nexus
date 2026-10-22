@@ -2,13 +2,13 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 
 /** zh-TW messages — namespace `onboarding`. */
 export const zhTWOnboarding = {
-  'model_setup.eyebrow': '首次啟動',
-  'model_setup.title': '安裝本機語音模型',
-  'model_setup.body_prefix': '語音喚醒和轉寫需要先下載幾個本機模型。',
+  'model_setup.eyebrow': '語音',
+  'model_setup.title': '安裝語音模型',
+  'model_setup.body_prefix': '裝好後，你叫我、跟我說話，我都能聽懂。模型就放在你的電腦上，不用註冊帳號。',
   'model_setup.model.vad.name': '說話偵測模型',
   'model_setup.model.vad.purpose': '聽出你什麼時候開始和停止說話。',
   'model_setup.dismiss': '稍後再說',
-  'model_setup.network_hf_unreachable': '偵測到 HuggingFace 無法直連，將優先使用 GitHub Releases / ModelScope 鏡像。',
+  'model_setup.network_hf_unreachable': '預設的下載位址連不上，會自動換一個連得上的。',
   'model_setup.required_heading': '必需模型',
   'model_setup.optional_heading': '可選模型',
   'model_setup.optional_tag': '可選',

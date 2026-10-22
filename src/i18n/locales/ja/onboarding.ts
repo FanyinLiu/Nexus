@@ -2,13 +2,13 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 
 /** ja messages — namespace `onboarding`. */
 export const jaOnboarding = {
-  'model_setup.eyebrow': '初回起動',
-  'model_setup.title': 'ローカル音声モデルのインストール',
-  'model_setup.body_prefix': '音声で呼び出すにも、話した内容を文字にするにも、先にいくつかのローカルモデルが必要です。',
+  'model_setup.eyebrow': '音声',
+  'model_setup.title': '音声モデルを入れる',
+  'model_setup.body_prefix': '入れておけば、呼びかけも話しかけもちゃんと聞き取れるよ。モデルはこのパソコンの中に置くから、アカウント登録はいらないよ。',
   'model_setup.model.vad.name': '発話検出',
   'model_setup.model.vad.purpose': '話し始めと話し終わりを聞き取ります。',
   'model_setup.dismiss': 'あとで',
-  'model_setup.network_hf_unreachable': 'HuggingFace に直接アクセスできないため、GitHub Releases / ModelScope ミラーを優先します。',
+  'model_setup.network_hf_unreachable': 'いつものダウンロード先につながらないから、別のところから自動でダウンロードするね。',
   'model_setup.required_heading': '必須モデル',
   'model_setup.optional_heading': 'オプションモデル',
   'model_setup.optional_tag': '任意',
