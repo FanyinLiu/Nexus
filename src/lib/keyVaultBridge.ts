@@ -1,5 +1,6 @@
 import type { AppSettings } from '../types'
 import { isVaultRef } from '../../shared/vaultRefs.js'
+import { canUsePanelOnlyBridge } from './windowCapability.ts'
 
 /**
  * Maps settings field names to vault slot names for API key encryption.
@@ -48,13 +49,22 @@ function isDesktopEnvironment(): boolean {
 }
 
 /**
+ * Vault IPC is panel-only. Reading it from the pet window is always rejected,
+ * so its settings hydration must fall back to the stripped local snapshot.
+ */
+async function canUseDesktopVault(): Promise<boolean> {
+  if (!isDesktopEnvironment()) return false
+  return canUsePanelOnlyBridge()
+}
+
+/**
  * Migrate plaintext keys from a loaded settings object into the vault,
  * then return a copy with key fields cleared.
  *
  * Call once on first load when vault is empty but localStorage has keys.
  */
 export async function migrateKeysToVault(settings: AppSettings): Promise<AppSettings> {
-  if (!isDesktopEnvironment()) return settings
+  if (!(await canUseDesktopVault())) return settings
 
   const entries: Record<string, string> = {}
 
@@ -81,7 +91,7 @@ export async function migrateKeysToVault(settings: AppSettings): Promise<AppSett
  * Used after loadSettings() to hydrate the in-memory settings object.
  */
 export async function hydrateSettingsKeys(settings: AppSettings): Promise<AppSettings> {
-  if (!isDesktopEnvironment()) return settings
+  if (!(await canUseDesktopVault())) return settings
 
   const slots = SETTINGS_KEY_FIELDS.map((f) => settingsSlot(f))
   const profileSlots = collectProfileSlots(settings)
@@ -111,7 +121,7 @@ export async function hydrateSettingsKeys(settings: AppSettings): Promise<AppSet
  * Used before saveSettings() to strip secrets from localStorage.
  */
 export async function dehydrateSettingsKeys(settings: AppSettings): Promise<AppSettings> {
-  if (!isDesktopEnvironment()) return settings
+  if (!(await canUseDesktopVault())) return settings
 
   const entries: Record<string, string> = {}
 

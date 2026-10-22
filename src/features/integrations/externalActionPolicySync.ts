@@ -1,4 +1,5 @@
 import type { AppSettings, IntegrationPermissionMode } from '../../types'
+import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
 
 type ExternalActionIntegrationId = 'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp'
 
@@ -69,5 +70,8 @@ export function buildExternalActionPolicySyncPayload(settings: AppSettings): Ext
 export async function syncExternalActionPolicyToMain(settings: AppSettings): Promise<void> {
   const sync = typeof window !== 'undefined' ? window.desktopPet?.externalActionPolicySync : undefined
   if (!sync) return
+  // The policy channel is panel-only; pet-subscriber hydration must not emit
+  // an IPC call that the main process is required to reject.
+  if (!(await canUsePanelOnlyBridge())) return
   await sync(buildExternalActionPolicySyncPayload(settings))
 }

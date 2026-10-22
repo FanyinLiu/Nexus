@@ -422,7 +422,7 @@ test('Live2DCanvas wires ownership coordinator and does not set React state in c
   assert.match(canvasSource, /paused\?: boolean/)
   assert.match(canvasSource, /const pausedRef = useRef\(paused\)/)
   assert.match(canvasSource, /paused: pausedRef\.current/)
-  assert.match(canvasSource, /syncPlayback\(app, isDisposed\(\)\)/)
+  assert.match(canvasSource, /planLive2DVisibilityRecovery/)
   assert.match(canvasSource, /pausedRef\.current = paused[\s\S]*?syncPlayback\(appRef\.current, false\)/)
   const bootEffect = canvasSource.match(
     /useEffect\(\(\) => \{\s*const ownership =([\s\S]*?)\n\s{2}\}, \[([\s\S]*?)\n\s{2}\]\)/,
