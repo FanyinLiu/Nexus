@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   dragBy: (delta) => ipcRenderer.invoke('window:drag-by', delta),
   openPanel: (section) => ipcRenderer.invoke('window:open-panel', section),
   requestModelSetup: (options) => ipcRenderer.invoke('window:request-model-setup', options),
-  claimModelSetupReminder: () => ipcRenderer.invoke('window:claim-model-setup-reminder'),
+  claimModelSetupReminder: (options) => ipcRenderer.invoke('window:claim-model-setup-reminder', options),
   ...(panelView ? {
     consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
     declineModelSetup: () => ipcRenderer.invoke('window:decline-model-setup'),

@@ -173,6 +173,23 @@ export function validateMediaSessionControlPayload(payload) {
   return validateIpcPayload('media-session:control', payload, mediaSessionControlSchema)
 }
 
+const modelSetupReminderSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    peek: optionalBoolean,
+  },
+}
+
 export function validateModelSetupRequestPayload(payload) {
   return validateIpcPayload('window:request-model-setup', payload, modelSetupRequestSchema)
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ peek?: boolean }}
+ */
+export function validateModelSetupReminderPayload(payload) {
+  return validateIpcPayload('window:claim-model-setup-reminder', payload, modelSetupReminderSchema)
 }

@@ -7,7 +7,7 @@ export const zhCNOnboarding = {
   'model_setup.model.vad.purpose': '听出你什么时候开始和停止说话。',
   'model_setup.dismiss': '稍后再说',
   'model_setup.dismiss_hint': '先跳过也行 —— 下次想说话的时候我再提醒你一次。',
-  'model_setup.deferred_reminder': '还没装语音模型呢 —— 装上就能直接跟我说话啦。',
+  'model_setup.deferred_reminder': '想用语音的话，去「设置 → 语音 → 高级」点「下载缺失模型」就行。',
   'model_setup.network_hf_unreachable': '检测到 HuggingFace 不可直连，将优先使用 GitHub Releases / ModelScope 国内镜像。',
   'model_setup.required_heading': '必需模型',
   'model_setup.optional_heading': '可选模型',

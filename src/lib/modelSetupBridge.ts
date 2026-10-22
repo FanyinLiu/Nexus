@@ -69,7 +69,8 @@ export async function requestModelSetupForVoiceUse(view: WindowView): Promise<Mo
 
 /**
  * Reads the installer's deferral state from the main process. The refusal and
- * the one reminder it owes live there, so every window answers the same way.
+ * the one reminder it owes live there, on disk, so every window — and the
+ * next launch — answers the same way.
  */
 async function readModelSetupDeferral(): Promise<ModelSetupDeferral> {
   const claim = window.desktopPet?.claimModelSetupReminder

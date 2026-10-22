@@ -8,17 +8,25 @@
  * off, installer dismissed) takes it back.
  *
  * The installer also has a "maybe later" answer. A decline is stronger than a
- * cancel: it is the user saying "do not offer this again", so the gate stops
- * delivering for the rest of the session. Without that latch every later voice
- * action would raise the chat panel again and replay the request.
+ * cancel: it is the user saying "do not offer this again". The gate reads
+ * that refusal from its own store at startup and stops delivering, including
+ * after a restart. Without that latch every later voice action would raise
+ * the chat panel again and replay the request. The renderer never supplies
+ * the flag — a request payload cannot clear it.
  */
 
+/** Only an explicit true is a refusal or a spent reminder. */
+function readDeferralFlag(record, key) {
+  return Boolean(record && typeof record === 'object' && record[key] === true)
+}
+
 /**
- * Schedules `task` and returns a cancellable handle. Injectable for tests.
  * @param {{
  *   deliver?: () => void,
  *   schedule?: (task: () => void, delayMs: number) => unknown,
  *   cancelSchedule?: (handle: unknown) => void,
+ *   loadDeferral?: () => { declined?: boolean, reminded?: boolean },
+ *   saveDeferral?: (state: { declined: boolean, reminded: boolean }) => unknown,
  * }} [dependencies]
  */
 export function createModelSetupRequestGate(dependencies = {}) {
@@ -26,15 +34,36 @@ export function createModelSetupRequestGate(dependencies = {}) {
     deliver,
     schedule = (task, delayMs) => setTimeout(task, delayMs),
     cancelSchedule = (handle) => clearTimeout(handle),
+    loadDeferral = () => ({ declined: false, reminded: false }),
+    saveDeferral = () => {},
   } = dependencies
   // A request that already reached the panel and waits to be claimed.
   let delivered = false
   // A request whose delay has not elapsed yet.
   let timer = null
+  // Loaded before any request is accepted. A throw or a non-boolean is
+  // "not declined": hiding the installer requires an explicit true.
+  let loadedDeferral
+  try {
+    loadedDeferral = loadDeferral()
+  } catch {
+    loadedDeferral = null
+  }
   // The user answered "maybe later" in the installer.
-  let declined = false
+  let declined = readDeferralFlag(loadedDeferral, 'declined')
   // The single reminder that refusal owes the user.
-  let reminded = false
+  let reminded = readDeferralFlag(loadedDeferral, 'reminded')
+  // Disk writes run one at a time so an older snapshot cannot land last.
+  let persistTail = Promise.resolve()
+
+  const persist = () => {
+    const snapshot = { declined, reminded }
+    persistTail = persistTail
+      .catch(() => undefined)
+      .then(() => saveDeferral(snapshot))
+      .then(() => undefined, () => undefined)
+    return persistTail
+  }
 
   const clearTimer = () => {
     if (timer === null) return
@@ -70,26 +99,44 @@ export function createModelSetupRequestGate(dependencies = {}) {
     },
     /**
      * Records the "maybe later" answer: the pending request is retracted and
-     * no later request reaches the panel.
+     * no later request reaches the panel. The refusal is written to disk.
      */
     decline() {
       declined = true
       clearTimer()
       delivered = false
+      void persist()
     },
-    /** Whether the user declined the installer in this session. */
+    /** Whether the user declined the installer, including after a restart. */
     isDeclined() {
       return declined
     },
     /**
+     * Whether the refusal still owes its one reminder. Does not spend it.
+     * @returns {boolean}
+     */
+    isReminderOwed() {
+      return declined && !reminded
+    },
+    /**
      * Claims the one reminder the refusal owes. The first claim after a
      * refusal returns true, every later claim returns false: the installer
-     * promises a single nudge, not a lecture.
+     * promises a single nudge, not a lecture. The spent flag is written
+     * to disk, so a restart cannot show the reminder twice or skip it
+     * when it has not been shown yet.
      */
     claimReminder() {
       if (!declined || reminded) return false
       reminded = true
+      void persist()
       return true
+    },
+    /**
+     * Resolves when the latest refusal or reminder write has settled.
+     * @returns {Promise<void>}
+     */
+    whenPersisted() {
+      return persistTail
     },
     /** Retracts a delayed or delivered request (wake-word switched off). */
     cancel() {

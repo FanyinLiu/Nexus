@@ -26,7 +26,8 @@ import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
 import {
-  resolveCompanionSurfaceCaption,
+  captionPhaseForCompanionNotice,
+  resolveFramelessCompanionCaption,
   resolveCompanionSurfaceBasePhase,
   useCompanionSurfacePhase,
   type CompanionSurfacePhase,
@@ -202,8 +203,10 @@ export function FramelessCompanionSurface({
     if (touchTimeoutRef.current !== null) window.clearTimeout(touchTimeoutRef.current)
   }, [])
 
-  const nextCaption = captionOverride ?? resolveCompanionSurfaceCaption({
+  const nextCaption = resolveFramelessCompanionCaption({
+    captionOverride,
     phase,
+    petDialogBubble: chat.petDialogBubble,
     assistantReply: phase === 'error' || phase === 'offline'
       ? undefined
       : chat.petDialogBubble?.content,
@@ -212,7 +215,14 @@ export function FramelessCompanionSurface({
     errorRecovery: ti('ui_v2.error_recovery'),
     offlineRecovery: ti('ui_v2.offline_recovery'),
   })
-  const caption = useReadableCaption(nextCaption, phase, captionPaused)
+  const hasPriorityNotice = Boolean(
+    chat.petDialogBubble?.replacesSurfaceError && chat.petDialogBubble.content?.trim(),
+  )
+  const caption = useReadableCaption(
+    nextCaption,
+    captionPhaseForCompanionNotice(phase, hasPriorityNotice),
+    captionPaused,
+  )
   const showCaption = Boolean(caption)
 
   const voiceActionLabel = phase === 'error' || phase === 'offline'

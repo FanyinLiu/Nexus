@@ -26,7 +26,18 @@ function testState() {
 }
 `
 
-const ELECTRON_STUB = `${STATE_PRELUDE}
+const ELECTRON_STUB = `
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+${STATE_PRELUDE}
+export const app = {
+  getPath() {
+    const state = testState()
+    if (!state.userData) state.userData = mkdtempSync(join(tmpdir(), 'nexus-window-ipc-'))
+    return state.userData
+  },
+}
 export const ipcMain = {
   handle(channel, listener) {
     testState().handlers.set(channel, listener)

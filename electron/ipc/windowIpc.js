@@ -1,4 +1,5 @@
-import { BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import path from 'node:path'
 import {
   mainWindow,
   panelWindow,
@@ -63,6 +64,7 @@ import {
   validateExternalLinkToolPayload,
   validateIntegrationInspectPayload,
   validateMediaSessionControlPayload,
+  validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
@@ -75,6 +77,7 @@ import {
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from './payloadSchemas.js'
+import { createModelSetupDeferralStore, MODEL_SETUP_DEFERRAL_FILE_NAME } from '../services/modelSetupDeferralStore.js'
 import { createModelSetupRequestGate } from '../services/modelSetupRequestGate.js'
 import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
@@ -174,11 +177,18 @@ function emitModelSetupRequest() {
   panelWindow.webContents.send('models:setup-requested')
 }
 
+// The refusal is read here, in the main process, before any request can
+// raise the panel. The renderer cannot clear it.
+const modelSetupDeferralStore = createModelSetupDeferralStore({
+  getStorePath: () => path.join(app.getPath('userData'), MODEL_SETUP_DEFERRAL_FILE_NAME),
+})
 const modelSetupRequestGate = createModelSetupRequestGate({
   deliver: () => {
     showPanelWindow('chat')
     emitModelSetupRequest()
   },
+  loadDeferral: () => modelSetupDeferralStore.load(),
+  saveDeferral: (state) => modelSetupDeferralStore.save(state),
 })
 
 export function register() {
@@ -219,21 +229,33 @@ export function register() {
   })
 
   // The user answered "maybe later" in the installer. The gate keeps that
-  // refusal, so a later voice action cannot raise the panel for the
-  // installer again.
+  // refusal on disk, so a later voice action cannot raise the panel for
+  // the installer again — including after a restart.
   ipcMain.handle('window:decline-model-setup', (event) => {
     requireTrustedSender(event)
     modelSetupRequestGate.decline()
+    return modelSetupRequestGate.whenPersisted()
   })
 
   // The voice path asks whether the installer was refused, and whether the
   // single reminder that refusal owes is still waiting for the user.
-  ipcMain.handle('window:claim-model-setup-reminder', (event) => {
+  // `peek` reads that without spending the reminder (the installer dialog
+  // uses it to stay closed). Spending the reminder waits until the write
+  // lands, so a restart cannot show it twice.
+  ipcMain.handle('window:claim-model-setup-reminder', (event, payload) => {
     requireTrustedSender(event)
-    return {
-      declined: modelSetupRequestGate.isDeclined(),
-      remind: modelSetupRequestGate.claimReminder(),
+    payload = validateModelSetupReminderPayload(payload)
+    if (payload.peek === true) {
+      return {
+        declined: modelSetupRequestGate.isDeclined(),
+        remind: modelSetupRequestGate.isReminderOwed(),
+      }
     }
+    const remind = modelSetupRequestGate.claimReminder()
+    return modelSetupRequestGate.whenPersisted().then(() => ({
+      declined: modelSetupRequestGate.isDeclined(),
+      remind,
+    }))
   })
 
   ipcMain.handle('window:consume-model-setup-request', (event) => {

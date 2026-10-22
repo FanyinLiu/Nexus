@@ -105,6 +105,19 @@ export function ModelSetupOverlay({
 
   useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
 
+  // sessionStorage only lasts for this page. The refusal itself is on disk
+  // in the main process; peeking it (without spending the reminder) keeps
+  // the dialog closed after a restart even if a request is replayed.
+  useEffect(() => {
+    let cancelled = false
+    const claim = window.desktopPet?.claimModelSetupReminder
+    if (!claim) return undefined
+    void claim({ peek: true }).then((state) => {
+      if (!cancelled && state?.declined === true) setDismissed(true)
+    }).catch(() => undefined)
+    return () => { cancelled = true }
+  }, [])
+
   useEffect(() => {
     const unsubscribe = window.desktopPet?.subscribeModelsProgress?.((event: ProgressEvent) => {
       setProgress((prev) => mergeModelProgress(prev, event))

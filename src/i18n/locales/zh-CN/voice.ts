@@ -45,7 +45,7 @@ export const zhCNVoice = {
   'voice.provider.sensevoice.node_missing': 'sherpa-onnx-node 未安装，请运行 npm install 后重试。',
   'voice.provider.sensevoice.node_missing_detail': 'sherpa-onnx-node 未安装，请先运行 npm install sherpa-onnx-node。',
   'voice.provider.sensevoice.model_missing': 'SenseVoice 尚未安装。可在语音设置里下载，或改用云端语音识别。',
-  'voice.provider.sensevoice.not_installed': '本地语音识别尚未安装。请到语音设置下载 SenseVoice，或先关闭语音输入。',
+  'voice.provider.sensevoice.not_installed': '想用语音的话，去「设置 → 语音 → 高级」点「下载缺失模型」就行。',
   'voice.provider.sensevoice.fallback_cloud': 'SenseVoice 尚未安装，这一轮改用你配置的云端语音识别。',
   'voice.provider.sensevoice.model_location_hint': '在 {modelsDir} 下还没有 SenseVoice。请到语音设置里下载。',
   'voice.provider.api.connect_required': '当前环境未连接桌面客户端，无法使用内置语音识别。',

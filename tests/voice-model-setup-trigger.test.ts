@@ -16,11 +16,16 @@ const {
 
 function createLifecycle(
   view: 'pet' | 'panel',
-  options: { onReminder?: (content: string) => void } = {},
+  options: {
+    onReminder?: (content: string, notice?: { replacesSurfaceError?: boolean }) => void
+    onError?: (error: string | null) => void
+    onStatus?: (message: string) => void
+    speechInputProviderId?: string
+  } = {},
 ) {
   const settings = {
     speechInputEnabled: false,
-    speechInputProviderId: '',
+    speechInputProviderId: options.speechInputProviderId ?? '',
     speechOutputEnabled: false,
     voiceActivityDetectionEnabled: false,
   } as AppSettings
@@ -69,7 +74,7 @@ function createLifecycle(
       busyRef: { current: false },
       markPresenceActivity: () => {},
       setMood: () => {},
-      setError: () => {},
+      setError: (error: string | null) => { options.onError?.(error) },
     },
     refs,
     setters: {
@@ -80,8 +85,11 @@ function createLifecycle(
       ti: (key: string) => key,
       clearPendingVoiceRestart: () => {},
       updateVoicePipeline: () => {},
-      showPetStatus: () => {},
-      presentCompanionNotice: (content: string) => { options.onReminder?.(content) },
+      showPetStatus: (message: string) => { options.onStatus?.(message) },
+      presentCompanionNotice: (
+        content: string,
+        notice?: { replacesSurfaceError?: boolean },
+      ) => { options.onReminder?.(content, notice) },
       busEmit: () => {},
       ensureSupportedSpeechInputSettings: () => settings,
       appendVoiceTrace: () => {},
@@ -104,7 +112,10 @@ function createLifecycle(
 
 function installBridge(
   inventoryReady: boolean,
-  options: { gate?: ReturnType<typeof createModelSetupRequestGate> } = {},
+  options: {
+    gate?: ReturnType<typeof createModelSetupRequestGate>
+    senseVoice?: { installed: boolean; modelFound: boolean; modelsDir: string }
+  } = {},
 ) {
   let requests = 0
   const gate = options.gate
@@ -112,6 +123,11 @@ function installBridge(
     window: {
       desktopPet: {
         modelsGetInventory: async () => ({ ready: inventoryReady }),
+        sensevoiceStatus: async () => options.senseVoice ?? {
+          installed: false,
+          modelFound: false,
+          modelsDir: '',
+        },
         requestModelSetup: async () => { requests += 1 },
         // The refusal and the reminder it owes live in the main process.
         claimModelSetupReminder: async () => ({
@@ -177,6 +193,47 @@ test('a refused installer reminds once on the next voice action', async () => {
     'the reminder is owed only once',
   )
   assert.equal(bridge.getRequests(), 0, 'the refused installer stays closed')
+})
+
+test('a missing SenseVoice model shows the reminder instead of the error', async () => {
+  const gate = createModelSetupRequestGate({ deliver: () => {} })
+  gate.decline()
+
+  const reminders: Array<{ content: string; replacesSurfaceError?: boolean }> = []
+  const errors: Array<string | null> = []
+  const statuses: string[] = []
+  installBridge(false, {
+    gate,
+    senseVoice: { installed: true, modelFound: false, modelsDir: '/models' },
+  })
+  const lifecycle = createLifecycle('pet', {
+    speechInputProviderId: 'local-sensevoice',
+    onReminder: (content, notice) => {
+      reminders.push({ content, replacesSurfaceError: notice?.replacesSurfaceError })
+    },
+    onError: (error) => { errors.push(error) },
+    onStatus: (message) => { statuses.push(message) },
+  })
+
+  lifecycle.toggleVoiceConversation()
+  await flushAsyncWork()
+
+  assert.deepEqual(reminders, [{
+    content: 'model_setup.deferred_reminder',
+    replacesSurfaceError: true,
+  }])
+  assert.deepEqual(errors, [], 'the missing-model error is not raised beside the reminder')
+  assert.deepEqual(statuses, [], 'the missing-model status is not raised beside the reminder')
+
+  lifecycle.toggleVoiceConversation()
+  await flushAsyncWork()
+
+  assert.deepEqual(reminders, [{
+    content: 'model_setup.deferred_reminder',
+    replacesSurfaceError: true,
+  }], 'the reminder is owed only once')
+  assert.deepEqual(errors, ['voice.provider.sensevoice.not_installed'])
+  assert.deepEqual(statuses, ['voice.provider.sensevoice.not_installed'])
 })
 
 test('a voice action without a refusal offers the installer instead of reminding', async () => {

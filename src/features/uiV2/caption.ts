@@ -2,6 +2,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CompanionSurfacePhase } from './state.ts'
 
+/** Phases in which a new caption is allowed onto the pet bubble. */
+export function companionCaptionPhaseAcceptsText(phase: CompanionSurfacePhase): boolean {
+  return phase === 'speaking' || phase === 'done' || phase === 'error' || phase === 'offline'
+}
+
 export function getCaptionReadingDurationMs(text: string): number {
   const cjkCount = (text.match(/[\u3400-\u9fff\uf900-\ufaff]/g) ?? []).length
   const latinWordCount = text.replace(/[\u3400-\u9fff\uf900-\ufaff]/g, ' ').trim().split(/\s+/).filter(Boolean).length
@@ -21,7 +26,7 @@ export function useReadableCaption(
       setVisibleText('')
       return
     }
-    if (!nextText || (phase !== 'speaking' && phase !== 'done' && phase !== 'error' && phase !== 'offline')) return
+    if (!nextText || !companionCaptionPhaseAcceptsText(phase)) return
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     setVisibleText(nextText)
   }, [nextText, phase])

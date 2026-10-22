@@ -30,6 +30,23 @@ import type { ParaformerStreamSession } from '../../features/hearing/localParafo
 import type { TencentAsrStreamSession } from '../../features/hearing/tencentAsr.ts'
 import type { SenseVoiceStreamSession } from '../../features/hearing/localSenseVoice.ts'
 
+/**
+ * The reminder is the only line for this attempt. Setting the missing-model
+ * error as well makes the pet bubble show that error, then the generic
+ * recovery line, and the reminder never appears.
+ */
+async function modelSetupReminderReplacesMissingModelError(
+  modelSetupOutcome: Promise<{ remind: boolean }> | undefined,
+): Promise<boolean> {
+  if (!modelSetupOutcome) return false
+  try {
+    const outcome = await modelSetupOutcome
+    return outcome?.remind === true
+  } catch {
+    return false
+  }
+}
+
 type ShowPetStatus = (
   message: string,
   duration?: number,
@@ -92,6 +109,11 @@ export type StartVoiceConversationEntrypointOptions = {
   ) => Promise<void>
   startApiVoiceConversation: (options?: VoiceConversationOptions) => Promise<void>
   ti: Translator
+  /**
+   * Set only for a user-initiated start. The missing-model error waits for
+   * it so the one "maybe later" reminder can replace that error.
+   */
+  modelSetupOutcome?: Promise<{ remind: boolean }>
 }
 
 export type StopVoiceConversationEntrypointOptions = {
@@ -139,11 +161,12 @@ export function startVoiceConversationEntrypoint(
     // availability-check await would see sessionRef=null and race.
     if (params.paraformerStartingRef.current) return
     params.paraformerStartingRef.current = true
-    void checkParaformerAvailability().then((status) => {
+    void checkParaformerAvailability().then(async (status) => {
       if (!isParaformerSpeechInputProvider(params.settingsRef.current.speechInputProviderId)) {
         return
       }
       if (!status.installed || !status.modelFound) {
+        if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
         const msg = params.ti('voice.provider.paraformer.model_missing')
         params.setError(msg)
         params.showPetStatus(msg, 5_000)
@@ -165,7 +188,7 @@ export function startVoiceConversationEntrypoint(
   if (isSenseVoiceSpeechInputProvider(currentSettings.speechInputProviderId)) {
     if (params.sensevoiceStartingRef.current) return
     params.sensevoiceStartingRef.current = true
-    void checkSenseVoiceAvailability().then((status) => {
+    void checkSenseVoiceAvailability().then(async (status) => {
       if (!isSenseVoiceSpeechInputProvider(params.settingsRef.current.speechInputProviderId)) {
         return
       }
@@ -184,6 +207,7 @@ export function startVoiceConversationEntrypoint(
             }
           }
         }
+        if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
         const msg = !status.installed
           ? params.ti('voice.provider.sensevoice.node_missing')
           : params.ti('voice.provider.sensevoice.not_installed')

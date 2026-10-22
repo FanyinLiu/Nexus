@@ -28,6 +28,11 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     enginesHolder,
   } = bag
   const { ti } = hookCallbacks
+  // Handed to the single start that follows a user toggle, then cleared so
+  // a later automatic restart does not treat the reminder as still in flight.
+  const modelSetupOutcomeRef: { current: Promise<{ remind: boolean }> | undefined } = {
+    current: undefined,
+  }
 
   const bindings = expectHolderValue(
     bindingsHolder,
@@ -147,20 +152,30 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
 
     // Only user-initiated starts reach here; automatic restarts and
     // wake-word sessions call startVoiceConversation directly.
-    void requestModelSetupForVoiceUse(ctx.view).then((outcome) => {
+    // The promise is shared with the entrypoint so a missing-model error
+    // waits for this answer and stays quiet when the reminder replaces it.
+    const modelSetupOutcome = requestModelSetupForVoiceUse(ctx.view)
+    modelSetupOutcomeRef.current = modelSetupOutcome
+    void modelSetupOutcome.then((outcome) => {
       // The user refused the installer earlier. The refusal owes them one
-      // reminder, and this is the voice action that spends it.
+      // reminder, and this is the voice action that spends it. The line
+      // replaces the missing-model error instead of stacking under it.
       if (!outcome.remind) return
-      hookCallbacks.presentCompanionNotice?.(ti('model_setup.deferred_reminder'))
+      hookCallbacks.presentCompanionNotice?.(ti('model_setup.deferred_reminder'), {
+        replacesSurfaceError: true,
+      })
     })
     startVoiceConversation()
   }
 
   // ── startVoiceConversation ──────────────────────────────────────────────
   function startVoiceConversation(options?: VoiceConversationOptions) {
+    const modelSetupOutcome = modelSetupOutcomeRef.current
+    modelSetupOutcomeRef.current = undefined
     try {
       startVoiceConversationEntrypoint({
         options,
+        modelSetupOutcome,
         settingsRef: ctx.settingsRef,
         busyRef: ctx.busyRef,
         activeVoiceConversationOptionsRef: refs.activeVoiceConversationOptionsRef,

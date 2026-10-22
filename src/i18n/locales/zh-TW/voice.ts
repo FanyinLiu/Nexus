@@ -47,7 +47,7 @@ export const zhTWVoice = {
   'voice.provider.sensevoice.node_missing': 'sherpa-onnx-node 未安裝，請執行 npm install 後重試。',
   'voice.provider.sensevoice.node_missing_detail': 'sherpa-onnx-node 未安裝，請先執行 npm install sherpa-onnx-node。',
   'voice.provider.sensevoice.model_missing': 'SenseVoice 尚未安裝。可在語音設定裡下載，或改用雲端語音辨識。',
-  'voice.provider.sensevoice.not_installed': '本機語音辨識尚未安裝。請到語音設定下載 SenseVoice，或先關閉語音輸入。',
+  'voice.provider.sensevoice.not_installed': '想用語音的話，去「設定 → 語音 → 進階」點「下載缺失模型」就行。',
   'voice.provider.sensevoice.fallback_cloud': 'SenseVoice 尚未安裝，這一輪改用你設定的雲端語音辨識。',
   'voice.provider.sensevoice.model_location_hint': '在 {modelsDir} 下還沒有 SenseVoice。請到語音設定裡下載。',
   'voice.provider.api.connect_required': '目前環境沒連上桌面客戶端，沒法用內建語音辨識。',

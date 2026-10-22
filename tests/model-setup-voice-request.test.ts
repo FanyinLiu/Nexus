@@ -273,16 +273,21 @@ test('the installer promises the one reminder in every locale', () => {
   }
 })
 
-test('the reminder about the missing models reads the same in every locale', () => {
+test('the reminder and the missing-model line point at Voice → Advanced', () => {
   const dictionaries = [
-    [zhCNMessages, '还没装语音模型呢 —— 装上就能直接跟我说话啦。'],
-    [zhTWMessages, '還沒裝語音模型呢 —— 裝上就能直接跟我說話啦。'],
-    [enMessages, 'No voice models yet — install them and we can talk out loud.'],
-    [jaMessages, '音声モデルがまだ入っていないよ。入れれば声で話せるよ。'],
-    [koMessages, '음성 모델이 아직 없어요. 설치하면 목소리로 이야기할 수 있어요.'],
+    [zhCNMessages, '想用语音的话，去「设置 → 语音 → 高级」点「下载缺失模型」就行。'],
+    [zhTWMessages, '想用語音的話，去「設定 → 語音 → 進階」點「下載缺失模型」就行。'],
+    [enMessages, 'Want to use voice? Go to Settings → Voice → Advanced and click "Download missing models".'],
+    [jaMessages, '声で話したいなら、「設定 → 音声 → 高度設定」で「不足モデルをダウンロード」を押してね。'],
+    [koMessages, '음성을 쓰려면 「설정 → 음성 → 고급」에서 「없는 모델 다운로드」를 눌러 주세요.'],
   ] as const
 
   for (const [dictionary, expected] of dictionaries) {
     assert.equal(dictionary['model_setup.deferred_reminder'], expected)
+    assert.equal(dictionary['voice.provider.sensevoice.not_installed'], expected)
+    assert.ok(expected.includes(dictionary['settings.title']))
+    assert.ok(expected.includes(dictionary['settings.simple.voice']))
+    assert.ok(expected.includes(dictionary['settings.voice.advanced_title']))
+    assert.ok(expected.includes(dictionary['settings.voice.local_models_download']))
   }
 })

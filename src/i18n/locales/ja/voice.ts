@@ -47,7 +47,7 @@ export const jaVoice = {
   'voice.provider.sensevoice.node_missing': 'sherpa-onnx-node がインストールされていません。"npm install" を実行してから再試行してください。',
   'voice.provider.sensevoice.node_missing_detail': 'sherpa-onnx-node がインストールされていません。先に "npm install sherpa-onnx-node" を実行してください。',
   'voice.provider.sensevoice.model_missing': 'SenseVoice は未インストールです。音声設定からダウンロードするか、クラウド音声認識を選んでください。',
-  'voice.provider.sensevoice.not_installed': 'ローカル音声認識は未インストールです。音声設定から SenseVoice をダウンロードするか、音声入力をオフにしてください。',
+  'voice.provider.sensevoice.not_installed': '声で話したいなら、「設定 → 音声 → 高度設定」で「不足モデルをダウンロード」を押してね。',
   'voice.provider.sensevoice.fallback_cloud': 'SenseVoice が未インストールのため、この回は設定済みのクラウド音声認識を使います。',
   'voice.provider.sensevoice.model_location_hint': '{modelsDir} に SenseVoice がありません。音声設定からダウンロードしてください。',
   'voice.provider.api.connect_required': '現在の環境ではデスクトップクライアントが接続されておらず、内蔵音声認識は利用できません。',

@@ -1,7 +1,7 @@
 /**
  * Settings view of the local voice-model inventory.
  *
- * The first-launch dialog can be dismissed for the rest of the session.
+ * "Maybe later" on the first-launch dialog is remembered on this computer.
  * This view is the way back: it only describes inventory, progress, disk,
  * and whether a partial file can be continued. Downloads stay on the
  * existing catalog calls.

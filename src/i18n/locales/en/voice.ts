@@ -47,7 +47,7 @@ export const enVoice = {
   'voice.provider.sensevoice.node_missing': 'sherpa-onnx-node is not installed — please run "npm install" and try again.',
   'voice.provider.sensevoice.node_missing_detail': 'sherpa-onnx-node is not installed — please run "npm install sherpa-onnx-node" first.',
   'voice.provider.sensevoice.model_missing': 'SenseVoice is not installed. Download it from Voice settings, or pick a cloud speech provider.',
-  'voice.provider.sensevoice.not_installed': 'Local speech recognition is not installed. Download SenseVoice from Voice settings, or turn speech input off.',
+  'voice.provider.sensevoice.not_installed': 'Want to use voice? Go to Settings → Voice → Advanced and click "Download missing models".',
   'voice.provider.sensevoice.fallback_cloud': 'SenseVoice is not installed, so this turn uses your cloud speech provider.',
   'voice.provider.sensevoice.model_location_hint': 'SenseVoice is not installed under {modelsDir}. Download it from Voice settings.',
   'voice.provider.api.connect_required': 'The desktop client is not connected in the current environment, so the built-in speech recognition is unavailable.',

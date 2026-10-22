@@ -234,9 +234,13 @@ export function useAppController() {
     appendSystemMessage: (content, tone) => appendSystemMessageRef.current(content, tone),
     // The pet bubble belongs to the chat hook, which is created after this
     // one. The ref keeps the voice hook's context referentially stable.
-    presentCompanionNotice: (content) => {
+    presentCompanionNotice: (content, options) => {
       presentPetDialogBubbleRef.current(
-        { content, streaming: false },
+        {
+          content,
+          streaming: false,
+          ...(options?.replacesSurfaceError ? { replacesSurfaceError: true } : {}),
+        },
         { autoHideMs: 14_000 },
       )
     },

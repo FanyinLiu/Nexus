@@ -1,6 +1,7 @@
 export {
   validateDesktopContextRequestPayload,
   validateMediaSessionControlPayload,
+  validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
