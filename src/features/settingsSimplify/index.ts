@@ -5,12 +5,14 @@ export {
 } from './companionInitiative.ts'
 export {
   desktopAwarenessPatch,
+  endpointEditorPlacement,
   keepTalkingPatch,
   lookupPatch,
   quietHoursPatch,
   sharedLookup,
   unifiedQuietHours,
   voiceLanguagesAfterSettingsOpen,
+  type EndpointEditorPlacement,
   type QuietHours,
 } from './surfaceRules.ts'
 export {

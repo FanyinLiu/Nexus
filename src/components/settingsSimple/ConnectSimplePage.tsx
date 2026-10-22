@@ -6,7 +6,7 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { API_PROVIDER_PRESETS, getApiProviderPreset } from '../../features/models/providerCatalog.ts'
-import { lookupPatch, sharedLookup } from '../../features/settingsSimplify/index.ts'
+import { endpointEditorPlacement, lookupPatch, sharedLookup } from '../../features/settingsSimplify/index.ts'
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { UrlInput } from '../../features/settingsV3/UrlInput.tsx'
 import { SettingsV3Field, SettingsV3Notice, SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
@@ -35,7 +35,7 @@ export function ConnectSimplePage({
   const preset = getApiProviderPreset(draft.apiProviderId)
   const lookup = sharedLookup(draft.toolWebSearchEnabled, draft.toolWeatherEnabled)
   const keyStored = isVaultRefString(draft.apiKey)
-  const showAddress = draft.apiProviderId === 'custom'
+  const showAddress = endpointEditorPlacement(draft.apiProviderId) === 'simple'
   const showTest = !preset.requiresApiKey || Boolean(draft.apiKey.trim())
 
   return (

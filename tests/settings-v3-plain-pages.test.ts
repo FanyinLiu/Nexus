@@ -182,3 +182,24 @@ test('the voice page can still pick the fill-the-box trigger', { timeout: 150_00
   assert.equal(saved.wakeWord, '小N')
   await page.close()
 })
+
+test('a preset service keeps its address editable in the advanced section', { timeout: 150_000 }, async () => {
+  const page = await browser.newPage()
+  await openSettingsPage(page, 'model', {
+    apiProviderId: 'openai',
+    apiBaseUrl: 'https://proxy.example/v1',
+  })
+  await openAdvanced(page, '地址、Telegram、Discord、花费上限')
+
+  const endpoint = page.getByLabel('文本接口地址')
+  await endpoint.waitFor({ state: 'visible' })
+  assert.equal(await endpoint.count(), 1)
+  assert.equal(await endpoint.inputValue(), 'https://proxy.example/v1')
+  assert.equal(await page.getByLabel('地址', { exact: true }).count(), 0)
+
+  await endpoint.fill('http://127.0.0.1:11435/v1')
+  const saved = await saveSettings(page, { apiBaseUrl: 'http://127.0.0.1:11435/v1' })
+  assert.equal(saved.apiBaseUrl, 'http://127.0.0.1:11435/v1')
+  assert.equal(saved.apiProviderId, 'openai')
+  await page.close()
+})

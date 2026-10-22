@@ -58,6 +58,17 @@ export function lookupPatch(enabled: boolean) {
   }
 }
 
+export type EndpointEditorPlacement = 'simple' | 'advanced'
+
+/**
+ * Where the text endpoint address is edited. A service the person fills
+ * in keeps its address on the plain connection page; a preset keeps it in
+ * the advanced model section, so the plain page stays short.
+ */
+export function endpointEditorPlacement(providerId: string): EndpointEditorPlacement {
+  return providerId === 'custom' ? 'simple' : 'advanced'
+}
+
 type AwarenessFlags = {
   activeWindowContextEnabled: boolean
   clipboardContextEnabled: boolean

@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   companionInitiativePatch,
   desktopAwarenessPatch,
+  endpointEditorPlacement,
   inferCompanionInitiative,
   keepTalkingPatch,
   lookupPatch,
@@ -14,6 +15,7 @@ import {
   voiceTriggerPatch,
   VOICE_TRIGGER_MODES,
 } from '../src/features/settingsSimplify/index.ts'
+import { API_PROVIDER_PRESETS } from '../src/features/models/providerCatalog.ts'
 import type { VoiceTriggerMode } from '../src/types/voice.ts'
 
 const factory = {
@@ -79,6 +81,21 @@ test('search and weather are not flipped together when they disagree', () => {
     toolWebSearchEnabled: true,
     toolWeatherEnabled: true,
   })
+})
+
+test('every service keeps exactly one place to edit its address', () => {
+  assert.equal(endpointEditorPlacement('custom'), 'simple')
+  assert.equal(endpointEditorPlacement('openai'), 'advanced')
+  assert.equal(endpointEditorPlacement('anthropic'), 'advanced')
+  assert.equal(endpointEditorPlacement('ollama'), 'advanced')
+  for (const provider of API_PROVIDER_PRESETS) {
+    const placement = endpointEditorPlacement(provider.id)
+    assert.equal(
+      placement === 'simple' || placement === 'advanced',
+      true,
+      `${provider.id} needs one address editor`,
+    )
+  }
 })
 
 test('desktop awareness turns on the window title only when every source is off', () => {
