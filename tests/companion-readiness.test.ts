@@ -45,7 +45,6 @@ test('marks a text-only companion as ready when the core identity and text model
   assert.equal(readiness.targetMinutes, FIRST_CONVERSATION_TARGET_MINUTES)
   assert.equal(readiness.targetMinutes, 5)
   assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.ready')
-  assert.deepEqual(readiness.timeboxParams, { minutes: FIRST_CONVERSATION_TARGET_MINUTES })
   assert.deepEqual(
     readiness.items.map((item) => [item.id, item.status]),
     [
@@ -64,7 +63,6 @@ test('blocks readiness when the text model is missing required launch fields', (
 
   assert.equal(readiness.status, 'blocked')
   assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.blocked')
-  assert.equal(readiness.timeboxParams, undefined)
   assert.equal(itemStatus({ ...baseInput, apiBaseUrl: '' }, 'text'), 'blocked')
 })
 
@@ -75,8 +73,7 @@ test('warns when a keyed text provider has no api key yet', () => {
   })
 
   assert.equal(readiness.status, 'warning')
-  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.warning')
-  assert.equal(readiness.timeboxParams, undefined)
+  assert.equal(readiness.timeboxKey, null)
   assert.equal(itemStatus({ ...baseInput, textProviderRequiresApiKey: true }, 'text'), 'warning')
 })
 
@@ -87,7 +84,7 @@ test('warns when the text model fields are filled but the connection test has no
   })
 
   assert.equal(readiness.status, 'warning')
-  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.warning')
+  assert.equal(readiness.timeboxKey, null)
   assert.deepEqual(
     readiness.items.find((item) => item.id === 'text'),
     {
@@ -149,18 +146,20 @@ function readinessInputWithLocalVoice(): CompanionReadinessInput {
   }
 }
 
-test('the warning timebox tells the user to start instead of promising a duration', () => {
+test('the complete-state readiness line says everything is set in every locale', () => {
   const messages = [zhCNMessages, zhTWMessages, enMessages, jaMessages, koMessages]
 
   for (const dictionary of messages) {
-    const warning = dictionary['onboarding.readiness.timebox.warning']
-    assert.doesNotMatch(warning, /\{minutes\}/)
-    assert.doesNotMatch(warning, /connect/i)
+    const ready = dictionary['onboarding.readiness.timebox.ready']
+    // The complete state is reached after the connection test passed, so its
+    // line must neither promise a duration nor ask for another test.
+    assert.doesNotMatch(ready, /\{minutes\}/)
+    assert.doesNotMatch(ready, /connect|连接|連線|接続|연결/i)
   }
 
-  assert.equal(zhCNMessages['onboarding.readiness.timebox.warning'], '都设好了，点下面的按钮就能开始。')
-  assert.equal(zhTWMessages['onboarding.readiness.timebox.warning'], '都設定好了，按下面的按鈕就能開始。')
-  assert.equal(enMessages['onboarding.readiness.timebox.warning'], "You're all set. Click the button below to get started.")
-  assert.equal(jaMessages['onboarding.readiness.timebox.warning'], '準備ができました。下のボタンを押して始めましょう。')
-  assert.equal(koMessages['onboarding.readiness.timebox.warning'], '준비됐어요. 아래 버튼을 눌러 시작하세요.')
+  assert.equal(zhCNMessages['onboarding.readiness.timebox.ready'], '都设好了，点下面的按钮就能开始。')
+  assert.equal(zhTWMessages['onboarding.readiness.timebox.ready'], '都設定好了，按下面的按鈕就能開始。')
+  assert.equal(enMessages['onboarding.readiness.timebox.ready'], "You're all set. Click the button below to get started.")
+  assert.equal(jaMessages['onboarding.readiness.timebox.ready'], '準備ができました。下のボタンを押して始めましょう。')
+  assert.equal(koMessages['onboarding.readiness.timebox.ready'], '준비됐어요. 아래 버튼을 눌러 시작하세요.')
 })

@@ -158,17 +158,13 @@ export function CompanionStep({
           </span>
         </div>
         <p>{ti(readiness.summaryKey)}</p>
-        {/* The warning timebox says "all set", which contradicts unfinished
-            items; keep only the summary line until everything is complete. */}
-        {readiness.status === 'warning' ? null : (
+        {/* A status with gaps left to fill has no closing line of its own:
+            its summary and item list already say what is still missing. */}
+        {readiness.timeboxKey ? (
           <p className="onboarding-readiness__timebox">
-            {pickTranslatedUiText(
-              draft.uiLanguage,
-              readiness.timeboxKey,
-              readiness.timeboxParams,
-            )}
+            {ti(readiness.timeboxKey)}
           </p>
-        )}
+        ) : null}
         <ul className="onboarding-readiness__list">
           {readinessItems.map((item) => (
             <li

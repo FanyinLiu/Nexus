@@ -1,4 +1,4 @@
-import type { TranslationKey, TranslationParams } from '../../types'
+import type { TranslationKey } from '../../types'
 
 export type CompanionReadinessStatus = 'ready' | 'warning' | 'blocked'
 
@@ -13,9 +13,11 @@ type CompanionReadinessItem = {
 export type CompanionReadinessSummary = {
   status: CompanionReadinessStatus
   summaryKey: TranslationKey
-  timeboxKey: TranslationKey
-  /** Only statuses whose copy still names a duration receive `{minutes}`. */
-  timeboxParams: TranslationParams | undefined
+  /**
+   * The closing line of the readiness block. Statuses that still have gaps to
+   * fill carry no line of their own — their summary and item list say it all.
+   */
+  timeboxKey: TranslationKey | null
   targetMinutes: number
   items: CompanionReadinessItem[]
 }
@@ -46,9 +48,8 @@ const SUMMARY_KEY_BY_STATUS: Record<CompanionReadinessStatus, TranslationKey> = 
   blocked: 'onboarding.readiness.summary.blocked',
 }
 
-const TIMEBOX_KEY_BY_STATUS: Record<CompanionReadinessStatus, TranslationKey> = {
+const TIMEBOX_KEY_BY_STATUS: Partial<Record<CompanionReadinessStatus, TranslationKey>> = {
   ready: 'onboarding.readiness.timebox.ready',
-  warning: 'onboarding.readiness.timebox.warning',
   blocked: 'onboarding.readiness.timebox.blocked',
 }
 
@@ -188,10 +189,7 @@ export function buildCompanionReadiness(input: CompanionReadinessInput): Compani
   return {
     status,
     summaryKey: SUMMARY_KEY_BY_STATUS[status],
-    timeboxKey: TIMEBOX_KEY_BY_STATUS[status],
-    timeboxParams: status === 'ready'
-      ? { minutes: FIRST_CONVERSATION_TARGET_MINUTES }
-      : undefined,
+    timeboxKey: TIMEBOX_KEY_BY_STATUS[status] ?? null,
     targetMinutes: FIRST_CONVERSATION_TARGET_MINUTES,
     items,
   }

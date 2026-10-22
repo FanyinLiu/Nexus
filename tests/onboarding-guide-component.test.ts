@@ -466,16 +466,14 @@ test('the all-set sentence appears only when every readiness item is complete', 
 
   const warnedText = collectText(renderCompanion({ textConnectionVerified: false }))
   assert.equal(
-    warnedText.includes(enMessages['onboarding.readiness.timebox.warning']),
+    warnedText.includes(enMessages['onboarding.readiness.timebox.ready']),
     false,
   )
   assert.ok(warnedText.includes(enMessages['onboarding.readiness.summary.warning']))
   assert.equal(warnedText.some((line) => line.includes('{minutes}')), false)
 
   const readyText = collectText(renderCompanion({ textConnectionVerified: true }))
-  assert.ok(readyText.includes(
-    enMessages['onboarding.readiness.timebox.ready'].replace('{minutes}', '5'),
-  ))
+  assert.ok(readyText.includes(enMessages['onboarding.readiness.timebox.ready']))
   assert.equal(readyText.some((line) => line.includes('{minutes}')), false)
 
   guide.unmount()
