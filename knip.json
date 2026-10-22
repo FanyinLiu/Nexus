@@ -6,7 +6,9 @@
     "tests/benchmarks.bench.ts",
     "tests/fixtures/settingsSurfaceAuditBaseline.ts",
     "tests/helpers/bundler-import-hooks.mjs",
-    "tests/helpers/electron-main-stub-hooks.mjs"
+    "tests/helpers/electron-main-stub-hooks.mjs",
+    "tests/helpers/wakewordHarness.ts",
+    "tests/helpers/window-ipc-stub-hooks.mjs"
   ],
   "ignore": [
     "shared/**/*.d.ts"

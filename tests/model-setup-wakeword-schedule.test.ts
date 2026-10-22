@@ -3,7 +3,12 @@ import { register } from 'node:module'
 import { test } from 'node:test'
 import type { TestContext } from 'node:test'
 
-import React from 'react'
+import {
+  createHookRenderer,
+  createOverlayProps,
+  flushAsyncWork,
+  wakewordSettings,
+} from './helpers/wakewordHarness.ts'
 
 register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
 
@@ -18,91 +23,6 @@ const { loadSettings } = await import('../src/lib/storage/settings.ts')
 const { ensureLocaleLoaded, setLocale } = await import('../src/i18n/runtime.ts')
 await ensureLocaleLoaded('en-US')
 setLocale('en-US')
-
-type ReactInternals = { H: unknown }
-const reactInternals = (React as unknown as {
-  __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE: ReactInternals
-}).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
-
-type EffectSlot = { deps?: readonly unknown[]; cleanup?: () => void }
-
-function createHookRenderer(hook: () => void) {
-  const slots: unknown[] = []
-  const effects: EffectSlot[] = []
-  let cursor = 0
-  let pending: Array<{ index: number; callback: () => void | (() => void) }> = []
-
-  const dispatcher = {
-    useState(initial: unknown) {
-      const index = cursor++
-      if (!(index in slots)) {
-        slots[index] = typeof initial === 'function' ? (initial as () => unknown)() : initial
-      }
-      const setState = (value: unknown) => {
-        slots[index] = typeof value === 'function'
-          ? (value as (prev: unknown) => unknown)(slots[index])
-          : value
-      }
-      return [slots[index], setState]
-    },
-    useRef(initial: unknown) {
-      const index = cursor++
-      if (!(index in slots)) slots[index] = { current: initial }
-      return slots[index]
-    },
-    useCallback(fn: unknown) {
-      cursor++
-      return fn
-    },
-    useMemo(fn: () => unknown) {
-      cursor++
-      return fn()
-    },
-    useContext() {
-      cursor++
-      return null
-    },
-    useEffect(callback: () => void | (() => void), deps?: readonly unknown[]) {
-      const index = cursor++
-      const prev = effects[index]
-      const changed = !prev
-        || deps === undefined
-        || prev.deps === undefined
-        || deps.length !== prev.deps.length
-        || deps.some((dep, i) => !Object.is(dep, prev.deps![i]))
-      if (changed) {
-        effects[index] = { deps }
-        pending.push({ index, callback })
-      }
-    },
-    useLayoutEffect(callback: () => void | (() => void), deps?: readonly unknown[]) {
-      this.useEffect(callback, deps)
-    },
-  }
-
-  function render() {
-    cursor = 0
-    pending = []
-    reactInternals.H = dispatcher
-    try {
-      hook()
-    } finally {
-      reactInternals.H = null
-    }
-    for (const { index, callback } of pending) {
-      const slot = effects[index]
-      slot.cleanup?.()
-      const cleanup = callback()
-      slot.cleanup = typeof cleanup === 'function' ? cleanup : undefined
-    }
-  }
-
-  function unmount() {
-    for (const effect of effects) effect?.cleanup?.()
-  }
-
-  return { render, unmount }
-}
 
 type InventoryMode = 'missing' | 'ready' | 'unreadable'
 
@@ -148,88 +68,6 @@ function installWindowMock(inventoryMode: InventoryMode) {
   return { windowMock, calls }
 }
 
-function createOverlayProps(view: 'pet' | 'panel', settings: ReturnType<typeof loadSettings>) {
-  const noop = () => {}
-  return {
-    view,
-    settings,
-    platformProfile: { startup: { supported: false } },
-    setSettings: noop,
-    settingsOpen: false,
-    preferredSettingsSectionId: null,
-    preferredMemoryFocus: null,
-    setSettingsOpen: noop,
-    petModelPresets: [],
-    petModelPresetsReady: true,
-    petRuntimeContinuousVoiceActive: false,
-    reminderTasks: [],
-    debugConsoleEvents: [],
-    loadPetModels: async () => [],
-    memory: {
-      memories: [],
-      dailyMemories: [],
-      recentDailyMemoryEntries: [],
-      exportMemoryArchive: async () => '',
-      importMemoryArchive: async () => {},
-      clearMemoryArchive: async () => {},
-      addManualMemory: () => {},
-      updateMemory: () => {},
-      patchMemory: () => {},
-      setMemoryEnabled: () => {},
-      removeMemory: () => {},
-      clearTodayDailyMemory: () => {},
-      updateDailyEntry: () => {},
-      removeDailyEntry: () => {},
-    },
-    chat: {
-      messages: [],
-      busy: false,
-      busyRef: { current: false },
-      currentSessionId: '',
-      setError: noop,
-      appendSystemMessage: noop,
-      appendChatMessage: noop,
-      cancelActiveTurn: noop,
-      exportChatHistory: async () => '',
-      importChatHistory: async () => {},
-      clearChatHistory: async () => {},
-    },
-    pet: { setMood: noop },
-    voice: {
-      voiceState: 'idle',
-      continuousVoiceActive: false,
-      toggleVoiceConversation: noop,
-      stopVoiceConversation: noop,
-      voiceStateRef: { current: 'idle' },
-      liveTranscript: '',
-      speechLevelSource: null,
-      voicePipeline: null,
-      voiceTrace: [],
-      stopActiveSpeechOutput: noop,
-      setVoiceState: noop,
-      runAudioSmokeTest: async () => ({ ok: true }),
-      startSpeechOutput: async () => {},
-      testSpeechInputConnection: async () => ({ ok: true }),
-      testSpeechOutputReadiness: async () => ({ ok: true }),
-    },
-    addReminderTask: () => null,
-    updateReminderTask: () => null,
-    removeReminderTask: () => null,
-    clearDebugConsoleEvents: noop,
-  } as unknown as Parameters<typeof useAppOverlays>[0]
-}
-
-function wakewordSettings(
-  settings: ReturnType<typeof loadSettings>,
-  enabled: boolean,
-) {
-  return {
-    ...settings,
-    wakewordAlwaysOn: enabled,
-    voiceTriggerMode: enabled ? 'wake_word' : 'direct_send',
-  } as ReturnType<typeof loadSettings>
-}
-
 async function renderOverlay(view: 'pet' | 'panel', inventoryMode: InventoryMode) {
   const { calls, windowMock } = installWindowMock(inventoryMode)
   saveOnboardingCompleted(true)
@@ -242,10 +80,6 @@ async function renderOverlay(view: 'pet' | 'panel', inventoryMode: InventoryMode
   renderer.render()
   assert.ok(overlays.current)
   return { renderer, overlays, baseline, next, calls, windowMock }
-}
-
-async function flushAsyncWork() {
-  for (let i = 0; i < 6; i += 1) await Promise.resolve()
 }
 
 /**
