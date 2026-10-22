@@ -125,20 +125,17 @@ export function getOnboardingFinishHint(
 }
 
 /**
- * Finishing is never blocked on an untested connection: the guide only
- * surfaces a short hint so the user can test later in Settings.
+ * Hint for the last step when the connection has not been tested. Finishing is
+ * never blocked on it: the guide closes on the first click and the user can
+ * still test the connection later in Settings.
  */
-export function resolveOnboardingFinishGate(input: {
-  textConnectionVerified: boolean
-  acknowledgedUnverified?: boolean
-  uiLanguage: UiLanguage
-}): { proceed: true; hint: string | null } {
-  return {
-    proceed: true,
-    hint: input.textConnectionVerified
-      ? null
-      : pickTranslatedUiText(input.uiLanguage, 'onboarding.finish_hint.unverified_model'),
-  }
+export function getOnboardingUnverifiedConnectionHint(
+  textConnectionVerified: boolean,
+  uiLanguage: UiLanguage,
+): string | null {
+  return textConnectionVerified
+    ? null
+    : pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.unverified_model')
 }
 
 export function getOnboardingStepError(

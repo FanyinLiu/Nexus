@@ -23,6 +23,8 @@ type CompanionStepProps = {
   selectedPetModel: PetModelDefinition | undefined
   launchOnStartupSupported: boolean
   textConnectionVerified: boolean
+  /** The last-step hint already says the connection is untested. */
+  hideUnverifiedTextWarning: boolean
 }
 
 export function CompanionStep({
@@ -32,6 +34,7 @@ export function CompanionStep({
   selectedPetModel,
   launchOnStartupSupported,
   textConnectionVerified,
+  hideUnverifiedTextWarning,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -60,6 +63,9 @@ export function CompanionStep({
     warning: 'onboarding.readiness.warning',
     blocked: 'onboarding.readiness.blocked',
   }
+  const readinessItems = hideUnverifiedTextWarning
+    ? readiness.items.filter((item) => item.messageKey !== 'onboarding.readiness.text.warning_unverified')
+    : readiness.items
 
   return (
     <div className="onboarding-grid onboarding-grid--stack">
@@ -158,7 +164,7 @@ export function CompanionStep({
           })}
         </p>
         <ul className="onboarding-readiness__list">
-          {readiness.items.map((item) => (
+          {readinessItems.map((item) => (
             <li
               key={item.id}
               className={`onboarding-readiness__item onboarding-readiness__item--${item.status}`}

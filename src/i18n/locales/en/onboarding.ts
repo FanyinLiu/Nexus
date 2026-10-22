@@ -37,7 +37,7 @@ export const enOnboarding = {
   'onboarding.step.companion.title': 'Companion style',
   'onboarding.step.companion.description': 'Almost done — pick how she looks and what mode she boots into.',
   'onboarding.finish_hint.missing_api_key': 'No key yet is fine. Look around first, and add it before you start chatting.',
-  'onboarding.finish_hint.unverified_model': 'The connection has not been checked yet. You can test it later in Settings.',
+  'onboarding.finish_hint.unverified_model': 'It\'s fine if the connection hasn\'t been checked yet. You can test it later in Settings.',
   'onboarding.finish_hint.default': 'You can adjust the rest in Settings later.',
   'onboarding.repair.apply_text_defaults': 'Apply recommended settings',
   'onboarding.repair.applied_text_defaults': 'Recommended settings are filled in. Test the connection to make sure it really works.',

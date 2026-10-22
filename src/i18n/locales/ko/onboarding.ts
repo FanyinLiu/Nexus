@@ -37,7 +37,7 @@ export const koOnboarding = {
   'onboarding.step.companion.title': '동반자 스타일',
   'onboarding.step.companion.description': '거의 다 됐어요 —— 그녀가 어떻게 보일지, 실행될 때 어떤 상태일지 정해 주세요.',
   'onboarding.finish_hint.missing_api_key': '키가 아직 없어도 괜찮아요. 먼저 둘러보고, 대화를 시작하기 전에 넣으면 돼요.',
-  'onboarding.finish_hint.unverified_model': '연결을 아직 확인하지 않아도 괜찮아요. 나중에 설정에서 확인할 수 있어요.',
+  'onboarding.finish_hint.unverified_model': '연결을 아직 확인하지 않아도 괜찮아요. 나중에 설정에서 테스트할 수 있어요.',
   'onboarding.finish_hint.default': '나머지는 나중에 설정에서 조정할 수 있어요.',
   'onboarding.repair.apply_text_defaults': '권장 설정 적용',
   'onboarding.repair.applied_text_defaults': '권장 설정을 넣었어요. 연결을 시험해서 정말 되는지 확인해 주세요.',

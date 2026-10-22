@@ -31,7 +31,7 @@ import {
   buildOnboardingSteps,
   getOnboardingMissingApiKeyHint,
   getOnboardingStepIssue,
-  resolveOnboardingFinishGate,
+  getOnboardingUnverifiedConnectionHint,
   sanitizeOnboardingSettings,
   type OnboardingStepIssue,
 } from './onboardingGuideSupport.ts'
@@ -110,10 +110,10 @@ export function OnboardingGuide({
     'text',
     draft,
   )
-  const finishHint = resolveOnboardingFinishGate({
+  const finishHint = getOnboardingUnverifiedConnectionHint(
     textConnectionVerified,
-    uiLanguage: draft.uiLanguage,
-  }).hint
+    draft.uiLanguage,
+  )
 
   // Reset the wizard whenever it (re)opens or the underlying settings change
   // while open — render-time adjust keyed on an "open ? settings : null"
@@ -354,6 +354,7 @@ export function OnboardingGuide({
             selectedPetModel={selectedPetModel}
             launchOnStartupSupported={platformProfile.startup.supported}
             textConnectionVerified={textConnectionVerified}
+            hideUnverifiedTextWarning={Boolean(finishHint)}
           />
         )
     }

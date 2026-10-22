@@ -15,7 +15,7 @@ import {
   getOnboardingProviderNote,
   getOnboardingStepError,
   getOnboardingStepIssue,
-  resolveOnboardingFinishGate,
+  getOnboardingUnverifiedConnectionHint,
 } from '../src/features/onboarding/components/onboardingGuideSupport.ts'
 import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
 import { detectPreferredUiLanguage } from '../src/lib/uiLanguage.ts'
@@ -180,22 +180,26 @@ test('missing API key hint is for the model step and stays empty for keyless pro
   assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
 })
 
-test('finish with an untested connection completes onboarding in one click', () => {
-  const gate = resolveOnboardingFinishGate({
-    textConnectionVerified: false,
-    acknowledgedUnverified: false,
-    uiLanguage: 'zh-CN',
-  })
+test('an untested connection only yields the test-later hint, never a second click', () => {
+  const hint = getOnboardingUnverifiedConnectionHint(false, 'zh-CN')
 
-  assert.equal(gate.proceed, true)
-  assert.match(gate.hint ?? '', /设置/)
-  assert.doesNotMatch(gate.hint ?? '', /再点一次/)
+  assert.match(hint ?? '', /设置/)
+  assert.doesNotMatch(hint ?? '', /再点一次/)
+  assert.equal(getOnboardingUnverifiedConnectionHint(true, 'en-US'), null)
+})
 
-  assert.deepEqual(resolveOnboardingFinishGate({
-    textConnectionVerified: true,
-    acknowledgedUnverified: false,
-    uiLanguage: 'en-US',
-  }), { proceed: true, hint: null })
+test('unverified hint copy matches the requested wording in every locale', () => {
+  assert.equal(
+    enMessages['onboarding.finish_hint.unverified_model'],
+    'It\'s fine if the connection hasn\'t been checked yet. You can test it later in Settings.',
+  )
+  assert.equal(
+    jaMessages['onboarding.finish_hint.unverified_model'],
+    '接続の確認がまだでも大丈夫です。あとで設定からテストできます。',
+  )
+  assert.match(zhCNMessages['onboarding.finish_hint.unverified_model'], /设置.*测试/)
+  assert.match(zhTWMessages['onboarding.finish_hint.unverified_model'], /設定.*測試/)
+  assert.match(koMessages['onboarding.finish_hint.unverified_model'], /설정.*테스트/)
 })
 
 test('onboarding text step shows provider-aware missing model guidance', () => {
