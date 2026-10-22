@@ -510,6 +510,9 @@ declare global {
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
       dragBy: (delta: { x: number; y: number }) => Promise<void>
       openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
+      requestModelSetup: () => Promise<void>
+      consumeModelSetupRequest: () => Promise<boolean>
+      subscribeModelSetupRequest: (listener: () => void) => () => void
       getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>
       openPetMenu: () => Promise<void>
       closePanel: () => Promise<void>

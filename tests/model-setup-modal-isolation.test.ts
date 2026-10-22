@@ -14,7 +14,7 @@ function sliceFrom(source: string, marker: string, endMarker: string) {
   return source.slice(start, end)
 }
 
-test('App owns ModelSetupOverlay visibility and forwards the shared modal state to both routes', async () => {
+test('App owns ModelSetupOverlay in the panel route only so Mao stays visible', async () => {
   const [app, panel] = await Promise.all([
     read('src/app/App.tsx'),
     read('src/app/views/PanelView.tsx'),
@@ -24,12 +24,13 @@ test('App owns ModelSetupOverlay visibility and forwards the shared modal state 
   assert.match(app, /const \[modelSetupOverlayOpen, setModelSetupOverlayOpen\]/)
   assert.match(app, /const handleModelSetupVisibilityChange = useCallback\(\(visible: boolean\) => \{[\s\S]*setModelSetupOverlayOpen\(visible\)/)
   assert.match(app, /const modelSetupOverlayActive = controller\.view === 'panel'[\s\S]*!competingModalOpen/)
-  // Both routes share the same modal state, so a voice-triggered overlay can
-  // open over Mao without fighting the settings drawer or the onboarding guide.
-  assert.equal(
-    app.match(/<ModelSetupOverlay\s+suppressed=\{competingModalOpen\}\s+onVisibilityChange=\{handleModelSetupVisibilityChange\}/g)?.length,
-    2,
-  )
+  // The pet and the installer share one window. Mounting it only with the
+  // panel route keeps the overlay from covering Mao.
+  assert.equal(app.match(/<ModelSetupOverlay\b/g)?.length, 1)
+
+  const petBranch = sliceFrom(app, "if (controller.view === 'pet')", '\n  }')
+  assert.doesNotMatch(petBranch, /<ModelSetupOverlay\b/)
+  assert.doesNotMatch(petBranch, /modelSetupOverlayOpen/)
 
   const panelCall = sliceFrom(app, '<PanelView', '\n      />')
   assert.match(panelCall, /modelSetupOverlayOpen=\{modelSetupOverlayActive\}/)

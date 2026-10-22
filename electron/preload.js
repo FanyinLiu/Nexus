@@ -11,6 +11,13 @@ contextBridge.exposeInMainWorld('desktopPet', {
   },
   dragBy: (delta) => ipcRenderer.invoke('window:drag-by', delta),
   openPanel: (section) => ipcRenderer.invoke('window:open-panel', section),
+  requestModelSetup: () => ipcRenderer.invoke('window:request-model-setup'),
+  consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
+  subscribeModelSetupRequest: (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on('models:setup-requested', handler)
+    return () => ipcRenderer.removeListener('models:setup-requested', handler)
+  },
   getPanelSection: () => ipcRenderer.invoke('window:get-panel-section'),
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),

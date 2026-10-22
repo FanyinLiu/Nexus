@@ -13,6 +13,7 @@
  * pet view to appear before the installer may cover it.
  */
 
+import type { WindowView } from '../../types'
 import type { VoiceTriggerMode } from '../../types/voice.ts'
 
 type WakewordSetupFlags = {
@@ -32,8 +33,9 @@ export type ModelSetupRequestStore = {
   /**
    * Latches the request after `delayMs`. The returned function cancels a
    * pending latch, so reverting the action within the delay stays quiet.
+   * An optional task replaces the default latch for routed delivery.
    */
-  requestAfter: (delayMs: number) => () => void
+  requestAfter: (delayMs: number, task?: () => void) => () => void
   hasRequest: () => boolean
   subscribe: (listener: () => void) => () => void
 }
@@ -62,7 +64,7 @@ export function createModelSetupRequestStore(
 
   return {
     request,
-    requestAfter: (delayMs) => schedule(request, delayMs),
+    requestAfter: (delayMs, task = request) => schedule(task, delayMs),
     hasRequest: () => requested,
     subscribe(listener) {
       listeners.add(listener)
@@ -78,12 +80,53 @@ export function requestModelSetupOnVoiceUse(): void {
   sharedStore.request()
 }
 
+// Only one wake-word opt-in is ever in flight. The owner (settings save)
+// keeps the returned cancel function so leaving the surface, dismissing the
+// installer, or switching the wake word off can retract the pending offer.
+let pendingWakewordCancel: (() => void) | null = null
+
 /**
  * Marks that the user switched a wake word on. Deferred so the pet view wins
- * the first moments after finishing onboarding.
+ * the first moments after finishing onboarding. Returns the cancel function
+ * for that pending request.
  */
-export function requestModelSetupOnWakewordEnabled(): void {
-  sharedStore.requestAfter(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
+export function requestModelSetupOnWakewordEnabled(
+  deliver: () => void = requestModelSetupOnVoiceUse,
+): () => void {
+  pendingWakewordCancel?.()
+  let active = true
+
+  function cancel() {
+    if (!active) return
+    active = false
+    cancelScheduled()
+    if (pendingWakewordCancel === cancel) pendingWakewordCancel = null
+  }
+
+  const cancelScheduled = sharedStore.requestAfter(
+    MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS,
+    () => {
+      if (!active) return
+      active = false
+      if (pendingWakewordCancel === cancel) pendingWakewordCancel = null
+      deliver()
+    },
+  )
+  pendingWakewordCancel = cancel
+  return cancel
+}
+
+/** Retracts a wake-word request that has not reached its delay yet. */
+export function cancelModelSetupWakewordRequest(): void {
+  pendingWakewordCancel?.()
+}
+
+/**
+ * The panel window owns the installer. A pet-side request is forwarded to the
+ * main process, which opens/focuses the panel before replaying it there.
+ */
+export function resolveModelSetupRequestRoute(view: WindowView): 'local' | 'panel' {
+  return view === 'panel' ? 'local' : 'panel'
 }
 
 /** Whether this launch has already seen a voice-triggered request. */
@@ -108,4 +151,36 @@ export function shouldRequestModelSetupForWakewordChange(
     (!previous.wakewordAlwaysOn && next.wakewordAlwaysOn)
     || (previous.voiceTriggerMode !== 'wake_word' && next.voiceTriggerMode === 'wake_word')
   )
+}
+
+/** True when a wake-word control is switched back off. */
+export function shouldCancelModelSetupForWakewordChange(
+  previous: WakewordSetupFlags,
+  next: WakewordSetupFlags,
+): boolean {
+  return (
+    (previous.wakewordAlwaysOn && !next.wakewordAlwaysOn)
+    || (previous.voiceTriggerMode === 'wake_word' && next.voiceTriggerMode !== 'wake_word')
+  )
+}
+
+/**
+ * Applies a settings-save transition to the delayed request. Keeping the
+ * decision here means the save path only wires timers, while the on/off
+ * semantics stay testable without React or the Electron bridge.
+ */
+export function applyModelSetupWakewordChange(
+  previous: WakewordSetupFlags,
+  next: WakewordSetupFlags,
+  actions: { request: () => void; cancel: () => void },
+): 'request' | 'cancel' | 'none' {
+  if (shouldRequestModelSetupForWakewordChange(previous, next)) {
+    actions.request()
+    return 'request'
+  }
+  if (shouldCancelModelSetupForWakewordChange(previous, next)) {
+    actions.cancel()
+    return 'cancel'
+  }
+  return 'none'
 }

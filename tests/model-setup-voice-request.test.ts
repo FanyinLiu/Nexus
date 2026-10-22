@@ -3,9 +3,14 @@ import { test } from 'node:test'
 
 import {
   MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS,
+  applyModelSetupWakewordChange,
+  cancelModelSetupWakewordRequest,
   createModelSetupRequestStore,
   hasModelSetupRequest,
   requestModelSetupOnVoiceUse,
+  requestModelSetupOnWakewordEnabled,
+  resolveModelSetupRequestRoute,
+  shouldCancelModelSetupForWakewordChange,
   shouldRequestModelSetupForWakewordChange,
   subscribeModelSetupRequests,
 } from '../src/features/setup/modelSetupRequests.ts'
@@ -199,6 +204,101 @@ test('cancelling a deferred request keeps the installer quiet', () => {
 
   assert.equal(pending, null)
   assert.equal(store.hasRequest(), false)
+})
+
+test('a pending wake-word request is cancelled on unmount', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let delivered = false
+
+  requestModelSetupOnWakewordEnabled(() => { delivered = true })
+  // The settings surface cancels from an unmount cleanup.
+  cancelModelSetupWakewordRequest()
+
+  t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
+  assert.equal(delivered, false)
+})
+
+test('switching the wake word off before the delay cancels the pending request', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let delivered = false
+  requestModelSetupOnWakewordEnabled(() => { delivered = true })
+
+  const outcome = applyModelSetupWakewordChange(
+    wakewordFlags(true, 'wake_word'),
+    wakewordFlags(false, 'direct_send'),
+    {
+      request: () => { requestModelSetupOnWakewordEnabled(() => { delivered = true }) },
+      cancel: () => cancelModelSetupWakewordRequest(),
+    },
+  )
+
+  assert.equal(outcome, 'cancel')
+  t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
+  assert.equal(delivered, false)
+})
+
+test('saving with the wake word newly on schedules the delayed request and saving without it does not', () => {
+  const scheduled: number[] = []
+  const store = createModelSetupRequestStore((_task, delayMs) => {
+    scheduled.push(delayMs)
+    return () => {}
+  })
+  let cancels = 0
+  const actions = {
+    request: () => { store.requestAfter(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS) },
+    cancel: () => { cancels += 1 },
+  }
+
+  assert.equal(
+    applyModelSetupWakewordChange(
+      wakewordFlags(false, 'direct_send'),
+      wakewordFlags(true, 'direct_send'),
+      actions,
+    ),
+    'request',
+  )
+  assert.deepEqual(scheduled, [MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS])
+
+  assert.equal(
+    applyModelSetupWakewordChange(
+      wakewordFlags(false, 'direct_send'),
+      wakewordFlags(false, 'direct_send'),
+      actions,
+    ),
+    'none',
+  )
+  assert.deepEqual(scheduled, [MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS])
+  assert.equal(cancels, 0)
+  assert.equal(store.hasRequest(), false)
+})
+
+test('wake-word off is detected as a cancel transition but never as a request', () => {
+  assert.equal(
+    shouldCancelModelSetupForWakewordChange(
+      wakewordFlags(false, 'wake_word'),
+      wakewordFlags(false, 'direct_send'),
+    ),
+    true,
+  )
+  assert.equal(
+    shouldCancelModelSetupForWakewordChange(
+      wakewordFlags(true, 'direct_send'),
+      wakewordFlags(false, 'direct_send'),
+    ),
+    true,
+  )
+  assert.equal(
+    shouldCancelModelSetupForWakewordChange(
+      wakewordFlags(false, 'direct_send'),
+      wakewordFlags(true, 'direct_send'),
+    ),
+    false,
+  )
+})
+
+test('pet-side requests route to the panel while panel-side requests stay local', () => {
+  assert.equal(resolveModelSetupRequestRoute('pet'), 'panel')
+  assert.equal(resolveModelSetupRequestRoute('panel'), 'local')
 })
 
 test('the installer opens with the voice invite in every locale', () => {

@@ -163,6 +163,16 @@ function registerPowerEventForwarding() {
   }
 }
 
+// A pet-side voice action asks the panel to offer the model installer. The
+// flag survives the panel's creation so a cold window can consume it after
+// its first render, while an already-mounted panel also gets the event.
+let pendingModelSetupRequest = false
+
+function emitModelSetupRequest() {
+  if (!panelWindow || panelWindow.isDestroyed()) return
+  panelWindow.webContents.send('models:setup-requested')
+}
+
 export function register() {
   registerPowerEventForwarding()
 
@@ -188,6 +198,20 @@ export function register() {
     const sourceView = getViewKind(event)
     const settingsReturnTarget = section === 'settings' && sourceView === 'pet' ? 'pet' : 'panel'
     showPanelWindow(section, { settingsReturnTarget })
+  })
+
+  ipcMain.handle('window:request-model-setup', (event) => {
+    requireTrustedSender(event)
+    pendingModelSetupRequest = true
+    showPanelWindow('chat')
+    emitModelSetupRequest()
+  })
+
+  ipcMain.handle('window:consume-model-setup-request', (event) => {
+    requireTrustedSender(event)
+    const pending = pendingModelSetupRequest
+    pendingModelSetupRequest = false
+    return pending
   })
 
   ipcMain.handle('window:get-panel-section', (event) => {

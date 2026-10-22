@@ -448,7 +448,7 @@ test('the readiness list keeps the untested-connection warning when no last-step
   guide.unmount()
 })
 
-test('the last-step readiness line drops the duration placeholder for warnings and keeps it when ready', () => {
+test('the all-set sentence appears only when every readiness item is complete', () => {
   const guide = createGuide()
   guide.render()
   guide.advanceToLastStep()
@@ -465,7 +465,11 @@ test('the last-step readiness line drops the duration placeholder for warnings a
   )({ ...companion.props, selectedPetModel: {}, ...overrides })
 
   const warnedText = collectText(renderCompanion({ textConnectionVerified: false }))
-  assert.ok(warnedText.includes(enMessages['onboarding.readiness.timebox.warning']))
+  assert.equal(
+    warnedText.includes(enMessages['onboarding.readiness.timebox.warning']),
+    false,
+  )
+  assert.ok(warnedText.includes(enMessages['onboarding.readiness.summary.warning']))
   assert.equal(warnedText.some((line) => line.includes('{minutes}')), false)
 
   const readyText = collectText(renderCompanion({ textConnectionVerified: true }))

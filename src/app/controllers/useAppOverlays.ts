@@ -35,9 +35,11 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight.ts'
 import {
+  cancelModelSetupWakewordRequest,
+  applyModelSetupWakewordChange,
   requestModelSetupOnWakewordEnabled,
-  shouldRequestModelSetupForWakewordChange,
 } from '../../features/setup/modelSetupRequests.ts'
+import { deliverModelSetupRequest } from '../../lib/modelSetupBridge.ts'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -247,6 +249,10 @@ export function useAppOverlays({
     return () => { active = false }
   }, [firstUseGuideHost, openFirstUsePanel, setChatError, t])
 
+  // A pending wake-word offer belongs to this surface. Closing the window
+  // before the delay elapses must not let it fire into a dead renderer.
+  useEffect(() => () => cancelModelSetupWakewordRequest(), [])
+
   const closeSettingsSurface = useCallback(() => {
     setSettingsOpen(false)
     syncWindowViewToUrl(view === 'panel' ? 'panel' : 'pet', view === 'panel' ? 'chat' : undefined)
@@ -322,7 +328,7 @@ export function useAppOverlays({
     // runs only where the user saved, so a synced change elsewhere stays quiet.
     // Deferred: the wake-word flag usually arrives together with the onboarding
     // Finish click, and the pet view must appear before the installer does.
-    if (shouldRequestModelSetupForWakewordChange(
+    applyModelSetupWakewordChange(
       {
         wakewordAlwaysOn: options.baselineSettings.wakewordAlwaysOn,
         voiceTriggerMode: options.baselineSettings.voiceTriggerMode,
@@ -331,9 +337,13 @@ export function useAppOverlays({
         wakewordAlwaysOn: committedSettings.wakewordAlwaysOn,
         voiceTriggerMode: committedSettings.voiceTriggerMode,
       },
-    )) {
-      requestModelSetupOnWakewordEnabled()
-    }
+      {
+        request: () => {
+          requestModelSetupOnWakewordEnabled(() => { void deliverModelSetupRequest(view) })
+        },
+        cancel: () => cancelModelSetupWakewordRequest(),
+      },
+    )
 
     if (options?.closeSettings ?? true) {
       closeSettingsSurface()
@@ -372,7 +382,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings])
+  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings, view])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,

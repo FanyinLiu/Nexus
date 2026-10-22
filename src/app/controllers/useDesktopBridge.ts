@@ -16,6 +16,7 @@ import {
   makeTranslator,
 } from '../appSupport.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
+import { requestModelSetupOnVoiceUse } from '../../features/setup/modelSetupRequests.ts'
 import {
   getPetModelPreset,
   getPetModelPresets,
@@ -481,6 +482,23 @@ export function useDesktopBridge({
     subscribe: (listener) => window.desktopPet?.subscribePanelSection?.(listener),
     apply: ({ section }) => setSettingsOpen(section === 'settings'),
   }, [setSettingsOpen, view])
+
+  // A pet-side voice action is replayed here through the main process. The
+  // pending flag covers the cold-window race where the replay event lands
+  // before this effect subscribes.
+  useEffect(() => {
+    if (view !== 'panel') return undefined
+
+    const consumePending = () => {
+      void window.desktopPet?.consumeModelSetupRequest?.()
+        .then((pending) => { if (pending) requestModelSetupOnVoiceUse() })
+        .catch(() => undefined)
+    }
+
+    const unsubscribe = window.desktopPet?.subscribeModelSetupRequest?.(consumePending)
+    consumePending()
+    return () => unsubscribe?.()
+  }, [view])
 
   useEffect(() => {
     if (view !== 'pet') {

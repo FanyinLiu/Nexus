@@ -7,6 +7,7 @@ import './styles/panel-companion.css'
 import { useAppController } from './controllers'
 import { PetView, PanelView } from './views'
 import { ModelSetupOverlay } from '../features/setup/components/ModelSetupOverlay.tsx'
+import { loadOnboardingCompleted } from '../lib'
 import { t as translate } from '../i18n/runtime.ts'
 import { formatComponentStackForLog, formatErrorBoundaryDetail } from './errorBoundarySupport.ts'
 
@@ -86,6 +87,7 @@ function App() {
   const modelSetupOverlayActive = controller.view === 'panel'
     && modelSetupOverlayOpen
     && !competingModalOpen
+  const firstLaunch = !loadOnboardingCompleted()
 
   if (controller.view === 'pet') {
     return (
@@ -94,10 +96,6 @@ function App() {
           {...controller.petView}
           settingsDrawer={settingsDrawer}
           onboardingGuide={onboardingGuide}
-        />
-        <ModelSetupOverlay
-          suppressed={competingModalOpen}
-          onVisibilityChange={handleModelSetupVisibilityChange}
         />
       </AppErrorBoundary>
     )
@@ -113,6 +111,7 @@ function App() {
       />
       <ModelSetupOverlay
         suppressed={competingModalOpen}
+        firstLaunch={firstLaunch}
         onVisibilityChange={handleModelSetupVisibilityChange}
       />
     </AppErrorBoundary>
