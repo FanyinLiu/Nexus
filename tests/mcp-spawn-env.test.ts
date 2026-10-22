@@ -89,6 +89,57 @@ test('an MCP child gets the allowlisted parent variables and its own server env'
   }
 })
 
+test('an MCP child receives proxy and custom-CA variables in both cases', async () => {
+  const userDataPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-mcp-env-'))
+  const spawns: SpawnRecord[] = []
+  const previous = new Map<string, string | undefined>()
+  const set = (name: string, value: string) => {
+    previous.set(name, process.env[name])
+    process.env[name] = value
+  }
+  set('http_proxy', 'http://proxy.example:8080')
+  set('HTTPS_PROXY', 'https://proxy.example:8443')
+  set('NO_PROXY', 'localhost,127.0.0.1')
+  set('all_proxy', 'socks5://proxy.example:1080')
+  set('NODE_EXTRA_CA_CERTS', '/etc/ssl/corp.pem')
+  set('SSL_CERT_FILE', '/etc/ssl/cert.pem')
+  set('AWS_SECRET_ACCESS_KEY', 'parent-secret-value')
+  globalThis.__nexusMcpTestUserData = userDataPath
+  globalThis.__nexusMcpTestSpawn = spawns
+  try {
+    const { syncFromSettings } = await import('../electron/services/mcpHost.js')
+    await syncFromSettings([{
+      id: 'srv-proxy',
+      command: 'node',
+      args: '--serve',
+      enabled: true,
+    }])
+
+    assert.equal(spawns.length, 1)
+    const env = spawns[0].options.env ?? {}
+    const expectBoth = (name: string, value: string) => {
+      assert.equal(env[name], value, name)
+      assert.equal(env[name.toLowerCase()], value, name.toLowerCase())
+    }
+    expectBoth('HTTP_PROXY', 'http://proxy.example:8080')
+    expectBoth('HTTPS_PROXY', 'https://proxy.example:8443')
+    expectBoth('NO_PROXY', 'localhost,127.0.0.1')
+    expectBoth('ALL_PROXY', 'socks5://proxy.example:1080')
+    expectBoth('NODE_EXTRA_CA_CERTS', '/etc/ssl/corp.pem')
+    expectBoth('SSL_CERT_FILE', '/etc/ssl/cert.pem')
+    assert.equal('AWS_SECRET_ACCESS_KEY' in env, false)
+    assert.equal('aws_secret_access_key' in env, false)
+  } finally {
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name]
+      else process.env[name] = value
+    }
+    delete globalThis.__nexusMcpTestUserData
+    delete globalThis.__nexusMcpTestSpawn
+    await fs.rm(userDataPath, { recursive: true, force: true })
+  }
+})
+
 test('an MCP server without an env still gets only the allowlisted parent variables', async () => {
   const userDataPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-mcp-env-'))
   const spawns: SpawnRecord[] = []
