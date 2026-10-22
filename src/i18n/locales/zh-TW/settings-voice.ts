@@ -29,7 +29,7 @@ export const zhTWSettingsVoice = {
   'settings.voice.interrupt_hint': '她正在說的時候，你正常說話就能打斷她。',
   'settings.voice.enable_stt_failover': '聽不清時換一種聽法',
   'settings.voice.enable_tts_failover': '說不出時換一種說法',
-  'settings.voice.trigger_mode': '語音觸發方式',
+  'settings.voice.trigger_mode': '說完怎麼傳出去',
   'settings.voice.wake_word': '喚醒詞',
   'settings.voice.wake_word_placeholder': '例如：小白',
   'settings.voice.wake_word_note_suffix': ' 目前只有命中喚醒詞的句子才會送給大模型。',

@@ -29,7 +29,7 @@ export const koSettingsVoice = {
   'settings.voice.interrupt_hint': '그녀가 말하는 동안 보통 목소리로 말하면 멈춥니다.',
   'settings.voice.enable_stt_failover': '잘 안 들리면 다른 듣기로',
   'settings.voice.enable_tts_failover': '잘 안 되면 다른 말하기로',
-  'settings.voice.trigger_mode': '음성 트리거 모드',
+  'settings.voice.trigger_mode': '말한 내용을 보내는 방식',
   'settings.voice.wake_word': '호출어',
   'settings.voice.wake_word_placeholder': '예: Xinghui',
   'settings.voice.wake_word_note_suffix': ' 호출어와 일치하는 발화만 모델로 전송됩니다.',

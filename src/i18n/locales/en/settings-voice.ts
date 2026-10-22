@@ -29,7 +29,7 @@ export const enSettingsVoice = {
   'settings.voice.interrupt_hint': 'While she is talking, speaking at a normal volume stops her.',
   'settings.voice.enable_stt_failover': 'Try another way of listening',
   'settings.voice.enable_tts_failover': 'Try another way of speaking',
-  'settings.voice.trigger_mode': 'Voice trigger mode',
+  'settings.voice.trigger_mode': 'When to send what you say',
   'settings.voice.wake_word': 'Wake word',
   'settings.voice.wake_word_placeholder': 'Example: Xiaobai',
   'settings.voice.wake_word_note_suffix': ' Only utterances that match the wake word will be sent to the model.',

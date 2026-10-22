@@ -27,7 +27,7 @@ export const zhCNSettingsVoice = {
   'settings.voice.interrupt_hint': '她正在说的时候，你正常说话就能打断她。',
   'settings.voice.enable_stt_failover': '听不清时换一种听法',
   'settings.voice.enable_tts_failover': '说不出时换一种说法',
-  'settings.voice.trigger_mode': '语音触发方式',
+  'settings.voice.trigger_mode': '说完怎么发出去',
   'settings.voice.wake_word': '唤醒词',
   'settings.voice.wake_word_placeholder': '例如：小白（支持逗号分隔多个唤醒词，如：小白, 小助手）',
   'settings.voice.wake_word_note_suffix': ' 当前只有命中唤醒词的句子才会发给大模型。',

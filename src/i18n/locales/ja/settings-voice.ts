@@ -29,7 +29,7 @@ export const jaSettingsVoice = {
   'settings.voice.interrupt_hint': '彼女が話しているとき、普通の声で話すと止まります。',
   'settings.voice.enable_stt_failover': '聞き取れないとき別の聞き方にする',
   'settings.voice.enable_tts_failover': '話せないとき別の話し方にする',
-  'settings.voice.trigger_mode': '音声トリガーモード',
+  'settings.voice.trigger_mode': '話した言葉の送り方',
   'settings.voice.wake_word': 'ウェイクワード',
   'settings.voice.wake_word_placeholder': '例: Xinghui',
   'settings.voice.wake_word_note_suffix': ' ウェイクワードに一致した発話のみがモデルに送信されます。',
