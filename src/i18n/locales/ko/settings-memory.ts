@@ -261,6 +261,8 @@ export const koSettingsMemory = {
   'memory.soul.save': '저장',
   'memory.soul.placeholder': '성격이랑, 어떻게 곁에 있을지 적어.',
   'memory.soul.default': '나는 성회야. 네 바탕화면에 있어. 네가 한 말을 먼저 받고, 살짝 한마디 보태. 규칙은 네가 정하고, 나는 그걸 따라.',
+  'memory.soul.restored': '기본 내용으로 되돌렸어요',
+  'memory.soul.too_long': '내용이 너무 길어요. 줄인 다음 저장해 주세요.',
   'memory.portrait.title': '기억',
   'memory.portrait.hint': '그녀가 기억하는 너에 대한 것.',
   'memory.portrait.about': '너에 대해',

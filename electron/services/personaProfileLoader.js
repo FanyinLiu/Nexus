@@ -1,4 +1,7 @@
 import path from 'node:path'
+import { acceptPersonaSoulContent, PERSONA_SOUL_MAX_CHARS } from '../../shared/personaSoul.js'
+
+export { acceptPersonaSoulContent, PERSONA_SOUL_MAX_CHARS }
 
 const PERSONA_PROFILE_FILES = {
   soul: 'soul.md',
@@ -122,27 +125,6 @@ export async function loadPersonaProfileFromReader(options) {
   }
 
   return result
-}
-
-/**
- * Upper bound for one soul write. Character-card identity text is long, and
- * the old portrait cap would cut it off; this still refuses an unbounded
- * payload so a save cannot fill the disk.
- */
-export const PERSONA_SOUL_MAX_CHARS = 500_000
-
-/**
- * Accept soul text for a save, or null when the payload must not be written.
- * Missing text is an empty file. Non-strings are refused so an object is not
- * coerced into a placeholder.
- * @param {unknown} content
- * @returns {string | null}
- */
-export function acceptPersonaSoulContent(content) {
-  if (content == null) return ''
-  if (typeof content !== 'string') return null
-  if (content.length > PERSONA_SOUL_MAX_CHARS) return null
-  return content
 }
 
 /**

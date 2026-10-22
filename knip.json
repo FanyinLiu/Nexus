@@ -6,7 +6,9 @@
     "tests/benchmarks.bench.ts",
     "tests/fixtures/settingsSurfaceAuditBaseline.ts",
     "tests/helpers/bundler-import-hooks.mjs",
-    "tests/helpers/electron-main-stub-hooks.mjs"
+    "tests/helpers/electron-main-stub-hooks.mjs",
+    "tests/helpers/persona-ipc-electron-stub.mjs",
+    "tests/helpers/tsx-test-loader.mjs"
   ],
   "ignore": [
     "shared/**/*.d.ts"

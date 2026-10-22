@@ -261,6 +261,8 @@ export const jaSettingsMemory = {
   'memory.soul.save': '保存',
   'memory.soul.placeholder': '性格と、どう寄り添うかを書いて。',
   'memory.soul.default': '私は星絵。デスクトップにいる。まずあなたの話を受けて、そっと一言添える。決まりはあなたが決めて、私はそれに従う。',
+  'memory.soul.restored': '初期の文に戻しました',
+  'memory.soul.too_long': '長すぎます。短くしてから保存してください。',
   'memory.portrait.title': '記憶',
   'memory.portrait.hint': '彼女が覚えている、あなたのこと。',
   'memory.portrait.about': 'あなたについて',

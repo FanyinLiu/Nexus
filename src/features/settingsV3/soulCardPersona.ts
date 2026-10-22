@@ -1,12 +1,14 @@
 /**
  * The SOUL card reads and writes the persona text chat actually uses.
  *
- * An active profile persona wins; otherwise the global SOUL file. A legacy
- * localStorage note is copied once into an empty target and then removed.
- * Saves use the existing panel-only persona channel and do nothing when this
- * window is not allowed to write.
+ * An active profile's soul.md wins, then the global SOUL file, then
+ * settings.systemPrompt — the same chain the chat prompt builder uses.
+ * A legacy localStorage note is copied once into an empty override and then
+ * removed. Saves use the existing panel-only persona channel and do nothing
+ * when this window is not allowed to write.
  */
 
+import { PERSONA_SOUL_MAX_CHARS } from '../../../shared/personaSoul.js'
 import { loadActiveProfilePersona } from '../chat/systemPromptBuilder.ts'
 import type { AppSettings } from '../../types/app.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
@@ -21,61 +23,106 @@ export type SoulCardTarget =
   | { kind: 'soul-file' }
 
 export interface SoulCardNote {
+  /** Text the model will receive on the next reply. */
   text: string
   updatedAt: string | null
   target: SoulCardTarget
 }
 
-export type SoulCardSettings = Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId'>
+type LoadedSoul = SoulCardNote & {
+  /** Raw override file. Empty means the fallback chain is what the model sees. */
+  overrideText: string
+}
+
+export type SoulCardSettings = Pick<
+  AppSettings,
+  'profilePersonaInChatEnabled' | 'activeCharacterProfileId' | 'systemPrompt'
+>
+
+export type SoulCardSaveResult =
+  | { ok: true; note: SoulCardNote; restoredDefault: boolean }
+  | { ok: false; reason: 'too-long' | 'rejected' }
 
 /**
  * Load the persona text the next chat reply will use, migrating a legacy
- * note into an empty target first.
+ * note into an empty override first.
  */
 export async function loadSoulCard(settings: SoulCardSettings): Promise<SoulCardNote> {
   try {
     const note = await readEffectiveSoul(settings)
-    return await migrateLegacySoul(note)
+    return visibleNote(await migrateLegacySoul(note))
   } catch (error) {
     console.warn('[memory] soul load failed:', getRedactedLogErrorMessage(error))
-    return { text: '', updatedAt: null, target: { kind: 'soul-file' } }
+    return {
+      text: typeof settings.systemPrompt === 'string' ? settings.systemPrompt : '',
+      updatedAt: null,
+      target: { kind: 'soul-file' },
+    }
   }
 }
 
 /**
  * Write the card draft to the persona source chat will read next.
- * Returns null when the write is refused.
+ * A blank draft clears the override so the fallback applies again.
+ * An oversized draft is refused and nothing is written.
  */
 export async function saveSoulCard(
   settings: SoulCardSettings,
   text: string,
-): Promise<SoulCardNote | null> {
+): Promise<SoulCardSaveResult> {
+  const content = text.replace(/\r\n/g, '\n').trim()
+  if (content.length > PERSONA_SOUL_MAX_CHARS) {
+    return { ok: false, reason: 'too-long' }
+  }
   try {
     const current = await readEffectiveSoul(settings)
-    const written = await writeSoul(current.target, text)
-    if (written == null) return null
+    const written = await writeSoul(current.target, content)
+    if (written == null) return { ok: false, reason: 'rejected' }
+    const fresh = await readEffectiveSoul(settings)
     return {
-      text: written,
-      updatedAt: new Date().toISOString(),
-      target: current.target,
+      ok: true,
+      restoredDefault: written === '',
+      note: {
+        text: fresh.text,
+        updatedAt: new Date().toISOString(),
+        target: fresh.target,
+      },
     }
   } catch (error) {
     console.warn('[memory] soul save failed:', getRedactedLogErrorMessage(error))
-    return null
+    return { ok: false, reason: 'rejected' }
   }
 }
 
-async function readEffectiveSoul(settings: SoulCardSettings): Promise<SoulCardNote> {
+/** Same truthiness as `profileSoul || globalSoul || systemPrompt` in the prompt builder. */
+function effectivePersonaText(profileSoul: string, globalSoul: string, systemPrompt: string): string {
+  const selected = profileSoul || globalSoul || systemPrompt
+  return typeof selected === 'string' ? selected : ''
+}
+
+function visibleNote(note: LoadedSoul): SoulCardNote {
+  return { text: note.text, updatedAt: note.updatedAt, target: note.target }
+}
+
+async function readEffectiveSoul(settings: SoulCardSettings): Promise<LoadedSoul> {
+  const globalSoul = await readGlobalSoul()
+  const systemPrompt = typeof settings.systemPrompt === 'string' ? settings.systemPrompt : ''
   const profile = await loadActiveProfilePersona(settings)
   if (profile?.present && profile.id.trim()) {
+    const overrideText = typeof profile.soul === 'string' ? profile.soul : ''
     return {
-      text: profile.soul ?? '',
+      text: effectivePersonaText(overrideText, globalSoul, systemPrompt),
+      overrideText,
       updatedAt: null,
       target: { kind: 'profile', profileId: profile.id },
     }
   }
-  const soul = await readGlobalSoul()
-  return { text: soul, updatedAt: null, target: { kind: 'soul-file' } }
+  return {
+    text: effectivePersonaText('', globalSoul, systemPrompt),
+    overrideText: globalSoul,
+    updatedAt: null,
+    target: { kind: 'soul-file' },
+  }
 }
 
 async function readGlobalSoul(): Promise<string> {
@@ -89,24 +136,21 @@ async function readGlobalSoul(): Promise<string> {
 }
 
 /**
- * Copy the legacy note only when the live target is empty, then drop the
- * note so a later empty target cannot pick it up again. A refused write
- * leaves the note in place for a later attempt.
+ * Copy the legacy note only when the live override is empty, then drop the
+ * note so a later empty override cannot pick it up again. A refused write
+ * leaves the note in place for a later attempt. Emptiness here is the file,
+ * not the system-prompt fallback the card may be showing.
  */
-async function migrateLegacySoul(note: SoulCardNote): Promise<SoulCardNote> {
+async function migrateLegacySoul(note: LoadedSoul): Promise<LoadedSoul> {
   const legacy = loadCompanionSoul()
-  if (!legacy.text.trim()) {
-    clearCompanionSoul()
-    return note
-  }
-  if (note.text.trim()) {
+  if (!legacy.text.trim() || note.overrideText.trim()) {
     clearCompanionSoul()
     return note
   }
   const written = await writeSoul(note.target, legacy.text)
   if (written == null) return note
   clearCompanionSoul()
-  return { ...note, text: written, updatedAt: legacy.updatedAt }
+  return { ...note, text: written, overrideText: written, updatedAt: legacy.updatedAt }
 }
 
 async function writeSoul(target: SoulCardTarget, text: string): Promise<string | null> {

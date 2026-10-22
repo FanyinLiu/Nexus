@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
+import { PERSONA_SOUL_MAX_CHARS } from '../shared/personaSoul.js'
 import { buildChatRequestPayload } from '../src/features/chat/systemPromptBuilder.ts'
 import {
   PERSONA_SOUL_SAVED_CHANNEL,
@@ -142,8 +143,11 @@ test('editing the soul card updates the active profile persona in the next syste
   const saved = await saveSoulCard(settings, `  ${PROFILE_EDIT}\nsecond line  `)
   const prompt = await systemPromptFor(settings)
 
-  assert.equal(saved?.text, `${PROFILE_EDIT}\nsecond line`)
-  assert.equal(saved?.target.kind, 'profile')
+  assert.equal(saved.ok, true)
+  if (!saved.ok) return
+  assert.equal(saved.note.text, `${PROFILE_EDIT}\nsecond line`)
+  assert.equal(saved.note.target.kind, 'profile')
+  assert.equal(saved.restoredDefault, false)
   assert.equal(harness.profiles.get('card-1')?.soul, `${PROFILE_EDIT}\nsecond line`)
   assert.equal(harness.globalSoul.value, 'global-soul-should-stay')
   assert.deepEqual(harness.saves, [{ content: `${PROFILE_EDIT}\nsecond line`, profileId: 'card-1' }])
@@ -168,7 +172,10 @@ test('editing the soul card updates SOUL.md when no profile persona is active', 
   const saved = await saveSoulCard(settings, GLOBAL_EDIT)
   const prompt = await systemPromptFor(settings)
 
-  assert.equal(saved?.target.kind, 'soul-file')
+  assert.equal(saved.ok, true)
+  if (!saved.ok) return
+  assert.equal(saved.note.target.kind, 'soul-file')
+  assert.equal(saved.restoredDefault, false)
   assert.equal(harness.globalSoul.value, GLOBAL_EDIT)
   assert.equal(harness.profiles.get('card-1')?.soul, 'profile-soul-should-stay')
   assert.deepEqual(harness.saves, [{ content: GLOBAL_EDIT, profileId: undefined }])
@@ -257,6 +264,7 @@ test('a legacy soul note is not copied over an existing persona, and is not appl
   const settings = settingsWith({
     profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
 
   const first = await loadSoulCard(settings)
@@ -268,7 +276,8 @@ test('a legacy soul note is not copied over an existing persona, and is not appl
   const second = await loadSoulCard(settings)
   const prompt = await systemPromptFor(settings)
 
-  assert.equal(second.text, '')
+  assert.equal(second.text, 'ENGLISH-DEFAULT-PROMPT')
+  assert.doesNotMatch(second.text, /我是星绘/)
   assert.equal(harness.saves.length, 0)
   assert.equal(harness.globalSoul.value, '')
   assert.doesNotMatch(prompt, new RegExp(LEGACY))
@@ -289,7 +298,7 @@ test('a window that cannot save persona files does not write the soul card or th
   const saved = await saveSoulCard(settings, GLOBAL_EDIT)
   const prompt = await systemPromptFor(settings)
 
-  assert.equal(saved, null)
+  assert.deepEqual(saved, { ok: false, reason: 'rejected' })
   assert.equal(harness.saves.length, 0)
   assert.equal(harness.globalSoul.value, 'global-soul-before')
   const legacyRaw = harness.storage.get(COMPANION_SOUL_STORAGE_KEY) ?? ''
@@ -309,12 +318,15 @@ test('a window that cannot save persona files keeps a legacy note when the targe
   const settings = settingsWith({
     profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
 
   const loaded = await loadSoulCard(settings)
   const prompt = await systemPromptFor(settings)
 
-  assert.equal(loaded.text, '')
+  assert.equal(loaded.text, 'ENGLISH-DEFAULT-PROMPT')
+  assert.doesNotMatch(loaded.text, /我是星绘/)
+  assert.match(prompt, /ENGLISH-DEFAULT-PROMPT/)
   assert.equal(harness.saves.length, 0)
   assert.equal(harness.globalSoul.value, '')
   assert.equal(harness.storage.has(COMPANION_SOUL_STORAGE_KEY), true)
@@ -344,4 +356,115 @@ test('a soul save tells other windows the text changed without sending the text'
   } finally {
     channel.close()
   }
+})
+
+test('an empty persona file shows the system prompt the model receives, not a translated sample', async () => {
+  install({
+    panel: true,
+    globalSoul: '',
+  })
+  const settings = settingsWith({
+    profilePersonaInChatEnabled: false,
+    activeCharacterProfileId: '',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
+  })
+
+  const loaded = await loadSoulCard(settings)
+  const prompt = await systemPromptFor(settings)
+
+  assert.equal(loaded.text, 'ENGLISH-DEFAULT-PROMPT')
+  assert.doesNotMatch(loaded.text, /我是星绘/)
+  assert.match(prompt, /ENGLISH-DEFAULT-PROMPT/)
+  assert.doesNotMatch(prompt, /我是星绘/)
+})
+
+test('whitespace in a persona file is the text the model receives', async () => {
+  install({
+    panel: true,
+    globalSoul: '   ',
+  })
+  const settings = settingsWith({
+    profilePersonaInChatEnabled: false,
+    activeCharacterProfileId: '',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
+  })
+
+  const loaded = await loadSoulCard(settings)
+  const prompt = await systemPromptFor(settings)
+
+  assert.equal(loaded.text, '   ')
+  assert.equal(prompt.startsWith('   '), true)
+  assert.doesNotMatch(prompt, /ENGLISH-DEFAULT-PROMPT/)
+})
+
+test('an empty profile soul falls through to SOUL.md, then the system prompt', async () => {
+  install({
+    panel: true,
+    globalSoul: '',
+    profiles: { 'card-1': { present: true, soul: '' } },
+  })
+  const settings = settingsWith({
+    profilePersonaInChatEnabled: true,
+    activeCharacterProfileId: 'card-1',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
+  })
+
+  const loaded = await loadSoulCard(settings)
+  assert.equal(loaded.target.kind, 'profile')
+  assert.equal(loaded.text, 'ENGLISH-DEFAULT-PROMPT')
+
+  const withGlobal = install({
+    panel: true,
+    globalSoul: 'global-soul-fallback',
+    profiles: { 'card-1': { present: true, soul: '' } },
+  })
+  const again = await loadSoulCard(settings)
+  assert.equal(again.text, 'global-soul-fallback')
+  assert.equal(again.target.kind, 'profile')
+  assert.equal(withGlobal.globalSoul.value, 'global-soul-fallback')
+})
+
+test('clearing the soul card removes the override and the model receives the system prompt again', async () => {
+  const harness = install({
+    panel: true,
+    globalSoul: 'old-soul-override',
+  })
+  const settings = settingsWith({
+    profilePersonaInChatEnabled: false,
+    activeCharacterProfileId: '',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
+  })
+
+  const cleared = await saveSoulCard(settings, '   ')
+  const prompt = await systemPromptFor(settings)
+
+  assert.equal(cleared.ok, true)
+  if (!cleared.ok) return
+  assert.equal(cleared.restoredDefault, true)
+  assert.equal(cleared.note.text, 'ENGLISH-DEFAULT-PROMPT')
+  assert.doesNotMatch(cleared.note.text, /我是星绘/)
+  assert.equal(harness.globalSoul.value, '')
+  assert.deepEqual(harness.saves, [{ content: '', profileId: undefined }])
+  assert.match(prompt, /ENGLISH-DEFAULT-PROMPT/)
+  assert.doesNotMatch(prompt, /old-soul-override/)
+})
+
+test('a soul card over the size limit is refused and the previous persona stays', async () => {
+  const harness = install({
+    panel: true,
+    globalSoul: 'old-soul-override',
+  })
+  const settings = settingsWith({
+    profilePersonaInChatEnabled: false,
+    activeCharacterProfileId: '',
+    systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
+  })
+
+  const refused = await saveSoulCard(settings, 'x'.repeat(PERSONA_SOUL_MAX_CHARS + 1))
+  const prompt = await systemPromptFor(settings)
+
+  assert.deepEqual(refused, { ok: false, reason: 'too-long' })
+  assert.equal(harness.saves.length, 0)
+  assert.equal(harness.globalSoul.value, 'old-soul-override')
+  assert.match(prompt, /old-soul-override/)
 })
