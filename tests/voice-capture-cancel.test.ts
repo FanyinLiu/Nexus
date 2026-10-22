@@ -10,6 +10,7 @@ import {
   runStartVoiceClick,
   saveVoiceStartSwitches,
   voiceCapturePhase,
+  voiceSwitchesAfterMicrophoneDenied,
   withVoiceCaptureAttempt,
 } from '../src/features/voice/voiceCaptureAttempt.ts'
 
@@ -230,6 +231,147 @@ test('a microphone grant that arrives after the window closed is discarded', asy
       speechOutputEnabled: true,
     }, true).enabled, true)
   } finally {
+    media.restore()
+    resetVoiceCaptureAttemptForTests()
+  }
+})
+
+const PERMISSION_PROMPT_MS = 5_000
+
+async function flushMicrotasks() {
+  for (let i = 0; i < 8; i += 1) await Promise.resolve()
+}
+
+test('a several-second permission prompt keeps Settings open until the microphone stream is live', async () => {
+  resetVoiceCaptureAttemptForTests()
+  const media = installMedia(() => true)
+  const timers: Array<{ delay: number; callback: () => void }> = []
+  const previousSetTimeout = globalThis.setTimeout
+  globalThis.setTimeout = ((callback: () => void, delay?: number) => {
+    timers.push({ delay: delay ?? 0, callback })
+    return timers.length
+  }) as typeof setTimeout
+  let closes = 0
+  let granted = false
+  let used: FakeStream | null = null
+  try {
+    const outcome = runStartVoiceClick({
+      visible: () => true,
+      subscribeHidden: () => () => {},
+      saveSwitches: async () => {},
+      start: () => {
+        const attemptId = pendingVoiceCaptureAttempt()
+        void withVoiceCaptureAttempt(attemptId, async () => {
+          const handle = await requestVoiceInputStream({ purpose: 'stt' })
+          used = handle.stream as unknown as FakeStream
+        })
+      },
+      closeSurface: () => {
+        assert.equal(granted, true)
+        closes += 1
+      },
+    })
+    await flushMicrotasks()
+    assert.equal(media.requests.length, 1)
+    assert.equal(closes, 0)
+    assert.equal(used, null)
+    for (const timer of timers) {
+      if (timer.delay <= PERMISSION_PROMPT_MS) timer.callback()
+    }
+    await flushMicrotasks()
+    assert.equal(closes, 0)
+    assert.equal(media.requests.length, 1)
+    assert.equal(used, null)
+
+    granted = true
+    media.releaseGrants()
+    assert.equal(await outcome, 'open')
+    await flushMicrotasks()
+    assert.equal(closes, 1)
+    assert.equal(used, media.streams[0])
+    assert.equal(media.streams[0]?.stopped, false)
+    assert.equal(voiceCapturePhase(), 'open')
+  } finally {
+    globalThis.setTimeout = previousSetTimeout
+    media.restore()
+    resetVoiceCaptureAttemptForTests()
+  }
+})
+
+test('denying the microphone prompt keeps Settings open without claiming voice works', async () => {
+  resetVoiceCaptureAttemptForTests()
+  const media = installMedia(() => true)
+  media.navigator.mediaDevices.getUserMedia = async () => {
+    media.requests.push({ purpose: 'audio' })
+    throw new DOMException('Permission denied', 'NotAllowedError')
+  }
+  const timers: Array<{ delay: number; callback: () => void }> = []
+  const previousSetTimeout = globalThis.setTimeout
+  globalThis.setTimeout = ((callback: () => void, delay?: number) => {
+    timers.push({ delay: delay ?? 0, callback })
+    return timers.length
+  }) as typeof setTimeout
+  const draft = {
+    speechInputEnabled: false,
+    speechOutputEnabled: false,
+    speechOutputVoice: 'kept',
+  }
+  const committed: Array<typeof draft> = []
+  let closes = 0
+  let seen: unknown = null
+  try {
+    const outcome = await runStartVoiceClick({
+      visible: () => true,
+      subscribeHidden: () => () => {},
+      saveSwitches: () => saveVoiceStartSwitches({
+        patch: { speechInputEnabled: true, speechOutputEnabled: true },
+        dirty: false,
+        draft,
+        commitDraft: async (next) => {
+          committed.push(next)
+        },
+      }),
+      start: () => {
+        const attemptId = pendingVoiceCaptureAttempt()
+        void withVoiceCaptureAttempt(attemptId, async () => {
+          await requestVoiceInputStream({ purpose: 'stt' })
+        }).catch((error: unknown) => {
+          seen = error
+        })
+      },
+      revertSwitches: async () => {
+        const saved = committed[0]
+        assert.ok(saved)
+        committed.push(voiceSwitchesAfterMicrophoneDenied(saved))
+      },
+      closeSurface: () => { closes += 1 },
+    })
+    await flushMicrotasks()
+    assert.equal(outcome, 'denied')
+    assert.equal(closes, 0)
+    assert.equal(media.requests.length, 1)
+    assert.equal(seen instanceof DOMException, true)
+    assert.equal((seen as DOMException).name, 'NotAllowedError')
+    assert.equal(committed[0]?.speechInputEnabled, true)
+    assert.equal(committed[0]?.speechOutputEnabled, true)
+    assert.equal(committed[1]?.speechInputEnabled, false)
+    assert.equal(committed[1]?.speechOutputEnabled, false)
+    assert.equal(committed[1]?.speechOutputVoice, 'kept')
+    assert.equal(voiceCapturePhase(), 'cancelled')
+
+    media.document.visibilityState = 'visible'
+    for (const timer of timers) {
+      if (timer.delay <= 60_000) timer.callback()
+    }
+    await flushMicrotasks()
+    assert.equal(media.requests.length, 1)
+    assert.equal(closes, 0)
+    assert.equal(voiceStartClick({
+      speechInputEnabled: false,
+      speechOutputEnabled: false,
+    }, true).enabled, true)
+  } finally {
+    globalThis.setTimeout = previousSetTimeout
     media.restore()
     resetVoiceCaptureAttemptForTests()
   }

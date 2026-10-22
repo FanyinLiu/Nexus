@@ -1,12 +1,16 @@
 /**
  * One start-voice click may open the microphone only while its window is
- * still showing. Saving the switches does not open it. If the window hides
- * before the stream is live, that click is finished: showing the window,
- * opening chat, or waiting must not ask for the microphone again. A stream
- * that is already live is left running. A later click may try again.
+ * still showing. Saving the switches does not open it. Settings stays open
+ * through the system permission prompt and closes only once the stream is
+ * live; closing earlier drops a grant that arrives seconds later. A denial
+ * leaves Settings open, puts the switches back, and never asks again. If the
+ * window hides before the stream is live, that click is finished: showing
+ * the window, opening chat, or waiting must not ask for the microphone
+ * again. A stream that is already live is left running. A later click may
+ * try again.
  */
 
-export type VoiceCaptureOutcome = 'open' | 'cancelled' | 'released'
+export type VoiceCaptureOutcome = 'open' | 'cancelled' | 'released' | 'denied'
 
 type VoiceCapturePhase = 'idle' | 'pending' | 'open' | 'cancelled'
 
@@ -28,6 +32,9 @@ function finish(attempt: Attempt, outcome: VoiceCaptureOutcome) {
   attempt.outcome = outcome
   const listeners = attempt.onCancel
   attempt.onCancel = []
+  // A live stream is already in use. Every other finish wakes a prompt that
+  // is still waiting so its grant cannot land later. The microphone opener
+  // handles that wake-up after the prompt itself has already failed.
   if (outcome !== 'open') {
     for (const listener of listeners) listener()
   }
@@ -92,8 +99,18 @@ export function cancelVoiceCaptureIfUnopened(): boolean {
 }
 
 /**
- * The start path is not going to open a microphone (missing model, refused).
- * The click stays finished, and Settings may close.
+ * The user refused the permission prompt. The click is finished, Settings
+ * stays open, and a later show or timer must not call getUserMedia again.
+ */
+export function denyVoiceCapture(id: number): void {
+  if (!current || current.id !== id || current.phase !== 'pending') return
+  finish(current, 'denied')
+}
+
+/**
+ * The start path is not going to open a microphone (missing model, refused
+ * for a reason other than the permission prompt). The click stays finished.
+ * Settings stays open until a stream is actually live.
  */
 export function releaseVoiceCaptureWithoutMicrophone(id: number | null): void {
   if (id === null || !current || current.id !== id || current.phase !== 'pending') return
@@ -185,6 +202,21 @@ type VoiceSwitchPatch = {
 }
 
 /**
+ * The permission prompt was refused, so the click must not leave listening
+ * and speaking on. Those switches are what the screen uses to say voice works.
+ */
+export function voiceSwitchesAfterMicrophoneDenied<T extends {
+  speechInputEnabled: boolean
+  speechOutputEnabled: boolean
+}>(draft: T): T {
+  return {
+    ...draft,
+    speechInputEnabled: false,
+    speechOutputEnabled: false,
+  }
+}
+
+/**
  * Persist the click's switch change before anything may open the microphone.
  * A speaking switch left off while listening is already on is not rewritten:
  * that click has no patch. A failed save must reject so the click does not start.
@@ -208,13 +240,17 @@ export type StartVoiceClickActions = {
   subscribeHidden: (onHidden: () => void) => () => void
   saveSwitches: () => Promise<void>
   start: () => void
+  /** Persist the switches off after a permission denial. Settings stays open. */
+  revertSwitches?: () => Promise<void>
   closeSurface: () => void
 }
 
 /**
  * Save, then open the microphone only if the window is still visible.
- * The surface stays up until the stream is live, so the open is part of the
- * click. Hiding before that cancels the click and does not close again.
+ * Settings closes only after the stream is live, so a permission prompt
+ * that takes several seconds still belongs to this click. A denial reverts
+ * the switches and leaves the surface open. Hiding before the stream is
+ * live cancels the click and does not close again.
  */
 export async function runStartVoiceClick(actions: StartVoiceClickActions): Promise<VoiceCaptureOutcome> {
   await actions.saveSwitches()
@@ -232,7 +268,8 @@ export async function runStartVoiceClick(actions: StartVoiceClickActions): Promi
   try {
     actions.start()
     const outcome = await settled
-    if (outcome !== 'cancelled') actions.closeSurface()
+    if (outcome === 'denied') await actions.revertSwitches?.()
+    if (outcome === 'open') actions.closeSurface()
     return outcome
   } finally {
     unsubscribe()

@@ -30,6 +30,7 @@ import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLa
 import {
   runStartVoiceClick,
   saveVoiceStartSwitches,
+  voiceSwitchesAfterMicrophoneDenied,
 } from '../features/voice/voiceCaptureAttempt.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
 import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
@@ -672,8 +673,10 @@ export function SettingsDrawer({
     try {
       // The save used to hide the window and then ask for the microphone on
       // the next frame. Chromium holds that request until the window is
-      // shown again. Keep the window up until the stream is live, and if it
-      // hides first, drop the click instead of replaying it.
+      // shown again, so a grant that arrives after the macOS prompt is
+      // discarded. Keep the window up until the stream is live. A denial
+      // puts the switches back and leaves Settings open. Hiding first drops
+      // the click instead of replaying it.
       const outcome = await runStartVoiceClick({
         visible: () => document.visibilityState !== 'hidden',
         subscribeHidden: (onHidden) => {
@@ -692,11 +695,16 @@ export function SettingsDrawer({
         start: () => {
           onStartVoiceConversation()
         },
+        revertSwitches: () => {
+          const reverted = voiceSwitchesAfterMicrophoneDenied(nextDraft)
+          setDraft(reverted)
+          return commitDraft(reverted, { closeSettings: false })
+        },
         closeSurface: () => {
           onClose()
         },
       })
-      if (outcome !== 'cancelled') restoreSettingsOpenerFocus()
+      if (outcome === 'open') restoreSettingsOpenerFocus()
     } catch (error) {
       console.error('[SettingsDrawer] voice start save failed:', getRedactedLogErrorMessage(error))
     } finally {

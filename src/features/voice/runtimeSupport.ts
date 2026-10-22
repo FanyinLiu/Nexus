@@ -2,6 +2,7 @@ import type { AppSettings, AudioSynthesisRequest, TranslationKey, TranslationPar
 import { t } from '../../i18n/runtime.ts'
 import {
   boundVoiceCaptureAttempt,
+  denyVoiceCapture,
   markVoiceCaptureOpened,
   VoiceCaptureCancelledError,
   voiceCaptureGrantIsUsable,
@@ -129,6 +130,18 @@ function microphoneAttemptId(purpose: VoiceInputPurpose): number | undefined {
   return boundVoiceCaptureAttempt() ?? undefined
 }
 
+/**
+ * The system prompt is the user's answer. Another constraint profile would
+ * call getUserMedia again, and a later show of the window must not either.
+ */
+function microphonePermissionDenied(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('name' in error)) return false
+  const name = (error as { name?: unknown }).name
+  return name === 'NotAllowedError'
+    || name === 'PermissionDeniedError'
+    || name === 'SecurityError'
+}
+
 async function openMicrophone(
   constraints: MediaTrackConstraints | true,
   attemptId: number | undefined,
@@ -142,6 +155,9 @@ async function openMicrophone(
     : whenVoiceCaptureCancelled(attemptId).then(() => {
       throw new VoiceCaptureCancelledError()
     })
+  // The race observes this rejection. The extra handler keeps a cancel that
+  // arrives after the prompt already failed from becoming unhandled.
+  if (cancelGuard) void cancelGuard.catch(() => undefined)
   try {
     const stream = await (cancelGuard ? Promise.race([pending, cancelGuard]) : pending)
     if (attemptId !== undefined && !voiceCaptureGrantIsUsable(attemptId, pageVisible())) {
@@ -195,6 +211,10 @@ export async function requestVoiceInputStream(
       }
     } catch (error) {
       if (error instanceof VoiceCaptureCancelledError) throw error
+      if (microphonePermissionDenied(error)) {
+        if (attemptId !== undefined) denyVoiceCapture(attemptId)
+        throw error
+      }
       lastError = error
     }
   }
