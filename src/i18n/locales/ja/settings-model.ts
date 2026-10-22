@@ -44,7 +44,7 @@ export const jaSettingsModel = {
   'settings.model.testing': 'テスト中...',
   'settings.model.test_endpoint': '接続をテスト',
   'settings.model.provider': 'プロバイダー',
-  'settings.model.endpoint_url': 'テキストエンドポイント URL',
+  'settings.model.endpoint_url': 'チャットサービスのアドレス',
   'settings.model.api_key': 'テキスト API キー',
   'settings.model.model': 'テキストモデル',
   'settings.model.custom': '（カスタム）',
