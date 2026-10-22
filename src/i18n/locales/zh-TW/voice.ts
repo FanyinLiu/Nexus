@@ -15,7 +15,7 @@ export const zhTWVoice = {
   'voice_trigger.direct_send.label': '辨識後直接發送',
   'voice_trigger.direct_send.hint': '說完一句就發送，回應最快。',
   'voice_trigger.wake_word.label': '聽到喚醒詞再發送',
-  'voice_trigger.wake_word.hint': '只有偵測到喚醒詞時，轉寫結果才會繼續發給模型。',
+  'voice_trigger.wake_word.hint': '只有說了喚醒詞的話，才會傳出去。',
   'voice_trigger.manual_confirm.label': '只填入輸入框',
   'voice_trigger.manual_confirm.hint': '先把辨識結果填進輸入框，再由你確認是否發送。',
   'voice_state.idle': '待命',

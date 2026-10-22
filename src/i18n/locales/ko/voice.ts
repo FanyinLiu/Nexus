@@ -15,7 +15,7 @@ export const koVoice = {
   'voice_trigger.direct_send.label': '인식 즉시 전송',
   'voice_trigger.direct_send.hint': '한 문장을 끝내면 바로 보내서, 답이 가장 빨리 옵니다.',
   'voice_trigger.wake_word.label': '호출어를 들으면 전송',
-  'voice_trigger.wake_word.hint': '웨이크워드가 포함된 발화만 모델로 전달됩니다.',
+  'voice_trigger.wake_word.hint': '호출어가 들어간 말만 보내요.',
   'voice_trigger.manual_confirm.label': '입력창에만 채우기',
   'voice_trigger.manual_confirm.hint': '인식 결과를 입력창에 먼저 넣고, 전송 여부는 당신이 결정합니다.',
   'voice_state.idle': '대기',
