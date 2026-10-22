@@ -21,6 +21,7 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^local-data:memory-(?:read|migration-(?:apply|rollback))$/,
   /^local-data:companion-(?:read|comparison-preview|dataset-mirror|migration-(?:apply|rollback))$/,
   /^mcp:(?:call-tool|sync-servers)$/,
+  /^memory:clear-user-data$/,
   /^minecraft:(?:connect|send-command)$/,
   /^models:download$/,
   /^notification:(?:set-channels|start)$/,

@@ -355,8 +355,7 @@ if (typeof window !== 'undefined') {
 
 /**
  * Drop a debounced write that has not landed yet.
- * Used when another window already persisted a newer copy, so the pending
- * local payload must not overwrite it when the timer fires.
+ * A purge or a newer remote copy must not be overwritten when the timer fires.
  */
 export function cancelDebouncedWrite(key: string): void {
   const existing = debouncedTimers.get(key)
