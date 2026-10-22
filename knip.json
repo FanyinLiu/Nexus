@@ -8,7 +8,8 @@
     "tests/helpers/bundler-import-hooks.mjs",
     "tests/helpers/electron-main-stub-hooks.mjs",
     "tests/helpers/memory-vector-electron-hooks.mjs",
-    "tests/helpers/memory-vector-electron-stub.mjs"
+    "tests/helpers/memory-vector-electron-stub.mjs",
+    "tests/helpers/mcp-host-hooks.mjs"
   ],
   "ignore": [
     "shared/**/*.d.ts"
