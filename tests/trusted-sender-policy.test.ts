@@ -187,6 +187,17 @@ test('model setup request stays shared but fails closed for an unbound sender', 
   }
 })
 
+test('the model setup event is addressed only to the panel webContents', async () => {
+  assert.equal(getRequiredWindowCapability('models:setup-requested'), 'panel')
+
+  const source = await readFile(new URL('../electron/ipc/windowIpc.js', import.meta.url), 'utf8')
+  const emitter = source.match(/function emitModelSetupRequest\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+
+  assert.ok(emitter, 'emitModelSetupRequest should exist')
+  assert.match(emitter, /panelWindow\.webContents\.send\('models:setup-requested'\)/)
+  assert.doesNotMatch(emitter, /BrowserWindow\.getAllWindows|mainWindow|petWindow|broadcast/i)
+})
+
 test('the pet window can invoke only the model setup request channel', () => {
   const pet = { id: 1207 }
   bindWindowCapability(pet, 'pet')

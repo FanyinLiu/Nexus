@@ -2,7 +2,6 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 
 /** ja messages — namespace `onboarding`. */
 export const jaOnboarding = {
-  'model_setup.eyebrow': '初回起動',
   'model_setup.title': 'ローカル音声モデルのインストール',
   'model_setup.body_prefix': '音声で呼び出すにも、話した内容を文字にするにも、先にいくつかのローカルモデルが必要です。',
   'model_setup.voice_invite': '声で話したいなら、先に音声モデルを入れてね。',

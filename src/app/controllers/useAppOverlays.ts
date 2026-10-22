@@ -35,11 +35,12 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight.ts'
 import {
-  cancelModelSetupWakewordRequest,
   applyModelSetupWakewordChange,
-  requestModelSetupOnWakewordEnabled,
 } from '../../features/setup/modelSetupRequests.ts'
-import { deliverModelSetupRequest } from '../../lib/modelSetupBridge.ts'
+import {
+  cancelModelSetupAfterWakeword,
+  createModelSetupWakewordActions,
+} from '../../lib/modelSetupBridge.ts'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -251,7 +252,7 @@ export function useAppOverlays({
 
   // A pending wake-word offer belongs to this surface. Closing the window
   // before the delay elapses must not let it fire into a dead renderer.
-  useEffect(() => () => cancelModelSetupWakewordRequest(), [])
+  useEffect(() => () => cancelModelSetupAfterWakeword(view), [view])
 
   const closeSettingsSurface = useCallback(() => {
     setSettingsOpen(false)
@@ -326,8 +327,9 @@ export function useAppOverlays({
     // Saving with a wake-word control switched on is a voice action, so that
     // window gets the same installer offer as pressing the mic button. This
     // runs only where the user saved, so a synced change elsewhere stays quiet.
-    // Deferred: the wake-word flag usually arrives together with the onboarding
-    // Finish click, and the pet view must appear before the installer does.
+    // The bridge checks inventory before scheduling: ready or unreadable models
+    // must not open or focus the panel. Panel saves keep the timer with the
+    // installer owner; pet saves delegate it to main so a panel dismiss wins.
     applyModelSetupWakewordChange(
       {
         wakewordAlwaysOn: options.baselineSettings.wakewordAlwaysOn,
@@ -337,12 +339,7 @@ export function useAppOverlays({
         wakewordAlwaysOn: committedSettings.wakewordAlwaysOn,
         voiceTriggerMode: committedSettings.voiceTriggerMode,
       },
-      {
-        request: () => {
-          requestModelSetupOnWakewordEnabled(() => { void deliverModelSetupRequest(view) })
-        },
-        cancel: () => cancelModelSetupWakewordRequest(),
-      },
+      createModelSetupWakewordActions(view),
     )
 
     if (options?.closeSettings ?? true) {

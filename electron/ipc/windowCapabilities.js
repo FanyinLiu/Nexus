@@ -34,6 +34,7 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^updater:install$/,
   /^vault:/,
   /^vts-bridge:migrate-legacy-token$/,
+  /^models:setup-requested$/,
   /^window:consume-model-setup-request$/,
 ])
 

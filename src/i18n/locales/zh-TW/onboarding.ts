@@ -2,7 +2,6 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 
 /** zh-TW messages — namespace `onboarding`. */
 export const zhTWOnboarding = {
-  'model_setup.eyebrow': '首次啟動',
   'model_setup.title': '安裝本機語音模型',
   'model_setup.body_prefix': '語音喚醒和轉寫需要先下載幾個本機模型。',
   'model_setup.voice_invite': '想跟我說話的話，要先裝一下語音模型。',

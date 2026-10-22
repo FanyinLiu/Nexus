@@ -27,6 +27,10 @@ test('App owns ModelSetupOverlay in the panel route only so Mao stays visible', 
   // The pet and the installer share one window. Mounting it only with the
   // panel route keeps the overlay from covering Mao.
   assert.equal(app.match(/<ModelSetupOverlay\b/g)?.length, 1)
+  const panelContainerIndex = app.indexOf('<PanelView')
+  const overlayIndex = app.indexOf('<ModelSetupOverlay')
+  assert.ok(panelContainerIndex >= 0, 'panel container should exist')
+  assert.ok(overlayIndex > panelContainerIndex, 'overlay should mount inside the panel container')
 
   const petBranch = sliceFrom(app, "if (controller.view === 'pet')", '\n  }')
   assert.doesNotMatch(petBranch, /<ModelSetupOverlay\b/)

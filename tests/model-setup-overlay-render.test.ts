@@ -16,7 +16,6 @@ const {
 const {
   cancelModelSetupWakewordRequest,
   requestModelSetupOnVoiceUse,
-  requestModelSetupOnWakewordEnabled,
 } = await import('../src/features/setup/modelSetupRequests.ts')
 await ensureLocaleLoaded('en-US')
 setLocale('en-US')
@@ -223,13 +222,12 @@ test('the overlay leads with the voice invite and still lists model sizes', asyn
   requestModelSetupOnVoiceUse()
 
   const renderer = createComponentRenderer<{
-    firstLaunch?: boolean
     suppressed?: boolean
-  }>(ModelSetupOverlay as (props: { firstLaunch?: boolean; suppressed?: boolean }) => unknown)
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
 
-  renderer.render({ firstLaunch: true })
+  renderer.render({})
   await flushEffects()
-  const tree = renderer.render({ firstLaunch: true })
+  const tree = renderer.render({})
   const text = collectText(tree)
 
   const inviteIndex = text.indexOf(enMessages['model_setup.voice_invite'])
@@ -237,10 +235,6 @@ test('the overlay leads with the voice invite and still lists model sizes', asyn
   assert.ok(inviteIndex >= 0, 'voice invite should render')
   assert.ok(bodyIndex >= 0, 'body copy should still render')
   assert.ok(inviteIndex < bodyIndex, 'voice invite should be the first line')
-  assert.ok(
-    text.indexOf(enMessages['model_setup.eyebrow']) < inviteIndex,
-    'the first-launch eyebrow is the only line above the invite',
-  )
   assert.ok(text.includes('42 MB'), 'download size should render')
   assert.ok(text.includes(enMessages['model_setup.model.vad.name']), 'model list should render')
 
@@ -248,42 +242,64 @@ test('the overlay leads with the voice invite and still lists model sizes', asyn
   cancelModelSetupWakewordRequest()
 })
 
-test('the first-launch eyebrow is hidden when the installer opens later', async () => {
+test('the installer card renders the zh-CN invite inside its sized panel shell', async () => {
   installWindowMock()
   requestModelSetupOnVoiceUse()
+  await ensureLocaleLoaded('zh-CN')
+  setLocale('zh-CN')
 
   const renderer = createComponentRenderer<{
-    firstLaunch?: boolean
     suppressed?: boolean
-  }>(ModelSetupOverlay as (props: { firstLaunch?: boolean; suppressed?: boolean }) => unknown)
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
 
-  renderer.render({ firstLaunch: false })
+  renderer.render({})
   await flushEffects()
-  const text = collectText(renderer.render({ firstLaunch: false }))
+  const tree = renderer.render({})
 
-  assert.equal(text.includes(enMessages['model_setup.eyebrow']), false)
-  assert.ok(text.includes(enMessages['model_setup.voice_invite']))
+  assert.ok(
+    collectText(tree).includes('想跟我说话的话，要先装一下语音模型。'),
+    'zh-CN invite should render',
+  )
+  assert.equal(
+    collectText(tree).includes('首次启动'),
+    false,
+    'the first-launch eyebrow line is gone',
+  )
+  const [backdrop] = findElements(
+    tree,
+    (element) => element.props.className === 'model-setup-backdrop',
+  )
+  const [card] = findElements(
+    tree,
+    (element) => element.props.className === 'model-setup-card',
+  )
+  assert.ok(backdrop, 'overlay backdrop should be the fixed-position container')
+  assert.ok(card, 'dialog should use the sized model-setup card class')
 
   renderer.unmount()
   cancelModelSetupWakewordRequest()
+  setLocale('en-US')
 })
 
-test('dismissing the installer cancels a pending wake-word request', async (t) => {
-  installWindowMock()
+test('dismissing the installer cancels a pending cross-window request', async (t) => {
+  const { windowMock } = installWindowMock()
   requestModelSetupOnVoiceUse()
 
   t.mock.timers.enable({ apis: ['setTimeout'] })
   let delivered = false
-  requestModelSetupOnWakewordEnabled(() => { delivered = true })
+  const mainTimer = setTimeout(() => { delivered = true }, 3_000)
+  windowMock.desktopPet.consumeModelSetupRequest = async () => {
+    clearTimeout(mainTimer)
+    return true
+  }
 
   const renderer = createComponentRenderer<{
-    firstLaunch?: boolean
     suppressed?: boolean
-  }>(ModelSetupOverlay as (props: { firstLaunch?: boolean; suppressed?: boolean }) => unknown)
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
 
-  renderer.render({ firstLaunch: false })
+  renderer.render({})
   await flushEffects()
-  const tree = renderer.render({ firstLaunch: false })
+  const tree = renderer.render({})
   const [dismissButton] = findElements(
     tree,
     (element) => element.type === 'button'
@@ -293,7 +309,32 @@ test('dismissing the installer cancels a pending wake-word request', async (t) =
   ;(dismissButton.props.onClick as () => void)()
 
   t.mock.timers.tick(3_000)
-  assert.equal(delivered, false)
+  assert.equal(delivered, false, 'panel dismissal must cancel the main-process timer')
 
   renderer.unmount()
+})
+
+test('unmounting the installer cancels a pending cross-window request', async (t) => {
+  const { windowMock } = installWindowMock()
+  requestModelSetupOnVoiceUse()
+
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let delivered = false
+  const mainTimer = setTimeout(() => { delivered = true }, 3_000)
+  windowMock.desktopPet.consumeModelSetupRequest = async () => {
+    clearTimeout(mainTimer)
+    return true
+  }
+
+  const renderer = createComponentRenderer<{
+    suppressed?: boolean
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
+
+  renderer.render({})
+  await flushEffects()
+  renderer.render({})
+  renderer.unmount()
+
+  t.mock.timers.tick(3_000)
+  assert.equal(delivered, false, 'unmounting the panel must cancel the main-process timer')
 })

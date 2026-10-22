@@ -2,7 +2,6 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 
 /** en messages — namespace `onboarding`. */
 export const enOnboarding = {
-  'model_setup.eyebrow': 'First launch',
   'model_setup.title': 'Install local voice models',
   'model_setup.body_prefix': 'Wake word and transcription need a few local models downloaded first.',
   'model_setup.voice_invite': 'Want to talk to me out loud? Install the voice models first.',

@@ -25,8 +25,6 @@ import {
 type Props = {
   /** Hide the overlay while another modal owns the screen (settings, onboarding guide). */
   suppressed?: boolean
-  /** The "First launch" eyebrow only belongs to the genuine first run. */
-  firstLaunch?: boolean
   onVisibilityChange?: (visible: boolean) => void
 }
 
@@ -44,7 +42,6 @@ function formatBytes(bytes: number): string {
 
 export function ModelSetupOverlay({
   suppressed = false,
-  firstLaunch = false,
   onVisibilityChange,
 }: Props) {
   const { t } = useTranslation()
@@ -108,6 +105,14 @@ export function ModelSetupOverlay({
 
   useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
 
+  // The panel owns the installer, so leaving the surface retracts a delayed
+  // request that has not reached its 3s mark yet.
+  useEffect(() => () => {
+    cancelModelSetupWakewordRequest()
+    const consume = window.desktopPet?.consumeModelSetupRequest
+    if (consume) void consume().catch(() => undefined)
+  }, [])
+
   useEffect(() => {
     const unsubscribe = window.desktopPet?.subscribeModelsProgress?.((event: ProgressEvent) => {
       setProgress((prev) => mergeModelProgress(prev, event))
@@ -147,7 +152,11 @@ export function ModelSetupOverlay({
   }, [refreshInventory])
 
   const handleDismiss = useCallback(() => {
+    // A pet-side wake-word save may still have a timer armed in main. Dismissing
+    // in the installer's own window retracts it as well as closing the box.
     cancelModelSetupWakewordRequest()
+    const consume = window.desktopPet?.consumeModelSetupRequest
+    if (consume) void consume().catch(() => undefined)
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
     setDismissed(true)
   }, [])
@@ -329,7 +338,6 @@ export function ModelSetupOverlay({
       >
         <header className="model-setup-card__header">
           <div>
-            {firstLaunch ? <p className="eyebrow">{t('model_setup.eyebrow')}</p> : null}
             <h2 id="model-setup-title">{t('model_setup.title')}</h2>
             <p className="model-setup-card__copy">
               {t('model_setup.voice_invite')}

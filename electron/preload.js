@@ -1,5 +1,18 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+// The panel owns the model installer UI. The URL token is only a renderer-side
+// hint for which bridge surface to expose; main-process capability checks stay
+// authoritative.
+function isPanelView() {
+  try {
+    return new URLSearchParams(window.location.search).get('view') === 'panel'
+  } catch {
+    return false
+  }
+}
+
+const panelView = isPanelView()
+
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
@@ -11,13 +24,15 @@ contextBridge.exposeInMainWorld('desktopPet', {
   },
   dragBy: (delta) => ipcRenderer.invoke('window:drag-by', delta),
   openPanel: (section) => ipcRenderer.invoke('window:open-panel', section),
-  requestModelSetup: () => ipcRenderer.invoke('window:request-model-setup'),
-  consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
-  subscribeModelSetupRequest: (listener) => {
-    const handler = () => listener()
-    ipcRenderer.on('models:setup-requested', handler)
-    return () => ipcRenderer.removeListener('models:setup-requested', handler)
-  },
+  requestModelSetup: (options) => ipcRenderer.invoke('window:request-model-setup', options),
+  ...(panelView ? {
+    consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
+    subscribeModelSetupRequest: (listener) => {
+      const handler = () => listener()
+      ipcRenderer.on('models:setup-requested', handler)
+      return () => ipcRenderer.removeListener('models:setup-requested', handler)
+    },
+  } : {}),
   getPanelSection: () => ipcRenderer.invoke('window:get-panel-section'),
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),

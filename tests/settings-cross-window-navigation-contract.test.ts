@@ -201,8 +201,8 @@ test('settings-to-onboarding switches the local modal while keeping the Panel op
 
   const modelOverlays = [...app.matchAll(/<ModelSetupOverlay[\s\S]*?\/>/g)].map((match) => match[0])
   assert.equal(modelOverlays.length, 1, 'only the panel route may mount the model overlay')
-  assert.match(modelOverlays[0], /firstLaunch=\{firstLaunch\}/)
   assert.match(modelOverlays[0], /suppressed=\{competingModalOpen\}/)
+  assert.doesNotMatch(modelOverlays[0], /firstLaunch/)
   assert.doesNotMatch(
     app.slice(app.indexOf("if (controller.view === 'pet')"), app.indexOf('<PanelView')),
     /<ModelSetupOverlay\b/,

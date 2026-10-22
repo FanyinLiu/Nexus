@@ -63,6 +63,7 @@ import {
   validateExternalLinkToolPayload,
   validateIntegrationInspectPayload,
   validateMediaSessionControlPayload,
+  validateModelSetupRequestPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,
@@ -74,6 +75,7 @@ import {
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from './payloadSchemas.js'
+import { createModelSetupRequestGate } from '../services/modelSetupRequestGate.js'
 import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
@@ -163,15 +165,20 @@ function registerPowerEventForwarding() {
   }
 }
 
-// A pet-side voice action asks the panel to offer the model installer. The
-// flag survives the panel's creation so a cold window can consume it after
-// its first render, while an already-mounted panel also gets the event.
-let pendingModelSetupRequest = false
-
+// A pet-side voice action asks the panel to offer the model installer. A
+// wake-word save may arm it a few seconds later, and the panel's consume (or
+// dismiss) call must be able to clear both the latch and that timer.
 function emitModelSetupRequest() {
   if (!panelWindow || panelWindow.isDestroyed()) return
   panelWindow.webContents.send('models:setup-requested')
 }
+
+const modelSetupRequestGate = createModelSetupRequestGate({
+  deliver: () => {
+    showPanelWindow('chat')
+    emitModelSetupRequest()
+  },
+})
 
 export function register() {
   registerPowerEventForwarding()
@@ -200,18 +207,19 @@ export function register() {
     showPanelWindow(section, { settingsReturnTarget })
   })
 
-  ipcMain.handle('window:request-model-setup', (event) => {
+  ipcMain.handle('window:request-model-setup', (event, payload) => {
     requireTrustedSender(event)
-    pendingModelSetupRequest = true
-    showPanelWindow('chat')
-    emitModelSetupRequest()
+    payload = validateModelSetupRequestPayload(payload)
+    if (payload.cancel) {
+      modelSetupRequestGate.cancel()
+      return
+    }
+    modelSetupRequestGate.request({ delayMs: payload.delayMs ?? 0 })
   })
 
   ipcMain.handle('window:consume-model-setup-request', (event) => {
     requireTrustedSender(event)
-    const pending = pendingModelSetupRequest
-    pendingModelSetupRequest = false
-    return pending
+    return modelSetupRequestGate.consume()
   })
 
   ipcMain.handle('window:get-panel-section', (event) => {
