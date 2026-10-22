@@ -83,6 +83,21 @@ export function cancelModelSetupAfterWakeword(): void {
 }
 
 /**
+ * Tells the main process that the user answered "maybe later" in the
+ * installer. The refusal lives in the main process, so a later voice action
+ * cannot raise the chat panel for the installer again — the surface that
+ * dismissed the box may be a different window than the one that asks.
+ */
+export function declineModelSetup(): void {
+  // A wake-word save that is still in flight must not re-arm the request
+  // after the refusal reached the main process.
+  wakewordRequestGeneration += 1
+  const decline = window.desktopPet?.declineModelSetup
+  if (!decline) return
+  void decline().catch(() => undefined)
+}
+
+/**
  * The settings-save actions for a wake-word transition. Kept here so the
  * save path and its behavior tests share exactly the same wiring.
  */

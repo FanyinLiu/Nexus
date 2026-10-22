@@ -107,3 +107,59 @@ test('an immediate request delivers once and consume reports the pending latch',
   assert.equal(harness.gate.consume(), true)
   assert.equal(harness.gate.consume(), false)
 })
+
+test('a declined installer is never delivered again', () => {
+  const harness = createHarness()
+
+  assert.equal(harness.gate.isDeclined(), false)
+  assert.equal(harness.gate.request(), true, 'a request before the refusal is armed')
+  assert.equal(harness.delivered, 1)
+
+  harness.gate.decline()
+  assert.equal(harness.gate.isDeclined(), true)
+
+  assert.equal(harness.gate.request(), false, 'a request after the refusal is dropped')
+  assert.equal(harness.delivered, 1, 'the panel is not raised for a declined installer')
+  assert.equal(harness.gate.hasPending(), false)
+  assert.equal(harness.gate.consume(), false, 'no request is left for the panel to claim')
+})
+
+test('a declined installer drops the request the pet window makes later', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const harness = createHarness()
+
+  harness.gate.decline()
+  harness.gate.request({ delayMs: 3_000 })
+
+  t.mock.timers.tick(3_000)
+
+  assert.equal(harness.delivered, 0, 'the delayed request never reaches the panel')
+  assert.equal(harness.gate.isScheduled(), false)
+  assert.equal(harness.gate.hasPending(), false)
+})
+
+test('declining retracts the request that was still counting down', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const harness = createHarness()
+
+  harness.gate.request({ delayMs: 3_000 })
+  assert.equal(harness.gate.isScheduled(), true)
+
+  harness.gate.decline()
+  t.mock.timers.tick(3_000)
+
+  assert.equal(harness.delivered, 0)
+  assert.equal(harness.gate.isScheduled(), false)
+  assert.equal(harness.gate.hasPending(), false)
+})
+
+test('cancelling a request does not undo the refusal', () => {
+  const harness = createHarness()
+
+  harness.gate.decline()
+  harness.gate.cancel()
+
+  assert.equal(harness.gate.isDeclined(), true, 'the refusal outlives a plain retraction')
+  assert.equal(harness.gate.request(), false)
+  assert.equal(harness.delivered, 0)
+})

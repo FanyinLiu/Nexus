@@ -20,7 +20,7 @@ import {
   hasModelSetupRequest,
   subscribeModelSetupRequests,
 } from '../modelSetupRequests.ts'
-import { cancelModelSetupAfterWakeword } from '../../../lib/modelSetupBridge.ts'
+import { declineModelSetup } from '../../../lib/modelSetupBridge.ts'
 
 type Props = {
   /** Hide the overlay while another modal owns the screen (settings, onboarding guide). */
@@ -145,9 +145,9 @@ export function ModelSetupOverlay({
 
   const handleDismiss = useCallback(() => {
     // A wake-word save may still be counting down in the main process.
-    // Dismissing in the installer's own window retracts it as well as
-    // closing the box.
-    cancelModelSetupAfterWakeword()
+    // The refusal retracts it, closes the box, and keeps the installer from
+    // being offered again in this session.
+    declineModelSetup()
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
     setDismissed(true)
   }, [])

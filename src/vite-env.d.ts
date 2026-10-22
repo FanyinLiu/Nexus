@@ -512,6 +512,7 @@ declare global {
       openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
       requestModelSetup: (options?: { delayMs?: number; cancel?: boolean }) => Promise<void>
       consumeModelSetupRequest?: () => Promise<boolean>
+      declineModelSetup?: () => Promise<void>
       subscribeModelSetupRequest?: (listener: () => void) => () => void
       getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>
       openPetMenu: () => Promise<void>

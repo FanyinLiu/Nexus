@@ -139,6 +139,7 @@ test('an unbound window stays unprivileged even if its url says panel', () => {
 const MODEL_SETUP_CHANNELS = [
   'window:request-model-setup',
   'window:consume-model-setup-request',
+  'window:decline-model-setup',
 ] as const
 
 test('model setup request consumption is panel-only', () => {
@@ -198,14 +199,17 @@ test('the model setup event is addressed only to the panel webContents', async (
   assert.doesNotMatch(emitter, /BrowserWindow\.getAllWindows|mainWindow|petWindow|broadcast/i)
 })
 
-test('the pet window can invoke only the model setup request channel', () => {
+test('the pet window can ask for the model setup and refuse it, but never claim it', () => {
   const pet = { id: 1207 }
   bindWindowCapability(pet, 'pet')
   try {
     const petInvocable = MODEL_SETUP_CHANNELS.filter(
       (channel) => isWindowChannelAllowed(channel, 'pet'),
     )
-    assert.deepEqual(petInvocable, ['window:request-model-setup'])
+    assert.deepEqual(petInvocable, [
+      'window:request-model-setup',
+      'window:decline-model-setup',
+    ])
   } finally {
     unbindWindowCapability(pet)
   }

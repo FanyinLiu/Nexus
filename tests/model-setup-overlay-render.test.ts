@@ -278,13 +278,17 @@ test('the installer card renders the zh-CN invite inside its sized panel shell',
   setLocale('en-US')
 })
 
-test('dismissing the installer retracts a pending cross-window request', async () => {
+test('dismissing the installer refuses it in the main process', async () => {
   const { windowMock } = installWindowMock()
   requestModelSetupOnVoiceUse()
 
   const requests: unknown[] = []
+  const declines: number[] = []
   windowMock.desktopPet.requestModelSetup = async (options: unknown) => {
     requests.push(options)
+  }
+  windowMock.desktopPet.declineModelSetup = async () => {
+    declines.push(1)
   }
 
   const renderer = createComponentRenderer<{
@@ -305,8 +309,13 @@ test('dismissing the installer retracts a pending cross-window request', async (
 
   assert.deepEqual(
     requests,
-    [{ cancel: true }],
-    'dismissal retracts the request the main process still holds',
+    [],
+    'dismissal does not arm a new request',
+  )
+  assert.equal(
+    declines.length,
+    1,
+    'dismissal tells the main process that the installer was refused',
   )
 
   renderer.unmount()

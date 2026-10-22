@@ -218,6 +218,14 @@ export function register() {
     modelSetupRequestGate.request({ delayMs: payload.delayMs ?? 0 })
   })
 
+  // The user answered "maybe later" in the installer. The gate keeps that
+  // refusal, so a later voice action cannot raise the panel for the
+  // installer again.
+  ipcMain.handle('window:decline-model-setup', (event) => {
+    requireTrustedSender(event)
+    modelSetupRequestGate.decline()
+  })
+
   ipcMain.handle('window:consume-model-setup-request', (event) => {
     requireTrustedSender(event)
     return modelSetupRequestGate.consume()

@@ -150,7 +150,7 @@ test('the pet preload exposes only the request entry point for model setup', () 
   assert.deepEqual(modelSetupKeys, ['requestModelSetup'])
 })
 
-test('the panel preload exposes request, consume, and subscribe for model setup', () => {
+test('the panel preload exposes request, consume, decline, and subscribe for model setup', () => {
   const panelKeys = Object.keys(loadPreloadDesktopPetApi('panel').desktopPet)
   const modelSetupKeys = panelKeys
     .filter((key) => /modelSetup/i.test(key))
@@ -158,6 +158,7 @@ test('the panel preload exposes request, consume, and subscribe for model setup'
 
   assert.deepEqual(modelSetupKeys, [
     'consumeModelSetupRequest',
+    'declineModelSetup',
     'requestModelSetup',
     'subscribeModelSetupRequest',
   ])
@@ -173,16 +174,21 @@ test('panel preload model setup methods use only their classified channels', asy
   const consumeModelSetupRequest = desktopPet.consumeModelSetupRequest as
     | (() => Promise<unknown>)
     | undefined
+  const declineModelSetup = desktopPet.declineModelSetup as
+    | (() => Promise<unknown>)
+    | undefined
   const subscribeModelSetupRequest = desktopPet.subscribeModelSetupRequest as
     | ((listener: () => void) => () => void)
     | undefined
 
   assert.equal(typeof requestModelSetup, 'function')
   assert.equal(typeof consumeModelSetupRequest, 'function')
+  assert.equal(typeof declineModelSetup, 'function')
   assert.equal(typeof subscribeModelSetupRequest, 'function')
 
   await requestModelSetup!({ delayMs: 3_000 })
   await consumeModelSetupRequest!()
+  await declineModelSetup!()
 
   let events = 0
   const unsubscribe = subscribeModelSetupRequest!(() => { events += 1 })
@@ -199,6 +205,7 @@ test('panel preload model setup methods use only their classified channels', asy
   assert.deepEqual(invokedChannels, [
     'window:request-model-setup',
     'window:consume-model-setup-request',
+    'window:decline-model-setup',
   ])
   assert.deepEqual([...subscribedChannels.keys()], ['models:setup-requested'])
 })

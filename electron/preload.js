@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   requestModelSetup: (options) => ipcRenderer.invoke('window:request-model-setup', options),
   ...(panelView ? {
     consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
+    declineModelSetup: () => ipcRenderer.invoke('window:decline-model-setup'),
     subscribeModelSetupRequest: (listener) => {
       const handler = () => listener()
       ipcRenderer.on('models:setup-requested', handler)
