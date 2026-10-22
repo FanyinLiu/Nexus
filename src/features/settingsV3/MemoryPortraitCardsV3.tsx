@@ -11,6 +11,7 @@ import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { AppSettings } from '../../types/app.ts'
 import type { TranslationKey } from '../../types/i18n.ts'
 import { loadSoulCard, saveSoulCard, type SoulCardNote } from './soulCardPersona.ts'
+import { holdSoulCardDraft, peekSoulCardDraft, releaseSoulCardDraft } from './soulCardDraftSession.ts'
 import { loadMemoryOpLog, appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { MEMORY_OP_LOG_CHANGED_EVENT } from '../../lib/storage/purgeMemoryStores.ts'
 import { peekDeletedMemory, takeDeletedMemory } from '../memory/deletedMemorySession.ts'
@@ -62,10 +63,11 @@ export function MemoryPortraitCardsV3({
   onRemoveMemory,
 }: MemoryPortraitCardsV3Props) {
   const { t } = useTranslation()
+  const restoredDraft = peekSoulCardDraft()
   const [soul, setSoul] = useState<SoulCardNote>(EMPTY_SOUL)
-  const [soulDraft, setSoulDraft] = useState('')
-  const [keepDraft, setKeepDraft] = useState(false)
-  const [soulNotice, setSoulNotice] = useState<'restored' | 'too-long' | null>(null)
+  const [soulDraft, setSoulDraft] = useState(restoredDraft ?? '')
+  const [keepDraft, setKeepDraft] = useState(restoredDraft != null)
+  const [soulNotice, setSoulNotice] = useState<'restored' | 'too-long' | null>(restoredDraft != null ? 'too-long' : null)
   const personaKey = `${settings.profilePersonaInChatEnabled ? '1' : '0'}:${settings.activeCharacterProfileId ?? ''}`
   const [loadedPersonaKey, setLoadedPersonaKey] = useState<string | null>(null)
   const soulReady = loadedPersonaKey === personaKey
@@ -110,6 +112,11 @@ export function MemoryPortraitCardsV3({
       current = false
     }
   }, [personaKey, settings.profilePersonaInChatEnabled, settings.activeCharacterProfileId, settings.systemPrompt, keepDraft])
+  // The sheet's own state dies with the Memory page. The session copy is what
+  // comes back when Settings returns to this page.
+  useEffect(() => {
+    if (keepDraft) holdSoulCardDraft(soulDraft)
+  }, [keepDraft, soulDraft])
   const memorySummary = diaryCount === 0
     ? t('memory.portrait.summary_empty', { count: active.length })
     : t('memory.portrait.summary', { count: active.length })
@@ -133,6 +140,7 @@ export function MemoryPortraitCardsV3({
         }
         return
       }
+      releaseSoulCardDraft()
       setKeepDraft(false)
       setSoul(result.note)
       setSoulDraft(result.note.text)

@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import React from 'react'
 
 import { PERSONA_SOUL_MAX_CHARS } from '../shared/personaSoul.js'
+import { releaseSoulCardDraft } from '../src/features/settingsV3/soulCardDraftSession.ts'
 
 // JSX in the card does not survive type-stripping, and the card imports CSS.
 // Import before any test installs `window`: the storage core opens a
@@ -102,6 +103,7 @@ function createHookRenderer<P, R>(hookFn: (props: P) => R) {
 type SaveCall = { content: string; profileId?: string }
 
 function installWindow() {
+  releaseSoulCardDraft()
   const storage = new Map<string, string>()
   const saves: SaveCall[] = []
   const globalSoul = { value: '' }
@@ -282,5 +284,44 @@ test('an oversized soul draft shows a message and is still in the editor after r
     assert.match(visibleText(tree), /内容太长了，删短一点再保存/)
   } finally {
     renderer.unmount()
+  }
+})
+
+test('an oversized soul draft survives leaving the memory page and coming back', async () => {
+  const harness = installWindow()
+  const tooLong = 'q'.repeat(PERSONA_SOUL_MAX_CHARS + 1)
+  const first = createHookRenderer(MemoryPortraitCardsV3)
+  try {
+    let tree = first.render(cardProps)
+    await settle()
+    tree = first.render(cardProps)
+    click(findProps(tree, (props) => props['data-soul-card'] === 'true'))
+    tree = first.render(cardProps)
+    const editor = findProps(tree, (props) => props.className === 'memory-portrait__editor')
+    ;(editor?.onChange as (event: { target: { value: string } }) => void)({ target: { value: tooLong } })
+    tree = first.render(cardProps)
+    click(findProps(tree, (props) => props.className === 'memory-portrait__save'))
+    await settle()
+    tree = first.render(cardProps)
+    assert.equal(findProps(tree, (props) => props.className === 'memory-portrait__editor')?.value, tooLong)
+  } finally {
+    first.unmount()
+  }
+
+  const second = createHookRenderer(MemoryPortraitCardsV3)
+  try {
+    let tree = second.render(cardProps)
+    await settle()
+    tree = second.render(cardProps)
+    click(findProps(tree, (props) => props['data-soul-card'] === 'true'))
+    tree = second.render(cardProps)
+
+    assert.equal(findProps(tree, (props) => props.className === 'memory-portrait__editor')?.value, tooLong)
+    assert.match(visibleText(tree), /内容太长了，删短一点再保存/)
+    assert.equal(harness.saves.length, 0)
+    assert.equal(harness.globalSoul.value, '')
+  } finally {
+    second.unmount()
+    releaseSoulCardDraft()
   }
 })

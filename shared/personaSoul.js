@@ -3,7 +3,9 @@
  *
  * The settings card and the main-process save channel share this limit so a
  * draft the card refuses is the same draft the channel refuses. Empty text is
- * a real write: it clears an override and the fallback persona applies again.
+ * accepted so a save can clear an override. The writer removes an existing
+ * file instead of creating a new empty one; a missing file already falls
+ * through to the default persona.
  */
 
 /**
@@ -14,8 +16,8 @@ export const PERSONA_SOUL_MAX_CHARS = 500_000
 
 /**
  * Accept soul text for a save, or null when the payload must not be written.
- * Missing text is an empty file. Non-strings are refused so an object is not
- * coerced into a placeholder.
+ * Missing text is an empty clear, not a new file. Non-strings are refused
+ * so an object is not coerced into a placeholder.
  * @param {unknown} content
  * @returns {string | null}
  */
