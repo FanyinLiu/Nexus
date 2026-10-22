@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import React from 'react'
 
 import { PERSONA_SOUL_MAX_CHARS } from '../shared/personaSoul.js'
-import { releaseSoulCardDraft } from '../src/features/settingsV3/soulCardDraftSession.ts'
+import { peekSoulCardDraft, releaseSoulCardDraft } from '../src/features/settingsV3/soulCardDraftSession.ts'
 
 // JSX in the card does not survive type-stripping, and the card imports CSS.
 // Import before any test installs `window`: the storage core opens a
@@ -320,6 +320,59 @@ test('an oversized soul draft survives leaving the memory page and coming back',
     assert.match(visibleText(tree), /内容太长了，删短一点再保存/)
     assert.equal(harness.saves.length, 0)
     assert.equal(harness.globalSoul.value, '')
+  } finally {
+    second.unmount()
+    releaseSoulCardDraft()
+  }
+})
+
+test('a successful save clears the oversized draft so it does not come back', async () => {
+  const harness = installWindow()
+  const tooLong = 'q'.repeat(PERSONA_SOUL_MAX_CHARS + 1)
+  const saved = 'short-enough-to-save'
+  const first = createHookRenderer(MemoryPortraitCardsV3)
+  try {
+    let tree = first.render(cardProps)
+    await settle()
+    tree = first.render(cardProps)
+    click(findProps(tree, (props) => props['data-soul-card'] === 'true'))
+    tree = first.render(cardProps)
+    const editor = findProps(tree, (props) => props.className === 'memory-portrait__editor')
+    ;(editor?.onChange as (event: { target: { value: string } }) => void)({ target: { value: tooLong } })
+    tree = first.render(cardProps)
+    click(findProps(tree, (props) => props.className === 'memory-portrait__save'))
+    await settle()
+    tree = first.render(cardProps)
+    assert.equal(peekSoulCardDraft(), tooLong)
+
+    const rejected = findProps(tree, (props) => props.className === 'memory-portrait__editor')
+    ;(rejected?.onChange as (event: { target: { value: string } }) => void)({ target: { value: saved } })
+    tree = first.render(cardProps)
+    click(findProps(tree, (props) => props.className === 'memory-portrait__save'))
+    await settle()
+    tree = first.render(cardProps)
+
+    assert.equal(peekSoulCardDraft(), null)
+    assert.equal(harness.globalSoul.value, saved)
+    assert.doesNotMatch(visibleText(tree), /内容太长了/)
+    assert.equal(findProps(tree, (props) => props.className === 'memory-portrait__editor')?.value, saved)
+  } finally {
+    first.unmount()
+  }
+
+  const second = createHookRenderer(MemoryPortraitCardsV3)
+  try {
+    let tree = second.render(cardProps)
+    await settle()
+    tree = second.render(cardProps)
+    assert.doesNotMatch(visibleText(tree), /内容太长了/)
+    click(findProps(tree, (props) => props['data-soul-card'] === 'true'))
+    tree = second.render(cardProps)
+
+    assert.equal(peekSoulCardDraft(), null)
+    assert.equal(findProps(tree, (props) => props.className === 'memory-portrait__editor')?.value, saved)
+    assert.doesNotMatch(visibleText(tree), /内容太长了/)
+    assert.match(visibleText(tree), new RegExp(saved))
   } finally {
     second.unmount()
     releaseSoulCardDraft()
