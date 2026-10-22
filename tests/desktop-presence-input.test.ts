@@ -409,13 +409,13 @@ test('a failed xdotool sample drops the cached pointer so gaze falls back to Ele
   })
   await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
 
-  now += 100
+  now += 200
   assert.deepEqual(await input.pollCursor(), { x: 80, y: 180 })
   assert.deepEqual(input.readCursor(), { x: 80, y: 180 })
 
   // The failed sample must clear the last point; keeping it would freeze gaze
   // at the stale coordinate for the whole retry cooldown.
-  now += 100
+  now += 200
   assert.equal(await input.pollCursor(), null)
   assert.equal(calls, 2)
   assert.equal(input.readCursor(), null)
@@ -530,4 +530,262 @@ test('Linux pointer query never runs on Wayland', async () => {
   })
   assert.equal(await wayland(), null)
   assert.equal(waylandSpawns, 0)
+})
+
+test('the pointer query reports whether it really spawns xdotool', () => {
+  const x11 = createLinuxPointerQuery({
+    platform: 'linux',
+    sessionType: 'x11',
+    hasWaylandDisplay: false,
+    execFileFn: (() => {}) as unknown as ExecLike,
+    log: { warn: () => {} },
+  })
+  const wayland = createLinuxPointerQuery({
+    platform: 'linux',
+    sessionType: 'wayland',
+    hasWaylandDisplay: true,
+    execFileFn: (() => {}) as unknown as ExecLike,
+    log: { warn: () => {} },
+  })
+  const other = createLinuxPointerQuery({
+    platform: 'darwin',
+    execFileFn: (() => {}) as unknown as ExecLike,
+    log: { warn: () => {} },
+  })
+
+  assert.equal(x11.usesXdotool, true)
+  assert.equal(wayland.usesXdotool, false)
+  assert.equal(other.usesXdotool, false)
+})
+
+test('the Linux xdotool path keeps pointer samples at least 200ms apart', async () => {
+  let now = 0
+  const samples: number[] = []
+  const input = createPresenceInput({
+    platform: 'linux',
+    loadHook: async () => null,
+    pointerQuery: async () => {
+      samples.push(now)
+      return { x: 12, y: 34 }
+    },
+    now: () => now,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  await input.pollCursor()
+  assert.deepEqual(samples, [0])
+
+  // A sample is still refused one millisecond before the 200ms window ends.
+  now = 199
+  await input.pollCursor()
+  assert.deepEqual(samples, [0])
+
+  now = 200
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200])
+  assert.deepEqual(input.readCursor(), { x: 12, y: 34 })
+})
+
+test('the X11 pointer query spawns xdotool no more than every 200ms', async () => {
+  let now = 0
+  const spawns: number[] = []
+  const execFileFn: ExecLike = (_command, _args, _options, callback) => {
+    spawns.push(now)
+    callback(null, 'X=80\nY=180\n')
+  }
+  const query = createLinuxPointerQuery({
+    platform: 'linux',
+    sessionType: 'x11',
+    hasWaylandDisplay: false,
+    execFileFn,
+    now: () => now,
+    log: { warn: () => {} },
+  })
+  const input = createPresenceInput({
+    platform: 'linux',
+    loadHook: async () => null,
+    pointerQuery: query,
+    now: () => now,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  await input.pollCursor()
+  assert.deepEqual(spawns, [0])
+
+  now = 199
+  await input.pollCursor()
+  assert.deepEqual(spawns, [0])
+
+  now = 200
+  await input.pollCursor()
+  assert.deepEqual(spawns, [0, 200])
+})
+
+test('a still cursor stretches the Linux xdotool sampling interval towards a second', async () => {
+  let now = 0
+  const samples: number[] = []
+  const input = createPresenceInput({
+    platform: 'linux',
+    loadHook: async () => null,
+    pointerQuery: async () => {
+      samples.push(now)
+      return { x: 5, y: 5 }
+    },
+    now: () => now,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  await input.pollCursor()
+  assert.deepEqual(samples, [0])
+
+  // The first idle sample keeps the base rate.
+  now = 199
+  await input.pollCursor()
+  assert.deepEqual(samples, [0])
+  now = 200
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200])
+
+  // Two idle samples in a row stretch the next interval to 400ms.
+  now = 399
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200])
+  now = 400
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400])
+
+  // Each further idle sample stretches the interval again: 600ms, 800ms, 1s.
+  now = 799
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400])
+  now = 800
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800])
+
+  now = 1399
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800])
+  now = 1400
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400])
+
+  now = 2199
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400])
+  now = 2200
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200])
+
+  now = 3199
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200])
+  now = 3200
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200])
+
+  // The idle interval never grows past a second.
+  now = 4199
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200])
+  now = 4200
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200, 4200])
+})
+
+test('a moving cursor restores the 200ms Linux xdotool sampling interval', async () => {
+  let now = 0
+  const samples: number[] = []
+  let point = { x: 5, y: 5 }
+  const input = createPresenceInput({
+    platform: 'linux',
+    loadHook: async () => null,
+    pointerQuery: async () => {
+      samples.push(now)
+      return point
+    },
+    now: () => now,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  // Idle samples stretch the interval out to a second.
+  for (const at of [0, 200, 400, 800, 1400, 2200, 3200]) {
+    now = at
+    await input.pollCursor()
+  }
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200])
+
+  // The cursor moves: the next sample is due after the base rate again.
+  point = { x: 9, y: 9 }
+  now = 4200
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200, 4200])
+
+  now = 4399
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200, 4200])
+  now = 4400
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 200, 400, 800, 1400, 2200, 3200, 4200, 4400])
+  assert.deepEqual(input.readCursor(), { x: 9, y: 9 })
+})
+
+test('a pointer source that never spawns xdotool keeps the fast sampling cadence', async () => {
+  let now = 0
+  const samples: number[] = []
+  const wayland = createLinuxPointerQuery({
+    platform: 'linux',
+    sessionType: 'wayland',
+    hasWaylandDisplay: true,
+    execFileFn: (() => {}) as unknown as ExecLike,
+    now: () => now,
+    log: { warn: () => {} },
+  })
+  const pointerQuery = Object.assign(async () => {
+    samples.push(now)
+    return wayland()
+  }, { usesXdotool: wayland.usesXdotool })
+  const input = createPresenceInput({
+    platform: 'linux',
+    loadHook: async () => null,
+    pointerQuery,
+    now: () => now,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  await input.pollCursor()
+  assert.deepEqual(samples, [0])
+
+  // The generic cadence stays in place even while the cursor never moves.
+  now = 79
+  await input.pollCursor()
+  assert.deepEqual(samples, [0])
+  now = 80
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 80])
+  now = 160
+  await input.pollCursor()
+  assert.deepEqual(samples, [0, 80, 160])
+})
+
+test('non-Linux platforms never query the pointer', async () => {
+  let now = 0
+  let queries = 0
+  const input = createPresenceInput({
+    platform: 'darwin',
+    loadHook: async () => null,
+    pointerQuery: async () => {
+      queries += 1
+      return { x: 3, y: 4 }
+    },
+    now: () => now,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  now = 10
+  await input.pollCursor()
+  now = 20
+  await input.pollCursor()
+
+  assert.equal(queries, 0)
+  assert.equal(input.readCursor(), null)
 })

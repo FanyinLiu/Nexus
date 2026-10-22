@@ -58,7 +58,7 @@ export function parseXdotoolLocation(stdout) {
  *   now?: () => number,
  *   log?: Pick<Console, 'warn'>,
  * }} [options]
- * @returns {(() => Promise<{ x: number, y: number } | null>) & { dispose: () => void }}
+ * @returns {(() => Promise<{ x: number, y: number } | null>) & { dispose: () => void, usesXdotool: boolean }}
  */
 export function createLinuxPointerQuery({
   platform = process.platform,
@@ -172,5 +172,8 @@ export function createLinuxPointerQuery({
     })
   }
   queryLinuxPointer.dispose = dispose
+  // The owner samples slower when a query really spawns xdotool. A session
+  // without X11 never starts the child, so it keeps the fast cadence.
+  queryLinuxPointer.usesXdotool = supported
   return queryLinuxPointer
 }

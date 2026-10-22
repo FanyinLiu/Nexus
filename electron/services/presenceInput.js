@@ -5,11 +5,20 @@
 // gaze alone can never install or keep a keyboard-capable hook alive.
 // Preference changes are serialized because uiohook throws when start() races
 // another start() or a stop() on the same hook object.
+//
+// The Linux gaze path pays for one xdotool child process per sample, so it
+// polls far slower than any other pointer source and stretches the interval
+// further while the cursor sits still. Every other source keeps the generic
+// cadence.
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { createLinuxPointerQuery } from './linuxPointer.js'
 
 const POINTER_SAMPLE_THROTTLE_MS = 80
+const XDOTOOL_POINTER_THROTTLE_MS = 200
+const XDOTOOL_POINTER_IDLE_STEP_MS = 200
+const XDOTOOL_POINTER_MAX_THROTTLE_MS = 1000
+const XDOTOOL_POINTER_IDLE_SAMPLES = 2
 
 /**
  * @typedef {{ x: number, y: number }} PointerPoint
@@ -49,7 +58,7 @@ async function defaultLoadHook() {
  * @param {{
  *   platform?: string,
  *   loadHook?: () => Promise<NativeHook | null>,
- *   pointerQuery?: null | (() => Promise<PointerPoint | null>),
+ *   pointerQuery?: null | ((() => Promise<PointerPoint | null>) & { usesXdotool?: boolean }),
  *   onKeyDown?: (event: unknown) => void,
  *   onKeyUp?: (event: unknown) => void,
  *   now?: () => number,
@@ -78,6 +87,7 @@ export function createPresenceInput(dependencies = {}) {
   let pointerGeneration = 0
   let pointerStartedAt = Number.NEGATIVE_INFINITY
   let pointerInFlight = null
+  let pointerIdleStreak = 0
 
   /**
    * Keep hook lifecycle changes in order. A preference change that arrives
@@ -178,8 +188,36 @@ export function createPresenceInput(dependencies = {}) {
     if (!gazeEnabled) {
       pointer = null
       pointerStartedAt = Number.NEGATIVE_INFINITY
+      pointerIdleStreak = 0
     }
     return serialize(reconcileTyping)
+  }
+
+  /**
+   * True when the pointer source shells out to xdotool. Only that path pays
+   * for a child process per sample, so only that path samples slowly.
+   * A query that does not declare its backend counts as the xdotool path:
+   * the Linux pointer query is the only source the app ships there.
+   * @returns {boolean}
+   */
+  function usesXdotool() {
+    if (platform !== 'linux') return false
+    if (typeof pointerQuery !== 'function') return false
+    return pointerQuery.usesXdotool !== false
+  }
+
+  /**
+   * Current sampling interval. The xdotool path starts at 200ms and grows by
+   * one step per extra idle sample, capped near one second, so a cursor that
+   * never moves stops spawning children. Any other source keeps the generic
+   * interval.
+   * @returns {number}
+   */
+  function pointerThrottleMs() {
+    if (!usesXdotool()) return POINTER_SAMPLE_THROTTLE_MS
+    const idleSteps = Math.max(0, pointerIdleStreak - (XDOTOOL_POINTER_IDLE_SAMPLES - 1))
+    const throttle = XDOTOOL_POINTER_THROTTLE_MS + idleSteps * XDOTOOL_POINTER_IDLE_STEP_MS
+    return Math.min(XDOTOOL_POINTER_MAX_THROTTLE_MS, throttle)
   }
 
   /**
@@ -193,7 +231,7 @@ export function createPresenceInput(dependencies = {}) {
     }
     if (pointerInFlight) return pointerInFlight
     const current = now()
-    if (current - pointerStartedAt < POINTER_SAMPLE_THROTTLE_MS) {
+    if (current - pointerStartedAt < pointerThrottleMs()) {
       return Promise.resolve(pointer)
     }
     pointerStartedAt = current
@@ -209,14 +247,22 @@ export function createPresenceInput(dependencies = {}) {
           // Drop the cached point so gaze falls back to Electron during the
           // xdotool cooldown instead of following a stale position.
           pointer = null
+          pointerIdleStreak = 0
           return null
         }
+        const previous = pointer
         pointer = { x, y }
+        // An unchanged point means the cursor is idle: the sampler may back
+        // off further. Any movement returns the interval to its base rate.
+        pointerIdleStreak = previous && previous.x === x && previous.y === y
+          ? pointerIdleStreak + 1
+          : 0
         return pointer
       })
       .catch((error) => {
         if (generation === pointerGeneration) {
           pointer = null
+          pointerIdleStreak = 0
           log?.warn?.(
             '[desktop-presence] Linux pointer sample failed:',
             getRedactedErrorMessage(error),
@@ -262,6 +308,7 @@ export function createPresenceInput(dependencies = {}) {
     pointerGeneration += 1
     pointerInFlight = null
     pointerStartedAt = Number.NEGATIVE_INFINITY
+    pointerIdleStreak = 0
     disposePointerQuery()
     return serialize(() => {
       stopHook()
