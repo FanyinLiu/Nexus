@@ -205,12 +205,18 @@ export function createPresenceInput(dependencies = {}) {
         if (generation !== pointerGeneration || !gazeEnabled) return null
         const x = Number(point?.x)
         const y = Number(point?.y)
-        if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          // Drop the cached point so gaze falls back to Electron during the
+          // xdotool cooldown instead of following a stale position.
+          pointer = null
+          return null
+        }
         pointer = { x, y }
         return pointer
       })
       .catch((error) => {
         if (generation === pointerGeneration) {
+          pointer = null
           log?.warn?.(
             '[desktop-presence] Linux pointer sample failed:',
             getRedactedErrorMessage(error),

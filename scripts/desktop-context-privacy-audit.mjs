@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// TypeScript 7 removed the classic compiler API from the main export.
+// Audit tooling keeps using the TS 6 API via the typescript6 alias.
+import ts from 'typescript6'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -11,6 +14,9 @@ const CHECKED_FILES = [
   'electron/services/desktopContextService.js',
   'shared/desktopContextPrivacy.js',
   'electron/services/desktopContextPrivacy.js',
+  'electron/services/desktopPresence.js',
+  'electron/services/presenceInput.js',
+  'electron/services/linuxPointer.js',
   'src/hooks/useDesktopContext.ts',
   'src/hooks/useContextScheduler.ts',
   'src/features/autonomy/contextScheduler.ts',
@@ -19,6 +25,13 @@ const CHECKED_FILES = [
   'tests/context-scheduler.test.ts',
   'tests/desktop-context.test.ts',
 ]
+
+// uiohook has no mouse-only mode: any running hook can observe the keyboard.
+// Only the presence input owner may load it, and only while typing awareness
+// is on. Every other source file must stay free of the import.
+const UIOHOOK_OWNER = 'electron/services/presenceInput.js'
+const UIOHOOK_SCAN_DIRS = ['electron', 'shared', 'src', 'scripts', 'tests']
+const UIOHOOK_SCAN_EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx'])
 
 const UNSAFE_PATTERNS = [
   {
@@ -186,16 +199,124 @@ const REQUIRED_PHRASES = [
       'desktop context strips screenshot payload before chat/runtime reuse',
     ],
   },
+  {
+    id: 'presence-hook-owned-by-typing',
+    file: 'electron/services/presenceInput.js',
+    phrases: [
+      "await import('uiohook-napi')",
+      'async function reconcileTyping()',
+      'if (!typingEnabled) {',
+      'stopHook()',
+    ],
+  },
+  {
+    id: 'presence-gaze-never-keeps-the-keyboard-hook',
+    file: 'electron/services/desktopPresence.js',
+    phrases: [
+      "import { createPresenceInput } from './presenceInput.js'",
+      'if (!preferences.typingAwarenessEnabled) {',
+      'await input.applyPreferences({ gazeFollowEnabled, typingAwarenessEnabled: false })',
+      'if (preferences.gazeFollowEnabled === true) void input.pollCursor()',
+    ],
+  },
+  {
+    id: 'linux-pointer-uses-xdotool-without-the-hook',
+    file: 'electron/services/linuxPointer.js',
+    phrases: [
+      "command = 'xdotool'",
+      "['getmouselocation', '--shell']",
+    ],
+  },
 ]
 
 function readText(root, path) {
   return readFileSync(join(root, path), 'utf8')
 }
 
+function listSourceFiles(root, relativeDir, files = []) {
+  const directory = join(root, relativeDir)
+  if (!existsSync(directory)) return files
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
+    const relative = `${relativeDir}/${entry.name}`
+    if (entry.isDirectory()) {
+      listSourceFiles(root, relative, files)
+    } else if (entry.isFile() && UIOHOOK_SCAN_EXTENSIONS.has(extname(entry.name))) {
+      files.push(relative)
+    }
+  }
+  return files
+}
+
+function sourceKind(file) {
+  if (file.endsWith('.tsx')) return ts.ScriptKind.TSX
+  if (file.endsWith('.ts')) return ts.ScriptKind.TS
+  return ts.ScriptKind.JS
+}
+
+function hasUiohookImport(file, source) {
+  if (!source.includes('uiohook-napi')) return false
+  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, sourceKind(file))
+  let found = false
+
+  function visit(node) {
+    if (found) return
+    if (ts.isImportDeclaration(node)) {
+      if (ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === 'uiohook-napi') {
+        found = true
+        return
+      }
+    }
+    if (ts.isExportDeclaration(node)) {
+      if (node.moduleSpecifier
+        && ts.isStringLiteral(node.moduleSpecifier)
+        && node.moduleSpecifier.text === 'uiohook-napi') {
+        found = true
+        return
+      }
+    }
+    if (ts.isCallExpression(node)) {
+      const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
+      const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require'
+      const [argument] = node.arguments
+      if ((isDynamicImport || isRequire)
+        && argument
+        && ts.isStringLiteral(argument)
+        && argument.text === 'uiohook-napi') {
+        found = true
+        return
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return found
+}
+
+function findUiohookImports(root) {
+  const offenders = []
+  for (const dir of UIOHOOK_SCAN_DIRS) {
+    const files = listSourceFiles(root, dir).sort()
+    for (const file of files) {
+      if (file === UIOHOOK_OWNER) continue
+      if (hasUiohookImport(file, readText(root, file))) {
+        offenders.push(file)
+      }
+    }
+  }
+  return offenders
+}
+
 export function buildDesktopContextPrivacyReport(root = ROOT) {
   const missingFiles = []
   const unsafePatterns = []
   const missingRequiredPhrases = []
+  const uiohookImports = findUiohookImports(root).map((file) => ({
+    id: 'uiohook-import-outside-presence-input',
+    file,
+    message: 'uiohook-napi may only be imported by electron/services/presenceInput.js; a running hook can observe the keyboard',
+  }))
   const sourceByFile = new Map()
 
   for (const file of CHECKED_FILES) {
@@ -229,7 +350,7 @@ export function buildDesktopContextPrivacyReport(root = ROOT) {
     }
   }
 
-  const errors = { missingFiles, unsafePatterns, missingRequiredPhrases }
+  const errors = { missingFiles, unsafePatterns, missingRequiredPhrases, uiohookImports }
   const errorCount = Object.values(errors).reduce((sum, list) => sum + list.length, 0)
 
   return {

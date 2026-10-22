@@ -21,6 +21,25 @@ sanitizeDesktopContextSnapshot
   'electron/services/desktopContextPrivacy.js': `
 sanitizeDesktopContextSnapshot
 `,
+  'electron/services/presenceInput.js': `
+await import('uiohook-napi')
+async function reconcileTyping() {
+  if (!typingEnabled) {
+    stopHook()
+  }
+}
+`,
+  'electron/services/desktopPresence.js': `
+import { createPresenceInput } from './presenceInput.js'
+if (!preferences.typingAwarenessEnabled) {
+  await input.applyPreferences({ gazeFollowEnabled, typingAwarenessEnabled: false })
+}
+if (preferences.gazeFollowEnabled === true) void input.pollCursor()
+`,
+  'electron/services/linuxPointer.js': `
+command = 'xdotool'
+['getmouselocation', '--shell']
+`,
   'electron/services/desktopContextService.js': `
 import { redactSensitiveErrorText } from './errorRedaction.js'
 function formatDesktopContextErrorForLog(error) {}
@@ -125,6 +144,24 @@ return snapshot
     assert.equal(report.summary.ok, false)
     assert.ok(
       report.errors.unsafePatterns.some((item) => item.id === 'desktop-context-ipc-returns-unsanitized-snapshot'),
+    )
+  })
+})
+
+test('desktop context privacy audit rejects uiohook imports outside presence input', () => {
+  withDesktopContextPrivacyFixture({
+    'electron/services/desktopPresence.js': `${BASELINE_FILES['electron/services/desktopPresence.js']}
+import { uIOhook } from 'uiohook-napi'
+`,
+  }, (root) => {
+    const report = buildDesktopContextPrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.uiohookImports.some(
+        (item) => item.id === 'uiohook-import-outside-presence-input'
+          && item.file === 'electron/services/desktopPresence.js',
+      ),
     )
   })
 })

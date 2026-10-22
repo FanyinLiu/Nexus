@@ -32,7 +32,7 @@ export const zhCNSettingsWindow = {
   'settings.window.companion_backdrop': '显示背景卡片',
   'settings.window.companion_backdrop_hint': '在角色后面放一块柔和的卡片。默认关闭，角色直接站在桌面上，没有边框和阴影。',
   'settings.window.typing_awareness': '打字感知',
-  'settings.window.typing_awareness_hint': '在其他应用里打字时，伙伴会跟着做出反应。默认关闭；关闭时，Nexus 完全不会读取键盘。不会记录或上传按了哪些键，只知道正在打字和大致速度。',
+  'settings.window.typing_awareness_hint': '在其他应用里打字时，伙伴会跟着做出反应。默认关闭；关掉后，Nexus 不会监听你在其他应用里的键盘输入。不会记录或上传按了哪些键，只知道正在打字和大致速度。',
   'settings.window.typing_explain_title': '开启打字感知前',
   'settings.window.typing_explain_body': '这会在本机监听键盘活动，用来判断你是否正在打字以及大致速度。按键内容不会被保存，也不会发给模型或网络。macOS 需要在系统设置里允许辅助功能或输入监视。',
   'settings.window.typing_explain_confirm': '知道了，开启',
