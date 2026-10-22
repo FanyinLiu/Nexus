@@ -13,9 +13,9 @@ import type { LoopStatus, MemoryItem } from '../../types/memory.ts'
 import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
 import { isSensitiveMemoryText } from './memoryRules.ts'
 import {
-  applyClock,
   commitmentSlotKey,
   evidenceFromUtterance,
+  findDue,
   findPlace,
   hasExplicitClock,
 } from './loopDetails.ts'
@@ -51,102 +51,6 @@ const DISMISS = /(?:don'?t remind me|do not remind me|别再?提醒|別再?提�
 const BARE_DONE = /^(?:done|finished|all done|完成了|做完了|搞定了|終わった|終わったよ|끝냈어|완료)[.!?。]?$/iu
 const BARE_SNOOZE = /^(?:later|not now|snooze|稍后|等会|等一下|晚点|あとで|後で|나중에|잠시만)[.!?。]?$/iu
 const BARE_DISMISS = /^(?:don'?t remind me(?: about this)?|别提醒我|別提醒我|不用提醒|不要再提醒|提醒しないで|リマインドしないで|그만 알려줘|알리지 마)[.!?。]?$/iu
-
-type DueRule = {
-  pattern: RegExp
-  resolve: (now: Date, match: RegExpMatchArray) => Date
-}
-
-function atLocalHour(now: Date, dayOffset: number): Date {
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, 18, 0, 0, 0)
-}
-
-/**
- * 下周 / 来週 is the weekday in the next Monday-based week.
- * On Friday 16 Oct, 下周二 is 20 Oct, not the Tuesday after that.
- */
-function nextCalendarWeekday(now: Date, target: number): Date {
-  const sinceMonday = (now.getDay() + 6) % 7
-  const daysUntilNextMonday = 7 - sinceMonday
-  const fromMonday = target === 0 ? 6 : target - 1
-  return atLocalHour(now, daysUntilNextMonday + fromMonday)
-}
-
-function weekdayDate(now: Date, target: number, mode: 'upcoming' | 'following-week' | 'named-next'): Date {
-  if (mode === 'following-week') return nextCalendarWeekday(now, target)
-  let delta = (target - now.getDay() + 7) % 7
-  if (mode === 'named-next' && delta === 0) {
-    delta = 7
-  } else if (delta === 0 && now.getHours() >= 18) {
-    delta = 7
-  }
-  return atLocalHour(now, delta)
-}
-
-function dayOffsetDate(now: Date, offset: number): Date {
-  return atLocalHour(now, offset)
-}
-
-const WEEKDAY_NAMED: Array<{ pattern: RegExp; day: number; mode: 'upcoming' | 'following-week' | 'named-next' }> = [
-  { pattern: /下(?:个)?(?:周|星期)([一二三四五六日天])/u, day: -1, mode: 'following-week' },
-  { pattern: /(?:周|星期)([一二三四五六日天])/u, day: -1, mode: 'upcoming' },
-  { pattern: /来週の?(日曜|月曜|火曜|水曜|木曜|金曜|土曜)/u, day: -1, mode: 'following-week' },
-  { pattern: /(日曜|月曜|火曜|水曜|木曜|金曜|土曜)/u, day: -1, mode: 'upcoming' },
-  { pattern: /다음\s*주\s*(일요일|월요일|화요일|수요일|목요일|금요일|토요일)/u, day: -1, mode: 'following-week' },
-  { pattern: /(일요일|월요일|화요일|수요일|목요일|금요일|토요일)/u, day: -1, mode: 'upcoming' },
-  { pattern: /next\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)/iu, day: -1, mode: 'named-next' },
-  { pattern: /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/iu, day: -1, mode: 'upcoming' },
-]
-
-const ZH_DAY: Record<string, number> = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 0, 天: 0 }
-const JA_DAY: Record<string, number> = { 日曜: 0, 月曜: 1, 火曜: 2, 水曜: 3, 木曜: 4, 金曜: 5, 土曜: 6 }
-const KO_DAY: Record<string, number> = {
-  일요일: 0, 월요일: 1, 화요일: 2, 수요일: 3, 목요일: 4, 금요일: 5, 토요일: 6,
-}
-const EN_DAY: Record<string, number> = {
-  sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
-}
-
-function weekdayFromMatch(match: RegExpMatchArray): number | null {
-  const token = (match[1] ?? match[0]).toLowerCase()
-  if (token in ZH_DAY) return ZH_DAY[token]!
-  if (match[1] && match[1] in JA_DAY) return JA_DAY[match[1]]!
-  if (match[1] && match[1] in KO_DAY) return KO_DAY[match[1]]!
-  if (token in EN_DAY) return EN_DAY[token]!
-  for (const [key, day] of Object.entries(JA_DAY)) {
-    if (match[0].includes(key)) return day
-  }
-  for (const [key, day] of Object.entries(KO_DAY)) {
-    if (match[0].includes(key)) return day
-  }
-  return null
-}
-
-const OFFSET_RULES: DueRule[] = [
-  { pattern: /后天|모레/u, resolve: (now) => dayOffsetDate(now, 2) },
-  { pattern: /明天|明日|내일|tomorrow/iu, resolve: (now) => dayOffsetDate(now, 1) },
-  { pattern: /今天|今晚|今日|오늘|today|tonight/iu, resolve: (now) => dayOffsetDate(now, 0) },
-]
-
-function findDue(text: string, now: Date): { at: string; text: string } | null {
-  const hits: Array<{ index: number; at: Date; text: string }> = []
-  for (const rule of OFFSET_RULES) {
-    const match = rule.pattern.exec(text)
-    if (match) hits.push({ index: match.index, at: rule.resolve(now, match), text: match[0] })
-  }
-  for (const rule of WEEKDAY_NAMED) {
-    const match = rule.pattern.exec(text)
-    if (!match) continue
-    const day = weekdayFromMatch(match)
-    if (day === null) continue
-    hits.push({ index: match.index, at: weekdayDate(now, day, rule.mode), text: match[0] })
-  }
-  hits.sort((left, right) => left.index - right.index)
-  const best = hits[0]
-  if (!best) return null
-  const at = hasExplicitClock(text) ? applyClock(text, best.at) : best.at
-  return { at: at.toISOString(), text: best.text }
-}
 
 function splitSegments(content: string): string[] {
   return content
@@ -402,13 +306,6 @@ export function resolveOpenLoops(
     }),
     changes,
   }
-}
-
-/** Re-parse a due phrase after the user edits a loop in the memory view. */
-export function dueFromText(text: string, nowIso: string): { loopDueAt?: string; loopDueText?: string } {
-  const due = findDue(text, new Date(nowIso))
-  if (!due) return {}
-  return { loopDueAt: due.at, loopDueText: due.text }
 }
 
 export function listLoopMemories(memories: readonly MemoryItem[]): MemoryItem[] {

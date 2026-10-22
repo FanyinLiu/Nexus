@@ -5,7 +5,8 @@
  */
 
 import { useState } from 'react'
-import { dueFromText, listLoopMemories } from '../memory/openLoops.ts'
+import { dueFromText } from '../memory/loopDetails.ts'
+import { listLoopMemories } from '../memory/openLoops.ts'
 import {
   applyAgendaUserAction,
   followUpKeyToSettle,
