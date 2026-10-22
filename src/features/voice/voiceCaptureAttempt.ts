@@ -202,6 +202,20 @@ type VoiceSwitchPatch = {
 }
 
 /**
+ * The permission line stays up after a denial and leaves only when a later
+ * click gets a live microphone. Closing the window or giving up for another
+ * reason does not invent that line, and does not clear one already showing.
+ */
+export function microphonePermissionDeniedAfter(
+  outcome: VoiceCaptureOutcome | null,
+  showing: boolean,
+): boolean {
+  if (outcome === 'denied') return true
+  if (outcome === 'open') return false
+  return showing
+}
+
+/**
  * The permission prompt was refused, so the click must not leave listening
  * and speaking on. Those switches are what the screen uses to say voice works.
  */

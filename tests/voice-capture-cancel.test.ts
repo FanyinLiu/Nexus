@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict'
+import { register } from 'node:module'
 import { test } from 'node:test'
+
+import React from 'react'
 
 import { requestVoiceInputStream } from '../src/features/voice/runtimeSupport.ts'
 import { voiceStartClick } from '../src/features/voiceProfile/voiceReady.ts'
+import { pickTranslatedUiText } from '../src/lib/uiLanguage.ts'
 import {
   isVoiceCaptureCancelled,
+  microphonePermissionDeniedAfter,
   pendingVoiceCaptureAttempt,
   resetVoiceCaptureAttemptForTests,
   runStartVoiceClick,
@@ -13,6 +18,8 @@ import {
   voiceSwitchesAfterMicrophoneDenied,
   withVoiceCaptureAttempt,
 } from '../src/features/voice/voiceCaptureAttempt.ts'
+
+register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
 
 type FakeStream = {
   stopped: boolean
@@ -319,7 +326,9 @@ test('denying the microphone prompt keeps Settings open without claiming voice w
   const committed: Array<typeof draft> = []
   let closes = 0
   let seen: unknown = null
+  let showing = microphonePermissionDeniedAfter(null, false)
   try {
+    await assertStartVoicePermissionLine(showing)
     const outcome = await runStartVoiceClick({
       visible: () => true,
       subscribeHidden: () => () => {},
@@ -370,6 +379,37 @@ test('denying the microphone prompt keeps Settings open without claiming voice w
       speechInputEnabled: false,
       speechOutputEnabled: false,
     }, true).enabled, true)
+    showing = microphonePermissionDeniedAfter(outcome, showing)
+    assert.equal(showing, true)
+    await assertStartVoicePermissionLine(showing)
+    assert.equal(microphonePermissionDeniedAfter('cancelled', false), false)
+    assert.equal(microphonePermissionDeniedAfter('released', false), false)
+    assert.equal(microphonePermissionDeniedAfter('cancelled', true), true)
+
+    media.navigator.mediaDevices.getUserMedia = () => {
+      media.requests.push({ purpose: 'audio' })
+      const stream = fakeStream()
+      media.streams.push(stream)
+      return Promise.resolve(stream)
+    }
+    const opened = await runStartVoiceClick({
+      visible: () => true,
+      subscribeHidden: () => () => {},
+      saveSwitches: async () => {},
+      start: () => {
+        const attemptId = pendingVoiceCaptureAttempt()
+        void withVoiceCaptureAttempt(attemptId, async () => {
+          await requestVoiceInputStream({ purpose: 'stt' })
+        })
+      },
+      closeSurface: () => { closes += 1 },
+    })
+    assert.equal(opened, 'open')
+    assert.equal(media.requests.length, 2)
+    assert.equal(media.streams.at(-1)?.stopped, false)
+    showing = microphonePermissionDeniedAfter(opened, showing)
+    assert.equal(showing, false)
+    await assertStartVoicePermissionLine(showing)
   } finally {
     globalThis.setTimeout = previousSetTimeout
     media.restore()
@@ -396,3 +436,141 @@ test('a failed switch save does not open the microphone', async () => {
   assert.equal(voiceCapturePhase(), 'idle')
   resetVoiceCaptureAttemptForTests()
 })
+
+type ElementLike = {
+  type: unknown
+  props: { children?: unknown; className?: unknown } & Record<string, unknown>
+}
+
+function walkElements(node: unknown, visit: (element: ElementLike) => void) {
+  if (Array.isArray(node)) {
+    for (const child of node) walkElements(child, visit)
+    return
+  }
+  if (!node || typeof node !== 'object' || !('props' in node)) return
+  const element = node as ElementLike
+  visit(element)
+  walkElements(element.props.children, visit)
+}
+
+function renderVoiceSection(component: (props: Record<string, unknown>) => unknown, denied: boolean) {
+  const reactInternals = (React as unknown as {
+    __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE: { H: unknown }
+  }).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+  let used = false
+  reactInternals.H = {
+    useState(initial: unknown) {
+      if (used) throw new Error('voice section render used a second state slot')
+      used = true
+      return [typeof initial === 'function' ? (initial as () => unknown)() : initial, () => {}]
+    },
+  }
+  try {
+    return component({
+      active: true,
+      surface: 'rest',
+      audioSmokeStatus: null,
+      draft: {
+        companionName: '星绘',
+        speechInputEnabled: false,
+        speechOutputEnabled: false,
+        continuousVoiceModeEnabled: false,
+        voiceActivityDetectionEnabled: false,
+        voiceTriggerMode: 'direct_send',
+        speechInputProviderId: 'local-sensevoice',
+        wakeWord: '星绘',
+        vadSensitivity: 'high',
+        voiceInterruptionEnabled: false,
+        speechInputFailoverEnabled: false,
+        speechOutputFailoverEnabled: false,
+        wakewordAlwaysOn: false,
+        wakewordSessionIdleTimeoutMs: 9_000,
+      },
+      dirty: false,
+      continuousVoiceActive: false,
+      loadingSpeechVoices: false,
+      onApplySpeechOutputPreset: () => {},
+      onLoadSpeechVoices: () => {},
+      onPreviewSpeech: () => {},
+      onRunAudioSmokeTest: () => {},
+      onRunSpeechInputConnectionTest: () => {},
+      onRunSpeechOutputConnectionTest: () => {},
+      onStartVoiceConversation: async () => {},
+      onStopVoiceConversation: () => {},
+      onCancelVoiceTurn: () => {},
+      platformProfile: {
+        platform: 'darwin',
+        voice: {
+          speechInputSupported: true,
+          speechInputAvailable: true,
+          speechOutputSupported: true,
+          speechOutputAvailable: true,
+          continuousVoiceSupported: true,
+          vadSupported: true,
+          wakewordSupported: true,
+          dependencyHint: null,
+        },
+      },
+      previewingSpeech: false,
+      speechInputEvidence: null,
+      speechOutputEvidence: null,
+      runningAudioSmoke: false,
+      saveError: false,
+      saving: false,
+      setDraft: () => {},
+      setSpeechPreviewText: () => {},
+      speechPreviewStatus: null,
+      speechPreviewText: '',
+      speechVoiceOptions: [],
+      speechVoiceStatus: null,
+      testingInputTarget: null,
+      testingOutputTarget: null,
+      uiLanguage: 'zh-CN',
+      voiceActionPending: false,
+      voiceState: 'idle',
+      modelGapCount: 0,
+      microphoneDenied: denied,
+    })
+  } finally {
+    reactInternals.H = null
+  }
+}
+
+async function assertStartVoicePermissionLine(showing: boolean) {
+  const { VoiceMicrophoneDenialLine, VoiceSectionV3 } = await import('../src/features/settingsV3/VoiceSectionV3.tsx')
+  const Inner = (VoiceSectionV3 as unknown as { type: (props: Record<string, unknown>) => unknown }).type
+  const tree = renderVoiceSection(Inner, showing)
+  let children: unknown[] | null = null
+  walkElements(tree, (element) => {
+    const nested = Array.isArray(element.props.children) ? element.props.children : [element.props.children]
+    const hasStart = nested.some((child) => (
+      Boolean(child)
+      && typeof child === 'object'
+      && 'props' in child
+      && (child as ElementLike).type === 'button'
+      && (child as ElementLike).props.children === '开始语音'
+    ))
+    if (hasStart) children = nested
+  })
+  assert.ok(children, 'start voice keeps a toolbar')
+  const startIndex = children.findIndex((child) => (
+    Boolean(child)
+    && typeof child === 'object'
+    && 'props' in child
+    && (child as ElementLike).type === 'button'
+    && (child as ElementLike).props.children === '开始语音'
+  ))
+  assert.ok(startIndex >= 0, '开始语音 is in the toolbar')
+  const beside = children[startIndex + 1] as ElementLike
+  assert.equal(beside?.type, VoiceMicrophoneDenialLine)
+  const line = VoiceMicrophoneDenialLine(beside.props as { denied: boolean; uiLanguage: 'zh-CN' })
+  const expected = pickTranslatedUiText('zh-CN', 'voice.mic.permission_denied')
+  if (showing) {
+    assert.equal(line?.props.children, expected)
+    assert.equal(line?.props.role, 'status')
+    assert.equal(line?.props.className, 'settings-v3-voice-permission')
+    return
+  }
+  assert.equal(line, null)
+  assert.equal(JSON.stringify(children).includes(expected), false)
+}

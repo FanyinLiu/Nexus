@@ -119,6 +119,7 @@ export type SettingsDrawerActiveSectionProps = {
   voicePipeline: VoicePipelineState
   voiceState: VoiceState
   voiceActionPending: boolean
+  microphoneDenied?: boolean
   voiceTrace: VoiceTraceEntry[]
   windowState: WindowState
   surface?: 'full' | 'rest'
@@ -178,6 +179,7 @@ export function SettingsDrawerActiveSection({
   voicePipeline,
   voiceState,
   voiceActionPending,
+  microphoneDenied = false,
   voiceTrace,
   windowState,
   surface = 'full',
@@ -318,6 +320,7 @@ export function SettingsDrawerActiveSection({
           saveError={saveError}
           saving={saving}
           voiceActionPending={voiceActionPending}
+          microphoneDenied={microphoneDenied}
           setDraft={setDraft}
           setSpeechPreviewText={speechVoices.setSpeechPreviewText}
           speechPreviewStatus={speechVoices.speechPreviewStatus}

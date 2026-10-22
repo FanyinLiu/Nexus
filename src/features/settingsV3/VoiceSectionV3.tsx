@@ -77,10 +77,28 @@ export type VoiceSectionV3Props = {
   testingOutputTarget: ServiceConnectionCapability | null
   uiLanguage: UiLanguage
   voiceActionPending: boolean
+  /** Set after the system prompt is refused, until a later click opens the mic. */
+  microphoneDenied?: boolean
   voiceState: VoiceState
   surface?: 'full' | 'rest'
   /** Visual-matrix hook. Production leaves this unset and uses the live inventory. */
   modelGapCount?: number
+}
+
+/** One line beside start-voice. The copy stays on `voice.mic.permission_denied`. */
+export function VoiceMicrophoneDenialLine({
+  denied,
+  uiLanguage,
+}: {
+  denied: boolean
+  uiLanguage: UiLanguage
+}) {
+  if (!denied) return null
+  return (
+    <span role="status" className="settings-v3-voice-permission">
+      {pickTranslatedUiText(uiLanguage, 'voice.mic.permission_denied')}
+    </span>
+  )
 }
 
 export const VoiceSectionV3 = memo(function VoiceSectionV3({
@@ -116,6 +134,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   testingOutputTarget,
   uiLanguage,
   voiceActionPending,
+  microphoneDenied = false,
   voiceState,
   surface = 'full',
   modelGapCount,
@@ -259,6 +278,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         >
           {runtimeVoiceLabel}
         </button>
+        <VoiceMicrophoneDenialLine denied={microphoneDenied} uiLanguage={uiLanguage} />
         <button
           type="button"
           onClick={onRunAudioSmokeTest}

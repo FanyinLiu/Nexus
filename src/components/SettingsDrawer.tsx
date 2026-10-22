@@ -28,6 +28,7 @@ import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLanguages.ts'
 import {
+  microphonePermissionDeniedAfter,
   runStartVoiceClick,
   saveVoiceStartSwitches,
   voiceSwitchesAfterMicrophoneDenied,
@@ -253,6 +254,7 @@ export function SettingsDrawer({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
   const [voiceActionPending, setVoiceActionPending] = useState(false)
+  const [microphoneDenied, setMicrophoneDenied] = useState(false)
   const themePreview = useTheme()
   const settingsDialogRef = useRef<HTMLElement | null>(null)
   const settingsOpenerRef = useRef<HTMLElement | null>(null)
@@ -675,8 +677,9 @@ export function SettingsDrawer({
       // the next frame. Chromium holds that request until the window is
       // shown again, so a grant that arrives after the macOS prompt is
       // discarded. Keep the window up until the stream is live. A denial
-      // puts the switches back and leaves Settings open. Hiding first drops
-      // the click instead of replaying it.
+      // puts the switches back, leaves Settings open, and shows the existing
+      // permission line until a later click actually opens the microphone.
+      // Hiding first drops the click instead of replaying it.
       const outcome = await runStartVoiceClick({
         visible: () => document.visibilityState !== 'hidden',
         subscribeHidden: (onHidden) => {
@@ -704,6 +707,7 @@ export function SettingsDrawer({
           onClose()
         },
       })
+      setMicrophoneDenied((showing) => microphonePermissionDeniedAfter(outcome, showing))
       if (outcome === 'open') restoreSettingsOpenerFocus()
     } catch (error) {
       console.error('[SettingsDrawer] voice start save failed:', getRedactedLogErrorMessage(error))
@@ -845,6 +849,7 @@ export function SettingsDrawer({
       voicePipeline,
       voiceState,
       voiceActionPending,
+      microphoneDenied,
       voiceTrace,
       windowState,
     }
