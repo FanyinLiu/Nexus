@@ -352,3 +352,66 @@ test('the test-later hint appears only on the last step, and only while the conn
   assert.equal(findFinishHint(verified.tree), null, 'tested connection must not show the hint')
   verified.unmount()
 })
+
+test('the readiness list keeps the untested-connection warning when no last-step hint replaces it', () => {
+  const guide = createGuide()
+  guide.render()
+  guide.advanceToLastStep()
+
+  const [companion] = findElements(
+    guide.tree,
+    (element) => 'hideUnverifiedTextWarning' in element.props,
+  )
+  assert.ok(companion)
+  assert.equal(companion.props.hideUnverifiedTextWarning, true)
+  const renderCompanion = (hideUnverifiedTextWarning: boolean) => (
+    companion.type as (props: unknown) => unknown
+  )({ ...companion.props, hideUnverifiedTextWarning })
+
+  // Without the last-step hint taking over the message, the readiness list
+  // must still report the untested connection itself.
+  assert.equal(findReadinessWarningText(renderCompanion(false)).length, 1)
+  assert.equal(findReadinessWarningText(renderCompanion(true)).length, 0)
+  guide.unmount()
+})
+
+test('the missing API key reminder still shows on the model step and the last step', () => {
+  const guide = createGuide({
+    apiProviderId: 'deepseek',
+    apiBaseUrl: 'https://api.deepseek.com',
+    apiKey: '',
+    model: 'deepseek-v4-flash',
+  })
+  guide.render()
+
+  let textStepClicks = 0
+  while (findElements(
+    guide.tree,
+    (element) => typeof element.props.onTextConnectionVerificationChange === 'function',
+  ).length === 0) {
+    guide.clickPrimary()
+    textStepClicks += 1
+    assert.ok(textStepClicks <= 10, 'guide never reached the text step')
+  }
+  const [textStep] = findElements(
+    guide.tree,
+    (element) => typeof element.props.onTextConnectionVerificationChange === 'function',
+  )
+  const textStepRenderer = createComponentRenderer<Record<string, unknown>>(
+    textStep.type as (props: Record<string, unknown>) => unknown,
+  )
+  const textStepTree = textStepRenderer.render(textStep.props)
+  assert.equal(
+    findElements(
+      textStepTree,
+      (element) => element.props.children === enMessages['onboarding.finish_hint.missing_api_key'],
+    ).length,
+    1,
+  )
+  textStepRenderer.unmount()
+
+  guide.advanceToLastStep()
+  const hint = findFinishHint(guide.tree)
+  assert.equal(hint?.props.children, enMessages['onboarding.finish_hint.missing_api_key'])
+  guide.unmount()
+})

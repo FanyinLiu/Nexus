@@ -110,10 +110,13 @@ export function OnboardingGuide({
     'text',
     draft,
   )
-  const finishHint = getOnboardingUnverifiedConnectionHint(
+  const unverifiedConnectionHint = getOnboardingUnverifiedConnectionHint(
     textConnectionVerified,
     draft.uiLanguage,
   )
+  // A missing key is the actionable reminder the last step always carried;
+  // the untested-connection hint only fills in when the key is already set.
+  const finishHint = missingApiKeyHint ?? unverifiedConnectionHint
 
   // Reset the wizard whenever it (re)opens or the underlying settings change
   // while open — render-time adjust keyed on an "open ? settings : null"
@@ -354,7 +357,7 @@ export function OnboardingGuide({
             selectedPetModel={selectedPetModel}
             launchOnStartupSupported={platformProfile.startup.supported}
             textConnectionVerified={textConnectionVerified}
-            hideUnverifiedTextWarning={Boolean(finishHint)}
+            hideUnverifiedTextWarning={Boolean(unverifiedConnectionHint) && !missingApiKeyHint}
           />
         )
     }

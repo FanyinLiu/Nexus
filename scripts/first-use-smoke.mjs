@@ -103,11 +103,12 @@ async function nextGuideStep(page) {
   const progress = page.locator('.onboarding-disclosure__progress')
   const before = await progress.innerText()
   await page.locator('.onboarding-card__actions .primary-button').click()
+  // The last step's Finish action closes the guide in one click, so the
+  // progress indicator disappearing is the normal completion signal there.
   await page.waitForFunction((old) => {
     const current = document.querySelector('.onboarding-disclosure__progress')
     if (!current) return true
-    if (current.textContent.trim() !== old) return true
-    return Boolean(document.getElementById('onboarding-finish-warning'))
+    return current.textContent.trim() !== old
   }, before)
 }
 
@@ -133,15 +134,9 @@ async function waitForVisibleGuide(page) {
 
 async function finishRemainingGuide(page) {
   for (let count = 0; count < 8 && await page.locator('.onboarding-card').isVisible(); count += 1) {
-    if (await page.locator('#onboarding-finish-warning').isVisible()) {
-      await page.locator('.onboarding-card__actions .primary-button').click()
-      break
-    }
+    // Finish closes the guide on the first click, whether or not the last-step
+    // unverified-connection hint is visible.
     await nextGuideStep(page)
-    if (await page.locator('#onboarding-finish-warning').isVisible()) {
-      await page.locator('.onboarding-card__actions .primary-button').click()
-      break
-    }
   }
   await page.locator('.onboarding-card').waitFor({ state: 'hidden' })
 }
