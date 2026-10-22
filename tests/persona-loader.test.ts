@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFile } from 'node:fs/promises'
 import path, { join, dirname } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -192,14 +193,18 @@ test('persona soul save accepts text and refuses values that must not be written
 })
 
 test('persona profile soul path stays inside that profile and refuses unsafe ids', () => {
-  const resolved = resolvePersonaProfileSoulPath('/tmp/nexus-user', 'card-abc123')
-  assert.equal(resolved, path.join('/tmp/nexus-user', 'personas', 'card-abc123', 'soul.md'))
+  const userData = path.resolve(tmpdir(), 'nexus-user-soul')
+  const resolved = resolvePersonaProfileSoulPath(userData, 'card-abc123')
+  const personasRoot = path.join(userData, 'personas')
+  assert.equal(resolved, path.join(personasRoot, 'card-abc123', 'soul.md'))
+  assert.equal(path.relative(personasRoot, resolved ?? ''), path.join('card-abc123', 'soul.md'))
 
-  const xinghui = resolvePersonaProfileSoulPath('/tmp/nexus-user', 'xinghui')
+  const xinghui = resolvePersonaProfileSoulPath(userData, 'xinghui')
   assert.equal(path.basename(xinghui ?? ''), 'soul.md')
   assert.equal(path.basename(path.dirname(xinghui ?? '')), 'xinghui')
+  assert.equal(path.relative(personasRoot, xinghui ?? ''), path.join('xinghui', 'soul.md'))
 
   for (const unsafe of ['', '.', '..', '../etc', 'card/../xinghui', 'card name', 'a..b', 'card\\xinghui']) {
-    assert.equal(resolvePersonaProfileSoulPath('/tmp/nexus-user', unsafe), null, unsafe)
+    assert.equal(resolvePersonaProfileSoulPath(userData, unsafe), null, unsafe)
   }
 })
