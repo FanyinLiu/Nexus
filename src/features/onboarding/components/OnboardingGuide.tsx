@@ -71,8 +71,6 @@ export function OnboardingGuide({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<OnboardingStepIssue | null>(null)
   const [repairNotice, setRepairNotice] = useState<string | null>(null)
-  const [finishNotice, setFinishNotice] = useState<string | null>(null)
-  const [unverifiedFinishAcknowledged, setUnverifiedFinishAcknowledged] = useState(false)
   // Store fingerprint/evidence/checkedAt so readiness is derived from the
   // current draft + wall clock (not a sticky boolean that outlives the TTL).
   const [textConnectionVerification, setTextConnectionVerification] = useState<ConnectionVerificationRecord | null>(null)
@@ -112,6 +110,10 @@ export function OnboardingGuide({
     'text',
     draft,
   )
+  const finishHint = resolveOnboardingFinishGate({
+    textConnectionVerified,
+    uiLanguage: draft.uiLanguage,
+  }).hint
 
   // Reset the wizard whenever it (re)opens or the underlying settings change
   // while open — render-time adjust keyed on an "open ? settings : null"
@@ -128,8 +130,6 @@ export function OnboardingGuide({
       setSaving(false)
       setError(null)
       setRepairNotice(null)
-      setFinishNotice(null)
-      setUnverifiedFinishAcknowledged(false)
       setTextConnectionVerification(null)
       setVerificationFreshnessTick(0)
     }
@@ -196,15 +196,10 @@ export function OnboardingGuide({
     setDraft(next)
     setError(null)
     setRepairNotice(null)
-    setFinishNotice(null)
   }
 
   function updateTextConnectionVerification(record: ConnectionVerificationRecord | null) {
     setTextConnectionVerification(record)
-    if (!record) {
-      setUnverifiedFinishAcknowledged(false)
-      setFinishNotice(null)
-    }
   }
 
   async function chooseLanguage(nextLanguage: UiLanguage) {
@@ -221,7 +216,6 @@ export function OnboardingGuide({
     setDraft(nextDraft)
     setError(null)
     setRepairNotice(null)
-    setFinishNotice(null)
     if (!onPersistUiLanguage) return
     if (
       nextDraft.uiLanguage === settings.uiLanguage
@@ -276,7 +270,6 @@ export function OnboardingGuide({
 
     setError(null)
     setRepairNotice(null)
-    setFinishNotice(null)
     setStepIndex((current) => Math.min(lastStepIndex, current + 1))
   }
 
@@ -284,26 +277,12 @@ export function OnboardingGuide({
     const nextError = getOnboardingStepIssue(draft, step.id, draft.uiLanguage)
     if (nextError) {
       setError(nextError)
-      setFinishNotice(null)
-      return
-    }
-
-    const finishGate = resolveOnboardingFinishGate({
-      textConnectionVerified,
-      acknowledgedUnverified: unverifiedFinishAcknowledged,
-      uiLanguage: draft.uiLanguage,
-    })
-    if (!finishGate.proceed) {
-      setUnverifiedFinishAcknowledged(true)
-      setFinishNotice(finishGate.warning)
-      setError(null)
       return
     }
 
     setSaving(true)
     setError(null)
     setRepairNotice(null)
-    setFinishNotice(null)
 
     try {
       await onSave(sanitizeOnboardingSettings(draft, settings))
@@ -458,9 +437,9 @@ export function OnboardingGuide({
         </div>
 
         <div className="onboarding-grid onboarding-grid--stack">
-          {finishNotice ? (
-            <p id="onboarding-finish-warning" className="onboarding-tip onboarding-tip--strong" role="status">
-              {finishNotice}
+          {stepIndex === lastStepIndex && finishHint ? (
+            <p id="onboarding-finish-hint" className="onboarding-tip" role="status">
+              {finishHint}
             </p>
           ) : null}
           <div className={`onboarding-card__actions onboarding-card__actions--calm ${isAiDisclosureStep ? 'onboarding-card__actions--disclosure' : ''}`}>
@@ -472,7 +451,6 @@ export function OnboardingGuide({
                 setStepIndex((current) => Math.max(0, current - 1))
                 setError(null)
                 setRepairNotice(null)
-                setFinishNotice(null)
               }}
               disabled={saving}
             >

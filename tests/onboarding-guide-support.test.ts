@@ -180,26 +180,22 @@ test('missing API key hint is for the model step and stays empty for keyless pro
   assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
 })
 
-test('an untested model warns once, then finish can proceed', () => {
-  const first = resolveOnboardingFinishGate({
+test('finish with an untested connection completes onboarding in one click', () => {
+  const gate = resolveOnboardingFinishGate({
     textConnectionVerified: false,
     acknowledgedUnverified: false,
     uiLanguage: 'zh-CN',
   })
-  assert.equal(first.proceed, false)
-  if (!first.proceed) assert.match(first.warning, /再点一次/)
 
-  assert.deepEqual(resolveOnboardingFinishGate({
-    textConnectionVerified: false,
-    acknowledgedUnverified: true,
-    uiLanguage: 'zh-CN',
-  }), { proceed: true })
+  assert.equal(gate.proceed, true)
+  assert.match(gate.hint ?? '', /设置/)
+  assert.doesNotMatch(gate.hint ?? '', /再点一次/)
 
   assert.deepEqual(resolveOnboardingFinishGate({
     textConnectionVerified: true,
     acknowledgedUnverified: false,
     uiLanguage: 'en-US',
-  }), { proceed: true })
+  }), { proceed: true, hint: null })
 })
 
 test('onboarding text step shows provider-aware missing model guidance', () => {

@@ -37,7 +37,7 @@ export const jaOnboarding = {
   'onboarding.step.companion.title': '陪伴スタイル',
   'onboarding.step.companion.description': 'もう少しです —— 彼女の見た目と起動時の状態を選んでください。',
   'onboarding.finish_hint.missing_api_key': 'キーはまだ空でも大丈夫です。先に見て、話し始める前に足せます。',
-  'onboarding.finish_hint.unverified_model': '接続はまだ確認できていません。もう一度完了を押すと始められます。確認はあとから設定でできます。',
+  'onboarding.finish_hint.unverified_model': '接続がまだでも大丈夫です。あとから設定で確認できます。',
   'onboarding.finish_hint.default': '残りはあとから設定で調整できます。',
   'onboarding.repair.apply_text_defaults': 'おすすめ設定を適用',
   'onboarding.repair.applied_text_defaults': 'おすすめ設定を入力しました。接続を試して、本当に使えるか確認してください。',

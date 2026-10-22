@@ -37,7 +37,7 @@ export const zhTWOnboarding = {
   'onboarding.step.companion.title': '陪伴方式',
   'onboarding.step.companion.description': '快完了 —— 選她長什麼樣，開機時是什麼狀態。',
   'onboarding.finish_hint.missing_api_key': '還沒填密鑰也沒關係，先看看，開始聊天前再補上。',
-  'onboarding.finish_hint.unverified_model': '還沒測通連線。再點一次完成，也可以先開始，稍後再到設定裡測。',
+  'onboarding.finish_hint.unverified_model': '還沒測通連線也沒關係，之後可以在設定裡再測。',
   'onboarding.finish_hint.default': '之後還可以在設定裡慢慢調整。',
   'onboarding.repair.apply_text_defaults': '套用建議設定',
   'onboarding.repair.applied_text_defaults': '建議設定已填入。可以測試連線，確認這邊真的能用。',

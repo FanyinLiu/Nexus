@@ -35,7 +35,7 @@ export const zhCNOnboarding = {
   'onboarding.step.companion.title': '陪伴方式',
   'onboarding.step.companion.description': '快完了 —— 选她长什么样，开机时是什么状态。',
   'onboarding.finish_hint.missing_api_key': '还没填密钥也没关系，先看看，开始聊天前再补上。',
-  'onboarding.finish_hint.unverified_model': '还没测通连接。再点一次完成，也可以先开始，稍后再到设置里测。',
+  'onboarding.finish_hint.unverified_model': '还没测通连接也没关系，之后可以在设置里再测。',
   'onboarding.finish_hint.default': '之后还可以在设置里慢慢调整。',
   'onboarding.repair.apply_text_defaults': '应用推荐设置',
   'onboarding.repair.applied_text_defaults': '推荐设置已填入。可以测试连接，确认这边真的能用。',

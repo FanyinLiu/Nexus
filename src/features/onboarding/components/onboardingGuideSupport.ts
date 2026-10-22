@@ -125,19 +125,19 @@ export function getOnboardingFinishHint(
 }
 
 /**
- * A model that has never tested OK gets one warning. The next finish proceeds.
+ * Finishing is never blocked on an untested connection: the guide only
+ * surfaces a short hint so the user can test later in Settings.
  */
 export function resolveOnboardingFinishGate(input: {
   textConnectionVerified: boolean
-  acknowledgedUnverified: boolean
+  acknowledgedUnverified?: boolean
   uiLanguage: UiLanguage
-}): { proceed: true } | { proceed: false; warning: string } {
-  if (input.textConnectionVerified || input.acknowledgedUnverified) {
-    return { proceed: true }
-  }
+}): { proceed: true; hint: string | null } {
   return {
-    proceed: false,
-    warning: pickTranslatedUiText(input.uiLanguage, 'onboarding.finish_hint.unverified_model'),
+    proceed: true,
+    hint: input.textConnectionVerified
+      ? null
+      : pickTranslatedUiText(input.uiLanguage, 'onboarding.finish_hint.unverified_model'),
   }
 }
 
