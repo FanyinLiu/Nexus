@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useModalFocusTrap } from '../../../hooks/useModalFocusTrap.ts'
 import { useTranslation } from '../../../i18n/useTranslation.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
-import { localModelCopy } from '../localModelRepair.ts'
+import { localModelCopy, missingVoiceModelIds, voiceModelDownloadPayload } from '../localModelRepair.ts'
 import {
   MODEL_SETUP_DISMISSED_STORAGE_KEY,
   getModelProgressPercent,
@@ -26,6 +26,11 @@ type Props = {
   /** Hide the overlay while another modal owns the screen (settings, onboarding guide). */
   suppressed?: boolean
   onVisibilityChange?: (visible: boolean) => void
+  /**
+   * Listener selected in settings. The button counts and downloads the same
+   * set as Voice settings. A cloud id adds no speech model.
+   */
+  speechInputProviderId?: string
 }
 
 function readModelSetupDismissed(): boolean {
@@ -43,6 +48,7 @@ function formatBytes(bytes: number): string {
 export function ModelSetupOverlay({
   suppressed = false,
   onVisibilityChange,
+  speechInputProviderId,
 }: Props) {
   const { t } = useTranslation()
   const [inventory, setInventory] = useState<Inventory | null>(null)
@@ -61,12 +67,6 @@ export function ModelSetupOverlay({
     }
   }
   const [networkProbe, setNetworkProbe] = useState<{ huggingFaceReachable: boolean } | null>(null)
-  const [pythonStatus, setPythonStatus] = useState<{
-    pythonAvailable: boolean
-    version: string | null
-    omniVoice: { ready: boolean; missingImports: string[] }
-    glmAsr: { ready: boolean; missingImports: string[] }
-  } | null>(null)
   const [errorBanner, setErrorBanner] = useState<string | null>(null)
 
   const dialogRef = useRef<HTMLElement | null>(null)
@@ -100,7 +100,6 @@ export function ModelSetupOverlay({
       if (inv) setInventory(inv)
     })
     window.desktopPet?.modelsNetworkProbe?.().then(setNetworkProbe).catch(() => {})
-    window.desktopPet?.pythonRuntimeStatus?.().then(setPythonStatus).catch(() => {})
   }, [fetchInventory])
 
   useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
@@ -133,7 +132,9 @@ export function ModelSetupOverlay({
     setBusy(true)
     setErrorBanner(null)
     try {
-      const result = await window.desktopPet?.modelsDownloadMissing?.()
+      const result = await window.desktopPet?.modelsDownloadMissing?.(
+        voiceModelDownloadPayload(speechInputProviderId ?? ''),
+      )
       if (result?.inventory) setInventory(result.inventory)
       const failed = result?.results.filter(r => !r.ok) ?? []
       if (failed.length) {
@@ -144,7 +145,7 @@ export function ModelSetupOverlay({
     } finally {
       setBusy(false)
     }
-  }, [t])
+  }, [speechInputProviderId, t])
 
   const retryModel = useCallback(async (modelId: string) => {
     setErrorBanner(null)
@@ -259,6 +260,7 @@ export function ModelSetupOverlay({
   if (!inventory) return null
   if (inventory.ready) return null
 
+  const missingIds = missingVoiceModelIds(inventory.models, speechInputProviderId ?? '')
   const requiredModels = inventory.models.filter(m => m.required)
   const optionalModels = inventory.models.filter(m => !m.required)
   const optionalStatus = (required: boolean) => (
@@ -382,22 +384,6 @@ export function ModelSetupOverlay({
               </>
             ) : null}
           </div>
-
-          {pythonStatus ? (
-            <div className="model-setup__python">
-              <strong>{t('model_setup.python_title')}</strong>
-              <div>
-                {pythonStatus.pythonAvailable
-                  ? t('model_setup.python_detected', { version: pythonStatus.version ?? '' })
-                  : t('model_setup.python_not_detected')}
-              </div>
-              {pythonStatus.pythonAvailable && !pythonStatus.omniVoice.ready ? (
-                <div className="model-setup__python-note">
-                  {t('model_setup.python_missing_deps', { deps: pythonStatus.omniVoice.missingImports.join(', ') })}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         <footer className="model-setup-card__actions">
@@ -405,9 +391,9 @@ export function ModelSetupOverlay({
             type="button"
             className="primary-button"
             onClick={startDownloadAll}
-            disabled={busy || inventory.missingRequired.length === 0}
+            disabled={busy || missingIds.length === 0}
           >
-            {busy ? t('model_setup.downloading') : t('model_setup.download_all', { count: inventory.missingRequired.length })}
+            {busy ? t('model_setup.downloading') : t('model_setup.download_all', { count: missingIds.length })}
           </button>
           <button
             type="button"

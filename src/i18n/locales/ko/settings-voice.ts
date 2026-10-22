@@ -127,6 +127,7 @@ export const koSettingsVoice = {
   'settings.voice.local_models_hint': '첫 실행 창을 닫은 뒤에도 여기서 확인하고 다운로드할 수 있습니다.',
   'settings.voice.local_models_ready': '필요한 로컬 음성 모델이 설치되어 있습니다.',
   'settings.voice.local_models_missing': '모델 {count}개를 더 다운로드해야 합니다.',
+  'settings.voice.local_models_missing_one': '모델 {count}개를 더 다운로드해야 합니다.',
   'settings.voice.local_models_download': '없는 모델 다운로드',
   'settings.voice.local_models_resume': '다운로드 이어받기',
   'settings.voice.local_models_retry': '다시 시도',

@@ -9,7 +9,7 @@ export const koOnboarding = {
   'model_setup.model.vad.purpose': '말을 시작하고 멈추는 때를 듣습니다.',
   'model_setup.dismiss': '나중에',
   'model_setup.dismiss_hint': '지금은 넘어가도 돼요 — 다음에 이야기하고 싶을 때 한 번만 알려드릴게요.',
-  'model_setup.deferred_reminder': '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.',
+  'model_setup.deferred_reminder': '음성이 아직 준비되지 않았어요. 「{settings} → {voice} → {advanced}」에서 다운로드해 주세요.',
   'model_setup.network_hf_unreachable': 'HuggingFace 에 직접 접근할 수 없어 GitHub Releases / ModelScope 미러를 우선 사용합니다.',
   'model_setup.required_heading': '필수 모델',
   'model_setup.optional_heading': '선택 모델',

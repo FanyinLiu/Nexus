@@ -12,6 +12,7 @@ import {
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
 import { requestModelSetupForVoiceUse } from '../../lib/modelSetupBridge.ts'
+import { voiceDownloadGuidance } from '../../features/setup/voiceDownloadGuidance.ts'
 import type { AppSettings } from '../../types'
 import type { StreamingSpeechOutputController } from './types.ts'
 import type { VoiceConversationOptions } from './types.ts'
@@ -161,7 +162,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       // reminder, and this is the voice action that spends it. The line
       // replaces the missing-model error instead of stacking under it.
       if (!outcome.remind) return
-      hookCallbacks.presentCompanionNotice?.(ti('model_setup.deferred_reminder'), {
+      hookCallbacks.presentCompanionNotice?.(voiceDownloadGuidance(ti, 'model_setup.deferred_reminder'), {
         replacesSurfaceError: true,
       })
     })

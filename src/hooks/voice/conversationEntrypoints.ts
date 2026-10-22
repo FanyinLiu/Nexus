@@ -8,6 +8,7 @@ import { resolveMissingSenseVoiceSpeechInput } from '../../features/voice/senseV
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { switchSpeechInputProvider } from '../../lib/speechProviderProfiles.ts'
 import { checkParaformerAvailability } from '../../features/hearing/localParaformer.ts'
+import { voiceDownloadGuidance } from '../../features/setup/voiceDownloadGuidance.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type {
   VoiceSessionEvent,
@@ -185,7 +186,7 @@ export function startVoiceConversationEntrypoint(
       }
       if (!status.installed || !status.modelFound) {
         if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
-        showMissingVoiceGuidance(params, params.ti('voice.provider.paraformer.model_missing'))
+        showMissingVoiceGuidance(params, voiceDownloadGuidance(params.ti, 'voice.provider.paraformer.model_missing'))
         console.warn('[Voice] Paraformer unavailable:', status)
         return
       }
@@ -228,7 +229,7 @@ export function startVoiceConversationEntrypoint(
           params,
           !status.installed
             ? params.ti('voice.provider.sensevoice.node_missing')
-            : params.ti('voice.provider.sensevoice.not_installed'),
+            : voiceDownloadGuidance(params.ti, 'voice.provider.sensevoice.not_installed'),
         )
         console.warn('[Voice] SenseVoice unavailable:', status)
         return

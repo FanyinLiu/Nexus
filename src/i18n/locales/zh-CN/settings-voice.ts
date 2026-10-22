@@ -125,6 +125,7 @@ export const zhCNSettingsVoice = {
   'settings.voice.local_models_hint': '关掉首次安装窗口之后，仍可以在这里查看和下载。',
   'settings.voice.local_models_ready': '需要的本地语音模型都已安装。',
   'settings.voice.local_models_missing': '还有 {count} 个模型需要下载。',
+  'settings.voice.local_models_missing_one': '还有 {count} 个模型需要下载。',
   'settings.voice.local_models_download': '下载缺失模型',
   'settings.voice.local_models_resume': '继续下载',
   'settings.voice.local_models_retry': '重试',

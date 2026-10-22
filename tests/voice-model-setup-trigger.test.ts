@@ -21,6 +21,7 @@ function createLifecycle(
     onError?: (error: string | null) => void
     onStatus?: (message: string) => void
     speechInputProviderId?: string
+    translationCalls?: Array<{ key: string; params?: Record<string, string> }>
   } = {},
 ) {
   const settings = {
@@ -82,7 +83,10 @@ function createLifecycle(
       setLiveTranscript: () => {},
     },
     hookCallbacks: {
-      ti: (key: string) => key,
+      ti: (key: string, params?: Record<string, string>) => {
+        options.translationCalls?.push({ key, params })
+        return key
+      },
       clearPendingVoiceRestart: () => {},
       updateVoicePipeline: () => {},
       showPetStatus: (message: string) => { options.onStatus?.(message) },
@@ -171,14 +175,29 @@ test('the mic trigger stays quiet when the models are already installed', async 
   assert.equal(bridge.getRequests(), 0)
 })
 
+const GUIDANCE_PATH = {
+  settings: 'settings.title',
+  voice: 'settings.simple.voice',
+  advanced: 'settings.simple.advanced',
+}
+
+function guidanceParams(
+  calls: Array<{ key: string; params?: Record<string, string> }>,
+  key: string,
+) {
+  return calls.filter((call) => call.key === key).map((call) => call.params)
+}
+
 test('a refused installer reminds once on the next voice action', async () => {
   const gate = createModelSetupRequestGate({ deliver: () => {} })
   gate.decline()
 
   const reminders: string[] = []
+  const translationCalls: Array<{ key: string; params?: Record<string, string> }> = []
   const bridge = installBridge(false, { gate })
   const lifecycle = createLifecycle('pet', {
     onReminder: (content) => { reminders.push(content) },
+    translationCalls,
   })
 
   lifecycle.toggleVoiceConversation()
@@ -189,6 +208,7 @@ test('a refused installer reminds once on the next voice action', async () => {
     ['model_setup.deferred_reminder'],
     'the first voice action after the refusal reminds that the models are missing',
   )
+  assert.deepEqual(guidanceParams(translationCalls, 'model_setup.deferred_reminder'), [GUIDANCE_PATH])
   assert.equal(bridge.getRequests(), 0, 'the refused installer is not offered again')
 
   lifecycle.toggleVoiceConversation()
@@ -209,12 +229,14 @@ test('a missing SenseVoice model shows the reminder instead of the error', async
   const reminders: Array<{ content: string; replacesSurfaceError?: boolean }> = []
   const errors: Array<string | null> = []
   const statuses: string[] = []
+  const translationCalls: Array<{ key: string; params?: Record<string, string> }> = []
   installBridge(false, {
     gate,
     senseVoice: { installed: true, modelFound: false, modelsDir: '/models' },
   })
   const lifecycle = createLifecycle('pet', {
     speechInputProviderId: 'local-sensevoice',
+    translationCalls,
     onReminder: (content, notice) => {
       reminders.push({ content, replacesSurfaceError: notice?.replacesSurfaceError })
     },
@@ -245,6 +267,7 @@ test('a missing SenseVoice model shows the reminder instead of the error', async
       replacesSurfaceError: true,
     },
   ], 'after the one reminder, the missing model stays a single pet line')
+  assert.deepEqual(guidanceParams(translationCalls, 'voice.provider.sensevoice.not_installed'), [GUIDANCE_PATH])
   assert.deepEqual(errors, [], 'the missing-model sentence is not a chat error that later becomes generic')
   assert.deepEqual(statuses, [])
 })
@@ -267,12 +290,14 @@ test('a missing speech model is only the pet line, including the runtime and Par
     const reminders: Array<{ content: string; replacesSurfaceError?: boolean }> = []
     const errors: Array<string | null> = []
     const statuses: string[] = []
+    const translationCalls: Array<{ key: string; params?: Record<string, string> }> = []
     installBridge(true, {
       senseVoice: 'senseVoice' in item ? item.senseVoice : undefined,
       paraformer: 'paraformer' in item ? item.paraformer : undefined,
     })
     const lifecycle = createLifecycle('pet', {
       speechInputProviderId: item.providerId,
+      translationCalls,
       onReminder: (content, notice) => {
         reminders.push({ content, replacesSurfaceError: notice?.replacesSurfaceError })
       },
@@ -284,6 +309,10 @@ test('a missing speech model is only the pet line, including the runtime and Par
     await flushAsyncWork()
 
     assert.deepEqual(reminders, [{ content: item.expected, replacesSurfaceError: true }])
+    assert.deepEqual(
+      guidanceParams(translationCalls, item.expected),
+      item.expected === 'voice.provider.paraformer.model_missing' ? [GUIDANCE_PATH] : [undefined],
+    )
     assert.deepEqual(errors, [])
     assert.deepEqual(statuses, [])
   }

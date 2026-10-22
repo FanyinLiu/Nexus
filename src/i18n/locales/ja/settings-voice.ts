@@ -127,6 +127,7 @@ export const jaSettingsVoice = {
   'settings.voice.local_models_hint': '初回起動の画面を閉じたあとも、ここで確認してダウンロードできます。',
   'settings.voice.local_models_ready': '必要なローカル音声モデルはインストール済みです。',
   'settings.voice.local_models_missing': 'あと {count} 件のモデルをダウンロードする必要があります。',
+  'settings.voice.local_models_missing_one': 'あと {count} 件のモデルをダウンロードする必要があります。',
   'settings.voice.local_models_download': '不足モデルをダウンロード',
   'settings.voice.local_models_resume': 'ダウンロードを再開',
   'settings.voice.local_models_retry': 'もう一度',

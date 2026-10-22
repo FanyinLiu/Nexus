@@ -127,6 +127,7 @@ export const zhTWSettingsVoice = {
   'settings.voice.local_models_hint': '關掉首次安裝視窗之後，仍可以在這裡查看和下載。',
   'settings.voice.local_models_ready': '需要的本機語音模型都已安裝。',
   'settings.voice.local_models_missing': '還有 {count} 個模型需要下載。',
+  'settings.voice.local_models_missing_one': '還有 {count} 個模型需要下載。',
   'settings.voice.local_models_download': '下載缺失模型',
   'settings.voice.local_models_resume': '繼續下載',
   'settings.voice.local_models_retry': '重試',

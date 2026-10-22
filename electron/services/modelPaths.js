@@ -14,7 +14,11 @@
 
 import path from 'node:path'
 import fs from 'node:fs'
-import { app } from 'electron'
+import { loadElectron } from './loadElectron.js'
+
+// Loaded this way so a unit test can import the model manager without
+// Electron. These helpers still run only inside the app.
+const app = loadElectron()?.app
 
 export function getUserModelsRoot() {
   return path.join(app.getPath('userData'), 'sherpa-models')

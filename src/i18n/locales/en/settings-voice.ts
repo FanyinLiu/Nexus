@@ -127,6 +127,7 @@ export const enSettingsVoice = {
   'settings.voice.local_models_hint': 'You can check and download them here after closing the first-launch window.',
   'settings.voice.local_models_ready': 'The required local voice models are installed.',
   'settings.voice.local_models_missing': '{count} models still need to be downloaded.',
+  'settings.voice.local_models_missing_one': '{count} model still needs to be downloaded.',
   'settings.voice.local_models_download': 'Download missing models',
   'settings.voice.local_models_resume': 'Resume download',
   'settings.voice.local_models_retry': 'Try again',

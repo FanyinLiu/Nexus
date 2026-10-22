@@ -15,6 +15,7 @@ import {
   selectMissingVoiceModelIds,
   speechModelIdForProvider,
 } from '../shared/voiceModelDownloads.js'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import type { AppSettings, PlatformProfile } from '../src/types/index.ts'
 
 register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
@@ -341,4 +342,154 @@ test('voice settings say how many models are missing, including one', () => {
   assert.equal(titlesFor(1).includes('语音一切正常'), false)
   assert.ok(titlesFor(2).includes('还差 2 个模型没装'))
   assert.ok(titlesFor(0).includes('语音一切正常'))
+})
+
+function noticeTitles(node: unknown): string[] {
+  return findElements(node, (element) => typeof element.props.title === 'string')
+    .map((element) => String(element.props.title))
+}
+
+async function renderModelsPanel(
+  inventory: unknown,
+  props: { uiLanguage: 'zh-CN' | 'en-US'; speechInputProviderId: string; onMissingCount?: (count: number | null) => void },
+) {
+  Object.assign(globalThis, {
+    window: {
+      desktopPet: {
+        modelsGetInventory: async () => inventory,
+        subscribeModelsProgress: () => () => {},
+      },
+    },
+  })
+  const view = createRenderer(LocalVoiceModelsPanel)
+  view.render(props)
+  for (let i = 0; i < 12; i += 1) await Promise.resolve()
+  return view.render(props)
+}
+
+test('the voice panel is not ready while the selected speech model is missing', async () => {
+  await ensureLocaleLoaded('en-US')
+  await ensureLocaleLoaded('zh-CN')
+  const requiredInstalled = {
+    models: catalog.map((model) => ({ ...model, present: model.required })),
+    ready: true,
+    missingRequired: [] as string[],
+    disk: { ok: true },
+  }
+  const gap = await renderModelsPanel(requiredInstalled, {
+    uiLanguage: 'en-US',
+    speechInputProviderId: 'local-sensevoice',
+  })
+  assert.equal(noticeTitles(gap).includes('The required local voice models are installed.'), false)
+  assert.ok(collectText(gap).includes('1 model still needs to be downloaded.'))
+  assert.equal(collectText(gap).includes('1 models still need to be downloaded.'), false)
+
+  const twoMissing = {
+    ...requiredInstalled,
+    ready: false,
+    missingRequired: ['vad'],
+    models: requiredInstalled.models.map((model) => (
+      model.id === 'vad' ? { ...model, present: false } : model
+    )),
+  }
+  const plural = await renderModelsPanel(twoMissing, {
+    uiLanguage: 'en-US',
+    speechInputProviderId: 'local-sensevoice',
+  })
+  assert.ok(collectText(plural).includes('2 models still need to be downloaded.'))
+
+  const ready = await renderModelsPanel({
+    ...requiredInstalled,
+    models: requiredInstalled.models.map((model) => ({ ...model, present: true })),
+  }, {
+    uiLanguage: 'zh-CN',
+    speechInputProviderId: 'local-sensevoice',
+  })
+  assert.ok(noticeTitles(ready).includes('需要的本地语音模型都已安装。'))
+  assert.equal(collectText(ready).join('').includes('还有 1 个模型需要下载'), false)
+})
+
+test('voice settings follow the live inventory gap, including the selected speech model', async () => {
+  const Inner = (VoiceSectionV3 as unknown as { type: (props: unknown) => unknown }).type
+  const section = createRenderer(Inner)
+  const draft = {
+    companionName: '星绘',
+    speechInputEnabled: true,
+    speechOutputEnabled: false,
+    continuousVoiceModeEnabled: false,
+    voiceActivityDetectionEnabled: false,
+    voiceTriggerMode: 'direct_send',
+    speechInputProviderId: 'local-sensevoice',
+    wakeWord: '星绘',
+    vadSensitivity: 'high',
+    voiceInterruptionEnabled: false,
+    speechInputFailoverEnabled: false,
+    speechOutputFailoverEnabled: false,
+    wakewordAlwaysOn: false,
+    wakewordSessionIdleTimeoutMs: 9_000,
+  } as AppSettings
+  const base = {
+    active: true,
+    audioSmokeStatus: null,
+    draft,
+    dirty: false,
+    continuousVoiceActive: false,
+    loadingSpeechVoices: false,
+    onApplySpeechOutputPreset: () => {},
+    onLoadSpeechVoices: () => {},
+    onPreviewSpeech: () => {},
+    onRunAudioSmokeTest: () => {},
+    onRunSpeechInputConnectionTest: () => {},
+    onRunSpeechOutputConnectionTest: () => {},
+    onStartVoiceConversation: async () => {},
+    onStopVoiceConversation: () => {},
+    onCancelVoiceTurn: () => {},
+    platformProfile: {
+      platform: 'darwin',
+      voice: {
+        speechInputSupported: true,
+        speechInputAvailable: true,
+        speechOutputSupported: true,
+        speechOutputAvailable: true,
+        continuousVoiceSupported: true,
+        vadSupported: true,
+        wakewordSupported: true,
+        dependencyHint: null,
+      },
+    } as PlatformProfile,
+    previewingSpeech: false,
+    speechInputEvidence: null,
+    speechOutputEvidence: null,
+    runningAudioSmoke: false,
+    saveError: false,
+    saving: false,
+    setDraft: () => {},
+    setSpeechPreviewText: () => {},
+    speechPreviewStatus: null,
+    speechPreviewText: '',
+    speechVoiceOptions: [],
+    speechVoiceStatus: null,
+    testingInputTarget: null,
+    testingOutputTarget: null,
+    uiLanguage: 'zh-CN' as const,
+    voiceActionPending: false,
+    voiceState: 'idle' as const,
+  }
+  const first = section.render(base)
+  const panel = findElements(first, (element) => element.type === LocalVoiceModelsPanel)[0]
+  assert.ok(panel?.props.onMissingCount, 'the voice page must report the live model gap')
+  const inventory = {
+    models: catalog.map((model) => ({ ...model, present: model.required })),
+    ready: true,
+    missingRequired: [] as string[],
+    disk: { ok: true },
+  }
+  await renderModelsPanel(inventory, {
+    uiLanguage: panel.props.uiLanguage as 'zh-CN',
+    speechInputProviderId: String(panel.props.speechInputProviderId),
+    onMissingCount: panel.props.onMissingCount as (count: number | null) => void,
+  })
+  const titles = noticeTitles(section.render(base))
+  assert.ok(titles.includes('还差 1 个模型没装'))
+  assert.equal(titles.includes('语音一切正常'), false)
 })

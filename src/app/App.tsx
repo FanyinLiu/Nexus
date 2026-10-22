@@ -110,6 +110,7 @@ function App() {
       <ModelSetupOverlay
         suppressed={competingModalOpen}
         onVisibilityChange={handleModelSetupVisibilityChange}
+        speechInputProviderId={controller.panelView.settings.speechInputProviderId}
       />
     </AppErrorBoundary>
   )

@@ -186,7 +186,12 @@ export function LocalVoiceModelsPanel({
       ) : null}
       {stillNeeded > 0 ? (
         <p className="settings-v3-voice-models__summary">
-          {ti('settings.voice.local_models_missing', { count: stillNeeded })}
+          {ti(
+            stillNeeded === 1
+              ? 'settings.voice.local_models_missing_one'
+              : 'settings.voice.local_models_missing',
+            { count: stillNeeded },
+          )}
         </p>
       ) : null}
       <ul className="settings-v3-voice-models">

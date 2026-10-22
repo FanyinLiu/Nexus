@@ -12,6 +12,8 @@ import {
   subscribeModelSetupRequests,
 } from '../src/features/setup/modelSetupRequests.ts'
 import { shouldShowModelSetupOverlay } from '../src/features/setup/modelSetupState.ts'
+import { voiceDownloadGuidance } from '../src/features/setup/voiceDownloadGuidance.ts'
+import type { TranslationKey, TranslationParams } from '../src/types/i18n.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
@@ -278,27 +280,53 @@ test('the reminder and the missing-model lines point at Voice → Advanced', () 
     [zhCNMessages, '语音还没装好，去「设置 → 语音 → 高级」里下载。', '语音组件没装好，重新安装一下应用就行。', '还差 {count} 个模型没装'],
     [zhTWMessages, '語音還沒裝好，去「設定 → 語音 → 進階」裡下載。', '語音元件沒裝好，重新安裝一下 App 就行。', '還差 {count} 個模型沒裝'],
     [enMessages, 'Voice isn\'t ready yet. Download it in Settings → Voice → Advanced.', 'Part of voice is missing. Reinstall the app to fix it.', '{count} model isn\'t installed yet'],
-    [jaMessages, '音声がまだ入ってないよ。「設定 → 音声 → 高度設定」でダウンロードしてね。', '音声に必要なファイルが足りないみたい。アプリを入れ直してね。', 'まだ {count} 個のモデルが入っていません'],
+    [jaMessages, '音声がまだ入ってないよ。「設定 → 音声 → 詳細」でダウンロードしてね。', '音声に必要なファイルが足りないみたい。アプリを入れ直してね。', 'まだ {count} 個のモデルが入っていません'],
     [koMessages, '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.', '음성에 필요한 파일이 빠져 있어요. 앱을 다시 설치해 주세요.', '아직 모델 {count}개가 설치되지 않았어요'],
   ] as const
+  const guidanceKeys = [
+    'model_setup.deferred_reminder',
+    'voice.provider.sensevoice.not_installed',
+    'voice.provider.paraformer.model_missing',
+  ] as const satisfies readonly TranslationKey[]
 
   for (const [dictionary, expected, nodeMissing, missingOne] of dictionaries) {
-    assert.equal(dictionary['model_setup.deferred_reminder'], expected)
-    assert.equal(dictionary['voice.provider.sensevoice.not_installed'], expected)
-    assert.equal(dictionary['voice.provider.paraformer.model_missing'], expected)
-    assert.equal(dictionary['voice.provider.sensevoice.node_missing'], nodeMissing)
-    assert.equal(dictionary['settings.voice.status_models_missing_one'], missingOne)
-    assert.ok(expected.includes(dictionary['settings.title']))
-    assert.ok(expected.includes(dictionary['settings.simple.voice']))
-    assert.ok(expected.includes(dictionary['settings.voice.advanced_title']))
+    const messages = dictionary as Record<string, string>
+    const template = messages['model_setup.deferred_reminder']
+    assert.match(template, /\{settings\}/)
+    assert.match(template, /\{voice\}/)
+    assert.match(template, /\{advanced\}/)
+    assert.equal(messages['voice.provider.sensevoice.not_installed'], template)
+    assert.equal(messages['voice.provider.paraformer.model_missing'], template)
+    const seen: string[] = []
+    const translate = (key: TranslationKey, params?: TranslationParams) => {
+      seen.push(key)
+      const raw = messages[key] ?? key
+      if (!params) return raw
+      return raw.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`))
+    }
+    for (const key of guidanceKeys) {
+      seen.length = 0
+      assert.equal(voiceDownloadGuidance(translate, key), expected)
+      assert.deepEqual(seen, [
+        'settings.title',
+        'settings.simple.voice',
+        'settings.simple.advanced',
+        key,
+      ])
+    }
+    assert.equal(messages['voice.provider.sensevoice.node_missing'], nodeMissing)
+    assert.equal(messages['settings.voice.status_models_missing_one'], missingOne)
+    assert.ok(expected.includes(messages['settings.title']))
+    assert.ok(expected.includes(messages['settings.simple.voice']))
+    assert.ok(expected.includes(messages['settings.simple.advanced']))
     assert.doesNotMatch(nodeMissing, /npm|sherpa/i)
     if (dictionary === enMessages) {
       assert.equal(
-        dictionary['settings.voice.status_models_missing_other'],
+        messages['settings.voice.status_models_missing_other'],
         '{count} models aren\'t installed yet',
       )
     } else {
-      assert.equal(dictionary['settings.voice.status_models_missing_other'], missingOne)
+      assert.equal(messages['settings.voice.status_models_missing_other'], missingOne)
     }
   }
 })

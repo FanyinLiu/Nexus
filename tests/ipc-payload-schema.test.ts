@@ -1042,10 +1042,15 @@ test('IPC remaining runtime schemas bound integration voice model and TTS payloa
   assert.deepEqual(validateModelDownloadMissingPayload({ speechInputProviderId: 'local-sensevoice', ignored: true }), {
     speechInputProviderId: 'local-sensevoice',
   })
-  assert.throws(
-    () => validateModelDownloadMissingPayload({ speechInputProviderId: 'sensevoice' }),
-    /speechInputProviderId/,
-  )
+  assert.deepEqual(validateModelDownloadMissingPayload({ speechInputProviderId: 'local-paraformer' }), {
+    speechInputProviderId: 'local-paraformer',
+  })
+  for (const speechInputProviderId of ['sensevoice', 'paraformer-zh-en', 'zhipu-stt']) {
+    assert.throws(
+      () => validateModelDownloadMissingPayload({ speechInputProviderId }),
+      /speechInputProviderId/,
+    )
+  }
 
   assert.deepEqual(validateKwsOptionsPayload('kws:start', undefined), {})
   assert.deepEqual(validateKwsOptionsPayload('kws:status', { wakeWord: '  Nexus  ', ignored: true }), {

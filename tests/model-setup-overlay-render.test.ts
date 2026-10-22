@@ -170,8 +170,9 @@ const inventory: Inventory = {
   searchRoots: [],
 }
 
-function installWindowMock() {
+function installWindowMock(nextInventory: Inventory = inventory) {
   const storage = new Map<string, string>()
+  const downloadCalls: unknown[] = []
   const sessionStorage = {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => { storage.set(key, value) },
@@ -184,13 +185,17 @@ function installWindowMock() {
   }
   const windowMock = {
     desktopPet: {
-      modelsGetInventory: async () => inventory,
+      modelsGetInventory: async () => nextInventory,
       modelsNetworkProbe: async () => ({ huggingFaceReachable: true }),
+      modelsDownloadMissing: async (payload?: unknown) => {
+        downloadCalls.push(payload)
+        return { results: [], inventory: nextInventory }
+      },
       pythonRuntimeStatus: async () => ({
-        pythonAvailable: false,
-        version: null,
-        omniVoice: { ready: false, missingImports: [] },
-        glmAsr: { ready: false, missingImports: [] },
+        pythonAvailable: true,
+        version: '3.11.0',
+        omniVoice: { ready: false, missingImports: ['torch'] },
+        glmAsr: { ready: true, missingImports: [] },
       }),
       subscribeModelsProgress: () => () => {},
     },
@@ -207,7 +212,7 @@ function installWindowMock() {
     sessionStorage,
     HTMLElement: class {},
   })
-  return { windowMock, documentMock }
+  return { windowMock, documentMock, downloadCalls }
 }
 
 async function flushEffects() {
@@ -236,6 +241,8 @@ test('the overlay leads with the voice invite and still lists model sizes', asyn
   assert.ok(inviteIndex < bodyIndex, 'voice invite should be the first line')
   assert.ok(text.includes('42 MB'), 'download size should render')
   assert.ok(text.includes(enMessages['model_setup.model.vad.name']), 'model list should render')
+  assert.equal(text.includes(enMessages['model_setup.python_title']), false)
+  assert.equal(text.some((line) => line.includes('pip install')), false)
 
   renderer.unmount()
 })
@@ -345,4 +352,89 @@ test('unmounting the installer keeps a pending cross-window request armed', asyn
     [],
     'a panel that reloads must not retract the request the main process holds',
   )
+})
+
+test('the installer counts and downloads the selected listener, not only required models', async () => {
+  await ensureLocaleLoaded('en-US')
+  setLocale('en-US')
+  const speechInventory: Inventory = {
+    models: [
+      {
+        id: 'vad',
+        label: 'Voice activity model',
+        sizeLabel: '42 MB',
+        purpose: 'Detects when you start speaking.',
+        required: true,
+        kind: 'files',
+        present: false,
+        verified: false,
+        location: null,
+      },
+      {
+        id: 'sensevoice',
+        label: 'SenseVoice',
+        sizeLabel: '80 MB',
+        purpose: 'Listens.',
+        required: false,
+        kind: 'files',
+        present: false,
+        verified: false,
+        location: null,
+      },
+      {
+        id: 'paraformer-zh-en',
+        label: 'Paraformer',
+        sizeLabel: '80 MB',
+        purpose: 'Listens.',
+        required: false,
+        kind: 'files',
+        present: false,
+        verified: false,
+        location: null,
+      },
+    ],
+    ready: false,
+    missingRequired: ['vad'],
+    primaryDir: '/models',
+    searchRoots: [],
+  }
+  const { downloadCalls } = installWindowMock(speechInventory)
+  requestModelSetupOnVoiceUse()
+  const renderer = createComponentRenderer<{
+    speechInputProviderId?: string
+  }>(ModelSetupOverlay as (props: { speechInputProviderId?: string }) => unknown)
+
+  const buttonText = async (speechInputProviderId: string) => {
+    renderer.render({ speechInputProviderId })
+    await flushEffects()
+    const tree = renderer.render({ speechInputProviderId })
+    const [button] = findElements(
+      tree,
+      (element) => element.props.className === 'primary-button',
+    )
+    assert.ok(button)
+    return { button, text: collectText(button).join('') }
+  }
+
+  const sensevoice = await buttonText('local-sensevoice')
+  assert.equal(sensevoice.text, 'Download 2 missing models')
+  ;(sensevoice.button.props.onClick as () => void)()
+  await flushEffects()
+
+  const paraformer = await buttonText('local-paraformer')
+  assert.equal(paraformer.text, 'Download 2 missing models')
+  ;(paraformer.button.props.onClick as () => void)()
+  await flushEffects()
+
+  const cloud = await buttonText('zhipu-stt')
+  assert.equal(cloud.text, 'Download 1 missing models')
+  ;(cloud.button.props.onClick as () => void)()
+  await flushEffects()
+
+  assert.deepEqual(downloadCalls, [
+    { speechInputProviderId: 'local-sensevoice' },
+    { speechInputProviderId: 'local-paraformer' },
+    undefined,
+  ])
+  renderer.unmount()
 })

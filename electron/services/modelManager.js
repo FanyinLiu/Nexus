@@ -9,7 +9,13 @@
  */
 
 import fs from 'node:fs'
-import { app, BrowserWindow } from 'electron'
+import { loadElectron } from './loadElectron.js'
+
+// Same load path as modelPaths.js: a named `electron` import cannot be
+// evaluated under node:test, and the download test has to call this module.
+const electronApi = loadElectron()
+const app = electronApi?.app
+const BrowserWindow = electronApi?.BrowserWindow
 import { MODEL_CATALOG } from './modelDefinitions.js'
 import { createAsyncLock } from './asyncLock.js'
 import {
@@ -33,6 +39,7 @@ import { selectMissingVoiceModelIds } from '../../shared/voiceModelDownloads.js'
 const PROGRESS_CHANNEL = 'models:download-progress'
 
 function broadcast(channel, payload) {
+  if (!BrowserWindow) return
   const windows = BrowserWindow.getAllWindows()
   for (const win of windows) {
     try {
@@ -124,15 +131,24 @@ export async function downloadModel(modelId) {
   return withDownloadLock(() => _downloadOne(modelId))
 }
 
-export async function downloadMissingRequired(speechInputProviderId) {
-  const inventory = getInventory()
-  // Required models alone skip the listener the user selected. The provider
-  // id is optional so the first-launch installer keeps its previous set.
+/**
+ * Download every required model plus the selected local listener.
+ *
+ * An omitted provider id, or a cloud id, keeps the required-only set.
+ * `deps` is a test seam so the fetched ids can be asserted without disk
+ * or network. Production IPC calls this with one argument.
+ * @param {string | undefined} speechInputProviderId
+ * @param {{ inventory?: { models?: unknown }, downloadOne?: (id: string) => Promise<void> }} [deps]
+ */
+export async function downloadMissingRequired(speechInputProviderId, deps = {}) {
+  const inventory = deps.inventory ?? getInventory()
+  const downloadOne = deps.downloadOne ?? downloadModel
+  // Required models alone skip the listener the user selected.
   const toFetch = selectMissingVoiceModelIds(inventory.models, speechInputProviderId)
   const results = []
   for (const id of toFetch) {
     try {
-      await downloadModel(id)
+      await downloadOne(id)
       results.push({ id, ok: true })
     } catch (error) {
       results.push({
@@ -142,7 +158,10 @@ export async function downloadMissingRequired(speechInputProviderId) {
       })
     }
   }
-  return { results, inventory: getInventory() }
+  return {
+    results,
+    inventory: deps.inventory ?? getInventory(),
+  }
 }
 
 export async function getNetworkProbe() {
