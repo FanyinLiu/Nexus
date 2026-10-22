@@ -10,6 +10,7 @@ import {
   isModelProgressComplete,
   isModelProgressError,
   mergeModelProgress,
+  modelSetupInfoBlocks,
   shouldRestoreModelSetupAfterGuide,
   type Inventory,
   type ModelEntry,
@@ -55,12 +56,6 @@ export function ModelSetupOverlay({
     }
   }
   const [networkProbe, setNetworkProbe] = useState<{ huggingFaceReachable: boolean } | null>(null)
-  const [pythonStatus, setPythonStatus] = useState<{
-    pythonAvailable: boolean
-    version: string | null
-    omniVoice: { ready: boolean; missingImports: string[] }
-    glmAsr: { ready: boolean; missingImports: string[] }
-  } | null>(null)
   const [errorBanner, setErrorBanner] = useState<string | null>(null)
 
   const dialogRef = useRef<HTMLElement | null>(null)
@@ -94,7 +89,6 @@ export function ModelSetupOverlay({
       if (inv) setInventory(inv)
     })
     window.desktopPet?.modelsNetworkProbe?.().then(setNetworkProbe).catch(() => {})
-    window.desktopPet?.pythonRuntimeStatus?.().then(setPythonStatus).catch(() => {})
   }, [fetchInventory])
 
   useEffect(() => {
@@ -234,6 +228,10 @@ export function ModelSetupOverlay({
 
   const requiredModels = inventory.models.filter(m => m.required)
   const optionalModels = inventory.models.filter(m => !m.required)
+  const infoBlocks = modelSetupInfoBlocks({
+    huggingFaceReachable: networkProbe?.huggingFaceReachable,
+    errorMessage: errorBanner,
+  })
   const optionalStatus = (required: boolean) => (
     required ? '' : ` · ${t('model_setup.optional_tag')}`
   )
@@ -327,13 +325,13 @@ export function ModelSetupOverlay({
         </header>
 
         <div className="model-setup-card__body">
-          {networkProbe && !networkProbe.huggingFaceReachable ? (
+          {infoBlocks.includes('network_hint') ? (
             <div className="model-setup__hint">
               {t('model_setup.network_hf_unreachable')}
             </div>
           ) : null}
 
-          {errorBanner ? (
+          {infoBlocks.includes('error_banner') ? (
             <div className="model-setup__error" role="alert" aria-live="assertive" aria-atomic="true">
               {errorBanner}
             </div>
@@ -350,22 +348,6 @@ export function ModelSetupOverlay({
               </>
             ) : null}
           </div>
-
-          {pythonStatus ? (
-            <div className="model-setup__python">
-              <strong>{t('model_setup.python_title')}</strong>
-              <div>
-                {pythonStatus.pythonAvailable
-                  ? t('model_setup.python_detected', { version: pythonStatus.version ?? '' })
-                  : t('model_setup.python_not_detected')}
-              </div>
-              {pythonStatus.pythonAvailable && !pythonStatus.omniVoice.ready ? (
-                <div className="model-setup__python-note">
-                  {t('model_setup.python_missing_deps', { deps: pythonStatus.omniVoice.missingImports.join(', ') })}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         <footer className="model-setup-card__actions">
