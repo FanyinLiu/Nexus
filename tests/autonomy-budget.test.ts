@@ -44,3 +44,40 @@ test('only model calls spend the daily budget', () => {
   assert.equal(nextDay.state.dailyTickCount, 1)
   assert.equal(nextDay.state.dailyTickResetDate, '2026-06-20')
 })
+
+test('idle ticks on a new day reset the counter without spending it', () => {
+  const dayOne = Date.parse('2026-06-19T23:50:00')
+  const dayTwo = Date.parse('2026-06-20T00:10:00')
+  let state = { ...createInitialTickState(), dailyTickResetDate: '2026-06-19', dailyTickCount: 2 }
+
+  for (let i = 0; i < 40; i += 1) {
+    state = advanceTick(state, 'awake', 'idle', 30 + i, dayOne)
+  }
+  assert.equal(state.dailyTickCount, 2)
+  assert.equal(state.tickCount, 40)
+  assert.equal(state.dailyTickResetDate, '2026-06-19')
+
+  const rolled = advanceTick(state, 'awake', 'idle', 10, dayTwo)
+  assert.equal(rolled.dailyTickCount, 0)
+  assert.equal(rolled.dailyTickResetDate, '2026-06-20')
+})
+
+test('a refused model call does not spend the budget', () => {
+  const now = Date.parse('2026-06-19T10:00:00')
+  const state = { ...createInitialTickState(), dailyTickResetDate: '2026-06-19', dailyTickCount: 1 }
+
+  const refused = spendAutonomyLlmCall(state, { autonomyCostLimitDailyTicks: 1 }, now)
+
+  assert.equal(refused.allowed, false)
+  assert.equal(refused.state.dailyTickCount, 1)
+})
+
+test('a daily limit of zero refuses every model call', () => {
+  const now = Date.parse('2026-06-19T10:00:00')
+  const state = { ...createInitialTickState(), dailyTickResetDate: '2026-06-19' }
+
+  const refused = spendAutonomyLlmCall(state, { autonomyCostLimitDailyTicks: 0 }, now)
+
+  assert.equal(refused.allowed, false)
+  assert.equal(refused.state.dailyTickCount, 0)
+})
