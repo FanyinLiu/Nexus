@@ -11,6 +11,7 @@ import {
 } from './conversationEntrypoints.ts'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
+import { requestModelSetupOnVoiceUse } from '../../features/setup/modelSetupRequests.ts'
 import type { AppSettings } from '../../types'
 import type { StreamingSpeechOutputController } from './types.ts'
 import type { VoiceConversationOptions } from './types.ts'
@@ -144,6 +145,9 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       hookCallbacks.showPetStatus(ti('voice.pause_before_continue'), 2_400, 3_200)
     }
 
+    // Only user-initiated starts reach here; automatic restarts and
+    // wake-word sessions call startVoiceConversation directly.
+    requestModelSetupOnVoiceUse()
     startVoiceConversation()
   }
 

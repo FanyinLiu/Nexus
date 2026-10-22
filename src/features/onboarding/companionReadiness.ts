@@ -1,4 +1,4 @@
-import type { TranslationKey } from '../../types'
+import type { TranslationKey, TranslationParams } from '../../types'
 
 export type CompanionReadinessStatus = 'ready' | 'warning' | 'blocked'
 
@@ -14,6 +14,8 @@ export type CompanionReadinessSummary = {
   status: CompanionReadinessStatus
   summaryKey: TranslationKey
   timeboxKey: TranslationKey
+  /** Only statuses whose copy still names a duration receive `{minutes}`. */
+  timeboxParams: TranslationParams | undefined
   targetMinutes: number
   items: CompanionReadinessItem[]
 }
@@ -187,6 +189,9 @@ export function buildCompanionReadiness(input: CompanionReadinessInput): Compani
     status,
     summaryKey: SUMMARY_KEY_BY_STATUS[status],
     timeboxKey: TIMEBOX_KEY_BY_STATUS[status],
+    timeboxParams: status === 'ready'
+      ? { minutes: FIRST_CONVERSATION_TARGET_MINUTES }
+      : undefined,
     targetMinutes: FIRST_CONVERSATION_TARGET_MINUTES,
     items,
   }

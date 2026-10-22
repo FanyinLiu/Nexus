@@ -96,7 +96,7 @@ function App() {
           onboardingGuide={onboardingGuide}
         />
         <ModelSetupOverlay
-          suppressed
+          suppressed={competingModalOpen}
           onVisibilityChange={handleModelSetupVisibilityChange}
         />
       </AppErrorBoundary>

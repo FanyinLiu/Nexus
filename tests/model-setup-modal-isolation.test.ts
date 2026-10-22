@@ -14,7 +14,7 @@ function sliceFrom(source: string, marker: string, endMarker: string) {
   return source.slice(start, end)
 }
 
-test('App owns ModelSetupOverlay visibility and forwards the shared modal state to both panel routes', async () => {
+test('App owns ModelSetupOverlay visibility and forwards the shared modal state to both routes', async () => {
   const [app, panel] = await Promise.all([
     read('src/app/App.tsx'),
     read('src/app/views/PanelView.tsx'),
@@ -24,8 +24,12 @@ test('App owns ModelSetupOverlay visibility and forwards the shared modal state 
   assert.match(app, /const \[modelSetupOverlayOpen, setModelSetupOverlayOpen\]/)
   assert.match(app, /const handleModelSetupVisibilityChange = useCallback\(\(visible: boolean\) => \{[\s\S]*setModelSetupOverlayOpen\(visible\)/)
   assert.match(app, /const modelSetupOverlayActive = controller\.view === 'panel'[\s\S]*!competingModalOpen/)
-  assert.match(app, /<ModelSetupOverlay\s+suppressed\s+onVisibilityChange=\{handleModelSetupVisibilityChange\}/)
-  assert.match(app, /suppressed=\{competingModalOpen\}[\s\S]*onVisibilityChange=\{handleModelSetupVisibilityChange\}/)
+  // Both routes share the same modal state, so a voice-triggered overlay can
+  // open over Mao without fighting the settings drawer or the onboarding guide.
+  assert.equal(
+    app.match(/<ModelSetupOverlay\s+suppressed=\{competingModalOpen\}\s+onVisibilityChange=\{handleModelSetupVisibilityChange\}/g)?.length,
+    2,
+  )
 
   const panelCall = sliceFrom(app, '<PanelView', '\n      />')
   assert.match(panelCall, /modelSetupOverlayOpen=\{modelSetupOverlayActive\}/)

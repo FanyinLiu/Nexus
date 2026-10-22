@@ -95,7 +95,7 @@ export const jaOnboarding = {
   'onboarding.readiness.summary.warning': '今すぐ始められます。残りの一、二か所はあとからで大丈夫です。',
   'onboarding.readiness.summary.blocked': 'まだ足りないところがあります。埋めてから始めるとスムーズです。',
   'onboarding.readiness.timebox.ready': '最初の会話まで、だいたい {minutes} 分です。接続を確認してから、こんにちは、と送ってください。',
-  'onboarding.readiness.timebox.warning': 'だいたい {minutes} 分以内に始められます。上のメモを見てから、接続を確認してください。',
+  'onboarding.readiness.timebox.warning': '準備ができました。下のボタンを押して始めましょう。',
   'onboarding.readiness.timebox.blocked': '足りないところを埋めてから、最初の会話を始めましょう。',
   'onboarding.readiness.identity.ready': 'あなたの呼び名と伴侶の名前は準備済みです。',
   'onboarding.readiness.identity.blocked': 'あなたの呼び名と伴侶の名前を入力してください。',

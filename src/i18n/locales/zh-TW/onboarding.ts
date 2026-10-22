@@ -95,7 +95,7 @@ export const zhTWOnboarding = {
   'onboarding.readiness.summary.warning': '已經可以開始，還有一兩處可以稍後再補。',
   'onboarding.readiness.summary.blocked': '還有幾項沒填好，補上再開始會更順。',
   'onboarding.readiness.timebox.ready': '大概 {minutes} 分鐘就能開始第一次聊天。先測一下連線，再說第一句話。',
-  'onboarding.readiness.timebox.warning': '大概 {minutes} 分鐘內可以開始。先看看上面的提示，再測一下連線。',
+  'onboarding.readiness.timebox.warning': '都設定好了，按下面的按鈕就能開始。',
   'onboarding.readiness.timebox.blocked': '先補上缺的內容，再開始第一次聊天。',
   'onboarding.readiness.identity.ready': '稱呼與桌寵名字已準備好。',
   'onboarding.readiness.identity.blocked': '還需要填好你的稱呼和桌寵名字。',

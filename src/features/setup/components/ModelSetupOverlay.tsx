@@ -10,15 +10,19 @@ import {
   isModelProgressComplete,
   isModelProgressError,
   mergeModelProgress,
-  shouldRestoreModelSetupAfterGuide,
+  shouldShowModelSetupOverlay,
   type Inventory,
   type ModelEntry,
   type PerModelProgress,
   type ProgressEvent,
 } from '../modelSetupState.ts'
+import {
+  hasModelSetupRequest,
+  subscribeModelSetupRequests,
+} from '../modelSetupRequests.ts'
 
 type Props = {
-  /** Hide the overlay even when inventory is incomplete — used while the pet view is active. */
+  /** Hide the overlay while another modal owns the screen (settings, onboarding guide). */
   suppressed?: boolean
   onVisibilityChange?: (visible: boolean) => void
 }
@@ -44,6 +48,7 @@ export function ModelSetupOverlay({
   const [progress, setProgress] = useState<Record<string, PerModelProgress>>({})
   const [busy, setBusy] = useState(false)
   const [dismissed, setDismissed] = useState(readModelSetupDismissed)
+  const [requested, setRequested] = useState(hasModelSetupRequest)
   const [coverSeen, setCoverSeen] = useState(suppressed)
   if (coverSeen !== suppressed) {
     setCoverSeen(suppressed)
@@ -97,6 +102,8 @@ export function ModelSetupOverlay({
     window.desktopPet?.pythonRuntimeStatus?.().then(setPythonStatus).catch(() => {})
   }, [fetchInventory])
 
+  useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
+
   useEffect(() => {
     const unsubscribe = window.desktopPet?.subscribeModelsProgress?.((event: ProgressEvent) => {
       setProgress((prev) => mergeModelProgress(prev, event))
@@ -140,10 +147,11 @@ export function ModelSetupOverlay({
     setDismissed(true)
   }, [])
 
-  const overlayVisible = shouldRestoreModelSetupAfterGuide({
+  const overlayVisible = shouldShowModelSetupOverlay({
     dismissed,
     inventoryReady: inventory?.ready,
-    covered: suppressed,
+    requested,
+    suppressed,
   })
   useModalFocusTrap(dialogRef, overlayVisible)
 
@@ -229,6 +237,7 @@ export function ModelSetupOverlay({
 
   if (suppressed) return null
   if (dismissed) return null
+  if (!requested) return null
   if (!inventory) return null
   if (inventory.ready) return null
 

@@ -148,6 +148,19 @@ function findReadinessWarningText(tree: unknown): ElementLike[] {
   )
 }
 
+function collectText(node: unknown, found: string[] = []): string[] {
+  if (typeof node === 'string' || typeof node === 'number') {
+    found.push(String(node))
+    return found
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) collectText(child, found)
+    return found
+  }
+  if (!isElement(node)) return found
+  return collectText(node.props.children, found)
+}
+
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
     apiProviderId: 'ollama',
@@ -372,6 +385,35 @@ test('the readiness list keeps the untested-connection warning when no last-step
   // must still report the untested connection itself.
   assert.equal(findReadinessWarningText(renderCompanion(false)).length, 1)
   assert.equal(findReadinessWarningText(renderCompanion(true)).length, 0)
+  guide.unmount()
+})
+
+test('the last-step readiness line drops the duration placeholder for warnings and keeps it when ready', () => {
+  const guide = createGuide()
+  guide.render()
+  guide.advanceToLastStep()
+
+  // The guide renders CompanionStep as a child element, so its readiness line
+  // only materialises when the element itself is called.
+  const [companion] = findElements(
+    guide.tree,
+    (element) => 'hideUnverifiedTextWarning' in element.props,
+  )
+  assert.ok(companion)
+  const renderCompanion = (overrides: Record<string, unknown>) => (
+    companion.type as (props: unknown) => unknown
+  )({ ...companion.props, selectedPetModel: {}, ...overrides })
+
+  const warnedText = collectText(renderCompanion({ textConnectionVerified: false }))
+  assert.ok(warnedText.includes(enMessages['onboarding.readiness.timebox.warning']))
+  assert.equal(warnedText.some((line) => line.includes('{minutes}')), false)
+
+  const readyText = collectText(renderCompanion({ textConnectionVerified: true }))
+  assert.ok(readyText.includes(
+    enMessages['onboarding.readiness.timebox.ready'].replace('{minutes}', '5'),
+  ))
+  assert.equal(readyText.some((line) => line.includes('{minutes}')), false)
+
   guide.unmount()
 })
 

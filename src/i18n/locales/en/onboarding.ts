@@ -95,7 +95,7 @@ export const enOnboarding = {
   'onboarding.readiness.summary.warning': 'You can start now. One or two things can wait until later.',
   'onboarding.readiness.summary.blocked': 'A few things are still missing. Filling them in first will make the start smoother.',
   'onboarding.readiness.timebox.ready': 'About {minutes} minutes to the first chat. Check the connection, then say hello.',
-  'onboarding.readiness.timebox.warning': 'You can still start within about {minutes} minutes. Look at the notes above, then check the connection.',
+  'onboarding.readiness.timebox.warning': "You're all set. Click the button below to get started.",
   'onboarding.readiness.timebox.blocked': 'Fill in what is missing, then start the first chat.',
   'onboarding.readiness.identity.ready': 'Your name and companion name are ready.',
   'onboarding.readiness.identity.blocked': 'Add both your name and the companion name.',

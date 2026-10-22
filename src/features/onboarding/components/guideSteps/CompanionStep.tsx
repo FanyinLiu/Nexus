@@ -159,9 +159,11 @@ export function CompanionStep({
         </div>
         <p>{ti(readiness.summaryKey)}</p>
         <p className="onboarding-readiness__timebox">
-          {pickTranslatedUiText(draft.uiLanguage, readiness.timeboxKey, {
-            minutes: readiness.targetMinutes,
-          })}
+          {pickTranslatedUiText(
+            draft.uiLanguage,
+            readiness.timeboxKey,
+            readiness.timeboxParams,
+          )}
         </p>
         <ul className="onboarding-readiness__list">
           {readinessItems.map((item) => (

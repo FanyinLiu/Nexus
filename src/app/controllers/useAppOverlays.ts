@@ -34,6 +34,10 @@ import { syncWindowViewToUrl } from '../appSupport.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight.ts'
+import {
+  requestModelSetupOnVoiceUse,
+  shouldRequestModelSetupForWakewordChange,
+} from '../../features/setup/modelSetupRequests.ts'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -312,6 +316,22 @@ export function useAppOverlays({
 
     const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
     setSettings(committedSettings)
+
+    // Saving with a wake-word control switched on is a voice action, so that
+    // window gets the same installer offer as pressing the mic button. This
+    // runs only where the user saved, so a synced change elsewhere stays quiet.
+    if (shouldRequestModelSetupForWakewordChange(
+      {
+        wakewordAlwaysOn: options.baselineSettings.wakewordAlwaysOn,
+        voiceTriggerMode: options.baselineSettings.voiceTriggerMode,
+      },
+      {
+        wakewordAlwaysOn: committedSettings.wakewordAlwaysOn,
+        voiceTriggerMode: committedSettings.voiceTriggerMode,
+      },
+    )) {
+      requestModelSetupOnVoiceUse()
+    }
 
     if (options?.closeSettings ?? true) {
       closeSettingsSurface()
