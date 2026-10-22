@@ -4,7 +4,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 export const enOnboarding = {
   'model_setup.eyebrow': 'Voice',
   'model_setup.title': 'Install voice models',
-  'model_setup.body_prefix': 'Once they’re in, I can hear you call me and understand what you say. They live on your computer, no account needed.',
+  'model_setup.body_prefix': 'Once they’re in, you can call me and talk to me out loud. The models stay on your computer, no account needed.',
   'model_setup.model.vad.name': 'Speech detection',
   'model_setup.model.vad.purpose': 'Hears when you start and stop talking.',
   'model_setup.model.kws-en.name': 'English wake word',

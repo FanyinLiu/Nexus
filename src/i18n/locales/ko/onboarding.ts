@@ -4,7 +4,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 export const koOnboarding = {
   'model_setup.eyebrow': '음성',
   'model_setup.title': '음성 모델 설치',
-  'model_setup.body_prefix': '설치하면 저를 부르거나 말을 걸 때 알아들을 수 있어요. 모델은 이 컴퓨터에 두고 쓰니까 계정 가입은 필요 없어요.',
+  'model_setup.body_prefix': '설치하면 목소리로 저를 부르고 말을 걸 수 있어요. 모델은 이 컴퓨터에 두고 쓰니까 계정 가입은 필요 없어요.',
   'model_setup.model.vad.name': '말하기 감지',
   'model_setup.model.vad.purpose': '말을 시작하고 멈추는 때를 듣습니다.',
   'model_setup.model.kws-en.name': '영어로 깨우기',

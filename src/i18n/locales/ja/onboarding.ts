@@ -4,7 +4,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 export const jaOnboarding = {
   'model_setup.eyebrow': '音声',
   'model_setup.title': '音声モデルを入れる',
-  'model_setup.body_prefix': '入れておけば、呼びかけも話しかけもちゃんと聞き取れるよ。モデルはこのパソコンの中に置くから、アカウント登録はいらないよ。',
+  'model_setup.body_prefix': '入れたら、声で呼んだり話しかけたりできるよ。モデルはこのパソコンの中に置くから、アカウント登録はいらないよ。',
   'model_setup.model.vad.name': '発話検出',
   'model_setup.model.vad.purpose': '話し始めと話し終わりを聞き取ります。',
   'model_setup.model.kws-en.name': '英語で呼びかけ',

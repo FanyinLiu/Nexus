@@ -2,7 +2,7 @@
 export const zhCNOnboarding = {
   'model_setup.eyebrow': '语音',
   'model_setup.title': '安装语音模型',
-  'model_setup.body_prefix': '装好后，你喊我、跟我说话，我都能听懂。模型就放在你的电脑上，不用注册账号。',
+  'model_setup.body_prefix': '装好以后，就能用声音喊我、跟我说话。模型放在你自己的电脑上，不用注册账号。',
   'model_setup.model.vad.name': '说话检测模型',
   'model_setup.model.vad.purpose': '听出你什么时候开始和停止说话。',
   'model_setup.model.kws-en.name': '英文唤醒',

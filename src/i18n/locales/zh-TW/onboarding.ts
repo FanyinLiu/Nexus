@@ -4,7 +4,7 @@ import type { TranslationDictionary } from '../../../types/i18n.ts'
 export const zhTWOnboarding = {
   'model_setup.eyebrow': '語音',
   'model_setup.title': '安裝語音模型',
-  'model_setup.body_prefix': '裝好後，你叫我、跟我說話，我都能聽懂。模型就放在你的電腦上，不用註冊帳號。',
+  'model_setup.body_prefix': '裝好以後，就能用聲音叫我、跟我說話。模型放在你自己的電腦上，不用註冊帳號。',
   'model_setup.model.vad.name': '說話偵測模型',
   'model_setup.model.vad.purpose': '聽出你什麼時候開始和停止說話。',
   'model_setup.model.kws-en.name': '英文喚醒',
