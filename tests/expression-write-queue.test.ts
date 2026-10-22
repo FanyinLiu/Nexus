@@ -78,3 +78,18 @@ test('an empty expression name is ignored', async () => {
   await queue.request(undefined)
   assert.deepEqual(applied, [])
 })
+
+test('a reset lets the same expression be written again after a model swap', async () => {
+  const applied: string[] = []
+  const queue = createExpressionWriteQueue(async (name) => {
+    applied.push(name)
+  })
+  await queue.request('idle')
+  await queue.request('idle')
+  assert.deepEqual(applied, ['idle'])
+
+  queue.reset()
+
+  await queue.request('idle')
+  assert.deepEqual(applied, ['idle', 'idle'])
+})
