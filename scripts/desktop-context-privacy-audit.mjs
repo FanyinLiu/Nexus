@@ -254,6 +254,14 @@ function sourceKind(file) {
   return ts.ScriptKind.JS
 }
 
+function isUiohookSpecifier(node) {
+  if (!node) return false
+  const isLiteral = ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
+  if (!isLiteral) return false
+  // Subpath imports (`uiohook-napi/build/...`) load the same native hook.
+  return node.text === 'uiohook-napi' || node.text.startsWith('uiohook-napi/')
+}
+
 function hasUiohookImport(file, source) {
   if (!source.includes('uiohook-napi')) return false
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, sourceKind(file))
@@ -262,15 +270,13 @@ function hasUiohookImport(file, source) {
   function visit(node) {
     if (found) return
     if (ts.isImportDeclaration(node)) {
-      if (ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === 'uiohook-napi') {
+      if (isUiohookSpecifier(node.moduleSpecifier)) {
         found = true
         return
       }
     }
     if (ts.isExportDeclaration(node)) {
-      if (node.moduleSpecifier
-        && ts.isStringLiteral(node.moduleSpecifier)
-        && node.moduleSpecifier.text === 'uiohook-napi') {
+      if (isUiohookSpecifier(node.moduleSpecifier)) {
         found = true
         return
       }
@@ -279,10 +285,7 @@ function hasUiohookImport(file, source) {
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
       const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require'
       const [argument] = node.arguments
-      if ((isDynamicImport || isRequire)
-        && argument
-        && ts.isStringLiteral(argument)
-        && argument.text === 'uiohook-napi') {
+      if ((isDynamicImport || isRequire) && isUiohookSpecifier(argument)) {
         found = true
         return
       }

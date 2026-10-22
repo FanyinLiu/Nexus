@@ -426,6 +426,95 @@ test('a failed xdotool sample drops the cached pointer so gaze falls back to Ele
   }), { source: 'electron', dip: { x: 11, y: 22 } })
 })
 
+test('Linux pointer query logs once per failure episode and again after recovery', async () => {
+  let now = 0
+  let calls = 0
+  const warnings: unknown[] = []
+  const scripted: ExecLike = (_command, _args, _options, callback) => {
+    calls += 1
+    if (calls !== 3) {
+      callback(new Error('xdotool failed'))
+      return
+    }
+    callback(null, 'X=1\nY=2\n')
+  }
+  const query = createLinuxPointerQuery({
+    platform: 'linux',
+    sessionType: 'x11',
+    hasWaylandDisplay: false,
+    execFileFn: scripted,
+    now: () => now,
+    log: { warn: (...args: unknown[]) => { warnings.push(args) } },
+  })
+
+  assert.equal(await query(), null)
+  assert.equal(warnings.length, 1)
+
+  // The backoff retries stay quiet while the same failure episode continues.
+  now += LINUX_POINTER_RETRY_MS
+  assert.equal(await query(), null)
+  assert.equal(warnings.length, 1)
+
+  // A successful read closes the episode.
+  now += LINUX_POINTER_RETRY_MS * 2
+  assert.deepEqual(await query(), { x: 1, y: 2 })
+  assert.equal(warnings.length, 1)
+
+  // The next new failure warns again, and its retry stays quiet.
+  now += LINUX_POINTER_RETRY_MS
+  assert.equal(await query(), null)
+  assert.equal(warnings.length, 2)
+  now += LINUX_POINTER_RETRY_MS
+  assert.equal(await query(), null)
+  assert.equal(warnings.length, 2)
+})
+
+test('disposing the Linux pointer query kills the in-flight child and stops new queries', async () => {
+  let execCalls = 0
+  let kills = 0
+  const callbacks: ExecCallback[] = []
+  const execFileFn: ExecLike = (_command, _args, _options, callback) => {
+    execCalls += 1
+    callbacks.push(callback)
+    return { kill: () => { kills += 1 } }
+  }
+  const query = createLinuxPointerQuery({
+    platform: 'linux',
+    sessionType: 'x11',
+    hasWaylandDisplay: false,
+    execFileFn,
+    now: () => 0,
+    log: { warn: () => {} },
+  })
+
+  const sample = query()
+  assert.equal(execCalls, 1)
+  query.dispose()
+  assert.equal(kills, 1)
+
+  callbacks.shift()?.(new Error('killed'))
+  assert.equal(await sample, null)
+  assert.equal(await query(), null)
+  assert.equal(execCalls, 1)
+})
+
+test('presence input stop disposes the Linux pointer query', async () => {
+  let disposals = 0
+  const pointerQuery = Object.assign(async () => null, {
+    dispose: () => { disposals += 1 },
+  })
+  const input = createPresenceInput({
+    platform: 'linux',
+    loadHook: async () => null,
+    pointerQuery,
+  })
+  await input.applyPreferences({ gazeFollowEnabled: true, typingAwarenessEnabled: false })
+
+  await input.stop()
+
+  assert.equal(disposals, 1)
+})
+
 test('Linux pointer query never runs on Wayland', async () => {
   let waylandSpawns = 0
   const waylandExec: ExecLike = (_command, _args, _options, callback) => {

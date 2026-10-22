@@ -8,7 +8,9 @@
 // an exponential backoff (5s doubling to 60s) and reset on success, so a
 // repaired X11 setup recovers without a restart. A missing xdotool binary waits
 // five minutes between attempts: installing it later still recovers, while a
-// run without it keeps the child-process cost negligible.
+// run without it keeps the child-process cost negligible. The warning is logged
+// once per failure episode: retries stay quiet until a successful read resets
+// the episode. dispose() kills an in-flight child at quit.
 
 import { execFile } from 'node:child_process'
 import { getRedactedErrorMessage } from './errorRedaction.js'
@@ -56,7 +58,7 @@ export function parseXdotoolLocation(stdout) {
  *   now?: () => number,
  *   log?: Pick<Console, 'warn'>,
  * }} [options]
- * @returns {() => Promise<{ x: number, y: number } | null>}
+ * @returns {(() => Promise<{ x: number, y: number } | null>) & { dispose: () => void }}
  */
 export function createLinuxPointerQuery({
   platform = process.platform,
@@ -77,6 +79,8 @@ export function createLinuxPointerQuery({
   let failureCount = 0
   let nextAttemptAt = 0
   let warned = false
+  let disposed = false
+  let activeChild = null
 
   function warnOnce(error) {
     if (warned) return
@@ -102,24 +106,47 @@ export function createLinuxPointerQuery({
   function resetRetry() {
     failureCount = 0
     nextAttemptAt = 0
+    // A successful read ends the failure episode, so the next failure warns again.
+    warned = false
   }
 
-  return function queryLinuxPointer() {
-    if (!supported || now() < nextAttemptAt) return Promise.resolve(null)
+  /** Kill an in-flight xdotool child and refuse further queries. Safe at quit. */
+  function dispose() {
+    disposed = true
+    failureCount = 0
+    nextAttemptAt = 0
+    warned = false
+    const child = activeChild
+    activeChild = null
+    if (!child) return
+    try {
+      child.kill?.()
+    } catch {
+      // The child can already have exited between the handle and the kill.
+    }
+  }
+
+  function queryLinuxPointer() {
+    if (disposed || !supported || now() < nextAttemptAt) return Promise.resolve(null)
     return new Promise((resolve) => {
       let settled = false
+      let child = null
       const done = (point) => {
         if (settled) return
         settled = true
-        resolve(point)
+        if (activeChild === child) activeChild = null
+        resolve(disposed ? null : point)
       }
       const fail = (error) => {
-        scheduleRetry(error)
-        warnOnce(error)
+        // A killed child during shutdown is not a failure worth retrying or logging.
+        if (!disposed) {
+          scheduleRetry(error)
+          warnOnce(error)
+        }
         done(null)
       }
       try {
-        execFileFn(
+        child = execFileFn(
           command,
           ['getmouselocation', '--shell'],
           { timeout: timeoutMs, windowsHide: true, maxBuffer: 4096 },
@@ -137,9 +164,13 @@ export function createLinuxPointerQuery({
             done(point)
           },
         )
+        // An injected runner may settle synchronously; only keep a live handle.
+        if (!settled && child) activeChild = child
       } catch (error) {
         fail(error)
       }
     })
   }
+  queryLinuxPointer.dispose = dispose
+  return queryLinuxPointer
 }

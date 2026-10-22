@@ -241,6 +241,16 @@ export function createPresenceInput(dependencies = {}) {
     return hookRunning === true && hook !== null
   }
 
+  /** Kill an in-flight Linux pointer child so quit leaves no xdotool behind. */
+  function disposePointerQuery() {
+    if (!pointerQuery || typeof pointerQuery.dispose !== 'function') return
+    try {
+      pointerQuery.dispose()
+    } catch {
+      // Shutdown must not throw on an already-stopped query.
+    }
+  }
+
   /**
    * Stop the hook and drop the cached pointer. Safe to call at quit.
    * @returns {Promise<void>}
@@ -252,6 +262,7 @@ export function createPresenceInput(dependencies = {}) {
     pointerGeneration += 1
     pointerInFlight = null
     pointerStartedAt = Number.NEGATIVE_INFINITY
+    disposePointerQuery()
     return serialize(() => {
       stopHook()
     })

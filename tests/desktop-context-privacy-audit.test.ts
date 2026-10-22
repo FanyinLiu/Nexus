@@ -166,6 +166,91 @@ import { uIOhook } from 'uiohook-napi'
   })
 })
 
+test('desktop context privacy audit rejects uiohook subpath imports outside presence input', () => {
+  withDesktopContextPrivacyFixture({
+    'electron/services/desktopPresence.js': `${BASELINE_FILES['electron/services/desktopPresence.js']}
+import 'uiohook-napi/build/Release/uiohook-napi.node'
+`,
+  }, (root) => {
+    const report = buildDesktopContextPrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.uiohookImports.some(
+        (item) => item.file === 'electron/services/desktopPresence.js',
+      ),
+    )
+  })
+})
+
+test('desktop context privacy audit rejects dynamic uiohook imports with a string literal', () => {
+  withDesktopContextPrivacyFixture({
+    'electron/services/desktopPresence.js': `${BASELINE_FILES['electron/services/desktopPresence.js']}
+const hook = await import('uiohook-napi')
+`,
+  }, (root) => {
+    const report = buildDesktopContextPrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.uiohookImports.some(
+        (item) => item.file === 'electron/services/desktopPresence.js',
+      ),
+    )
+  })
+})
+
+test('desktop context privacy audit rejects dynamic uiohook imports with a template literal', () => {
+  withDesktopContextPrivacyFixture({
+    'electron/services/desktopPresence.js': `${BASELINE_FILES['electron/services/desktopPresence.js']}
+const hook = await import(\`uiohook-napi\`)
+`,
+  }, (root) => {
+    const report = buildDesktopContextPrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.uiohookImports.some(
+        (item) => item.file === 'electron/services/desktopPresence.js',
+      ),
+    )
+  })
+})
+
+test('desktop context privacy audit rejects uiohook requires with a string literal', () => {
+  withDesktopContextPrivacyFixture({
+    'electron/services/desktopPresence.js': `${BASELINE_FILES['electron/services/desktopPresence.js']}
+const hook = require('uiohook-napi')
+`,
+  }, (root) => {
+    const report = buildDesktopContextPrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.uiohookImports.some(
+        (item) => item.file === 'electron/services/desktopPresence.js',
+      ),
+    )
+  })
+})
+
+test('desktop context privacy audit rejects uiohook requires with a template literal', () => {
+  withDesktopContextPrivacyFixture({
+    'electron/services/desktopPresence.js': `${BASELINE_FILES['electron/services/desktopPresence.js']}
+const hook = require(\`uiohook-napi/build/Release/uiohook-napi.node\`)
+`,
+  }, (root) => {
+    const report = buildDesktopContextPrivacyReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.uiohookImports.some(
+        (item) => item.file === 'electron/services/desktopPresence.js',
+      ),
+    )
+  })
+})
+
 test('desktop context privacy audit rejects raw desktop context error logs', () => {
   withDesktopContextPrivacyFixture({
     'electron/services/desktopContextService.js': `${BASELINE_FILES['electron/services/desktopContextService.js']}
