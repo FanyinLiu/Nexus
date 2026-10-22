@@ -14,7 +14,7 @@ export const jaVoice = {
   'voice_pipeline.reply_failed': '返信が届かなかった',
   'voice_trigger.direct_send.label': '認識後すぐに送信',
   'voice_trigger.direct_send.hint': '一文言い終わるとすぐ送ります。返事が一番早く返ってきます。',
-  'voice_trigger.wake_word.label': 'ウェイクワード命中で送信',
+  'voice_trigger.wake_word.label': 'ウェイクワードが聞こえたら送信',
   'voice_trigger.wake_word.hint': 'ウェイクワードを含む発話のみモデルに転送します。',
   'voice_trigger.manual_confirm.label': '入力欄に入れるだけ',
   'voice_trigger.manual_confirm.hint': 'まず認識結果を入力欄に入れて、送信するかはあなたが決めます。',
