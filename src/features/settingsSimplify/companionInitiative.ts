@@ -5,8 +5,8 @@
  * Reading a draft never writes. A pace is applied only when the person
  * picks one. Anything that does not match a pace stays custom.
  *
- * Often does not turn on the autonomy tick. That tick stops for the day
- * after about 50 minutes until the 0.4.8 budget fix lands.
+ * Often turns the autonomy tick on. Idle ticks do not spend the daily
+ * model budget, so that pace can stay on for the whole day.
  */
 
 import type { CompanionInitiative } from '../../types/app.ts'
@@ -57,9 +57,10 @@ export function inferCompanionInitiative(raw: object): CompanionInitiative {
     return 'sometimes'
   }
 
-  // TODO(0.4.8): often can include autonomyEnabled again once the
-  // autonomy budget no longer ends the day after about 50 minutes.
-  if (!autonomyEnabled && presence && interval === OFTEN_INTERVAL_MINUTES && away && letter && agendaCap(source) === 'normal') {
+  // Tick on or off both read as often. Builds saved before the budget
+  // fix stored this pace with the tick off; picking it again turns the
+  // tick on. A different interval or cap stays custom.
+  if (presence && interval === OFTEN_INTERVAL_MINUTES && away && letter && agendaCap(source) === 'normal') {
     return 'often'
   }
 
@@ -69,7 +70,7 @@ export function inferCompanionInitiative(raw: object): CompanionInitiative {
 /**
  * Switches written when a person picks a pace. Unfinished-items stay as
  * they are; often only raises their daily cap. Quiet turns greetings off.
- * Sometimes and often both leave the autonomy tick off.
+ * Sometimes leaves the autonomy tick off. Often turns it on.
  */
 export function companionInitiativePatch(
   pace: Exclude<CompanionInitiative, 'custom'>,
@@ -92,11 +93,8 @@ export function companionInitiativePatch(
       proactiveLetterEnabled: true,
     }
   }
-  // TODO(0.4.8): do not set autonomyEnabled here until the budget fix
-  // lands. Often is presence, away, the weekly letter, and the higher
-  // agenda cap (normal, still inside the hard ceiling of 3).
   return {
-    autonomyEnabled: false,
+    autonomyEnabled: true,
     proactivePresenceEnabled: true,
     proactivePresenceIntervalMinutes: OFTEN_INTERVAL_MINUTES,
     proactiveAwayNotificationsEnabled: true,

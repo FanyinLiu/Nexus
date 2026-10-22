@@ -736,6 +736,13 @@ declare global {
         score: number
       }>>
       memoryVectorRemove: (payload: { id?: string; ids?: string[] }) => Promise<{ ok: boolean; count?: number }>
+      /**
+       * Clear-all hook the renderer purge calls: vector snapshot plus
+       * local-data vacuum. Same channel as memoryClearUserData.
+       */
+      memoryVectorClear: (payload?: { needles?: string[] }) => Promise<{ ok: boolean; removed?: number; localDataCleared?: boolean }>
+      /** Alias of memoryVectorClear. */
+      memoryClearUserData: (payload?: { needles?: string[] }) => Promise<{ ok: boolean; removed?: number; localDataCleared?: boolean }>
       memoryVectorStats: () => Promise<{
         totalEntries: number
         longTermCount: number

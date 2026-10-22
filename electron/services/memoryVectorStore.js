@@ -113,6 +113,8 @@ function applyLogOp(op) {
     for (const [id, entry] of _index) {
       if (entry.layer === op.layer) _index.delete(id)
     }
+  } else if (op.kind === 'clearAll') {
+    _index.clear()
   }
 }
 
@@ -249,8 +251,11 @@ function appendLogOp(op) {
 }
 
 async function drainLogAppends() {
-  try { await _logAppendChain } catch {}
+  // Flush the buffer directly. Its debounce timer is unref'd, so waiting
+  // on the enqueue promise first can stall a delete that needs the bytes
+  // rewritten now.
   try { await _logAppendBuffer?.drain() } catch {}
+  try { await _logAppendChain } catch {}
 }
 
 /**
@@ -559,7 +564,12 @@ export async function removeMemory(id) {
   if (deleted) {
     _bm25Dirty = true
     _snapshotDirty = true
+    _workerSnapshotCache = null
     appendLogOp({ kind: 'delete', id })
+    // Rewrite the snapshot and drop the append log. A delete line alone
+    // would leave the old plaintext in memory-vectors.json until the next
+    // size-based compaction, and the log would keep the upsert line.
+    await flush()
   }
   return deleted
 }
@@ -577,6 +587,8 @@ export async function removeMemories(ids) {
   if (count) {
     _bm25Dirty = true
     _snapshotDirty = true
+    _workerSnapshotCache = null
+    await flush()
   }
   return count
 }
@@ -597,6 +609,24 @@ export async function clearLayer(layer) {
     // Single op for the whole layer clear — replay reproduces the same effect.
     appendLogOp({ kind: 'clearLayer', layer })
   }
+  return count
+}
+
+/**
+ * Remove every vector row and rewrite the on-disk snapshot and log so
+ * memory plaintext from any layer is not left behind.
+ * @returns {Promise<number>} how many rows were dropped
+ */
+export async function clearAllEntries() {
+  await ensureLoaded()
+
+  const count = _index.size
+  _index.clear()
+  _bm25Dirty = true
+  _snapshotDirty = true
+  _workerSnapshotCache = null
+  appendLogOp({ kind: 'clearAll' })
+  await flush()
   return count
 }
 

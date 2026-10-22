@@ -7,34 +7,37 @@ export type ActivityClass =
   | 'documents'
   | 'unknown'
 
+// ASCII names use word boundaries so "password" is not Word, "Wordle" is not
+// Word, and "Archive" is not the Arc browser. Chinese names are not \w, so a
+// trailing \b would fail to match them.
 const ACTIVITY_PATTERNS: Array<{ class: ActivityClass; pattern: RegExp }> = [
   {
     class: 'coding',
-    pattern: /Visual Studio|VS ?Code|IntelliJ|WebStorm|PyCharm|Sublime Text|Cursor|Android Studio|Xcode|CLion|GoLand|RustRover|Terminal|iTerm|Warp|Alacritty|Neovim|Vim|Emacs/i,
+    pattern: /\b(?:Visual Studio|VS ?Code|IntelliJ|WebStorm|PyCharm|Sublime Text|Cursor|Android Studio|Xcode|CLion|GoLand|RustRover|Terminal|iTerm2?|Warp|Alacritty|Neovim|Vim|Emacs)\b/i,
   },
   {
     class: 'media',
-    pattern: /Spotify|YouTube|Netflix|Bilibili|VLC|PotPlayer|网易云|QQ音乐|Apple Music/i,
+    pattern: /\b(?:Spotify|YouTube|Netflix|Bilibili|VLC|PotPlayer|Apple Music)\b|网易云|QQ音乐/i,
   },
   {
     class: 'gaming',
-    pattern: /Steam|Epic Games|Minecraft|Genshin|原神|崩坏|League of Legends|Valorant|CS2|Overwatch/i,
+    pattern: /\b(?:Steam|Epic Games|Minecraft|Genshin|League of Legends|Valorant|CS2|Overwatch)\b|原神|崩坏/i,
   },
   {
     class: 'communication',
-    pattern: /WeChat|微信|QQ|Telegram|Discord|Slack|Teams|Zoom|钉钉|飞书|Lark/i,
+    pattern: /\b(?:WeChat|QQ|Telegram|Discord|Slack|Teams|Zoom|Lark)\b|微信|钉钉|飞书/i,
   },
   {
     class: 'documents',
-    pattern: /Word|Excel|PowerPoint|Notion|Obsidian|Typora|WPS|OneNote|Google Docs|Figma/i,
+    pattern: /\b(?:Word|Excel|PowerPoint|Notion|Obsidian|Typora|WPS|OneNote|Google Docs|Figma)\b/i,
   },
   {
     class: 'browsing',
-    pattern: /Chrome|Firefox|Edge|Safari|Opera|Brave|Arc|Vivaldi/i,
+    pattern: /\b(?:Chrome|Firefox|Edge|Safari|Opera|Brave|Arc|Vivaldi)\b/i,
   },
 ]
 
-const WEB_IDE_PATTERNS = /VS ?Code|Visual Studio|Cursor|WebStorm|IntelliJ|GitHub Codespace|Gitpod|CodeSandbox|StackBlitz|Replit/i
+const WEB_IDE_PATTERNS = /\b(?:VS ?Code|Visual Studio|Cursor|WebStorm|IntelliJ|GitHub Codespace|Gitpod|CodeSandbox|StackBlitz|Replit)\b/i
 
 export function classifyActivity(windowTitle: string | null): ActivityClass {
   if (!windowTitle) return 'unknown'
