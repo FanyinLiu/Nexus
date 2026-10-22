@@ -306,6 +306,14 @@ test('a language choice updates locale-default names and leaves custom names alo
   assert.equal(custom.wakeWord, '小星')
 })
 
+test('onboarding step 5 names the missing models in each locale', () => {
+  assert.equal(zhCNMessages['onboarding.voice.needs_models'], '语音还要下载模型，下完就能用')
+  assert.equal(zhTWMessages['onboarding.voice.needs_models'], '語音還要下載模型，下完就能用')
+  assert.equal(enMessages['onboarding.voice.needs_models'], 'Voice still needs a few models. It\'ll work once they finish downloading.')
+  assert.equal(jaMessages['onboarding.voice.needs_models'], '音声はまだモデルのダウンロードが必要です。ダウンロードが終わったら使えます。')
+  assert.equal(koMessages['onboarding.voice.needs_models'], '음성은 모델을 더 받아야 해요. 다 받으면 쓸 수 있어요.')
+})
+
 test('onboarding voice and readiness copy stays plain across locales', () => {
   const dictionaries: TranslationDictionary[] = [
     enMessages,

@@ -16,8 +16,7 @@ import {
   speechModelIdForProvider,
 } from '../shared/voiceModelDownloads.js'
 import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
-import { settingsSimpleGroupCopy } from '../src/components/settingsSimple/settingsSimpleCopy.ts'
-import { enableStockVoiceWhenModelsReady } from '../src/features/voiceProfile/voiceReady.ts'
+import { voiceStartClick } from '../src/features/voiceProfile/voiceReady.ts'
 import type { AppSettings, PlatformProfile } from '../src/types/index.ts'
 
 register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
@@ -542,42 +541,26 @@ test('settings shows an in-flight listener download and will not start another',
   assert.deepEqual(calls, [])
 })
 
-test('ready models turn the stock voice switches on so voice can start', async () => {
+test('models finishing does not turn voice on, and only the start click does', async () => {
   await ensureLocaleLoaded('zh-CN')
-  const memory = new Map<string, string>()
-  Object.assign(globalThis, {
-    localStorage: {
-      getItem: (key: string) => memory.get(key) ?? null,
-      setItem: (key: string, value: string) => { memory.set(key, value) },
-      removeItem: (key: string) => { memory.delete(key) },
-    },
+  const untouched = { speechInputEnabled: false, speechOutputEnabled: false }
+  const decision = voiceStartClick(untouched, true)
+  assert.equal(untouched.speechInputEnabled, false)
+  assert.equal(untouched.speechOutputEnabled, false)
+  assert.deepEqual(decision, {
+    enabled: true,
+    patch: { speechInputEnabled: true, speechOutputEnabled: true },
   })
-  const stock = {
-    uiLanguage: 'zh-CN' as const,
-    speechInputEnabled: false,
-    speechOutputEnabled: false,
-    memoryPaused: false,
-    apiProviderId: 'ollama' as const,
-    toolWebSearchEnabled: false,
-    toolWeatherEnabled: false,
-  } as AppSettings
-  const off = settingsSimpleGroupCopy(stock).find((card) => card.id === 'voice')
-  assert.equal(off?.description, '听和说都还关着')
-  const ready = enableStockVoiceWhenModelsReady(stock, true)
-  const on = settingsSimpleGroupCopy(ready).find((card) => card.id === 'voice')
-  assert.equal(on?.description, '听和说都开着')
-  assert.equal(ready.speechInputEnabled, true)
-  assert.equal(ready.speechOutputEnabled, true)
-  const chosen = { ...stock, speechOutputEnabled: true }
-  assert.equal(enableStockVoiceWhenModelsReady(chosen, true), chosen)
-  assert.equal(enableStockVoiceWhenModelsReady(stock, false).speechInputEnabled, false)
+  assert.deepEqual(voiceStartClick(untouched, false), { enabled: false })
+  const listeningOn = { speechInputEnabled: true, speechOutputEnabled: false }
+  assert.deepEqual(voiceStartClick(listeningOn, true), { enabled: true })
+  assert.equal(listeningOn.speechOutputEnabled, false)
 
   const Inner = (VoiceSectionV3 as unknown as { type: (props: unknown) => unknown }).type
-  const view = createRenderer(Inner)
   const draft = {
     companionName: '星绘',
-    speechInputEnabled: false,
-    speechOutputEnabled: false,
+    speechInputEnabled: true,
+    speechOutputEnabled: true,
     continuousVoiceModeEnabled: false,
     voiceActivityDetectionEnabled: false,
     voiceTriggerMode: 'direct_send',
@@ -590,10 +573,12 @@ test('ready models turn the stock voice switches on so voice can start', async (
     wakewordAlwaysOn: false,
     wakewordSessionIdleTimeoutMs: 9_000,
   } as AppSettings
+  let current = draft
+  const started: unknown[] = []
+  let draftWrites = 0
   const base = {
     active: true,
     audioSmokeStatus: null,
-    draft,
     dirty: false,
     continuousVoiceActive: false,
     loadingSpeechVoices: false,
@@ -603,7 +588,6 @@ test('ready models turn the stock voice switches on so voice can start', async (
     onRunAudioSmokeTest: () => {},
     onRunSpeechInputConnectionTest: () => {},
     onRunSpeechOutputConnectionTest: () => {},
-    onStartVoiceConversation: async () => {},
     onStopVoiceConversation: () => {},
     onCancelVoiceTurn: () => {},
     platformProfile: {
@@ -625,7 +609,6 @@ test('ready models turn the stock voice switches on so voice can start', async (
     runningAudioSmoke: false,
     saveError: false,
     saving: false,
-    setDraft: () => {},
     setSpeechPreviewText: () => {},
     speechPreviewStatus: null,
     speechPreviewText: '',
@@ -637,34 +620,69 @@ test('ready models turn the stock voice switches on so voice can start', async (
     voiceActionPending: false,
     voiceState: 'idle' as const,
   }
-  const started: unknown[] = []
-  const readyTree = view.render({
+  const view = createRenderer(Inner)
+  const renderAt = (gap: number) => view.render({
     ...base,
-    modelGapCount: 0,
+    draft: current,
+    modelGapCount: gap,
+    setDraft: (update: AppSettings | ((prev: AppSettings) => AppSettings)) => {
+      draftWrites += 1
+      current = typeof update === 'function' ? update(current) : update
+    },
     onStartVoiceConversation: async (patch?: unknown) => { started.push(patch) },
   })
-  const readyButton = findElements(readyTree, (element) => (
+  const switchesOf = (tree: unknown) => findElements(tree, (element) => (
+    typeof element.props.checked === 'boolean' && typeof element.props.onChange === 'function'
+  ))
+  const startButton = (tree: unknown) => findElements(tree, (element) => (
     typeof element.props['aria-label'] === 'string'
     && String(element.props['aria-label']).includes('开始语音')
   ))[0]
-  assert.ok(readyButton)
-  assert.equal(readyButton.props.disabled, false)
-  ;(readyButton.props.onClick as () => void)()
+
+  const before = renderAt(2)
+  const [inputSwitch, outputSwitch] = switchesOf(before)
+  assert.ok(inputSwitch && outputSwitch)
+  ;(inputSwitch.props.onChange as (value: boolean) => void)(false)
+  ;(outputSwitch.props.onChange as (value: boolean) => void)(false)
+  assert.equal(current.speechInputEnabled, false)
+  assert.equal(current.speechOutputEnabled, false)
+  draftWrites = 0
+  started.length = 0
+  const finished = renderAt(0)
+  const [inputAfter, outputAfter] = switchesOf(finished)
+  assert.equal(inputAfter?.props.checked, false)
+  assert.equal(outputAfter?.props.checked, false)
+  assert.equal(draftWrites, 0)
+  assert.deepEqual(started, [])
+  assert.equal(startButton(finished)?.props.disabled, false)
+
+  current = { ...draft, speechInputEnabled: false, speechOutputEnabled: false }
+  const freshView = createRenderer(Inner)
+  draftWrites = 0
+  started.length = 0
+  const fresh = freshView.render({
+    ...base,
+    draft: current,
+    modelGapCount: 0,
+    setDraft: () => { draftWrites += 1 },
+    onStartVoiceConversation: async (patch?: unknown) => { started.push(patch) },
+  })
+  const [freshInput, freshOutput] = switchesOf(fresh)
+  assert.equal(freshInput?.props.checked, false)
+  assert.equal(freshOutput?.props.checked, false)
+  assert.equal(draftWrites, 0)
+  assert.deepEqual(started, [])
+  const freshButton = startButton(fresh)
+  assert.equal(freshButton?.props.disabled, false)
+  ;(freshButton.props.onClick as () => void)()
   assert.deepEqual(started, [{ speechInputEnabled: true, speechOutputEnabled: true }])
 
-  const waiting = view.render({ ...base, modelGapCount: 2, draft })
-  const waitingButton = findElements(waiting, (element) => (
-    typeof element.props['aria-label'] === 'string'
-    && String(element.props['aria-label']).includes('开始语音')
-  ))[0]
-  assert.equal(waitingButton?.props.disabled, true)
-
-  memory.set('nexus.voice.switches-chosen', '1')
-  const held = createRenderer(Inner).render({ ...base, modelGapCount: 0, draft })
-  const heldButton = findElements(held, (element) => (
-    typeof element.props['aria-label'] === 'string'
-    && String(element.props['aria-label']).includes('开始语音')
-  ))[0]
-  assert.equal(heldButton?.props.disabled, true)
-  memory.delete('nexus.voice.switches-chosen')
+  const waiting = freshView.render({
+    ...base,
+    draft: current,
+    modelGapCount: 2,
+    setDraft: () => {},
+    onStartVoiceConversation: async () => { started.push('early') },
+  })
+  assert.equal(startButton(waiting)?.props.disabled, true)
 })

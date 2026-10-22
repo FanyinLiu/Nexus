@@ -16,7 +16,6 @@ import {
   isVoiceSpeechOutputAvailable,
 } from '../../lib/platformProfile.ts'
 import { keepTalkingPatch } from '../../features/settingsSimplify/index.ts'
-import { markVoiceSwitchesChosen } from '../../features/voiceProfile/voiceReady.ts'
 import { pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 import type { AppSettings, PlatformProfile, SpeechVoiceOption } from '../../types/index.ts'
@@ -100,7 +99,6 @@ export function VoiceSimplePage({
             disabled={!inputAvailable}
             label={ti('settings.simple.voice_listen')}
             onChange={(speechInputEnabled) => {
-              markVoiceSwitchesChosen()
               setDraft((current) => ({
                 ...current,
                 speechInputEnabled,
@@ -115,7 +113,6 @@ export function VoiceSimplePage({
             disabled={!outputAvailable}
             label={ti('settings.simple.voice_speak')}
             onChange={(speechOutputEnabled) => {
-              markVoiceSwitchesChosen()
               setDraft((current) => ({ ...current, speechOutputEnabled }))
             }}
           />

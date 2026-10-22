@@ -107,7 +107,7 @@ export const jaOnboarding = {
   'onboarding.readiness.voice.warning_continuous': '連続音声には音声入力と音声出力の両方が必要です。',
   'onboarding.readiness.voice.blocked': '音声には、聞き取りか読み上げの設定がまだ足りません。',
   'onboarding.voice.ready': '声の準備はできています。あなたの声を聞いて、声で返せます。',
-  'onboarding.voice.needs_models': '音声はまだモデルのダウンロードが必要です。終われば使えます。',
+  'onboarding.voice.needs_models': '音声はまだモデルのダウンロードが必要です。ダウンロードが終わったら使えます。',
   'onboarding.voice.preview': '聞いてみる',
   'onboarding.voice.previewing': '再生中',
   'onboarding.voice.preview_sample': 'こんにちは。ここにいるよ。',

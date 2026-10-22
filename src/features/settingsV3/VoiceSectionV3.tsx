@@ -1,9 +1,5 @@
 import { memo, useState, type Dispatch, type SetStateAction } from 'react'
-import {
-  enableStockVoiceWhenModelsReady,
-  markVoiceSwitchesChosen,
-  readVoiceSwitchesChosen,
-} from '../voiceProfile/voiceReady.ts'
+import { voiceStartClick } from '../voiceProfile/voiceReady.ts'
 import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
@@ -170,26 +166,18 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         : ti('panel.voice.interrupt_response')
   const runtimeVoicePending = saving || voiceActionPending
   const modelsReady = modelGap === 0
-  const startDraft = readVoiceSwitchesChosen()
-    ? draft
-    : enableStockVoiceWhenModelsReady(draft, modelsReady)
+  const start = voiceStartClick(draft, modelsReady)
   const runtimeVoiceDisabled = runtimeVoicePending || (
     voiceState === 'idle'
     && !continuousVoiceActive
-    && (!startDraft.speechInputEnabled || !inputAvailable)
+    && (!start.enabled || !inputAvailable)
   )
   const handleRuntimeVoiceAction = () => {
     if (voiceState === 'idle') {
       if (continuousVoiceActive) {
         onStopVoiceConversation()
       } else {
-        const patch = startDraft === draft
-          ? undefined
-          : {
-            speechInputEnabled: startDraft.speechInputEnabled,
-            speechOutputEnabled: startDraft.speechOutputEnabled,
-          }
-        void onStartVoiceConversation(patch)
+        void onStartVoiceConversation(start.patch)
       }
     } else if (voiceState === 'listening') {
       onStopVoiceConversation()
@@ -201,7 +189,6 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   }
 
   const updateInputEnabled = (speechInputEnabled: boolean) => {
-    markVoiceSwitchesChosen()
     setDraft((current) => ({
       ...current,
       speechInputEnabled,
@@ -246,7 +233,6 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             checked={draft.speechOutputEnabled}
             disabled={!outputAvailable}
             onChange={(value) => {
-              markVoiceSwitchesChosen()
               setSetting('speechOutputEnabled', value)
             }}
           />

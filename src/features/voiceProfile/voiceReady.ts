@@ -1,46 +1,35 @@
 /**
- * Listening and speaking ship turned off. Once the models for the selected
- * listener are on disk, that stock pair is what gets in the way of starting
- * voice. A user who already turned one of them on, or who has chosen the
- * switches themselves, is left alone.
+ * Listening and speaking stay as stored until the user clicks start voice.
+ * Models finishing must not write those switches: the stock off pair and a
+ * switch the user turned off are the same saved state.
+ *
+ * The click is the only writer. It saves before the microphone opens, and
+ * only when listening is still off. A speaking switch left off while
+ * listening is already on is not rewritten.
  */
-
-export const VOICE_SWITCHES_CHOSEN_KEY = 'nexus.voice.switches-chosen'
 
 type VoiceSwitchDraft = {
   speechInputEnabled: boolean
   speechOutputEnabled: boolean
 }
 
-function voiceSwitchStorage(): Pick<Storage, 'getItem' | 'setItem'> | null {
-  try {
-    const storage = globalThis.localStorage
-    if (!storage || typeof storage.getItem !== 'function') return null
-    return storage
-  } catch {
-    return null
+export type VoiceStartClick = {
+  enabled: boolean
+  patch?: {
+    speechInputEnabled: true
+    speechOutputEnabled: true
   }
 }
 
-/** True after the user has moved either voice switch. */
-export function readVoiceSwitchesChosen(): boolean {
-  return voiceSwitchStorage()?.getItem(VOICE_SWITCHES_CHOSEN_KEY) === '1'
-}
-
-/** Remember that the switches are the user's, not the stock off pair. */
-export function markVoiceSwitchesChosen(): void {
-  voiceSwitchStorage()?.setItem(VOICE_SWITCHES_CHOSEN_KEY, '1')
-}
-
 /**
- * Turn listening and speaking on when the voice models are ready and both
- * switches are still the stock off pair. Any other combination is returned
- * unchanged.
+ * Whether start voice can run, and the switch change that click must save
+ * first. The draft argument is not modified.
  */
-export function enableStockVoiceWhenModelsReady<T extends VoiceSwitchDraft>(
-  draft: T,
-  modelsReady: boolean,
-): T {
-  if (!modelsReady || draft.speechInputEnabled || draft.speechOutputEnabled) return draft
-  return { ...draft, speechInputEnabled: true, speechOutputEnabled: true }
+export function voiceStartClick(draft: VoiceSwitchDraft, modelsReady: boolean): VoiceStartClick {
+  if (draft.speechInputEnabled) return { enabled: true }
+  if (!modelsReady) return { enabled: false }
+  return {
+    enabled: true,
+    patch: { speechInputEnabled: true, speechOutputEnabled: true },
+  }
 }

@@ -164,6 +164,21 @@ export type StopVoiceConversationEntrypointOptions = {
   ti: Translator
 }
 
+/**
+ * Opening the microphone waits for the start-voice click, which saves
+ * listening on first. A missing model still reaches its reminder before
+ * this. Wake word is the opt-in that may listen with the switch off.
+ */
+function captureAllowed(params: StartVoiceConversationEntrypointOptions): boolean {
+  const wakewordTriggered = params.options?.wakewordTriggered ?? false
+  if (params.settingsRef.current.speechInputEnabled || wakewordTriggered) return true
+  params.setContinuousVoiceSession(false)
+  const msg = params.ti('voice.provider.vad.input_not_enabled')
+  params.setError(msg)
+  params.showPetStatus(msg, 4_000)
+  return false
+}
+
 export function startVoiceConversationEntrypoint(
   params: StartVoiceConversationEntrypointOptions,
 ) {
@@ -193,6 +208,7 @@ export function startVoiceConversationEntrypoint(
       if (params.vadSessionRef.current || params.paraformerSessionRef.current || params.busyRef.current) {
         return
       }
+      if (!captureAllowed(params)) return
       void params.startParaformerConversation(params.options)
     }).catch(() => {
       params.setError(params.ti('voice.provider.paraformer.unavailable'))
@@ -237,6 +253,7 @@ export function startVoiceConversationEntrypoint(
       if (params.vadSessionRef.current || params.sensevoiceSessionRef.current || params.busyRef.current) {
         return
       }
+      if (!captureAllowed(params)) return
       void params.startSenseVoiceConversation(params.options)
     }).catch(() => {
       params.setError(params.ti('voice.provider.sensevoice.unavailable'))
@@ -257,24 +274,12 @@ export function startVoiceConversationEntrypoint(
     ) {
       return
     }
+    if (!captureAllowed(params)) return
     void params.startTencentAsrConversation(params.options)
     return
   }
 
   currentSettings = params.settingsRef.current
-
-  // Wake-word-triggered sessions bypass the speechInputEnabled guard because
-  // the user opted into wakewordAlwaysOn specifically to be heard without
-  // leaving continuous STT running — see the settings hint
-  // "无论是否启用语音输入，唤醒词引擎都会后台常驻监听。喊出唤醒词即可立即开始对话。"
-  const wakewordTriggered = params.options?.wakewordTriggered ?? false
-  if (!currentSettings.speechInputEnabled && !wakewordTriggered) {
-    params.setContinuousVoiceSession(false)
-    const msg = params.ti('voice.provider.vad.input_not_enabled')
-    params.setError(msg)
-    params.showPetStatus(msg, 4_000)
-    return
-  }
 
   if (
     params.busyRef.current
@@ -292,6 +297,8 @@ export function startVoiceConversationEntrypoint(
       'voiceState:', params.voiceStateRef.current)
     return
   }
+
+  if (!captureAllowed(params)) return
 
   if (currentSettings.voiceActivityDetectionEnabled) {
     void params.startVadVoiceConversation('api', params.options)

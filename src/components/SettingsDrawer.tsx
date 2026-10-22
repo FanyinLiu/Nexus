@@ -26,12 +26,7 @@ import type { PetModelDefinition } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
-import { missingVoiceModelIds } from '../features/setup/localModelRepair.ts'
 import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLanguages.ts'
-import {
-  enableStockVoiceWhenModelsReady,
-  readVoiceSwitchesChosen,
-} from '../features/voiceProfile/voiceReady.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
 import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
@@ -522,25 +517,6 @@ export function SettingsDrawer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
-
-  // Stock "both off" is the default, so a finished download still looks like
-  // voice was never turned on. Once the listener's models are installed, turn
-  // the pair on in the draft. A saved one-sided choice, or a switch the user
-  // has moved, stays as they left it.
-  useEffect(() => {
-    if (!open || draft.speechInputEnabled || draft.speechOutputEnabled) return undefined
-    if (readVoiceSwitchesChosen()) return undefined
-    let cancelled = false
-    const providerId = draft.speechInputProviderId
-    void window.desktopPet?.modelsGetInventory?.().then((inventory) => {
-      if (cancelled || !inventory) return
-      if (missingVoiceModelIds(inventory.models, providerId).length > 0) return
-      setDraft((current) => (
-        readVoiceSwitchesChosen() ? current : enableStockVoiceWhenModelsReady(current, true)
-      ))
-    }).catch(() => undefined)
-    return () => { cancelled = true }
-  }, [draft.speechInputEnabled, draft.speechOutputEnabled, draft.speechInputProviderId, open, setDraft])
 
   useEffect(() => {
     if (!open || !preferredSectionId) return
