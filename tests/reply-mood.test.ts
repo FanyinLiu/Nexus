@@ -36,6 +36,17 @@ test('a mood tag is mapped through emotionToPetMood and a plain reply does not i
   assert.equal(supplied, 'worried')
 })
 
+test('a polite apology does not choose a sad face', () => {
+  for (const text of [
+    "I'm sorry",
+    "I'm sorry, I can't open that.",
+    '抱歉，我没听清。',
+    'Sorry, that file is missing.',
+  ]) {
+    assert.equal(petMoodForAssistantReply({ replyText: text }), null, text)
+  }
+})
+
 test('sad wording wins over a happy mood tag', () => {
   const mood = petMoodForAssistantReply({
     replyText: "I'm sorry that happened.",
