@@ -18,3 +18,10 @@ export {
   settingsPageForSection,
   type SettingsSimplePageId,
 } from './pages.ts'
+export {
+  showsVoiceWakeWord,
+  voiceTriggerPatch,
+  VOICE_TRIGGER_MODES,
+  type VoiceTriggerFields,
+  type VoiceTriggerPatch,
+} from './voiceTrigger.ts'
