@@ -2,13 +2,10 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
-  MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS,
   applyModelSetupWakewordChange,
-  cancelModelSetupWakewordRequest,
   createModelSetupRequestStore,
   hasModelSetupRequest,
   requestModelSetupOnVoiceUse,
-  requestModelSetupOnWakewordEnabled,
   resolveModelSetupRequestRoute,
   shouldCancelModelSetupForWakewordChange,
   shouldRequestModelSetupForWakewordChange,
@@ -150,102 +147,50 @@ test('the shared latch starts quiet and surfaces setup after the first voice act
   )
 })
 
-test('a wake-word request waits for the delay before the installer may cover the pet view', () => {
-  const scheduled: Array<{ task: () => void; delayMs: number }> = []
-  const store = createModelSetupRequestStore((task, delayMs) => {
-    scheduled.push({ task, delayMs })
-    return () => {}
-  })
-  const overlayVisible = () => shouldShowModelSetupOverlay({
-    ...missingInventory,
-    requested: store.hasRequest(),
-  })
+test('the wake-word delay belongs to the main process, not to the request store', () => {
+  const store = createModelSetupRequestStore()
 
-  store.requestAfter(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
-
-  // The instant Finish lands, the pet view is still alone on screen.
+  // Nothing latches here before the main process hands the request over, so
+  // a saving surface that hides or reloads cannot lose the offer.
   assert.equal(store.hasRequest(), false)
-  assert.equal(overlayVisible(), false)
-  assert.equal(scheduled.length, 1)
-  assert.equal(scheduled[0].delayMs, 3_000)
-
-  scheduled[0].task()
-
-  // A few seconds later the installer may offer itself.
-  assert.equal(store.hasRequest(), true)
-  assert.equal(overlayVisible(), true)
+  assert.equal(
+    shouldShowModelSetupOverlay({ ...missingInventory, requested: store.hasRequest() }),
+    false,
+  )
 })
 
-test('the mic button latches immediately and never takes the wake-word delay', () => {
-  const scheduled: number[] = []
-  const store = createModelSetupRequestStore((_task, delayMs) => {
-    scheduled.push(delayMs)
-    return () => {}
-  })
+test('the mic button latches immediately', () => {
+  const store = createModelSetupRequestStore()
 
   store.request()
 
   assert.equal(store.hasRequest(), true)
-  assert.deepEqual(scheduled, [])
   assert.equal(
     shouldShowModelSetupOverlay({ ...missingInventory, requested: store.hasRequest() }),
     true,
   )
 })
 
-test('cancelling a deferred request keeps the installer quiet', () => {
-  let pending: (() => void) | null = null
-  const store = createModelSetupRequestStore((task) => {
-    pending = task
-    return () => { pending = null }
-  })
-
-  store.requestAfter(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)()
-
-  assert.equal(pending, null)
-  assert.equal(store.hasRequest(), false)
-})
-
-test('a pending wake-word request is cancelled on unmount', (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  let delivered = false
-
-  requestModelSetupOnWakewordEnabled(() => { delivered = true })
-  // The settings surface cancels from an unmount cleanup.
-  cancelModelSetupWakewordRequest()
-
-  t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
-  assert.equal(delivered, false)
-})
-
-test('switching the wake word off before the delay cancels the pending request', (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  let delivered = false
-  requestModelSetupOnWakewordEnabled(() => { delivered = true })
-
+test('switching the wake word off retracts the pending request', () => {
+  let cancelled = 0
   const outcome = applyModelSetupWakewordChange(
     wakewordFlags(true, 'wake_word'),
     wakewordFlags(false, 'direct_send'),
     {
-      request: () => { requestModelSetupOnWakewordEnabled(() => { delivered = true }) },
-      cancel: () => cancelModelSetupWakewordRequest(),
+      request: () => {},
+      cancel: () => { cancelled += 1 },
     },
   )
 
   assert.equal(outcome, 'cancel')
-  t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
-  assert.equal(delivered, false)
+  assert.equal(cancelled, 1)
 })
 
-test('saving with the wake word newly on schedules the delayed request and saving without it does not', () => {
-  const scheduled: number[] = []
-  const store = createModelSetupRequestStore((_task, delayMs) => {
-    scheduled.push(delayMs)
-    return () => {}
-  })
+test('saving with the wake word newly on asks for setup and saving without it does not', () => {
+  let requests = 0
   let cancels = 0
   const actions = {
-    request: () => { store.requestAfter(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS) },
+    request: () => { requests += 1 },
     cancel: () => { cancels += 1 },
   }
 
@@ -257,7 +202,7 @@ test('saving with the wake word newly on schedules the delayed request and savin
     ),
     'request',
   )
-  assert.deepEqual(scheduled, [MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS])
+  assert.equal(requests, 1)
 
   assert.equal(
     applyModelSetupWakewordChange(
@@ -267,9 +212,8 @@ test('saving with the wake word newly on schedules the delayed request and savin
     ),
     'none',
   )
-  assert.deepEqual(scheduled, [MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS])
+  assert.equal(requests, 1)
   assert.equal(cancels, 0)
-  assert.equal(store.hasRequest(), false)
 })
 
 test('wake-word off is detected as a cancel transition but never as a request', () => {

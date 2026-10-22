@@ -9,8 +9,12 @@
  * Two intents exist. Pressing the mic button is an explicit "talk to me now",
  * so it latches at once. Switching a wake-word control on only says "later",
  * and it can land in the same click as the onboarding Finish button (the
- * guide's draft reaches settings only on save), so it waits a beat for the
- * pet view to appear before the installer may cover it.
+ * guide's draft reaches settings only on save), so the request waits a beat
+ * before the installer may cover the pet view.
+ *
+ * This module owns the latch the installer reads. The delay itself belongs to
+ * the main process (the model setup request gate), because the surface that
+ * armed the request may be hidden or reloaded before it elapses.
  */
 
 import type { WindowView } from '../../types'
@@ -24,25 +28,11 @@ type WakewordSetupFlags = {
 /** How long an enable-wake-word request waits before it may cover the pet. */
 export const MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS = 3_000
 
-/** Schedules `task` and returns a cancel function. Injectable for tests. */
-export type ModelSetupRequestSchedule = (task: () => void, delayMs: number) => () => void
-
 export type ModelSetupRequestStore = {
   /** Latches the request now. */
   request: () => void
-  /**
-   * Latches the request after `delayMs`. The returned function cancels a
-   * pending latch, so reverting the action within the delay stays quiet.
-   * An optional task replaces the default latch for routed delivery.
-   */
-  requestAfter: (delayMs: number, task?: () => void) => () => void
   hasRequest: () => boolean
   subscribe: (listener: () => void) => () => void
-}
-
-const defaultSchedule: ModelSetupRequestSchedule = (task, delayMs) => {
-  const handle = globalThis.setTimeout(task, delayMs)
-  return () => { globalThis.clearTimeout(handle) }
 }
 
 /**
@@ -50,9 +40,7 @@ const defaultSchedule: ModelSetupRequestSchedule = (task, delayMs) => {
  * deliberately not an app restart, so later launches stay quiet until the
  * user reaches for voice again.
  */
-export function createModelSetupRequestStore(
-  schedule: ModelSetupRequestSchedule = defaultSchedule,
-): ModelSetupRequestStore {
+export function createModelSetupRequestStore(): ModelSetupRequestStore {
   let requested = false
   const listeners = new Set<() => void>()
 
@@ -64,7 +52,6 @@ export function createModelSetupRequestStore(
 
   return {
     request,
-    requestAfter: (delayMs, task = request) => schedule(task, delayMs),
     hasRequest: () => requested,
     subscribe(listener) {
       listeners.add(listener)
@@ -80,50 +67,10 @@ export function requestModelSetupOnVoiceUse(): void {
   sharedStore.request()
 }
 
-// Only one wake-word opt-in is ever in flight. The owner (settings save)
-// keeps the returned cancel function so leaving the surface, dismissing the
-// installer, or switching the wake word off can retract the pending offer.
-let pendingWakewordCancel: (() => void) | null = null
-
 /**
- * Marks that the user switched a wake word on. Deferred so the pet view wins
- * the first moments after finishing onboarding. Returns the cancel function
- * for that pending request.
- */
-export function requestModelSetupOnWakewordEnabled(
-  deliver: () => void = requestModelSetupOnVoiceUse,
-): () => void {
-  pendingWakewordCancel?.()
-  let active = true
-
-  function cancel() {
-    if (!active) return
-    active = false
-    cancelScheduled()
-    if (pendingWakewordCancel === cancel) pendingWakewordCancel = null
-  }
-
-  const cancelScheduled = sharedStore.requestAfter(
-    MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS,
-    () => {
-      if (!active) return
-      active = false
-      if (pendingWakewordCancel === cancel) pendingWakewordCancel = null
-      deliver()
-    },
-  )
-  pendingWakewordCancel = cancel
-  return cancel
-}
-
-/** Retracts a wake-word request that has not reached its delay yet. */
-export function cancelModelSetupWakewordRequest(): void {
-  pendingWakewordCancel?.()
-}
-
-/**
- * The panel window owns the installer. A pet-side request is forwarded to the
- * main process, which opens/focuses the panel before replaying it there.
+ * The panel window owns the installer. An immediate voice request made in the
+ * panel latches there directly; a pet-side request is forwarded to the main
+ * process, which opens/focuses the panel before replaying it there.
  */
 export function resolveModelSetupRequestRoute(view: WindowView): 'local' | 'panel' {
   return view === 'panel' ? 'local' : 'panel'
@@ -166,7 +113,7 @@ export function shouldCancelModelSetupForWakewordChange(
 
 /**
  * Applies a settings-save transition to the delayed request. Keeping the
- * decision here means the save path only wires timers, while the on/off
+ * decision here means the save path only wires the request, while the on/off
  * semantics stay testable without React or the Electron bridge.
  */
 export function applyModelSetupWakewordChange(

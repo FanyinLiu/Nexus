@@ -18,6 +18,7 @@ test('a delayed request does not reach the panel until its timer fires', (t) => 
   harness.gate.request({ delayMs: 3_000 })
   assert.equal(harness.delivered, 0)
   assert.equal(harness.gate.hasPending(), false)
+  assert.equal(harness.gate.isScheduled(), true)
 
   t.mock.timers.tick(2_999)
   assert.equal(harness.delivered, 0)
@@ -25,17 +26,34 @@ test('a delayed request does not reach the panel until its timer fires', (t) => 
   t.mock.timers.tick(1)
   assert.equal(harness.delivered, 1)
   assert.equal(harness.gate.hasPending(), true)
+  assert.equal(harness.gate.isScheduled(), false)
 })
 
-test('consuming a delayed request clears the timer before it fires', (t) => {
+test('a panel that consumes before the delay keeps the request armed', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const harness = createHarness()
 
   harness.gate.request({ delayMs: 3_000 })
-  assert.equal(harness.gate.consume(), false)
+  assert.equal(harness.gate.consume(), false, 'an undelivered request cannot be claimed')
+  assert.equal(harness.gate.isScheduled(), true, 'the request keeps counting down')
 
+  t.mock.timers.tick(2_999)
+  assert.equal(harness.delivered, 0, 'the request is not delivered early')
+
+  t.mock.timers.tick(1)
+  assert.equal(harness.delivered, 1, 'the request reaches the panel after the delay')
+  assert.equal(harness.gate.hasPending(), true)
+})
+
+test('an expired request is claimed exactly once', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const harness = createHarness()
+
+  harness.gate.request({ delayMs: 3_000 })
   t.mock.timers.tick(3_000)
-  assert.equal(harness.delivered, 0)
+
+  assert.equal(harness.gate.consume(), true, 'the expired request is handed over')
+  assert.equal(harness.gate.consume(), false, 'a handed-over request is gone')
   assert.equal(harness.gate.hasPending(), false)
 })
 
@@ -49,6 +67,35 @@ test('cancelling a delayed request retracts it entirely', (t) => {
   t.mock.timers.tick(3_000)
   assert.equal(harness.delivered, 0)
   assert.equal(harness.gate.hasPending(), false)
+  assert.equal(harness.gate.isScheduled(), false)
+})
+
+test('cancelling after the delay retracts the delivered request', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const harness = createHarness()
+
+  harness.gate.request({ delayMs: 3_000 })
+  t.mock.timers.tick(3_000)
+  assert.equal(harness.gate.hasPending(), true)
+
+  harness.gate.cancel()
+
+  assert.equal(harness.gate.hasPending(), false)
+  assert.equal(harness.gate.consume(), false)
+})
+
+test('a new request replaces the armed one without touching a delivered latch', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const harness = createHarness()
+
+  harness.gate.request({ delayMs: 3_000 })
+  harness.gate.request({ delayMs: 5_000 })
+
+  t.mock.timers.tick(3_000)
+  assert.equal(harness.delivered, 0, 'the replaced timer never fires')
+
+  t.mock.timers.tick(2_000)
+  assert.equal(harness.delivered, 1)
 })
 
 test('an immediate request delivers once and consume reports the pending latch', () => {

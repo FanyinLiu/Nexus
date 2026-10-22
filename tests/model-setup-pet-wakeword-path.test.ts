@@ -272,7 +272,7 @@ test('a pet-window wake-word save that is retracted before the delay never opens
   assert.deepEqual(scheduled[0].payload, { delayMs: MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS })
 
   // The user retracts the offer before the delay elapses.
-  cancelModelSetupAfterWakeword('pet')
+  cancelModelSetupAfterWakeword()
   await flushAsyncWork()
 
   const cancelled = bridge.modelSetupInvokes()

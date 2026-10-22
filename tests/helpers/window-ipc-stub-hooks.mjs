@@ -19,6 +19,7 @@ function testState() {
       handlers: new Map(),
       panelRequests: [],
       panelShown: [],
+      panelEventSink: null,
     }
   }
   return globalThis.${STATE_KEY}
@@ -49,7 +50,12 @@ export const mainWindow = null
 export const panelWindow = {
   isDestroyed: () => false,
   webContents: {
-    send: (channel) => { testState().panelRequests.push(channel) },
+    send: (channel, payload) => {
+      testState().panelRequests.push(channel)
+      // A test may hand the event to the panel renderer, the way Electron
+      // delivers it to the webContents.
+      testState().panelEventSink?.(channel, payload)
+    },
   },
 }
 export const panelWindowState = {}

@@ -17,10 +17,10 @@ import {
   type ProgressEvent,
 } from '../modelSetupState.ts'
 import {
-  cancelModelSetupWakewordRequest,
   hasModelSetupRequest,
   subscribeModelSetupRequests,
 } from '../modelSetupRequests.ts'
+import { cancelModelSetupAfterWakeword } from '../../../lib/modelSetupBridge.ts'
 
 type Props = {
   /** Hide the overlay while another modal owns the screen (settings, onboarding guide). */
@@ -105,14 +105,6 @@ export function ModelSetupOverlay({
 
   useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
 
-  // The panel owns the installer, so leaving the surface retracts a delayed
-  // request that has not reached its 3s mark yet.
-  useEffect(() => () => {
-    cancelModelSetupWakewordRequest()
-    const consume = window.desktopPet?.consumeModelSetupRequest
-    if (consume) void consume().catch(() => undefined)
-  }, [])
-
   useEffect(() => {
     const unsubscribe = window.desktopPet?.subscribeModelsProgress?.((event: ProgressEvent) => {
       setProgress((prev) => mergeModelProgress(prev, event))
@@ -152,11 +144,10 @@ export function ModelSetupOverlay({
   }, [refreshInventory])
 
   const handleDismiss = useCallback(() => {
-    // A pet-side wake-word save may still have a timer armed in main. Dismissing
-    // in the installer's own window retracts it as well as closing the box.
-    cancelModelSetupWakewordRequest()
-    const consume = window.desktopPet?.consumeModelSetupRequest
-    if (consume) void consume().catch(() => undefined)
+    // A wake-word save may still be counting down in the main process.
+    // Dismissing in the installer's own window retracts it as well as
+    // closing the box.
+    cancelModelSetupAfterWakeword()
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
     setDismissed(true)
   }, [])

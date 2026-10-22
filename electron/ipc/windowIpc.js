@@ -165,9 +165,10 @@ function registerPowerEventForwarding() {
   }
 }
 
-// A pet-side voice action asks the panel to offer the model installer. A
-// wake-word save may arm it a few seconds later, and the panel's consume (or
-// dismiss) call must be able to clear both the latch and that timer.
+// A voice action asks the panel to offer the model installer. The gate keeps
+// the delay in the main process, so a panel that hides or reloads in the
+// meantime does not lose the request: when the timer fires, the main process
+// raises the panel and replays the request there.
 function emitModelSetupRequest() {
   if (!panelWindow || panelWindow.isDestroyed()) return
   panelWindow.webContents.send('models:setup-requested')

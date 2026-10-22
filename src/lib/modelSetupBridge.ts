@@ -3,17 +3,17 @@
  *
  * The installer only exists in the panel window, so a request made from the
  * pet surface is forwarded to the main process, which owns the delayed timer
- * and opens/focuses the panel when it fires. Panel-side requests can keep the
- * timer locally because dismissing the box there is the same store. Inventory
- * is checked before arming either timer so an already-installed model set (or
- * an unreadable bridge) never covers the user's screen.
+ * and opens/focuses the panel when it fires. A wake-word save always goes
+ * through the main process, whichever surface saved it: that surface may be
+ * hidden or reloaded before the delay elapses, and only the main process can
+ * raise the panel again. Inventory is checked before arming the timer so an
+ * already-installed model set (or an unreadable bridge) never covers the
+ * user's screen.
  */
 
 import {
   MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS,
-  cancelModelSetupWakewordRequest,
   requestModelSetupOnVoiceUse,
-  requestModelSetupOnWakewordEnabled,
   resolveModelSetupRequestRoute,
 } from '../features/setup/modelSetupRequests.ts'
 import type { WindowView } from '../types'
@@ -59,20 +59,14 @@ export async function requestModelSetupForVoiceUse(view: WindowView): Promise<bo
 }
 
 /**
- * Arms the delayed request after a wake-word save. Panel-side saves keep the
- * timer with the installer owner, where dismissal and unmount can clear it.
- * A pet-side save delegates to the main process so the panel's consume call
- * cancels the same timer even though it lives in another window.
+ * Arms the delayed request after a wake-word save. The main process owns the
+ * timer, so the request still reaches the user when the saving surface is
+ * hidden or reloaded in the meantime.
  */
-export async function scheduleModelSetupAfterWakeword(view: WindowView): Promise<boolean> {
+export async function scheduleModelSetupAfterWakeword(): Promise<boolean> {
   const generation = ++wakewordRequestGeneration
   if (!(await hasMissingModels())) return false
   if (generation !== wakewordRequestGeneration) return false
-
-  if (resolveModelSetupRequestRoute(view) === 'local') {
-    requestModelSetupOnWakewordEnabled()
-    return true
-  }
 
   const request = window.desktopPet?.requestModelSetup
   if (!request) return false
@@ -81,12 +75,8 @@ export async function scheduleModelSetupAfterWakeword(view: WindowView): Promise
 }
 
 /** Retracts a delayed wake-word request from either window. */
-export function cancelModelSetupAfterWakeword(view: WindowView): void {
+export function cancelModelSetupAfterWakeword(): void {
   wakewordRequestGeneration += 1
-  if (resolveModelSetupRequestRoute(view) === 'local') {
-    cancelModelSetupWakewordRequest()
-    return
-  }
   const request = window.desktopPet?.requestModelSetup
   if (!request) return
   void request({ cancel: true }).catch(() => undefined)
@@ -96,12 +86,12 @@ export function cancelModelSetupAfterWakeword(view: WindowView): void {
  * The settings-save actions for a wake-word transition. Kept here so the
  * save path and its behavior tests share exactly the same wiring.
  */
-export function createModelSetupWakewordActions(view: WindowView): {
+export function createModelSetupWakewordActions(): {
   request: () => void
   cancel: () => void
 } {
   return {
-    request: () => { void scheduleModelSetupAfterWakeword(view) },
-    cancel: () => cancelModelSetupAfterWakeword(view),
+    request: () => { void scheduleModelSetupAfterWakeword() },
+    cancel: () => cancelModelSetupAfterWakeword(),
   }
 }

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { register } from 'node:module'
 import { test } from 'node:test'
-import type { TestContext } from 'node:test'
 
 import {
   createHookRenderer,
   createOverlayProps,
   flushAsyncWork,
+  trackPendingTimers,
   wakewordSettings,
 } from './helpers/wakewordHarness.ts'
 
@@ -42,6 +42,7 @@ function installWindowMock(inventoryMode: InventoryMode) {
     clear: () => { sessionEntries.clear() },
   }
   const calls = { inventory: 0, request: 0 }
+  const requests: Array<{ delayMs?: number; cancel?: boolean } | undefined> = []
   const windowMock = {
     localStorage,
     sessionStorage,
@@ -56,7 +57,10 @@ function installWindowMock(inventoryMode: InventoryMode) {
         if (inventoryMode === 'unreadable') throw new Error('inventory unavailable')
         return { ready: inventoryMode === 'ready' }
       },
-      requestModelSetup: async () => { calls.request += 1 },
+      requestModelSetup: async (options?: { delayMs?: number; cancel?: boolean }) => {
+        calls.request += 1
+        requests.push(options)
+      },
     },
   }
 
@@ -65,11 +69,11 @@ function installWindowMock(inventoryMode: InventoryMode) {
     localStorage,
     sessionStorage,
   })
-  return { windowMock, calls }
+  return { windowMock, calls, requests }
 }
 
 async function renderOverlay(view: 'pet' | 'panel', inventoryMode: InventoryMode) {
-  const { calls, windowMock } = installWindowMock(inventoryMode)
+  const { calls, windowMock, requests } = installWindowMock(inventoryMode)
   saveOnboardingCompleted(true)
   const baseline = wakewordSettings(loadSettings(), false)
   const next = wakewordSettings(loadSettings(), true)
@@ -79,65 +83,27 @@ async function renderOverlay(view: 'pet' | 'panel', inventoryMode: InventoryMode
   })
   renderer.render()
   assert.ok(overlays.current)
-  return { renderer, overlays, baseline, next, calls, windowMock }
+  return { renderer, overlays, baseline, next, calls, requests, windowMock }
 }
 
-/**
- * Counts the timers the surface still has pending.
- *
- * The request latch is one-shot per launch, so it cannot prove that a
- * cancelled request stayed quiet. The pending timer can: a cleared timer
- * never delivers.
- */
-function trackPendingTimers(t: TestContext): { pending: () => number } {
-  const originalSetTimeout = globalThis.setTimeout
-  const originalClearTimeout = globalThis.clearTimeout
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  const mockedSetTimeout = globalThis.setTimeout
-  const mockedClearTimeout = globalThis.clearTimeout
-  const pending = new Set<unknown>()
-
-  globalThis.setTimeout = ((
-    callback: (...args: unknown[]) => void,
-    delay?: number,
-    ...args: unknown[]
-  ) => {
-    const handle = mockedSetTimeout(() => {
-      pending.delete(handle)
-      callback(...args)
-    }, delay)
-    pending.add(handle)
-    return handle
-  }) as typeof globalThis.setTimeout
-
-  globalThis.clearTimeout = ((handle?: unknown) => {
-    if (handle !== undefined) pending.delete(handle)
-    mockedClearTimeout(handle as ReturnType<typeof setTimeout>)
-  }) as typeof globalThis.clearTimeout
-
-  t.after(() => {
-    globalThis.setTimeout = originalSetTimeout
-    globalThis.clearTimeout = originalClearTimeout
-  })
-
-  return { pending: () => pending.size }
-}
-
-test('the delayed wake-word trigger checks inventory before requesting setup', async (t) => {
+test('the delayed wake-word trigger checks inventory before asking the main process', async (t) => {
   const timers = trackPendingTimers(t)
-  const { renderer, overlays, baseline, next, calls } = await renderOverlay('panel', 'missing')
+  const { renderer, overlays, baseline, next, calls, requests } = await renderOverlay('panel', 'missing')
 
   await overlays.current!.settingsDrawerProps.onSave(next, baseline)
   await flushAsyncWork()
   assert.equal(calls.inventory, 1, 'inventory is checked before scheduling')
-  assert.equal(timers.pending(), 1, 'the delayed request is scheduled')
-  assert.equal(hasModelSetupRequest(), false, 'the request waits for the delay')
+  assert.equal(calls.request, 1, 'the main process owns the delayed request')
+  assert.deepEqual(
+    requests,
+    [{ delayMs: MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS }],
+    'the main process is asked to raise the panel after the delay',
+  )
+  assert.equal(timers.pending(), 0, 'the panel keeps no local timer')
+  assert.equal(hasModelSetupRequest(), false, 'the request waits for the main process')
 
   t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
   await flushAsyncWork()
-
-  assert.equal(hasModelSetupRequest(), true, 'missing models should request setup')
-  assert.equal(timers.pending(), 0, 'the delayed request fired')
 
   renderer.unmount()
 })
@@ -178,33 +144,44 @@ test('an unreadable inventory keeps the delayed wake-word trigger quiet', async 
   renderer.unmount()
 })
 
-test('unmounting the panel hook cancels the pending wake-word request', async (t) => {
-  const timers = trackPendingTimers(t)
-  const { renderer, overlays, baseline, next } = await renderOverlay('panel', 'missing')
+test('unmounting the panel hook leaves the pending request with the main process', async (t) => {
+  trackPendingTimers(t)
+  const { renderer, overlays, baseline, next, requests } = await renderOverlay('panel', 'missing')
 
   await overlays.current!.settingsDrawerProps.onSave(next, baseline)
   await flushAsyncWork()
-  assert.equal(timers.pending(), 1, 'the delayed request is scheduled')
+  assert.equal(requests.length, 1, 'the main process owns the delayed request')
 
   renderer.unmount()
-  assert.equal(timers.pending(), 0, 'unmounting cancels the pending request')
+  assert.deepEqual(
+    requests,
+    [{ delayMs: MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS }],
+    'unmounting must not retract the request the main process holds',
+  )
 
   t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
   await flushAsyncWork()
 })
 
-test('saving the wake word off before the delay cancels the pending request', async (t) => {
-  const timers = trackPendingTimers(t)
-  const { renderer, overlays, baseline, next } = await renderOverlay('panel', 'missing')
+test('saving the wake word off before the delay retracts the pending request', async (t) => {
+  trackPendingTimers(t)
+  const { renderer, overlays, baseline, next, requests } = await renderOverlay('panel', 'missing')
 
   await overlays.current!.settingsDrawerProps.onSave(next, baseline)
   await flushAsyncWork()
-  assert.equal(timers.pending(), 1, 'the delayed request is scheduled')
+  assert.equal(requests.length, 1, 'the main process owns the delayed request')
 
   const off = wakewordSettings(next, false)
   await overlays.current!.settingsDrawerProps.onSave(off, next)
   await flushAsyncWork()
-  assert.equal(timers.pending(), 0, 'turning the wake word off must retract the offer')
+  assert.deepEqual(
+    requests,
+    [
+      { delayMs: MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS },
+      { cancel: true },
+    ],
+    'turning the wake word off must retract the offer in the main process',
+  )
 
   t.mock.timers.tick(MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS)
   await flushAsyncWork()

@@ -14,7 +14,6 @@ const {
   ModelSetupOverlay,
 } = await import('../src/features/setup/components/ModelSetupOverlay.tsx')
 const {
-  cancelModelSetupWakewordRequest,
   requestModelSetupOnVoiceUse,
 } = await import('../src/features/setup/modelSetupRequests.ts')
 await ensureLocaleLoaded('en-US')
@@ -239,7 +238,6 @@ test('the overlay leads with the voice invite and still lists model sizes', asyn
   assert.ok(text.includes(enMessages['model_setup.model.vad.name']), 'model list should render')
 
   renderer.unmount()
-  cancelModelSetupWakewordRequest()
 })
 
 test('the installer card renders the zh-CN invite inside its sized panel shell', async () => {
@@ -277,20 +275,16 @@ test('the installer card renders the zh-CN invite inside its sized panel shell',
   assert.ok(card, 'dialog should use the sized model-setup card class')
 
   renderer.unmount()
-  cancelModelSetupWakewordRequest()
   setLocale('en-US')
 })
 
-test('dismissing the installer cancels a pending cross-window request', async (t) => {
+test('dismissing the installer retracts a pending cross-window request', async () => {
   const { windowMock } = installWindowMock()
   requestModelSetupOnVoiceUse()
 
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  let delivered = false
-  const mainTimer = setTimeout(() => { delivered = true }, 3_000)
-  windowMock.desktopPet.consumeModelSetupRequest = async () => {
-    clearTimeout(mainTimer)
-    return true
+  const requests: unknown[] = []
+  windowMock.desktopPet.requestModelSetup = async (options: unknown) => {
+    requests.push(options)
   }
 
   const renderer = createComponentRenderer<{
@@ -307,23 +301,24 @@ test('dismissing the installer cancels a pending cross-window request', async (t
   )
   assert.ok(dismissButton)
   ;(dismissButton.props.onClick as () => void)()
+  await flushEffects()
 
-  t.mock.timers.tick(3_000)
-  assert.equal(delivered, false, 'panel dismissal must cancel the main-process timer')
+  assert.deepEqual(
+    requests,
+    [{ cancel: true }],
+    'dismissal retracts the request the main process still holds',
+  )
 
   renderer.unmount()
 })
 
-test('unmounting the installer cancels a pending cross-window request', async (t) => {
+test('unmounting the installer keeps a pending cross-window request armed', async () => {
   const { windowMock } = installWindowMock()
   requestModelSetupOnVoiceUse()
 
-  t.mock.timers.enable({ apis: ['setTimeout'] })
-  let delivered = false
-  const mainTimer = setTimeout(() => { delivered = true }, 3_000)
-  windowMock.desktopPet.consumeModelSetupRequest = async () => {
-    clearTimeout(mainTimer)
-    return true
+  const requests: unknown[] = []
+  windowMock.desktopPet.requestModelSetup = async (options: unknown) => {
+    requests.push(options)
   }
 
   const renderer = createComponentRenderer<{
@@ -334,7 +329,11 @@ test('unmounting the installer cancels a pending cross-window request', async (t
   await flushEffects()
   renderer.render({})
   renderer.unmount()
+  await flushEffects()
 
-  t.mock.timers.tick(3_000)
-  assert.equal(delivered, false, 'unmounting the panel must cancel the main-process timer')
+  assert.deepEqual(
+    requests,
+    [],
+    'a panel that reloads must not retract the request the main process holds',
+  )
 })

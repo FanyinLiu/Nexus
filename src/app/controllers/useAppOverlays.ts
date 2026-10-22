@@ -38,7 +38,6 @@ import {
   applyModelSetupWakewordChange,
 } from '../../features/setup/modelSetupRequests.ts'
 import {
-  cancelModelSetupAfterWakeword,
   createModelSetupWakewordActions,
 } from '../../lib/modelSetupBridge.ts'
 import type {
@@ -250,10 +249,6 @@ export function useAppOverlays({
     return () => { active = false }
   }, [firstUseGuideHost, openFirstUsePanel, setChatError, t])
 
-  // A pending wake-word offer belongs to this surface. Closing the window
-  // before the delay elapses must not let it fire into a dead renderer.
-  useEffect(() => () => cancelModelSetupAfterWakeword(view), [view])
-
   const closeSettingsSurface = useCallback(() => {
     setSettingsOpen(false)
     syncWindowViewToUrl(view === 'panel' ? 'panel' : 'pet', view === 'panel' ? 'chat' : undefined)
@@ -328,8 +323,8 @@ export function useAppOverlays({
     // window gets the same installer offer as pressing the mic button. This
     // runs only where the user saved, so a synced change elsewhere stays quiet.
     // The bridge checks inventory before scheduling: ready or unreadable models
-    // must not open or focus the panel. Panel saves keep the timer with the
-    // installer owner; pet saves delegate it to main so a panel dismiss wins.
+    // must not open or focus the panel. The delay lives in the main process,
+    // so the offer still reaches the user when this surface hides or reloads.
     applyModelSetupWakewordChange(
       {
         wakewordAlwaysOn: options.baselineSettings.wakewordAlwaysOn,
@@ -339,7 +334,7 @@ export function useAppOverlays({
         wakewordAlwaysOn: committedSettings.wakewordAlwaysOn,
         voiceTriggerMode: committedSettings.voiceTriggerMode,
       },
-      createModelSetupWakewordActions(view),
+      createModelSetupWakewordActions(),
     )
 
     if (options?.closeSettings ?? true) {
@@ -379,7 +374,7 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings, view])
+  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
