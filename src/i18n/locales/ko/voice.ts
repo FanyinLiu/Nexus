@@ -44,7 +44,7 @@ export const koVoice = {
   'voice.provider.sensevoice.start_failed': 'SenseVoice 인식이 시작이 안 됐어요 — 모델이랑 설정을 한번 봐주세요.',
   'voice.provider.sensevoice.generic_error': 'SenseVoice 쪽에 좀 문제가 있었어요.',
   'voice.provider.sensevoice.unavailable': 'SenseVoice 가 제대로 설치가 안 된 것 같아요.',
-  'voice.provider.sensevoice.node_missing': '음성 부품이 설치되지 않았어요. 앱을 다시 설치하면 돼요.',
+  'voice.provider.sensevoice.node_missing': '음성에 필요한 파일이 빠져 있어요. 앱을 다시 설치해 주세요.',
   'voice.provider.sensevoice.node_missing_detail': 'sherpa-onnx-node 가 설치되어 있지 않습니다. 먼저 "npm install sherpa-onnx-node" 를 실행해 주세요.',
   'voice.provider.sensevoice.model_missing': 'SenseVoice가 설치되어 있지 않습니다. 음성 설정에서 받거나 클라우드 음성 인식을 선택하세요.',
   'voice.provider.sensevoice.not_installed': '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.',

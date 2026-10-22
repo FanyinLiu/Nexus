@@ -276,10 +276,10 @@ test('the installer promises the one reminder in every locale', () => {
 test('the reminder and the missing-model lines point at Voice → Advanced', () => {
   const dictionaries = [
     [zhCNMessages, '语音还没装好，去「设置 → 语音 → 高级」里下载。', '语音组件没装好，重新安装一下应用就行。', '还差 {count} 个模型没装'],
-    [zhTWMessages, '語音還沒裝好，去「設定 → 語音 → 進階」裡下載。', '語音元件沒裝好，重新安裝一下應用就行。', '還差 {count} 個模型沒裝'],
-    [enMessages, 'Voice isn\'t ready yet. Download it in Settings → Voice → Advanced.', 'The voice piece isn\'t installed. Reinstall the app and it\'ll be ready.', '{count} model still isn\'t installed'],
-    [jaMessages, '音声がまだ入ってないよ。「設定 → 音声 → 高度設定」でダウンロードしてね。', '音声の部品が入ってないみたい。アプリを入れ直してね。', 'まだ {count} 個のモデルが入っていないよ'],
-    [koMessages, '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.', '음성 부품이 설치되지 않았어요. 앱을 다시 설치하면 돼요.', '아직 모델 {count}개가 설치되지 않았어요'],
+    [zhTWMessages, '語音還沒裝好，去「設定 → 語音 → 進階」裡下載。', '語音元件沒裝好，重新安裝一下 App 就行。', '還差 {count} 個模型沒裝'],
+    [enMessages, 'Voice isn\'t ready yet. Download it in Settings → Voice → Advanced.', 'Part of voice is missing. Reinstall the app to fix it.', '{count} model isn\'t installed yet'],
+    [jaMessages, '音声がまだ入ってないよ。「設定 → 音声 → 高度設定」でダウンロードしてね。', '音声に必要なファイルが足りないみたい。アプリを入れ直してね。', 'まだ {count} 個のモデルが入っていません'],
+    [koMessages, '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.', '음성에 필요한 파일이 빠져 있어요. 앱을 다시 설치해 주세요.', '아직 모델 {count}개가 설치되지 않았어요'],
   ] as const
 
   for (const [dictionary, expected, nodeMissing, missingOne] of dictionaries) {
@@ -295,7 +295,7 @@ test('the reminder and the missing-model lines point at Voice → Advanced', () 
     if (dictionary === enMessages) {
       assert.equal(
         dictionary['settings.voice.status_models_missing_other'],
-        '{count} models still aren\'t installed',
+        '{count} models aren\'t installed yet',
       )
     } else {
       assert.equal(dictionary['settings.voice.status_models_missing_other'], missingOne)

@@ -44,7 +44,7 @@ export const enVoice = {
   'voice.provider.sensevoice.start_failed': 'SenseVoice recognition couldn\'t start — check the model and configuration?',
   'voice.provider.sensevoice.generic_error': 'SenseVoice ran into a snag.',
   'voice.provider.sensevoice.unavailable': 'SenseVoice doesn\'t seem to be installed properly.',
-  'voice.provider.sensevoice.node_missing': 'The voice piece isn\'t installed. Reinstall the app and it\'ll be ready.',
+  'voice.provider.sensevoice.node_missing': 'Part of voice is missing. Reinstall the app to fix it.',
   'voice.provider.sensevoice.node_missing_detail': 'sherpa-onnx-node is not installed — please run "npm install sherpa-onnx-node" first.',
   'voice.provider.sensevoice.model_missing': 'SenseVoice is not installed. Download it from Voice settings, or pick a cloud speech provider.',
   'voice.provider.sensevoice.not_installed': 'Voice isn\'t ready yet. Download it in Settings → Voice → Advanced.',
