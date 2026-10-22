@@ -36,6 +36,8 @@ export type LocalModelInventoryView = {
   ready: boolean
   missingRequired: string[]
   disk?: LocalModelDisk
+  /** Catalog ids the main process is already fetching. */
+  downloading?: string[]
 }
 
 export type LocalModelRowStatus = 'installed' | 'pending' | 'downloading' | 'failed'
@@ -54,18 +56,21 @@ export type LocalModelDownloadAction = 'download' | 'resume' | 'retry' | 'none'
 export function buildLocalModelRows(
   models: LocalModelEntry[],
   progress: Record<string, PerModelProgress>,
+  downloadingIds: readonly string[] = [],
 ): LocalModelRowView[] {
+  const downloading = new Set(downloadingIds)
   return models.map((model) => {
     const current = progress[model.id]
     const percent = getModelProgressPercent(current)
     if (model.present || isModelProgressComplete(current)) {
       return { ...rowBase(model), status: 'installed', percent: null }
     }
+    // An in-flight id counts even when this page missed the progress events.
+    if (isModelProgressActive(current) || downloading.has(model.id)) {
+      return { ...rowBase(model), status: 'downloading', percent }
+    }
     if (isModelProgressError(current)) {
       return { ...rowBase(model), status: 'failed', percent }
-    }
-    if (isModelProgressActive(current)) {
-      return { ...rowBase(model), status: 'downloading', percent }
     }
     return { ...rowBase(model), status: 'pending', percent: null }
   })

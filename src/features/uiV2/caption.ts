@@ -7,6 +7,9 @@ export function companionCaptionPhaseAcceptsText(phase: CompanionSurfacePhase): 
   return phase === 'speaking' || phase === 'done' || phase === 'error' || phase === 'offline'
 }
 
+/** How long a companion notice stays up before the bubble dismisses itself. */
+export const COMPANION_NOTICE_AUTO_HIDE_MS = 14_000
+
 export function getCaptionReadingDurationMs(text: string): number {
   const cjkCount = (text.match(/[\u3400-\u9fff\uf900-\ufaff]/g) ?? []).length
   const latinWordCount = text.replace(/[\u3400-\u9fff\uf900-\ufaff]/g, ' ').trim().split(/\s+/).filter(Boolean).length
@@ -28,7 +31,22 @@ export function useReadableCaption(
       setVisibleText('')
       return
     }
-    if (!nextText || !companionCaptionPhaseAcceptsText(phase)) return
+    // The bubble timer already ended: nextText is empty and the phase is idle.
+    // Leaving the old line up starts a second reading countdown, so a 14s
+    // reminder stays on screen for the reading time as well. An empty line
+    // during error or offline is different — the surface is still holding a
+    // specific sentence and withholding the generic recovery line.
+    if (!nextText) {
+      if (phase === 'idle') {
+        if (timerRef.current !== null) {
+          window.clearTimeout(timerRef.current)
+          timerRef.current = null
+        }
+        setVisibleText('')
+      }
+      return
+    }
+    if (!companionCaptionPhaseAcceptsText(phase)) return
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     setVisibleText(nextText)
   }, [nextText, phase])

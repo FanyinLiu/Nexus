@@ -16,6 +16,7 @@ import type {
   VoiceState,
   WindowView,
 } from '../../types'
+import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { useChat } from '../../hooks/useChat.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext.ts'
@@ -241,7 +242,7 @@ export function useAppController() {
           streaming: false,
           ...(options?.replacesSurfaceError ? { replacesSurfaceError: true } : {}),
         },
-        { autoHideMs: 14_000 },
+        { autoHideMs: COMPANION_NOTICE_AUTO_HIDE_MS },
       )
     },
     // Forward to the autonomy emotion model. Wired through a ref because

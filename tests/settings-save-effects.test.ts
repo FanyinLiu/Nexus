@@ -94,9 +94,9 @@ test('settings commits use the serial functional mutation authority', async () =
   const overlaysSource = await readSource(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url))
   const setThemeSource = themeSource.match(/setTheme:\s*\([\s\S]*?\n\s*\},\n\s*theme,/)?.[0] ?? ''
   const settingsOnSaveSource = overlaysSource.match(/onSave: async \(nextSettings, baselineSettings\) => \{[\s\S]*?\n\s*\},\n\s*onImportPetModel/)?.[0] ?? ''
-  const commitDraftSource = drawerSource.match(/function commitDraft\(\): Promise<void> \{[\s\S]*?\n\s*\}\n\n\s*async function handleSaveDraft/)?.[0] ?? ''
+  const commitDraftSource = drawerSource.match(/function commitDraft\(override\?: AppSettings\): Promise<void> \{[\s\S]*?\n\s*\}\n\n\s*async function handleSaveDraft/)?.[0] ?? ''
   const handleSaveDraftSource = drawerSource.match(/async function handleSaveDraft\(\) \{[\s\S]*?\n\s*\}\n\n\s*async function handleStartVoiceConversation/)?.[0] ?? ''
-  const handleStartVoiceSource = drawerSource.match(/async function handleStartVoiceConversation\(\) \{[\s\S]*?\n\s*\}\n\n\s*function handleOpenSettingsSection/)?.[0] ?? ''
+  const handleStartVoiceSource = drawerSource.match(/async function handleStartVoiceConversation\(patch\?: \{[\s\S]*?\n\s*\}\n\n\s*function handleOpenSettingsSection/)?.[0] ?? ''
 
   assert.match(commitSource, /updateSettingsSnapshot\(update, apply\)/)
   assert.doesNotMatch(commitSource, /getSettingsSnapshot|setSettingsSnapshot/)
@@ -108,7 +108,7 @@ test('settings commits use the serial functional mutation authority', async () =
   assert.match(commitDraftSource, /saveInFlightRef\.current = savePromise/)
   assert.match(commitDraftSource, /return savePromise/)
   assert.match(handleSaveDraftSource, /await commitDraft\(\)/)
-  assert.match(handleStartVoiceSource, /if \(isDirty\) \{\s*await commitDraft\(\)/)
+  assert.match(handleStartVoiceSource, /if \(patch \|\| isDirty\) \{\s*await commitDraft\(/)
   assert.match(drawerSource, /getRedactedLogErrorMessage\(error\)/)
   assert.match(settingsOnSaveSource, /chat\.appendSystemMessage\(/)
   assert.match(settingsOnSaveSource, /throw error/)

@@ -258,6 +258,37 @@ test('onboarding starts with language and keeps the AI disclosure before chat', 
   assert.equal(getOnboardingStepIssue(makeSettings(), 'language', 'zh-CN'), null)
 })
 
+test('a new UI language moves stock voice settings and leaves a saved voice alone', () => {
+  const seeded = applyOnboardingLanguageChoice(makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'en-US',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'en-US-JennyNeural',
+  }), 'zh-CN')
+  assert.equal(seeded.uiLanguage, 'zh-CN')
+  assert.equal(seeded.speechRecognitionLang, 'zh-CN')
+  assert.equal(seeded.speechSynthesisLang, 'zh-CN')
+  assert.equal(seeded.speechOutputVoice, 'zh-CN-XiaoxiaoNeural')
+
+  const custom = applyOnboardingLanguageChoice(makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'ja',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'my-custom-voice',
+  }), 'zh-CN')
+  assert.equal(custom.speechRecognitionLang, 'ja')
+  assert.equal(custom.speechSynthesisLang, 'zh-CN')
+  assert.equal(custom.speechOutputVoice, 'my-custom-voice')
+})
+
 test('a language choice updates locale-default names and leaves custom names alone', () => {
   const switched = applyOnboardingLanguageChoice(makeSettings({ wakeWord: '星绘' }), 'en-US')
   assert.equal(switched.uiLanguage, 'en-US')
@@ -289,6 +320,7 @@ test('onboarding voice and readiness copy stays plain across locales', () => {
     'onboarding.step.voice.title',
     'onboarding.step.voice.description',
     'onboarding.voice.ready',
+    'onboarding.voice.needs_models',
     'onboarding.text.note.china',
     'onboarding.text.note.global',
     'onboarding.text.note.local',

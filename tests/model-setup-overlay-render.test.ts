@@ -173,6 +173,7 @@ const inventory: Inventory = {
 function installWindowMock(nextInventory: Inventory = inventory) {
   const storage = new Map<string, string>()
   const downloadCalls: unknown[] = []
+  let progressListener: ((event: unknown) => void) | null = null
   const sessionStorage = {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => { storage.set(key, value) },
@@ -191,13 +192,10 @@ function installWindowMock(nextInventory: Inventory = inventory) {
         downloadCalls.push(payload)
         return { results: [], inventory: nextInventory }
       },
-      pythonRuntimeStatus: async () => ({
-        pythonAvailable: true,
-        version: '3.11.0',
-        omniVoice: { ready: false, missingImports: ['torch'] },
-        glmAsr: { ready: true, missingImports: [] },
-      }),
-      subscribeModelsProgress: () => () => {},
+      subscribeModelsProgress: (listener: (event: unknown) => void) => {
+        progressListener = listener
+        return () => { progressListener = null }
+      },
     },
     requestAnimationFrame: (callback: () => void) => {
       callback()
@@ -212,7 +210,12 @@ function installWindowMock(nextInventory: Inventory = inventory) {
     sessionStorage,
     HTMLElement: class {},
   })
-  return { windowMock, documentMock, downloadCalls }
+  return {
+    windowMock,
+    documentMock,
+    downloadCalls,
+    emitProgress: (event: unknown) => progressListener?.(event),
+  }
 }
 
 async function flushEffects() {
@@ -241,7 +244,7 @@ test('the overlay leads with the voice invite and still lists model sizes', asyn
   assert.ok(inviteIndex < bodyIndex, 'voice invite should be the first line')
   assert.ok(text.includes('42 MB'), 'download size should render')
   assert.ok(text.includes(enMessages['model_setup.model.vad.name']), 'model list should render')
-  assert.equal(text.includes(enMessages['model_setup.python_title']), false)
+  assert.equal(text.includes('Optional Python services'), false)
   assert.equal(text.some((line) => line.includes('pip install')), false)
 
   renderer.unmount()
@@ -437,4 +440,77 @@ test('the installer counts and downloads the selected listener, not only require
     undefined,
   ])
   renderer.unmount()
+})
+
+test('the installer stays open until the selected listener finishes', async () => {
+  await ensureLocaleLoaded('en-US')
+  setLocale('en-US')
+  const listenerStillMissing: Inventory = {
+    models: [
+      {
+        id: 'vad',
+        label: 'Voice activity model',
+        sizeLabel: '2 MB',
+        purpose: 'Detects speech.',
+        required: true,
+        kind: 'files',
+        present: true,
+        verified: true,
+        location: '/models/vad',
+      },
+      {
+        id: 'sensevoice',
+        label: 'SenseVoice',
+        sizeLabel: '239 MB',
+        purpose: 'Listens.',
+        required: false,
+        kind: 'files',
+        present: false,
+        verified: false,
+        location: null,
+      },
+    ],
+    ready: true,
+    missingRequired: [],
+    primaryDir: '/models',
+    searchRoots: [],
+    downloading: ['sensevoice'],
+  }
+  const { emitProgress } = installWindowMock(listenerStillMissing)
+  requestModelSetupOnVoiceUse()
+  const renderer = createComponentRenderer<{ speechInputProviderId?: string }>(
+    ModelSetupOverlay as (props: { speechInputProviderId?: string }) => unknown,
+  )
+  renderer.render({ speechInputProviderId: 'local-sensevoice' })
+  await flushEffects()
+  const open = renderer.render({ speechInputProviderId: 'local-sensevoice' })
+  const openText = collectText(open).join('\n')
+  assert.ok(open, 'required models being installed must not close the dialog')
+  assert.ok(openText.includes('SenseVoice'), 'the listener row stays in the dialog')
+  assert.ok(openText.includes('Download 1 missing models'))
+  assert.ok(openText.includes(enMessages['model_setup.downloading']))
+
+  emitProgress({ modelId: 'sensevoice', phase: 'downloading', downloaded: 50, total: 100 })
+  const progressing = renderer.render({ speechInputProviderId: 'local-sensevoice' })
+  assert.ok(collectText(progressing).join('\n').includes('50%'))
+
+  const finished: Inventory = {
+    ...listenerStillMissing,
+    downloading: [],
+    models: listenerStillMissing.models.map((model) => (
+      model.id === 'sensevoice' ? { ...model, present: true, verified: true } : model
+    )),
+  }
+  installWindowMock(finished)
+  requestModelSetupOnVoiceUse()
+  const doneRenderer = createComponentRenderer<{ speechInputProviderId?: string }>(
+    ModelSetupOverlay as (props: { speechInputProviderId?: string }) => unknown,
+  )
+  doneRenderer.render({ speechInputProviderId: 'local-sensevoice' })
+  await flushEffects()
+  const closed = doneRenderer.render({ speechInputProviderId: 'local-sensevoice' })
+  assert.equal(closed, null)
+
+  renderer.unmount()
+  doneRenderer.unmount()
 })

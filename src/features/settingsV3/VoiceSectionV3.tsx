@@ -1,5 +1,10 @@
 import { memo, useState, type Dispatch, type SetStateAction } from 'react'
 import {
+  enableStockVoiceWhenModelsReady,
+  markVoiceSwitchesChosen,
+  readVoiceSwitchesChosen,
+} from '../voiceProfile/voiceReady.ts'
+import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
 } from '../../components/settingsDrawerSupport.ts'
@@ -53,7 +58,10 @@ export type VoiceSectionV3Props = {
   onRunAudioSmokeTest: () => void
   onRunSpeechInputConnectionTest: () => void
   onRunSpeechOutputConnectionTest: () => void
-  onStartVoiceConversation: () => Promise<void>
+  onStartVoiceConversation: (patch?: {
+    speechInputEnabled: boolean
+    speechOutputEnabled: boolean
+  }) => Promise<void>
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
   platformProfile: PlatformProfile
@@ -161,17 +169,27 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         ? ti('panel.voice.cancel_reply')
         : ti('panel.voice.interrupt_response')
   const runtimeVoicePending = saving || voiceActionPending
+  const modelsReady = modelGap === 0
+  const startDraft = readVoiceSwitchesChosen()
+    ? draft
+    : enableStockVoiceWhenModelsReady(draft, modelsReady)
   const runtimeVoiceDisabled = runtimeVoicePending || (
     voiceState === 'idle'
     && !continuousVoiceActive
-    && (!draft.speechInputEnabled || !inputAvailable)
+    && (!startDraft.speechInputEnabled || !inputAvailable)
   )
   const handleRuntimeVoiceAction = () => {
     if (voiceState === 'idle') {
       if (continuousVoiceActive) {
         onStopVoiceConversation()
       } else {
-        void onStartVoiceConversation()
+        const patch = startDraft === draft
+          ? undefined
+          : {
+            speechInputEnabled: startDraft.speechInputEnabled,
+            speechOutputEnabled: startDraft.speechOutputEnabled,
+          }
+        void onStartVoiceConversation(patch)
       }
     } else if (voiceState === 'listening') {
       onStopVoiceConversation()
@@ -183,6 +201,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   }
 
   const updateInputEnabled = (speechInputEnabled: boolean) => {
+    markVoiceSwitchesChosen()
     setDraft((current) => ({
       ...current,
       speechInputEnabled,
@@ -226,7 +245,10 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             label={ti('settings.voice.enable_output')}
             checked={draft.speechOutputEnabled}
             disabled={!outputAvailable}
-            onChange={(value) => setSetting('speechOutputEnabled', value)}
+            onChange={(value) => {
+              markVoiceSwitchesChosen()
+              setSetting('speechOutputEnabled', value)
+            }}
           />
         </SettingsV3Row>
       </SettingsV3Section>}

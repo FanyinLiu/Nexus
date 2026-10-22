@@ -16,6 +16,8 @@ import {
   speechModelIdForProvider,
 } from '../shared/voiceModelDownloads.js'
 import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
+import { settingsSimpleGroupCopy } from '../src/components/settingsSimple/settingsSimpleCopy.ts'
+import { enableStockVoiceWhenModelsReady } from '../src/features/voiceProfile/voiceReady.ts'
 import type { AppSettings, PlatformProfile } from '../src/types/index.ts'
 
 register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
@@ -492,4 +494,177 @@ test('voice settings follow the live inventory gap, including the selected speec
   const titles = noticeTitles(section.render(base))
   assert.ok(titles.includes('还差 1 个模型没装'))
   assert.equal(titles.includes('语音一切正常'), false)
+})
+
+test('settings shows an in-flight listener download and will not start another', async () => {
+  await ensureLocaleLoaded('zh-CN')
+  const calls: unknown[] = []
+  const inventory = {
+    models: catalog.map((model) => ({
+      ...model,
+      present: model.required || model.id === 'paraformer-zh-en',
+    })),
+    ready: true,
+    missingRequired: [] as string[],
+    disk: { ok: true },
+    downloading: ['sensevoice'],
+  }
+  Object.assign(globalThis, {
+    window: {
+      desktopPet: {
+        modelsGetInventory: async () => inventory,
+        modelsDownloadMissing: async (payload?: unknown) => {
+          calls.push(payload)
+          return { results: [], inventory }
+        },
+        subscribeModelsProgress: () => () => {},
+      },
+    },
+  })
+  const view = createRenderer(LocalVoiceModelsPanel)
+  const props = {
+    uiLanguage: 'zh-CN' as const,
+    speechInputProviderId: 'local-sensevoice',
+  }
+  view.render(props)
+  for (let i = 0; i < 12; i += 1) await Promise.resolve()
+  const tree = view.render(props)
+  const text = collectText(tree).join('\n')
+  assert.ok(text.includes('正在下载 0%') || text.includes('正在下载'))
+  assert.equal(text.includes('未下载'), false)
+  const button = findElements(tree, (element) => (
+    element.props.className === 'primary-button settings-v3-voice-models__download'
+  ))[0]
+  assert.ok(button)
+  assert.equal(button.props.disabled, true)
+  ;(button.props.onClick as () => void)()
+  for (let i = 0; i < 8; i += 1) await Promise.resolve()
+  assert.deepEqual(calls, [])
+})
+
+test('ready models turn the stock voice switches on so voice can start', async () => {
+  await ensureLocaleLoaded('zh-CN')
+  const memory = new Map<string, string>()
+  Object.assign(globalThis, {
+    localStorage: {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => { memory.set(key, value) },
+      removeItem: (key: string) => { memory.delete(key) },
+    },
+  })
+  const stock = {
+    uiLanguage: 'zh-CN' as const,
+    speechInputEnabled: false,
+    speechOutputEnabled: false,
+    memoryPaused: false,
+    apiProviderId: 'ollama' as const,
+    toolWebSearchEnabled: false,
+    toolWeatherEnabled: false,
+  } as AppSettings
+  const off = settingsSimpleGroupCopy(stock).find((card) => card.id === 'voice')
+  assert.equal(off?.description, '听和说都还关着')
+  const ready = enableStockVoiceWhenModelsReady(stock, true)
+  const on = settingsSimpleGroupCopy(ready).find((card) => card.id === 'voice')
+  assert.equal(on?.description, '听和说都开着')
+  assert.equal(ready.speechInputEnabled, true)
+  assert.equal(ready.speechOutputEnabled, true)
+  const chosen = { ...stock, speechOutputEnabled: true }
+  assert.equal(enableStockVoiceWhenModelsReady(chosen, true), chosen)
+  assert.equal(enableStockVoiceWhenModelsReady(stock, false).speechInputEnabled, false)
+
+  const Inner = (VoiceSectionV3 as unknown as { type: (props: unknown) => unknown }).type
+  const view = createRenderer(Inner)
+  const draft = {
+    companionName: '星绘',
+    speechInputEnabled: false,
+    speechOutputEnabled: false,
+    continuousVoiceModeEnabled: false,
+    voiceActivityDetectionEnabled: false,
+    voiceTriggerMode: 'direct_send',
+    speechInputProviderId: 'local-sensevoice',
+    wakeWord: '星绘',
+    vadSensitivity: 'high',
+    voiceInterruptionEnabled: false,
+    speechInputFailoverEnabled: false,
+    speechOutputFailoverEnabled: false,
+    wakewordAlwaysOn: false,
+    wakewordSessionIdleTimeoutMs: 9_000,
+  } as AppSettings
+  const base = {
+    active: true,
+    audioSmokeStatus: null,
+    draft,
+    dirty: false,
+    continuousVoiceActive: false,
+    loadingSpeechVoices: false,
+    onApplySpeechOutputPreset: () => {},
+    onLoadSpeechVoices: () => {},
+    onPreviewSpeech: () => {},
+    onRunAudioSmokeTest: () => {},
+    onRunSpeechInputConnectionTest: () => {},
+    onRunSpeechOutputConnectionTest: () => {},
+    onStartVoiceConversation: async () => {},
+    onStopVoiceConversation: () => {},
+    onCancelVoiceTurn: () => {},
+    platformProfile: {
+      platform: 'darwin',
+      voice: {
+        speechInputSupported: true,
+        speechInputAvailable: true,
+        speechOutputSupported: true,
+        speechOutputAvailable: true,
+        continuousVoiceSupported: true,
+        vadSupported: true,
+        wakewordSupported: true,
+        dependencyHint: null,
+      },
+    } as PlatformProfile,
+    previewingSpeech: false,
+    speechInputEvidence: null,
+    speechOutputEvidence: null,
+    runningAudioSmoke: false,
+    saveError: false,
+    saving: false,
+    setDraft: () => {},
+    setSpeechPreviewText: () => {},
+    speechPreviewStatus: null,
+    speechPreviewText: '',
+    speechVoiceOptions: [],
+    speechVoiceStatus: null,
+    testingInputTarget: null,
+    testingOutputTarget: null,
+    uiLanguage: 'zh-CN' as const,
+    voiceActionPending: false,
+    voiceState: 'idle' as const,
+  }
+  const started: unknown[] = []
+  const readyTree = view.render({
+    ...base,
+    modelGapCount: 0,
+    onStartVoiceConversation: async (patch?: unknown) => { started.push(patch) },
+  })
+  const readyButton = findElements(readyTree, (element) => (
+    typeof element.props['aria-label'] === 'string'
+    && String(element.props['aria-label']).includes('开始语音')
+  ))[0]
+  assert.ok(readyButton)
+  assert.equal(readyButton.props.disabled, false)
+  ;(readyButton.props.onClick as () => void)()
+  assert.deepEqual(started, [{ speechInputEnabled: true, speechOutputEnabled: true }])
+
+  const waiting = view.render({ ...base, modelGapCount: 2, draft })
+  const waitingButton = findElements(waiting, (element) => (
+    typeof element.props['aria-label'] === 'string'
+    && String(element.props['aria-label']).includes('开始语音')
+  ))[0]
+  assert.equal(waitingButton?.props.disabled, true)
+
+  memory.set('nexus.voice.switches-chosen', '1')
+  const held = createRenderer(Inner).render({ ...base, modelGapCount: 0, draft })
+  const heldButton = findElements(held, (element) => (
+    typeof element.props['aria-label'] === 'string'
+    && String(element.props['aria-label']).includes('开始语音')
+  ))[0]
+  assert.equal(heldButton?.props.disabled, true)
+  memory.delete('nexus.voice.switches-chosen')
 })

@@ -16,6 +16,7 @@ import {
   isVoiceSpeechOutputAvailable,
 } from '../../lib/platformProfile.ts'
 import { keepTalkingPatch } from '../../features/settingsSimplify/index.ts'
+import { markVoiceSwitchesChosen } from '../../features/voiceProfile/voiceReady.ts'
 import { pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 import type { AppSettings, PlatformProfile, SpeechVoiceOption } from '../../types/index.ts'
@@ -98,11 +99,14 @@ export function VoiceSimplePage({
             checked={draft.speechInputEnabled}
             disabled={!inputAvailable}
             label={ti('settings.simple.voice_listen')}
-            onChange={(speechInputEnabled) => setDraft((current) => ({
-              ...current,
-              speechInputEnabled,
-              ...(!speechInputEnabled ? { continuousVoiceModeEnabled: false } : {}),
-            }))}
+            onChange={(speechInputEnabled) => {
+              markVoiceSwitchesChosen()
+              setDraft((current) => ({
+                ...current,
+                speechInputEnabled,
+                ...(!speechInputEnabled ? { continuousVoiceModeEnabled: false } : {}),
+              }))
+            }}
           />
         </SimpleRow>
         <SimpleRow icon="speaker" tone="warning" title={ti('settings.simple.voice_speak')} hint={ti('settings.simple.voice_speak_hint')}>
@@ -110,7 +114,10 @@ export function VoiceSimplePage({
             checked={draft.speechOutputEnabled}
             disabled={!outputAvailable}
             label={ti('settings.simple.voice_speak')}
-            onChange={(speechOutputEnabled) => setDraft((current) => ({ ...current, speechOutputEnabled }))}
+            onChange={(speechOutputEnabled) => {
+              markVoiceSwitchesChosen()
+              setDraft((current) => ({ ...current, speechOutputEnabled }))
+            }}
           />
         </SimpleRow>
       </section>

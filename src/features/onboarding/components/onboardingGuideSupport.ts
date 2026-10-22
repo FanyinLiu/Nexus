@@ -1,4 +1,5 @@
 import { syncWakeWordWithCompanionNameChange } from '../../hearing/companionWakeWordSync.ts'
+import { voiceFieldsFollowingUiLanguage } from '../../voiceProfile/voiceLanguages.ts'
 import {
   isSenseVoiceSpeechInputProvider,
   isSpeechOutputKeyless,
@@ -53,8 +54,9 @@ export function applyOnboardingLanguageChoice(
   draft: AppSettings,
   nextLanguage: UiLanguage,
 ): AppSettings {
+  const followed = voiceFieldsFollowingUiLanguage(draft, nextLanguage)
   return syncWakeWordWithCompanionNameChange(draft, {
-    ...draft,
+    ...followed,
     uiLanguage: nextLanguage,
     companionName: isLocaleDefaultCompanionName(draft.companionName)
       ? getDefaultCompanionName(nextLanguage)

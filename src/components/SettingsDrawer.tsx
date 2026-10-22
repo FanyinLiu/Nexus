@@ -26,6 +26,12 @@ import type { PetModelDefinition } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
+import { missingVoiceModelIds } from '../features/setup/localModelRepair.ts'
+import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLanguages.ts'
+import {
+  enableStockVoiceWhenModelsReady,
+  readVoiceSwitchesChosen,
+} from '../features/voiceProfile/voiceReady.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
 import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
@@ -59,6 +65,7 @@ import {
   clearRecentCompanionCheckInDecision,
   clearRecentCompanionSummary,
 } from '../features/context/index.ts'
+import { buildSettingsSavePayload } from './settingsDrawerHooks/settingsDraftModel.ts'
 import { commitSettingsDraft } from './settingsSaveEffects.ts'
 import { SettingsDrawerV2 } from './SettingsDrawerV2.tsx'
 import type {
@@ -255,16 +262,19 @@ export function SettingsDrawer({
   const voiceActionPendingRef = useRef(false)
 
   const applyDraftLanguage = useCallback((nextLanguage: AppSettings['uiLanguage']) => {
-    setDraft((prev) => syncWakeWordWithCompanionNameChange(prev, {
-      ...prev,
-      uiLanguage: nextLanguage,
-      companionName: isLocaleDefaultCompanionName(prev.companionName)
-        ? getDefaultCompanionName(nextLanguage)
-        : prev.companionName,
-      userName: isLocaleDefaultUserName(prev.userName)
-        ? getDefaultUserName(nextLanguage)
-        : prev.userName,
-    }))
+    setDraft((prev) => {
+      const followed = voiceFieldsFollowingUiLanguage(prev, nextLanguage)
+      return syncWakeWordWithCompanionNameChange(prev, {
+        ...followed,
+        uiLanguage: nextLanguage,
+        companionName: isLocaleDefaultCompanionName(prev.companionName)
+          ? getDefaultCompanionName(nextLanguage)
+          : prev.companionName,
+        userName: isLocaleDefaultUserName(prev.userName)
+          ? getDefaultUserName(nextLanguage)
+          : prev.userName,
+      })
+    })
   }, [setDraft])
 
   const languageControl = useSettingsLanguageControl({
@@ -513,6 +523,25 @@ export function SettingsDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only fire on open transition, not settings changes
   }, [open])
 
+  // Stock "both off" is the default, so a finished download still looks like
+  // voice was never turned on. Once the listener's models are installed, turn
+  // the pair on in the draft. A saved one-sided choice, or a switch the user
+  // has moved, stays as they left it.
+  useEffect(() => {
+    if (!open || draft.speechInputEnabled || draft.speechOutputEnabled) return undefined
+    if (readVoiceSwitchesChosen()) return undefined
+    let cancelled = false
+    const providerId = draft.speechInputProviderId
+    void window.desktopPet?.modelsGetInventory?.().then((inventory) => {
+      if (cancelled || !inventory) return
+      if (missingVoiceModelIds(inventory.models, providerId).length > 0) return
+      setDraft((current) => (
+        readVoiceSwitchesChosen() ? current : enableStockVoiceWhenModelsReady(current, true)
+      ))
+    }).catch(() => undefined)
+    return () => { cancelled = true }
+  }, [draft.speechInputEnabled, draft.speechOutputEnabled, draft.speechInputProviderId, open, setDraft])
+
   useEffect(() => {
     if (!open || !preferredSectionId) return
     shouldFocusActiveSectionHeadingRef.current = true
@@ -610,14 +639,14 @@ export function SettingsDrawer({
     restoreSettingsOpenerFocus()
   }
 
-  function commitDraft(): Promise<void> {
+  function commitDraft(override?: AppSettings): Promise<void> {
     if (saveInFlightRef.current) return saveInFlightRef.current
 
     setSaveError(false)
     setSaving(true)
     const savePromise = commitSettingsDraft({
       committed: baseline,
-      draft: createSavePayload(),
+      draft: override ? buildSettingsSavePayload(override) : createSavePayload(),
       onSave: (nextDraft) => onSave(nextDraft, baseline),
       onContextAwarenessDisabled: () => {
         clearRecentCompanionCheckInDecision()
@@ -643,14 +672,19 @@ export function SettingsDrawer({
     }
   }
 
-  async function handleStartVoiceConversation() {
+  async function handleStartVoiceConversation(patch?: {
+    speechInputEnabled: boolean
+    speechOutputEnabled: boolean
+  }) {
     if (voiceActionPendingRef.current || saveInFlightRef.current) return
+    const nextDraft = patch ? { ...draft, ...patch } : draft
+    if (patch) setDraft(nextDraft)
     voiceActionPendingRef.current = true
     setVoiceActionPending(true)
     setSaveError(false)
     try {
-      if (isDirty) {
-        await commitDraft()
+      if (patch || isDirty) {
+        await commitDraft(patch ? nextDraft : undefined)
       } else {
         onClose()
       }

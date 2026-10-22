@@ -190,20 +190,13 @@ type ModelInventory = {
   missingRequired: string[]
   primaryDir: string
   searchRoots: string[]
+  downloading?: string[]
   disk?: {
     ok: boolean
     freeBytes: number | null
     neededBytes: number
     resumable: boolean
   }
-}
-
-type PythonRuntimeStatus = {
-  pythonAvailable: boolean
-  binary: string | null
-  version: string | null
-  omniVoice: { ready: boolean; missingImports: string[] }
-  glmAsr: { ready: boolean; missingImports: string[] }
 }
 
 type ModelProgressEvent = {
@@ -908,7 +901,6 @@ declare global {
         benchmark: { status: 'ok' | 'timeout' | 'skipped' | 'error' | 'not-run'; sttRtf: number | null }
       }>
       subscribeModelsProgress: (listener: (event: ModelProgressEvent) => void) => () => void
-      pythonRuntimeStatus: () => Promise<PythonRuntimeStatus>
 
       // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
       sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; installState?: 'installed' | 'not-installed' | 'engine-missing'; modelsDir: string; currentModelId: string | null }>

@@ -89,7 +89,10 @@ export type SettingsDrawerActiveSectionProps = {
   onRemoveDailyEntry?: (id: string, day: string) => void
   onRemoveMemory: (id: string) => void
   onRemoveNotificationChannel?: (id: string) => Promise<void>
-  onStartVoiceConversation: () => Promise<void>
+  onStartVoiceConversation: (patch?: {
+    speechInputEnabled: boolean
+    speechOutputEnabled: boolean
+  }) => Promise<void>
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void

@@ -9,7 +9,6 @@ import {
   downloadMissingRequired,
   getNetworkProbe,
 } from '../services/modelManager.js'
-import { ensurePythonRuntimeStatus } from '../services/pythonRuntime.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateKwsOptionsPayload,
@@ -224,10 +223,5 @@ export function register() {
   ipcMain.handle('models:network-probe', async (event) => {
     requireTrustedSender(event)
     return getNetworkProbe()
-  })
-
-  ipcMain.handle('python:status', async (event) => {
-    requireTrustedSender(event)
-    return ensurePythonRuntimeStatus()
   })
 }

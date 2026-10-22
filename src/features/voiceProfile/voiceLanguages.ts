@@ -93,6 +93,44 @@ export function resolveStoredVoiceLanguage(stored: unknown, uiLanguage: string):
   return ui.canonical ?? 'zh-CN'
 }
 
+/**
+ * Move speech language and the stock Edge voice when the UI language
+ * changes and those fields are still the automatic seed for the language
+ * being left. A saved language or a custom voice stays where the user put it.
+ */
+export function voiceFieldsFollowingUiLanguage<T extends {
+  uiLanguage: string
+  speechRecognitionLang: string
+  speechSynthesisLang: string
+  speechOutputVoice: string
+  speechOutputProviderId?: string
+}>(draft: T, nextLanguage: string): T {
+  const previous = migrateVoiceLanguageValue(draft.uiLanguage).canonical
+  const next = migrateVoiceLanguageValue(nextLanguage).canonical
+  if (!previous || !next || previous === next) return draft
+  const recognition = migrateVoiceLanguageValue(draft.speechRecognitionLang)
+  const synthesis = migrateVoiceLanguageValue(draft.speechSynthesisLang)
+  const speechRecognitionLang = !recognition.value || recognition.canonical === previous
+    ? next
+    : draft.speechRecognitionLang
+  const speechSynthesisLang = !synthesis.value || synthesis.canonical === previous
+    ? next
+    : draft.speechSynthesisLang
+  const stockVoice = EDGE_VOICE_BY_LANGUAGE[previous]
+  const providerId = draft.speechOutputProviderId ?? 'edge-tts'
+  const currentVoice = typeof draft.speechOutputVoice === 'string' ? draft.speechOutputVoice : ''
+  const speechOutputVoice = providerId === 'edge-tts'
+    && (!currentVoice.trim() || currentVoice === stockVoice)
+    ? EDGE_VOICE_BY_LANGUAGE[next]
+    : draft.speechOutputVoice
+  if (
+    speechRecognitionLang === draft.speechRecognitionLang
+    && speechSynthesisLang === draft.speechSynthesisLang
+    && speechOutputVoice === draft.speechOutputVoice
+  ) return draft
+  return { ...draft, speechRecognitionLang, speechSynthesisLang, speechOutputVoice }
+}
+
 /** Edge voice for a canonical language, or null when the tag is custom. */
 export function defaultEdgeVoiceForLanguage(language: string): string | null {
   const canonical = migrateVoiceLanguageValue(language).canonical

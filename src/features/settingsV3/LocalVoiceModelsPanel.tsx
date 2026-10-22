@@ -107,13 +107,17 @@ export function LocalVoiceModelsPanel({
     )
   }
 
-  const rows = buildLocalModelRows(inventory.models, progress).map((row) => ({
+  const downloadingIds = inventory.downloading ?? []
+  const rows = buildLocalModelRows(inventory.models, progress, downloadingIds).map((row) => ({
     ...row,
     label: localModelCopy(row, ti).label,
   }))
   const neededIds = missingVoiceModelIds(inventory.models, speechInputProviderId)
   const missingCount = neededIds.length
   const stillNeeded = missingCount
+  const downloadInFlight = neededIds.some((id) => (
+    downloadingIds.includes(id) || rows.some((row) => row.id === id && row.status === 'downloading')
+  ))
   const busyPercent = rows.find((row) => row.status === 'downloading')?.percent
   const diskBlocked = localModelDiskBlocksDownload(inventory.disk)
   const action = localModelDownloadAction({
@@ -128,6 +132,7 @@ export function LocalVoiceModelsPanel({
       : ti('settings.voice.local_models_download')
 
   const startDownload = () => {
+    if (downloadInFlight) return
     setBusy(true)
     setError(null)
     const resumableIds = inventory.models
@@ -228,7 +233,7 @@ export function LocalVoiceModelsPanel({
             className="primary-button settings-v3-voice-models__download"
             onClick={startDownload}
             aria-busy={busy ? 'true' : undefined}
-            disabled={busy || diskBlocked || !window.desktopPet?.modelsDownloadMissing}
+            disabled={busy || downloadInFlight || diskBlocked || !window.desktopPet?.modelsDownloadMissing}
           >
             {busy ? ti('settings.voice.local_models_downloading', { percent: busyPercent ?? 0 }) : actionLabel}
           </button>

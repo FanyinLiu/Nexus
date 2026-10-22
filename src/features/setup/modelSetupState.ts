@@ -21,6 +21,8 @@ export type Inventory = {
   missingRequired: string[]
   primaryDir: string
   searchRoots: string[]
+  /** Catalog ids currently being fetched. Empty when nothing is in flight. */
+  downloading?: string[]
 }
 
 export type ProgressEvent = {

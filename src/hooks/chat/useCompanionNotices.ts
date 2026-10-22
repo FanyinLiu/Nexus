@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
@@ -85,7 +86,7 @@ export function useCompanionNotices({
           ...(options.loopCheck ? { loopCheck: options.loopCheck } : {}),
           ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
         },
-        { autoHideMs: options.autoHideMs ?? 14_000 },
+        { autoHideMs: options.autoHideMs ?? COMPANION_NOTICE_AUTO_HIDE_MS },
       )
     }
 

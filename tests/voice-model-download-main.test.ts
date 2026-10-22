@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { describe, test } from 'node:test'
 
-import { downloadMissingRequired } from '../electron/services/modelManager.js'
+import { activeModelDownloadIds, downloadMissingRequired } from '../electron/services/modelManager.js'
 
 const installedRequired = [
   { id: 'kws-en', required: true, present: true },
@@ -10,6 +10,8 @@ const installedRequired = [
   { id: 'sensevoice', required: false, present: false },
   { id: 'paraformer-zh-en', required: false, present: false },
 ]
+
+describe('downloadMissingRequired', { concurrency: 1 }, () => {
 
 test('downloadMissingRequired fetches the selected local listener', async () => {
   const fetched: string[] = []
@@ -46,4 +48,32 @@ test('downloadMissingRequired fetches the selected local listener', async () => 
     downloadOne,
   })
   assert.deepEqual(fetched, ['vad', 'sensevoice'])
+})
+
+test('a second download request while one is in flight does not fetch again', async () => {
+  const calls: string[] = []
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  const downloadOne = async (id: string) => {
+    calls.push(id)
+    await gate
+  }
+  const inventory = {
+    models: installedRequired,
+    missingRequired: [] as string[],
+    ready: true,
+  }
+  const first = downloadMissingRequired('local-sensevoice', { inventory, downloadOne })
+  const second = downloadMissingRequired('local-paraformer', { inventory, downloadOne })
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.deepEqual(calls, ['sensevoice'])
+  assert.deepEqual(activeModelDownloadIds(), ['sensevoice'])
+  release()
+  await first
+  await second
+  assert.deepEqual(calls, ['sensevoice'])
+  assert.deepEqual(activeModelDownloadIds(), [])
+})
+
 })

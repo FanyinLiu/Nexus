@@ -166,9 +166,14 @@ export function ModelSetupOverlay({
     setDismissed(true)
   }, [])
 
+  const voiceStillNeeded = inventory
+    ? missingVoiceModelIds(inventory.models, speechInputProviderId ?? '').length > 0
+    : undefined
   const overlayVisible = shouldShowModelSetupOverlay({
     dismissed,
-    inventoryReady: inventory?.ready,
+    // Required models alone are not "done": the selected listener is part of
+    // this install, and the dialog has to stay up while that file is fetched.
+    inventoryReady: voiceStillNeeded === undefined ? undefined : !voiceStillNeeded,
     requested,
     suppressed,
   })
@@ -258,7 +263,7 @@ export function ModelSetupOverlay({
   if (dismissed) return null
   if (!requested) return null
   if (!inventory) return null
-  if (inventory.ready) return null
+  if (!voiceStillNeeded) return null
 
   const missingIds = missingVoiceModelIds(inventory.models, speechInputProviderId ?? '')
   const requiredModels = inventory.models.filter(m => m.required)
@@ -270,8 +275,10 @@ export function ModelSetupOverlay({
   const renderRow = (model: ModelEntry) => {
     const p = progress[model.id]
     const pct = getModelProgressPercent(p)
-    const isActive = isModelProgressActive(p)
     const isComplete = isModelProgressComplete(p)
+    const isActive = !isComplete && (
+      isModelProgressActive(p) || (inventory.downloading ?? []).includes(model.id)
+    )
     const hasError = isModelProgressError(p)
     const isInstalled = model.present || isComplete
     const copy = localModelCopy(model, t)
