@@ -34,7 +34,7 @@ export const enSettingsWindow = {
   'settings.window.companion_backdrop': 'Show a backdrop',
   'settings.window.companion_backdrop_hint': 'Places a soft card behind the companion. Off by default, so the character stands on the desktop with no border or shadow.',
   'settings.window.typing_awareness': 'Typing awareness',
-  'settings.window.typing_awareness_hint': 'The companion reacts while you type in other apps. Off by default. Key identities are never stored or sent — only that typing is happening, and how fast.',
+  'settings.window.typing_awareness_hint': 'The companion reacts while you type in other apps. Off by default, and while it is off Nexus does not listen to the keyboard at all. Key identities are never stored or sent — only that typing is happening, and how fast.',
   'settings.window.typing_explain_title': 'Before turning on typing awareness',
   'settings.window.typing_explain_body': 'Nexus will watch keyboard activity on this computer to tell when you are typing and roughly how fast. It does not save which keys you press, and it does not send them to a model or the network. On macOS, allow Accessibility or Input Monitoring for Nexus in System Settings.',
   'settings.window.typing_explain_confirm': 'I understand, turn it on',

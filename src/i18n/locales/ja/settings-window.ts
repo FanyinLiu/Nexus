@@ -34,7 +34,7 @@ export const jaSettingsWindow = {
   'settings.window.companion_backdrop': '背景カードを表示',
   'settings.window.companion_backdrop_hint': 'コンパニオンの後ろにやわらかいカードを置きます。初期状態ではオフで、キャラクターは枠も影もなくデスクトップに直接立ちます。',
   'settings.window.typing_awareness': 'タイピング感知',
-  'settings.window.typing_awareness_hint': 'ほかのアプリで入力しているあいだ、パートナーが反応します。初期状態ではオフです。どのキーを押したかは保存も送信もせず、入力の有無とおおよその速さだけを使います。',
+  'settings.window.typing_awareness_hint': 'ほかのアプリで入力しているあいだ、パートナーが反応します。初期状態ではオフで、オフのあいだ Nexus はキーボードをまったく読み取りません。どのキーを押したかは保存も送信もせず、入力の有無とおおよその速さだけを使います。',
   'settings.window.typing_explain_title': 'タイピング感知をオンにする前に',
   'settings.window.typing_explain_body': 'この Mac / PC のキーボード活動を見て、入力中かどうかとおおよその速さを判断します。押したキーの内容は保存せず、モデルやネットワークにも送りません。macOS ではシステム設定でアクセシビリティまたは入力監視を許可してください。',
   'settings.window.typing_explain_confirm': '理解してオンにする',

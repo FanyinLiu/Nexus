@@ -34,7 +34,7 @@ export const zhTWSettingsWindow = {
   'settings.window.companion_backdrop': '顯示背景卡片',
   'settings.window.companion_backdrop_hint': '在角色後面放一塊柔和的卡片。預設關閉，角色直接站在桌面上，沒有邊框和陰影。',
   'settings.window.typing_awareness': '打字感知',
-  'settings.window.typing_awareness_hint': '在其他應用程式打字時，伙伴會跟著做出反應。預設關閉。不會記錄或上傳按了哪些鍵，只知道正在打字和大致速度。',
+  'settings.window.typing_awareness_hint': '在其他應用程式打字時，伙伴會跟著做出反應。預設關閉；關閉時，Nexus 完全不會讀取鍵盤。不會記錄或上傳按了哪些鍵，只知道正在打字和大致速度。',
   'settings.window.typing_explain_title': '開啟打字感知前',
   'settings.window.typing_explain_body': '這會在這台電腦監聽鍵盤活動，用來判斷你是否正在打字以及大致速度。按鍵內容不會被保存，也不會發給模型或網路。macOS 需要在系統設定裡允許輔助使用或輸入監控。',
   'settings.window.typing_explain_confirm': '知道了，開啟',
