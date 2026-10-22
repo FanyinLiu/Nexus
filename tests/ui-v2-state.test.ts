@@ -172,7 +172,7 @@ test('V2 voice actions have accurate localized names in every locale', () => {
 })
 
 test('the new pet bubble shows the model-setup reminder instead of the error', () => {
-  const reminder = '想用语音的话，去「设置 → 语音 → 高级」点「下载缺失模型」就行。'
+  const reminder = '语音还没装好，去「设置 → 语音 → 高级」里下载。'
   const missingModel = 'voice-model-missing'
   const generic = '刚才出了点问题，可以检查设置后再试。'
   const shared = {

@@ -201,6 +201,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
         setLiveTranscript: setters.setLiveTranscript,
         updateVoicePipeline: hookCallbacks.updateVoicePipeline,
         showPetStatus: hookCallbacks.showPetStatus,
+        presentCompanionNotice: hookCallbacks.presentCompanionNotice,
         handleRecognizedVoiceTranscript: bindings.handleRecognizedVoiceTranscript,
         handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,
         shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,

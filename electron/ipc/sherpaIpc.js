@@ -13,6 +13,7 @@ import { ensurePythonRuntimeStatus } from '../services/pythonRuntime.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateKwsOptionsPayload,
+  validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
   validateVadStartPayload,
 } from './payloadSchemas.js'
@@ -214,9 +215,10 @@ export function register() {
     return getModelInventory()
   })
 
-  ipcMain.handle('models:download-missing', async (event) => {
+  ipcMain.handle('models:download-missing', async (event, payload) => {
     requireTrustedSender(event)
-    return downloadMissingRequired()
+    payload = validateModelDownloadMissingPayload(payload)
+    return downloadMissingRequired(payload.speechInputProviderId)
   })
 
   ipcMain.handle('models:network-probe', async (event) => {

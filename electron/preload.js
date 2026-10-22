@@ -139,7 +139,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Model manager (first-launch setup wizard)
   modelsGetInventory: () => ipcRenderer.invoke('models:inventory'),
   modelsDownload: (modelId) => ipcRenderer.invoke('models:download', { modelId }),
-  modelsDownloadMissing: () => ipcRenderer.invoke('models:download-missing'),
+  modelsDownloadMissing: (payload) => ipcRenderer.invoke('models:download-missing', payload),
   modelsNetworkProbe: () => ipcRenderer.invoke('models:network-probe'),
   voiceProfileProbe: (payload) => ipcRenderer.invoke('voice-profile:probe', payload ?? {}),
   pythonRuntimeStatus: () => ipcRenderer.invoke('python:status'),

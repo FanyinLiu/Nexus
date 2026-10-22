@@ -10,6 +10,8 @@ export const zhCNSettingsVoice = {
   'settings.voice.status_input_unavailable': '当前平台缺少语音输入能力。',
   'settings.voice.status_output_ready': '会开口回你',
   'settings.voice.status_all_clear': '语音一切正常',
+  'settings.voice.status_models_missing_one': '还差 {count} 个模型没装',
+  'settings.voice.status_models_missing_other': '还差 {count} 个模型没装',
   'settings.voice.status_output_unavailable': '当前平台缺少语音输出能力。',
   'settings.voice.status_continuous_on': '连续开启',
   'settings.voice.status_continuous_off': '手动触发',

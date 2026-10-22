@@ -254,7 +254,7 @@
   line-height: 1.55;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .nexus-companion-v2__caption-expand {
@@ -352,7 +352,7 @@
   }
 
   .nexus-companion-v2__caption > span {
-    -webkit-line-clamp: 1;
+    -webkit-line-clamp: 3;
   }
 
   .nexus-companion-v2__utility-menu {

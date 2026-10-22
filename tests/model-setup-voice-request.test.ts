@@ -273,21 +273,32 @@ test('the installer promises the one reminder in every locale', () => {
   }
 })
 
-test('the reminder and the missing-model line point at Voice → Advanced', () => {
+test('the reminder and the missing-model lines point at Voice → Advanced', () => {
   const dictionaries = [
-    [zhCNMessages, '想用语音的话，去「设置 → 语音 → 高级」点「下载缺失模型」就行。'],
-    [zhTWMessages, '想用語音的話，去「設定 → 語音 → 進階」點「下載缺失模型」就行。'],
-    [enMessages, 'Want to use voice? Go to Settings → Voice → Advanced and click "Download missing models".'],
-    [jaMessages, '声で話したいなら、「設定 → 音声 → 高度設定」で「不足モデルをダウンロード」を押してね。'],
-    [koMessages, '음성을 쓰려면 「설정 → 음성 → 고급」에서 「없는 모델 다운로드」를 눌러 주세요.'],
+    [zhCNMessages, '语音还没装好，去「设置 → 语音 → 高级」里下载。', '语音组件没装好，重新安装一下应用就行。', '还差 {count} 个模型没装'],
+    [zhTWMessages, '語音還沒裝好，去「設定 → 語音 → 進階」裡下載。', '語音元件沒裝好，重新安裝一下應用就行。', '還差 {count} 個模型沒裝'],
+    [enMessages, 'Voice isn\'t ready yet. Download it in Settings → Voice → Advanced.', 'The voice piece isn\'t installed. Reinstall the app and it\'ll be ready.', '{count} model still isn\'t installed'],
+    [jaMessages, '音声がまだ入ってないよ。「設定 → 音声 → 高度設定」でダウンロードしてね。', '音声の部品が入ってないみたい。アプリを入れ直してね。', 'まだ {count} 個のモデルが入っていないよ'],
+    [koMessages, '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.', '음성 부품이 설치되지 않았어요. 앱을 다시 설치하면 돼요.', '아직 모델 {count}개가 설치되지 않았어요'],
   ] as const
 
-  for (const [dictionary, expected] of dictionaries) {
+  for (const [dictionary, expected, nodeMissing, missingOne] of dictionaries) {
     assert.equal(dictionary['model_setup.deferred_reminder'], expected)
     assert.equal(dictionary['voice.provider.sensevoice.not_installed'], expected)
+    assert.equal(dictionary['voice.provider.paraformer.model_missing'], expected)
+    assert.equal(dictionary['voice.provider.sensevoice.node_missing'], nodeMissing)
+    assert.equal(dictionary['settings.voice.status_models_missing_one'], missingOne)
     assert.ok(expected.includes(dictionary['settings.title']))
     assert.ok(expected.includes(dictionary['settings.simple.voice']))
     assert.ok(expected.includes(dictionary['settings.voice.advanced_title']))
-    assert.ok(expected.includes(dictionary['settings.voice.local_models_download']))
+    assert.doesNotMatch(nodeMissing, /npm|sherpa/i)
+    if (dictionary === enMessages) {
+      assert.equal(
+        dictionary['settings.voice.status_models_missing_other'],
+        '{count} models still aren\'t installed',
+      )
+    } else {
+      assert.equal(dictionary['settings.voice.status_models_missing_other'], missingOne)
+    }
   }
 })

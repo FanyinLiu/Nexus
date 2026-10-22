@@ -115,6 +115,7 @@ function installBridge(
   options: {
     gate?: ReturnType<typeof createModelSetupRequestGate>
     senseVoice?: { installed: boolean; modelFound: boolean; modelsDir: string }
+    paraformer?: { installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }
   } = {},
 ) {
   let requests = 0
@@ -127,6 +128,12 @@ function installBridge(
           installed: false,
           modelFound: false,
           modelsDir: '',
+        },
+        paraformerStatus: async () => options.paraformer ?? {
+          installed: false,
+          modelFound: false,
+          modelsDir: '',
+          currentModelId: null,
         },
         requestModelSetup: async () => { requests += 1 },
         // The refusal and the reminder it owes live in the main process.
@@ -189,8 +196,8 @@ test('a refused installer reminds once on the next voice action', async () => {
 
   assert.deepEqual(
     reminders,
-    ['model_setup.deferred_reminder'],
-    'the reminder is owed only once',
+    ['model_setup.deferred_reminder', 'voice.provider.sensevoice.node_missing'],
+    'the installer reminder is owed only once; the next press keeps the missing-runtime line',
   )
   assert.equal(bridge.getRequests(), 0, 'the refused installer stays closed')
 })
@@ -228,12 +235,58 @@ test('a missing SenseVoice model shows the reminder instead of the error', async
   lifecycle.toggleVoiceConversation()
   await flushAsyncWork()
 
-  assert.deepEqual(reminders, [{
-    content: 'model_setup.deferred_reminder',
-    replacesSurfaceError: true,
-  }], 'the reminder is owed only once')
-  assert.deepEqual(errors, ['voice.provider.sensevoice.not_installed'])
-  assert.deepEqual(statuses, ['voice.provider.sensevoice.not_installed'])
+  assert.deepEqual(reminders, [
+    {
+      content: 'model_setup.deferred_reminder',
+      replacesSurfaceError: true,
+    },
+    {
+      content: 'voice.provider.sensevoice.not_installed',
+      replacesSurfaceError: true,
+    },
+  ], 'after the one reminder, the missing model stays a single pet line')
+  assert.deepEqual(errors, [], 'the missing-model sentence is not a chat error that later becomes generic')
+  assert.deepEqual(statuses, [])
+})
+
+test('a missing speech model is only the pet line, including the runtime and Paraformer', async () => {
+  const cases = [
+    {
+      providerId: 'local-sensevoice',
+      senseVoice: { installed: false, modelFound: false, modelsDir: '' },
+      expected: 'voice.provider.sensevoice.node_missing',
+    },
+    {
+      providerId: 'local-paraformer',
+      paraformer: { installed: true, modelFound: false, modelsDir: '/models', currentModelId: null },
+      expected: 'voice.provider.paraformer.model_missing',
+    },
+  ] as const
+
+  for (const item of cases) {
+    const reminders: Array<{ content: string; replacesSurfaceError?: boolean }> = []
+    const errors: Array<string | null> = []
+    const statuses: string[] = []
+    installBridge(true, {
+      senseVoice: 'senseVoice' in item ? item.senseVoice : undefined,
+      paraformer: 'paraformer' in item ? item.paraformer : undefined,
+    })
+    const lifecycle = createLifecycle('pet', {
+      speechInputProviderId: item.providerId,
+      onReminder: (content, notice) => {
+        reminders.push({ content, replacesSurfaceError: notice?.replacesSurfaceError })
+      },
+      onError: (error) => { errors.push(error) },
+      onStatus: (message) => { statuses.push(message) },
+    })
+
+    lifecycle.toggleVoiceConversation()
+    await flushAsyncWork()
+
+    assert.deepEqual(reminders, [{ content: item.expected, replacesSurfaceError: true }])
+    assert.deepEqual(errors, [])
+    assert.deepEqual(statuses, [])
+  }
 })
 
 test('a voice action without a refusal offers the installer instead of reminding', async () => {
@@ -248,6 +301,10 @@ test('a voice action without a refusal offers the installer instead of reminding
   lifecycle.toggleVoiceConversation()
   await flushAsyncWork()
 
-  assert.deepEqual(reminders, [], 'nothing is owed while the installer may still open')
+  assert.deepEqual(
+    reminders,
+    ['voice.provider.sensevoice.node_missing'],
+    'the installer is still the offer; the pet line is the missing runtime, not the one reminder',
+  )
   assert.equal(bridge.getRequests(), 1, 'the installer is offered as before')
 })

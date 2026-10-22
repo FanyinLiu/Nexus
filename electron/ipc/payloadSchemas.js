@@ -23,6 +23,7 @@ export {
   validateAudioSynthesisPayload,
   validateAudioTranscriptionPayload,
   validateKwsOptionsPayload,
+  validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
   validateSpeechVoiceListPayload,
   validateTencentAsrConnectPayload,

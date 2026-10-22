@@ -12,6 +12,8 @@ export const koSettingsVoice = {
   'settings.voice.status_input_unavailable': '이 플랫폼에서는 음성 입력을 사용할 수 없습니다.',
   'settings.voice.status_output_ready': '말로 대답해요',
   'settings.voice.status_all_clear': '음성은 정상이에요',
+  'settings.voice.status_models_missing_one': '아직 모델 {count}개가 설치되지 않았어요',
+  'settings.voice.status_models_missing_other': '아직 모델 {count}개가 설치되지 않았어요',
   'settings.voice.status_output_unavailable': '이 플랫폼에서는 음성 출력을 사용할 수 없습니다.',
   'settings.voice.status_continuous_on': '연속',
   'settings.voice.status_continuous_off': '수동',

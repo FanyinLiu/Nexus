@@ -12,6 +12,8 @@ export const zhTWSettingsVoice = {
   'settings.voice.status_input_unavailable': '目前平台缺少語音輸入能力。',
   'settings.voice.status_output_ready': '會開口回你',
   'settings.voice.status_all_clear': '語音一切正常',
+  'settings.voice.status_models_missing_one': '還差 {count} 個模型沒裝',
+  'settings.voice.status_models_missing_other': '還差 {count} 個模型沒裝',
   'settings.voice.status_output_unavailable': '目前平台缺少語音輸出能力。',
   'settings.voice.status_continuous_on': '連續開啟',
   'settings.voice.status_continuous_off': '手動觸發',

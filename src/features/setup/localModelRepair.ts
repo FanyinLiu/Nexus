@@ -7,6 +7,7 @@
  * existing catalog calls.
  */
 
+import { selectMissingVoiceModelIds, speechModelIdForProvider } from '../../../shared/voiceModelDownloads.js'
 import type { TranslationKey } from '../../types/i18n.ts'
 import {
   getModelProgressPercent,
@@ -111,6 +112,40 @@ export function localModelCopy(
  */
 export function countLocalModelsStillNeeded(rows: LocalModelRowView[]): number {
   return rows.filter((row) => row.required && row.status !== 'installed').length
+}
+
+/**
+ * Models the Voice page still has to fetch for this listener, including
+ * the speech model the catalog does not mark required.
+ */
+export function missingVoiceModelIds(
+  models: LocalModelEntry[],
+  speechInputProviderId: string,
+): string[] {
+  return selectMissingVoiceModelIds(models, speechInputProviderId)
+}
+
+/**
+ * IPC payload for "Download missing models". Omitted for a cloud listener
+ * so the main process keeps the required-only set.
+ */
+export function voiceModelDownloadPayload(
+  speechInputProviderId: string,
+): { speechInputProviderId: string } | undefined {
+  if (!speechModelIdForProvider(speechInputProviderId)) return undefined
+  return { speechInputProviderId }
+}
+
+/**
+ * Status line on the Voice page. A missing count replaces "everything is
+ * fine". English uses a separate key so the noun can be singular.
+ */
+export function voiceSettingsStatusKey(missingCount: number | null): TranslationKey | null {
+  if (missingCount === null) return null
+  if (missingCount <= 0) return 'settings.voice.status_all_clear'
+  return missingCount === 1
+    ? 'settings.voice.status_models_missing_one'
+    : 'settings.voice.status_models_missing_other'
 }
 
 function rowBase(model: LocalModelEntry) {

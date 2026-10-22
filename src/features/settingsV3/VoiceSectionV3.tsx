@@ -1,4 +1,4 @@
-import { memo, type Dispatch, type SetStateAction } from 'react'
+import { memo, useState, type Dispatch, type SetStateAction } from 'react'
 import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
@@ -34,6 +34,7 @@ import {
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 import { VoiceProfileSuggestion } from '../../components/VoiceProfileSuggestion.tsx'
+import { voiceSettingsStatusKey } from '../setup/localModelRepair.ts'
 import { LocalVoiceModelsPanel } from './LocalVoiceModelsPanel.tsx'
 import { SpeechInputProviderV3 } from './SpeechInputProviderV3.tsx'
 import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3.tsx'
@@ -74,6 +75,8 @@ export type VoiceSectionV3Props = {
   voiceActionPending: boolean
   voiceState: VoiceState
   surface?: 'full' | 'rest'
+  /** Visual-matrix hook. Production leaves this unset and uses the live inventory. */
+  modelGapCount?: number
 }
 
 export const VoiceSectionV3 = memo(function VoiceSectionV3({
@@ -111,7 +114,10 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   voiceActionPending,
   voiceState,
   surface = 'full',
+  modelGapCount,
 }: VoiceSectionV3Props) {
+  const [reportedModelGap, setReportedModelGap] = useState<number | null>(null)
+  const modelGap = modelGapCount ?? reportedModelGap
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const tiParam = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -190,7 +196,11 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
     <SettingsV3Page className={active ? 'settings-v3-voice' : 'is-hidden settings-v3-voice'}>
       {platformHint ? <SettingsV3Notice tone="warning" title={platformHint} /> : null}
       {surface === 'rest' ? null : <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />}
-      <LocalVoiceModelsPanel uiLanguage={uiLanguage} />
+      <LocalVoiceModelsPanel
+        uiLanguage={uiLanguage}
+        speechInputProviderId={draft.speechInputProviderId}
+        onMissingCount={setReportedModelGap}
+      />
 
       {surface === 'rest' ? null : <SettingsV3Section title={ti('settings.voice.loop_title')}>
         <SettingsV3Row
@@ -222,10 +232,12 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
       </SettingsV3Section>}
 
       <SettingsV3Notice
-        tone={audioSmokeStatus && !audioSmokeStatus.ok ? 'error' : 'success'}
+        tone={audioSmokeStatus && !audioSmokeStatus.ok ? 'error' : modelGap ? 'warning' : 'success'}
         title={audioSmokeStatus && !audioSmokeStatus.ok
           ? (smokeMessage || ti('settings.voice.audio_smoke_error'))
-          : ti('settings.voice.status_all_clear')}
+          : voiceSettingsStatusKey(modelGap) === null
+            ? ti('settings.voice.status_all_clear')
+            : tiParam(voiceSettingsStatusKey(modelGap)!, { count: modelGap ?? 0 })}
         announce={Boolean(audioSmokeStatus)}
       />
       {saveError ? <SettingsV3Notice tone="error" title={ti('settings.save_failed_fallback')} /> : null}

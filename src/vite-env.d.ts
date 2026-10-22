@@ -880,7 +880,7 @@ declare global {
       // Model manager (first-launch setup wizard)
       modelsGetInventory: () => Promise<ModelInventory>
       modelsDownload: (modelId: string) => Promise<ModelInventory>
-      modelsDownloadMissing: () => Promise<{ results: { id: string; ok: boolean; message?: string }[]; inventory: ModelInventory }>
+      modelsDownloadMissing: (payload?: { speechInputProviderId?: string }) => Promise<{ results: { id: string; ok: boolean; message?: string }[]; inventory: ModelInventory }>
       modelsNetworkProbe: () => Promise<{ huggingFaceReachable: boolean }>
       voiceProfileProbe: (payload?: { benchmark?: boolean }) => Promise<{
         ok: boolean

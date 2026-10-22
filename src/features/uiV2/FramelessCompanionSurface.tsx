@@ -136,6 +136,7 @@ export function FramelessCompanionSurface({
   const [utilityOpen, setUtilityOpen] = useState(false)
   const [captionPaused, setCaptionPaused] = useState(false)
   const [revealedStateLabel, setRevealedStateLabel] = useState<'listening' | 'thinking' | null>(null)
+  const [blockGenericRecovery, setBlockGenericRecovery] = useState(false)
 
   const ti = useCallback((
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -203,16 +204,36 @@ export function FramelessCompanionSurface({
     if (touchTimeoutRef.current !== null) window.clearTimeout(touchTimeoutRef.current)
   }, [])
 
+  const specificSurfaceError = Boolean(chat.error?.trim() || runtimeSnapshot.wakewordError?.trim())
+  const replacingNotice = Boolean(
+    chat.petDialogBubble?.replacesSurfaceError && chat.petDialogBubble.content?.trim(),
+  )
+  // A specific line (the reminder, or the missing-model sentence) must not
+  // be followed by the generic recovery line. chat.error clears itself after
+  // 8s while presence can still say "error", and that gap would otherwise
+  // fill with ui_v2.error_recovery. The latch is adjusted during render so
+  // the caption in this commit already agrees with it.
+  const blockGeneric = (replacingNotice || specificSurfaceError)
+    ? true
+    : basePhase !== 'error'
+      ? false
+      : blockGenericRecovery
+  if (blockGeneric !== blockGenericRecovery) setBlockGenericRecovery(blockGeneric)
   const nextCaption = resolveFramelessCompanionCaption({
     captionOverride,
-    phase,
+    // basePhase, not the lagged presentation phase: the render that clears
+    // chat.error would still be "error" for one commit and would adopt the
+    // generic recovery line.
+    phase: basePhase,
     petDialogBubble: chat.petDialogBubble,
-    assistantReply: phase === 'error' || phase === 'offline'
+    assistantReply: basePhase === 'error' || basePhase === 'offline'
       ? undefined
       : chat.petDialogBubble?.content,
     chatError: chat.error,
     wakewordError: runtimeSnapshot.wakewordError,
-    errorRecovery: ti('ui_v2.error_recovery'),
+    // Empty skips the generic fallback. `trimmed` treats it as no line, and
+    // the caption input type requires a string.
+    errorRecovery: blockGeneric ? '' : ti('ui_v2.error_recovery'),
     offlineRecovery: ti('ui_v2.offline_recovery'),
   })
   const hasPriorityNotice = Boolean(

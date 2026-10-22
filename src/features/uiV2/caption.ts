@@ -18,7 +18,9 @@ export function useReadableCaption(
   phase: CompanionSurfacePhase,
   paused = false,
 ): string {
-  const [visibleText, setVisibleText] = useState('')
+  const [visibleText, setVisibleText] = useState(() => (
+    nextText && companionCaptionPhaseAcceptsText(phase) ? nextText : ''
+  ))
   const timerRef = useRef<number | null>(null)
 
   useEffect(() => {

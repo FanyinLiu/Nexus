@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   buildLocalModelRows,
-  countLocalModelsStillNeeded,
   localModelCopy,
+  missingVoiceModelIds,
+  voiceModelDownloadPayload,
   localModelCanResume,
   localModelDiskBlocksDownload,
   localModelDownloadAction,
@@ -23,13 +24,19 @@ import {
 
 type LocalVoiceModelsPanelProps = {
   uiLanguage: UiLanguage
+  speechInputProviderId: string
+  onMissingCount?: (count: number | null) => void
 }
 
 /**
  * Local model status and download on the Voice page. Dismissal of the
  * first-launch dialog does not hide this panel.
  */
-export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps) {
+export function LocalVoiceModelsPanel({
+  uiLanguage,
+  speechInputProviderId,
+  onMissingCount,
+}: LocalVoiceModelsPanelProps) {
   const ti = useCallback(
     (
       key: Parameters<typeof pickTranslatedUiText>[1],
@@ -85,6 +92,11 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
     }
   }, [refresh, ti])
 
+  useEffect(() => {
+    if (!loaded) return
+    onMissingCount?.(inventory ? missingVoiceModelIds(inventory.models, speechInputProviderId).length : null)
+  }, [inventory, loaded, onMissingCount, speechInputProviderId])
+
   if (!loaded) return null
 
   if (!inventory) {
@@ -99,8 +111,9 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
     ...row,
     label: localModelCopy(row, ti).label,
   }))
-  const missingCount = inventory.missingRequired.length
-  const stillNeeded = countLocalModelsStillNeeded(rows)
+  const neededIds = missingVoiceModelIds(inventory.models, speechInputProviderId)
+  const missingCount = neededIds.length
+  const stillNeeded = missingCount
   const busyPercent = rows.find((row) => row.status === 'downloading')?.percent
   const diskBlocked = localModelDiskBlocksDownload(inventory.disk)
   const action = localModelDownloadAction({
@@ -120,10 +133,12 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
     const resumableIds = inventory.models
       .filter((model) => model.resumable && !model.present)
       .map((model) => model.id)
-    const requiredIds = new Set(inventory.missingRequired)
+    const requiredIds = new Set(neededIds)
     const run = async () => {
       if (missingCount > 0) {
-        const result = await window.desktopPet?.modelsDownloadMissing?.()
+        const result = await window.desktopPet?.modelsDownloadMissing?.(
+          voiceModelDownloadPayload(speechInputProviderId),
+        )
         if (result?.inventory) setInventory(result.inventory)
         const failed = result?.results.filter((item) => !item.ok) ?? []
         if (failed.length) {
@@ -166,10 +181,10 @@ export function LocalVoiceModelsPanel({ uiLanguage }: LocalVoiceModelsPanelProps
         <SettingsV3Notice tone="warning" title={ti('settings.voice.local_models_disk')} />
       ) : null}
       {error ? <SettingsV3Notice tone="error" title={error} announce /> : null}
-      {inventory.ready && !error ? (
+      {missingCount === 0 && !error ? (
         <SettingsV3Notice tone="success" title={ti('settings.voice.local_models_ready')} />
       ) : null}
-      {!inventory.ready && stillNeeded > 0 ? (
+      {stillNeeded > 0 ? (
         <p className="settings-v3-voice-models__summary">
           {ti('settings.voice.local_models_missing', { count: stillNeeded })}
         </p>

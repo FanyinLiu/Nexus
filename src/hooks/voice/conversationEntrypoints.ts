@@ -47,6 +47,23 @@ async function modelSetupReminderReplacesMissingModelError(
   }
 }
 
+/**
+ * The missing-model line is the whole message. `setError` clears itself
+ * after 8 seconds, and the pet caption then falls through to the generic
+ * recovery line. A companion notice stays the only sentence.
+ */
+function showMissingVoiceGuidance(
+  params: StartVoiceConversationEntrypointOptions,
+  message: string,
+) {
+  if (params.presentCompanionNotice) {
+    params.presentCompanionNotice(message, { replacesSurfaceError: true })
+    return
+  }
+  params.setError(message)
+  params.showPetStatus(message, 5_000)
+}
+
 type ShowPetStatus = (
   message: string,
   duration?: number,
@@ -92,6 +109,7 @@ export type StartVoiceConversationEntrypointOptions = {
     transcript?: string,
   ) => void
   showPetStatus: ShowPetStatus
+  presentCompanionNotice?: (content: string, options?: { replacesSurfaceError?: boolean }) => void
   handleRecognizedVoiceTranscript: (
     transcript: string,
     options?: { traceId?: string },
@@ -167,9 +185,7 @@ export function startVoiceConversationEntrypoint(
       }
       if (!status.installed || !status.modelFound) {
         if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
-        const msg = params.ti('voice.provider.paraformer.model_missing')
-        params.setError(msg)
-        params.showPetStatus(msg, 5_000)
+        showMissingVoiceGuidance(params, params.ti('voice.provider.paraformer.model_missing'))
         console.warn('[Voice] Paraformer unavailable:', status)
         return
       }
@@ -208,11 +224,12 @@ export function startVoiceConversationEntrypoint(
           }
         }
         if (await modelSetupReminderReplacesMissingModelError(params.modelSetupOutcome)) return
-        const msg = !status.installed
-          ? params.ti('voice.provider.sensevoice.node_missing')
-          : params.ti('voice.provider.sensevoice.not_installed')
-        params.setError(msg)
-        params.showPetStatus(msg, 5_000)
+        showMissingVoiceGuidance(
+          params,
+          !status.installed
+            ? params.ti('voice.provider.sensevoice.node_missing')
+            : params.ti('voice.provider.sensevoice.not_installed'),
+        )
         console.warn('[Voice] SenseVoice unavailable:', status)
         return
       }

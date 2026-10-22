@@ -28,6 +28,7 @@ import {
 } from './modelPaths.js'
 import { migrateLegacySenseVoice } from './senseVoiceMigration.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { selectMissingVoiceModelIds } from '../../shared/voiceModelDownloads.js'
 
 const PROGRESS_CHANNEL = 'models:download-progress'
 
@@ -123,9 +124,11 @@ export async function downloadModel(modelId) {
   return withDownloadLock(() => _downloadOne(modelId))
 }
 
-export async function downloadMissingRequired() {
+export async function downloadMissingRequired(speechInputProviderId) {
   const inventory = getInventory()
-  const toFetch = inventory.missingRequired
+  // Required models alone skip the listener the user selected. The provider
+  // id is optional so the first-launch installer keeps its previous set.
+  const toFetch = selectMissingVoiceModelIds(inventory.models, speechInputProviderId)
   const results = []
   for (const id of toFetch) {
     try {
