@@ -258,3 +258,31 @@ test('the installer opens with the voice invite in every locale', () => {
     assert.equal(dictionary['model_setup.voice_invite'], expected)
   }
 })
+
+test('the installer promises the one reminder in every locale', () => {
+  const dictionaries = [
+    [zhCNMessages, '先跳过也行 —— 下次想说话的时候我再提醒你一次。'],
+    [zhTWMessages, '先跳過也行 —— 下次想說話的時候我再提醒你一次。'],
+    [enMessages, 'Skip it for now — I will nudge you once next time you want to talk.'],
+    [jaMessages, '今はスキップしても大丈夫 —— 次に話したくなったら一度だけ声をかけるね。'],
+    [koMessages, '지금은 넘어가도 돼요 — 다음에 이야기하고 싶을 때 한 번만 알려드릴게요.'],
+  ] as const
+
+  for (const [dictionary, expected] of dictionaries) {
+    assert.equal(dictionary['model_setup.dismiss_hint'], expected)
+  }
+})
+
+test('the reminder about the missing models reads the same in every locale', () => {
+  const dictionaries = [
+    [zhCNMessages, '还没装语音模型呢 —— 装上就能直接跟我说话啦。'],
+    [zhTWMessages, '還沒裝語音模型呢 —— 裝上就能直接跟我說話啦。'],
+    [enMessages, 'No voice models yet — install them and we can talk out loud.'],
+    [jaMessages, '音声モデルがまだ入っていないよ。入れれば声で話せるよ。'],
+    [koMessages, '음성 모델이 아직 없어요. 설치하면 목소리로 이야기할 수 있어요.'],
+  ] as const
+
+  for (const [dictionary, expected] of dictionaries) {
+    assert.equal(dictionary['model_setup.deferred_reminder'], expected)
+  }
+})

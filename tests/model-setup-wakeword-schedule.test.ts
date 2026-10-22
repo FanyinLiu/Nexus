@@ -192,13 +192,13 @@ test('saving the wake word off before the delay retracts the pending request', a
 test('pet-side delivery checks inventory before opening the panel', async () => {
   for (const mode of ['ready', 'unreadable'] as const) {
     const { calls } = installWindowMock(mode)
-    const delivered = await requestModelSetupForVoiceUse('pet')
-    assert.equal(delivered, false, `${mode} inventory must stay quiet`)
+    const outcome = await requestModelSetupForVoiceUse('pet')
+    assert.equal(outcome.delivered, false, `${mode} inventory must stay quiet`)
     assert.equal(calls.request, 0, `${mode} inventory must not open the panel`)
   }
 
   const { calls } = installWindowMock('missing')
-  const delivered = await requestModelSetupForVoiceUse('pet')
-  assert.equal(delivered, true)
+  const outcome = await requestModelSetupForVoiceUse('pet')
+  assert.equal(outcome.delivered, true)
   assert.equal(calls.request, 1)
 })

@@ -511,6 +511,7 @@ declare global {
       dragBy: (delta: { x: number; y: number }) => Promise<void>
       openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
       requestModelSetup: (options?: { delayMs?: number; cancel?: boolean }) => Promise<void>
+      claimModelSetupReminder?: () => Promise<{ declined: boolean; remind: boolean }>
       consumeModelSetupRequest?: () => Promise<boolean>
       declineModelSetup?: () => Promise<void>
       subscribeModelSetupRequest?: (listener: () => void) => () => void

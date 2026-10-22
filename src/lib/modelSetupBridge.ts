@@ -15,6 +15,9 @@ import {
   MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS,
   requestModelSetupOnVoiceUse,
   resolveModelSetupRequestRoute,
+  resolveModelSetupVoiceAction,
+  type ModelSetupDeferral,
+  type ModelSetupVoiceOutcome,
 } from '../features/setup/modelSetupRequests.ts'
 import type { WindowView } from '../types'
 
@@ -53,9 +56,35 @@ async function deliverModelSetupRequest(view: WindowView): Promise<boolean> {
  * are actually missing. An unreadable inventory stays quiet so a transient
  * bridge failure cannot cover the user's screen.
  */
-export async function requestModelSetupForVoiceUse(view: WindowView): Promise<boolean> {
-  if (!(await hasMissingModels())) return false
-  return deliverModelSetupRequest(view)
+export async function requestModelSetupForVoiceUse(view: WindowView): Promise<ModelSetupVoiceOutcome> {
+  if (!(await hasMissingModels())) return { delivered: false, remind: false }
+
+  const deferral = await readModelSetupDeferral()
+  const action = resolveModelSetupVoiceAction(deferral)
+  if (action === 'remind') return { delivered: false, remind: true }
+  if (action === 'quiet') return { delivered: false, remind: false }
+
+  return { delivered: await deliverModelSetupRequest(view), remind: false }
+}
+
+/**
+ * Reads the installer's deferral state from the main process. The refusal and
+ * the one reminder it owes live there, so every window answers the same way.
+ */
+async function readModelSetupDeferral(): Promise<ModelSetupDeferral> {
+  const claim = window.desktopPet?.claimModelSetupReminder
+  if (!claim) return { declined: false, remind: false }
+  try {
+    const state = await claim()
+    return {
+      declined: state?.declined === true,
+      remind: state?.remind === true,
+    }
+  } catch {
+    // A bridge that cannot answer leaves the installer alone: the offer stays
+    // allowed and the reminder is simply not spent.
+    return { declined: false, remind: false }
+  }
 }
 
 /**

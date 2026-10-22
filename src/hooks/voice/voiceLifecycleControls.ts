@@ -147,7 +147,12 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
 
     // Only user-initiated starts reach here; automatic restarts and
     // wake-word sessions call startVoiceConversation directly.
-    void requestModelSetupForVoiceUse(ctx.view)
+    void requestModelSetupForVoiceUse(ctx.view).then((outcome) => {
+      // The user refused the installer earlier. The refusal owes them one
+      // reminder, and this is the voice action that spends it.
+      if (!outcome.remind) return
+      hookCallbacks.presentCompanionNotice?.(ti('model_setup.deferred_reminder'))
+    })
     startVoiceConversation()
   }
 

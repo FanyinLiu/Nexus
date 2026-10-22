@@ -28,6 +28,36 @@ type WakewordSetupFlags = {
 /** How long an enable-wake-word request waits before it may cover the pet. */
 export const MODEL_SETUP_WAKEWORD_REQUEST_DELAY_MS = 3_000
 
+/**
+ * The deferral state the main process keeps for the local model installer.
+ * The renderer only reads it: the refusal itself lives in the main process,
+ * because the surface that answered "maybe later" may be another window.
+ */
+export type ModelSetupDeferral = {
+  /** The user answered "maybe later" in the installer. */
+  declined: boolean
+  /** The single reminder that refusal owes is still waiting. */
+  remind: boolean
+}
+
+/** What a voice action does with the local model installer. */
+export type ModelSetupVoiceOutcome = {
+  /** Whether the installer was asked to open. */
+  delivered: boolean
+  /** Whether the user should be reminded that the voice models are missing. */
+  remind: boolean
+}
+
+/**
+ * Decides what a voice action does with the installer. A refused installer
+ * stays closed, and the refusal owes the user exactly one reminder — the
+ * first voice action after the refusal spends it.
+ */
+export function resolveModelSetupVoiceAction(deferral: ModelSetupDeferral): 'remind' | 'offer' | 'quiet' {
+  if (!deferral.declined) return 'offer'
+  return deferral.remind ? 'remind' : 'quiet'
+}
+
 export type ModelSetupRequestStore = {
   /** Latches the request now. */
   request: () => void

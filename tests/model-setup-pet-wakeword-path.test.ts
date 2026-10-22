@@ -189,13 +189,13 @@ async function renderPetOverlay(options: { inventoryReady: boolean }) {
   return { renderer, overlays, baseline, next, bridge }
 }
 
-test('the pet window can only ask the main process for the model setup', () => {
+test('the pet window can only ask the main process about the model setup', () => {
   const bridge = createPetBridge({ inventoryReady: false })
   const modelSetupKeys = Object.keys(bridge.desktopPet)
     .filter((key) => /modelSetup/i.test(key))
     .sort()
 
-  assert.deepEqual(modelSetupKeys, ['requestModelSetup'])
+  assert.deepEqual(modelSetupKeys, ['claimModelSetupReminder', 'requestModelSetup'])
 })
 
 test('a pet-window wake-word save stays quiet while the voice models are installed', async (t) => {

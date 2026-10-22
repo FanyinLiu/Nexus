@@ -33,6 +33,8 @@ export function createModelSetupRequestGate(dependencies = {}) {
   let timer = null
   // The user answered "maybe later" in the installer.
   let declined = false
+  // The single reminder that refusal owes the user.
+  let reminded = false
 
   const clearTimer = () => {
     if (timer === null) return
@@ -78,6 +80,16 @@ export function createModelSetupRequestGate(dependencies = {}) {
     /** Whether the user declined the installer in this session. */
     isDeclined() {
       return declined
+    },
+    /**
+     * Claims the one reminder the refusal owes. The first claim after a
+     * refusal returns true, every later claim returns false: the installer
+     * promises a single nudge, not a lecture.
+     */
+    claimReminder() {
+      if (!declined || reminded) return false
+      reminded = true
+      return true
     },
     /** Retracts a delayed or delivered request (wake-word switched off). */
     cancel() {

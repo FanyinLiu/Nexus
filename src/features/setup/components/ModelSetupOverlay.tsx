@@ -336,6 +336,9 @@ export function ModelSetupOverlay({
             <p id="model-setup-description" className="model-setup-card__copy">
               {t('model_setup.body_prefix')}
             </p>
+            <p className="model-setup-card__copy">
+              {t('model_setup.dismiss_hint')}
+            </p>
           </div>
           <button ref={dismissButtonRef} className="ghost-button" type="button" onClick={handleDismiss} disabled={busy}>
             {t('model_setup.dismiss')}

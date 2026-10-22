@@ -8,6 +8,8 @@ export const zhTWOnboarding = {
   'model_setup.model.vad.name': '說話偵測模型',
   'model_setup.model.vad.purpose': '聽出你什麼時候開始和停止說話。',
   'model_setup.dismiss': '稍後再說',
+  'model_setup.dismiss_hint': '先跳過也行 —— 下次想說話的時候我再提醒你一次。',
+  'model_setup.deferred_reminder': '還沒裝語音模型呢 —— 裝上就能直接跟我說話啦。',
   'model_setup.network_hf_unreachable': '偵測到 HuggingFace 無法直連，將優先使用 GitHub Releases / ModelScope 鏡像。',
   'model_setup.required_heading': '必需模型',
   'model_setup.optional_heading': '可選模型',

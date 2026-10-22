@@ -114,6 +114,12 @@ export type UseVoiceContext = {
   >
   appendSystemMessage: (content: string, tone?: 'neutral' | 'error') => void
   /**
+   * Shows a short line from the companion in the pet bubble. Wired through a
+   * ref because the chat hook — which owns the bubble — is created after
+   * this hook.
+   */
+  presentCompanionNotice?: (content: string) => void
+  /**
    * Optional hook that converts a SenseVoice prosody emotion label into
    * an emotion-model signal and applies it. Called by the SenseVoice
    * conversation runner after it receives the final transcript.

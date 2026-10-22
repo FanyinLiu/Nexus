@@ -141,13 +141,16 @@ test('preload desktopPet API keys match the Window.desktopPet type contract', ()
   )
 })
 
-test('the pet preload exposes only the request entry point for model setup', () => {
+test('the pet preload exposes the request entry point and the reminder claim for model setup', () => {
   const petKeys = Object.keys(loadPreloadDesktopPetApi('pet').desktopPet)
   const modelSetupKeys = petKeys
     .filter((key) => /modelSetup/i.test(key))
     .sort()
 
-  assert.deepEqual(modelSetupKeys, ['requestModelSetup'])
+  assert.deepEqual(modelSetupKeys, [
+    'claimModelSetupReminder',
+    'requestModelSetup',
+  ])
 })
 
 test('the panel preload exposes request, consume, decline, and subscribe for model setup', () => {
@@ -157,6 +160,7 @@ test('the panel preload exposes request, consume, decline, and subscribe for mod
     .sort()
 
   assert.deepEqual(modelSetupKeys, [
+    'claimModelSetupReminder',
     'consumeModelSetupRequest',
     'declineModelSetup',
     'requestModelSetup',
@@ -177,6 +181,9 @@ test('panel preload model setup methods use only their classified channels', asy
   const declineModelSetup = desktopPet.declineModelSetup as
     | (() => Promise<unknown>)
     | undefined
+  const claimModelSetupReminder = desktopPet.claimModelSetupReminder as
+    | (() => Promise<unknown>)
+    | undefined
   const subscribeModelSetupRequest = desktopPet.subscribeModelSetupRequest as
     | ((listener: () => void) => () => void)
     | undefined
@@ -184,11 +191,13 @@ test('panel preload model setup methods use only their classified channels', asy
   assert.equal(typeof requestModelSetup, 'function')
   assert.equal(typeof consumeModelSetupRequest, 'function')
   assert.equal(typeof declineModelSetup, 'function')
+  assert.equal(typeof claimModelSetupReminder, 'function')
   assert.equal(typeof subscribeModelSetupRequest, 'function')
 
   await requestModelSetup!({ delayMs: 3_000 })
   await consumeModelSetupRequest!()
   await declineModelSetup!()
+  await claimModelSetupReminder!()
 
   let events = 0
   const unsubscribe = subscribeModelSetupRequest!(() => { events += 1 })
@@ -206,26 +215,33 @@ test('panel preload model setup methods use only their classified channels', asy
     'window:request-model-setup',
     'window:consume-model-setup-request',
     'window:decline-model-setup',
+    'window:claim-model-setup-reminder',
   ])
   assert.deepEqual([...subscribedChannels.keys()], ['models:setup-requested'])
 })
 
-test('pet preload forwards a delayed and cancelled model setup request', async () => {
+test('pet preload forwards the model setup request and the reminder claim', async () => {
   const { desktopPet, invokedChannels } = loadPreloadDesktopPetApi('pet')
 
   const requestModelSetup = desktopPet.requestModelSetup as
     | ((options?: { delayMs?: number; cancel?: boolean }) => Promise<unknown>)
     | undefined
+  const claimModelSetupReminder = desktopPet.claimModelSetupReminder as
+    | (() => Promise<unknown>)
+    | undefined
   assert.equal(typeof requestModelSetup, 'function')
+  assert.equal(typeof claimModelSetupReminder, 'function')
   assert.equal(desktopPet.consumeModelSetupRequest, undefined)
   assert.equal(desktopPet.subscribeModelSetupRequest, undefined)
 
   await requestModelSetup!({ delayMs: 3_000 })
   await requestModelSetup!({ cancel: true })
+  await claimModelSetupReminder!()
 
   assert.deepEqual(invokedChannels, [
     'window:request-model-setup',
     'window:request-model-setup',
+    'window:claim-model-setup-reminder',
   ])
 })
 

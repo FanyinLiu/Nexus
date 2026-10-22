@@ -8,6 +8,8 @@ export const enOnboarding = {
   'model_setup.model.vad.name': 'Speech detection',
   'model_setup.model.vad.purpose': 'Hears when you start and stop talking.',
   'model_setup.dismiss': 'Maybe later',
+  'model_setup.dismiss_hint': 'Skip it for now — I will nudge you once next time you want to talk.',
+  'model_setup.deferred_reminder': 'No voice models yet — install them and we can talk out loud.',
   'model_setup.network_hf_unreachable': 'HuggingFace is not directly reachable — we will prefer GitHub Releases / ModelScope mirrors.',
   'model_setup.required_heading': 'Required models',
   'model_setup.optional_heading': 'Optional models',

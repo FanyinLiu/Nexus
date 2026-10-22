@@ -8,6 +8,8 @@ export const jaOnboarding = {
   'model_setup.model.vad.name': '発話検出',
   'model_setup.model.vad.purpose': '話し始めと話し終わりを聞き取ります。',
   'model_setup.dismiss': 'あとで',
+  'model_setup.dismiss_hint': '今はスキップしても大丈夫 —— 次に話したくなったら一度だけ声をかけるね。',
+  'model_setup.deferred_reminder': '音声モデルがまだ入っていないよ。入れれば声で話せるよ。',
   'model_setup.network_hf_unreachable': 'HuggingFace に直接アクセスできないため、GitHub Releases / ModelScope ミラーを優先します。',
   'model_setup.required_heading': '必須モデル',
   'model_setup.optional_heading': 'オプションモデル',

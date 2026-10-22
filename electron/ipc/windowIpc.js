@@ -226,6 +226,16 @@ export function register() {
     modelSetupRequestGate.decline()
   })
 
+  // The voice path asks whether the installer was refused, and whether the
+  // single reminder that refusal owes is still waiting for the user.
+  ipcMain.handle('window:claim-model-setup-reminder', (event) => {
+    requireTrustedSender(event)
+    return {
+      declined: modelSetupRequestGate.isDeclined(),
+      remind: modelSetupRequestGate.claimReminder(),
+    }
+  })
+
   ipcMain.handle('window:consume-model-setup-request', (event) => {
     requireTrustedSender(event)
     return modelSetupRequestGate.consume()

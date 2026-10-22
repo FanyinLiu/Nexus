@@ -163,3 +163,15 @@ test('cancelling a request does not undo the refusal', () => {
   assert.equal(harness.gate.request(), false)
   assert.equal(harness.delivered, 0)
 })
+
+test('a refusal owes exactly one reminder', () => {
+  const harness = createHarness()
+
+  assert.equal(harness.gate.claimReminder(), false, 'nothing is owed before the refusal')
+
+  harness.gate.decline()
+
+  assert.equal(harness.gate.claimReminder(), true, 'the first claim spends the reminder')
+  assert.equal(harness.gate.claimReminder(), false, 'the reminder is owed only once')
+  assert.equal(harness.gate.claimReminder(), false)
+})

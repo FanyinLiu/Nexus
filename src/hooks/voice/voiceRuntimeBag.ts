@@ -114,6 +114,8 @@ type VoiceSetters = {
 // state) and are exposed to the factories via the runtime bag.
 type VoiceHookCallbacks = {
   showPetStatus: (message: string, duration?: number, dedupeWindowMs?: number) => void
+  /** Shows a short line from the companion in the pet bubble. */
+  presentCompanionNotice?: (content: string) => void
   updateVoicePipeline: (
     step: VoicePipelineState['step'],
     detail: string,
