@@ -135,6 +135,71 @@ test('an unbound window stays unprivileged even if its url says panel', () => {
   )
 })
 
+// Every renderer-invocable channel added for the post-wake-word model setup.
+const MODEL_SETUP_CHANNELS = [
+  'window:request-model-setup',
+  'window:consume-model-setup-request',
+] as const
+
+test('model setup request consumption is panel-only', () => {
+  const panel = { id: 1201 }
+  const pet = { id: 1202 }
+  const stranger = { id: 1203 }
+  bindWindowCapability(panel, 'panel')
+  bindWindowCapability(pet, 'pet')
+  try {
+    assert.equal(getRequiredWindowCapability('window:consume-model-setup-request'), 'panel')
+    assert.doesNotThrow(
+      () => assertBoundWindowChannelAllowed(panel, 'window:consume-model-setup-request'),
+    )
+    assert.throws(
+      () => assertBoundWindowChannelAllowed(pet, 'window:consume-model-setup-request'),
+      /panel capability is unavailable to pet window/,
+    )
+    assert.throws(
+      () => assertBoundWindowChannelAllowed(stranger, 'window:consume-model-setup-request'),
+      /panel capability is unavailable to unknown window/,
+    )
+  } finally {
+    unbindWindowCapability(panel)
+    unbindWindowCapability(pet)
+  }
+})
+
+test('model setup request stays shared but fails closed for an unbound sender', () => {
+  const panel = { id: 1204 }
+  const pet = { id: 1205 }
+  const stranger = { id: 1206 }
+  bindWindowCapability(panel, 'panel')
+  bindWindowCapability(pet, 'pet')
+  try {
+    assert.equal(getRequiredWindowCapability('window:request-model-setup'), 'shared')
+    assert.doesNotThrow(() => assertBoundWindowChannelAllowed(panel, 'window:request-model-setup'))
+    assert.doesNotThrow(() => assertBoundWindowChannelAllowed(pet, 'window:request-model-setup'))
+    assert.equal(isWindowChannelAllowed('window:request-model-setup', 'unknown'), false)
+    assert.throws(
+      () => assertBoundWindowChannelAllowed(stranger, 'window:request-model-setup'),
+      /capability is unavailable to unknown window/,
+    )
+  } finally {
+    unbindWindowCapability(panel)
+    unbindWindowCapability(pet)
+  }
+})
+
+test('the pet window can invoke only the model setup request channel', () => {
+  const pet = { id: 1207 }
+  bindWindowCapability(pet, 'pet')
+  try {
+    const petInvocable = MODEL_SETUP_CHANNELS.filter(
+      (channel) => isWindowChannelAllowed(channel, 'pet'),
+    )
+    assert.deepEqual(petInvocable, ['window:request-model-setup'])
+  } finally {
+    unbindWindowCapability(pet)
+  }
+})
+
 test('trusted sender checks the bound capability rather than the live url', async () => {
   const source = await readFile(new URL('../electron/ipc/validate.js', import.meta.url), 'utf8')
   assert.match(source, /getBoundWindowCapability\(sender\)/)
