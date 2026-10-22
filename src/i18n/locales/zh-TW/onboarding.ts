@@ -120,6 +120,7 @@ export const zhTWOnboarding = {
   'onboarding.readiness.voice.warning_continuous': '連續語音需要同時開啟語音輸入和輸出。',
   'onboarding.readiness.voice.blocked': '語音還缺聽寫或朗讀的位址。',
   'onboarding.voice.ready': '語音可以用了：能聽懂你說話，也能開口回你',
+  'onboarding.voice.models_missing': '語音模型還沒裝，第一次說話時會提醒你裝。',
   'onboarding.voice.preview': '試聽',
   'onboarding.voice.previewing': '試聽中',
   'onboarding.voice.preview_sample': '你好，我在這兒。',

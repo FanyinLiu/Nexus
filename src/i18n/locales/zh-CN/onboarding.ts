@@ -118,6 +118,7 @@ export const zhCNOnboarding = {
   'onboarding.readiness.voice.warning_continuous': '连续语音需要同时开启语音输入和输出。',
   'onboarding.readiness.voice.blocked': '语音还缺听写或朗读的地址。',
   'onboarding.voice.ready': '语音可以用了：能听懂你说话，也能开口回你',
+  'onboarding.voice.models_missing': '语音模型还没装，第一次说话时会提醒你装。',
   'onboarding.voice.preview': '试听',
   'onboarding.voice.previewing': '试听中',
   'onboarding.voice.preview_sample': '你好，我在这儿。',

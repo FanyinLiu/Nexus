@@ -120,6 +120,7 @@ export const koOnboarding = {
   'onboarding.readiness.voice.warning_continuous': '연속 음성에는 음성 입력과 음성 출력이 모두 필요합니다.',
   'onboarding.readiness.voice.blocked': '음성에 듣기나 말하기 설정이 아직 필요해요.',
   'onboarding.voice.ready': '목소리를 쓸 수 있어요. 말을 알아듣고, 소리로 대답할 수 있어요.',
+  'onboarding.voice.models_missing': '음성 모델이 아직 설치되지 않았어요. 처음 말을 걸 때 설치하라고 알려 드릴게요.',
   'onboarding.voice.preview': '들어 보기',
   'onboarding.voice.previewing': '재생 중',
   'onboarding.voice.preview_sample': '안녕, 나 여기 있어.',

@@ -120,6 +120,7 @@ export const enOnboarding = {
   'onboarding.readiness.voice.warning_continuous': 'Continuous voice needs both speech input and speech output enabled.',
   'onboarding.readiness.voice.blocked': 'Voice still needs a way to listen or speak.',
   'onboarding.voice.ready': 'Voice is ready: she can hear you, and she can answer out loud.',
+  'onboarding.voice.models_missing': 'Voice models aren’t installed yet. You’ll get a reminder the first time you talk.',
   'onboarding.voice.preview': 'Hear her',
   'onboarding.voice.previewing': 'Playing',
   'onboarding.voice.preview_sample': 'Hi, I\'m here.',

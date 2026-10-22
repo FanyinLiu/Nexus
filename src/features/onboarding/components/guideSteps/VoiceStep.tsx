@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  buildVoiceModelReadiness,
+  type VoiceModelInventory,
+} from '../../voiceModelReadiness.ts'
 import { humanizeIfSpeechIpcError } from '../../../../lib/humanizeError.ts'
 import { getRedactedLogErrorMessage } from '../../../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
@@ -14,6 +18,24 @@ export function VoiceStep({ draft, onPreviewSpeech }: VoiceStepProps) {
     pickTranslatedUiText(draft.uiLanguage, key)
   const [previewing, setPreviewing] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [inventory, setInventory] = useState<VoiceModelInventory | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadInventory = window.desktopPet?.modelsGetInventory
+    if (!loadInventory) return undefined
+
+    void Promise.resolve(loadInventory()).then((next) => {
+      if (cancelled) return
+      setInventory(next ?? null)
+    }).catch((error) => {
+      console.warn('[onboarding] voice model inventory failed:', getRedactedLogErrorMessage(error))
+      if (cancelled) return
+      setInventory(null)
+    })
+
+    return () => { cancelled = true }
+  }, [])
 
   async function preview() {
     if (!onPreviewSpeech || previewing) return
@@ -32,9 +54,17 @@ export function VoiceStep({ draft, onPreviewSpeech }: VoiceStepProps) {
     }
   }
 
+  const readiness = buildVoiceModelReadiness({
+    inventory,
+    speechInputProviderId: draft.speechInputProviderId,
+    speechOutputProviderId: draft.speechOutputProviderId,
+  })
+
   return (
     <div className="onboarding-grid onboarding-grid--stack">
-      <p className="onboarding-tip">{ti('onboarding.voice.ready')}</p>
+      {readiness.messageKey ? (
+        <p className="onboarding-tip">{ti(readiness.messageKey)}</p>
+      ) : null}
       <div className="onboarding-test-connection">
         <button
           type="button"
