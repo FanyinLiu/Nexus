@@ -76,7 +76,30 @@ test('speech detection uses a plain name instead of the engine label', () => {
   )
   assert.equal(copy.label, '说话检测模型')
   assert.equal(copy.purpose, '听出你什么时候开始和停止说话。')
-  assert.equal(localModelCopy({ id: 'kws-en', label: '英文唤醒词模型（可选）' }, () => 'unused').label, '英文唤醒词模型')
+})
+
+test('every catalog model reads its name and description from i18n', () => {
+  const expected = [
+    ['vad', 'model_setup.model.vad.name', 'model_setup.model.vad.purpose'],
+    ['kws-en', 'model_setup.model.kws-en.name', 'model_setup.model.kws-en.purpose'],
+    ['kws-zh', 'model_setup.model.kws-zh.name', 'model_setup.model.kws-zh.purpose'],
+    ['sensevoice', 'model_setup.model.sensevoice.name', 'model_setup.model.sensevoice.purpose'],
+    ['paraformer-zh-en', 'model_setup.model.paraformer-zh-en.name', 'model_setup.model.paraformer-zh-en.purpose'],
+    ['tts-melo-zh-en', 'model_setup.model.tts-melo-zh-en.name', 'model_setup.model.tts-melo-zh-en.purpose'],
+  ] as const
+
+  for (const [id, nameKey, purposeKey] of expected) {
+    const copy = localModelCopy(
+      { id, label: '清单里的中文名字', purpose: '清单里的中文说明' },
+      (key) => key,
+    )
+    assert.equal(copy.label, nameKey, id)
+    assert.equal(copy.purpose, purposeKey, id)
+  }
+})
+
+test('an unknown model falls back to the catalog text', () => {
+  assert.equal(localModelCopy({ id: 'other-model', label: '英文唤醒词模型（可选）' }, () => 'unused').label, '英文唤醒词模型')
 })
 
 test('download action resumes a partial, retries a failure, and stops when nothing is missing', () => {

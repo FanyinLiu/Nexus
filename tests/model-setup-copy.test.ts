@@ -28,6 +28,22 @@ const FIRST_LAUNCH_WORDS = /首次启动|首次啟動|初回起動|첫 실행|fi
 
 const STREAMING_WORDS = /流式|串流|streaming|ストリーミング|스트리밍/i
 
+/** One translated name and description per catalog model. */
+const LOCAL_MODEL_KEYS = [
+  'model_setup.model.vad.name',
+  'model_setup.model.vad.purpose',
+  'model_setup.model.kws-en.name',
+  'model_setup.model.kws-en.purpose',
+  'model_setup.model.kws-zh.name',
+  'model_setup.model.kws-zh.purpose',
+  'model_setup.model.sensevoice.name',
+  'model_setup.model.sensevoice.purpose',
+  'model_setup.model.paraformer-zh-en.name',
+  'model_setup.model.paraformer-zh-en.purpose',
+  'model_setup.model.tts-melo-zh-en.name',
+  'model_setup.model.tts-melo-zh-en.purpose',
+] as const satisfies readonly TranslationKey[]
+
 test('the voice model install dialog avoids developer wording in every locale', async () => {
   for (const locale of AVAILABLE_LOCALES) {
     const dictionary = await ensureLocaleLoaded(locale)
@@ -61,5 +77,19 @@ test('the voice model install dialog avoids developer wording in every locale', 
       /\bTTS\b/,
       `${locale}:provider.tts.local-tts.label`,
     )
+  }
+})
+
+test('every local model has a translated name and description in every locale', async () => {
+  for (const locale of AVAILABLE_LOCALES) {
+    const dictionary = await ensureLocaleLoaded(locale)
+
+    for (const key of LOCAL_MODEL_KEYS) {
+      const value = dictionary[key]
+      assert.equal(typeof value, 'string', `${locale}:${key}`)
+      assert.ok(value.trim().length > 0, `${locale}:${key}`)
+      assert.doesNotMatch(value, DEV_WORDS, `${locale}:${key}`)
+      assert.doesNotMatch(value, /\bTTS\b/, `${locale}:${key}`)
+    }
   }
 })

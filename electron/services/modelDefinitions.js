@@ -11,7 +11,8 @@
  *
  * Fields:
  *   id            stable identifier used by UI / IPC
- *   label         user-visible name (Chinese ok)
+ *   label         fallback name (Chinese ok) — the UI prefers the
+ *                 translated model_setup.model.<id>.name entry
  *   sizeLabel     human-readable download size estimate
  *   required      true → app features depend on this model
  *   kind          'archive' (tar.bz2) | 'files' (hf resolve/main) | 'standalone'
@@ -21,7 +22,8 @@
  *   hfRepo / revision / files pinned Hugging Face source (kind === 'files')
  *   integrity     exact byte size + SHA-256 for every remote archive/file
  *   standalone    { dest, urls[], integrity } (kind === 'standalone')
- *   purpose       short one-line description for UI
+ *   purpose       fallback one-line description for UI — the UI prefers the
+ *                 translated model_setup.model.<id>.purpose entry
  */
 
 export const MODEL_CATALOG = [
