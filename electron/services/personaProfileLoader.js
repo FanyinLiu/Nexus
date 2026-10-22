@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 const PERSONA_PROFILE_FILES = {
   soul: 'soul.md',
   memory: 'memory.md',
@@ -120,4 +122,42 @@ export async function loadPersonaProfileFromReader(options) {
   }
 
   return result
+}
+
+/**
+ * Upper bound for one soul write. Character-card identity text is long, and
+ * the old portrait cap would cut it off; this still refuses an unbounded
+ * payload so a save cannot fill the disk.
+ */
+export const PERSONA_SOUL_MAX_CHARS = 500_000
+
+/**
+ * Accept soul text for a save, or null when the payload must not be written.
+ * Missing text is an empty file. Non-strings are refused so an object is not
+ * coerced into a placeholder.
+ * @param {unknown} content
+ * @returns {string | null}
+ */
+export function acceptPersonaSoulContent(content) {
+  if (content == null) return ''
+  if (typeof content !== 'string') return null
+  if (content.length > PERSONA_SOUL_MAX_CHARS) return null
+  return content
+}
+
+/**
+ * Absolute `soul.md` path for a profile, or null when the id is not already
+ * one safe path segment. Stripping characters would write a different
+ * directory than the one the loader reads, so those ids are refused.
+ * @param {unknown} userDataDir
+ * @param {unknown} profileId
+ * @returns {string | null}
+ */
+export function resolvePersonaProfileSoulPath(userDataDir, profileId) {
+  if (typeof profileId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(profileId)) return null
+  const root = path.resolve(String(userDataDir ?? ''), 'personas')
+  const filePath = path.resolve(root, profileId, PERSONA_PROFILE_FILES.soul)
+  const rootPrefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`
+  if (!filePath.startsWith(rootPrefix)) return null
+  return filePath
 }

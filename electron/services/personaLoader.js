@@ -8,7 +8,7 @@
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
-import { loadPersonaProfileFromReader } from './personaProfileLoader.js'
+import { loadPersonaProfileFromReader, resolvePersonaProfileSoulPath } from './personaProfileLoader.js'
 
 const PERSONA_DIR = 'persona'
 const SOUL_FILE = 'SOUL.md'
@@ -118,6 +118,21 @@ export function getPersonaPaths() {
     soulPath: getDisplayPath(PERSONA_DIR, SOUL_FILE),
     memoryPath: getDisplayPath(PERSONA_DIR, MEMORY_FILE),
   }
+}
+
+/**
+ * Replace one profile's soul.md. Returns false when the id could point at a
+ * different directory than the loader uses. Other persona files stay put.
+ * @param {unknown} profileId
+ * @param {string} content
+ * @returns {Promise<boolean>}
+ */
+export async function savePersonaProfileSoul(profileId, content) {
+  const filePath = resolvePersonaProfileSoulPath(app.getPath('userData'), profileId)
+  if (!filePath) return false
+  await mkdir(path.dirname(filePath), { recursive: true })
+  await writeFile(filePath, content, 'utf8')
+  return true
 }
 
 export async function writePersonaProfile(profileId, files) {

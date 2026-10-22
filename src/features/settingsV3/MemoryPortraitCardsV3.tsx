@@ -7,8 +7,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import type { AppSettings } from '../../types/app.ts'
 import type { TranslationKey } from '../../types/i18n.ts'
-import { loadCompanionSoul, saveCompanionSoul } from '../../lib/storage/companionSoul.ts'
+import { loadSoulCard, saveSoulCard, type SoulCardNote } from './soulCardPersona.ts'
 import { loadMemoryOpLog, appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { MEMORY_OP_LOG_CHANGED_EVENT } from '../../lib/storage/purgeMemoryStores.ts'
 import { peekDeletedMemory, takeDeletedMemory } from '../memory/deletedMemorySession.ts'
@@ -27,6 +28,7 @@ import type { MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
 import './memory-portrait.css'
 
 type MemoryPortraitCardsV3Props = {
+  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId'>
   memories: MemoryItem[]
   diaryCount?: number
   onPatchMemory?: (id: string, patch: Partial<Pick<MemoryItem, 'content' | 'pinned' | 'userEdited' | 'importance'>>) => void
@@ -49,21 +51,27 @@ function topicName(
   return plainMemoryName(text) || t('memory.topic.note')
 }
 
+const EMPTY_SOUL: SoulCardNote = { text: '', updatedAt: null, target: { kind: 'soul-file' } }
+
 export function MemoryPortraitCardsV3({
+  settings,
   memories,
   diaryCount = 0,
   onPatchMemory,
   onRemoveMemory,
 }: MemoryPortraitCardsV3Props) {
   const { t } = useTranslation()
-  const [soul, setSoul] = useState(() => loadCompanionSoul())
-  const [soulDraft, setSoulDraft] = useState(soul.text)
+  const [soul, setSoul] = useState<SoulCardNote>(EMPTY_SOUL)
+  const [soulDraft, setSoulDraft] = useState('')
+  const personaKey = `${settings.profilePersonaInChatEnabled ? '1' : '0'}:${settings.activeCharacterProfileId ?? ''}`
+  const [loadedPersonaKey, setLoadedPersonaKey] = useState<string | null>(null)
+  const soulReady = loadedPersonaKey === personaKey
   const [sheet, setSheet] = useState<'soul' | 'memory' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const [logTick, setLogTick] = useState(0)
 
-  const savedSoul = soul.text.trim() ? soul.text : t('memory.soul.default')
+  const savedSoul = soul.text.trim() ? soul.text : (soulReady ? t('memory.soul.default') : '')
   const active = useMemo(() => memories.filter((memory) => (
     memory.status !== 'archived'
     && memory.status !== 'superseded'
@@ -82,6 +90,21 @@ export function MemoryPortraitCardsV3({
     window.addEventListener(MEMORY_OP_LOG_CHANGED_EVENT, bump)
     return () => window.removeEventListener(MEMORY_OP_LOG_CHANGED_EVENT, bump)
   }, [])
+  useEffect(() => {
+    let current = true
+    void loadSoulCard({
+      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
+      activeCharacterProfileId: settings.activeCharacterProfileId,
+    }).then((note) => {
+      if (!current) return
+      setSoul(note)
+      setSoulDraft(note.text)
+      setLoadedPersonaKey(personaKey)
+    })
+    return () => {
+      current = false
+    }
+  }, [personaKey, settings.profilePersonaInChatEnabled, settings.activeCharacterProfileId])
   const memorySummary = diaryCount === 0
     ? t('memory.portrait.summary_empty', { count: active.length })
     : t('memory.portrait.summary', { count: active.length })
@@ -93,8 +116,14 @@ export function MemoryPortraitCardsV3({
   const memoryStamp = formatPortraitDate(latestChange, dateTemplate)
 
   const saveSoul = () => {
-    const note = saveCompanionSoul(soulDraft, new Date().toISOString())
-    setSoul(note)
+    void saveSoulCard({
+      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
+      activeCharacterProfileId: settings.activeCharacterProfileId,
+    }, soulDraft).then((note) => {
+      if (!note) return
+      setSoul(note)
+      setSoulDraft(note.text)
+    })
   }
   const undo = (entry: MemoryOpRecord) => {
     const sessionRows = entry.reason === 'user-deleted'

@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import path, { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { loadPersonaProfileFromReader } from '../electron/services/personaProfileLoader.js'
+import {
+  PERSONA_SOUL_MAX_CHARS,
+  acceptPersonaSoulContent,
+  loadPersonaProfileFromReader,
+  resolvePersonaProfileSoulPath,
+} from '../electron/services/personaProfileLoader.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
@@ -173,5 +178,28 @@ test('persona profile loader loads the bundled Xinghui seed profile end-to-end',
   for (const ex of loaded.examples) {
     assert.ok(ex.user.length > 0)
     assert.ok(ex.assistant.length > 0)
+  }
+})
+
+test('persona soul save accepts text and refuses values that must not be written', () => {
+  assert.equal(acceptPersonaSoulContent(undefined), '')
+  assert.equal(acceptPersonaSoulContent(null), '')
+  assert.equal(acceptPersonaSoulContent('line one\nline two'), 'line one\nline two')
+  assert.equal(acceptPersonaSoulContent(12), null)
+  assert.equal(acceptPersonaSoulContent({ content: 'nope' }), null)
+  assert.equal(acceptPersonaSoulContent('x'.repeat(PERSONA_SOUL_MAX_CHARS)), 'x'.repeat(PERSONA_SOUL_MAX_CHARS))
+  assert.equal(acceptPersonaSoulContent('x'.repeat(PERSONA_SOUL_MAX_CHARS + 1)), null)
+})
+
+test('persona profile soul path stays inside that profile and refuses unsafe ids', () => {
+  const resolved = resolvePersonaProfileSoulPath('/tmp/nexus-user', 'card-abc123')
+  assert.equal(resolved, path.join('/tmp/nexus-user', 'personas', 'card-abc123', 'soul.md'))
+
+  const xinghui = resolvePersonaProfileSoulPath('/tmp/nexus-user', 'xinghui')
+  assert.equal(path.basename(xinghui ?? ''), 'soul.md')
+  assert.equal(path.basename(path.dirname(xinghui ?? '')), 'xinghui')
+
+  for (const unsafe of ['', '.', '..', '../etc', 'card/../xinghui', 'card name', 'a..b', 'card\\xinghui']) {
+    assert.equal(resolvePersonaProfileSoulPath('/tmp/nexus-user', unsafe), null, unsafe)
   }
 })
