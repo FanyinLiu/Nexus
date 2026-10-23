@@ -13,8 +13,7 @@ import {
   applyAccentStyle,
   resolvePerformanceAccentWindowMs,
 } from './accentStyle.ts'
-import { updateBlink, type BlinkState } from './blink.ts'
-import { RIGHT_BLINK_LAG_MS, createBlinkLane } from '../../blink.ts'
+import { updateBlinkEyes, type BlinkState } from './blink.ts'
 import { createSaccadeState, stepIdleSaccade, type SaccadeState } from '../../idleSaccades.ts'
 import { resolveSpeechVisemes } from '../../speechVisemes.ts'
 import { clamp } from '../../../../lib/common.ts'
@@ -46,7 +45,6 @@ export type FrameRenderState = {
   smoothedGaze: GazeTarget
   smoothedSpeechLevel: number
   blink: BlinkState
-  blinkRight?: BlinkState
   saccade?: SaccadeState
 }
 
@@ -375,11 +373,9 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
   addParameterValue(coreModel, rigParams?.eyeRForm, eyeFormLevel)
 
   // ── Eye blink ─────────────────────────────────────────────────────────
-  const blinkRight = state.blinkRight ?? createBlinkLane(
-    state.blink.phaseStartedAt,
-    state.blink.nextBlinkAt + RIGHT_BLINK_LAG_MS,
-  )
-  state.blinkRight = blinkRight
+  // Both lids read one sample. The delta is added, so a pose that already
+  // closed one eye keeps that difference.
+  const blinkEyes = updateBlinkEyes(state.blink, now)
   const scaleLid = (eyeOpen: number) => {
     let open = eyeOpen
     if (activeExpressionSlot === 'thinking') open *= 0.9
@@ -390,8 +386,8 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
     if (performanceCueAccentStyle === 'write') open *= 0.94
     return open
   }
-  const eyeOpenLeft = scaleLid(updateBlink(state.blink, now))
-  const eyeOpenRight = scaleLid(updateBlink(blinkRight, now))
+  const eyeOpenLeft = scaleLid(blinkEyes.left)
+  const eyeOpenRight = scaleLid(blinkEyes.right)
 
   addParameterValue(coreModel, rigParams?.eyeLOpen, eyeOpenLeft - 1)
   addParameterValue(coreModel, rigParams?.eyeROpen, eyeOpenRight - 1)
