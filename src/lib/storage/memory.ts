@@ -259,16 +259,28 @@ function readStorageText(key: string): string | null {
  * main-process file store; production resolves it from window.desktopPet.
  */
 export interface LongTermMemoryBackend {
-  load: () => Promise<{ exists: boolean; memories: unknown[] }>
+  load: () => Promise<{
+    exists: boolean
+    memories: unknown[]
+    corrupt?: boolean
+    backupPath?: string | null
+  }>
   save: (memories: MemoryItem[]) => Promise<unknown>
   clear: () => Promise<unknown>
 }
 
 /** Slice of window.desktopPet the memory file store needs. */
 export interface LongTermMemoryFileBridge extends LocalStorageResetBridge {
-  memoryLongTermLoad?: () => Promise<{ exists?: boolean; memories?: unknown[] } | null | undefined>
+  memoryLongTermLoad?: () => Promise<{
+    exists?: boolean
+    memories?: unknown[]
+    corrupt?: boolean
+    backupPath?: string | null
+  } | null | undefined>
   memoryLongTermSave?: (payload: { memories: unknown[] }) => Promise<unknown>
   memoryLongTermClear?: () => Promise<unknown>
+  onMemoryFlushRequest?: (listener: () => void | Promise<void>) => () => void
+  memoryFlushComplete?: () => Promise<unknown>
 }
 
 export interface HydrateLongTermMemoryOptions {
@@ -312,6 +324,8 @@ function resolveBridgeBackend(): LongTermMemoryBackend | null {
       return {
         exists: result?.exists === true,
         memories: Array.isArray(result?.memories) ? result.memories : [],
+        corrupt: result?.corrupt === true,
+        backupPath: typeof result?.backupPath === 'string' ? result.backupPath : null,
       }
     },
     save: (memories) => bridge.memoryLongTermSave!({ memories }),
@@ -400,7 +414,12 @@ async function hydrateInternal(options: HydrateLongTermMemoryOptions): Promise<v
     return
   }
 
-  let loaded: { exists: boolean; memories: unknown[] }
+  let loaded: {
+    exists: boolean
+    memories: unknown[]
+    corrupt?: boolean
+    backupPath?: string | null
+  }
   try {
     loaded = await backend.load()
   } catch (error) {
@@ -413,6 +432,21 @@ async function hydrateInternal(options: HydrateLongTermMemoryOptions): Promise<v
   }
 
   const local = readLocalMemorySnapshot()
+  if (loaded.corrupt) {
+    // The file store moved the unreadable bytes aside before returning. Never
+    // write an empty array over what the user still has: only a present local
+    // snapshot may seed a fresh file.
+    console.warn('[memory] long-term memory file was unreadable; kept a backup before recovering')
+    if (local.present) {
+      await migrateLocalMemoriesToFile(backend, local, options.resetBridge)
+    } else {
+      memoryCache = []
+      memoryStoreExists = false
+      if (hasLocalMemoryKeys()) await resetMemoryLocalStorage(options.resetBridge)
+    }
+    return
+  }
+
   if (!loaded.exists) {
     if (local.present) {
       await migrateLocalMemoriesToFile(backend, local, options.resetBridge)
@@ -491,6 +525,34 @@ export function flushLongTermMemoryWrites(): Promise<void> {
     if (persistDrain === drain) persistDrain = null
   })
   return drain
+}
+
+let quitFlushUnsubscribe: (() => void) | null = null
+
+/**
+ * Wire the main-process quit handshake. The main process blocks `before-quit`
+ * until the debounced write lands on disk, then this listener acks it; a
+ * fire-and-forget `beforeunload` write can be lost when the renderer dies
+ * first. Returns the unsubscribe function and reuses an existing wiring.
+ */
+export function installLongTermMemoryQuitFlush(
+  bridge: LongTermMemoryFileBridge | null = typeof window === 'undefined' ? null : window.desktopPet ?? null,
+): () => void {
+  if (typeof bridge?.onMemoryFlushRequest !== 'function') return () => {}
+  if (quitFlushUnsubscribe) return quitFlushUnsubscribe
+  const unsubscribe = bridge.onMemoryFlushRequest(async () => {
+    try {
+      await flushLongTermMemoryWrites()
+    } finally {
+      try {
+        await bridge.memoryFlushComplete?.()
+      } catch (error) {
+        console.warn('[memory] quit flush ack failed:', getRedactedLogErrorMessage(error))
+      }
+    }
+  })
+  quitFlushUnsubscribe = typeof unsubscribe === 'function' ? unsubscribe : () => {}
+  return quitFlushUnsubscribe
 }
 
 /** Serialized cache for the pre-install snapshot; does not touch disk. */
@@ -582,6 +644,8 @@ export function __resetLongTermMemoryStoreForTests(): void {
   hydratePromise = null
   pendingPersist = null
   persistDrain = null
+  quitFlushUnsubscribe?.()
+  quitFlushUnsubscribe = null
   if (persistTimer !== null && typeof window !== 'undefined') {
     window.clearTimeout(persistTimer)
   }
@@ -594,6 +658,7 @@ registerLongTermMemorySnapshotProvider({
 })
 
 if (typeof window !== 'undefined') {
+  installLongTermMemoryQuitFlush()
   window.addEventListener('beforeunload', () => {
     void flushLongTermMemoryWrites()
   })

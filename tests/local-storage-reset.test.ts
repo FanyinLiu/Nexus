@@ -172,6 +172,46 @@ test('migration falls back to the legacy key and removes every memory key', asyn
   }
 })
 
+test('a failed migration save leaves localStorage untouched and skips the reset', async () => {
+  __resetLongTermMemoryStoreForTests()
+  try {
+    const memoryBlob = JSON.stringify([memory('m1', SECRET)])
+    const storage = createStorage({
+      [SETTINGS_STORAGE_KEY]: SETTINGS,
+      [CHAT_STORAGE_KEY]: CHAT,
+      [MEMORY_STORAGE_KEY]: memoryBlob,
+      [MEMORY_V1_BACKUP_STORAGE_KEY]: memoryBlob,
+    })
+    installWindow(storage)
+    let resetCalls = 0
+    const backend: LongTermMemoryBackend = {
+      load: async () => ({ exists: false, memories: [] }),
+      save: async () => { throw new Error('disk full') },
+      clear: async () => ({ ok: true }),
+    }
+
+    await hydrateLongTermMemoryStore({
+      backend,
+      resetBridge: {
+        memoryResetLocalStorage: async () => {
+          resetCalls += 1
+          storage.clear()
+          return { ok: true }
+        },
+      },
+    })
+
+    assert.equal(resetCalls, 0)
+    assert.equal(storage.getItem(MEMORY_STORAGE_KEY), memoryBlob)
+    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), memoryBlob)
+    assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), SETTINGS)
+    assert.equal(storage.getItem(CHAT_STORAGE_KEY), CHAT)
+    assert.deepEqual(loadMemories().map((row) => row.content), [SECRET])
+  } finally {
+    delete (globalThis as { window?: unknown }).window
+  }
+})
+
 test('an existing file wins over leftover localStorage memory keys', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-memory-file-wins-'))
   __resetLongTermMemoryStoreForTests()
@@ -201,6 +241,40 @@ test('an existing file wins over leftover localStorage memory keys', async () =>
     assert.equal(resetCalls, 1)
     assert.equal(storage.getItem(MEMORY_STORAGE_KEY), null)
     assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), SETTINGS)
+  } finally {
+    delete (globalThis as { window?: unknown }).window
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('a corrupt file is backed up and never overwritten with an empty store during hydration', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-memory-corrupt-hydrate-'))
+  __resetLongTermMemoryStoreForTests()
+  try {
+    const filePath = path.join(dir, 'memory', 'long-term-memory.json')
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, `[{"content":"${SECRET}"`, 'utf8')
+    const storage = createStorage({ [SETTINGS_STORAGE_KEY]: SETTINGS })
+    installWindow(storage)
+    let resetCalls = 0
+
+    await hydrateLongTermMemoryStore({
+      backend: createBackend(filePath),
+      resetBridge: {
+        memoryResetLocalStorage: async () => {
+          resetCalls += 1
+          storage.clear()
+          return { ok: true }
+        },
+      },
+    })
+
+    assert.deepEqual(loadMemories(), [])
+    assert.equal(resetCalls, 0)
+    assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), SETTINGS)
+    await assert.rejects(() => fs.access(filePath))
+    const entries = await fs.readdir(path.dirname(filePath))
+    assert.equal(entries.filter((name) => name.startsWith('long-term-memory.corrupt-')).length, 1)
   } finally {
     delete (globalThis as { window?: unknown }).window
     await fs.rm(dir, { recursive: true, force: true })

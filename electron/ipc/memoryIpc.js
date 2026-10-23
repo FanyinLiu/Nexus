@@ -1,5 +1,6 @@
-import { app, ipcMain, session } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { clearMemoryUserData } from '../services/memoryUserDataClear.js'
+import { createMemoryFlushAckGate } from '../services/memoryFlushAckGate.js'
 import * as memoryVectorStore from '../services/memoryVectorStore.js'
 import {
   createLongTermMemoryFileStore,
@@ -17,9 +18,43 @@ import {
   validateMemoryVectorSearchPayload,
 } from './payloadSchemas.js'
 
+const MEMORY_FLUSH_QUIT_TIMEOUT_MS = 2_500
+
 export function register() {
   const longTermMemoryStore = createLongTermMemoryFileStore({
     filePath: resolveLongTermMemoryFilePath(app.getPath('userData')),
+  })
+  const flushGate = createMemoryFlushAckGate()
+
+  // The renderer buffers memory writes for 250 ms; `beforeunload` cannot await
+  // the IPC save. Block the first quit so the debounced value lands on disk,
+  // but never longer than the timeout if a renderer is gone.
+  let quitFlushStarted = false
+  app.on('before-quit', (event) => {
+    if (quitFlushStarted) return
+    quitFlushStarted = true
+    const windows = BrowserWindow.getAllWindows().filter((window) => (
+      !window.isDestroyed() && !window.webContents.isDestroyed()
+    ))
+    if (!windows.length) return
+    event.preventDefault()
+    flushGate.expect(windows.length)
+    for (const window of windows) {
+      try {
+        window.webContents.send('memory:flush-request')
+      } catch {
+        flushGate.acknowledge()
+      }
+    }
+    void flushGate.waitForAck(MEMORY_FLUSH_QUIT_TIMEOUT_MS).then(() => {
+      app.quit()
+    })
+  })
+
+  ipcMain.handle('memory:flush-complete', async (event) => {
+    requireTrustedSender(event)
+    flushGate.acknowledge()
+    return { ok: true }
   })
 
   ipcMain.handle('memory:long-term-load', async (event) => {

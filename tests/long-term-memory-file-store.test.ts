@@ -100,3 +100,65 @@ test('save rejects non-array payloads and non-object rows', async () => {
     await fs.rm(dir, { recursive: true, force: true })
   }
 })
+
+test('a corrupt file is backed up instead of being reported as an empty store', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-long-term-corrupt-'))
+  try {
+    const filePath = resolveLongTermMemoryFilePath(dir)
+    const original = `{"format":"nexus-long-term-memory","version":1,"memories":[${JSON.stringify(SECRET)}`
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, original, 'utf8')
+    const store = createLongTermMemoryFileStore({ filePath })
+
+    const loaded = await store.load()
+    assert.equal(loaded.exists, false)
+    assert.equal(loaded.corrupt, true)
+    assert.equal(typeof loaded.backupPath, 'string')
+    assert.deepEqual(loaded.memories, [])
+    assert.equal(await fs.readFile(loaded.backupPath!, 'utf8'), original)
+    await assert.rejects(() => fs.access(filePath))
+
+    // A later save writes a fresh store and must not touch the backup.
+    await store.save([memory('m2', 'fresh memory')])
+    assert.equal(await fs.readFile(loaded.backupPath!, 'utf8'), original)
+    assert.deepEqual((await store.load()).memories.map((row) => row.id), ['m2'])
+
+    await store.clear()
+    await assert.rejects(() => fs.access(loaded.backupPath!))
+    assert.equal(await treeContains(dir, SECRET), false)
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('a file with the wrong envelope is treated as corrupt, not empty', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-long-term-envelope-'))
+  try {
+    const filePath = resolveLongTermMemoryFilePath(dir)
+    const original = JSON.stringify({ format: 'some-other-store', memories: [memory('m1', SECRET)] })
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, original, 'utf8')
+    const store = createLongTermMemoryFileStore({ filePath })
+
+    const loaded = await store.load()
+    assert.equal(loaded.exists, false)
+    assert.equal(loaded.corrupt, true)
+    assert.equal(await fs.readFile(loaded.backupPath!, 'utf8'), original)
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('save writes the memory file with owner-only permissions', { skip: process.platform === 'win32' }, async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-long-term-mode-'))
+  try {
+    const filePath = resolveLongTermMemoryFilePath(dir)
+    const store = createLongTermMemoryFileStore({ filePath })
+    await store.save([memory('m1', SECRET)])
+
+    const mode = (await fs.stat(filePath)).mode & 0o777
+    assert.equal(mode, 0o600)
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+})

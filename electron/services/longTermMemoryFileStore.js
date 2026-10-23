@@ -8,6 +8,10 @@
 // load() reports `exists` because the renderer must distinguish "never stored"
 // (first migration) from "stored empty" (the user deleted every memory — the
 // legacy key must not resurrect rows in that case).
+//
+// An existing file that cannot be parsed is never reported as empty: it is
+// moved aside as a `.corrupt-<timestamp>.json` sibling first, so a later save
+// cannot silently replace the user's bytes with an empty array.
 
 import fsp from 'node:fs/promises'
 import path from 'node:path'
@@ -34,18 +38,59 @@ function memoryError(code, detail) {
 /**
  * The file is an envelope, not a bare array, so future metadata can be added
  * without guessing whether a parsed array is a legacy blob or this format.
- * @param {unknown} parsed
- * @returns {{ format: string, version: number, memories: unknown[] }}
+ * Returns null for anything that is not this envelope; the caller must treat
+ * that as corruption rather than as an empty store.
+ * @param {string} rawText
+ * @returns {unknown[] | null}
  */
-function normalizeFile(parsed) {
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { format: FILE_FORMAT, version: FILE_VERSION, memories: [] }
+function parseEnvelope(rawText) {
+  let parsed
+  try {
+    parsed = JSON.parse(rawText)
+  } catch {
+    return null
   }
-  const record = /** @type {{ memories?: unknown }} */ (parsed)
-  return {
-    format: FILE_FORMAT,
-    version: FILE_VERSION,
-    memories: Array.isArray(record.memories) ? record.memories : [],
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
+  const record = /** @type {{ format?: unknown, memories?: unknown }} */ (parsed)
+  if (record.format !== FILE_FORMAT || !Array.isArray(record.memories)) return null
+  return record.memories
+}
+
+/** Filesystem-safe UTC stamp, e.g. `20261022T120000Z`. */
+function corruptTimestamp(now = new Date()) {
+  return now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+}
+
+async function pathExists(filePath) {
+  try {
+    await fsp.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Move an unreadable file aside so the original bytes survive the next save.
+ * The backup stays next to the store and is removed by clear().
+ * @param {string} resolvedPath
+ * @returns {Promise<string | null>} Backup path, or null when the move failed.
+ */
+async function quarantineCorruptFile(resolvedPath) {
+  const directory = path.dirname(resolvedPath)
+  const base = path.basename(resolvedPath, path.extname(resolvedPath))
+  const stamp = corruptTimestamp()
+  let backupPath = path.join(directory, `${base}.corrupt-${stamp}.json`)
+  let suffix = 1
+  while (await pathExists(backupPath)) {
+    backupPath = path.join(directory, `${base}.corrupt-${stamp}-${suffix}.json`)
+    suffix += 1
+  }
+  try {
+    await fsp.rename(resolvedPath, backupPath)
+    return backupPath
+  } catch {
+    return null
   }
 }
 
@@ -80,7 +125,7 @@ function validateMemories(memories) {
  *
  * @param {{ filePath: string, maxBytes?: number }} options
  * @returns {{
- *   load: () => Promise<{ exists: boolean, memories: unknown[] }>,
+ *   load: () => Promise<{ exists: boolean, memories: unknown[], corrupt?: boolean, backupPath?: string | null }>,
  *   save: (memories: unknown[]) => Promise<{ ok: boolean, count: number }>,
  *   clear: () => Promise<{ ok: boolean }>,
  *   filePath: string,
@@ -96,12 +141,22 @@ export function createLongTermMemoryFileStore({ filePath, maxBytes = MAX_FILE_BY
     // No read cache: `exists` and `memories` must describe the same on-disk
     // state. A cached array would outlive a clear performed through another
     // handle to the same file.
+    let rawText
     try {
-      const parsed = JSON.parse(await fsp.readFile(resolvedPath, 'utf8'))
-      return { exists: true, memories: normalizeFile(parsed).memories }
-    } catch {
-      return { exists: false, memories: [] }
+      rawText = await fsp.readFile(resolvedPath, 'utf8')
+    } catch (error) {
+      if (/** @type {{ code?: unknown }} */ (error)?.code === 'ENOENT') {
+        return { exists: false, memories: [] }
+      }
+      const backupPath = await quarantineCorruptFile(resolvedPath)
+      return { exists: false, corrupt: true, backupPath, memories: [] }
     }
+    const memories = parseEnvelope(rawText)
+    if (memories === null) {
+      const backupPath = await quarantineCorruptFile(resolvedPath)
+      return { exists: false, corrupt: true, backupPath, memories: [] }
+    }
+    return { exists: true, memories }
   }
 
   async function save(memories) {
@@ -111,7 +166,7 @@ export function createLongTermMemoryFileStore({ filePath, maxBytes = MAX_FILE_BY
       throw memoryError(LONG_TERM_MEMORY_ERROR_CODES.TOO_LARGE, 'memories exceed the file size budget')
     }
     const payload = { format: FILE_FORMAT, version: FILE_VERSION, memories: [...validated] }
-    await atomicWriteJson(resolvedPath, payload)
+    await atomicWriteJson(resolvedPath, payload, { fileMode: 0o600 })
     return { ok: true, count: validated.length }
   }
 
@@ -119,17 +174,21 @@ export function createLongTermMemoryFileStore({ filePath, maxBytes = MAX_FILE_BY
     await fsp.rm(resolvedPath, { force: true })
     // atomicWriteJson writes `<file>.<pid>.<ts>.tmp` beside the target. A
     // crash can leave one behind, and it still contains the memory wording.
+    // Quarantined corrupt files use the same directory and contain the same
+    // wording, so they are removed by the same sweep.
     const directory = path.dirname(resolvedPath)
     const base = path.basename(resolvedPath)
+    const backupBase = path.basename(resolvedPath, path.extname(resolvedPath))
     let entries
     try {
       entries = await fsp.readdir(directory)
     } catch {
       return { ok: true }
     }
-    const siblings = entries.filter((name) => (
-      name.startsWith(`${base}.`) && (name.endsWith('.tmp') || name.endsWith('.bak'))
-    ))
+    const siblings = entries.filter((name) => {
+      if (name.startsWith(`${base}.`) && (name.endsWith('.tmp') || name.endsWith('.bak'))) return true
+      return name.startsWith(`${backupBase}.corrupt-`) && name.endsWith('.json')
+    })
     await Promise.all(siblings.map((name) => fsp.rm(path.join(directory, name), { force: true })))
     return { ok: true }
   }
