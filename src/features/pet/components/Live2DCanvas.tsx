@@ -9,7 +9,7 @@ import {
   type PetExpressionSlot,
 } from '../models.ts'
 import type { PetPerformanceCue } from '../performance.ts'
-import { createBlinkPair } from './live2d/blink.ts'
+import { createBlinkState, suspendCubismEyeBlink } from './live2d/blink.ts'
 import { createSaccadeState } from '../idleSaccades.ts'
 import { createExpressionWriteQueue, type ExpressionWriteQueue, resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions.ts'
 import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender.ts'
@@ -47,12 +47,10 @@ const MODEL_LOAD_MAX_ATTEMPTS = 3
 const MOTION_TRIGGER_COOLDOWN_MS = 1500
 
 function createPetFrameState(): FrameRenderState {
-  const pair = createBlinkPair()
   return {
     smoothedGaze: { x: 0, y: 0 },
     smoothedSpeechLevel: 0,
-    blink: pair.left,
-    blinkRight: pair.right,
+    blink: createBlinkState(),
     saccade: createSaccadeState(),
   }
 }
@@ -789,6 +787,7 @@ export function Live2DCanvas({
         }
 
         modelRef.current = model
+        suspendCubismEyeBlink(model as Live2DModelHandle)
         app.stage.addChild(model)
         modelTickerCleanupRef.current = attachLive2DModelTicker({
           ticker: app.ticker,
