@@ -199,7 +199,7 @@ export type AssistantReplyRequestOptions = {
  * existing global-SOUL.md behaviour.
  */
 export async function loadActiveProfilePersona(
-  settings: AppSettings,
+  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId'>,
 ): Promise<LoadedPersona | null> {
   if (!settings.profilePersonaInChatEnabled) return null
   const load = window.desktopPet?.personaLoadProfile

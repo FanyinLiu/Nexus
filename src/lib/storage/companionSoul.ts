@@ -1,11 +1,14 @@
 /**
- * Editable companion portrait. The default lives in i18n until the user
- * saves their own wording. Parse failures become an empty note.
+ * Legacy SOUL-card note stored in localStorage.
+ *
+ * Chat never read this blob. It is a one-time migration source: callers copy
+ * the text into the live persona when that target is empty, then remove the
+ * blob. Parse failures become an empty note. This module does not write it.
  */
 
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { normalizeBoundedText } from '../normalize.ts'
-import { COMPANION_SOUL_STORAGE_KEY, readJson, writeJson } from './core.ts'
+import { COMPANION_SOUL_STORAGE_KEY, readJson } from './core.ts'
 
 export interface CompanionSoulNote {
   text: string
@@ -13,8 +16,7 @@ export interface CompanionSoulNote {
 }
 
 /**
- * Read the saved portrait. A missing or broken blob is an empty note,
- * which the settings card replaces with the locale default.
+ * Read the legacy portrait. A missing or broken blob is an empty note.
  */
 export function loadCompanionSoul(): CompanionSoulNote {
   try {
@@ -32,16 +34,11 @@ export function loadCompanionSoul(): CompanionSoulNote {
   }
 }
 
-/** Persist the portrait. Storage failures are warned and do not throw. */
-export function saveCompanionSoul(text: string, nowIso: string): CompanionSoulNote {
-  const note: CompanionSoulNote = {
-    text: text.trim().slice(0, 2_000),
-    updatedAt: Number.isFinite(Date.parse(nowIso)) ? new Date(nowIso).toISOString() : new Date().toISOString(),
-  }
+/** Drop the legacy portrait. Storage failures are warned and do not throw. */
+export function clearCompanionSoul(): void {
   try {
-    writeJson(COMPANION_SOUL_STORAGE_KEY, note)
+    window.localStorage.removeItem(COMPANION_SOUL_STORAGE_KEY)
   } catch (error) {
-    console.warn('[memory] soul write failed:', getRedactedLogErrorMessage(error))
+    console.warn('[memory] soul legacy clear failed:', getRedactedLogErrorMessage(error))
   }
-  return note
 }
