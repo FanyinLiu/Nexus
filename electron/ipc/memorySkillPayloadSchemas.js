@@ -75,6 +75,18 @@ const memoryClearUserDataSchema = {
   },
 }
 
+const longTermMemorySaveSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    memories: {
+      type: 'array',
+      maxItems: 5_000,
+      items: { type: 'object', unknown: 'preserve' },
+    },
+  },
+}
+
 const memoryRemoveSchema = {
   type: 'object',
   optional: true,
@@ -196,6 +208,10 @@ export function validateMemoryRemovePayload(payload) {
 
 export function validateMemoryClearUserDataPayload(payload) {
   return validateIpcPayload('memory:clear-user-data', payload, memoryClearUserDataSchema)
+}
+
+export function validateMemoryLongTermSavePayload(payload) {
+  return validateIpcPayload('memory:long-term-save', payload, longTermMemorySaveSchema)
 }
 
 export function validateSkillSavePayload(payload) {

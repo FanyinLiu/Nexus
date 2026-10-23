@@ -29,8 +29,8 @@ import {
 import {
   CHAT_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
+  applyLongTermMemoryBroadcast,
   loadChatMessages,
-  loadMemories,
   onStorageChange,
   savePetWindowPreferences,
 } from '../../lib'
@@ -347,7 +347,7 @@ export function useDesktopBridge({
     )
     const unsubscribeMemories = onStorageChange(
       MEMORY_STORAGE_KEY,
-      () => applyRemoteMemories(loadMemories()),
+      (value) => applyRemoteMemories(applyLongTermMemoryBroadcast(value)),
     )
     return () => {
       unsubscribeChat()

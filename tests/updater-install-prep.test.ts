@@ -49,7 +49,6 @@ test('prepareForUpdateInstall flushes settings, memory v2, the vector store, the
         longTerm: '[{"id":"m-v2"}]',
         daily: '{}',
         opLog: '[]',
-        v1Backup: '[{"id":"v1"}]',
       }
     },
     flushMemoryVector: async () => {
@@ -68,8 +67,7 @@ test('prepareForUpdateInstall flushes settings, memory v2, the vector store, the
     },
     writeSnapshot: async (input) => {
       calls.push('snapshot')
-      const snapshotInput = input as { memoryV2: { v1Backup: string, longTerm: string } }
-      assert.equal(snapshotInput.memoryV2.v1Backup, '[{"id":"v1"}]')
+      const snapshotInput = input as { memoryV2: { longTerm: string } }
       assert.equal(snapshotInput.memoryV2.longTerm, '[{"id":"m-v2"}]')
       return { directory: '/tmp/nexus-update-snapshot' }
     },
@@ -170,7 +168,6 @@ test('a failed snapshot blocks install and keeps the earlier snapshot', async ()
       longTerm: '[{"id":"m-v2","schemaVersion":2}]',
       daily: '{"2026-10-15":[]}',
       opLog: '[{"op":"ADD"}]',
-      v1Backup: '[{"id":"legacy-v1"}]',
     }
     const base = {
       userDataPath: userData,
@@ -207,10 +204,6 @@ test('a failed snapshot blocks install and keeps the earlier snapshot', async ()
     assert.equal(
       readFileSync(join(third.directory, 'memory-v2', 'long-term.json'), 'utf8'),
       memoryV2.longTerm,
-    )
-    assert.equal(
-      readFileSync(join(third.directory, 'memory-v2', 'v1-backup.txt'), 'utf8'),
-      memoryV2.v1Backup,
     )
     assert.equal(
       readFileSync(join(third.directory, 'memory-v2', 'op-log.json'), 'utf8'),
@@ -324,12 +317,9 @@ test('debounced json stores flush before their timer and renderer memory v2 is c
       writeJsonDebounced,
       MEMORY_STORAGE_KEY,
       MEMORY_OP_LOG_STORAGE_KEY,
-      MEMORY_V1_BACKUP_STORAGE_KEY,
       PROACTIVE_AGENDA_STORAGE_KEY,
     } = await import('../src/lib/storage/core.ts')
-    const saved = new Map<string, string>([
-      [MEMORY_V1_BACKUP_STORAGE_KEY, '[{"id":"v1-backup"}]'],
-    ])
+    const saved = new Map<string, string>()
     Object.defineProperty(globalThis, 'window', {
       configurable: true,
       writable: true,
@@ -367,7 +357,6 @@ test('debounced json stores flush before their timer and renderer memory v2 is c
     assert.match(snapshot.memoryV2.longTerm ?? '', /open_loop/)
     assert.match(snapshot.memoryV2.longTerm ?? '', /loopSnoozeUntil/)
     assert.match(snapshot.memoryV2.opLog ?? '', /ADD/)
-    assert.equal(snapshot.memoryV2.v1Backup, '[{"id":"v1-backup"}]')
     assert.match(saved.get(MEMORY_STORAGE_KEY) ?? '', /send the report/)
     assert.match(saved.get(PROACTIVE_AGENDA_STORAGE_KEY) ?? '', /agenda:open_loop:loop-1/)
   } finally {

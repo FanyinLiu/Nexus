@@ -15,10 +15,17 @@ import {
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
+  broadcastWrite,
   readJson,
+  registerLongTermMemorySnapshotProvider,
   writeJson,
   writeJsonDebounced,
 } from './core.ts'
+import {
+  MEMORY_LOCAL_STORAGE_DROP_KEYS,
+  resetLocalStorage,
+  type LocalStorageResetBridge,
+} from './localStorageReset.ts'
 import { isObject } from '../guards.ts'
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { normalizeBoundedText } from '../normalize.ts'
@@ -248,22 +255,348 @@ function readStorageText(key: string): string | null {
 }
 
 /**
- * Keep the original blob the first time v2 normalization would rewrite it.
- * Later runs no-op once the backup key exists, including when the blob is corrupt.
+ * Durable long-term memory backend. Tests inject one backed by the real
+ * main-process file store; production resolves it from window.desktopPet.
  */
-function backupMemoryV1Raw(rawText: string | null): void {
-  if (!rawText) return
-  try {
-    if (window.localStorage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY) !== null) return
-    window.localStorage.setItem(MEMORY_V1_BACKUP_STORAGE_KEY, rawText)
-  } catch (error) {
-    console.warn('[memory] v1 backup skipped:', getRedactedLogErrorMessage(error))
+export interface LongTermMemoryBackend {
+  load: () => Promise<{ exists: boolean; memories: unknown[] }>
+  save: (memories: MemoryItem[]) => Promise<unknown>
+  clear: () => Promise<unknown>
+}
+
+/** Slice of window.desktopPet the memory file store needs. */
+export interface LongTermMemoryFileBridge extends LocalStorageResetBridge {
+  memoryLongTermLoad?: () => Promise<{ exists?: boolean; memories?: unknown[] } | null | undefined>
+  memoryLongTermSave?: (payload: { memories: unknown[] }) => Promise<unknown>
+  memoryLongTermClear?: () => Promise<unknown>
+}
+
+export interface HydrateLongTermMemoryOptions {
+  /** Explicit backend for tests; omit to resolve the desktop bridge. */
+  backend?: LongTermMemoryBackend | null
+  /** Fakeable reset bridge for tests. */
+  resetBridge?: LocalStorageResetBridge | null
+}
+
+interface LocalMemorySnapshot {
+  present: boolean
+  raw: unknown
+  memories: MemoryItem[]
+}
+
+// The synchronous API stays cache-backed: hydration fills it before first
+// render, saves update it immediately, and cross-window broadcasts replace it.
+let memoryCache: MemoryItem[] | null = null
+let memoryStoreExists = false
+let hydratePromise: Promise<void> | null = null
+
+let activeBackend: LongTermMemoryBackend | null = null
+let pendingPersist: MemoryItem[] | null = null
+let persistTimer: number | null = null
+let persistDrain: Promise<void> | null = null
+const PERSIST_DEBOUNCE_MS = 250
+
+function resolveBridgeBackend(): LongTermMemoryBackend | null {
+  const bridge: LongTermMemoryFileBridge | null = typeof window === 'undefined'
+    ? null
+    : window.desktopPet ?? null
+  if (!bridge
+    || typeof bridge.memoryLongTermLoad !== 'function'
+    || typeof bridge.memoryLongTermSave !== 'function'
+    || typeof bridge.memoryLongTermClear !== 'function') {
+    return null
+  }
+  return {
+    load: async () => {
+      const result = await bridge.memoryLongTermLoad!()
+      return {
+        exists: result?.exists === true,
+        memories: Array.isArray(result?.memories) ? result.memories : [],
+      }
+    },
+    save: (memories) => bridge.memoryLongTermSave!({ memories }),
+    clear: () => bridge.memoryLongTermClear!(),
   }
 }
 
-function needsV1Backup(parsed: unknown): boolean {
-  if (!Array.isArray(parsed)) return true
-  return parsed.some((item) => !isObject(item) || item.schemaVersion !== MEMORY_RECORD_SCHEMA_VERSION)
+function parseStorageJson(rawText: string, label: string): unknown {
+  if (!rawText) return []
+  try {
+    return JSON.parse(rawText) as unknown
+  } catch (error) {
+    console.warn(`[memory] ${label} did not parse:`, getRedactedLogErrorMessage(error))
+    return []
+  }
+}
+
+/**
+ * Read the pre-file localStorage shape. The legacy key is only a fallback when
+ * the current key is genuinely absent: an existing empty array means the user
+ * deleted everything, and falling back would resurrect removed rows.
+ */
+function readLocalMemorySnapshot(): LocalMemorySnapshot {
+  const currentText = readStorageText(MEMORY_STORAGE_KEY)
+  if (currentText !== null) {
+    const raw = parseStorageJson(currentText, 'long-term store')
+    return { present: true, raw, memories: normalizeMemoryItemsForStorage(raw) }
+  }
+  const legacyText = readStorageText(LEGACY_MEMORY_STORAGE_KEY)
+  if (legacyText !== null) {
+    const raw = parseStorageJson(legacyText, 'legacy store')
+    return { present: true, raw, memories: normalizeMemoryItemsForStorage(raw) }
+  }
+  return { present: false, raw: [], memories: [] }
+}
+
+function hasLocalMemoryKeys(): boolean {
+  return readStorageText(MEMORY_STORAGE_KEY) !== null
+    || readStorageText(LEGACY_MEMORY_STORAGE_KEY) !== null
+    || readStorageText(MEMORY_V1_BACKUP_STORAGE_KEY) !== null
+}
+
+function loadMemoriesFromLocalStorage(): MemoryItem[] {
+  const local = readLocalMemorySnapshot()
+  if (!local.memories.length) return []
+  if (JSON.stringify(local.memories) !== JSON.stringify(local.raw)) {
+    writeJson(MEMORY_STORAGE_KEY, local.memories)
+  }
+  return local.memories
+}
+
+async function resetMemoryLocalStorage(
+  bridge: LocalStorageResetBridge | null | undefined,
+): Promise<void> {
+  await resetLocalStorage({
+    bridge,
+    dropKeys: MEMORY_LOCAL_STORAGE_DROP_KEYS,
+  })
+}
+
+async function migrateLocalMemoriesToFile(
+  backend: LongTermMemoryBackend,
+  local: LocalMemorySnapshot,
+  resetBridge: LocalStorageResetBridge | null | undefined,
+): Promise<void> {
+  try {
+    await backend.save(local.memories)
+    memoryStoreExists = true
+  } catch (error) {
+    // Keep localStorage untouched: a failed migration must not delete the only
+    // copy. The app still runs from the local snapshot for this session.
+    memoryCache = local.memories
+    console.warn('[memory] migration to file store failed:', getRedactedLogErrorMessage(error))
+    return
+  }
+  memoryCache = local.memories
+  await resetMemoryLocalStorage(resetBridge)
+}
+
+async function hydrateInternal(options: HydrateLongTermMemoryOptions): Promise<void> {
+  activeBackend = options.backend === undefined ? resolveBridgeBackend() : options.backend
+  const backend = activeBackend
+  if (!backend) {
+    // Browser preview and unit tests keep the historical localStorage path.
+    memoryCache = loadMemoriesFromLocalStorage()
+    return
+  }
+
+  let loaded: { exists: boolean; memories: unknown[] }
+  try {
+    loaded = await backend.load()
+  } catch (error) {
+    // An unreadable file must not be overwritten by a later save; stay on the
+    // local snapshot until the next launch retries the load.
+    activeBackend = null
+    memoryCache = loadMemoriesFromLocalStorage()
+    console.warn('[memory] file store load failed:', getRedactedLogErrorMessage(error))
+    return
+  }
+
+  const local = readLocalMemorySnapshot()
+  if (!loaded.exists) {
+    if (local.present) {
+      await migrateLocalMemoriesToFile(backend, local, options.resetBridge)
+    } else {
+      memoryCache = []
+      memoryStoreExists = false
+      if (hasLocalMemoryKeys()) await resetMemoryLocalStorage(options.resetBridge)
+    }
+    return
+  }
+
+  // The file wins. Any local memory keys are leftover bytes from an
+  // interrupted migration and get the full storage reset.
+  memoryCache = normalizeMemoryItemsForStorage(loaded.memories)
+  memoryStoreExists = true
+  if (hasLocalMemoryKeys()) await resetMemoryLocalStorage(options.resetBridge)
+}
+
+/**
+ * Load the long-term memory file and migrate localStorage on first upgrade.
+ * Awaited by initApp before the first render. Safe to call repeatedly.
+ */
+export function hydrateLongTermMemoryStore(options: HydrateLongTermMemoryOptions = {}): Promise<void> {
+  if (hydratePromise) return hydratePromise
+  hydratePromise = hydrateInternal(options).catch((error: unknown) => {
+    console.warn('[memory] hydration failed:', getRedactedLogErrorMessage(error))
+  })
+  return hydratePromise
+}
+
+async function drainPersistQueue(backend: LongTermMemoryBackend): Promise<void> {
+  while (pendingPersist) {
+    const value = pendingPersist
+    pendingPersist = null
+    try {
+      await backend.save(value)
+    } catch (error) {
+      console.warn('[memory] file store save failed:', getRedactedLogErrorMessage(error))
+    }
+  }
+}
+
+function schedulePersist(memories: MemoryItem[]): void {
+  pendingPersist = memories
+  if (typeof window === 'undefined') {
+    void flushLongTermMemoryWrites()
+    return
+  }
+  if (persistTimer !== null) window.clearTimeout(persistTimer)
+  persistTimer = window.setTimeout(() => {
+    persistTimer = null
+    void flushLongTermMemoryWrites()
+  }, PERSIST_DEBOUNCE_MS)
+}
+
+/**
+ * Persist the latest cached memories now. The drain loop re-reads the pending
+ * value, so the last save wins even when writes overlap.
+ */
+export function flushLongTermMemoryWrites(): Promise<void> {
+  const backend = activeBackend
+  if (!backend) return Promise.resolve()
+  if (persistTimer !== null && typeof window !== 'undefined') {
+    window.clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  if (!pendingPersist) return persistDrain ?? Promise.resolve()
+  if (persistDrain) {
+    // A save can land after the drain loop's last check but before this
+    // promise settles; re-check so that value is not stranded.
+    return persistDrain.then(() => flushLongTermMemoryWrites())
+  }
+  const drain = drainPersistQueue(backend)
+  persistDrain = drain
+  void drain.finally(() => {
+    if (persistDrain === drain) persistDrain = null
+  })
+  return drain
+}
+
+/** Serialized cache for the pre-install snapshot; does not touch disk. */
+export function readLongTermMemoryRaw(): string | null {
+  if (memoryCache !== null) return JSON.stringify(memoryCache)
+  return readStorageText(MEMORY_STORAGE_KEY)
+}
+
+/** True when long-term memories existed before this launch (onboarding backfill). */
+export function hasStoredLongTermMemories(): boolean {
+  if (memoryCache !== null) return memoryStoreExists || memoryCache.length > 0
+  return readStorageText(MEMORY_STORAGE_KEY) !== null
+    || readStorageText(LEGACY_MEMORY_STORAGE_KEY) !== null
+}
+
+/**
+ * Source snapshot for the local-data migration package. `canonicalPresent`
+ * excludes the legacy key on purpose: an untouched legacy blob is a fallback
+ * source, not evidence that the current store exists.
+ */
+export function readLongTermMemoryMigrationSource(): {
+  canonicalPresent: boolean
+  memories: MemoryItem[]
+} {
+  if (activeBackend !== null) {
+    return { canonicalPresent: memoryStoreExists, memories: memoryCache ?? [] }
+  }
+  // No file backend (browser preview, or the load failed): the current key is
+  // the canonical source, and the cache already holds its normalized rows.
+  return {
+    canonicalPresent: readStorageText(MEMORY_STORAGE_KEY) !== null,
+    memories: memoryCache !== null ? [...memoryCache] : readLocalMemorySnapshot().memories,
+  }
+}
+
+/**
+ * Replace the cache from another window's broadcast. Never writes localStorage:
+ * the sender already persisted to the canonical file store.
+ */
+export function applyLongTermMemoryBroadcast(value: unknown): MemoryItem[] {
+  const next = normalizeMemoryItemsForStorage(value)
+  memoryCache = next
+  memoryStoreExists = true
+  // A queued local write is older than the broadcast; letting the drain run
+  // would overwrite the other window's newer state.
+  pendingPersist = null
+  if (persistTimer !== null && typeof window !== 'undefined') {
+    window.clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  return next
+}
+
+/**
+ * Delete the canonical file and reset the cache. The broadcast tells the other
+ * window to drop its copy without touching its localStorage.
+ */
+export async function clearLongTermMemoryStore(): Promise<void> {
+  memoryCache = []
+  memoryStoreExists = false
+  pendingPersist = null
+  if (persistTimer !== null && typeof window !== 'undefined') {
+    window.clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  if (persistDrain) {
+    try {
+      await persistDrain
+    } catch {
+      // A failed in-flight write still gets removed by clear().
+    }
+  }
+  const backend = activeBackend
+  if (backend) {
+    try {
+      await backend.clear()
+    } catch (error) {
+      console.warn('[memory] file store clear failed:', getRedactedLogErrorMessage(error))
+    }
+  }
+  broadcastWrite(MEMORY_STORAGE_KEY, [])
+}
+
+/** Test hook: forget hydration/backend state between cases. */
+export function __resetLongTermMemoryStoreForTests(): void {
+  activeBackend = null
+  memoryCache = null
+  memoryStoreExists = false
+  hydratePromise = null
+  pendingPersist = null
+  persistDrain = null
+  if (persistTimer !== null && typeof window !== 'undefined') {
+    window.clearTimeout(persistTimer)
+  }
+  persistTimer = null
+}
+
+registerLongTermMemorySnapshotProvider({
+  read: () => readLongTermMemoryRaw(),
+  flush: () => { void flushLongTermMemoryWrites() },
+})
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    void flushLongTermMemoryWrites()
+  })
 }
 
 function isValidDayKey(value: string): boolean {
@@ -321,62 +654,37 @@ export function normalizeDailyMemoryStore(raw: unknown): DailyMemoryStore {
 }
 
 export function loadMemories(): MemoryItem[] {
-  const rawText = readStorageText(MEMORY_STORAGE_KEY)
-  let rawNext: unknown = []
-  let rawParsed = false
-  if (rawText) {
-    try {
-      rawNext = JSON.parse(rawText) as unknown
-      rawParsed = true
-    } catch (error) {
-      backupMemoryV1Raw(rawText)
-      console.warn('[memory] long-term store did not parse:', getRedactedLogErrorMessage(error))
-    }
-  }
-  if (rawParsed && needsV1Backup(rawNext)) backupMemoryV1Raw(rawText)
-  const next = normalizeMemoryItemsForStorage(rawNext)
-  if (next.length) {
-    if (JSON.stringify(next) !== JSON.stringify(rawNext)) {
-      writeJson(MEMORY_STORAGE_KEY, next)
-    }
-    return next
-  }
-
-  // Only fall back to the legacy key when the current key is genuinely absent
-  // (first launch after the store was split). A key that exists but holds an
-  // empty array means the user deleted every memory — falling back here would
-  // resurrect the legacy memories they just removed. A corrupt current blob
-  // is also present: keep it via the backup and do not resurrect legacy rows.
-  if (rawText !== null) return []
-
-  const legacyText = readStorageText(LEGACY_MEMORY_STORAGE_KEY)
-  let rawLegacy: unknown = []
-  if (legacyText) {
-    try {
-      rawLegacy = JSON.parse(legacyText) as unknown
-      if (needsV1Backup(rawLegacy)) backupMemoryV1Raw(legacyText)
-    } catch (error) {
-      backupMemoryV1Raw(legacyText)
-      console.warn('[memory] legacy store did not parse:', getRedactedLogErrorMessage(error))
-      rawLegacy = []
-    }
-  }
-  const legacy = normalizeMemoryItemsForStorage(rawLegacy)
-  if (legacy.length) {
-    writeJson(MEMORY_STORAGE_KEY, legacy)
-  }
-
-  return legacy
+  if (memoryCache !== null) return [...memoryCache]
+  return loadMemoriesFromLocalStorage()
 }
 
 /**
- * Persist long-term memories. An empty list does not create the key: startup
- * consolidation copies the loaded list, and a newly created key makes the
- * onboarding backfill treat a fresh install as an upgrade.
+ * Persist long-term memories. An empty list does not create the canonical store
+ * on a fresh install: startup consolidation copies the loaded list, and a newly
+ * created store makes the onboarding backfill treat a fresh install as an
+ * upgrade. A store that already exists is allowed to become empty (the user
+ * deleted every memory).
  */
 export function saveMemories(memories: MemoryItem[]) {
   const normalized = normalizeMemoryItemsForStorage(memories)
-  if (!normalized.length && readStorageText(MEMORY_STORAGE_KEY) === null) return
+  if (!normalized.length) {
+    if (activeBackend) {
+      if (!memoryStoreExists) {
+        memoryCache = normalized
+        return
+      }
+    } else if (readStorageText(MEMORY_STORAGE_KEY) === null) {
+      return
+    }
+  }
+
+  memoryCache = normalized
+  if (activeBackend) {
+    if (normalized.length) memoryStoreExists = true
+    schedulePersist(normalized)
+    broadcastWrite(MEMORY_STORAGE_KEY, normalized)
+    return
+  }
   writeJsonDebounced(MEMORY_STORAGE_KEY, normalized)
 }
 

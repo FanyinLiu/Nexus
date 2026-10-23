@@ -34,7 +34,7 @@ const PREP_RECOMMENDATION_KEY = 'updater.error.install_prep_failed_rec'
 const SNAPSHOT_MESSAGE_KEY = 'updater.error.snapshot_failed'
 const SNAPSHOT_RECOMMENDATION_KEY = 'updater.error.snapshot_failed_rec'
 
-const MEMORY_V2_FIELDS = ['longTerm', 'daily', 'opLog', 'v1Backup']
+const MEMORY_V2_FIELDS = ['longTerm', 'daily', 'opLog']
 
 /**
  * Step names recorded by prepareForUpdateInstall. Snapshot runs after these
@@ -307,7 +307,6 @@ export async function writeUpdateSnapshot(input) {
         longTerm: input.memoryV2.longTerm !== null,
         daily: input.memoryV2.daily !== null,
         opLog: input.memoryV2.opLog !== null,
-        v1Backup: input.memoryV2.v1Backup !== null,
       },
       localDataPresent,
     }, null, 2)}\n`)
@@ -375,7 +374,7 @@ async function writeExact(filePath, text) {
 
 /**
  * @param {string} partial
- * @param {{ longTerm: string | null, daily: string | null, opLog: string | null, v1Backup: string | null }} memoryV2
+ * @param {{ longTerm: string | null, daily: string | null, opLog: string | null }} memoryV2
  */
 async function writeMemoryV2(partial, memoryV2) {
   const dir = path.join(partial, 'memory-v2')
@@ -384,7 +383,6 @@ async function writeMemoryV2(partial, memoryV2) {
     ['long-term.json', memoryV2.longTerm],
     ['daily.json', memoryV2.daily],
     ['op-log.json', memoryV2.opLog],
-    ['v1-backup.txt', memoryV2.v1Backup],
   ]
   for (const [name, contents] of files) {
     if (contents === null) continue

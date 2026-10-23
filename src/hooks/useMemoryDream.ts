@@ -43,11 +43,11 @@ import {
 } from '../features/autonomy/skillDistillation.ts'
 import {
   AUTONOMY_DREAM_LOG_STORAGE_KEY,
-  MEMORY_STORAGE_KEY,
   appendMemoryOpLog,
-  normalizeMemoryItemsForStorage,
+  flushLongTermMemoryWrites,
   onStorageChange,
   readJson,
+  saveMemories,
   writeJson,
 } from '../lib/storage.ts'
 import {
@@ -477,7 +477,8 @@ export function useMemoryDream({
       // leave the archived items in BOTH stores (resurfacing as duplicates on
       // restart). The setMemories below still drives the UI + normal save.
       if (candidates.length > 0 || capped.evicted.length > 0) {
-        writeJson(MEMORY_STORAGE_KEY, normalizeMemoryItemsForStorage(finalMemories))
+        saveMemories(finalMemories)
+        void flushLongTermMemoryWrites()
       }
 
       // Pure replacement: updater closes over `finalMemories` (already

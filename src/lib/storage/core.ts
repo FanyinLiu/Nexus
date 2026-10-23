@@ -20,7 +20,7 @@ export const LOREBOOK_ENTRIES_STORAGE_KEY = 'nexus:lorebooks'
 export const LEGACY_MEMORY_STORAGE_KEY = 'nexus:memory'
 export const MEMORY_STORAGE_KEY = 'nexus:memory:long-term'
 export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'
-/** One-shot raw copy of pre-v2 long-term memories. Never overwritten. */
+/** Legacy raw copy of pre-v2 long-term memories. Only removed by the reset. */
 export const MEMORY_V1_BACKUP_STORAGE_KEY = 'nexus:memory:v1-backup'
 /** Append-only reconcile and cap decisions. */
 export const MEMORY_OP_LOG_STORAGE_KEY = 'nexus:memory:op-log'
@@ -218,7 +218,12 @@ if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
   }
 }
 
-function broadcastWrite(key: string, value: unknown): void {
+/**
+ * Push a storage value to other windows without touching localStorage.
+ * Memory persistence uses this once its canonical store moved to the main
+ * process; the receiving window updates its cache from the broadcast value.
+ */
+export function broadcastWrite(key: string, value: unknown): void {
   if (!syncChannel) return
   const msg: StorageSyncMessage = { key, value, timestamp: Date.now() }
   try { syncChannel.postMessage(msg) } catch { /* channel may be closed */ }
@@ -295,7 +300,6 @@ export type DurableMemoryV2Snapshot = {
   longTerm: string | null
   daily: string | null
   opLog: string | null
-  v1Backup: string | null
 }
 
 export type DurableUpdateSnapshot = {
@@ -303,8 +307,29 @@ export type DurableUpdateSnapshot = {
   memoryV2: DurableMemoryV2Snapshot
 }
 
+export interface LongTermMemorySnapshotProvider {
+  /** Serialized long-term memories for the pre-install snapshot. */
+  read: () => string | null
+  /** Kick any pending file write before install copies the store. */
+  flush?: () => void
+}
+
+// memory.ts registers itself here once it owns the cache. core.ts cannot
+// import memory.ts: memory.ts already imports core.ts for its primitives.
+let longTermMemorySnapshotProvider: LongTermMemorySnapshotProvider | null = null
+
+/** Wire the renderer memory cache into the durable install snapshot. */
+export function registerLongTermMemorySnapshotProvider(provider: LongTermMemorySnapshotProvider): void {
+  longTermMemorySnapshotProvider = provider
+}
+
 function readStorageItem(key: string): string | null {
   return window.localStorage.getItem(key)
+}
+
+function readLongTermMemorySnapshot(): string | null {
+  if (longTermMemorySnapshotProvider) return longTermMemorySnapshotProvider.read()
+  return readStorageItem(MEMORY_STORAGE_KEY)
 }
 
 /**
@@ -323,6 +348,7 @@ function publishDurableUpdateSnapshot(snapshot: DurableUpdateSnapshot | null): v
  * write cannot be stored, so install can abort instead of copying a gap.
  */
 export function captureDurableUpdateSnapshot(): DurableUpdateSnapshot {
+  longTermMemorySnapshotProvider?.flush?.()
   if (!flushPendingStorageWrites()) {
     publishDurableUpdateSnapshot(null)
     throw new Error('durable storage flush failed')
@@ -330,10 +356,9 @@ export function captureDurableUpdateSnapshot(): DurableUpdateSnapshot {
   const snapshot: DurableUpdateSnapshot = {
     settings: readStorageItem(SETTINGS_STORAGE_KEY),
     memoryV2: {
-      longTerm: readStorageItem(MEMORY_STORAGE_KEY),
+      longTerm: readLongTermMemorySnapshot(),
       daily: readStorageItem(DAILY_MEMORY_STORAGE_KEY),
       opLog: readStorageItem(MEMORY_OP_LOG_STORAGE_KEY),
-      v1Backup: readStorageItem(MEMORY_V1_BACKUP_STORAGE_KEY),
     },
   }
   publishDurableUpdateSnapshot(snapshot)

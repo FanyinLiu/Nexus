@@ -777,6 +777,16 @@ declare global {
         score: number
       }>>
 
+      // Long-term memory file store
+      memoryLongTermLoad: () => Promise<{
+        exists: boolean
+        memories: unknown[]
+      }>
+      memoryLongTermSave: (payload: { memories: unknown[] }) => Promise<{ ok: boolean; count: number }>
+      memoryLongTermClear: () => Promise<{ ok: boolean }>
+      /** Session-level localStorage clear used by the memory reset procedure. */
+      memoryResetLocalStorage: () => Promise<{ ok: boolean }>
+
       // Auto-generated Skills
       skillSave: (payload: {
         id: string

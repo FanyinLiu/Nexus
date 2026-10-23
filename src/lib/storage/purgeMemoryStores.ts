@@ -25,7 +25,13 @@ import {
   type MemoryPurgeRequest,
 } from '../../features/memory/purgeMemoryText.ts'
 import type { DailyMemoryStore, MemoryItem } from '../../types/memory.ts'
-import { loadMemories } from './memory.ts'
+import {
+  clearLongTermMemoryStore,
+  flushLongTermMemoryWrites,
+  loadMemories,
+  readLongTermMemoryRaw,
+  saveMemories,
+} from './memory.ts'
 import {
   cancelDebouncedWrite,
   CHAT_SESSIONS_STORAGE_KEY,
@@ -34,12 +40,11 @@ import {
   MEMORY_CALLBACK_QUEUE_STORAGE_KEY,
   MEMORY_OP_LOG_STORAGE_KEY,
   MEMORY_RUN_SNAPSHOT_STORAGE_KEY,
-  MEMORY_STORAGE_KEY,
-  MEMORY_V1_BACKUP_STORAGE_KEY,
   PROACTIVE_AGENDA_STORAGE_KEY,
   REMINDER_TASKS_STORAGE_KEY,
   writeJson,
 } from './core.ts'
+import { resetLocalStorage } from './localStorageReset.ts'
 
 /** Chat state listens and drops the same wording from the open transcript. */
 export const MEMORY_PLAINTEXT_PURGED_EVENT = 'nexus:memory-plaintext-purged'
@@ -48,11 +53,9 @@ export const MEMORY_PLAINTEXT_PURGED_EVENT = 'nexus:memory-plaintext-purged'
 export const MEMORY_OP_LOG_CHANGED_EVENT = 'nexus:memory-op-log-changed'
 
 const FILE_TO_KEY: Record<string, string> = {
-  [MEMORY_DATA_FILES.longTerm]: MEMORY_STORAGE_KEY,
   [MEMORY_DATA_FILES.daily]: DAILY_MEMORY_STORAGE_KEY,
   [MEMORY_DATA_FILES.opLog]: MEMORY_OP_LOG_STORAGE_KEY,
   [MEMORY_DATA_FILES.snapshots]: MEMORY_RUN_SNAPSHOT_STORAGE_KEY,
-  [MEMORY_DATA_FILES.v1Backup]: MEMORY_V1_BACKUP_STORAGE_KEY,
   [MEMORY_DATA_FILES.archive]: ARCHIVE_STORAGE_KEY,
   [MEMORY_DATA_FILES.narrative]: NARRATIVE_STORAGE_KEY,
   [MEMORY_DATA_FILES.agenda]: PROACTIVE_AGENDA_STORAGE_KEY,
@@ -64,12 +67,15 @@ const FILE_TO_KEY: Record<string, string> = {
 
 /**
  * Read the memory files this feature persists.
- * Missing keys are omitted. Callers can write the map into a directory.
+ * Long-term memory comes from the canonical store; the rest are still
+ * localStorage-backed. Missing values are omitted.
  */
 export function readMemoryDataFiles(): Record<string, string> {
   const storage = currentStorage()
   if (!storage) return {}
   const files: Record<string, string> = {}
+  const longTerm = readLongTermMemoryRaw()
+  if (longTerm !== null) files[MEMORY_DATA_FILES.longTerm] = longTerm
   for (const [file, key] of Object.entries(FILE_TO_KEY)) {
     const raw = storage.getItem(key)
     if (raw !== null) files[file] = raw
@@ -90,19 +96,23 @@ export function purgeDeletedMemory(memory: MemoryItem, at = new Date().toISOStri
     reminderIds: memory.loopReminderTaskId ? [memory.loopReminderTaskId] : [],
     at,
   })
+  // A delete is a privacy boundary: do not leave the old wording on disk for
+  // the debounce window.
+  void flushLongTermMemoryWrites()
   void refreshPersona(needles)
   requestVectorPurge([memory.id], false)
 }
 
 /**
  * Clear-all removes every stored copy of the current memories and diary.
- * It does not keep a session undo.
+ * It does not keep a session undo. The promise resolves after the long-term
+ * file, localStorage, and the vector store have all been cleared.
  */
-export function purgeClearedMemories(
+export async function purgeClearedMemories(
   memories: readonly MemoryItem[],
   daily: DailyMemoryStore,
   at = new Date().toISOString(),
-): Promise<unknown> | undefined {
+): Promise<unknown> {
   clearDeletedMemorySession()
   const needles = [
     ...memories.flatMap((memory) => memoryPlaintextNeedles(memory)),
@@ -117,6 +127,10 @@ export function purgeClearedMemories(
     at,
   })
   void refreshPersona(needles)
+  // The long-term file is deleted outright; writing an empty array would still
+  // leave a store on disk and skip the LevelDB compaction.
+  await clearLongTermMemoryStore()
+  await resetLocalStorage()
   return requestVectorPurge(memories.map((memory) => memory.id), true, needles)
 }
 
@@ -125,13 +139,21 @@ function applyPurge(request: MemoryPurgeRequest): void {
   if (!storage) return
   const next = scrubMemoryDataFiles(readMemoryDataFiles(), request)
   for (const [file, text] of Object.entries(next)) {
+    if (file === MEMORY_DATA_FILES.longTerm) {
+      // Clear-all deletes the file after the loop; a single delete persists the
+      // scrubbed rows through the canonical store.
+      if (request.clearAll) continue
+      try {
+        const parsed = JSON.parse(text) as unknown
+        if (Array.isArray(parsed)) saveMemories(parsed as MemoryItem[])
+      } catch {
+        // A corrupt long-term blob has no rows this purge can rewrite.
+      }
+      continue
+    }
     const key = FILE_TO_KEY[file]
     if (!key) continue
     cancelDebouncedWrite(key)
-    if (file === MEMORY_DATA_FILES.v1Backup) {
-      storage.setItem(key, text)
-      continue
-    }
     try {
       writeJson(key, JSON.parse(text) as unknown)
     } catch {

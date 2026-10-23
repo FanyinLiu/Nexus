@@ -1,11 +1,16 @@
 import { app, ipcMain, session } from 'electron'
 import { clearMemoryUserData } from '../services/memoryUserDataClear.js'
 import * as memoryVectorStore from '../services/memoryVectorStore.js'
+import {
+  createLongTermMemoryFileStore,
+  resolveLongTermMemoryFilePath,
+} from '../services/longTermMemoryFileStore.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateMemoryClearUserDataPayload,
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
+  validateMemoryLongTermSavePayload,
   validateMemoryRemovePayload,
   validateMemoryVectorIndexBatchPayload,
   validateMemoryVectorIndexPayload,
@@ -13,6 +18,35 @@ import {
 } from './payloadSchemas.js'
 
 export function register() {
+  const longTermMemoryStore = createLongTermMemoryFileStore({
+    filePath: resolveLongTermMemoryFilePath(app.getPath('userData')),
+  })
+
+  ipcMain.handle('memory:long-term-load', async (event) => {
+    requireTrustedSender(event)
+    return longTermMemoryStore.load()
+  })
+
+  ipcMain.handle('memory:long-term-save', async (event, payload) => {
+    requireTrustedSender(event)
+    const parsed = validateMemoryLongTermSavePayload(payload)
+    return longTermMemoryStore.save(parsed?.memories ?? [])
+  })
+
+  ipcMain.handle('memory:long-term-clear', async (event) => {
+    requireTrustedSender(event)
+    return longTermMemoryStore.clear()
+  })
+
+  // Chromium keeps removed localStorage values in LevelDB tombstones. Only the
+  // session-level clear compacts them away; the renderer restores every
+  // non-memory key afterwards.
+  ipcMain.handle('memory:reset-local-storage', async (event) => {
+    requireTrustedSender(event)
+    await session.defaultSession.clearStorageData({ storages: ['localstorage'] })
+    return { ok: true }
+  })
+
   ipcMain.handle('memory:vector-index', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateMemoryVectorIndexPayload(payload)

@@ -75,6 +75,7 @@ export {
   validateMemoryClearUserDataPayload,
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
+  validateMemoryLongTermSavePayload,
   validateMemoryRemovePayload,
   validateMemoryVectorIndexBatchPayload,
   validateMemoryVectorIndexPayload,
