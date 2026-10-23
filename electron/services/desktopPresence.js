@@ -1,14 +1,17 @@
 // Adaptive desktop presence: global cursor gaze and aggregate typing.
 // Gaze samples are window-relative DIP. On Linux the Electron cursor query
-// stays stale until the pointer crosses a BrowserWindow, so gaze reads the
-// same global input hook typing uses. Typing IPC is only
-// { phase, keysPerSecond }. Key codes stay inside the state machine and
-// are cleared on lock, suspend, resume, and quit. A missing native hook
+// can stay stale until the pointer crosses a BrowserWindow, so gaze polls an
+// X11 pointer query that never sees the keyboard. The uiohook native hook is
+// owned by typing awareness alone: it is installed only while typing is on
+// and stopped as soon as typing turns off, even when gaze stays on. Typing IPC
+// is only { phase, keysPerSecond }. Key codes stay inside the state machine
+// and are cleared on lock, suspend, resume, and quit. A missing native hook
 // disables typing and leaves the Electron cursor query in place.
 
 import { app, BrowserWindow, powerMonitor, screen, shell, systemPreferences } from 'electron'
 import { getPetInstanceForWindow } from '../petWindowInstances.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { createPresenceInput } from './presenceInput.js'
 import {
   GAZE_RESUME_CHECK_MS,
   GAZE_SAMPLE_INTERVAL_MS,
@@ -31,6 +34,16 @@ const TYPING_EMIT_MS = 50
 const machine = createTypingActivityMachine()
 const session = { locked: false, suspended: false }
 const lastEmit = new Map()
+const input = createPresenceInput({
+  onKeyDown: (event) => {
+    const token = typeof event?.keycode === 'number' ? event.keycode : 'unknown'
+    noteTyping(machine.keyDown(token, Date.now()))
+  },
+  onKeyUp: (event) => {
+    const token = typeof event?.keycode === 'number' ? event.keycode : 'unknown'
+    noteTyping(machine.keyUp(token, Date.now()))
+  },
+})
 
 let started = false
 let preferences = { gazeFollowEnabled: true, typingAwarenessEnabled: false }
@@ -40,15 +53,6 @@ let gazeInterval = 0
 let pauseSent = false
 let cursorFailed = false
 let typingGeneration = 0
-let hook = null
-let hookRunning = false
-let hookStart = null
-let onKeyDown = null
-let onKeyUp = null
-let onMouseMove = null
-let gazeListening = false
-let hookCursor = null
-let gazeHookWarned = false
 let activityTimer = null
 let typingTimer = null
 let pendingTyping = null
@@ -145,130 +149,19 @@ function noteTyping(signal) {
 }
 
 /**
+ * Clear aggregate typing output and stop the native hook. Gaze has its own
+ * pointer source and never keeps the hook alive.
  * @param {boolean} publishStop
+ * @param {boolean} wasRunning
  */
-function detachTypingListeners() {
-  const current = hook
-  if (!current) return
-  try {
-    if (onKeyDown) current.off?.('keydown', onKeyDown)
-    if (onKeyUp) current.off?.('keyup', onKeyUp)
-  } catch {
-    // The emitter may already have been stopped.
-  }
-}
-
-function detachGazeListener() {
-  const current = hook
-  if (current && onMouseMove) {
-    try {
-      current.off?.('mousemove', onMouseMove)
-    } catch {
-      // The emitter may already have been stopped.
-    }
-  }
-  onMouseMove = null
-  gazeListening = false
-  hookCursor = null
-}
-
-function stopNativeHook() {
-  const current = hook
-  hook = null
-  hookRunning = false
-  hookStart = null
-  if (!current) return
-  try {
-    current.stop()
-  } catch {
-    // stop() throws when start() never succeeded. That is the fail-safe path.
-  }
-}
-
-/**
- * Drop typing listeners. The native hook stays up while gaze still needs
- * global mouse motion; stopping it there would freeze the pet's eyes.
- * @param {boolean} publishStop
- */
-function stopHook(publishStop) {
-  const wasRunning = hookRunning
+function stopTypingOutput(publishStop, wasRunning) {
   if (activityTimer) clearInterval(activityTimer)
   activityTimer = null
   if (typingTimer) clearTimeout(typingTimer)
   typingTimer = null
   pendingTyping = null
-  detachTypingListeners()
-  onKeyDown = null
-  onKeyUp = null
-  if (!gazeListening) stopNativeHook()
   const signal = machine.reset(Date.now())
   if (publishStop && wasRunning) publishTyping(signal)
-}
-
-/**
- * uiohook throws if start() runs twice. Typing and gaze share one hook.
- * @param {{ on: Function, start: Function }} loaded
- */
-function startNativeHook(loaded) {
-  if (hookRunning && hook) return Promise.resolve(hook)
-  if (hookStart) return hookStart
-  hookStart = Promise.resolve().then(() => {
-    if (hookRunning && hook) return hook
-    loaded.start()
-    hook = loaded
-    hookRunning = true
-    return hook
-  }).finally(() => {
-    hookStart = null
-  })
-  return hookStart
-}
-
-function rememberHookCursor(event) {
-  const x = Number(event?.x)
-  const y = Number(event?.y)
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return
-  hookCursor = { x, y }
-}
-
-/**
- * Linux gaze needs a cursor source that updates off the pet window.
- * A missing hook leaves the Electron query in place.
- */
-async function ensureGazeHook() {
-  if (process.platform !== 'linux' || preferences.gazeFollowEnabled !== true) {
-    detachGazeListener()
-    if (!onKeyDown && !onKeyUp) stopNativeHook()
-    return
-  }
-  if (gazeListening && hookRunning && onMouseMove) return
-  const loaded = await loadHook()
-  if (process.platform !== 'linux' || preferences.gazeFollowEnabled !== true) return
-  if (!loaded) {
-    if (!gazeHookWarned) {
-      gazeHookWarned = true
-      console.warn('[desktop-presence] gaze cursor hook unavailable')
-    }
-    return
-  }
-  if (onMouseMove) {
-    try { loaded.off?.('mousemove', onMouseMove) } catch { /* already detached */ }
-  }
-  onMouseMove = (event) => rememberHookCursor(event)
-  try {
-    loaded.on('mousemove', onMouseMove)
-    await startNativeHook(loaded)
-    gazeListening = true
-    hook = loaded
-  } catch (error) {
-    try { loaded.off?.('mousemove', onMouseMove) } catch { /* already detached */ }
-    onMouseMove = null
-    gazeListening = false
-    if (!gazeHookWarned) {
-      gazeHookWarned = true
-      console.warn('[desktop-presence] gaze cursor hook failed:', getRedactedErrorMessage(error))
-    }
-  }
 }
 
 function accessibilityGranted() {
@@ -278,21 +171,6 @@ function accessibilityGranted() {
   } catch (error) {
     console.warn('[desktop-presence] accessibility check failed:', getRedactedErrorMessage(error))
     return false
-  }
-}
-
-async function loadHook() {
-  try {
-    const imported = await import('uiohook-napi')
-    const namespace = imported?.uIOhook ? imported : (imported?.default ?? {})
-    const candidate = namespace.uIOhook
-    if (!candidate || typeof candidate.on !== 'function' || typeof candidate.start !== 'function') {
-      return null
-    }
-    return candidate
-  } catch (error) {
-    console.warn('[desktop-presence] typing hook unavailable:', getRedactedErrorMessage(error))
-    return null
   }
 }
 
@@ -329,56 +207,44 @@ function linuxTypingStartFailureStatus(error) {
 
 async function refreshTyping() {
   const generation = ++typingGeneration
+  const gazeFollowEnabled = preferences.gazeFollowEnabled
+  const wasRunning = input.isTypingRunning()
   if (!preferences.typingAwarenessEnabled) {
-    stopHook(true)
+    stopTypingOutput(true, wasRunning)
+    await input.applyPreferences({ gazeFollowEnabled, typingAwarenessEnabled: false })
+    if (generation !== typingGeneration) return
     setStatus(buildStatus('not-applicable', false))
     return
   }
   if (process.platform === 'darwin' && !accessibilityGranted()) {
-    stopHook(true)
+    stopTypingOutput(true, wasRunning)
+    await input.applyPreferences({ gazeFollowEnabled, typingAwarenessEnabled: false })
+    if (generation !== typingGeneration) return
     setStatus(buildStatus('denied', false))
     return
   }
-  const loaded = await loadHook()
-  if (generation !== typingGeneration || !preferences.typingAwarenessEnabled) return
-  if (!loaded) {
-    stopHook(true)
+  const result = await input.applyPreferences({ gazeFollowEnabled, typingAwarenessEnabled: true })
+  if (generation !== typingGeneration) return
+  if (result.running) {
+    ensureActivityTimer()
+    setStatus(buildStatus(process.platform === 'darwin' ? 'granted' : 'not-applicable', true))
+    return
+  }
+  stopTypingOutput(true, wasRunning)
+  if (result.unavailable) {
     setStatus(buildStatus('unavailable', false))
     return
   }
-  if (hook === loaded && hookRunning && onKeyDown && onKeyUp) {
-    setStatus(buildStatus(process.platform === 'darwin' ? 'granted' : 'not-applicable', true))
-    return
-  }
-  // Gaze may already own the running hook. Stopping it would drop mouse
-  // events until start() succeeds again, and start() throws if it is current.
-  if (!(hook === loaded && hookRunning && gazeListening)) {
-    stopHook(false)
-    hook = loaded
-  }
-  onKeyDown = (event) => {
-    const token = typeof event?.keycode === 'number' ? event.keycode : 'unknown'
-    noteTyping(machine.keyDown(token, Date.now()))
-  }
-  onKeyUp = (event) => {
-    const token = typeof event?.keycode === 'number' ? event.keycode : 'unknown'
-    noteTyping(machine.keyUp(token, Date.now()))
-  }
-  try {
-    hook.on('keydown', onKeyDown)
-    hook.on('keyup', onKeyUp)
-    await startNativeHook(hook)
-    ensureActivityTimer()
-    setStatus(buildStatus(process.platform === 'darwin' ? 'granted' : 'not-applicable', true))
-  } catch (error) {
-    console.warn('[desktop-presence] typing hook start failed:', getRedactedErrorMessage(error))
-    stopHook(false)
+  if (result.error) {
+    console.warn('[desktop-presence] typing hook start failed:', getRedactedErrorMessage(result.error))
     if (process.platform === 'linux') {
-      setStatus(linuxTypingStartFailureStatus(error))
+      setStatus(linuxTypingStartFailureStatus(result.error))
       return
     }
     setStatus(buildStatus(process.platform === 'darwin' ? 'denied' : 'unavailable', false))
+    return
   }
+  setStatus(buildStatus('not-applicable', false))
 }
 
 function listPetWindows() {
@@ -415,7 +281,7 @@ function readIdleSeconds() {
   }
 }
 
-function hookPointToDip(physical) {
+function globalPointToDip(physical) {
   if (typeof screen.screenToDipPoint === 'function') {
     try {
       const dip = screen.screenToDipPoint(physical)
@@ -442,12 +308,12 @@ function readCursorDip() {
     }
     const selected = selectGazeCursor({
       platform: process.platform,
-      hookPoint: hookCursor,
+      globalPoint: input.readCursor(),
       electronPoint,
     })
     if (!selected) return null
     cursorFailed = false
-    if (selected.source === 'hook') return hookPointToDip(selected.physical)
+    if (selected.source === 'global') return globalPointToDip(selected.physical)
     return normalizeCursorToDip(selected.dip, screen)
   } catch (error) {
     if (!cursorFailed) {
@@ -499,6 +365,7 @@ function tickGaze() {
     return
   }
   pauseSent = false
+  if (preferences.gazeFollowEnabled === true) void input.pollCursor()
   const cursor = readCursorDip()
   if (!cursor) return
   const now = Date.now()
@@ -572,7 +439,7 @@ function unbindPower() {
 }
 
 function onWindowFocus() {
-  if (!preferences.typingAwarenessEnabled || hookRunning) return
+  if (!preferences.typingAwarenessEnabled || input.isTypingRunning()) return
   if (currentStatus.permission !== 'denied') return
   void refreshTyping()
 }
@@ -594,9 +461,8 @@ export function applyDesktopPresencePreferences(next) {
     typingAwarenessEnabled: next?.typingAwarenessEnabled === true,
   }
   pauseSent = false
-  tickGaze()
-  void ensureGazeHook()
   void refreshTyping()
+  tickGaze()
   return currentStatus
 }
 
@@ -654,8 +520,8 @@ export function startDesktopPresence() {
       stopDesktopPresence()
     })
     armGaze(GAZE_RESUME_CHECK_MS)
+    void refreshTyping()
     tickGaze()
-    void ensureGazeHook()
   } catch (error) {
     console.warn('[desktop-presence] failed to start:', getRedactedErrorMessage(error))
   }
@@ -663,13 +529,13 @@ export function startDesktopPresence() {
 
 /** Stop sampling, drop tracked keys, and unload the typing hook. */
 export function stopDesktopPresence() {
-  if (!started && !hook && !gazeTimer) return
+  if (!started && !input.isTypingRunning() && !gazeTimer) return
   started = false
   if (gazeTimer) clearInterval(gazeTimer)
   gazeTimer = null
   gazeInterval = 0
-  detachGazeListener()
-  stopHook(true)
+  stopTypingOutput(true, input.isTypingRunning())
+  void input.stop()
   unbindPower()
   unbindFocus()
 }
