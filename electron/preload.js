@@ -1,5 +1,18 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
+// The panel owns the model installer UI. The URL token is only a renderer-side
+// hint for which bridge surface to expose; main-process capability checks stay
+// authoritative.
+function isPanelView() {
+  try {
+    return new URLSearchParams(window.location.search).get('view') === 'panel'
+  } catch {
+    return false
+  }
+}
+
+const panelView = isPanelView()
+
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
@@ -11,6 +24,17 @@ contextBridge.exposeInMainWorld('desktopPet', {
   },
   dragBy: (delta) => ipcRenderer.invoke('window:drag-by', delta),
   openPanel: (section) => ipcRenderer.invoke('window:open-panel', section),
+  requestModelSetup: (options) => ipcRenderer.invoke('window:request-model-setup', options),
+  claimModelSetupReminder: (options) => ipcRenderer.invoke('window:claim-model-setup-reminder', options),
+  ...(panelView ? {
+    consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
+    declineModelSetup: () => ipcRenderer.invoke('window:decline-model-setup'),
+    subscribeModelSetupRequest: (listener) => {
+      const handler = () => listener()
+      ipcRenderer.on('models:setup-requested', handler)
+      return () => ipcRenderer.removeListener('models:setup-requested', handler)
+    },
+  } : {}),
   getPanelSection: () => ipcRenderer.invoke('window:get-panel-section'),
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),
@@ -115,10 +139,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Model manager (first-launch setup wizard)
   modelsGetInventory: () => ipcRenderer.invoke('models:inventory'),
   modelsDownload: (modelId) => ipcRenderer.invoke('models:download', { modelId }),
-  modelsDownloadMissing: () => ipcRenderer.invoke('models:download-missing'),
+  modelsDownloadMissing: (payload) => ipcRenderer.invoke('models:download-missing', payload),
   modelsNetworkProbe: () => ipcRenderer.invoke('models:network-probe'),
   voiceProfileProbe: (payload) => ipcRenderer.invoke('voice-profile:probe', payload ?? {}),
-  pythonRuntimeStatus: () => ipcRenderer.invoke('python:status'),
   subscribeModelsProgress: (listener) => {
     const handler = (_event, payload) => listener(payload)
     ipcRenderer.on('models:download-progress', handler)

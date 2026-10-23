@@ -93,26 +93,27 @@ test('settings commits use the serial functional mutation authority', async () =
   const drawerSource = await readSource(new URL('../src/components/SettingsDrawer.tsx', import.meta.url))
   const overlaysSource = await readSource(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url))
   const setThemeSource = themeSource.match(/setTheme:\s*\([\s\S]*?\n\s*\},\n\s*theme,/)?.[0] ?? ''
-  const settingsOnSaveSource = overlaysSource.match(/onSave: async \(nextSettings, baselineSettings\) => \{[\s\S]*?\n\s*\},\n\s*onImportPetModel/)?.[0] ?? ''
-  const commitDraftSource = drawerSource.match(/function commitDraft\(\): Promise<void> \{[\s\S]*?\n\s*\}\n\n\s*async function handleSaveDraft/)?.[0] ?? ''
+  const settingsOnSaveSource = overlaysSource.match(/onSave: async \(nextSettings, baselineSettings, saveOptions\) => \{[\s\S]*?\n\s*\},\n\s*onImportPetModel/)?.[0] ?? ''
+  const commitDraftSource = drawerSource.match(/function commitDraft\(\s*override\?: AppSettings,[\s\S]*?\n\s*\}\n\n\s*async function handleSaveDraft/)?.[0] ?? ''
   const handleSaveDraftSource = drawerSource.match(/async function handleSaveDraft\(\) \{[\s\S]*?\n\s*\}\n\n\s*async function handleStartVoiceConversation/)?.[0] ?? ''
-  const handleStartVoiceSource = drawerSource.match(/async function handleStartVoiceConversation\(\) \{[\s\S]*?\n\s*\}\n\n\s*function handleOpenSettingsSection/)?.[0] ?? ''
+  const handleStartVoiceSource = drawerSource.match(/async function handleStartVoiceConversation\(patch\?: \{[\s\S]*?\n\s*\}\n\n\s*function handleOpenSettingsSection/)?.[0] ?? ''
 
   assert.match(commitSource, /updateSettingsSnapshot\(update, apply\)/)
   assert.doesNotMatch(commitSource, /getSettingsSnapshot|setSettingsSnapshot/)
   assert.match(setThemeSource, /updateSettingsSnapshot\([\s\S]*?\)\.catch\(/)
   assert.doesNotMatch(setThemeSource, /getSettingsSnapshot|setSettingsSnapshot/)
-  assert.match(drawerSource, /onSave: \(settings: AppSettings, baseline: AppSettings\) => Promise<void>/)
+  assert.match(drawerSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean; vaultFree\?: boolean \},\s*\) => Promise<AppSettings>/)
   assert.match(commitDraftSource, /const savePromise = commitSettingsDraft\(\{/)
   assert.match(commitDraftSource, /if \(saveInFlightRef\.current\) return saveInFlightRef\.current/)
   assert.match(commitDraftSource, /saveInFlightRef\.current = savePromise/)
   assert.match(commitDraftSource, /return savePromise/)
   assert.match(handleSaveDraftSource, /await commitDraft\(\)/)
-  assert.match(handleStartVoiceSource, /if \(isDirty\) \{\s*await commitDraft\(\)/)
+  assert.match(handleStartVoiceSource, /saveVoiceStartSwitches\(\{[\s\S]*?commitDraft: \(draftToSave\) => commitDraft\(draftToSave, \{ closeSettings: false \}\)/)
   assert.match(drawerSource, /getRedactedLogErrorMessage\(error\)/)
   assert.match(settingsOnSaveSource, /chat\.appendSystemMessage\(/)
   assert.match(settingsOnSaveSource, /throw error/)
-  assert.match(settingsOnSaveSource, /onSave: async \(nextSettings, baselineSettings\)/)
+  assert.match(settingsOnSaveSource, /onSave: async \(nextSettings, baselineSettings, saveOptions\)/)
+  assert.match(settingsOnSaveSource, /closeSettings: saveOptions\?\.closeSettings !== false/)
   assert.match(settingsOnSaveSource, /baselineSettings,/)
   assert.match(
     overlaysSource,

@@ -10,8 +10,8 @@
  *   - Is there a python binary?
  *   - Can it import the modules each service needs?
  * If either check fails we mark the service as "disabled — requires Python"
- * and skip the spawn entirely. The renderer can query python:status to show
- * a friendly note in Settings instead of spinning forever.
+ * and skip the spawn entirely. The probe stays in the main process; the
+ * window no longer asks for it.
  *
  * All probes run with `spawn` (async). The previous implementation used
  * `spawnSync` inside `app.whenReady`, which stalled the main event loop

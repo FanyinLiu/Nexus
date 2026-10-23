@@ -9,7 +9,13 @@
  */
 
 import fs from 'node:fs'
-import { app, BrowserWindow } from 'electron'
+import { loadElectron } from './loadElectron.js'
+
+// Same load path as modelPaths.js: a named `electron` import cannot be
+// evaluated under node:test, and the download test has to call this module.
+const electronApi = loadElectron()
+const app = electronApi?.app
+const BrowserWindow = electronApi?.BrowserWindow
 import { MODEL_CATALOG } from './modelDefinitions.js'
 import { createAsyncLock } from './asyncLock.js'
 import {
@@ -28,10 +34,12 @@ import {
 } from './modelPaths.js'
 import { migrateLegacySenseVoice } from './senseVoiceMigration.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { selectMissingVoiceModelIds } from '../../shared/voiceModelDownloads.js'
 
 const PROGRESS_CHANNEL = 'models:download-progress'
 
 function broadcast(channel, payload) {
+  if (!BrowserWindow) return
   const windows = BrowserWindow.getAllWindows()
   for (const win of windows) {
     try {
@@ -78,6 +86,9 @@ export function getInventory() {
     missingRequired,
     primaryDir: getPrimaryModelsDir(),
     searchRoots: roots,
+    // Ids already being fetched. A settings page opened mid-download has
+    // missed the progress events, so the inventory itself has to say so.
+    downloading: activeModelDownloadIds(),
     disk: {
       ...diskSpace,
       resumable: entries.some((entry) => entry.resumable),
@@ -87,6 +98,17 @@ export function getInventory() {
 
 // Serialize downloads so two simultaneous wizard clicks don't race.
 const withDownloadLock = createAsyncLock()
+const activeDownloadIds = new Set()
+const inFlightById = new Map()
+let inFlightMissing = null
+
+/**
+ * Catalog ids whose files are being fetched right now.
+ * @returns {string[]}
+ */
+export function activeModelDownloadIds() {
+  return [...activeDownloadIds]
+}
 
 async function _downloadOne(modelId) {
   const model = MODEL_CATALOG.find(m => m.id === modelId)
@@ -119,27 +141,64 @@ async function _downloadOne(modelId) {
   }
 }
 
-export async function downloadModel(modelId) {
-  return withDownloadLock(() => _downloadOne(modelId))
+export function downloadModel(modelId) {
+  const existing = inFlightById.get(modelId)
+  if (existing) return existing
+  activeDownloadIds.add(modelId)
+  const run = withDownloadLock(() => _downloadOne(modelId)).finally(() => {
+    activeDownloadIds.delete(modelId)
+    if (inFlightById.get(modelId) === run) inFlightById.delete(modelId)
+  })
+  inFlightById.set(modelId, run)
+  return run
 }
 
-export async function downloadMissingRequired() {
-  const inventory = getInventory()
-  const toFetch = inventory.missingRequired
-  const results = []
-  for (const id of toFetch) {
-    try {
-      await downloadModel(id)
-      results.push({ id, ok: true })
-    } catch (error) {
-      results.push({
-        id,
-        ok: false,
-        message: getRedactedErrorMessage(error),
-      })
+/**
+ * Download every required model plus the selected local listener.
+ *
+ * An omitted provider id, or a cloud id, keeps the required-only set.
+ * A second call while one batch is still fetching does nothing: it waits
+ * on the same work instead of starting another copy of the files.
+ * `deps` is a test seam so the fetched ids can be asserted without disk
+ * or network. Production IPC calls this with one argument.
+ * @param {string | undefined} speechInputProviderId
+ * @param {{ inventory?: { models?: unknown }, downloadOne?: (id: string) => Promise<void> }} [deps]
+ */
+export function downloadMissingRequired(speechInputProviderId, deps = {}) {
+  if (inFlightMissing) return inFlightMissing
+  const run = (async () => {
+    const inventory = deps.inventory ?? getInventory()
+    const downloadOne = deps.downloadOne ?? downloadModel
+    // Required models alone skip the listener the user selected.
+    const toFetch = selectMissingVoiceModelIds(inventory.models, speechInputProviderId)
+    const results = []
+    for (const id of toFetch) {
+      // The seam bypasses downloadModel, so the batch itself has to publish
+      // the id. downloadModel adds the same id; a Set keeps that to one entry.
+      activeDownloadIds.add(id)
+      try {
+        await downloadOne(id)
+        results.push({ id, ok: true })
+      } catch (error) {
+        results.push({
+          id,
+          ok: false,
+          message: getRedactedErrorMessage(error),
+        })
+      } finally {
+        activeDownloadIds.delete(id)
+      }
     }
-  }
-  return { results, inventory: getInventory() }
+    return {
+      results,
+      inventory: deps.inventory ?? getInventory(),
+    }
+  })()
+  const tracked = run.finally(() => {
+    if (inFlightMissing === tracked) inFlightMissing = null
+  })
+  inFlightMissing = tracked
+  return tracked
 }
 
 export async function getNetworkProbe() {

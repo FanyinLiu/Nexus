@@ -1,6 +1,8 @@
 export {
   validateDesktopContextRequestPayload,
   validateMediaSessionControlPayload,
+  validateModelSetupReminderPayload,
+  validateModelSetupRequestPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,
@@ -21,6 +23,7 @@ export {
   validateAudioSynthesisPayload,
   validateAudioTranscriptionPayload,
   validateKwsOptionsPayload,
+  validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
   validateSpeechVoiceListPayload,
   validateTencentAsrConnectPayload,

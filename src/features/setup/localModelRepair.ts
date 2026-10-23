@@ -1,12 +1,13 @@
 /**
  * Settings view of the local voice-model inventory.
  *
- * The first-launch dialog can be dismissed for the rest of the session.
+ * "Maybe later" on the first-launch dialog is remembered on this computer.
  * This view is the way back: it only describes inventory, progress, disk,
  * and whether a partial file can be continued. Downloads stay on the
  * existing catalog calls.
  */
 
+import { selectMissingVoiceModelIds, speechModelIdForProvider } from '../../../shared/voiceModelDownloads.js'
 import type { TranslationKey } from '../../types/i18n.ts'
 import {
   getModelProgressPercent,
@@ -35,6 +36,8 @@ export type LocalModelInventoryView = {
   ready: boolean
   missingRequired: string[]
   disk?: LocalModelDisk
+  /** Catalog ids the main process is already fetching. */
+  downloading?: string[]
 }
 
 export type LocalModelRowStatus = 'installed' | 'pending' | 'downloading' | 'failed'
@@ -53,18 +56,21 @@ export type LocalModelDownloadAction = 'download' | 'resume' | 'retry' | 'none'
 export function buildLocalModelRows(
   models: LocalModelEntry[],
   progress: Record<string, PerModelProgress>,
+  downloadingIds: readonly string[] = [],
 ): LocalModelRowView[] {
+  const downloading = new Set(downloadingIds)
   return models.map((model) => {
     const current = progress[model.id]
     const percent = getModelProgressPercent(current)
     if (model.present || isModelProgressComplete(current)) {
       return { ...rowBase(model), status: 'installed', percent: null }
     }
+    // An in-flight id counts even when this page missed the progress events.
+    if (isModelProgressActive(current) || downloading.has(model.id)) {
+      return { ...rowBase(model), status: 'downloading', percent }
+    }
     if (isModelProgressError(current)) {
       return { ...rowBase(model), status: 'failed', percent }
-    }
-    if (isModelProgressActive(current)) {
-      return { ...rowBase(model), status: 'downloading', percent }
     }
     return { ...rowBase(model), status: 'pending', percent: null }
   })
@@ -111,6 +117,40 @@ export function localModelCopy(
  */
 export function countLocalModelsStillNeeded(rows: LocalModelRowView[]): number {
   return rows.filter((row) => row.required && row.status !== 'installed').length
+}
+
+/**
+ * Models the Voice page still has to fetch for this listener, including
+ * the speech model the catalog does not mark required.
+ */
+export function missingVoiceModelIds(
+  models: LocalModelEntry[],
+  speechInputProviderId: string,
+): string[] {
+  return selectMissingVoiceModelIds(models, speechInputProviderId)
+}
+
+/**
+ * IPC payload for "Download missing models". Omitted for a cloud listener
+ * so the main process keeps the required-only set.
+ */
+export function voiceModelDownloadPayload(
+  speechInputProviderId: string,
+): { speechInputProviderId: string } | undefined {
+  if (!speechModelIdForProvider(speechInputProviderId)) return undefined
+  return { speechInputProviderId }
+}
+
+/**
+ * Status line on the Voice page. A missing count replaces "everything is
+ * fine". English uses a separate key so the noun can be singular.
+ */
+export function voiceSettingsStatusKey(missingCount: number | null): TranslationKey | null {
+  if (missingCount === null) return null
+  if (missingCount <= 0) return 'settings.voice.status_all_clear'
+  return missingCount === 1
+    ? 'settings.voice.status_models_missing_one'
+    : 'settings.voice.status_models_missing_other'
 }
 
 function rowBase(model: LocalModelEntry) {
