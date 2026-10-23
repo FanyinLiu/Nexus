@@ -13,7 +13,7 @@ import {
   isSenseVoiceSpeechInputProvider,
 } from '../../lib/audioProviders.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
-import { humanizeError } from '../../lib/humanizeError.ts'
+import { humanizeError, humanizeMicPermissionError } from '../../lib/humanizeError.ts'
 import {
   buildSpeechRecognitionProbe,
   classifyRecognitionProbe,
@@ -163,11 +163,12 @@ export async function testSpeechInputReadinessRuntime(
   } catch (caught) {
     return {
       ok: false,
-      message: mapMicrophoneDiagnosticError(
-        caught,
-        isSenseVoiceSpeechInputProvider(providerId),
-        options.ti,
-      ),
+      message: humanizeMicPermissionError(caught)
+        ?? mapMicrophoneDiagnosticError(
+          caught,
+          isSenseVoiceSpeechInputProvider(providerId),
+          options.ti,
+        ),
     }
   } finally {
     stream?.getTracks().forEach((track) => track.stop())

@@ -11,6 +11,7 @@ import {
 } from './conversationEntrypoints.ts'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
+import { humanizeMicPermissionError } from '../../lib/humanizeError.ts'
 import type { AppSettings } from '../../types'
 import type { StreamingSpeechOutputController } from './types.ts'
 import type { VoiceConversationOptions } from './types.ts'
@@ -191,7 +192,10 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       })
     } catch (err) {
       console.error('[Voice] startVoiceConversation failed:', err)
-      ctx.setError(err instanceof Error ? err.message : ti('voice.start_failed'))
+      ctx.setError(
+        humanizeMicPermissionError(err)
+          ?? (err instanceof Error ? err.message : ti('voice.start_failed')),
+      )
       setters.setVoiceState('idle')
       bindings.resetSpeechLevel()
     }

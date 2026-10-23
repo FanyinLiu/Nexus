@@ -4,15 +4,19 @@ import { test } from 'node:test'
 import {
   buildSpeechOutputSmokeText,
   calculateAudioRms,
+  detectVoicePermissionPlatform,
   getCachedTtsResult,
   getRecordingFileName,
   mapMicrophoneDiagnosticError,
   pickMicrophonePermissionDeniedKey,
+  pickMicrophonePermissionKey,
   pickRecordingMimeType,
   requestVoiceInputStream,
   setCachedTtsResult,
 } from '../src/features/voice/runtimeSupport.ts'
-import { t } from '../src/i18n/runtime.ts'
+import { mapSpeechError } from '../src/lib/voice.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
+import { setLocale, t } from '../src/i18n/runtime.ts'
 
 function createTrack() {
   return {
@@ -55,6 +59,29 @@ async function withFakeNavigator<T>(
 
   try {
     return await run()
+  } finally {
+    if (previousDescriptor) {
+      Object.defineProperty(globalThis, 'navigator', previousDescriptor)
+    } else {
+      delete (globalThis as { navigator?: Navigator }).navigator
+    }
+  }
+}
+
+function withNavigatorValue<T>(value: unknown, run: () => T): T {
+  const previousDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+
+  if (value === undefined) {
+    delete (globalThis as { navigator?: unknown }).navigator
+  } else {
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value,
+    })
+  }
+
+  try {
+    return run()
   } finally {
     if (previousDescriptor) {
       Object.defineProperty(globalThis, 'navigator', previousDescriptor)
@@ -222,6 +249,81 @@ test('microphone permission copy follows the platform', () => {
   assert.equal(pickMicrophonePermissionDeniedKey('win32'), 'voice.mic.permission_denied_windows')
   assert.equal(pickMicrophonePermissionDeniedKey('linux'), 'voice.mic.permission_denied')
   assert.equal(pickMicrophonePermissionDeniedKey(null), 'voice.mic.permission_denied')
+})
+
+test('detectVoicePermissionPlatform normalizes navigator platform hints', () => {
+  const cases = [
+    {
+      target: { userAgentData: { platform: 'macOS' }, platform: 'Linux x86_64' },
+      expected: 'darwin',
+    },
+    {
+      target: { platform: 'MacIntel' },
+      expected: 'darwin',
+    },
+    {
+      target: { userAgentData: { platform: 'Windows' }, platform: 'MacIntel' },
+      expected: 'win32',
+    },
+    {
+      target: { userAgentData: { platform: '' }, platform: 'Linux x86_64' },
+      expected: 'linux',
+    },
+    {
+      target: { userAgentData: { platform: 'FreeBSD' }, platform: 'FreeBSD amd64' },
+      expected: 'unknown',
+    },
+    {
+      target: { userAgentData: { platform: '   ' }, platform: '' },
+      expected: 'unknown',
+    },
+  ]
+
+  for (const { target, expected } of cases) {
+    assert.equal(withNavigatorValue(target, detectVoicePermissionPlatform), expected)
+  }
+
+  assert.equal(withNavigatorValue(undefined, detectVoicePermissionPlatform), 'unknown')
+})
+
+test('microphone permission keys append the platform suffix for every surface', () => {
+  const baseKeys = [
+    'humanize.voice.mic_permission',
+    'voice.provider.api.permission_denied',
+    'voice.stt.error.permission_denied',
+  ] as const
+
+  for (const baseKey of baseKeys) {
+    assert.equal(pickMicrophonePermissionKey(baseKey, 'darwin'), `${baseKey}_mac`)
+    assert.equal(pickMicrophonePermissionKey(baseKey, 'MacIntel'), `${baseKey}_mac`)
+    assert.equal(pickMicrophonePermissionKey(baseKey, 'win32'), `${baseKey}_windows`)
+    assert.equal(pickMicrophonePermissionKey(baseKey, 'windows'), `${baseKey}_windows`)
+    assert.equal(pickMicrophonePermissionKey(baseKey, 'linux'), baseKey)
+    assert.equal(pickMicrophonePermissionKey(baseKey, 'unknown'), baseKey)
+  }
+})
+
+test('mapSpeechError not-allowed resolves the platform permission sentence', () => {
+  // Locale is process-local and other tests here do not switch it; pin it so
+  // the expected sentence comes from a known dictionary.
+  setLocale('zh-CN')
+
+  assert.equal(
+    mapSpeechError('not-allowed', 'darwin'),
+    zhCNMessages['voice.stt.error.permission_denied_mac'],
+  )
+  assert.equal(
+    mapSpeechError('not-allowed', 'win32'),
+    zhCNMessages['voice.stt.error.permission_denied_windows'],
+  )
+  assert.equal(
+    mapSpeechError('not-allowed', 'linux'),
+    zhCNMessages['voice.stt.error.permission_denied'],
+  )
+  assert.equal(
+    mapSpeechError('not-allowed', 'unknown'),
+    zhCNMessages['voice.stt.error.permission_denied'],
+  )
 })
 
 test('buildSpeechOutputSmokeText falls back when companion name is empty', () => {

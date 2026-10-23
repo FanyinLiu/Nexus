@@ -2,8 +2,13 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { before, describe, test } from 'node:test'
 
-import { humanizeError, lookupTranslation } from '../src/lib/humanizeError.ts'
+import { humanizeError, humanizeMicPermissionError, lookupTranslation } from '../src/lib/humanizeError.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
+import { koMessages } from '../src/i18n/locales/ko/index.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
+import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 import type { TranslationKey } from '../src/types/i18n.ts'
 
 // Force English so the regex assertions below are deterministic. The
@@ -59,6 +64,27 @@ describe('humanizeError — context-specific', () => {
     assert.match(out, /(microphone|mic|permission|access)/i)
   })
 
+  test('voice mic permission copy follows the platform variant', () => {
+    const denied = new Error('NotAllowedError: Permission denied')
+
+    assert.equal(
+      humanizeError(denied, 'voice', { platform: 'darwin' }),
+      enMessages['humanize.voice.mic_permission_mac'],
+    )
+    assert.equal(
+      humanizeError(denied, 'voice', { platform: 'win32' }),
+      enMessages['humanize.voice.mic_permission_windows'],
+    )
+    assert.equal(
+      humanizeError(denied, 'voice', { platform: 'linux' }),
+      enMessages['humanize.voice.mic_permission'],
+    )
+    assert.equal(
+      humanizeError(denied, 'voice', { platform: 'unknown' }),
+      enMessages['humanize.voice.mic_permission'],
+    )
+  })
+
   test('voice context recognizes missing mic', () => {
     const out = humanizeError(new Error('Requested device not found'), 'voice')
     assert.match(out, /(microphone|plugged|input)/i)
@@ -69,17 +95,145 @@ describe('humanizeError — context-specific', () => {
     assert.match(out, /(model|install|download|Settings)/i)
   })
 
-  test('stt model-missing copy points at the local voice model download', () => {
+  test('stt model-missing copy matches the SenseVoice not-installed sentence', () => {
     const out = humanizeError(new Error('Wake-word model is not installed'), 'stt')
     assert.equal(
       out,
-      'The dictation model isn’t installed yet. Download it in Settings → Voice → Advanced → "Local voice models".',
+      'Local speech recognition is not installed. Download SenseVoice from Voice settings, or turn speech input off.',
     )
   })
 
   test('model context recognizes disk-full', () => {
     const out = humanizeError(new Error('ENOSPC: no space left on device'), 'model')
     assert.match(out, /(disk|space|free)/i)
+  })
+})
+
+// getUserMedia denials arrive as DOMExceptions whose message is the bare
+// English "Permission denied". The helper must classify on `name` as well as
+// `message` and always return the platform sentence, never the raw text.
+describe('humanizeMicPermissionError', () => {
+  const platformCases = [
+    { platform: 'darwin', key: 'humanize.voice.mic_permission_mac' },
+    { platform: 'win32', key: 'humanize.voice.mic_permission_windows' },
+    { platform: 'linux', key: 'humanize.voice.mic_permission' },
+    { platform: 'unknown', key: 'humanize.voice.mic_permission' },
+  ] as const
+
+  const deniedErrors = [
+    {
+      name: 'plain Error with the Chromium message',
+      error: new Error('Permission denied'),
+    },
+    {
+      name: 'DOMException with NotAllowedError name',
+      error: new DOMException('Permission denied', 'NotAllowedError'),
+    },
+    {
+      name: 'NotAllowedError name with an unrelated message',
+      error: Object.assign(new Error('The request is not allowed by the user agent'), {
+        name: 'NotAllowedError',
+      }),
+    },
+    {
+      name: 'PermissionDeniedError name with an unrelated message',
+      error: Object.assign(new Error('User denied access'), { name: 'PermissionDeniedError' }),
+    },
+  ]
+
+  for (const { name, error } of deniedErrors) {
+    test(`${name} maps to the per-platform sentence and never the raw text`, () => {
+      for (const { platform, key } of platformCases) {
+        const out = humanizeMicPermissionError(error, { platform })
+        assert.equal(out, enMessages[key], `${name} / ${platform}`)
+        assert.doesNotMatch(out ?? '', /Permission denied/)
+      }
+    })
+  }
+
+  test('non-permission errors return null', () => {
+    assert.equal(humanizeMicPermissionError(new Error('Requested device not found')), null)
+    assert.equal(humanizeMicPermissionError(new Error('Could not start audio source')), null)
+    assert.equal(humanizeMicPermissionError(new Error('Some unrelated failure')), null)
+    assert.equal(humanizeMicPermissionError('plain string error'), null)
+    assert.equal(humanizeMicPermissionError(null), null)
+    assert.equal(humanizeMicPermissionError(undefined), null)
+    assert.equal(humanizeMicPermissionError({ message: 'Permission denied' }), null)
+  })
+})
+
+// Product decision: the dictation-model error reuses the SenseVoice
+// "not installed" sentence verbatim, so every surface gives the user the
+// same instruction for a missing local speech model.
+describe('humanizeError — stt model_missing matches SenseVoice not_installed', () => {
+  const locales = [
+    { name: 'zh-CN', messages: zhCNMessages },
+    { name: 'zh-TW', messages: zhTWMessages },
+    { name: 'en', messages: enMessages },
+    { name: 'ja', messages: jaMessages },
+    { name: 'ko', messages: koMessages },
+  ]
+
+  for (const { name, messages } of locales) {
+    test(`${name}: humanize.stt.model_missing equals voice.provider.sensevoice.not_installed`, () => {
+      assert.equal(
+        messages['humanize.stt.model_missing'],
+        messages['voice.provider.sensevoice.not_installed'],
+      )
+    })
+  }
+
+  test('English fallback equals the en SenseVoice sentence', () => {
+    // The fallback table is module-private, so pin its literal from source.
+    const source = readFileSync(new URL('../src/lib/humanizeError.ts', import.meta.url), 'utf8')
+    const fallback = source.match(/'humanize\.stt\.model_missing':\s*'((?:[^'\\]|\\.)*)'/)
+    assert.ok(fallback, 'humanizeError.ts no longer declares the stt.model_missing fallback')
+    assert.equal(fallback[1], enMessages['voice.provider.sensevoice.not_installed'])
+  })
+})
+
+// Product decision: every microphone-permission surface reuses the canonical
+// `voice.mic.permission_denied*` sentences so the user reads the same
+// instruction no matter which layer reported the denial.
+describe('microphone permission sentences are identical across surfaces', () => {
+  const locales = [
+    { name: 'zh-CN', messages: zhCNMessages },
+    { name: 'zh-TW', messages: zhTWMessages },
+    { name: 'en', messages: enMessages },
+    { name: 'ja', messages: jaMessages },
+    { name: 'ko', messages: koMessages },
+  ]
+  const surfaces = [
+    'humanize.voice.mic_permission',
+    'voice.provider.api.permission_denied',
+    'voice.stt.error.permission_denied',
+  ] as const
+  const variants = ['', '_mac', '_windows'] as const
+
+  for (const { name, messages } of locales) {
+    test(`${name}: every mic permission surface reuses voice.mic.permission_denied*`, () => {
+      for (const surface of surfaces) {
+        for (const variant of variants) {
+          assert.equal(
+            messages[`${surface}${variant}`],
+            messages[`voice.mic.permission_denied${variant}`],
+            `${surface}${variant}`,
+          )
+        }
+      }
+    })
+  }
+
+  test('English fallbacks carry all three platform sentences', () => {
+    // The fallback table is module-private, so pin its literals from source.
+    const source = readFileSync(new URL('../src/lib/humanizeError.ts', import.meta.url), 'utf8')
+    for (const variant of variants) {
+      const key = `humanize.voice.mic_permission${variant}`
+      const pattern = new RegExp(`'${key.replace(/\./g, '\\.')}':\\s*'((?:[^'\\\\]|\\\\.)*)'`)
+      const fallback = source.match(pattern)
+      assert.ok(fallback, `humanizeError.ts no longer declares the ${key} fallback`)
+      assert.equal(fallback[1].replace(/\\'/g, "'"), enMessages[key])
+    }
   })
 })
 
