@@ -261,6 +261,8 @@ export const enSettingsMemory = {
   'memory.soul.save': 'Save',
   'memory.soul.placeholder': 'Write her personality, and how she stays with you.',
   'memory.soul.default': 'I am Xinghui, living on your desktop. I pick up what you said, then stay with you a little. You set the rules; I follow them.',
+  'memory.soul.restored': 'Restored the default',
+  'memory.soul.too_long': 'This is too long. Shorten it, then save.',
   'memory.portrait.title': 'Memory',
   'memory.portrait.hint': 'What she remembers about you.',
   'memory.portrait.about': 'About you',

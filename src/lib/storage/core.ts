@@ -26,7 +26,7 @@ export const MEMORY_V1_BACKUP_STORAGE_KEY = 'nexus:memory:v1-backup'
 export const MEMORY_OP_LOG_STORAGE_KEY = 'nexus:memory:op-log'
 /** Pre-images taken before each daily memory run. */
 export const MEMORY_RUN_SNAPSHOT_STORAGE_KEY = 'nexus:memory:run-snapshots'
-/** User-edited companion portrait shown on the SOUL card. */
+/** Legacy SOUL-card text. Read once into the live persona, then removed. */
 export const COMPANION_SOUL_STORAGE_KEY = 'nexus:companion:soul'
 export const MEMORY_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:memory:local-data-authority-consent'
 export const COMPANION_LOCAL_DATA_AUTHORITY_CONSENT_KEY = 'nexus:companion:local-data-authority-consent'

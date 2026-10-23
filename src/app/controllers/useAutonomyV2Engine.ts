@@ -6,7 +6,7 @@
  *
  * Responsibilities:
  *  - Load the active persona profile from disk on mount (cached in a ref
- *    so tick ticks don't re-read).
+ *    so ticks don't re-read). A soul save drops that cache.
  *  - Gate ticks by `ticksBetweenConsiderations(level)` — we don't want
  *    to burn an LLM call on every 30-second tick.
  *  - Build AutonomyContextV2 from the refs the controller already holds.
@@ -57,6 +57,7 @@ import {
   recordBackgroundChatSuccess,
   runLockedBackgroundChat,
 } from '../../features/autonomy/backgroundChatPolicy.ts'
+import { PERSONA_SOUL_SAVED_CHANNEL } from '../../features/settingsV3/soulCardPersona.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 
@@ -101,9 +102,8 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   const inflightRef = useRef(false)
   const loadedPersonaProfileIdRef = useRef<string | null>(null)
 
-  // Load persona on mount. Single shot for now — editing persona files
-  // on disk won't hot-reload until the user restarts Nexus. We expose
-  // reloadPersona() below for manual refreshing.
+  // Skip repeat disk reads while the active profile is unchanged. A soul
+  // save clears loadedPersonaProfileIdRef so the next call reads the edit.
   const reloadPersona = useCallback(async () => {
     if (opts.enabled === false) return
     try {
@@ -144,6 +144,24 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   useEffect(() => {
     void reloadPersona()
   }, [reloadPersona])
+
+  const reloadPersonaRef = useRef(reloadPersona)
+  useEffect(() => {
+    reloadPersonaRef.current = reloadPersona
+  }, [reloadPersona])
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return undefined
+    const channel = new BroadcastChannel(PERSONA_SOUL_SAVED_CHANNEL)
+    const refresh = () => {
+      loadedPersonaProfileIdRef.current = null
+      void reloadPersonaRef.current()
+    }
+    channel.addEventListener('message', refresh)
+    return () => {
+      channel.removeEventListener('message', refresh)
+      channel.close()
+    }
+  }, [])
 
   const considerTick = useCallback(async (tickState: AutonomyTickState) => {
     if (opts.enabled === false) return
