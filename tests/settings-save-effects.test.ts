@@ -102,7 +102,7 @@ test('settings commits use the serial functional mutation authority', async () =
   assert.doesNotMatch(commitSource, /getSettingsSnapshot|setSettingsSnapshot/)
   assert.match(setThemeSource, /updateSettingsSnapshot\([\s\S]*?\)\.catch\(/)
   assert.doesNotMatch(setThemeSource, /getSettingsSnapshot|setSettingsSnapshot/)
-  assert.match(drawerSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean \},\s*\) => Promise<void>/)
+  assert.match(drawerSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean \},\s*\) => Promise<AppSettings>/)
   assert.match(commitDraftSource, /const savePromise = commitSettingsDraft\(\{/)
   assert.match(commitDraftSource, /if \(saveInFlightRef\.current\) return saveInFlightRef\.current/)
   assert.match(commitDraftSource, /saveInFlightRef\.current = savePromise/)

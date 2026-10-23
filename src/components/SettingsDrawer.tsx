@@ -113,7 +113,7 @@ export type SettingsDrawerProps = {
     settings: AppSettings,
     baseline: AppSettings,
     options?: { closeSettings?: boolean },
-  ) => Promise<void>
+  ) => Promise<AppSettings>
   onExportChatHistory: () => Promise<{
     canceled: boolean
     filePath?: string
@@ -238,7 +238,7 @@ export function SettingsDrawer({
 }: SettingsDrawerProps) {
   const {
     draft,
-    baseline,
+    baselineRef,
     setDraft,
     resetDraftForOpen,
     getRollbackThemeId,
@@ -246,6 +246,7 @@ export function SettingsDrawer({
     mergeHydratedSecrets,
     ensurePetModelPreset,
     patchCommittedField,
+    rememberSavedSettings,
     createSavePayload,
     isDirty,
   } = useSettingsDraftState(settings)
@@ -634,10 +635,17 @@ export function SettingsDrawer({
 
     setSaveError(false)
     setSaving(true)
+    const requested = override ? buildSettingsSavePayload(override) : createSavePayload()
+    // Captured now, not at render. The denial revert is a second save in this
+    // click, and it has to diff against what the enable save just stored.
+    const baselineAtSave = baselineRef.current
     const savePromise = commitSettingsDraft({
-      committed: baseline,
-      draft: override ? buildSettingsSavePayload(override) : createSavePayload(),
-      onSave: (nextDraft) => onSave(nextDraft, baseline, options),
+      committed: baselineAtSave,
+      draft: requested,
+      onSave: async (nextDraft) => {
+        const persisted = await onSave(nextDraft, baselineAtSave, options)
+        rememberSavedSettings(persisted, nextDraft)
+      },
       onContextAwarenessDisabled: () => {
         clearRecentCompanionCheckInDecision()
         clearRecentCompanionSummary()

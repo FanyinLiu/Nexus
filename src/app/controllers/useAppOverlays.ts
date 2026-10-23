@@ -380,6 +380,8 @@ export function useAppOverlays({
         }
       }
     }
+
+    return committedSettings
   }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings, settingsRef])
 
   const chatMessageCount = useMemo(
@@ -486,7 +488,7 @@ export function useAppOverlays({
     onRemoveNotificationChannel,
     onSave: async (nextSettings, baselineSettings, saveOptions) => {
       try {
-        await applySettingsSave(nextSettings, {
+        return await applySettingsSave(nextSettings, {
           baselineSettings,
           closeSettings: saveOptions?.closeSettings !== false,
         })
