@@ -13,9 +13,11 @@ import {
   type ChatMemoryTraceFocusTarget,
 } from '../../features/memory/traceDetails.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide.tsx'
+import { settingsSavedForUiLanguageChoice } from '../../features/onboarding/components/onboardingGuideSupport.ts'
 import { resolveGuideLaunch } from '../../features/onboarding/guideDeferral.ts'
 import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
 import type { PetModelDefinition } from '../../features/pet'
+import { useClearChatErrorOnVoiceCapture } from '../../hooks/voice/useClearChatErrorOnVoiceCapture.ts'
 import {
   loadGuideDeferral,
   loadOnboardingCompleted,
@@ -34,6 +36,12 @@ import { syncWindowViewToUrl } from '../appSupport.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { runTextConnectionTestPreflight } from '../../features/models/connectionPreflight.ts'
+import {
+  applyModelSetupWakewordChange,
+} from '../../features/setup/modelSetupRequests.ts'
+import {
+  createModelSetupWakewordActions,
+} from '../../lib/modelSetupBridge.ts'
 import type {
   AppSettings,
   DebugConsoleEvent,
@@ -121,6 +129,7 @@ function reuseUnchangedProviderProfileMaps(
 type UseAppOverlaysOptions = {
   view: 'pet' | 'panel'
   settings: AppSettings
+  settingsRef?: { current: AppSettings }
   platformProfile: PlatformProfile
   setSettings: Dispatch<SetStateAction<AppSettings>>
   settingsOpen: boolean
@@ -198,6 +207,7 @@ type UseAppOverlaysOptions = {
 export function useAppOverlays({
   view,
   settings,
+  settingsRef,
   platformProfile,
   setSettings,
   settingsOpen,
@@ -233,6 +243,7 @@ export function useAppOverlays({
     openPanel: () => window.desktopPet!.openPanel('chat'),
   }))
   const setChatError = chat.setError
+  useClearChatErrorOnVoiceCapture(setChatError)
 
   useEffect(() => {
     if (firstUseGuideHost !== 'panel') return
@@ -274,6 +285,7 @@ export function useAppOverlays({
       baselineSettings: AppSettings
       closeSettings?: boolean
       completeOnboarding?: boolean
+      vaultFree?: boolean
     },
   ) => {
     const launchOnStartupChanged = !Object.is(
@@ -310,8 +322,34 @@ export function useAppOverlays({
       markOnboardingInProgress()
     }
 
-    const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
+    const committedSettings = await updateSettingsFromDraft(
+      options.baselineSettings,
+      finalSettings,
+      undefined,
+      { vaultFree: options.vaultFree === true },
+    )
+    // The voice start reads this ref in the same turn as the save. Waiting
+    // for the settings effect would let the click run against the old switches.
+    if (settingsRef) settingsRef.current = committedSettings
     setSettings(committedSettings)
+
+    // Saving with a wake-word control switched on is a voice action, so that
+    // window gets the same installer offer as pressing the mic button. This
+    // runs only where the user saved, so a synced change elsewhere stays quiet.
+    // The bridge checks inventory before scheduling: ready or unreadable models
+    // must not open or focus the panel. The delay lives in the main process,
+    // so the offer still reaches the user when this surface hides or reloads.
+    applyModelSetupWakewordChange(
+      {
+        wakewordAlwaysOn: options.baselineSettings.wakewordAlwaysOn,
+        voiceTriggerMode: options.baselineSettings.voiceTriggerMode,
+      },
+      {
+        wakewordAlwaysOn: committedSettings.wakewordAlwaysOn,
+        voiceTriggerMode: committedSettings.voiceTriggerMode,
+      },
+      createModelSetupWakewordActions(),
+    )
 
     if (options?.closeSettings ?? true) {
       closeSettingsSurface()
@@ -350,7 +388,9 @@ export function useAppOverlays({
         }
       }
     }
-  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings])
+
+    return committedSettings
+  }, [chat, closeSettingsSurface, onboardingPending, platformProfile.startup.supported, setSettings, settingsRef])
 
   const chatMessageCount = useMemo(
     () => chat.messages.filter((message) => message.role !== 'system').length,
@@ -454,11 +494,12 @@ export function useAppOverlays({
     onAddNotificationChannel,
     onUpdateNotificationChannel,
     onRemoveNotificationChannel,
-    onSave: async (nextSettings, baselineSettings) => {
+    onSave: async (nextSettings, baselineSettings, saveOptions) => {
       try {
-        await applySettingsSave(nextSettings, {
+        return await applySettingsSave(nextSettings, {
           baselineSettings,
-          closeSettings: true,
+          closeSettings: saveOptions?.closeSettings !== false,
+          vaultFree: saveOptions?.vaultFree === true,
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : t('settings.save_failed_fallback')
@@ -576,13 +617,7 @@ export function useAppOverlays({
       })
     },
     onPersistUiLanguage: async (nextSettings) => {
-      await applySettingsSave({
-        ...settings,
-        uiLanguage: nextSettings.uiLanguage,
-        companionName: nextSettings.companionName,
-        userName: nextSettings.userName,
-        wakeWord: nextSettings.wakeWord,
-      }, {
+      await applySettingsSave(settingsSavedForUiLanguageChoice(settings, nextSettings), {
         baselineSettings: settings,
         closeSettings: false,
         completeOnboarding: false,

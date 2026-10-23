@@ -403,7 +403,7 @@ export const jaCore = {
   'humanize.voice.mic_permission_windows': 'マイクを使う許可がありません。「設定 → プライバシーとセキュリティ → マイク」で「デスクトップ アプリがマイクにアクセスできるようにする」をオンにしてから、もう一度お試しください。',
   'humanize.voice.mic_busy': 'マイクが別のアプリで使用中です。閉じてから再試行してください。',
   'humanize.tts.voice_unavailable': 'その音声は利用できません。「設定 → 音声出力」で別のものを選んでください。',
-  'humanize.stt.model_missing': 'ローカル音声認識は未インストールです。音声設定から SenseVoice をダウンロードするか、音声入力をオフにしてください。',
+  'humanize.stt.model_missing': '音声がまだ入ってないよ。「{settings} → {voice} → {advanced}」でダウンロードしてね。',
   'humanize.model.no_disk_space': 'ダウンロードのためのディスク容量が足りません。空き容量を増やしてから再試行してください。',
   'humanize.model.hf_unreachable': 'モデルリポジトリに到達できません。ネットワークを確認するか、ミラーを試してください。',
   'humanize.fallback': 'ちょっと問題があったみたい。({detail})',

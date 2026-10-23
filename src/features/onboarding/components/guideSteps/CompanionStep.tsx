@@ -8,7 +8,7 @@ import {
   pickTranslatedUiText,
   pickTranslatedUiTextOrFallback,
 } from '../../../../lib/uiLanguage.ts'
-import type { AppSettings } from '../../../../types'
+import type { AppSettings, TranslationKey } from '../../../../types'
 import {
   buildCompanionReadiness,
   type CompanionReadinessStatus,
@@ -23,6 +23,8 @@ type CompanionStepProps = {
   selectedPetModel: PetModelDefinition | undefined
   launchOnStartupSupported: boolean
   textConnectionVerified: boolean
+  /** The last-step hint already says this, so its readiness line is hidden. */
+  hiddenReadinessWarningKey: TranslationKey | null
 }
 
 export function CompanionStep({
@@ -32,6 +34,7 @@ export function CompanionStep({
   selectedPetModel,
   launchOnStartupSupported,
   textConnectionVerified,
+  hiddenReadinessWarningKey,
 }: CompanionStepProps) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) =>
     pickTranslatedUiText(draft.uiLanguage, key)
@@ -60,6 +63,9 @@ export function CompanionStep({
     warning: 'onboarding.readiness.warning',
     blocked: 'onboarding.readiness.blocked',
   }
+  const readinessItems = hiddenReadinessWarningKey
+    ? readiness.items.filter((item) => item.messageKey !== hiddenReadinessWarningKey)
+    : readiness.items
 
   return (
     <div className="onboarding-grid onboarding-grid--stack">
@@ -152,13 +158,15 @@ export function CompanionStep({
           </span>
         </div>
         <p>{ti(readiness.summaryKey)}</p>
-        <p className="onboarding-readiness__timebox">
-          {pickTranslatedUiText(draft.uiLanguage, readiness.timeboxKey, {
-            minutes: readiness.targetMinutes,
-          })}
-        </p>
+        {/* A status with gaps left to fill has no closing line of its own:
+            its summary and item list already say what is still missing. */}
+        {readiness.timeboxKey ? (
+          <p className="onboarding-readiness__timebox">
+            {ti(readiness.timeboxKey)}
+          </p>
+        ) : null}
         <ul className="onboarding-readiness__list">
-          {readiness.items.map((item) => (
+          {readinessItems.map((item) => (
             <li
               key={item.id}
               className={`onboarding-readiness__item onboarding-readiness__item--${item.status}`}

@@ -1,5 +1,5 @@
 import { t } from '../i18n/runtime.ts'
-import type { TranslationKey } from '../types/i18n.ts'
+import type { TranslationKey, TranslationParams } from '../types/i18n.ts'
 import { redactSensitiveText } from '../../shared/redaction.js'
 import {
   CHAT_IPC_ERROR_CODES,
@@ -21,6 +21,7 @@ import {
   detectVoicePermissionPlatform,
   pickMicrophonePermissionKey,
 } from '../features/voice/runtimeSupport.ts'
+import { voiceDownloadGuidance } from '../features/setup/voiceDownloadGuidance.ts'
 
 /**
  * humanizeError — translate raw runtime errors into companion-voice
@@ -190,7 +191,7 @@ const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
   'humanize.voice.mic_permission_windows': 'Nexus can\'t use the microphone yet. In Settings → Privacy & security → Microphone, turn on "Let desktop apps access your microphone", then try again.',
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
-  'humanize.stt.model_missing': 'Local speech recognition is not installed. Download SenseVoice from Voice settings, or turn speech input off.',
+  'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
   'humanize.fallback': 'Something went wrong. ({detail})',
@@ -219,6 +220,23 @@ export function lookupTranslation(key: TranslationKey, detail?: string): string 
   // Should never hit this — every defined key has a fallback. Never surface
   // the raw detail here: it can contain provider internals or secrets.
   return 'Something went wrong. Please try again.'
+}
+
+/**
+ * Translator for sentence templates that carry named params (the Settings
+ * path in the missing-model line). Mirrors lookupTranslation's dictionary-then-
+ * fallback order while filling params into the English fallback too.
+ */
+function translateWithFallback(key: TranslationKey, params?: TranslationParams): string {
+  const translated = t(key, params)
+  if (translated && translated !== key) return translated
+  const fallback = ENGLISH_FALLBACKS[key]
+  if (!fallback) return key
+  if (!params) return fallback
+  return Object.entries(params).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    fallback,
+  )
 }
 
 /**
@@ -293,6 +311,9 @@ export function humanizeError(
       const key = pattern.platformScoped
         ? pickMicrophonePermissionKey(pattern.key, platform)
         : pattern.key
+      if (key === 'humanize.stt.model_missing') {
+        return voiceDownloadGuidance(translateWithFallback, key)
+      }
       return lookupTranslation(key, pattern.withDetail ? redactSensitive(raw) : undefined)
     }
   }

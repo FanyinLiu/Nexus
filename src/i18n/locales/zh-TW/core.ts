@@ -403,7 +403,7 @@ export const zhTWCore = {
   'humanize.voice.mic_permission_windows': '沒有拿到麥克風權限。到「設定 → 隱私權與安全性 → 麥克風」裡開啟「允許桌面應用程式存取您的麥克風」，再點一次「開始語音」。',
   'humanize.voice.mic_busy': '麥克風被別的 app 佔用了。關掉它再試。',
   'humanize.tts.voice_unavailable': '這個聲音用不了。去「設定 → 語音輸出」換一個。',
-  'humanize.stt.model_missing': '本機語音辨識尚未安裝。請到語音設定下載 SenseVoice，或先關閉語音輸入。',
+  'humanize.stt.model_missing': '語音還沒裝好，去「{settings} → {voice} → {advanced}」裡下載。',
   'humanize.model.no_disk_space': '硬碟空間不夠下載。騰點空間再試。',
   'humanize.model.hf_unreachable': '連不上模型庫。檢查一下網路或者換個鏡像。',
   'humanize.fallback': '出錯了。({detail})',

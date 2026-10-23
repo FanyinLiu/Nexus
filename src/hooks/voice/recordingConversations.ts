@@ -4,6 +4,7 @@ import {
   detectVoicePermissionPlatform,
   pickMicrophonePermissionKey,
 } from '../../features/voice/runtimeSupport.ts'
+import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
@@ -230,6 +231,7 @@ export async function startApiRecordingConversation(
     params.setContinuousVoiceSession(false)
     params.setVoiceState('idle')
     params.setMood('idle')
+    if (isVoiceCaptureCancelled(error)) return
     params.setError(
       humanizeIfSpeechIpcError(error, 'stt')
         ?? humanizeMicPermissionError(error)

@@ -9,7 +9,6 @@ import {
   isModelProgressError,
   mergeModelProgress,
   normalizeModelProgressEvent,
-  shouldRestoreModelSetupAfterGuide,
   shouldShowModelSetupOverlay,
 } from '../src/features/setup/modelSetupState.ts'
 
@@ -156,34 +155,37 @@ test('model progress phase helpers keep completed downloads out of pending UI st
   assert.equal(isModelProgressError({ phase: 'installed', downloaded: 10, total: 10 }), false)
 })
 
-test('shouldShowModelSetupOverlay only opens for missing inventory that is not suppressed or dismissed', () => {
-  assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: false }), true)
-  assert.equal(shouldShowModelSetupOverlay({ suppressed: true, dismissed: false, inventoryReady: false }), false)
-  assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: true, inventoryReady: false }), false)
-  assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: true }), false)
-  assert.equal(shouldShowModelSetupOverlay({ suppressed: false, dismissed: false, inventoryReady: undefined }), false)
+test('shouldShowModelSetupOverlay stays closed for missing inventory until voice requests setup', () => {
+  const missing = { suppressed: false, dismissed: false, inventoryReady: false }
+
+  assert.equal(shouldShowModelSetupOverlay({ ...missing, requested: false }), false)
+  assert.equal(shouldShowModelSetupOverlay({ ...missing, requested: true }), true)
 })
 
-test('closing the model guide restores the dialog unless the user dismissed it', () => {
-  assert.equal(shouldRestoreModelSetupAfterGuide({
-    covered: true,
+test('a voice request cannot override suppression, dismissal, or a complete inventory', () => {
+  assert.equal(shouldShowModelSetupOverlay({
+    requested: true,
+    suppressed: true,
     dismissed: false,
     inventoryReady: false,
   }), false)
-  assert.equal(shouldRestoreModelSetupAfterGuide({
-    covered: false,
-    dismissed: false,
-    inventoryReady: false,
-  }), true)
-  assert.equal(shouldRestoreModelSetupAfterGuide({
-    covered: false,
+  assert.equal(shouldShowModelSetupOverlay({
+    requested: true,
+    suppressed: false,
     dismissed: true,
     inventoryReady: false,
   }), false)
-  assert.equal(shouldRestoreModelSetupAfterGuide({
-    covered: false,
+  assert.equal(shouldShowModelSetupOverlay({
+    requested: true,
+    suppressed: false,
     dismissed: false,
     inventoryReady: true,
+  }), false)
+  assert.equal(shouldShowModelSetupOverlay({
+    requested: true,
+    suppressed: false,
+    dismissed: false,
+    inventoryReady: undefined,
   }), false)
 })
 

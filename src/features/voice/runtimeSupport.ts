@@ -1,5 +1,14 @@
 import type { AppSettings, AudioSynthesisRequest, TranslationKey, TranslationParams } from '../../types'
 import { t } from '../../i18n/runtime.ts'
+import {
+  boundVoiceCaptureAttempt,
+  denyVoiceCapture,
+  markVoiceCaptureOpened,
+  VoiceCaptureCancelledError,
+  voiceCaptureGrantIsUsable,
+  voiceCaptureMayRequestMicrophone,
+  whenVoiceCaptureCancelled,
+} from './voiceCaptureAttempt.ts'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
@@ -102,32 +111,98 @@ function buildVoiceInputConstraintProfiles(
   }
 }
 
+function pageVisible(): boolean {
+  if (typeof document === 'undefined') return true
+  return document.visibilityState !== 'hidden'
+}
+
+function stopMediaStream(stream: MediaStream) {
+  stream.getTracks().forEach((track) => track.stop())
+}
+
+/**
+ * Wake word is the opt-in that may listen without a start-voice click.
+ * Every other open joins the click when one is in flight, including a click
+ * that already lost the race with the window, so the late call does not ask.
+ */
+function microphoneAttemptId(purpose: VoiceInputPurpose): number | undefined {
+  if (purpose === 'wakeword') return undefined
+  return boundVoiceCaptureAttempt() ?? undefined
+}
+
+/**
+ * The system prompt is the user's answer. Another constraint profile would
+ * call getUserMedia again, and a later show of the window must not either.
+ */
+function microphonePermissionDenied(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('name' in error)) return false
+  const name = (error as { name?: unknown }).name
+  return name === 'NotAllowedError'
+    || name === 'PermissionDeniedError'
+    || name === 'SecurityError'
+}
+
+async function openMicrophone(
+  constraints: MediaTrackConstraints | true,
+  attemptId: number | undefined,
+): Promise<MediaStream> {
+  if (attemptId !== undefined && !voiceCaptureMayRequestMicrophone(attemptId, pageVisible())) {
+    throw new VoiceCaptureCancelledError()
+  }
+  const pending = navigator.mediaDevices.getUserMedia({ audio: constraints })
+  const cancelGuard = attemptId === undefined
+    ? null
+    : whenVoiceCaptureCancelled(attemptId).then(() => {
+      throw new VoiceCaptureCancelledError()
+    })
+  // The race observes this rejection. The extra handler keeps a cancel that
+  // arrives after the prompt already failed from becoming unhandled.
+  if (cancelGuard) void cancelGuard.catch(() => undefined)
+  try {
+    const stream = await (cancelGuard ? Promise.race([pending, cancelGuard]) : pending)
+    if (attemptId !== undefined && !voiceCaptureGrantIsUsable(attemptId, pageVisible())) {
+      stopMediaStream(stream)
+      throw new VoiceCaptureCancelledError()
+    }
+    return stream
+  } catch (error) {
+    // A grant that arrives after the window closed must not stay live, and
+    // must not be turned into a second request when the window is shown.
+    void pending.then(stopMediaStream).catch(() => undefined)
+    throw error
+  }
+}
+
 export async function requestVoiceInputStream(
   options: {
     preferredSampleRate?: number
     purpose?: VoiceInputPurpose
   } = {},
 ): Promise<VoiceInputStreamHandle> {
+  const purpose = options.purpose ?? 'stt'
+  const attemptId = microphoneAttemptId(purpose)
   const profiles = buildVoiceInputConstraintProfiles(
     options.preferredSampleRate,
-    options.purpose ?? 'stt',
+    purpose,
   )
   let lastError: unknown = null
 
   for (const profile of profiles) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: profile.constraints,
-      })
+      const stream = await openMicrophone(profile.constraints, attemptId)
       const track = stream.getAudioTracks()[0] ?? null
 
       if (!track) {
-        stream.getTracks().forEach((item) => item.stop())
+        stopMediaStream(stream)
         lastError = new Error(t('voice.mic.no_audio_track'))
         continue
       }
 
       track.enabled = true
+      if (attemptId !== undefined && !markVoiceCaptureOpened(attemptId, pageVisible())) {
+        stopMediaStream(stream)
+        throw new VoiceCaptureCancelledError()
+      }
 
       return {
         stream,
@@ -135,6 +210,11 @@ export async function requestVoiceInputStream(
         trackSettings: typeof track.getSettings === 'function' ? track.getSettings() : null,
       }
     } catch (error) {
+      if (error instanceof VoiceCaptureCancelledError) throw error
+      if (microphonePermissionDenied(error)) {
+        if (attemptId !== undefined) denyVoiceCapture(attemptId)
+        throw error
+      }
       lastError = error
     }
   }

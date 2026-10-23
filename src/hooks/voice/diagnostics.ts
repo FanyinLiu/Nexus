@@ -128,7 +128,7 @@ export async function testSpeechInputReadinessRuntime(
       if (!status.installed) {
         return {
           ok: false,
-          message: options.ti('voice.provider.sensevoice.node_missing_detail'),
+          message: options.ti('voice.provider.sensevoice.node_missing'),
         }
       }
       if (!status.modelFound) {

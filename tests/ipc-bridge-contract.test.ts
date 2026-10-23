@@ -31,7 +31,7 @@ function extractRegexMatches(source: string, regex: RegExp): string[] {
   return [...source.matchAll(regex)].map((match) => match[1])
 }
 
-function loadPreloadDesktopPetApi() {
+function loadPreloadDesktopPetApi(view: 'pet' | 'panel' = 'pet') {
   const preloadSource = fs.readFileSync(PRELOAD_PATH, 'utf8')
   const exposed: Record<string, unknown> = {}
   const invokedChannels: string[] = []
@@ -53,6 +53,7 @@ function loadPreloadDesktopPetApi() {
     },
   }
 
+  const location = { search: `?view=${view}` }
   vm.runInNewContext(preloadSource, {
     require(name: string) {
       if (name !== 'electron') throw new Error(`Unexpected preload require: ${name}`)
@@ -65,6 +66,9 @@ function loadPreloadDesktopPetApi() {
         ipcRenderer,
       }
     },
+    window: { location },
+    location,
+    URLSearchParams,
     process: { env: { NEXUS_ENABLE_REALTIME_VOICE: '1' } },
     console,
     Date,
@@ -83,7 +87,10 @@ function loadPreloadDesktopPetApi() {
 }
 
 function getPreloadDesktopPetKeys() {
-  return Object.keys(loadPreloadDesktopPetApi().desktopPet).sort()
+  return [...new Set([
+    ...Object.keys(loadPreloadDesktopPetApi('pet').desktopPet),
+    ...Object.keys(loadPreloadDesktopPetApi('panel').desktopPet),
+  ])].sort()
 }
 
 function getDeclaredDesktopPetKeys() {
@@ -132,6 +139,110 @@ test('preload desktopPet API keys match the Window.desktopPet type contract', ()
     [],
     'preload exposes desktopPet APIs missing from vite-env.d.ts',
   )
+})
+
+test('the pet preload exposes the request entry point and the reminder claim for model setup', () => {
+  const petKeys = Object.keys(loadPreloadDesktopPetApi('pet').desktopPet)
+  const modelSetupKeys = petKeys
+    .filter((key) => /modelSetup/i.test(key))
+    .sort()
+
+  assert.deepEqual(modelSetupKeys, [
+    'claimModelSetupReminder',
+    'requestModelSetup',
+  ])
+})
+
+test('the panel preload exposes request, consume, decline, and subscribe for model setup', () => {
+  const panelKeys = Object.keys(loadPreloadDesktopPetApi('panel').desktopPet)
+  const modelSetupKeys = panelKeys
+    .filter((key) => /modelSetup/i.test(key))
+    .sort()
+
+  assert.deepEqual(modelSetupKeys, [
+    'claimModelSetupReminder',
+    'consumeModelSetupRequest',
+    'declineModelSetup',
+    'requestModelSetup',
+    'subscribeModelSetupRequest',
+  ])
+})
+
+test('panel preload model setup methods use only their classified channels', async () => {
+  const { desktopPet, invokedChannels, subscribedChannels, removedChannels } =
+    loadPreloadDesktopPetApi('panel')
+
+  const requestModelSetup = desktopPet.requestModelSetup as
+    | ((options?: { delayMs?: number; cancel?: boolean }) => Promise<unknown>)
+    | undefined
+  const consumeModelSetupRequest = desktopPet.consumeModelSetupRequest as
+    | (() => Promise<unknown>)
+    | undefined
+  const declineModelSetup = desktopPet.declineModelSetup as
+    | (() => Promise<unknown>)
+    | undefined
+  const claimModelSetupReminder = desktopPet.claimModelSetupReminder as
+    | (() => Promise<unknown>)
+    | undefined
+  const subscribeModelSetupRequest = desktopPet.subscribeModelSetupRequest as
+    | ((listener: () => void) => () => void)
+    | undefined
+
+  assert.equal(typeof requestModelSetup, 'function')
+  assert.equal(typeof consumeModelSetupRequest, 'function')
+  assert.equal(typeof declineModelSetup, 'function')
+  assert.equal(typeof claimModelSetupReminder, 'function')
+  assert.equal(typeof subscribeModelSetupRequest, 'function')
+
+  await requestModelSetup!({ delayMs: 3_000 })
+  await consumeModelSetupRequest!()
+  await declineModelSetup!()
+  await claimModelSetupReminder!()
+
+  let events = 0
+  const unsubscribe = subscribeModelSetupRequest!(() => { events += 1 })
+  const handlers = subscribedChannels.get('models:setup-requested')
+  assert.equal(handlers?.size, 1)
+  const [handler] = [...handlers ?? []]
+  handler({})
+  assert.equal(events, 1)
+
+  unsubscribe()
+  assert.equal(subscribedChannels.get('models:setup-requested')?.size ?? 0, 0)
+  assert.equal(removedChannels.find((item) => item.channel === 'models:setup-requested')?.handler, handler)
+
+  assert.deepEqual(invokedChannels, [
+    'window:request-model-setup',
+    'window:consume-model-setup-request',
+    'window:decline-model-setup',
+    'window:claim-model-setup-reminder',
+  ])
+  assert.deepEqual([...subscribedChannels.keys()], ['models:setup-requested'])
+})
+
+test('pet preload forwards the model setup request and the reminder claim', async () => {
+  const { desktopPet, invokedChannels } = loadPreloadDesktopPetApi('pet')
+
+  const requestModelSetup = desktopPet.requestModelSetup as
+    | ((options?: { delayMs?: number; cancel?: boolean }) => Promise<unknown>)
+    | undefined
+  const claimModelSetupReminder = desktopPet.claimModelSetupReminder as
+    | (() => Promise<unknown>)
+    | undefined
+  assert.equal(typeof requestModelSetup, 'function')
+  assert.equal(typeof claimModelSetupReminder, 'function')
+  assert.equal(desktopPet.consumeModelSetupRequest, undefined)
+  assert.equal(desktopPet.subscribeModelSetupRequest, undefined)
+
+  await requestModelSetup!({ delayMs: 3_000 })
+  await requestModelSetup!({ cancel: true })
+  await claimModelSetupReminder!()
+
+  assert.deepEqual(invokedChannels, [
+    'window:request-model-setup',
+    'window:request-model-setup',
+    'window:claim-model-setup-reminder',
+  ])
 })
 
 test('every preload invoke channel has an ipcMain handler', () => {

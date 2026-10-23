@@ -403,7 +403,7 @@ export const enCore = {
   'humanize.voice.mic_permission_windows': 'Nexus can\'t use the microphone yet. In Settings → Privacy & security → Microphone, turn on "Let desktop apps access your microphone", then try again.',
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
-  'humanize.stt.model_missing': 'Local speech recognition is not installed. Download SenseVoice from Voice settings, or turn speech input off.',
+  'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
   'humanize.fallback': 'Something went wrong. ({detail})',

@@ -1,7 +1,15 @@
-// ESM resolve hooks for node --test: the app source is written for the Vite
-// bundler, which accepts directory imports (`../../lib`) and extensionless
-// relative imports (`../../lib/coreRuntime`). Node's resolver rejects both,
-// so retry those specifiers as `/index.ts` / `.ts` before giving up.
+// ESM resolve/load hooks for node --test: the app source is written for the
+// Vite bundler, which accepts directory imports (`../../lib`) and
+// extensionless relative imports (`../../lib/coreRuntime`). Node's resolver
+// rejects both, so retry those specifiers as `/index.ts` / `.ts` before giving
+// up. Production JSX lives in .tsx modules, which Node's type stripping alone
+// cannot load, so transform those with esbuild (the same transformer Vite
+// uses). CSS imports become empty modules — styles are irrelevant to behavior
+// tests.
+import { readFile } from 'node:fs/promises'
+
+import { transformSync } from 'esbuild'
+
 export async function resolve(specifier, context, nextResolve) {
   try {
     return await nextResolve(specifier, context)
@@ -20,4 +28,22 @@ export async function resolve(specifier, context, nextResolve) {
     }
     throw err
   }
+}
+
+export async function load(url, context, nextLoad) {
+  if (url.endsWith('.css')) {
+    return { format: 'module', shortCircuit: true, source: 'export default {}\n' }
+  }
+  if (!url.endsWith('.tsx')) return nextLoad(url, context)
+
+  const source = await readFile(new URL(url), 'utf8')
+  const transformed = transformSync(source, {
+    format: 'esm',
+    jsx: 'automatic',
+    loader: 'tsx',
+    sourcefile: url,
+    sourcemap: 'inline',
+    target: 'es2024',
+  })
+  return { format: 'module', shortCircuit: true, source: transformed.code }
 }

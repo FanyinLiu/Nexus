@@ -6,6 +6,7 @@ import {
   startTencentAsrStream,
   type TencentAsrStreamSession,
 } from '../../features/hearing/tencentAsr.ts'
+import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import { resolveSherpaStreamIdleTimeoutMs } from '../../features/voice/sherpaIdleTimeout.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
@@ -356,6 +357,7 @@ export async function startTencentConversation(
     session?.abort()
     params.tencentAsrSessionRef.current?.abort()
     params.tencentAsrSessionRef.current = null
+    if (isVoiceCaptureCancelled(error)) return
 
     const message = humanizeMicPermissionError(error)
       ?? (error instanceof Error

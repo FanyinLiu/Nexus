@@ -401,7 +401,7 @@ export const zhCNCore = {
   'humanize.voice.mic_permission_windows': '没有拿到麦克风权限。去「设置 → 隐私和安全性 → 麦克风」里打开「允许桌面应用访问麦克风」，再点一次「开始语音」。',
   'humanize.voice.mic_busy': '麦克风被别的 app 占用了。关掉它再试。',
   'humanize.tts.voice_unavailable': '这个声音用不了。去「设置 → 语音输出」换一个。',
-  'humanize.stt.model_missing': '本地语音识别尚未安装。请到语音设置下载 SenseVoice，或先关闭语音输入。',
+  'humanize.stt.model_missing': '语音还没装好，去「{settings} → {voice} → {advanced}」里下载。',
   'humanize.model.no_disk_space': '硬盘空间不够下载。腾点空间再试。',
   'humanize.model.hf_unreachable': '连不上模型库。检查一下网络或者换个镜像。',
   'humanize.fallback': '出错了。({detail})',

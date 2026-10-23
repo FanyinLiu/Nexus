@@ -6,12 +6,14 @@ import {
   saveSettings,
 } from '../../lib/storage.ts'
 import {
+  carryHydratedSettingsSecrets,
   dehydrateSettingsKeys,
   hydrateSettingsKeys,
   isVaultRefString,
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
 import { syncExternalActionPolicyToMain } from '../../features/integrations/externalActionPolicySync.ts'
+import { voiceSwitchesAfterMicrophoneDenied } from '../../features/voice/voiceCaptureAttempt.ts'
 import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import type { AppSettings } from '../../types/index.ts'
@@ -312,6 +314,71 @@ async function runLocalSettingsMutation(
   })
 }
 
+/**
+ * The microphone denial may fire while the vault bulk-read limit is exhausted.
+ * That revert only moves two non-secret toggles, so it must not depend on the
+ * vault: the persisted snapshot is authoritative, and the committed in-memory
+ * copy keeps the secrets this window already hydrated. Anything else in the
+ * draft is ignored so this path can never persist a plaintext key.
+ */
+function voiceDenialSettingsUpdater(draft: AppSettings) {
+  const reverted = voiceSwitchesAfterMicrophoneDenied(draft)
+  return (current: AppSettings): AppSettings => {
+    if (
+      current.speechInputEnabled === reverted.speechInputEnabled
+      && current.speechOutputEnabled === reverted.speechOutputEnabled
+    ) {
+      return current
+    }
+    return {
+      ...current,
+      speechInputEnabled: reverted.speechInputEnabled,
+      speechOutputEnabled: reverted.speechOutputEnabled,
+    }
+  }
+}
+
+async function runVaultFreeSettingsMutation(
+  updater: SettingsUpdater,
+  onCommit?: SettingsCommitCallback,
+): Promise<AppSettings> {
+  return withSettingsMutationLock(async () => {
+    const previousCached = cachedHydratedSettings
+    const persisted = loadSettings()
+    const nextSettings = updater(persisted)
+
+    if (Object.is(nextSettings, persisted)) {
+      const committed = previousCached ?? persisted
+      onCommit?.(committed)
+      return committed
+    }
+
+    pendingHydration = null
+    saveSettings(nextSettings, { silent: true })
+    // Deliberately no hydrateSettingsKeys here. The write already landed, so
+    // a vault read that hits the bulk limit must not turn it into a failure.
+    const committed = carryHydratedSettingsSecrets(loadSettings(), previousCached)
+    commitSettingsCache(committed)
+    notifySettingsListeners(committed)
+    onCommit?.(committed)
+    return committed
+  })
+}
+
+/**
+ * Persist the microphone-denial revert without reading or writing the vault.
+ * Used only by the Settings start-voice denial path.
+ */
+export function revertVoiceSettingsAfterMicrophoneDenied(
+  draft: AppSettings,
+  onCommit?: SettingsCommitCallback,
+): Promise<AppSettings> {
+  return enqueueSettingsTask(() => runVaultFreeSettingsMutation(
+    voiceDenialSettingsUpdater(draft),
+    onCommit,
+  ))
+}
+
 export function updateSettingsSnapshot(
   updater: SettingsUpdater,
   onCommit?: SettingsCommitCallback,
@@ -337,7 +404,11 @@ export function updateSettingsFromDraft(
   baseline: AppSettings,
   draft: AppSettings,
   onCommit?: SettingsCommitCallback,
+  options?: { vaultFree?: boolean },
 ): Promise<AppSettings> {
+  if (options?.vaultFree) {
+    return revertVoiceSettingsAfterMicrophoneDenied(draft, onCommit)
+  }
   return updateSettingsSnapshot(
     (current) => applyDraftChanges(current, baseline, draft),
     onCommit,

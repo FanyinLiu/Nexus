@@ -35,11 +35,20 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^updater:install$/,
   /^vault:/,
   /^vts-bridge:migrate-legacy-token$/,
+  /^models:setup-requested$/,
+  /^window:consume-model-setup-request$/,
 ])
 
 const EXPLICIT_SHARED_HIGH_IMPACT_CHANNELS = Object.freeze(new Set([
   // Desktop awareness is consumed by the pet runtime so it remains shared.
   'desktop-context:get',
+]))
+
+// Shared between panel and pet, but only for a window bound at creation time.
+// The pending request is a one-shot hand-off, so an unbound webContents (which
+// our own windows never are) must not be able to arm it.
+const BOUND_WINDOW_ONLY_CHANNELS = Object.freeze(new Set([
+  'window:request-model-setup',
 ]))
 
 // WeakMap keys have to be objects, so the webContents object is the identity
@@ -156,6 +165,7 @@ export function isWindowChannelAllowed(channel, viewKind) {
   const kind = viewKind === 'panel' || viewKind === 'pet' || viewKind === 'unknown'
     ? viewKind
     : 'unknown'
+  if (kind === 'unknown' && BOUND_WINDOW_ONLY_CHANNELS.has(String(channel ?? ''))) return false
   return WINDOW_CAPABILITY_MATRIX[kind][required] === true
 }
 

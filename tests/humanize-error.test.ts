@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs'
 import { before, describe, test } from 'node:test'
 
 import { humanizeError, humanizeMicPermissionError, lookupTranslation } from '../src/lib/humanizeError.ts'
-import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
+import { voiceDownloadGuidance } from '../src/features/setup/voiceDownloadGuidance.ts'
+import { ensureLocaleLoaded, setLocale, t } from '../src/i18n/runtime.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
@@ -95,12 +96,14 @@ describe('humanizeError — context-specific', () => {
     assert.match(out, /(model|install|download|Settings)/i)
   })
 
-  test('stt model-missing copy matches the SenseVoice not-installed sentence', () => {
+  test('stt model-missing copy matches the rendered SenseVoice not-installed sentence', () => {
     const out = humanizeError(new Error('Wake-word model is not installed'), 'stt')
-    assert.equal(
-      out,
-      'Local speech recognition is not installed. Download SenseVoice from Voice settings, or turn speech input off.',
+    const expected = voiceDownloadGuidance(
+      (key, params) => t(key, params),
+      'voice.provider.sensevoice.not_installed',
     )
+    assert.equal(out, expected)
+    assert.doesNotMatch(out, /[{}]/)
   })
 
   test('model context recognizes disk-full', () => {
@@ -188,8 +191,29 @@ describe('humanizeError — stt model_missing matches SenseVoice not_installed',
     const source = readFileSync(new URL('../src/lib/humanizeError.ts', import.meta.url), 'utf8')
     const fallback = source.match(/'humanize\.stt\.model_missing':\s*'((?:[^'\\]|\\.)*)'/)
     assert.ok(fallback, 'humanizeError.ts no longer declares the stt.model_missing fallback')
-    assert.equal(fallback[1], enMessages['voice.provider.sensevoice.not_installed'])
+    assert.equal(fallback[1].replace(/\\'/g, "'"), enMessages['voice.provider.sensevoice.not_installed'])
   })
+
+  for (const { name, locale } of [
+    { name: 'en', locale: 'en-US' },
+    { name: 'zh-CN', locale: 'zh-CN' },
+  ]) {
+    test(`${name}: rendered model_missing equals the rendered not_installed sentence`, async () => {
+      await ensureLocaleLoaded(locale)
+      setLocale(locale)
+      try {
+        const expected = voiceDownloadGuidance(
+          (key, params) => t(key, params),
+          'voice.provider.sensevoice.not_installed',
+        )
+        const out = humanizeError(new Error('Wake-word model is not installed'), 'stt')
+        assert.equal(out, expected)
+        assert.doesNotMatch(out, /[{}]/)
+      } finally {
+        setLocale('en-US')
+      }
+    })
+  }
 })
 
 // Product decision: every microphone-permission surface reuses the canonical

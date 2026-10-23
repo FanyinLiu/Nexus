@@ -59,11 +59,14 @@ export function VoiceStep({ draft, onPreviewSpeech }: VoiceStepProps) {
     speechInputProviderId: draft.speechInputProviderId,
     speechOutputProviderId: draft.speechOutputProviderId,
   })
+  const tipKey = readiness.status === 'models_missing'
+    ? 'onboarding.voice.needs_models'
+    : readiness.messageKey
 
   return (
     <div className="onboarding-grid onboarding-grid--stack">
-      {readiness.messageKey ? (
-        <p className="onboarding-tip">{ti(readiness.messageKey)}</p>
+      {tipKey ? (
+        <p className="onboarding-tip">{ti(tipKey)}</p>
       ) : null}
       <div className="onboarding-test-connection">
         <button

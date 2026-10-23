@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { loadSettings, SETTINGS_UPDATED_EVENT } from '../src/lib/storage.ts'
+import { loadSettings, saveSettings, SETTINGS_UPDATED_EVENT } from '../src/lib/storage.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -194,4 +194,75 @@ test('subscribeToSettings fans out a single vault hydration failure', async () =
   } finally {
     console.error = originalError
   }
+})
+
+test('microphone-denial revert persists the switches without reading or writing the vault', async () => {
+  let retrieveCalls = 0
+  let storeCalls = 0
+  let vaultExhausted = false
+  const vaultEntries: Record<string, string> = {}
+  installWindow({
+    vaultStore: async () => undefined,
+    vaultStoreMany: async (entries: Record<string, string>) => {
+      storeCalls += 1
+      if (vaultExhausted) throw new Error('vault store-many failed')
+      Object.assign(vaultEntries, entries)
+    },
+    vaultRetrieveMany: async (slots: string[]) => {
+      retrieveCalls += 1
+      if (vaultExhausted) {
+        throw new Error(
+          'vault retrieve-many rate-limited: more than 6 bulk operations in 60s — '
+          + 'looks like programmatic enumeration. Check the audit log.',
+        )
+      }
+      const values: Record<string, string> = {}
+      for (const slot of slots) {
+        if (vaultEntries[slot]) values[slot] = vaultEntries[slot]
+      }
+      return values
+    },
+  })
+  saveSettings({
+    ...loadSettings(),
+    speechInputEnabled: true,
+    speechOutputEnabled: true,
+    apiKey: 'sk-unit-secret',
+    companionName: 'steady-companion',
+  })
+  const store = await importFreshSettingsStore()
+  const hydrated = await store.initializeSettingsWithVault()
+  assert.equal(hydrated.apiKey, 'sk-unit-secret')
+
+  // The permission prompt is refused while the bulk-read budget is spent.
+  vaultExhausted = true
+  retrieveCalls = 0
+  storeCalls = 0
+  const nextDraft = {
+    ...hydrated,
+    speechInputEnabled: false,
+    speechOutputEnabled: false,
+    apiKey: 'sk-draft-plaintext',
+    companionName: 'draft-companion',
+  }
+  const committed = await store.updateSettingsFromDraft(
+    hydrated,
+    nextDraft,
+    undefined,
+    { vaultFree: true },
+  )
+
+  assert.equal(retrieveCalls, 0)
+  assert.equal(storeCalls, 0)
+  assert.equal(committed.speechInputEnabled, false)
+  assert.equal(committed.speechOutputEnabled, false)
+  assert.equal(committed.apiKey, 'sk-unit-secret')
+  // Only the voice toggles move; the denial must not persist other draft edits.
+  assert.equal(committed.companionName, 'steady-companion')
+  const persisted = loadSettings()
+  assert.equal(persisted.speechInputEnabled, false)
+  assert.equal(persisted.speechOutputEnabled, false)
+  assert.equal(persisted.apiKey, '')
+  assert.equal(persisted.companionName, 'steady-companion')
+  assert.equal(store.getSettingsSnapshot().apiKey, 'sk-unit-secret')
 })

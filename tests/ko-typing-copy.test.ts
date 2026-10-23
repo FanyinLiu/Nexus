@@ -10,7 +10,7 @@ import { koSettingsWindow } from '../src/i18n/locales/ko/settings-window.ts'
  */
 const TYPING_COPY: Record<string, string> = {
   'settings.window.typing_awareness_hint':
-    '다른 앱에서 입력하는 동안 파트너가 반응해요. 기본값은 꺼져 있어요. 어떤 키를 눌렀는지는 저장하거나 보내지 않고, 입력 중인지와 대략적인 속도만 써요.',
+    '다른 앱에서 입력하는 동안 파트너가 반응해요. 기본값은 꺼져 있어요. 끄면 Nexus는 다른 앱에서의 키보드 입력을 감지하지 않아요. 어떤 키를 눌렀는지는 저장하거나 보내지 않고, 입력 여부와 대략적인 속도만 사용해요.',
   'settings.window.typing_explain_body':
     '이 컴퓨터의 키보드 활동을 보고 입력 중인지와 대략적인 속도를 알아내요. 누른 키는 저장하지 않고, 모델이나 네트워크로 보내지도 않아요. macOS에서는 시스템 설정에서 손쉬운 사용 또는 입력 모니터링을 허용해 주세요.',
   'settings.window.typing_permission_denied': '키보드 감지가 아직 허용되지 않았어요',

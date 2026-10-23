@@ -4954,8 +4954,8 @@ html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window_
   }
 }
 
-/* First-launch model setup overlay. This overlay can appear before the settings
-   drawer chunk is loaded, so it must stay in the main app stylesheet. */
+/* Model setup overlay. This overlay can appear before the settings drawer
+   chunk is loaded, so it must stay in the main app stylesheet. */
 .model-setup-backdrop {
   position: fixed;
   inset: 0;
@@ -5033,14 +5033,6 @@ html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window_
   font-weight: 720;
   line-height: 1.18;
   letter-spacing: 0;
-}
-
-/* The shared .eyebrow resolves to translucent white globally, which is
-   invisible on a light card — pin it to the theme accent so it reads on
-   every theme. */
-.model-setup-card .eyebrow {
-  color: var(--color-accent, #a88bff);
-  opacity: 0.85;
 }
 
 .model-setup-card__copy {

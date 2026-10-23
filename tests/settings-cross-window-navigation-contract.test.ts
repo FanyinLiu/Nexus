@@ -200,9 +200,13 @@ test('settings-to-onboarding switches the local modal while keeping the Panel op
   assert.match(focusEffect, /return \(\) => unsubscribe\?\.\(\)/)
 
   const modelOverlays = [...app.matchAll(/<ModelSetupOverlay[\s\S]*?\/>/g)].map((match) => match[0])
-  assert.equal(modelOverlays.length, 2, 'App should keep one model overlay per window route')
-  assert.match(modelOverlays[0], /suppressed/)
-  assert.match(modelOverlays[1], /suppressed=\{competingModalOpen\}/)
+  assert.equal(modelOverlays.length, 1, 'only the panel route may mount the model overlay')
+  assert.match(modelOverlays[0], /suppressed=\{competingModalOpen\}/)
+  assert.doesNotMatch(modelOverlays[0], /firstLaunch/)
+  assert.doesNotMatch(
+    app.slice(app.indexOf("if (controller.view === 'pet')"), app.indexOf('<PanelView')),
+    /<ModelSetupOverlay\b/,
+  )
 })
 
 test('preload and renderer types expose optional close/focus-return compatibility hooks', async () => {

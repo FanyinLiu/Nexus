@@ -1,6 +1,7 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import type {
   AppSettings,
+  PetDialogNoticeOptions,
   PetMood,
   TtsStreamEvent,
   VoiceEmotionLabel,
@@ -113,6 +114,12 @@ export type UseVoiceContext = {
     (content: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'; traceId?: string }) => Promise<boolean>
   >
   appendSystemMessage: (content: string, tone?: 'neutral' | 'error') => void
+  /**
+   * Shows a short line from the companion in the pet bubble. Wired through a
+   * ref because the chat hook — which owns the bubble — is created after
+   * this hook.
+   */
+  presentCompanionNotice?: (content: string, options?: PetDialogNoticeOptions) => void
   /**
    * Optional hook that converts a SenseVoice prosody emotion label into
    * an emotion-model signal and applies it. Called by the SenseVoice

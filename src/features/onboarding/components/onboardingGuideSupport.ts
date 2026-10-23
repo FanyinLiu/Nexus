@@ -1,4 +1,5 @@
 import { syncWakeWordWithCompanionNameChange } from '../../hearing/companionWakeWordSync.ts'
+import { voiceFieldsFollowingUiLanguage } from '../../voiceProfile/voiceLanguages.ts'
 import {
   isSenseVoiceSpeechInputProvider,
   isSpeechOutputKeyless,
@@ -48,13 +49,35 @@ const ONBOARDING_STEP_KEYS: Array<{
   { id: 'companion', titleKey: 'onboarding.step.companion.title', descriptionKey: 'onboarding.step.companion.description' },
 ]
 
+/**
+ * Fields written when the guide saves a UI language. Speech recognition,
+ * speech output language, and the stock voice travel with that choice.
+ * Anything else in the draft stays out of this save.
+ */
+export function settingsSavedForUiLanguageChoice(
+  baseline: AppSettings,
+  next: AppSettings,
+): AppSettings {
+  return {
+    ...baseline,
+    uiLanguage: next.uiLanguage,
+    companionName: next.companionName,
+    userName: next.userName,
+    wakeWord: next.wakeWord,
+    speechRecognitionLang: next.speechRecognitionLang,
+    speechSynthesisLang: next.speechSynthesisLang,
+    speechOutputVoice: next.speechOutputVoice,
+  }
+}
+
 /** Apply a language pick, including locale-default names and the wake word. */
 export function applyOnboardingLanguageChoice(
   draft: AppSettings,
   nextLanguage: UiLanguage,
 ): AppSettings {
+  const followed = voiceFieldsFollowingUiLanguage(draft, nextLanguage)
   return syncWakeWordWithCompanionNameChange(draft, {
-    ...draft,
+    ...followed,
     uiLanguage: nextLanguage,
     companionName: isLocaleDefaultCompanionName(draft.companionName)
       ? getDefaultCompanionName(nextLanguage)
@@ -125,20 +148,17 @@ export function getOnboardingFinishHint(
 }
 
 /**
- * A model that has never tested OK gets one warning. The next finish proceeds.
+ * Hint for the last step when the connection has not been tested. Finishing is
+ * never blocked on it: the guide closes on the first click and the user can
+ * still test the connection later in Settings.
  */
-export function resolveOnboardingFinishGate(input: {
-  textConnectionVerified: boolean
-  acknowledgedUnverified: boolean
-  uiLanguage: UiLanguage
-}): { proceed: true } | { proceed: false; warning: string } {
-  if (input.textConnectionVerified || input.acknowledgedUnverified) {
-    return { proceed: true }
-  }
-  return {
-    proceed: false,
-    warning: pickTranslatedUiText(input.uiLanguage, 'onboarding.finish_hint.unverified_model'),
-  }
+export function getOnboardingUnverifiedConnectionHint(
+  textConnectionVerified: boolean,
+  uiLanguage: UiLanguage,
+): string | null {
+  return textConnectionVerified
+    ? null
+    : pickTranslatedUiText(uiLanguage, 'onboarding.finish_hint.unverified_model')
 }
 
 export function getOnboardingStepError(
