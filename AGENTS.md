@@ -195,6 +195,27 @@ Verified against the tree at v0.4.7 (2026-08). Canonical gate: `npm run verify:p
 - **AGT-7** Never claim work is done without having run the verification you cite.
   If you could not run something, say so.
 
+## Cursor Cloud specific instructions
+
+- Toolchain is Node.js 22 and npm 10. Bootstrap with `npm ci`. `postinstall` copies
+  vendor assets and downloads Cubism Core from `https://cubism.live2d.com`.
+  `public/vendor/` is gitignored.
+- The renderer is `http://127.0.0.1:47821/` with `strictPort`.
+  `http://127.0.0.1:11434/v1` is optional Ollama, not the preview.
+  `npm run electron:dev` reuses a preview that is already listening.
+- Linux agents have no desktop session. Run Electron with `xvfb-run -a`.
+  GTK, NSS, GBM, and Xvfb are already on the default image (the same packages
+  CI installs in `.github/workflows/ci.yml`).
+- A browser on the Vite preview can finish onboarding and open chat. Sending a
+  message calls `completeChat` on the Electron preload, so a browser-only tab
+  reports that the bridge is missing. The loopback chat path is `npm run build`,
+  then `xvfb-run -a npm run first-use:smoke:built`. That smoke uses port 47822
+  and does not replace the dev server.
+- `requirements.txt` is only for the optional OmniVoice / GLM-ASR Python
+  sidecars. Text chat does not need it.
+- `npm test` is the behavior suite. `npm run verify:pr` is the long pull-request
+  gate.
+
 ---
 
 *This file is enforced socially and by the gates it names. If a rule here is wrong,
