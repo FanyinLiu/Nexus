@@ -508,7 +508,7 @@ declare global {
       consumeModelSetupRequest?: () => Promise<boolean>
       declineModelSetup?: () => Promise<void>
       subscribeModelSetupRequest?: (listener: () => void) => () => void
-      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>
+      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null; intentToken?: number }>
       openPetMenu: () => Promise<void>
       closePanel: () => Promise<void>
       closeSettings?: () => Promise<void>
@@ -516,7 +516,7 @@ declare global {
       getPanelWindowState: () => Promise<PanelWindowState>
       setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
       isPanelWindow: () => Promise<boolean>
-      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }) => void) => () => void
+      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null; intentToken?: number }) => void) => () => void
       subscribeSettingsReturnFocus?: (listener: () => void) => () => void
       subscribePanelWindowState: (listener: (state: PanelWindowState) => void) => () => void
       subscribeRuntimeState: (listener: (state: RuntimeStateSnapshot) => void) => () => void

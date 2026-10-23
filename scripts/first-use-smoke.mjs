@@ -159,7 +159,12 @@ async function openPanel(petPage) {
   await petPage.locator('.nexus-companion-v2__character-hit').hover()
   await petPage.locator('.nexus-companion-v2__utility-trigger').click()
   await petPage.locator('.nexus-companion-v2__utility-item').first().click()
-  return waitForPanel(petPage)
+  const panel = await waitForPanel(petPage)
+  // The first pet action is text input. The panel mounts More, then the
+  // section intent removes it when chat opens. Leave only after that sheet
+  // is up, so the next step closes chat instead of clicking More in the gap.
+  await panel.locator('.chat-sheet-v2').waitFor()
+  return panel
 }
 
 async function waitForPanel(petPage) {
@@ -219,7 +224,13 @@ async function assertReply(page, content) {
 }
 
 async function openSettings(page) {
-  if (await page.locator('.chat-sheet-v2').isVisible()) await page.locator('.chat-sheet-v2__back').click()
+  const chat = page.locator('.chat-sheet-v2')
+  if (await chat.isVisible()) {
+    await page.locator('.chat-sheet-v2__back').click()
+    // Back unmounts the sheet and mounts More. Clicking before that swap
+    // settles targets a button the close is about to replace.
+    await chat.waitFor({ state: 'hidden' })
+  }
   if (!await page.locator('.settings-v2').isVisible()) {
     await page.locator('.nexus-panel-v2__utility').click()
     await page.locator('.nexus-panel-v2__menu button').nth(1).click()
