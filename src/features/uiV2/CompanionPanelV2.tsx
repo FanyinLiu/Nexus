@@ -17,6 +17,7 @@ import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { PetPerformanceCue } from '../pet/types.ts'
 import { describeChatMemoryTrace } from '../memory/memoryTraceLabel.ts'
+import { panelChatIntentDecision } from '../../../shared/panelSectionIntent.js'
 import { ChatSheetV2, type ChatSheetV2Message } from './ChatSheetV2.tsx'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
@@ -232,8 +233,11 @@ export function CompanionPanelV2({
 
   useEffect(() => {
     let frameId: number | null = null
-    const applyIntent = ({ intent }: { intent?: 'text' | 'recent' | null }) => {
-      if (intent !== 'text' && intent !== 'recent') return
+    let appliedToken = 0
+    const applyIntent = (snapshot: { intent?: 'text' | 'recent' | null; intentToken?: number } | null | undefined) => {
+      const decision = panelChatIntentDecision(appliedToken, snapshot)
+      appliedToken = decision.appliedToken
+      if (!decision.open) return
       if (frameId !== null) window.cancelAnimationFrame(frameId)
       frameId = window.requestAnimationFrame(() => {
         chatReturnTargetRef.current = utilityButtonRef.current

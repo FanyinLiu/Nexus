@@ -89,7 +89,10 @@ export type SettingsDrawerActiveSectionProps = {
   onRemoveDailyEntry?: (id: string, day: string) => void
   onRemoveMemory: (id: string) => void
   onRemoveNotificationChannel?: (id: string) => Promise<void>
-  onStartVoiceConversation: () => Promise<void>
+  onStartVoiceConversation: (patch?: {
+    speechInputEnabled: boolean
+    speechOutputEnabled: boolean
+  }) => Promise<void>
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
   onSetMemoryEnabled: (id: string, enabled: boolean) => void
@@ -116,6 +119,7 @@ export type SettingsDrawerActiveSectionProps = {
   voicePipeline: VoicePipelineState
   voiceState: VoiceState
   voiceActionPending: boolean
+  microphoneDenied?: boolean
   voiceTrace: VoiceTraceEntry[]
   windowState: WindowState
   surface?: 'full' | 'rest'
@@ -175,6 +179,7 @@ export function SettingsDrawerActiveSection({
   voicePipeline,
   voiceState,
   voiceActionPending,
+  microphoneDenied = false,
   voiceTrace,
   windowState,
   surface = 'full',
@@ -315,6 +320,7 @@ export function SettingsDrawerActiveSection({
           saveError={saveError}
           saving={saving}
           voiceActionPending={voiceActionPending}
+          microphoneDenied={microphoneDenied}
           setDraft={setDraft}
           setSpeechPreviewText={speechVoices.setSpeechPreviewText}
           speechPreviewStatus={speechVoices.speechPreviewStatus}

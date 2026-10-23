@@ -131,6 +131,16 @@ const mediaSessionControlSchema = {
   },
 }
 
+const modelSetupRequestSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    delayMs: { type: 'number', optional: true, min: 0, max: 60_000 },
+    cancel: optionalBoolean,
+  },
+}
+
 export function validatePetWindowStatePayload(payload) {
   return validateIpcPayload('pet-window:update-state', payload, petWindowStateSchema)
 }
@@ -161,4 +171,25 @@ export function validateDesktopContextRequestPayload(payload) {
 
 export function validateMediaSessionControlPayload(payload) {
   return validateIpcPayload('media-session:control', payload, mediaSessionControlSchema)
+}
+
+const modelSetupReminderSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    peek: optionalBoolean,
+  },
+}
+
+export function validateModelSetupRequestPayload(payload) {
+  return validateIpcPayload('window:request-model-setup', payload, modelSetupRequestSchema)
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ peek?: boolean }}
+ */
+export function validateModelSetupReminderPayload(payload) {
+  return validateIpcPayload('window:claim-model-setup-reminder', payload, modelSetupReminderSchema)
 }

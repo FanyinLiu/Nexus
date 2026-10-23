@@ -89,6 +89,14 @@ export const REQUIRED_PHRASES = [
     ],
   },
   {
+    id: 'model-setup-deferral-store-redacts-persist-errors',
+    file: 'electron/services/modelSetupDeferralStore.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      "console.warn('[modelSetupDeferral] persist failed:', getRedactedErrorMessage(error))",
+    ],
+  },
+  {
     id: 'pet-prefs-store-redacts-persist-errors',
     file: 'electron/services/petPrefsStore.js',
     phrases: [

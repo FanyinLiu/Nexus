@@ -52,6 +52,48 @@ export function resolveCompanionSurfaceCaption(
   return trimmed(input.assistantReply)
 }
 
+export type FramelessCompanionCaptionInput = CompanionSurfaceCaptionInput & {
+  captionOverride?: string | null
+  /**
+   * The pet dialog line. When `replacesSurfaceError` is set, this line is
+   * the caption even while the surface is in error — the one reminder
+   * after "maybe later" stands in for the missing-model error and the
+   * generic recovery line, instead of being dropped underneath them.
+   */
+  petDialogBubble?: { content?: string | null; replacesSurfaceError?: boolean } | null
+}
+
+/**
+ * Caption for the frameless pet. A notice that replaces the error wins
+ * over the error detail and the generic recovery line. Ordinary replies
+ * still lose to a current error.
+ */
+export function resolveFramelessCompanionCaption(
+  input: FramelessCompanionCaptionInput,
+): string | undefined {
+  // `null` and `undefined` mean "no override", matching `captionOverride ??`.
+  if (input.captionOverride != null) return trimmed(input.captionOverride)
+  if (input.petDialogBubble?.replacesSurfaceError) {
+    const notice = trimmed(input.petDialogBubble.content)
+    if (notice) return notice
+  }
+  return resolveCompanionSurfaceCaption(input)
+}
+
+/**
+ * The readable-caption hook only accepts text during speaking, done,
+ * error, and offline. An idle reminder would otherwise never appear, so
+ * the notice is shown through the done slot without changing the pet's
+ * real phase.
+ */
+export function captionPhaseForCompanionNotice(
+  phase: CompanionSurfacePhase,
+  hasPriorityNotice: boolean,
+): CompanionSurfacePhase {
+  if (hasPriorityNotice && phase === 'idle') return 'done'
+  return phase
+}
+
 const THINKING_ACTIVITIES = new Set<AssistantRuntimeActivity>([
   'thinking',
   'searching',

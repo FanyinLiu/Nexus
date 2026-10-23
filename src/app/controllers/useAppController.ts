@@ -16,6 +16,7 @@ import type {
   VoiceState,
   WindowView,
 } from '../../types'
+import { showCompanionNoticeBubble } from '../../features/uiV2/caption.ts'
 import { useChat } from '../../hooks/useChat.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext.ts'
@@ -135,6 +136,7 @@ export function useAppController() {
   const setErrorRef = useRef<ChatController['setError']>(() => {})
   const setInputFnRef = useRef<ChatController['setInput']>(() => {})
   const appendSystemMessageRef = useRef<ChatController['appendSystemMessage']>(() => {})
+  const presentPetDialogBubbleRef = useRef<ChatController['presentPetDialogBubble']>(() => {})
   const sendMessageRef = useRef<ChatController['sendMessage']>(async () => false)
   const platformProfileRef = useRef<PlatformProfile | null>(null)
 
@@ -231,6 +233,11 @@ export function useAppController() {
     setSettings,
     sendMessageRef,
     appendSystemMessage: (content, tone) => appendSystemMessageRef.current(content, tone),
+    // The pet bubble belongs to the chat hook, which is created after this
+    // one. The ref keeps the voice hook's context referentially stable.
+    presentCompanionNotice: (content, options) => {
+      showCompanionNoticeBubble(presentPetDialogBubbleRef.current, content, options)
+    },
     // Forward to the autonomy emotion model. Wired through a ref because
     // autonomy is created later in this hook and we need to keep useVoice's
     // ctx referentially stable.
@@ -369,7 +376,8 @@ export function useAppController() {
     setErrorRef.current = chat.setError
     setInputFnRef.current = chat.setInput
     appendSystemMessageRef.current = chat.appendSystemMessage
-  }, [chat.appendSystemMessage, chat.setError, chat.setInput])
+    presentPetDialogBubbleRef.current = chat.presentPetDialogBubble
+  }, [chat.appendSystemMessage, chat.presentPetDialogBubble, chat.setError, chat.setInput])
 
   useEffect(() => {
     settingsRef.current = settings
@@ -607,6 +615,7 @@ export function useAppController() {
   const { overlays } = useAppOverlays({
     view,
     settings,
+    settingsRef,
     platformProfile,
     setSettings,
     settingsOpen,

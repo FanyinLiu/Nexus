@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
+import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
@@ -222,6 +223,7 @@ export async function startApiRecordingConversation(
     params.setContinuousVoiceSession(false)
     params.setVoiceState('idle')
     params.setMood('idle')
+    if (isVoiceCaptureCancelled(error)) return
     params.setError(
       humanizeIfSpeechIpcError(error, 'stt')
         ?? (error instanceof Error

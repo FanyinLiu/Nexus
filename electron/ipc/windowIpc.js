@@ -1,4 +1,5 @@
-import { BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
+import path from 'node:path'
 import {
   mainWindow,
   panelWindow,
@@ -63,6 +64,8 @@ import {
   validateExternalLinkToolPayload,
   validateIntegrationInspectPayload,
   validateMediaSessionControlPayload,
+  validateModelSetupReminderPayload,
+  validateModelSetupRequestPayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,
@@ -74,6 +77,8 @@ import {
   validateWebSearchToolPayload,
   validateWindowDragPayload,
 } from './payloadSchemas.js'
+import { createModelSetupDeferralStore, MODEL_SETUP_DEFERRAL_FILE_NAME } from '../services/modelSetupDeferralStore.js'
+import { createModelSetupRequestGate } from '../services/modelSetupRequestGate.js'
 import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
@@ -163,6 +168,29 @@ function registerPowerEventForwarding() {
   }
 }
 
+// A voice action asks the panel to offer the model installer. The gate keeps
+// the delay in the main process, so a panel that hides or reloads in the
+// meantime does not lose the request: when the timer fires, the main process
+// raises the panel and replays the request there.
+function emitModelSetupRequest() {
+  if (!panelWindow || panelWindow.isDestroyed()) return
+  panelWindow.webContents.send('models:setup-requested')
+}
+
+// The refusal is read here, in the main process, before any request can
+// raise the panel. The renderer cannot clear it.
+const modelSetupDeferralStore = createModelSetupDeferralStore({
+  getStorePath: () => path.join(app.getPath('userData'), MODEL_SETUP_DEFERRAL_FILE_NAME),
+})
+const modelSetupRequestGate = createModelSetupRequestGate({
+  deliver: () => {
+    showPanelWindow('chat')
+    emitModelSetupRequest()
+  },
+  loadDeferral: () => modelSetupDeferralStore.load(),
+  saveDeferral: (state) => modelSetupDeferralStore.save(state),
+})
+
 export function register() {
   registerPowerEventForwarding()
 
@@ -188,6 +216,51 @@ export function register() {
     const sourceView = getViewKind(event)
     const settingsReturnTarget = section === 'settings' && sourceView === 'pet' ? 'pet' : 'panel'
     showPanelWindow(section, { settingsReturnTarget })
+  })
+
+  ipcMain.handle('window:request-model-setup', (event, payload) => {
+    requireTrustedSender(event)
+    payload = validateModelSetupRequestPayload(payload)
+    if (payload.cancel) {
+      modelSetupRequestGate.cancel()
+      return
+    }
+    modelSetupRequestGate.request({ delayMs: payload.delayMs ?? 0 })
+  })
+
+  // The user answered "maybe later" in the installer. The gate keeps that
+  // refusal on disk, so a later voice action cannot raise the panel for
+  // the installer again — including after a restart.
+  ipcMain.handle('window:decline-model-setup', (event) => {
+    requireTrustedSender(event)
+    modelSetupRequestGate.decline()
+    return modelSetupRequestGate.whenPersisted()
+  })
+
+  // The voice path asks whether the installer was refused, and whether the
+  // single reminder that refusal owes is still waiting for the user.
+  // `peek` reads that without spending the reminder (the installer dialog
+  // uses it to stay closed). Spending the reminder waits until the write
+  // lands, so a restart cannot show it twice.
+  ipcMain.handle('window:claim-model-setup-reminder', (event, payload) => {
+    requireTrustedSender(event)
+    payload = validateModelSetupReminderPayload(payload)
+    if (payload.peek === true) {
+      return {
+        declined: modelSetupRequestGate.isDeclined(),
+        remind: modelSetupRequestGate.isReminderOwed(),
+      }
+    }
+    const remind = modelSetupRequestGate.claimReminder()
+    return modelSetupRequestGate.whenPersisted().then(() => ({
+      declined: modelSetupRequestGate.isDeclined(),
+      remind,
+    }))
+  })
+
+  ipcMain.handle('window:consume-model-setup-request', (event) => {
+    requireTrustedSender(event)
+    return modelSetupRequestGate.consume()
   })
 
   ipcMain.handle('window:get-panel-section', (event) => {

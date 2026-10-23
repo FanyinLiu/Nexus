@@ -98,11 +98,13 @@ export function VoiceSimplePage({
             checked={draft.speechInputEnabled}
             disabled={!inputAvailable}
             label={ti('settings.simple.voice_listen')}
-            onChange={(speechInputEnabled) => setDraft((current) => ({
-              ...current,
-              speechInputEnabled,
-              ...(!speechInputEnabled ? { continuousVoiceModeEnabled: false } : {}),
-            }))}
+            onChange={(speechInputEnabled) => {
+              setDraft((current) => ({
+                ...current,
+                speechInputEnabled,
+                ...(!speechInputEnabled ? { continuousVoiceModeEnabled: false } : {}),
+              }))
+            }}
           />
         </SimpleRow>
         <SimpleRow icon="speaker" tone="warning" title={ti('settings.simple.voice_speak')} hint={ti('settings.simple.voice_speak_hint')}>
@@ -110,7 +112,9 @@ export function VoiceSimplePage({
             checked={draft.speechOutputEnabled}
             disabled={!outputAvailable}
             label={ti('settings.simple.voice_speak')}
-            onChange={(speechOutputEnabled) => setDraft((current) => ({ ...current, speechOutputEnabled }))}
+            onChange={(speechOutputEnabled) => {
+              setDraft((current) => ({ ...current, speechOutputEnabled }))
+            }}
           />
         </SimpleRow>
       </section>

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 import { enMessages } from '../src/i18n/locales/en/index.ts'
@@ -8,6 +9,7 @@ import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
 import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 import {
   applyOnboardingLanguageChoice,
+  settingsSavedForUiLanguageChoice,
   applyOnboardingStepRepairDraft,
   buildOnboardingSteps,
   getOnboardingFinishHint,
@@ -15,7 +17,7 @@ import {
   getOnboardingProviderNote,
   getOnboardingStepError,
   getOnboardingStepIssue,
-  resolveOnboardingFinishGate,
+  getOnboardingUnverifiedConnectionHint,
 } from '../src/features/onboarding/components/onboardingGuideSupport.ts'
 import { getApiProviderPreset } from '../src/features/models/providerCatalog.ts'
 import { detectPreferredUiLanguage } from '../src/lib/uiLanguage.ts'
@@ -180,26 +182,26 @@ test('missing API key hint is for the model step and stays empty for keyless pro
   assert.equal(hint, '还没填密钥也没关系，先看看，开始聊天前再补上。')
 })
 
-test('an untested model warns once, then finish can proceed', () => {
-  const first = resolveOnboardingFinishGate({
-    textConnectionVerified: false,
-    acknowledgedUnverified: false,
-    uiLanguage: 'zh-CN',
-  })
-  assert.equal(first.proceed, false)
-  if (!first.proceed) assert.match(first.warning, /再点一次/)
+test('an untested connection only yields the test-later hint, never a second click', () => {
+  const hint = getOnboardingUnverifiedConnectionHint(false, 'zh-CN')
 
-  assert.deepEqual(resolveOnboardingFinishGate({
-    textConnectionVerified: false,
-    acknowledgedUnverified: true,
-    uiLanguage: 'zh-CN',
-  }), { proceed: true })
+  assert.match(hint ?? '', /设置/)
+  assert.doesNotMatch(hint ?? '', /再点一次/)
+  assert.equal(getOnboardingUnverifiedConnectionHint(true, 'en-US'), null)
+})
 
-  assert.deepEqual(resolveOnboardingFinishGate({
-    textConnectionVerified: true,
-    acknowledgedUnverified: false,
-    uiLanguage: 'en-US',
-  }), { proceed: true })
+test('unverified hint copy matches the requested wording in every locale', () => {
+  assert.equal(
+    enMessages['onboarding.finish_hint.unverified_model'],
+    'It\'s fine if the connection hasn\'t been checked yet. You can test it later in Settings.',
+  )
+  assert.equal(
+    jaMessages['onboarding.finish_hint.unverified_model'],
+    '接続の確認がまだでも大丈夫です。あとで設定からテストできます。',
+  )
+  assert.match(zhCNMessages['onboarding.finish_hint.unverified_model'], /设置.*测试/)
+  assert.match(zhTWMessages['onboarding.finish_hint.unverified_model'], /設定.*測試/)
+  assert.match(koMessages['onboarding.finish_hint.unverified_model'], /설정.*테스트/)
 })
 
 test('onboarding text step shows provider-aware missing model guidance', () => {
@@ -258,6 +260,75 @@ test('onboarding starts with language and keeps the AI disclosure before chat', 
   assert.equal(getOnboardingStepIssue(makeSettings(), 'language', 'zh-CN'), null)
 })
 
+test('a new UI language moves stock voice settings and leaves a saved voice alone', () => {
+  const seeded = applyOnboardingLanguageChoice(makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'en-US',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'en-US-JennyNeural',
+  }), 'zh-CN')
+  assert.equal(seeded.uiLanguage, 'zh-CN')
+  assert.equal(seeded.speechRecognitionLang, 'zh-CN')
+  assert.equal(seeded.speechSynthesisLang, 'zh-CN')
+  assert.equal(seeded.speechOutputVoice, 'zh-CN-XiaoxiaoNeural')
+
+  const custom = applyOnboardingLanguageChoice(makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'ja',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'my-custom-voice',
+  }), 'zh-CN')
+  assert.equal(custom.speechRecognitionLang, 'ja')
+  assert.equal(custom.speechSynthesisLang, 'zh-CN')
+  assert.equal(custom.speechOutputVoice, 'my-custom-voice')
+})
+
+test('choosing Simplified Chinese then skipping persists the speech language that followed it', async () => {
+  const seeded = makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'en-US',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'en-US-JennyNeural',
+  })
+  const chosen = applyOnboardingLanguageChoice(seeded, 'zh-CN')
+  const saved = settingsSavedForUiLanguageChoice(seeded, chosen)
+  assert.equal(saved.uiLanguage, 'zh-CN')
+  assert.equal(saved.speechRecognitionLang, 'zh-CN')
+  assert.equal(saved.speechSynthesisLang, 'zh-CN')
+  assert.equal(saved.speechOutputVoice, 'zh-CN-XiaoxiaoNeural')
+  assert.equal(saved.apiProviderId, seeded.apiProviderId)
+
+  const explicit = makeSettings({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    userName: 'you',
+    wakeWord: 'Nexus',
+    speechRecognitionLang: 'ja',
+    speechSynthesisLang: 'en-US',
+    speechOutputProviderId: 'edge-tts',
+    speechOutputVoice: 'en-US-JennyNeural',
+  })
+  const kept = settingsSavedForUiLanguageChoice(explicit, applyOnboardingLanguageChoice(explicit, 'zh-CN'))
+  assert.equal(kept.speechRecognitionLang, 'ja')
+  assert.equal(kept.speechSynthesisLang, 'zh-CN')
+  assert.equal(kept.speechOutputVoice, 'zh-CN-XiaoxiaoNeural')
+
+  const overlays = await readFile(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url), 'utf8')
+  assert.match(overlays, /settingsSavedForUiLanguageChoice\(settings, nextSettings\)/)
+})
+
 test('a language choice updates locale-default names and leaves custom names alone', () => {
   const switched = applyOnboardingLanguageChoice(makeSettings({ wakeWord: '星绘' }), 'en-US')
   assert.equal(switched.uiLanguage, 'en-US')
@@ -275,6 +346,14 @@ test('a language choice updates locale-default names and leaves custom names alo
   assert.equal(custom.wakeWord, '小星')
 })
 
+test('onboarding step 5 names the missing models in each locale', () => {
+  assert.equal(zhCNMessages['onboarding.voice.needs_models'], '语音还要下载模型，下完就能用')
+  assert.equal(zhTWMessages['onboarding.voice.needs_models'], '語音還要下載模型，下完就能用')
+  assert.equal(enMessages['onboarding.voice.needs_models'], 'Voice still needs a few models. It\'ll work once they finish downloading.')
+  assert.equal(jaMessages['onboarding.voice.needs_models'], '音声はまだモデルのダウンロードが必要です。ダウンロードが終わったら使えます。')
+  assert.equal(koMessages['onboarding.voice.needs_models'], '음성은 모델을 더 받아야 해요. 다 받으면 쓸 수 있어요.')
+})
+
 test('onboarding voice and readiness copy stays plain across locales', () => {
   const dictionaries: TranslationDictionary[] = [
     enMessages,
@@ -289,6 +368,7 @@ test('onboarding voice and readiness copy stays plain across locales', () => {
     'onboarding.step.voice.title',
     'onboarding.step.voice.description',
     'onboarding.voice.ready',
+    'onboarding.voice.needs_models',
     'onboarding.text.note.china',
     'onboarding.text.note.global',
     'onboarding.text.note.local',

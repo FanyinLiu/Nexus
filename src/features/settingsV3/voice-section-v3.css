@@ -1,3 +1,9 @@
+.settings-v3-voice-permission {
+  margin: 0;
+  color: var(--sv3-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
 .settings-v3-provider { display: grid; gap: 14px; min-width: 0; padding-top: 12px; }
 .settings-v3-provider > .settings-v3-toolbar { justify-content: flex-end; }
 .settings-v3-provider__fields { padding: 0; }

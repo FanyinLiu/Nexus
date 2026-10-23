@@ -1,4 +1,5 @@
-import { memo, type Dispatch, type SetStateAction } from 'react'
+import { memo, useState, type Dispatch, type SetStateAction } from 'react'
+import { voiceStartClick } from '../voiceProfile/voiceReady.ts'
 import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
@@ -34,6 +35,7 @@ import {
   SettingsV3Toolbar,
 } from './SettingsV3Primitives.tsx'
 import { VoiceProfileSuggestion } from '../../components/VoiceProfileSuggestion.tsx'
+import { voiceSettingsStatusKey } from '../setup/localModelRepair.ts'
 import { LocalVoiceModelsPanel } from './LocalVoiceModelsPanel.tsx'
 import { SpeechInputProviderV3 } from './SpeechInputProviderV3.tsx'
 import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3.tsx'
@@ -52,7 +54,10 @@ export type VoiceSectionV3Props = {
   onRunAudioSmokeTest: () => void
   onRunSpeechInputConnectionTest: () => void
   onRunSpeechOutputConnectionTest: () => void
-  onStartVoiceConversation: () => Promise<void>
+  onStartVoiceConversation: (patch?: {
+    speechInputEnabled: boolean
+    speechOutputEnabled: boolean
+  }) => Promise<void>
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
   platformProfile: PlatformProfile
@@ -72,8 +77,28 @@ export type VoiceSectionV3Props = {
   testingOutputTarget: ServiceConnectionCapability | null
   uiLanguage: UiLanguage
   voiceActionPending: boolean
+  /** Set after the system prompt is refused, until a later click opens the mic. */
+  microphoneDenied?: boolean
   voiceState: VoiceState
   surface?: 'full' | 'rest'
+  /** Visual-matrix hook. Production leaves this unset and uses the live inventory. */
+  modelGapCount?: number
+}
+
+/** One line beside start-voice. The copy stays on `voice.mic.permission_denied`. */
+export function VoiceMicrophoneDenialLine({
+  denied,
+  uiLanguage,
+}: {
+  denied: boolean
+  uiLanguage: UiLanguage
+}) {
+  if (!denied) return null
+  return (
+    <span role="status" className="settings-v3-voice-permission">
+      {pickTranslatedUiText(uiLanguage, 'voice.mic.permission_denied')}
+    </span>
+  )
 }
 
 export const VoiceSectionV3 = memo(function VoiceSectionV3({
@@ -109,9 +134,13 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
   testingOutputTarget,
   uiLanguage,
   voiceActionPending,
+  microphoneDenied = false,
   voiceState,
   surface = 'full',
+  modelGapCount,
 }: VoiceSectionV3Props) {
+  const [reportedModelGap, setReportedModelGap] = useState<number | null>(null)
+  const modelGap = modelGapCount ?? reportedModelGap
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const tiParam = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -155,17 +184,19 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         ? ti('panel.voice.cancel_reply')
         : ti('panel.voice.interrupt_response')
   const runtimeVoicePending = saving || voiceActionPending
+  const modelsReady = modelGap === 0
+  const start = voiceStartClick(draft, modelsReady)
   const runtimeVoiceDisabled = runtimeVoicePending || (
     voiceState === 'idle'
     && !continuousVoiceActive
-    && (!draft.speechInputEnabled || !inputAvailable)
+    && (!start.enabled || !inputAvailable)
   )
   const handleRuntimeVoiceAction = () => {
     if (voiceState === 'idle') {
       if (continuousVoiceActive) {
         onStopVoiceConversation()
       } else {
-        void onStartVoiceConversation()
+        void onStartVoiceConversation(start.patch)
       }
     } else if (voiceState === 'listening') {
       onStopVoiceConversation()
@@ -190,7 +221,11 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
     <SettingsV3Page className={active ? 'settings-v3-voice' : 'is-hidden settings-v3-voice'}>
       {platformHint ? <SettingsV3Notice tone="warning" title={platformHint} /> : null}
       {surface === 'rest' ? null : <VoiceProfileSuggestion draft={draft} setDraft={setDraft} mode="settings" />}
-      <LocalVoiceModelsPanel uiLanguage={uiLanguage} />
+      <LocalVoiceModelsPanel
+        uiLanguage={uiLanguage}
+        speechInputProviderId={draft.speechInputProviderId}
+        onMissingCount={setReportedModelGap}
+      />
 
       {surface === 'rest' ? null : <SettingsV3Section title={ti('settings.voice.loop_title')}>
         <SettingsV3Row
@@ -216,16 +251,20 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             label={ti('settings.voice.enable_output')}
             checked={draft.speechOutputEnabled}
             disabled={!outputAvailable}
-            onChange={(value) => setSetting('speechOutputEnabled', value)}
+            onChange={(value) => {
+              setSetting('speechOutputEnabled', value)
+            }}
           />
         </SettingsV3Row>
       </SettingsV3Section>}
 
       <SettingsV3Notice
-        tone={audioSmokeStatus && !audioSmokeStatus.ok ? 'error' : 'success'}
+        tone={audioSmokeStatus && !audioSmokeStatus.ok ? 'error' : modelGap ? 'warning' : 'success'}
         title={audioSmokeStatus && !audioSmokeStatus.ok
           ? (smokeMessage || ti('settings.voice.audio_smoke_error'))
-          : ti('settings.voice.status_all_clear')}
+          : voiceSettingsStatusKey(modelGap) === null
+            ? ti('settings.voice.status_all_clear')
+            : tiParam(voiceSettingsStatusKey(modelGap)!, { count: modelGap ?? 0 })}
         announce={Boolean(audioSmokeStatus)}
       />
       {saveError ? <SettingsV3Notice tone="error" title={ti('settings.save_failed_fallback')} /> : null}
@@ -239,6 +278,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         >
           {runtimeVoiceLabel}
         </button>
+        <VoiceMicrophoneDenialLine denied={microphoneDenied} uiLanguage={uiLanguage} />
         <button
           type="button"
           onClick={onRunAudioSmokeTest}
