@@ -25,6 +25,12 @@ import {
   getPetInstanceForWindow,
 } from './petWindowInstances.js'
 import { configurePanelWindowController } from './panelWindowController.js'
+import {
+  consumePanelSectionIntent,
+  initialPanelSectionState,
+  panelSectionSnapshot,
+  requestPanelSection,
+} from '../shared/panelSectionIntent.js'
 
 import {
   bindRuntimeWindows,
@@ -182,7 +188,7 @@ configureWindowCreation({
 })
 
 export let panelSection = 'chat'
-let panelChatIntent = null
+let panelSectionState = initialPanelSectionState()
 
 export function hasSystemTray() {
   return Boolean(tray && !tray.isDestroyed?.())
@@ -253,17 +259,23 @@ export function dragWindowBy(event, delta) {
 
 function emitPanelSection() {
   if (!panelWindow || panelWindow.isDestroyed()) return
-  panelWindow.webContents.send('panel-section:changed', { section: panelSection, intent: panelChatIntent })
+  panelWindow.webContents.send('panel-section:changed', panelSectionSnapshot(panelSectionState))
 }
 
 function setPanelSection(section) {
-  panelChatIntent = section === 'chat-text' ? 'text' : section === 'chat-recent' ? 'recent' : null
-  panelSection = section === 'settings' ? 'settings' : 'chat'
+  panelSectionState = requestPanelSection(panelSectionState, section)
+  panelSection = panelSectionState.section
 }
 
+/**
+ * Catch-up read for a renderer that subscribed after the section event.
+ * Clears the intent so this read is not itself a second request; the token
+ * stays on the event copy that was already sent.
+ * @returns {{ section: 'chat' | 'settings', intent: 'text' | 'recent' | null, intentToken: number }}
+ */
 export function getPanelSectionSnapshot() {
-  const snapshot = { section: panelSection, intent: panelChatIntent }
-  panelChatIntent = null
+  const snapshot = panelSectionSnapshot(panelSectionState)
+  panelSectionState = consumePanelSectionIntent(panelSectionState)
   return snapshot
 }
 

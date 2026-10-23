@@ -14,7 +14,7 @@ function sliceFrom(source: string, marker: string, endMarker: string) {
   return source.slice(start, end)
 }
 
-test('App owns ModelSetupOverlay visibility and forwards the shared modal state to both panel routes', async () => {
+test('App owns ModelSetupOverlay in the panel route only so Mao stays visible', async () => {
   const [app, panel] = await Promise.all([
     read('src/app/App.tsx'),
     read('src/app/views/PanelView.tsx'),
@@ -24,8 +24,17 @@ test('App owns ModelSetupOverlay visibility and forwards the shared modal state 
   assert.match(app, /const \[modelSetupOverlayOpen, setModelSetupOverlayOpen\]/)
   assert.match(app, /const handleModelSetupVisibilityChange = useCallback\(\(visible: boolean\) => \{[\s\S]*setModelSetupOverlayOpen\(visible\)/)
   assert.match(app, /const modelSetupOverlayActive = controller\.view === 'panel'[\s\S]*!competingModalOpen/)
-  assert.match(app, /<ModelSetupOverlay\s+suppressed\s+onVisibilityChange=\{handleModelSetupVisibilityChange\}/)
-  assert.match(app, /suppressed=\{competingModalOpen\}[\s\S]*onVisibilityChange=\{handleModelSetupVisibilityChange\}/)
+  // The pet and the installer share one window. Mounting it only with the
+  // panel route keeps the overlay from covering Mao.
+  assert.equal(app.match(/<ModelSetupOverlay\b/g)?.length, 1)
+  const panelContainerIndex = app.indexOf('<PanelView')
+  const overlayIndex = app.indexOf('<ModelSetupOverlay')
+  assert.ok(panelContainerIndex >= 0, 'panel container should exist')
+  assert.ok(overlayIndex > panelContainerIndex, 'overlay should mount inside the panel container')
+
+  const petBranch = sliceFrom(app, "if (controller.view === 'pet')", '\n  }')
+  assert.doesNotMatch(petBranch, /<ModelSetupOverlay\b/)
+  assert.doesNotMatch(petBranch, /modelSetupOverlayOpen/)
 
   const panelCall = sliceFrom(app, '<PanelView', '\n      />')
   assert.match(panelCall, /modelSetupOverlayOpen=\{modelSetupOverlayActive\}/)

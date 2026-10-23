@@ -11,6 +11,8 @@ import {
 } from './conversationEntrypoints.ts'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
+import { requestModelSetupForVoiceUse } from '../../lib/modelSetupBridge.ts'
+import { voiceDownloadGuidance } from '../../features/setup/voiceDownloadGuidance.ts'
 import type { AppSettings } from '../../types'
 import type { StreamingSpeechOutputController } from './types.ts'
 import type { VoiceConversationOptions } from './types.ts'
@@ -27,6 +29,11 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     enginesHolder,
   } = bag
   const { ti } = hookCallbacks
+  // Handed to the single start that follows a user toggle, then cleared so
+  // a later automatic restart does not treat the reminder as still in flight.
+  const modelSetupOutcomeRef: { current: Promise<{ remind: boolean }> | undefined } = {
+    current: undefined,
+  }
 
   const bindings = expectHolderValue(
     bindingsHolder,
@@ -144,14 +151,32 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       hookCallbacks.showPetStatus(ti('voice.pause_before_continue'), 2_400, 3_200)
     }
 
+    // Only user-initiated starts reach here; automatic restarts and
+    // wake-word sessions call startVoiceConversation directly.
+    // The promise is shared with the entrypoint so a missing-model error
+    // waits for this answer and stays quiet when the reminder replaces it.
+    const modelSetupOutcome = requestModelSetupForVoiceUse(ctx.view)
+    modelSetupOutcomeRef.current = modelSetupOutcome
+    void modelSetupOutcome.then((outcome) => {
+      // The user refused the installer earlier. The refusal owes them one
+      // reminder, and this is the voice action that spends it. The line
+      // replaces the missing-model error instead of stacking under it.
+      if (!outcome.remind) return
+      hookCallbacks.presentCompanionNotice?.(voiceDownloadGuidance(ti, 'model_setup.deferred_reminder'), {
+        replacesSurfaceError: true,
+      })
+    })
     startVoiceConversation()
   }
 
   // ── startVoiceConversation ──────────────────────────────────────────────
   function startVoiceConversation(options?: VoiceConversationOptions) {
+    const modelSetupOutcome = modelSetupOutcomeRef.current
+    modelSetupOutcomeRef.current = undefined
     try {
       startVoiceConversationEntrypoint({
         options,
+        modelSetupOutcome,
         settingsRef: ctx.settingsRef,
         busyRef: ctx.busyRef,
         activeVoiceConversationOptionsRef: refs.activeVoiceConversationOptionsRef,
@@ -177,6 +202,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
         setLiveTranscript: setters.setLiveTranscript,
         updateVoicePipeline: hookCallbacks.updateVoicePipeline,
         showPetStatus: hookCallbacks.showPetStatus,
+        presentCompanionNotice: hookCallbacks.presentCompanionNotice,
         handleRecognizedVoiceTranscript: bindings.handleRecognizedVoiceTranscript,
         handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,
         shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,

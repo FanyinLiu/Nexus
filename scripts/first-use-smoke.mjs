@@ -103,11 +103,12 @@ async function nextGuideStep(page) {
   const progress = page.locator('.onboarding-disclosure__progress')
   const before = await progress.innerText()
   await page.locator('.onboarding-card__actions .primary-button').click()
+  // The last step's Finish action closes the guide in one click, so the
+  // progress indicator disappearing is the normal completion signal there.
   await page.waitForFunction((old) => {
     const current = document.querySelector('.onboarding-disclosure__progress')
     if (!current) return true
-    if (current.textContent.trim() !== old) return true
-    return Boolean(document.getElementById('onboarding-finish-warning'))
+    return current.textContent.trim() !== old
   }, before)
 }
 
@@ -133,15 +134,9 @@ async function waitForVisibleGuide(page) {
 
 async function finishRemainingGuide(page) {
   for (let count = 0; count < 8 && await page.locator('.onboarding-card').isVisible(); count += 1) {
-    if (await page.locator('#onboarding-finish-warning').isVisible()) {
-      await page.locator('.onboarding-card__actions .primary-button').click()
-      break
-    }
+    // Finish closes the guide on the first click, whether or not the last-step
+    // unverified-connection hint is visible.
     await nextGuideStep(page)
-    if (await page.locator('#onboarding-finish-warning').isVisible()) {
-      await page.locator('.onboarding-card__actions .primary-button').click()
-      break
-    }
   }
   await page.locator('.onboarding-card').waitFor({ state: 'hidden' })
 }
@@ -164,7 +159,12 @@ async function openPanel(petPage) {
   await petPage.locator('.nexus-companion-v2__character-hit').hover()
   await petPage.locator('.nexus-companion-v2__utility-trigger').click()
   await petPage.locator('.nexus-companion-v2__utility-item').first().click()
-  return waitForPanel(petPage)
+  const panel = await waitForPanel(petPage)
+  // The first pet action is text input. The panel mounts More, then the
+  // section intent removes it when chat opens. Leave only after that sheet
+  // is up, so the next step closes chat instead of clicking More in the gap.
+  await panel.locator('.chat-sheet-v2').waitFor()
+  return panel
 }
 
 async function waitForPanel(petPage) {
@@ -224,7 +224,13 @@ async function assertReply(page, content) {
 }
 
 async function openSettings(page) {
-  if (await page.locator('.chat-sheet-v2').isVisible()) await page.locator('.chat-sheet-v2__back').click()
+  const chat = page.locator('.chat-sheet-v2')
+  if (await chat.isVisible()) {
+    await page.locator('.chat-sheet-v2__back').click()
+    // Back unmounts the sheet and mounts More. Clicking before that swap
+    // settles targets a button the close is about to replace.
+    await chat.waitFor({ state: 'hidden' })
+  }
   if (!await page.locator('.settings-v2').isVisible()) {
     await page.locator('.nexus-panel-v2__utility').click()
     await page.locator('.nexus-panel-v2__menu button').nth(1).click()

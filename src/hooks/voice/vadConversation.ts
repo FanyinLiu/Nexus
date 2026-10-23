@@ -8,6 +8,7 @@ import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVo
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
+import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import type {
   VoiceSessionEvent,
   VoiceSessionTransport,
@@ -465,6 +466,7 @@ export async function startVadConversation(
     params.setVoiceState('idle')
     params.setMood('idle')
     params.resetSpeechLevel()
+    if (isVoiceCaptureCancelled(error)) return
     const originalMessage = (
       error instanceof Error
         ? error.message

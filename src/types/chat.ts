@@ -106,6 +106,16 @@ export interface PetDialogBubbleState {
   loopOffer?: ChatMessage['loopOffer']
   loopCheck?: ChatMessage['loopCheck']
   proactiveWhy?: ChatMessage['proactiveWhy']
+  /**
+   * When set, the frameless pet shows this line in place of a voice error
+   * and the generic recovery caption.
+   */
+  replacesSurfaceError?: boolean
+}
+
+/** Options for a short companion line shown in the pet bubble. */
+export type PetDialogNoticeOptions = {
+  replacesSurfaceError?: boolean
 }
 
 export interface PetThoughtBubbleState {
