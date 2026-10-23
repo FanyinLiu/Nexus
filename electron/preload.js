@@ -274,6 +274,8 @@ contextBridge.exposeInMainWorld('desktopPet', {
   memoryVectorIndexBatch: (payload) => ipcRenderer.invoke('memory:vector-index-batch', payload),
   memoryVectorSearch: (payload) => ipcRenderer.invoke('memory:vector-search', payload),
   memoryVectorRemove: (payload) => ipcRenderer.invoke('memory:vector-remove', payload),
+  memoryVectorClear: (payload) => ipcRenderer.invoke('memory:clear-user-data', payload),
+  memoryClearUserData: (payload) => ipcRenderer.invoke('memory:clear-user-data', payload),
   memoryVectorStats: () => ipcRenderer.invoke('memory:vector-stats'),
   memoryKeywordSearch: (payload) => ipcRenderer.invoke('memory:keyword-search', payload),
   memoryHybridSearch: (payload) => ipcRenderer.invoke('memory:hybrid-search', payload),

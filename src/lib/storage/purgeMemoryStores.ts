@@ -3,11 +3,14 @@
  *
  * The op log keeps a redacted row. Run snapshots, evidence quotes, reminder
  * copies, and the other memory files lose the text. A session-only buffer
- * can still undo one delete until reload. Vector removal calls the current
- * index hook, and `memoryVectorClear` when the store wipe lands.
+ * can still undo one delete until reload. One row goes through
+ * `memoryVectorRemove`. Clearing the archive goes through `memoryVectorClear`,
+ * which flushes the vector snapshot and vacuums local-data pages.
  */
 
 import { formatMemoriesForPersonaFile } from '../../features/memory/memoryPersistence.ts'
+import { scrubPendingGreetingResidue } from './pendingGreeting.ts'
+import { scrubPresenceMemoryResidue } from './presence.ts'
 import { ARCHIVE_STORAGE_KEY } from '../../features/memory/coldArchive.ts'
 import {
   clearDeletedMemorySession,
@@ -99,7 +102,7 @@ export function purgeClearedMemories(
   memories: readonly MemoryItem[],
   daily: DailyMemoryStore,
   at = new Date().toISOString(),
-): void {
+): Promise<unknown> | undefined {
   clearDeletedMemorySession()
   const needles = [
     ...memories.flatMap((memory) => memoryPlaintextNeedles(memory)),
@@ -114,7 +117,7 @@ export function purgeClearedMemories(
     at,
   })
   void refreshPersona(needles)
-  requestVectorPurge(memories.map((memory) => memory.id), true)
+  return requestVectorPurge(memories.map((memory) => memory.id), true, needles)
 }
 
 function applyPurge(request: MemoryPurgeRequest): void {
@@ -135,6 +138,8 @@ function applyPurge(request: MemoryPurgeRequest): void {
       storage.setItem(key, text)
     }
   }
+  scrubPresenceMemoryResidue(request.needles)
+  scrubPendingGreetingResidue(request.needles)
   window.dispatchEvent(new CustomEvent(MEMORY_PLAINTEXT_PURGED_EVENT, {
     detail: { ids: [...request.ids], needles: [...request.needles] },
   }))
@@ -159,19 +164,24 @@ async function refreshPersona(needles: readonly string[]): Promise<void> {
 }
 
 /**
- * Ask the vector store to drop the ids. `memoryVectorClear` is the wipe
- * the 0.4.8 store will expose; until then the index remove is the hook.
+ * Ask the vector store to drop the ids. Clear-all uses the wipe hook so
+ * the snapshot and the database free pages go with the rows. A single
+ * delete only removes those ids.
  */
-function requestVectorPurge(ids: readonly string[], clearAll: boolean): void {
-  const pet = window.desktopPet as (NonNullable<typeof window.desktopPet> & {
-    memoryVectorClear?: () => Promise<unknown>
-  }) | undefined
-  if (!pet) return
+function requestVectorPurge(
+  ids: readonly string[],
+  clearAll: boolean,
+  needles: readonly string[] = [],
+): Promise<unknown> | undefined {
+  const pet = window.desktopPet
+  if (!pet) return undefined
   if (clearAll && typeof pet.memoryVectorClear === 'function') {
-    void pet.memoryVectorClear().catch(() => undefined)
-    return
+    // The main process rewrites Chromium's storage logs. Without the
+    // needles it can empty the live rows and still leave the text on disk.
+    return pet.memoryVectorClear({ needles: [...needles] }).catch(() => undefined)
   }
   if (ids.length && pet.memoryVectorRemove) {
-    void pet.memoryVectorRemove({ ids: [...ids] }).catch(() => undefined)
+    return pet.memoryVectorRemove({ ids: [...ids] }).catch(() => undefined)
   }
+  return undefined
 }

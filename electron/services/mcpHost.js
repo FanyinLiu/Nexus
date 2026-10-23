@@ -10,7 +10,9 @@ import {
   snapshotInitialTools,
 } from './mcpApprovals.js'
 import {
+  buildMcpSpawnEnv,
   formatMcpHostLogLabel,
+  normalizeMcpServerEnv,
   parseArgsString as parseArgsStringPure,
   summarizeMcpCommandForLog,
   summarizeMcpOutputLineForLog,
@@ -48,6 +50,7 @@ class McpInstance {
     this.intentionallyStopped = false
     this.pendingStartCommand = null
     this.pendingStartArgs = null
+    this.pendingStartEnv = null
     /** @type {string[]} Declared capabilities from plugin manifest. */
     this.capabilities = ['tools']
     /** @type {Map<string, { name: string, description: string, inputSchema: object }>} */
@@ -205,7 +208,7 @@ class McpInstance {
       this.restartTimer = null
       if (this.intentionallyStopped || !this.pendingStartCommand) return
       try {
-        await this.start(this.pendingStartCommand, this.pendingStartArgs ?? [])
+        await this.start(this.pendingStartCommand, this.pendingStartArgs ?? [], this.pendingStartEnv ?? {})
       } catch (err) {
         console.error(`${mcpLogScope(this.id)} restart failed:`, getRedactedErrorMessage(err))
         this._scheduleRestart()
@@ -213,7 +216,7 @@ class McpInstance {
     }, delayMs)
   }
 
-  async start(command, args = []) {
+  async start(command, args = [], env) {
     if (this.state === 'starting' || this.state === 'running') {
       throw new Error(`MCP host [${this.id}] is already ${this.state}`)
     }
@@ -246,6 +249,7 @@ class McpInstance {
         this.state = 'awaiting_approval'
         this.pendingStartCommand = command
         this.pendingStartArgs = args
+        this.pendingStartEnv = normalizeMcpServerEnv(env)
         throw new Error(
           `MCP server [${this.id}] launch was rejected by the user. `
           + 'Re-enable from Settings → Integrations → MCP after reviewing the command.',
@@ -253,8 +257,12 @@ class McpInstance {
       }
     }
 
+    const serverEnv = env === undefined
+      ? normalizeMcpServerEnv(this.pendingStartEnv)
+      : normalizeMcpServerEnv(env)
     this.pendingStartCommand = command
     this.pendingStartArgs = args
+    this.pendingStartEnv = serverEnv
     this.intentionallyStopped = false
     this.state = 'starting'
     this.tools.clear()
@@ -282,6 +290,7 @@ class McpInstance {
     const child = spawn(spawnCommand, spawnArgs, {
       stdio: ['pipe', 'pipe', 'inherit'],
       windowsHide: true,
+      env: buildMcpSpawnEnv(process.env, serverEnv),
     })
 
     this.process = child
@@ -337,6 +346,7 @@ class McpInstance {
     this.intentionallyStopped = true
     this.pendingStartCommand = null
     this.pendingStartArgs = null
+    this.pendingStartEnv = null
     this._rejectAllPending('MCP host stopped')
 
     if (!this.process) {
@@ -366,11 +376,12 @@ class McpInstance {
     console.info(`${mcpLogScope(this.id)} stopped`)
   }
 
-  async restart(command, args = []) {
+  async restart(command, args = [], env) {
+    const serverEnv = env === undefined ? this.pendingStartEnv : env
     await this.stop()
     this.intentionallyStopped = false
     this.restartCount = 0
-    await this.start(command, args)
+    await this.start(command, args, serverEnv ?? {})
   }
 
   getStatus() {
@@ -571,6 +582,7 @@ export async function syncFromSettings(desired) {
       enabled: Boolean(cfg.enabled),
       command: String(cfg.command ?? '').trim(),
       args: parseArgsString(cfg.args),
+      env: normalizeMcpServerEnv(cfg.env),
       label: cfg.label ?? '',
     })
   }
@@ -605,15 +617,16 @@ export async function syncFromSettings(desired) {
     const cmdChanged = (
       instance.pendingStartCommand !== target.command
       || JSON.stringify(instance.pendingStartArgs ?? []) !== JSON.stringify(target.args)
+      || JSON.stringify(instance.pendingStartEnv ?? {}) !== JSON.stringify(target.env ?? {})
     )
 
     if (instance.state === 'running' && !cmdChanged) continue
 
     try {
       if (instance.state === 'running' || instance.state === 'starting') {
-        await instance.restart(target.command, target.args)
+        await instance.restart(target.command, target.args, target.env)
       } else {
-        await instance.start(target.command, target.args)
+        await instance.start(target.command, target.args, target.env)
       }
     } catch (err) {
       console.warn(`[mcpHost:sync] start failed (${formatMcpHostLogLabel(target.id)}):`, getRedactedErrorMessage(err))

@@ -73,19 +73,49 @@ export function computeNextPhase(
 // ── Tick eligibility ──────────────────────────────────────────────────────────
 
 /**
- * Returns true if the tick loop should fire this cycle.
- * Enforces cost limits (daily tick cap) and basic sanity.
+ * Returns true if the scheduler should fire this cycle.
+ * The daily cap counts model calls (`spendAutonomyLlmCall`), not ticks.
+ * Idle ticks have to keep running so phase, emotion decay, and dreams
+ * do not freeze after the cap is spent.
  */
 export function shouldTick(
   state: AutonomyTickState,
   settings: Pick<AppSettings, 'autonomyCostLimitDailyTicks'>,
 ): boolean {
-  // Reset daily counter if date has changed
-  const today = localDayKey(Date.now())
-  if (state.dailyTickResetDate !== today) {
-    return true // Will reset in advanceTick
+  void state
+  void settings
+  return true
+}
+
+/**
+ * Spend one unit of the daily model budget.
+ * Returns the next state when a call is allowed. Idle ticks must not call this.
+ */
+export function spendAutonomyLlmCall(
+  state: AutonomyTickState,
+  settings: Pick<AppSettings, 'autonomyCostLimitDailyTicks'>,
+  now = Date.now(),
+): { allowed: boolean; state: AutonomyTickState } {
+  const today = localDayKey(now)
+  const isNewDay = state.dailyTickResetDate !== today
+  const spent = isNewDay ? 0 : state.dailyTickCount
+  const limit = settings.autonomyCostLimitDailyTicks
+  if (spent >= limit) {
+    return {
+      allowed: false,
+      state: isNewDay
+        ? { ...state, dailyTickCount: 0, dailyTickResetDate: today }
+        : state,
+    }
   }
-  return state.dailyTickCount < settings.autonomyCostLimitDailyTicks
+  return {
+    allowed: true,
+    state: {
+      ...state,
+      dailyTickCount: spent + 1,
+      dailyTickResetDate: today,
+    },
+  }
 }
 
 // ── Tick advance ──────────────────────────────────────────────────────────────
@@ -98,8 +128,9 @@ export function advanceTick(
   phase: AutonomyPhase,
   focusState: FocusState,
   idleSeconds: number,
+  nowMs = Date.now(),
 ): AutonomyTickState {
-  const now = new Date()
+  const now = new Date(nowMs)
   const today = localDayKey(now.getTime())
   const isNewDay = state.dailyTickResetDate !== today
   const wasIdle = focusState !== 'active'
@@ -116,7 +147,7 @@ export function advanceTick(
       ? now.toISOString()
       : state.lastSleepAt,
     tickCount: state.tickCount + 1,
-    dailyTickCount: isNewDay ? 1 : state.dailyTickCount + 1,
+    dailyTickCount: isNewDay ? 0 : state.dailyTickCount,
     dailyTickResetDate: today,
     idleSeconds,
     consecutiveIdleTicks: wasIdle ? state.consecutiveIdleTicks + 1 : 0,

@@ -7,7 +7,7 @@ import {
 import { buildChatMemoryTrace } from '../../../features/memory/recallTrace.ts'
 import { shouldGenerateSkill, generateAndSaveSkill } from '../../../features/skills/autoSkillGenerator.ts'
 import { captureUserAffectSample } from '../../../features/autonomy/userAffectTimeline.ts'
-import { userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../../features/autonomy/emotionModel.ts'
+import { petMoodForAssistantReply, userMoodReadToEmotionSignal, userMoodReadToVAD } from '../../../features/autonomy/emotionModel.ts'
 import { recordFirstConversationTelemetry } from '../../../features/onboarding/firstConversationTelemetry.ts'
 import { PUBLIC_GESTURE_NAMES } from '../../../features/pet/models.ts'
 import {
@@ -246,7 +246,10 @@ export async function postProcessAssistantReply(
     ...inlineExpressionOverrideCues,
     ...inlineGestureCues,
   ])
-  dependencies.ctx.setMood('happy')
+  const replyMood = petMoodForAssistantReply({
+    replyText: `${assistantMessageContent}\n${assistantSpeechOutput}`,
+    moodWord: inlineMoodCues[0]?.mood ?? null,
+  })
 
   // Auto-generate skill document if the response was complex enough
   const toolCallNames = [
@@ -276,6 +279,13 @@ export async function postProcessAssistantReply(
   const handledByStreamingTts = Boolean(activeStreamingTtsController)
   let shouldFallbackToDirectSpeech = false
   let ttsWaitTimedOut = false
+  // session:completed and tts:completed both force idle (tts:started forces
+  // happy while the voice is playing). The reply mood has to land after
+  // those resets, on every path, or the face depends on whether voice is on.
+  const moodToApply = replyMood ?? 'idle'
+  const applyReplyMood = () => {
+    window.setTimeout(() => dependencies.ctx.setMood(moodToApply), 0)
+  }
 
   if (handledByStreamingTts) {
     const streamingSpeechController = activeStreamingTtsController!
@@ -388,6 +398,19 @@ export async function postProcessAssistantReply(
     } else {
       dependencies.ctx.busEmit({ type: 'session:completed' })
     }
+  }
+
+  const streamingStillPlaying = handledByStreamingTts
+    && !shouldFallbackToDirectSpeech
+    && (ttsWaitTimedOut || activeStreamingTtsController?.hasStarted() === true)
+  if (streamingStillPlaying && activeStreamingTtsController) {
+    // The 12s wait can return while playback continues. Apply the face
+    // when playback actually ends, after tts:completed resets it to idle.
+    void activeStreamingTtsController.waitForCompletion()
+      .catch(() => undefined)
+      .then(applyReplyMood)
+  } else {
+    applyReplyMood()
   }
 
   return true
