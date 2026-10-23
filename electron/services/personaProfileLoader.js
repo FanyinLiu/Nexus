@@ -1,3 +1,8 @@
+import path from 'node:path'
+import { acceptPersonaSoulContent, PERSONA_SOUL_MAX_CHARS } from '../../shared/personaSoul.js'
+
+export { acceptPersonaSoulContent, PERSONA_SOUL_MAX_CHARS }
+
 const PERSONA_PROFILE_FILES = {
   soul: 'soul.md',
   memory: 'memory.md',
@@ -120,4 +125,21 @@ export async function loadPersonaProfileFromReader(options) {
   }
 
   return result
+}
+
+/**
+ * Absolute `soul.md` path for a profile, or null when the id is not already
+ * one safe path segment. Stripping characters would write a different
+ * directory than the one the loader reads, so those ids are refused.
+ * @param {unknown} userDataDir
+ * @param {unknown} profileId
+ * @returns {string | null}
+ */
+export function resolvePersonaProfileSoulPath(userDataDir, profileId) {
+  if (typeof profileId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(profileId)) return null
+  const root = path.resolve(String(userDataDir ?? ''), 'personas')
+  const filePath = path.resolve(root, profileId, PERSONA_PROFILE_FILES.soul)
+  const rootPrefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`
+  if (!filePath.startsWith(rootPrefix)) return null
+  return filePath
 }

@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import path, { join, dirname } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
-import { loadPersonaProfileFromReader } from '../electron/services/personaProfileLoader.js'
+import {
+  PERSONA_SOUL_MAX_CHARS,
+  acceptPersonaSoulContent,
+  loadPersonaProfileFromReader,
+  resolvePersonaProfileSoulPath,
+} from '../electron/services/personaProfileLoader.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
@@ -173,5 +179,32 @@ test('persona profile loader loads the bundled Xinghui seed profile end-to-end',
   for (const ex of loaded.examples) {
     assert.ok(ex.user.length > 0)
     assert.ok(ex.assistant.length > 0)
+  }
+})
+
+test('persona soul save accepts text and refuses values that must not be written', () => {
+  assert.equal(acceptPersonaSoulContent(undefined), '')
+  assert.equal(acceptPersonaSoulContent(null), '')
+  assert.equal(acceptPersonaSoulContent('line one\nline two'), 'line one\nline two')
+  assert.equal(acceptPersonaSoulContent(12), null)
+  assert.equal(acceptPersonaSoulContent({ content: 'nope' }), null)
+  assert.equal(acceptPersonaSoulContent('x'.repeat(PERSONA_SOUL_MAX_CHARS)), 'x'.repeat(PERSONA_SOUL_MAX_CHARS))
+  assert.equal(acceptPersonaSoulContent('x'.repeat(PERSONA_SOUL_MAX_CHARS + 1)), null)
+})
+
+test('persona profile soul path stays inside that profile and refuses unsafe ids', () => {
+  const userData = path.resolve(tmpdir(), 'nexus-user-soul')
+  const resolved = resolvePersonaProfileSoulPath(userData, 'card-abc123')
+  const personasRoot = path.join(userData, 'personas')
+  assert.equal(resolved, path.join(personasRoot, 'card-abc123', 'soul.md'))
+  assert.equal(path.relative(personasRoot, resolved ?? ''), path.join('card-abc123', 'soul.md'))
+
+  const xinghui = resolvePersonaProfileSoulPath(userData, 'xinghui')
+  assert.equal(path.basename(xinghui ?? ''), 'soul.md')
+  assert.equal(path.basename(path.dirname(xinghui ?? '')), 'xinghui')
+  assert.equal(path.relative(personasRoot, xinghui ?? ''), path.join('xinghui', 'soul.md'))
+
+  for (const unsafe of ['', '.', '..', '../etc', 'card/../xinghui', 'card name', 'a..b', 'card\\xinghui']) {
+    assert.equal(resolvePersonaProfileSoulPath(userData, unsafe), null, unsafe)
   }
 })

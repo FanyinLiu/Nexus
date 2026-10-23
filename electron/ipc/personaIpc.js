@@ -1,5 +1,6 @@
 import { ipcMain, shell, dialog, BrowserWindow } from 'electron'
 import * as personaLoader from '../services/personaLoader.js'
+import { acceptPersonaSoulContent } from '../services/personaProfileLoader.js'
 import { parseCharacterCard } from '../services/characterCardParser.js'
 import { mapCardToPersona } from '../services/characterCardMapper.js'
 import { requireTrustedSender } from './validate.js'
@@ -17,7 +18,20 @@ export function register() {
 
   ipcMain.handle('persona:save-soul', async (event, payload) => {
     requireTrustedSender(event)
-    await personaLoader.saveSoul(String(payload?.content ?? ''))
+    const rawContent = payload?.content
+    if (rawContent != null && typeof rawContent !== 'string') return { ok: false }
+    const content = acceptPersonaSoulContent(rawContent == null ? '' : String(rawContent))
+    if (content == null) return { ok: false }
+    // Optional profileId writes that profile's soul.md on the same panel-only
+    // channel. An id that is present but not a safe segment is refused, and
+    // is not redirected onto the global SOUL file.
+    const profileId = payload && typeof payload === 'object' ? payload.profileId : undefined
+    if (profileId != null && profileId !== '') {
+      if (typeof profileId !== 'string') return { ok: false }
+      const saved = await personaLoader.savePersonaProfileSoul(profileId, content)
+      return { ok: saved }
+    }
+    await personaLoader.saveSoul(content)
     return { ok: true }
   })
 

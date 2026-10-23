@@ -822,7 +822,7 @@ declare global {
       // Persona (SOUL.md file-based identity)
       personaLoadSoul: () => Promise<string>
       personaLoadMemory: () => Promise<string>
-      personaSaveSoul: (payload: { content: string }) => Promise<{ ok: boolean }>
+      personaSaveSoul: (payload: { content: string; profileId?: string }) => Promise<{ ok: boolean }>
       personaSaveMemory: (payload: { content: string }) => Promise<{ ok: boolean }>
       personaPaths: () => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
       personaOpenDir: () => Promise<{ ok: boolean }>

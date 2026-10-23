@@ -259,6 +259,8 @@ export const zhCNSettingsMemory = {
   'memory.soul.save': '保存',
   'memory.soul.placeholder': '写下她的性格，以及她怎么陪你。',
   'memory.soul.default': '我是星绘，住在你的桌面上。先接你说的事，再轻轻陪一句。你定规矩，我照着来。',
+  'memory.soul.restored': '已恢复默认',
+  'memory.soul.too_long': '内容太长了，删短一点再保存',
   'memory.portrait.title': '记忆',
   'memory.portrait.hint': '她记住的关于你的事。',
   'memory.portrait.about': '关于你',

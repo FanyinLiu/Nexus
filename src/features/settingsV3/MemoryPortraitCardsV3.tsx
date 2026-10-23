@@ -1,14 +1,17 @@
 /**
  * SOUL and 记忆 summary cards.
  *
- * The page shows two colored cards. Editing happens in a sheet, and recent
- * changes are sentences with one undo each. Op codes stay in the log.
+ * The page shows two colored cards. The SOUL card shows the persona text the
+ * model will receive. Editing happens in a sheet, and recent changes are
+ * sentences with one undo each. Op codes stay in the log.
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import type { AppSettings } from '../../types/app.ts'
 import type { TranslationKey } from '../../types/i18n.ts'
-import { loadCompanionSoul, saveCompanionSoul } from '../../lib/storage/companionSoul.ts'
+import { loadSoulCard, saveSoulCard, type SoulCardNote } from './soulCardPersona.ts'
+import { holdSoulCardDraft, peekSoulCardDraft, releaseSoulCardDraft } from './soulCardDraftSession.ts'
 import { loadMemoryOpLog, appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { MEMORY_OP_LOG_CHANGED_EVENT } from '../../lib/storage/purgeMemoryStores.ts'
 import { peekDeletedMemory, takeDeletedMemory } from '../memory/deletedMemorySession.ts'
@@ -27,6 +30,7 @@ import type { MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
 import './memory-portrait.css'
 
 type MemoryPortraitCardsV3Props = {
+  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId' | 'systemPrompt'>
   memories: MemoryItem[]
   diaryCount?: number
   onPatchMemory?: (id: string, patch: Partial<Pick<MemoryItem, 'content' | 'pinned' | 'userEdited' | 'importance'>>) => void
@@ -49,21 +53,31 @@ function topicName(
   return plainMemoryName(text) || t('memory.topic.note')
 }
 
+const EMPTY_SOUL: SoulCardNote = { text: '', updatedAt: null, target: { kind: 'soul-file' } }
+
 export function MemoryPortraitCardsV3({
+  settings,
   memories,
   diaryCount = 0,
   onPatchMemory,
   onRemoveMemory,
 }: MemoryPortraitCardsV3Props) {
   const { t } = useTranslation()
-  const [soul, setSoul] = useState(() => loadCompanionSoul())
-  const [soulDraft, setSoulDraft] = useState(soul.text)
+  const restoredDraft = peekSoulCardDraft()
+  const [soul, setSoul] = useState<SoulCardNote>(EMPTY_SOUL)
+  const [soulDraft, setSoulDraft] = useState(restoredDraft ?? '')
+  const [keepDraft, setKeepDraft] = useState(restoredDraft != null)
+  const [soulNotice, setSoulNotice] = useState<'restored' | 'too-long' | null>(restoredDraft != null ? 'too-long' : null)
+  const personaKey = `${settings.profilePersonaInChatEnabled ? '1' : '0'}:${settings.activeCharacterProfileId ?? ''}`
+  const [loadedPersonaKey, setLoadedPersonaKey] = useState<string | null>(null)
+  const soulReady = loadedPersonaKey === personaKey
   const [sheet, setSheet] = useState<'soul' | 'memory' | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const [logTick, setLogTick] = useState(0)
 
-  const savedSoul = soul.text.trim() ? soul.text : t('memory.soul.default')
+  // memory.soul.default is a translated sample. The model never receives it.
+  const savedSoul = soulReady ? soul.text : ''
   const active = useMemo(() => memories.filter((memory) => (
     memory.status !== 'archived'
     && memory.status !== 'superseded'
@@ -82,6 +96,27 @@ export function MemoryPortraitCardsV3({
     window.addEventListener(MEMORY_OP_LOG_CHANGED_EVENT, bump)
     return () => window.removeEventListener(MEMORY_OP_LOG_CHANGED_EVENT, bump)
   }, [])
+  useEffect(() => {
+    let current = true
+    void loadSoulCard({
+      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
+      activeCharacterProfileId: settings.activeCharacterProfileId,
+      systemPrompt: settings.systemPrompt,
+    }).then((note) => {
+      if (!current) return
+      setSoul(note)
+      if (!keepDraft) setSoulDraft(note.text)
+      setLoadedPersonaKey(personaKey)
+    })
+    return () => {
+      current = false
+    }
+  }, [personaKey, settings.profilePersonaInChatEnabled, settings.activeCharacterProfileId, settings.systemPrompt, keepDraft])
+  // The sheet's own state dies with the Memory page. The session copy is what
+  // comes back when Settings returns to this page.
+  useEffect(() => {
+    if (keepDraft) holdSoulCardDraft(soulDraft)
+  }, [keepDraft, soulDraft])
   const memorySummary = diaryCount === 0
     ? t('memory.portrait.summary_empty', { count: active.length })
     : t('memory.portrait.summary', { count: active.length })
@@ -93,8 +128,24 @@ export function MemoryPortraitCardsV3({
   const memoryStamp = formatPortraitDate(latestChange, dateTemplate)
 
   const saveSoul = () => {
-    const note = saveCompanionSoul(soulDraft, new Date().toISOString())
-    setSoul(note)
+    void saveSoulCard({
+      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
+      activeCharacterProfileId: settings.activeCharacterProfileId,
+      systemPrompt: settings.systemPrompt,
+    }, soulDraft).then((result) => {
+      if (!result.ok) {
+        if (result.reason === 'too-long') {
+          setKeepDraft(true)
+          setSoulNotice('too-long')
+        }
+        return
+      }
+      releaseSoulCardDraft()
+      setKeepDraft(false)
+      setSoul(result.note)
+      setSoulDraft(result.note.text)
+      setSoulNotice(result.restoredDefault ? 'restored' : null)
+    })
   }
   const undo = (entry: MemoryOpRecord) => {
     const sessionRows = entry.reason === 'user-deleted'
@@ -119,7 +170,7 @@ export function MemoryPortraitCardsV3({
     setLogTick((value) => value + 1)
   }
   const openSoul = () => {
-    setSoulDraft(soul.text)
+    if (!keepDraft) setSoulDraft(soul.text)
     setSheet('soul')
   }
 
@@ -182,6 +233,8 @@ export function MemoryPortraitCardsV3({
         <button type="button" className="memory-portrait__card memory-portrait__card--soul nx-companion-card nx-companion-card--soul" data-soul-card="true" onClick={openSoul}>
           <p className="memory-portrait__kicker">{t('memory.soul.title')}</p>
           <p className="memory-portrait__summary">{savedSoul}</p>
+          {soulNotice === 'restored' ? <p className="memory-portrait__summary">{t('memory.soul.restored')}</p> : null}
+          {soulNotice === 'too-long' ? <p className="memory-portrait__summary">{t('memory.soul.too_long')}</p> : null}
           <span className="memory-portrait__meta">
             {soulStamp ? <span>{soulStamp}</span> : null}
             <span>{t('memory.portrait.open')}</span>
@@ -217,6 +270,8 @@ export function MemoryPortraitCardsV3({
                   placeholder={t('memory.soul.placeholder')}
                   onChange={(event) => setSoulDraft(event.target.value)}
                 />
+                {soulNotice === 'restored' ? <p className="memory-portrait__label">{t('memory.soul.restored')}</p> : null}
+                {soulNotice === 'too-long' ? <p className="memory-portrait__label">{t('memory.soul.too_long')}</p> : null}
                 <button type="button" className="memory-portrait__save" onClick={saveSoul}>{t('memory.soul.save')}</button>
               </>
             ) : (
