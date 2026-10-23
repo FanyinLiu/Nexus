@@ -218,13 +218,52 @@ export function calculateAudioRms(samples: ArrayLike<number>) {
   return Math.sqrt(total / samples.length)
 }
 
-export function mapMicrophoneDiagnosticError(error: unknown, localMode = false, ti: Translator = t) {
+/**
+ * Renderer-side platform token used to pick microphone permission copy.
+ * Mirrors the `process.platform` vocabulary exposed by PlatformProfile
+ * (`darwin` / `win32` / `linux`) so callers can inject a known value.
+ */
+export function detectVoicePermissionPlatform(): string {
+  if (typeof navigator === 'undefined') return 'unknown'
+  const userAgentData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+  const raw = userAgentData?.platform || navigator.platform || ''
+  const normalized = raw.trim().toLowerCase()
+  if (normalized.includes('mac')) return 'darwin'
+  if (normalized.includes('win')) return 'win32'
+  if (normalized.includes('linux')) return 'linux'
+  return 'unknown'
+}
+
+/**
+ * Pure platform-to-key decision for microphone permission copy. macOS and
+ * Windows point users at their own privacy panes; everything else gets the
+ * generic system-settings wording.
+ */
+export function pickMicrophonePermissionDeniedKey(
+  platform: string | null | undefined,
+): TranslationKey {
+  const normalized = (platform ?? '').trim().toLowerCase()
+  if (normalized === 'darwin' || normalized.startsWith('mac')) {
+    return 'voice.mic.permission_denied_mac'
+  }
+  if (normalized === 'win32' || normalized.startsWith('win')) {
+    return 'voice.mic.permission_denied_windows'
+  }
+  return 'voice.mic.permission_denied'
+}
+
+export function mapMicrophoneDiagnosticError(
+  error: unknown,
+  localMode = false,
+  ti: Translator = t,
+  platform: string | null | undefined = detectVoicePermissionPlatform(),
+) {
   if (error instanceof DOMException) {
     switch (error.name) {
       case 'NotAllowedError':
       case 'PermissionDeniedError':
       case 'SecurityError':
-        return ti('voice.mic.permission_denied')
+        return ti(pickMicrophonePermissionDeniedKey(platform))
       case 'NotFoundError':
       case 'DevicesNotFoundError':
         return ti('voice.mic.not_found')

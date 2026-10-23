@@ -401,7 +401,7 @@ export const koCore = {
   'humanize.voice.mic_permission': '마이크 접근이 차단되어 있어요. 「시스템 설정 → 개인정보 보호 및 보안 → 마이크」에서 허용해 주세요.',
   'humanize.voice.mic_busy': '마이크를 다른 앱이 사용 중이에요 — 그걸 닫고 다시 해볼래요?',
   'humanize.tts.voice_unavailable': '이 음성은 사용할 수 없어요. 「설정 → 음성 출력」에서 다른 것을 선택해 주세요.',
-  'humanize.stt.model_missing': '음성 인식 모델이 아직 설치되지 않았어요. 「설정 → 로컬 모델」에서 다운로드해 주세요.',
+  'humanize.stt.model_missing': '받아쓰기 모델이 아직 설치되지 않았어요. 「설정 → 음성 → 고급 → 로컬 음성 모델」에서 다운로드해 주세요.',
   'humanize.model.no_disk_space': '다운로드할 디스크 공간이 부족해요 — 공간을 확보하고 다시 해볼래요?',
   'humanize.model.hf_unreachable': '모델 저장소에 접근할 수 없어요. 네트워크를 확인하거나 미러를 시도해 보세요.',
   'humanize.fallback': '문제가 있었어요. ({detail})',

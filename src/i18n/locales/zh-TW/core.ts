@@ -401,7 +401,7 @@ export const zhTWCore = {
   'humanize.voice.mic_permission': '麥克風權限被關了。去「系統設定 → 隱私與安全性 → 麥克風」打開。',
   'humanize.voice.mic_busy': '麥克風被別的 app 佔用了。關掉它再試。',
   'humanize.tts.voice_unavailable': '這個聲音用不了。去「設定 → 語音輸出」換一個。',
-  'humanize.stt.model_missing': '還沒裝語音識別模型。去「設定 → 本地模型」下載一下。',
+  'humanize.stt.model_missing': '還沒裝聽寫用的模型。去「設定 → 語音 → 進階 → 本機語音模型」下載一下。',
   'humanize.model.no_disk_space': '硬碟空間不夠下載。騰點空間再試。',
   'humanize.model.hf_unreachable': '連不上模型庫。檢查一下網路或者換個鏡像。',
   'humanize.fallback': '出錯了。({detail})',

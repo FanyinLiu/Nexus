@@ -401,7 +401,7 @@ export const jaCore = {
   'humanize.voice.mic_permission': 'マイクへのアクセスがブロックされています。「システム設定 → プライバシーとセキュリティ → マイク」で許可してください。',
   'humanize.voice.mic_busy': 'マイクが別のアプリで使用中です。閉じてから再試行してください。',
   'humanize.tts.voice_unavailable': 'その音声は利用できません。「設定 → 音声出力」で別のものを選んでください。',
-  'humanize.stt.model_missing': '音声認識モデルがまだインストールされていません。「設定 → ローカルモデル」でダウンロードしてください。',
+  'humanize.stt.model_missing': '聞き取り用のモデルがまだ入っていません。「設定 → 音声 → 詳細 → ローカル音声モデル」からダウンロードしてください。',
   'humanize.model.no_disk_space': 'ダウンロードのためのディスク容量が足りません。空き容量を増やしてから再試行してください。',
   'humanize.model.hf_unreachable': 'モデルリポジトリに到達できません。ネットワークを確認するか、ミラーを試してください。',
   'humanize.fallback': 'ちょっと問題があったみたい。({detail})',

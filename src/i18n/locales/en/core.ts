@@ -401,7 +401,7 @@ export const enCore = {
   'humanize.voice.mic_permission': 'Microphone access is blocked. Allow it in System Settings → Privacy & Security → Microphone.',
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
-  'humanize.stt.model_missing': 'The speech-to-text model isn\'t installed yet. Open Settings → Local Models to download it.',
+  'humanize.stt.model_missing': 'The dictation model isn’t installed yet. Download it in Settings → Voice → Advanced → "Local voice models".',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
   'humanize.fallback': 'Something went wrong. ({detail})',

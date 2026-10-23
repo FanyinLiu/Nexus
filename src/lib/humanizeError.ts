@@ -179,13 +179,19 @@ const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
   'humanize.voice.mic_permission': 'Microphone access is blocked. Allow it in System Settings → Privacy & Security → Microphone.',
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
-  'humanize.stt.model_missing': 'The speech-to-text model isn\'t installed yet. Open Settings → Local Models to download it.',
+  'humanize.stt.model_missing': 'The dictation model isn’t installed yet. Download it in Settings → Voice → Advanced → "Local voice models".',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
   'humanize.fallback': 'Something went wrong. ({detail})',
 }
 
-function lookupTranslation(key: TranslationKey, detail?: string): string {
+/**
+ * Resolve a humanize key through the runtime translator, then the English
+ * fallback table. The last-resort branch deliberately returns friendly copy
+ * instead of the raw error detail so no internal text reaches the user even
+ * when a key is missing from both dictionaries.
+ */
+export function lookupTranslation(key: TranslationKey, detail?: string): string {
   // Try the runtime translator first; if it returns the key unchanged
   // (i.e. no entry), fall back to our hardcoded English so the user
   // never sees the raw key.
@@ -199,8 +205,9 @@ function lookupTranslation(key: TranslationKey, detail?: string): string {
       : fallback
   }
 
-  // Should never hit this — every defined key has a fallback.
-  return detail !== undefined ? detail : 'Something went wrong.'
+  // Should never hit this — every defined key has a fallback. Never surface
+  // the raw detail here: it can contain provider internals or secrets.
+  return 'Something went wrong. Please try again.'
 }
 
 /**

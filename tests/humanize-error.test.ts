@@ -2,8 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { before, describe, test } from 'node:test'
 
-import { humanizeError } from '../src/lib/humanizeError.ts'
+import { humanizeError, lookupTranslation } from '../src/lib/humanizeError.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
+import type { TranslationKey } from '../src/types/i18n.ts'
 
 // Force English so the regex assertions below are deterministic. The
 // production code path picks the user's actual locale; this test just
@@ -66,6 +67,14 @@ describe('humanizeError — context-specific', () => {
   test('stt context catches missing local model', () => {
     const out = humanizeError(new Error('Wake-word model is not installed'), 'stt')
     assert.match(out, /(model|install|download|Settings)/i)
+  })
+
+  test('stt model-missing copy points at the local voice model download', () => {
+    const out = humanizeError(new Error('Wake-word model is not installed'), 'stt')
+    assert.equal(
+      out,
+      'The dictation model isn’t installed yet. Download it in Settings → Voice → Advanced → "Local voice models".',
+    )
   })
 
   test('model context recognizes disk-full', () => {
@@ -293,6 +302,15 @@ describe('humanizeError — secret redaction in the fallback path', () => {
 })
 
 describe('humanizeError — fallbacks', () => {
+  test('missing key never returns the raw error detail', () => {
+    const out = lookupTranslation(
+      'humanize.__missing_key__' as TranslationKey,
+      'ECONNREFUSED 127.0.0.1:11434',
+    )
+    assert.equal(out, 'Something went wrong. Please try again.')
+    assert.doesNotMatch(out, /ECONNREFUSED|127\.0\.0\.1/)
+  })
+
   test('unknown error wrapped friendly with raw text in parens', () => {
     const out = humanizeError(new Error('Some weird internal thing happened'))
     assert.match(out, /Something went wrong/)

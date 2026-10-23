@@ -7,10 +7,12 @@ import {
   getCachedTtsResult,
   getRecordingFileName,
   mapMicrophoneDiagnosticError,
+  pickMicrophonePermissionDeniedKey,
   pickRecordingMimeType,
   requestVoiceInputStream,
   setCachedTtsResult,
 } from '../src/features/voice/runtimeSupport.ts'
+import { t } from '../src/i18n/runtime.ts'
 
 function createTrack() {
   return {
@@ -165,7 +167,7 @@ test('mapMicrophoneDiagnosticError maps DOM and generic errors through translato
   )
 
   assert.equal(
-    mapMicrophoneDiagnosticError(new DOMException('denied', 'NotAllowedError'), false, ti),
+    mapMicrophoneDiagnosticError(new DOMException('denied', 'NotAllowedError'), false, ti, 'linux'),
     'voice.mic.permission_denied',
   )
   assert.equal(
@@ -188,6 +190,38 @@ test('mapMicrophoneDiagnosticError maps DOM and generic errors through translato
     mapMicrophoneDiagnosticError(null, true, ti),
     'voice.mic.local_readiness_failed_generic',
   )
+})
+
+test('microphone permission copy follows the platform', () => {
+  const denied = () => new DOMException('denied', 'NotAllowedError')
+  const seen: string[] = []
+  const ti = (key: string, params?: Record<string, unknown>) => {
+    seen.push(key)
+    return t(key as never, params, 'zh-CN')
+  }
+
+  assert.equal(
+    mapMicrophoneDiagnosticError(denied(), false, ti, 'darwin'),
+    '没有拿到麦克风权限。去「系统设置 → 隐私与安全性 → 麦克风」里允许 Nexus，再点一次「开始语音」。',
+  )
+  assert.equal(seen.at(-1), 'voice.mic.permission_denied_mac')
+
+  assert.equal(
+    mapMicrophoneDiagnosticError(denied(), false, ti, 'win32'),
+    '没有拿到麦克风权限。去「设置 → 隐私和安全性 → 麦克风」里打开「允许桌面应用访问麦克风」，再点一次「开始语音」。',
+  )
+  assert.equal(seen.at(-1), 'voice.mic.permission_denied_windows')
+
+  assert.equal(
+    mapMicrophoneDiagnosticError(denied(), false, ti, 'linux'),
+    '没有拿到麦克风权限。去系统设置里允许 Nexus 使用麦克风，再点一次「开始语音」。',
+  )
+  assert.equal(seen.at(-1), 'voice.mic.permission_denied')
+
+  assert.equal(pickMicrophonePermissionDeniedKey('darwin'), 'voice.mic.permission_denied_mac')
+  assert.equal(pickMicrophonePermissionDeniedKey('win32'), 'voice.mic.permission_denied_windows')
+  assert.equal(pickMicrophonePermissionDeniedKey('linux'), 'voice.mic.permission_denied')
+  assert.equal(pickMicrophonePermissionDeniedKey(null), 'voice.mic.permission_denied')
 })
 
 test('buildSpeechOutputSmokeText falls back when companion name is empty', () => {

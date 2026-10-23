@@ -399,7 +399,7 @@ export const zhCNCore = {
   'humanize.voice.mic_permission': '麦克风权限被关了。去「系统设置 → 隐私与安全性 → 麦克风」打开。',
   'humanize.voice.mic_busy': '麦克风被别的 app 占用了。关掉它再试。',
   'humanize.tts.voice_unavailable': '这个声音用不了。去「设置 → 语音输出」换一个。',
-  'humanize.stt.model_missing': '还没装语音识别模型。去「设置 → 本地模型」下载一下。',
+  'humanize.stt.model_missing': '还没装听写用的模型。去「设置 → 语音 → 高级 → 本地语音模型」下载一下。',
   'humanize.model.no_disk_space': '硬盘空间不够下载。腾点空间再试。',
   'humanize.model.hf_unreachable': '连不上模型库。检查一下网络或者换个镜像。',
   'humanize.fallback': '出错了。({detail})',
