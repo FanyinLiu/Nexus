@@ -1,6 +1,7 @@
 /**
  * Eyelid timeline for Live2D.
- * idle → closing → holding → opening. Returns eye-open in [0, 1].
+ * idle → closing → holding → opening. One sample is both eyes, in [0, 1].
+ * Callers add `(open - 1)` so a pose that already shut one eye is kept.
  */
 
 import { clamp } from '../../lib/common.ts'
@@ -9,7 +10,6 @@ export const BLINK_CLOSE_MS = 88
 export const BLINK_HOLD_MS = 32
 export const BLINK_OPEN_MS = 136
 export const BLINK_DOUBLE_GAP_MS = 96
-export const RIGHT_BLINK_LAG_MS = 36
 export const BLINK_DOUBLE_CHANCE = 0.17
 
 export type BlinkPhase = 'idle' | 'closing' | 'holding' | 'opening'
@@ -98,4 +98,24 @@ export function stepBlinkLane(
   }
 
   return 1
+}
+
+export type BlinkEyeOpenness = {
+  left: number
+  right: number
+}
+
+/**
+ * Advance the shared eyelid timeline once.
+ * Both eyes get this sample on this frame. A wink stays a wink because the
+ * sample is added to each eye, not written over the pose.
+ */
+export function stepBlinkEyes(
+  lane: BlinkLane,
+  nowMs: number,
+  scheduleNext: (nowMs: number) => number,
+  options: StepBlinkOptions = {},
+): BlinkEyeOpenness {
+  const open = stepBlinkLane(lane, nowMs, scheduleNext, options)
+  return { left: open, right: open }
 }

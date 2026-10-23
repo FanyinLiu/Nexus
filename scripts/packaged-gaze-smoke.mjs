@@ -9,6 +9,7 @@ import { chmodSync, existsSync, mkdtempSync, readdirSync, rmSync, statSync } fro
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { formatExceptionDetails } from './lib/cdp-exception-details.mjs'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const RELEASE_DIR = path.resolve(ROOT, process.env.PACKAGED_SMOKE_RELEASE_DIR || 'release')
@@ -119,7 +120,7 @@ async function evaluate(session, expression) {
     awaitPromise: true,
   })
   if (result.exceptionDetails) {
-    throw new Error(result.exceptionDetails.text || 'eval failed')
+    throw new Error(formatExceptionDetails(result.exceptionDetails))
   }
   return result.result?.value
 }

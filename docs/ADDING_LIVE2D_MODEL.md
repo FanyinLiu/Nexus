@@ -63,7 +63,7 @@ public/live2d/<你的模型目录>/
 - **`surprised` / `confused` / `embarrassed` 没有位置默认**：想要这三个表情，必须在 `models.ts` 的 preset 里手写 `expressionMap`（运行时会保留它们）。
 - **动作组按名字模糊匹配**：待机用 `Idle` / `idle` / `Main`，交互用 `TapBody` / `Tap` / `Touch` / `Action`；都没有就用声明的第一个组。
 - **命名手势不会自动填**：`wave` / `nod` / `shake` / `tilt` / `point`（聊天里的 `[motion:wave]` 之类）只有在 preset 的 `motionGroups.gestures` 里手动映射后才会动，否则静默忽略。
-- **标准 Cubism 参数即可用**：`ParamAngleX/Y/Z`（头部跟随）、`LipSync` 组的嘴型参数、`EyeBlink` 组的眨眼，命名标准就自动生效；非标准参数需在 preset 里写 `rigParams` / `mouthParams`。
+- **标准 Cubism 参数即可用**：`ParamAngleX/Y/Z`（头部跟随）、`LipSync` 组的嘴型参数、`ParamEyeLOpen` / `ParamEyeROpen`（左右眼同一次眨眼）。命名标准就自动生效；非标准参数需在 preset 里写 `rigParams` / `mouthParams`。
 
 > 一句话：动作和基础表情能“继承”，靠的是 **标准命名 + 正确的表情顺序** 这套约定，不是逐个模型去识别。命名规整的模型基本不用改代码；要精细控制再去 `models.ts` 加 preset。
 
