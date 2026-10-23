@@ -45,14 +45,22 @@ test('sometimes and often match only their own switches', () => {
   }), 'often')
   assert.equal(companionInitiativePatch('sometimes').autonomyEnabled, false)
   const often = companionInitiativePatch('often')
-  assert.equal(often.autonomyEnabled, false)
+  assert.equal(often.autonomyEnabled, true)
   assert.equal(often.proactivePresenceEnabled, true)
   assert.equal(often.proactiveAwayNotificationsEnabled, true)
   assert.equal(often.proactiveLetterEnabled, true)
   assert.equal(often.proactiveFrequency, 'normal')
   assert.equal('proactiveAgendaEnabled' in often, false)
-  assert.equal(inferCompanionInitiative({ ...factory, ...often, autonomyEnabled: true }), 'custom')
+  assert.equal(inferCompanionInitiative({ ...factory, ...often, autonomyEnabled: false }), 'often')
   assert.equal(inferCompanionInitiative({ ...factory, ...often, proactiveFrequency: 'low' }), 'custom')
+})
+
+test('often turns the autonomy tick on', () => {
+  const often = companionInitiativePatch('often')
+  assert.equal(often.autonomyEnabled, true)
+  assert.equal(inferCompanionInitiative({ ...factory, ...often }), 'often')
+  assert.equal(companionInitiativePatch('sometimes').autonomyEnabled, false)
+  assert.equal(companionInitiativePatch('quiet').autonomyEnabled, false)
 })
 
 test('a pace that does not match stays custom and the patch leaves unfinished items alone', () => {

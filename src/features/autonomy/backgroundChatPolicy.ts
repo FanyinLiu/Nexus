@@ -232,6 +232,41 @@ export function isBackgroundChatLeaseAvailable(): boolean {
   return !leaseOwner
 }
 
+/** Thrown when the daily model budget is already spent. The lease is released. */
+export class BackgroundChatBudgetExhaustedError extends Error {
+  constructor() {
+    super('daily check-in limit reached')
+    this.name = 'BackgroundChatBudgetExhaustedError'
+  }
+}
+
+/**
+ * Run one background model call while holding the shared lease.
+ * The budget is spent only after the lease is acquired, so a busy lock
+ * does not burn a call and two callers cannot both pass the check.
+ */
+export async function runLockedBackgroundChat<T>(options: {
+  tryConsumeBudget?: () => boolean
+  onRunError?: (error: unknown) => void
+  run: () => Promise<T>
+}): Promise<T> {
+  const lease = acquireBackgroundChatLease()
+  if (!lease) throw new Error('background chat lease busy')
+  let started = false
+  try {
+    if (options.tryConsumeBudget && !options.tryConsumeBudget()) {
+      throw new BackgroundChatBudgetExhaustedError()
+    }
+    started = true
+    return await options.run()
+  } catch (error) {
+    if (started) options.onRunError?.(error)
+    throw error
+  } finally {
+    releaseBackgroundChatLease(lease)
+  }
+}
+
 /** Module-scope lease shared by Dream, V2 autonomy, and Sunday Letter. */
 export function acquireBackgroundChatLease(): symbol | null {
   if (leaseOwner) return null

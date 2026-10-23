@@ -1,4 +1,5 @@
 import type { AmbientPresenceState, PresenceCategory, PresenceHistoryItem } from '../../types/index.ts'
+import { textMentionsMemoryResidue } from '../../../shared/memoryResidue.js'
 import {
   AMBIENT_PRESENCE_STORAGE_KEY,
   LAST_PROACTIVE_PRESENCE_AT_STORAGE_KEY,
@@ -133,4 +134,18 @@ export function loadPresenceHistory() {
 
 export function savePresenceHistory(history: PresenceHistoryItem[]) {
   writeJson(PRESENCE_HISTORY_STORAGE_KEY, normalizePresenceHistory(history))
+}
+
+/**
+ * Drop presence lines that still quote a memory the user just deleted.
+ * The live record is what the next greeting would repeat.
+ */
+export function scrubPresenceMemoryResidue(needles: readonly string[]): void {
+  const history = loadPresenceHistory()
+  const kept = history.filter((item) => !textMentionsMemoryResidue(item.text, needles))
+  if (kept.length !== history.length) savePresenceHistory(kept)
+  const ambient = loadAmbientPresence()
+  if (ambient && textMentionsMemoryResidue(ambient.text, needles)) {
+    saveAmbientPresence(null)
+  }
 }

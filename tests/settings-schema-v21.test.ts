@@ -79,7 +79,7 @@ test('schema 20 with the autonomy tick on stays custom and does not clear that t
     themeColorScheme: 'dark',
     autonomyEnabled: true,
     proactivePresenceEnabled: true,
-    proactivePresenceIntervalMinutes: 15,
+    proactivePresenceIntervalMinutes: 10,
     proactiveAwayNotificationsEnabled: true,
     proactiveBracketEnabled: true,
     proactiveLetterEnabled: true,
@@ -98,6 +98,21 @@ test('schema 20 with the autonomy tick on stays custom and does not clear that t
     if (stored[key as keyof typeof stored] === undefined) continue
     assert.equal(next[key], before[key], key)
   }
+})
+
+test('schema 20 often shape that already had the tick stays often and keeps it', () => {
+  const stored = {
+    settingsSchemaVersion: 20,
+    autonomyEnabled: true,
+    proactivePresenceEnabled: true,
+    proactivePresenceIntervalMinutes: 15,
+    proactiveAwayNotificationsEnabled: true,
+    proactiveLetterEnabled: true,
+    proactiveFrequency: 'normal',
+  }
+  const next = migrateSettings(stored, 20)
+  assert.equal(next.companionInitiative, 'often')
+  assert.equal(next.autonomyEnabled, true)
 })
 
 test('schema 20 without the autonomy tick records often and leaves the tick off', () => {

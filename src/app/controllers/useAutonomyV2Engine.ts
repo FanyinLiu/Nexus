@@ -50,13 +50,12 @@ import {
   resolveAutonomyV2Config,
 } from '../../features/autonomy/v2/providerResolution.ts'
 import {
-  acquireBackgroundChatLease,
   classifyBackgroundChatFailure,
   getBackgroundChatGate,
   isBackgroundChatLeaseAvailable,
   recordBackgroundChatFailure,
   recordBackgroundChatSuccess,
-  releaseBackgroundChatLease,
+  runLockedBackgroundChat,
 } from '../../features/autonomy/backgroundChatPolicy.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
@@ -85,6 +84,8 @@ export type UseAutonomyV2EngineOptions = {
   triggerIdleGesture?: (gestureName: string) => void
   /** Only the background owner may load persona or consume V2 cadence. */
   enabled?: boolean
+  /** Spend one daily model call. Absent means the caller has no budget. */
+  tryConsumeLlmBudget?: () => boolean
   onDebugEvent?: (event: {
     source: DebugConsoleEventSource
     title: string
@@ -249,37 +250,36 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
         }
         throw new Error(`background chat blocked: ${gate.reason}`)
       }
-      const lease = acquireBackgroundChatLease()
-      if (!lease) throw new Error('background chat lease busy')
-      const desktopPet = window.desktopPet
-      try {
-        if (!desktopPet?.completeChat) {
-          throw new Error('window.desktopPet.completeChat is not available')
-        }
-        const resp = await desktopPet.completeChat({
-          providerId: payload.providerId,
-          baseUrl: payload.baseUrl,
-          apiKey: payload.apiKey,
-          model: payload.model,
-          messages: payload.messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          temperature: payload.temperature,
-          maxTokens: payload.maxTokens,
-          traceId: 'background:autonomy-v2',
-        })
-        recordBackgroundChatSuccess(requestInput)
-        return {
-          content: resp.content ?? '',
-          finishReason: resp.finish_reason,
-        }
-      } catch (error) {
-        recordBackgroundChatFailure(requestInput, classifyBackgroundChatFailure(error))
-        throw error
-      } finally {
-        releaseBackgroundChatLease(lease)
-      }
+      return runLockedBackgroundChat({
+        tryConsumeBudget: opts.tryConsumeLlmBudget,
+        onRunError: (error) => {
+          recordBackgroundChatFailure(requestInput, classifyBackgroundChatFailure(error))
+        },
+        run: async () => {
+          const desktopPet = window.desktopPet
+          if (!desktopPet?.completeChat) {
+            throw new Error('window.desktopPet.completeChat is not available')
+          }
+          const resp = await desktopPet.completeChat({
+            providerId: payload.providerId,
+            baseUrl: payload.baseUrl,
+            apiKey: payload.apiKey,
+            model: payload.model,
+            messages: payload.messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            temperature: payload.temperature,
+            maxTokens: payload.maxTokens,
+            traceId: 'background:autonomy-v2',
+          })
+          recordBackgroundChatSuccess(requestInput)
+          return {
+            content: resp.content ?? '',
+            finishReason: resp.finish_reason,
+          }
+        },
+      })
     }
 
     // Only invite the silent idle motion when the user has been idle for

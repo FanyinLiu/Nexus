@@ -23,7 +23,7 @@ export interface AutonomyTickState {
   lastWakeAt: string
   lastSleepAt: string | null
   tickCount: number
-  /** Cumulative ticks today — resets at midnight, used for cost cap. */
+  /** Model calls spent today. Idle ticks do not increment it. */
   dailyTickCount: number
   dailyTickResetDate: string
   idleSeconds: number
