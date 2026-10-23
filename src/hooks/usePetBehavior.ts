@@ -200,7 +200,14 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     }
   }, [dismissAmbientPresence])
 
-  const publishAmbientPresence = useCallback((line: PresenceLine, duration = PROACTIVE_PRESENCE_DURATION_MS) => {
+  const publishAmbientPresence = useCallback((
+    line: PresenceLine,
+    duration = PROACTIVE_PRESENCE_DURATION_MS,
+    options?: { sessionOnly?: boolean },
+  ) => {
+    // A line that quotes memory must not reach localStorage: the stored text
+    // would outlive the memory it came from.
+    const sessionOnly = options?.sessionOnly === true || line.category === 'memory'
     const now = Date.now()
     const nextPresence: AmbientPresenceState = {
       text: line.text,
@@ -228,8 +235,8 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
       text: item.text,
       category: item.category,
     }))
-    savePresenceHistory(nextHistory)
-    saveAmbientPresence(nextPresence)
+    savePresenceHistory(nextHistory, sessionOnly ? [line.text] : [])
+    saveAmbientPresence(nextPresence, { sessionOnly })
     setAmbientPresence(nextPresence)
     updatePetStatus(line.text, duration)
   }, [updatePetStatus])

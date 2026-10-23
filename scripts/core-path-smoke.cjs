@@ -2,6 +2,7 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 const { app, BrowserWindow } = require('electron')
+const { isSettingsEntryReady, isV2PanelReady } = require('./core-path-smoke-state.cjs')
 
 const ROOT = path.join(__dirname, '..')
 const DIST_INDEX = path.join(ROOT, 'dist', 'index.html')
@@ -203,34 +204,6 @@ async function click(window, selector, label) {
   }
 }
 
-function isV2PanelReady(state) {
-  return state.panelSurface === 'v2'
-    ? state.hasV2Root
-      && state.hasV2Stage
-      && state.hasV2Utility
-      && state.panelWidth >= 240
-      && state.panelHeight >= 500
-    : state.hasRoot
-      && state.hasPanel
-      && state.hasToolbar
-      && state.hasSettingsButton
-      && state.hasComposer
-      && state.hasSendButton
-      && state.panelWidth >= 240
-      && state.panelHeight >= 500
-}
-
-function isSettingsEntryReady(state) {
-  const v2Ready = state.hasSettingsV2
-    && (
-      (state.hasSettingsV2Home && state.hasSettingsV2AdvancedCard)
-      || (state.settingsV2Destination === 'connect' && state.hasV2ModelContent)
-    )
-  const legacyReady = state.hasSettingsHome && state.hasModelCard
-    || state.hasModelPage && !state.hasSettingsV2
-  return state.hasSettingsDrawer && (v2Ready || legacyReady)
-}
-
 async function main() {
   if (!fs.existsSync(DIST_INDEX)) {
     throw new Error('dist/index.html is missing. Run `npm run build` before the core path smoke.')
@@ -321,6 +294,13 @@ async function main() {
       || (state.hasV3ModelContent && state.hasV3ModelTestButton && state.v3ModelFieldCount >= 2)
     ))
 
+    // The plain connection page must offer a usable "test" button; without
+    // it the person cannot tell whether the configured endpoint answers.
+    const hasTextTestButton = Boolean(modelDetail.hasModelTestButton || modelDetail.hasV3ModelTestButton)
+    if (!hasTextTestButton) {
+      throw new Error('model detail ready: no usable text connection test button')
+    }
+
     const report = {
       ok: true,
       panelReady,
@@ -331,6 +311,7 @@ async function main() {
       settingsEntry,
       modelPage,
       modelDetail,
+      hasTextTestButton,
       rendererWarnings: rendererWarnings.slice(0, 12),
     }
     const reportPath = path.join(OUTPUT_DIR, 'core-path-smoke.json')

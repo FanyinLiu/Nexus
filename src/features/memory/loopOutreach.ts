@@ -97,6 +97,15 @@ export function nightBeforeIso(dueIso: string): string | null {
 }
 
 /**
+ * True when the loop already has a night-before reminder booked.
+ * The booked state belongs to the reminder, not to how clear the plan
+ * reads, so an offer the person accepted still counts as booked.
+ */
+export function isLoopBooked(memory: MemoryItem): boolean {
+  return Boolean(memory.loopReminderTaskId)
+}
+
+/**
  * What to say for this loop at `nowMs`.
  * Null when the loop is closed, migrated, or not inside the preview/check window.
  */
@@ -130,7 +139,7 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
   }
   const night = nightBeforeIso(memory.loopDueAt ?? '')
   const offer = night ? { memoryId: memory.id, title: what.slice(0, 80), nightBeforeAt: night } : null
-  const booked = loopPlanReading(memory) === 'clear' && Boolean(memory.loopReminderTaskId)
+  const booked = isLoopBooked(memory)
   if (booked) {
     const text = where
       ? t('proactive.loop.confirmed', { when, where })
@@ -183,7 +192,7 @@ export interface ClearPlanReminderDraft {
 export function clearPlanReminderDrafts(memories: readonly MemoryItem[], nowMs: number): ClearPlanReminderDraft[] {
   const drafts: ClearPlanReminderDraft[] = []
   for (const memory of memories) {
-    if (memory.loopReminderTaskId) continue
+    if (isLoopBooked(memory)) continue
     if (loopPlanReading(memory) !== 'clear') continue
     const draft = loopReminderDraft(memory, nowMs)
     if (!draft) continue

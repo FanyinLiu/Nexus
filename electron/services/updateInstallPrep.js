@@ -34,7 +34,7 @@ const PREP_RECOMMENDATION_KEY = 'updater.error.install_prep_failed_rec'
 const SNAPSHOT_MESSAGE_KEY = 'updater.error.snapshot_failed'
 const SNAPSHOT_RECOMMENDATION_KEY = 'updater.error.snapshot_failed_rec'
 
-const MEMORY_V2_FIELDS = ['longTerm', 'daily', 'opLog', 'v1Backup']
+const MEMORY_V2_FIELDS = ['longTerm', 'daily', 'opLog']
 
 /**
  * Step names recorded by prepareForUpdateInstall. Snapshot runs after these
@@ -307,7 +307,6 @@ export async function writeUpdateSnapshot(input) {
         longTerm: input.memoryV2.longTerm !== null,
         daily: input.memoryV2.daily !== null,
         opLog: input.memoryV2.opLog !== null,
-        v1Backup: input.memoryV2.v1Backup !== null,
       },
       localDataPresent,
     }, null, 2)}\n`)
@@ -325,6 +324,40 @@ export async function writeUpdateSnapshot(input) {
       error,
     )
   }
+}
+
+/**
+ * Delete every memory-v2 copy under userData/update-snapshots.
+ *
+ * Snapshots are write-only backups: nothing reads them at startup, so a
+ * memory clear has to remove them explicitly or the wording survives there.
+ * Settings, manifests, and the local-data copy stay untouched.
+ * @param {string} userDataPath
+ * @returns {Promise<{ removed: string[] }>} Deleted paths relative to userData.
+ */
+export async function removeMemoryFromUpdateSnapshots(userDataPath) {
+  const root = path.join(userDataPath, UPDATE_SNAPSHOTS_DIRNAME)
+  let entries
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true })
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { removed: [] }
+    throw error
+  }
+  const removed = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const memoryDir = path.join(root, entry.name, 'memory-v2')
+    for (const name of ['long-term.json', 'daily.json', 'op-log.json']) {
+      const filePath = path.join(memoryDir, name)
+      if (!(await fileExists(filePath))) continue
+      await fs.rm(filePath, { force: true })
+      removed.push(path.relative(userDataPath, filePath))
+    }
+    // Fails with ENOTEMPTY when the snapshot kept other files; ignore that.
+    await fs.rmdir(memoryDir).catch(() => {})
+  }
+  return { removed }
 }
 
 /**
@@ -375,7 +408,7 @@ async function writeExact(filePath, text) {
 
 /**
  * @param {string} partial
- * @param {{ longTerm: string | null, daily: string | null, opLog: string | null, v1Backup: string | null }} memoryV2
+ * @param {{ longTerm: string | null, daily: string | null, opLog: string | null }} memoryV2
  */
 async function writeMemoryV2(partial, memoryV2) {
   const dir = path.join(partial, 'memory-v2')
@@ -384,7 +417,6 @@ async function writeMemoryV2(partial, memoryV2) {
     ['long-term.json', memoryV2.longTerm],
     ['daily.json', memoryV2.daily],
     ['op-log.json', memoryV2.opLog],
-    ['v1-backup.txt', memoryV2.v1Backup],
   ]
   for (const [name, contents] of files) {
     if (contents === null) continue

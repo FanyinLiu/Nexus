@@ -84,27 +84,27 @@ test('manual rows become user-confirmed and pending supersession stays active', 
   assert.equal(pending?.supersededPending, true)
 })
 
-test('loadMemories backs up the raw v1 blob once and still reads it as v2', () => {
+test('loadMemories reads a raw v1 blob as v2 without creating a backup key', () => {
   const raw = JSON.stringify([v1])
   const storage = installStorage({ [MEMORY_STORAGE_KEY]: raw })
   try {
     const first = loadMemories()
-    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), raw)
+    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), null)
     assert.equal(first[0]?.schemaVersion, 2)
     assert.equal(first[0]?.content, 'I live in Shanghai')
     const second = loadMemories()
-    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), raw)
+    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), null)
     assert.deepEqual(second, first)
   } finally {
     delete (globalThis as { window?: unknown }).window
   }
 })
 
-test('a corrupt long-term blob is backed up and does not erase the key', () => {
+test('a corrupt long-term blob is not backed up and does not erase the key', () => {
   const storage = installStorage({ [MEMORY_STORAGE_KEY]: '{not-json' })
   try {
     assert.deepEqual(loadMemories(), [])
-    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), '{not-json')
+    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), null)
     assert.equal(storage.getItem(MEMORY_STORAGE_KEY), '{not-json')
   } finally {
     delete (globalThis as { window?: unknown }).window

@@ -775,6 +775,21 @@ declare global {
         score: number
       }>>
 
+      // Long-term memory file store
+      memoryLongTermLoad: () => Promise<{
+        exists: boolean
+        memories: unknown[]
+        corrupt?: boolean
+        backupPath?: string | null
+      }>
+      memoryLongTermSave: (payload: { memories: unknown[] }) => Promise<{ ok: boolean; count: number }>
+      memoryLongTermClear: () => Promise<{ ok: boolean }>
+      /** Session-level localStorage clear used by the memory reset procedure. */
+      memoryResetLocalStorage: () => Promise<{ ok: boolean }>
+      /** Main-process quit handshake: flush the debounced memory write, then ack. */
+      onMemoryFlushRequest?: (listener: () => void | Promise<void>) => () => void
+      memoryFlushComplete: () => Promise<{ ok: boolean }>
+
       // Auto-generated Skills
       skillSave: (payload: {
         id: string

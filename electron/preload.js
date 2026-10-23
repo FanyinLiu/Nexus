@@ -303,6 +303,20 @@ contextBridge.exposeInMainWorld('desktopPet', {
   memoryKeywordSearch: (payload) => ipcRenderer.invoke('memory:keyword-search', payload),
   memoryHybridSearch: (payload) => ipcRenderer.invoke('memory:hybrid-search', payload),
 
+  // Long-term memory file store (userData/memory/long-term-memory.json)
+  memoryLongTermLoad: () => ipcRenderer.invoke('memory:long-term-load'),
+  memoryLongTermSave: (payload) => ipcRenderer.invoke('memory:long-term-save', payload),
+  memoryLongTermClear: () => ipcRenderer.invoke('memory:long-term-clear'),
+  /** Session-level localStorage clear used by the memory reset procedure. */
+  memoryResetLocalStorage: () => ipcRenderer.invoke('memory:reset-local-storage'),
+  /** Main-process quit handshake: flush the debounced memory write, then ack. */
+  onMemoryFlushRequest: (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on('memory:flush-request', handler)
+    return () => ipcRenderer.removeListener('memory:flush-request', handler)
+  },
+  memoryFlushComplete: () => ipcRenderer.invoke('memory:flush-complete'),
+
   // Auto-generated Skills
   skillSave: (payload) => ipcRenderer.invoke('skill:save', payload),
   skillSearch: (payload) => ipcRenderer.invoke('skill:search', payload),

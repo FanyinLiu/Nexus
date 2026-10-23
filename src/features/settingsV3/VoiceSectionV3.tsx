@@ -4,7 +4,7 @@ import {
   getVoiceTriggerModeOptions,
   type ConnectionResult,
 } from '../../components/settingsDrawerSupport.ts'
-import { getDirectSendFallbackWakeWord } from '../hearing/companionWakeWordSync.ts'
+import { showsVoiceWakeWord, voiceTriggerPatch } from '../settingsSimplify/index.ts'
 import { isWakeWordSupported } from '../voice/providerSettings.ts'
 import {
   getPlatformDependencyHint,
@@ -291,7 +291,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
         {runtimeVoiceLabel}
       </span>
 
-      {surface === 'rest' ? null : <SettingsV3Section title={ti('settings.voice.trigger_mode')} description={triggerOption.hint.trim()}>
+      <SettingsV3Section title={ti('settings.voice.trigger_mode')} description={triggerOption.hint.trim()}>
         <div className="settings-v3-editor">
           <SettingsV3Field label={ti('settings.voice.trigger_mode')}>
             <select
@@ -300,11 +300,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
                 const voiceTriggerMode = event.target.value as AppSettings['voiceTriggerMode']
                 setDraft((current) => ({
                   ...current,
-                  voiceTriggerMode,
-                  wakeWordEnabled: voiceTriggerMode === 'wake_word',
-                  ...(voiceTriggerMode === 'wake_word' && !current.wakeWord.trim()
-                    ? { wakeWord: getDirectSendFallbackWakeWord(current) }
-                    : {}),
+                  ...voiceTriggerPatch(voiceTriggerMode, current),
                 }))
               }}
             >
@@ -319,7 +315,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
               ))}
             </select>
           </SettingsV3Field>
-          {draft.voiceTriggerMode === 'wake_word' ? (
+          {showsVoiceWakeWord(surface, draft.voiceTriggerMode) ? (
             <SettingsV3Field label={ti('settings.voice.wake_word')} hint={ti('settings.voice.wake_word_note_suffix')}>
               <input
                 value={draft.wakeWord}
@@ -330,7 +326,7 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             </SettingsV3Field>
           ) : null}
         </div>
-      </SettingsV3Section>}
+      </SettingsV3Section>
 
       {draft.voiceTriggerMode === 'wake_word' && !isWakeWordSupported(draft.wakeWord) ? (
         <SettingsV3Notice tone="error" title={ti('settings.voice.wake_word_chinese_only')} announce />

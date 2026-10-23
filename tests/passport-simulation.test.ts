@@ -10,6 +10,7 @@ import {
 } from '../src/features/autonomy/proactiveAgenda.ts'
 import { evaluateProactiveEtiquette } from '../src/features/autonomy/proactiveBudget.ts'
 import { curateMemories } from '../src/features/memory/curation.ts'
+import { applyBookedLoopAction } from '../src/features/memory/loopCardActions.ts'
 import {
   bookClearPlanReminders,
   buildLoopOutreach,
@@ -17,6 +18,7 @@ import {
   loopReminderDraft,
   outreachAsks,
 } from '../src/features/memory/loopOutreach.ts'
+import { acceptLoopOffer } from '../src/features/memory/loopOfferAccept.ts'
 import { extractOpenLoopItems, loopPlanReading } from '../src/features/memory/openLoops.ts'
 import { planTurnMemoryWrite } from '../src/features/memory/reconcile.ts'
 import { t } from '../src/i18n/runtime.ts'
@@ -222,6 +224,52 @@ test('14 days: passport capture, night-before offer, one check, then silence', (
     resumedAtMs: atLocal(2026, 10, 22, 9).getTime(),
   })
   assert.equal(backedOff.reason, 'daily-cap')
+})
+
+test('a vague plan is offered once and the accepted card confirms the booking', () => {
+  const saidAt = atLocal(2026, 10, 16, 11)
+  const [captured] = extractOpenLoopItems('下周二去办护照', saidAt.toISOString(), () => 'memory-vague', 'msg-1')
+  assert.ok(captured)
+  assert.equal(loopPlanReading(captured), 'ask')
+
+  // The agenda offers the night-before reminder one day before the due.
+  const offerAt = atLocal(2026, 10, 19, 19)
+  const agenda = projectAgenda({
+    memories: [captured],
+    followUps: [],
+    previous: emptyAgendaState(),
+    nowMs: offerAt.getTime(),
+  })
+  const item = selectAgendaItem(agenda.items, offerAt.getTime(), 'return')
+  assert.equal(item?.sourceId, 'memory-vague')
+  const offer = buildLoopOutreach(captured, offerAt.getTime(), t)
+  assert.equal(offer?.mode, 'ask')
+  assert.ok(offer?.offer)
+
+  // Accepting books one reminder, and accepting again books no second one.
+  let created = 0
+  const accepted = acceptLoopOffer([captured], 'memory-vague', offerAt.getTime(), () => {
+    created += 1
+    return { id: 'reminder-vague' }
+  })
+  assert.equal(created, 1)
+  const again = acceptLoopOffer(accepted.memories, 'memory-vague', offerAt.getTime(), () => {
+    created += 1
+    return { id: 'reminder-again' }
+  })
+  assert.equal(created, 1)
+  assert.equal(again.memories[0]?.loopReminderTaskId, 'reminder-vague')
+
+  // The booked card confirms the reminder instead of asking for it again.
+  const booked = buildLoopOutreach(again.memories[0]!, offerAt.getTime(), t)
+  assert.equal(booked?.mode, 'confirm')
+  assert.equal(booked?.text.includes('要我前一晚提醒你吗'), false)
+  assert.equal(booked?.text.includes('18:00'), false)
+
+  // Cancelling removes the only reminder that exists.
+  const cancelled = applyBookedLoopAction(again.memories, 'memory-vague', 'cancel', offerAt.toISOString(), '撤销')
+  assert.equal(cancelled.reminderTaskId, 'reminder-vague')
+  assert.equal(cancelled.memories[0]?.loopReminderTaskId, undefined)
 })
 
 test('english preview sentences keep a space after the period', () => {

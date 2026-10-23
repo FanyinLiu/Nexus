@@ -7,8 +7,10 @@ import {
   bookClearPlanReminders,
   buildLoopOutreach,
   clearPlanReminderDrafts,
+  isLoopBooked,
   outreachAsks,
 } from '../src/features/memory/loopOutreach.ts'
+import { acceptLoopOffer } from '../src/features/memory/loopOfferAccept.ts'
 import {
   classifyPlanUtterance,
   extractOpenLoopItems,
@@ -82,6 +84,50 @@ test('a vague plan asks and does not book a reminder', () => {
   assert.match(card?.text ?? '', /10月20日/)
   assert.equal((card?.text ?? '').includes('18:00'), false)
   assert.equal((card?.text ?? '').includes('9:00'), false)
+})
+
+test('an accepted offer counts as booked and never books a second reminder', () => {
+  const [loop] = extractOpenLoopItems('下周二去办护照', friday.toISOString(), () => 'loop-ask', 'msg-ask')
+  assert.ok(loop)
+  assert.equal(isLoopBooked(loop), false)
+
+  let created = 0
+  const accepted = acceptLoopOffer([loop], 'loop-ask', atLocal(2026, 10, 16, 12).getTime(), () => {
+    created += 1
+    return { id: 'task-ask' }
+  })
+  assert.equal(created, 1)
+  assert.equal(accepted.created, true)
+  assert.equal(accepted.reminderTaskId, 'task-ask')
+  assert.equal(accepted.memories[0]?.loopReminderTaskId, 'task-ask')
+  assert.equal(isLoopBooked(accepted.memories[0]!), true)
+
+  const again = acceptLoopOffer(accepted.memories, 'loop-ask', atLocal(2026, 10, 16, 12).getTime(), () => {
+    created += 1
+    return { id: 'task-again' }
+  })
+  assert.equal(created, 1)
+  assert.equal(again.created, false)
+  assert.equal(again.reminderTaskId, 'task-ask')
+  assert.equal(again.memories[0]?.loopReminderTaskId, 'task-ask')
+
+  const confirm = buildLoopOutreach(again.memories[0]!, atLocal(2026, 10, 19, 10).getTime(), t)
+  assert.equal(confirm?.mode, 'confirm')
+  assert.equal(outreachAsks(confirm?.text ?? ''), false)
+  assert.match(confirm?.text ?? '', /前一晚会提醒你/)
+  assert.equal((confirm?.text ?? '').includes('18:00'), false)
+  assert.equal((confirm?.text ?? '').includes('要我前一晚提醒你吗'), false)
+
+  const cancelled = applyBookedLoopAction(again.memories, 'loop-ask', 'cancel', friday.toISOString(), '撤销')
+  assert.equal(cancelled.reminderTaskId, 'task-ask')
+  assert.equal(cancelled.memories[0]?.loopReminderTaskId, undefined)
+})
+
+test('a booked loop is not offered a clear-plan reminder twice', () => {
+  const [loop] = extractOpenLoopItems('下周二去办护照', friday.toISOString(), () => 'loop-ask', 'msg-ask')
+  assert.ok(loop)
+  const booked = { ...loop, loopReminderTaskId: 'task-ask' }
+  assert.equal(clearPlanReminderDrafts([booked], friday.getTime()).length, 0)
 })
 
 test('someone else\'s plan, a hypothetical, and a past event are not stored', () => {

@@ -12,7 +12,7 @@ import {
   STARTUP_GREETING_DURATION_MS,
   STARTUP_GREETING_SESSION_KEY,
   VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY,
-  buildStartupGreetingText,
+  buildStartupGreeting,
   makeTranslator,
 } from '../appSupport.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
@@ -30,8 +30,8 @@ import {
 import {
   CHAT_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
+  applyLongTermMemoryBroadcast,
   loadChatMessages,
-  loadMemories,
   onStorageChange,
   savePetWindowPreferences,
 } from '../../lib'
@@ -348,7 +348,7 @@ export function useDesktopBridge({
     )
     const unsubscribeMemories = onStorageChange(
       MEMORY_STORAGE_KEY,
-      () => applyRemoteMemories(loadMemories()),
+      (value) => applyRemoteMemories(applyLongTermMemoryBroadcast(value)),
     )
     return () => {
       unsubscribeChat()
@@ -548,13 +548,14 @@ export function useDesktopBridge({
       return
     }
 
-    const greeting = buildStartupGreetingText(settings, memory.memories, makeTranslator(settings.uiLanguage))
+    const greeting = buildStartupGreeting(settings, memory.memories, makeTranslator(settings.uiLanguage))
     publishAmbientPresence(
       {
-        text: greeting,
+        text: greeting.text,
         category: 'time',
       },
       STARTUP_GREETING_DURATION_MS,
+      { sessionOnly: greeting.quotesMemory },
     )
     window.sessionStorage.setItem(STARTUP_GREETING_SESSION_KEY, '1')
   }, [ambientPresence, memory.memories, publishAmbientPresence, settings, view])

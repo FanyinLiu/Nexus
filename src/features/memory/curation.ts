@@ -7,8 +7,7 @@
  */
 
 import type { MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
-import { dueFromText } from './openLoops.ts'
-import { hasExplicitClock } from './loopDetails.ts'
+import { dueFromText, hasExplicitClock } from './loopDetails.ts'
 import { destructiveOpCap, isUserOwnedMemory, isUserProtectedMemory } from './memoryRules.ts'
 
 const CITY_ZH = /我(?:现在|已|已经)?(?:住在|搬到|搬去)([^，。,.\s]{1,16})/u
@@ -43,21 +42,42 @@ function sameDay(leftIso: string, rightIso: string): boolean {
 }
 
 /**
+ * The day the due phrase was said. The newest evidence that repeats the
+ * phrase is the day the person last named it; older words fall back to
+ * the day the loop was created.
+ */
+function duePhraseDay(memory: MemoryItem): string {
+  const phrase = memory.loopDueText
+  if (phrase) {
+    for (const item of memory.evidence ?? []) {
+      if (item.quote.includes(phrase)) return item.at
+    }
+  }
+  return memory.createdAt
+}
+
+/** Every word the person used about this loop, the first line included. */
+function loopQuotes(memory: MemoryItem): string[] {
+  return [memory.content, ...(memory.evidence ?? []).map((item) => item.quote)]
+}
+
+/**
  * Re-read the due phrase against the day it was said.
  * A clock the user added later is kept when the calendar day still matches.
  */
 export function repairLoopDue(memory: MemoryItem): MemoryItem {
   if (memory.kind !== 'open_loop' || !memory.loopDueText || !memory.loopDueAt) return memory
   if (isUserOwnedMemory(memory)) return memory
-  const parsed = dueFromText(`${memory.loopDueText} ${memory.content}`, memory.createdAt)
+  const parsed = dueFromText(`${memory.loopDueText} ${memory.content}`, duePhraseDay(memory))
   if (!parsed.loopDueAt) return memory
+  const namedClock = loopQuotes(memory).some((quote) => hasExplicitClock(quote))
   if (sameDay(parsed.loopDueAt, memory.loopDueAt)) {
-    if (hasExplicitClock(memory.content)) return memory
+    if (namedClock) return memory
     return memory.loopDueAt === parsed.loopDueAt ? memory : { ...memory, loopDueAt: parsed.loopDueAt }
   }
   const stored = new Date(memory.loopDueAt)
   const next = new Date(parsed.loopDueAt)
-  if (hasExplicitClock(memory.content)) {
+  if (namedClock) {
     next.setHours(stored.getHours(), stored.getMinutes(), 0, 0)
   }
   const loopDueAt = next.toISOString()
