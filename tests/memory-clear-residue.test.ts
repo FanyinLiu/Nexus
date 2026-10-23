@@ -112,6 +112,15 @@ test('store, recall, and clear drop memory text from vectors, sqlite, logs, and 
     assert.equal(stored.memories.some((item) => item.content === SECRET), true)
     assert.equal(stored.daily.some((item) => item.content === SECRET), true)
 
+    const snapshotDir = path.join(userDataPath, 'update-snapshots', 'snap-clear')
+    const snapshotMemoryDir = path.join(snapshotDir, 'memory-v2')
+    await fs.mkdir(snapshotMemoryDir, { recursive: true })
+    await fs.writeFile(path.join(snapshotMemoryDir, 'long-term.json'), JSON.stringify([row]))
+    await fs.writeFile(path.join(snapshotMemoryDir, 'daily.json'), JSON.stringify(daily))
+    await fs.writeFile(path.join(snapshotMemoryDir, 'op-log.json'), JSON.stringify([{ content: SECRET }]))
+    await fs.writeFile(path.join(snapshotDir, 'settings.json'), '{"keep":true}')
+    await fs.writeFile(path.join(snapshotDir, 'manifest.json'), '{"keep":true}')
+
     const leveldb = path.join(userDataPath, 'Local Storage', 'leveldb')
     const indexeddb = path.join(userDataPath, 'IndexedDB', 'http_127.0.0.1.indexeddb.leveldb')
     const sessionStorage = path.join(userDataPath, 'Session Storage')
@@ -179,16 +188,21 @@ test('store, recall, and clear drop memory text from vectors, sqlite, logs, and 
 
     const pending = purgeClearedMemories([row], daily) as unknown as Promise<{
       storageFilesRewritten?: number
+      snapshotMemoryFilesRemoved?: number
     } | undefined>
     assert.equal(pending instanceof Promise, true)
     const cleared = await pending
     assert.equal(flushed, true)
     assert.ok((cleared?.storageFilesRewritten ?? 0) >= 3)
+    assert.equal(cleared?.snapshotMemoryFilesRemoved, 3)
 
     assert.equal(await treeContains(userDataPath, SECRET), false)
     assert.equal(await treeContains(userDataPath, SECRET_QUOTE), false)
     assert.equal(await treeContains(userDataPath, KEEP_LOG), true)
     assert.equal(await treeContains(userDataPath, KEEP_INDEXED), true)
+    await assert.rejects(() => fs.access(snapshotMemoryDir))
+    assert.equal(await fs.readFile(path.join(snapshotDir, 'settings.json'), 'utf8'), '{"keep":true}')
+    assert.equal(await fs.readFile(path.join(snapshotDir, 'manifest.json'), 'utf8'), '{"keep":true}')
     assert.equal(await fs.readFile(path.join(userDataPath, 'unrelated.txt'), 'utf8'), 'leave-this-file')
 
     const rewritten = readLevelDbLogPayloads(await fs.readFile(leveldbLog))
@@ -211,8 +225,9 @@ test('store, recall, and clear drop memory text from vectors, sqlite, logs, and 
     assert.equal(storedText.includes(SECRET_QUOTE), false)
     assert.equal(values.get(PENDING_GREETING_KEY) ?? null, null)
     assert.equal(values.get(AMBIENT_PRESENCE_STORAGE_KEY) ?? null, null)
-    const history = JSON.parse(values.get(PRESENCE_HISTORY_STORAGE_KEY) ?? '[]') as Array<{ text: string }>
-    assert.deepEqual(history.map((item) => item.text), [KEEP_GREETING])
+    // Presence lines can quote memory text, so clear-all drops the history
+    // outright instead of keeping the non-memory rows in localStorage.
+    assert.equal(values.get(PRESENCE_HISTORY_STORAGE_KEY) ?? null, null)
   } finally {
     await store?.terminate()
     await fs.rm(userDataPath, { recursive: true, force: true })

@@ -71,6 +71,21 @@ async function pathExists(filePath) {
 }
 
 /**
+ * The store holds memory wording, so the directory must stay owner-only even
+ * when an older install created it with the default umask. Windows has no
+ * POSIX directory mode, so its chmod failure is not fatal.
+ * @param {string} directory
+ */
+async function ensurePrivateDirectory(directory) {
+  await fsp.mkdir(directory, { recursive: true, mode: 0o700 })
+  try {
+    await fsp.chmod(directory, 0o700)
+  } catch (error) {
+    if (process.platform !== 'win32') throw error
+  }
+}
+
+/**
  * Move an unreadable file aside so the original bytes survive the next save.
  * The backup stays next to the store and is removed by clear().
  * @param {string} resolvedPath
@@ -78,6 +93,7 @@ async function pathExists(filePath) {
  */
 async function quarantineCorruptFile(resolvedPath) {
   const directory = path.dirname(resolvedPath)
+  await ensurePrivateDirectory(directory)
   const base = path.basename(resolvedPath, path.extname(resolvedPath))
   const stamp = corruptTimestamp()
   let backupPath = path.join(directory, `${base}.corrupt-${stamp}.json`)
@@ -88,6 +104,14 @@ async function quarantineCorruptFile(resolvedPath) {
   }
   try {
     await fsp.rename(resolvedPath, backupPath)
+    // The rename keeps the legacy file's mode. A backup with memory wording
+    // must not stay group/world-readable; a chmod failure must not lose it.
+    try {
+      await fsp.chmod(backupPath, 0o600)
+    } catch {
+      // Best effort on every platform: the backup must survive even when the
+      // filesystem refuses the mode change (notably Windows).
+    }
     return backupPath
   } catch {
     return null
@@ -166,6 +190,7 @@ export function createLongTermMemoryFileStore({ filePath, maxBytes = MAX_FILE_BY
       throw memoryError(LONG_TERM_MEMORY_ERROR_CODES.TOO_LARGE, 'memories exceed the file size budget')
     }
     const payload = { format: FILE_FORMAT, version: FILE_VERSION, memories: [...validated] }
+    await ensurePrivateDirectory(path.dirname(resolvedPath))
     await atomicWriteJson(resolvedPath, payload, { fileMode: 0o600 })
     return { ok: true, count: validated.length }
   }

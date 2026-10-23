@@ -141,27 +141,43 @@ function getTimeGreeting(ti: Translator): string {
   return ti('time_greeting.evening')
 }
 
-export function buildStartupGreetingText(
+/** Startup greeting text plus whether it quoted long-term memory. */
+export interface StartupGreeting {
+  text: string
+  quotesMemory: boolean
+}
+
+/**
+ * Build the first ambient line of the session. Callers must publish a quoted
+ * memory as session-only so the text never reaches localStorage.
+ */
+export function buildStartupGreeting(
   settings: AppSettings,
   memories: MemoryItem[],
   ti: Translator,
-): string {
+): StartupGreeting {
   const greeting = getTimeGreeting(ti)
   const latestMemory = memories[0]?.content
 
   if (latestMemory) {
-    return ti('startup_greeting.with_memory', {
-      greeting,
-      userName: settings.userName,
-      memory: shorten(latestMemory, 20),
-    })
+    return {
+      text: ti('startup_greeting.with_memory', {
+        greeting,
+        userName: settings.userName,
+        memory: shorten(latestMemory, 20),
+      }),
+      quotesMemory: true,
+    }
   }
 
-  return ti('startup_greeting.plain', {
-    greeting,
-    userName: settings.userName,
-    companionName: settings.companionName,
-  })
+  return {
+    text: ti('startup_greeting.plain', {
+      greeting,
+      userName: settings.userName,
+      companionName: settings.companionName,
+    }),
+    quotesMemory: false,
+  }
 }
 
 /** Helper for callers that don't already have a ti() — builds one on the fly. */

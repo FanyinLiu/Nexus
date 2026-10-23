@@ -12,11 +12,13 @@ import {
   type LongTermMemoryBackend,
 } from '../src/lib/storage/memory.ts'
 import {
+  AMBIENT_PRESENCE_STORAGE_KEY,
   CHAT_STORAGE_KEY,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
   ONBOARDING_STORAGE_KEY,
+  PRESENCE_HISTORY_STORAGE_KEY,
   SETTINGS_STORAGE_KEY,
 } from '../src/lib/storage/core.ts'
 import { resetLocalStorage } from '../src/lib/storage/localStorageReset.ts'
@@ -383,6 +385,87 @@ test('reset restores the snapshot even when the bridge fails', async () => {
   assert.equal(result.resetCalled, false)
   assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), SETTINGS)
   assert.equal(storage.getItem(MEMORY_STORAGE_KEY), null)
+})
+
+test('resetLocalStorage removes presence keys and never writes them back', async () => {
+  const storage = createStorage({
+    [SETTINGS_STORAGE_KEY]: SETTINGS,
+    [CHAT_STORAGE_KEY]: CHAT,
+    [MEMORY_STORAGE_KEY]: JSON.stringify([memory('m1', SECRET)]),
+    [AMBIENT_PRESENCE_STORAGE_KEY]: JSON.stringify({
+      text: `you told me ${SECRET}`,
+      createdAt: AT,
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }),
+    [PRESENCE_HISTORY_STORAGE_KEY]: JSON.stringify([
+      { text: `remember ${SECRET}`, category: 'memory', createdAt: AT },
+    ]),
+  })
+  let resetCalls = 0
+
+  const result = await resetLocalStorage({
+    storage: storage as unknown as Storage,
+    bridge: {
+      memoryResetLocalStorage: async () => {
+        resetCalls += 1
+        return { ok: true }
+      },
+    },
+    flush: () => true,
+  })
+
+  assert.equal(result.ok, true)
+  assert.equal(result.resetCalled, true)
+  assert.equal(resetCalls, 1)
+  assert.equal(storage.getItem(AMBIENT_PRESENCE_STORAGE_KEY), null)
+  assert.equal(storage.getItem(PRESENCE_HISTORY_STORAGE_KEY), null)
+  assert.equal(storage.getItem(MEMORY_STORAGE_KEY), null)
+  assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), SETTINGS)
+  assert.equal(storage.getItem(CHAT_STORAGE_KEY), CHAT)
+})
+
+test('migration hydration drops presence keys along with the memory keys', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-memory-presence-'))
+  __resetLongTermMemoryStoreForTests()
+  try {
+    const filePath = path.join(dir, 'memory', 'long-term-memory.json')
+    const store = createLongTermMemoryFileStore({ filePath })
+    const storage = createStorage({
+      [SETTINGS_STORAGE_KEY]: SETTINGS,
+      [MEMORY_STORAGE_KEY]: JSON.stringify([memory('m1', SECRET)]),
+      [MEMORY_V1_BACKUP_STORAGE_KEY]: JSON.stringify([memory('m1', SECRET)]),
+      [AMBIENT_PRESENCE_STORAGE_KEY]: JSON.stringify({
+        text: `you told me ${SECRET}`,
+        createdAt: AT,
+        expiresAt: '2099-01-01T00:00:00.000Z',
+      }),
+      [PRESENCE_HISTORY_STORAGE_KEY]: JSON.stringify([
+        { text: `remember ${SECRET}`, category: 'memory', createdAt: AT },
+      ]),
+    })
+    installWindow(storage)
+
+    await hydrateLongTermMemoryStore({
+      backend: createBackend(filePath),
+      resetBridge: {
+        memoryResetLocalStorage: async () => {
+          storage.clear()
+          return { ok: true }
+        },
+      },
+    })
+
+    assert.deepEqual(loadMemories().map((row) => row.content), [SECRET])
+    assert.equal((await store.load()).exists, true)
+    assert.equal(storage.getItem(AMBIENT_PRESENCE_STORAGE_KEY), null)
+    assert.equal(storage.getItem(PRESENCE_HISTORY_STORAGE_KEY), null)
+    assert.equal(storage.getItem(MEMORY_STORAGE_KEY), null)
+    assert.equal(storage.getItem(MEMORY_V1_BACKUP_STORAGE_KEY), null)
+    assert.equal(storage.getItem(SETTINGS_STORAGE_KEY), SETTINGS)
+  } finally {
+    delete (globalThis as { window?: unknown }).window
+    await fs.rm(dir, { recursive: true, force: true })
+  }
 })
 
 test('CURRENT_SETTINGS_SCHEMA_VERSION stays 22', () => {

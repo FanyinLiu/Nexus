@@ -327,6 +327,40 @@ export async function writeUpdateSnapshot(input) {
 }
 
 /**
+ * Delete every memory-v2 copy under userData/update-snapshots.
+ *
+ * Snapshots are write-only backups: nothing reads them at startup, so a
+ * memory clear has to remove them explicitly or the wording survives there.
+ * Settings, manifests, and the local-data copy stay untouched.
+ * @param {string} userDataPath
+ * @returns {Promise<{ removed: string[] }>} Deleted paths relative to userData.
+ */
+export async function removeMemoryFromUpdateSnapshots(userDataPath) {
+  const root = path.join(userDataPath, UPDATE_SNAPSHOTS_DIRNAME)
+  let entries
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true })
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { removed: [] }
+    throw error
+  }
+  const removed = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const memoryDir = path.join(root, entry.name, 'memory-v2')
+    for (const name of ['long-term.json', 'daily.json', 'op-log.json']) {
+      const filePath = path.join(memoryDir, name)
+      if (!(await fileExists(filePath))) continue
+      await fs.rm(filePath, { force: true })
+      removed.push(path.relative(userDataPath, filePath))
+    }
+    // Fails with ENOTEMPTY when the snapshot kept other files; ignore that.
+    await fs.rmdir(memoryDir).catch(() => {})
+  }
+  return { removed }
+}
+
+/**
  * @param {unknown} value
  */
 function isTextOrNull(value) {

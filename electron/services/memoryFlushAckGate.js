@@ -56,3 +56,48 @@ export function createMemoryFlushAckGate() {
 
   return { expect, acknowledge, waitForAck }
 }
+
+/**
+ * Build the `before-quit` handler that blocks the first quit until every
+ * window acks its memory flush. An update install owns its own quit and must
+ * never be slowed down, so that path returns untouched.
+ * @param {{
+ *   getWindows: () => Array<{ isDestroyed: () => boolean, webContents: { isDestroyed: () => boolean, send: (channel: string) => void } }>,
+ *   gate: { expect: (count: number) => void, acknowledge: () => void, waitForAck: (timeoutMs: number) => Promise<boolean> },
+ *   timeoutMs: number,
+ *   quit: () => void,
+ *   isUpdateInstallQuit: () => boolean,
+ * }} deps
+ * @returns {(event: { preventDefault: () => void }) => void}
+ */
+export function createMemoryQuitFlushHandler({
+  getWindows,
+  gate,
+  timeoutMs,
+  quit,
+  isUpdateInstallQuit,
+}) {
+  let quitFlushStarted = false
+
+  return function handleBeforeQuit(event) {
+    if (isUpdateInstallQuit()) return
+    if (quitFlushStarted) return
+    quitFlushStarted = true
+    const windows = getWindows().filter((window) => (
+      !window.isDestroyed() && !window.webContents.isDestroyed()
+    ))
+    if (!windows.length) return
+    event.preventDefault()
+    gate.expect(windows.length)
+    for (const window of windows) {
+      try {
+        window.webContents.send('memory:flush-request')
+      } catch {
+        gate.acknowledge()
+      }
+    }
+    void gate.waitForAck(timeoutMs).then(() => {
+      quit()
+    })
+  }
+}

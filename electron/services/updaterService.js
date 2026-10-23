@@ -43,6 +43,7 @@ import {
 } from './updateInstallPrep.js'
 import { flushWindowBoundsStore } from './windowBoundsStore.js'
 import { flushRuntimeLogWriteBuffer } from '../windowManager.js'
+import { markUpdateInstallQuit } from './updateInstallQuitFlag.js'
 
 const { autoUpdater } = electronUpdater
 
@@ -134,6 +135,10 @@ export function initAutoUpdater({ getWindows }) {
       message: getRedactedErrorMessage(error ?? 'unknown error'),
     })
   })
+
+  // electron-updater emits this before its own quit. Marking it here keeps
+  // the memory flush handshake out of the installer path.
+  autoUpdater.on('before-quit-for-update', markUpdateInstallQuit)
 
   // Silent background check shortly after startup.
   setTimeout(() => {
@@ -340,6 +345,7 @@ export function quitAndInstallUpdate() {
       toVersion: lastStatus?.type === 'downloaded' ? lastStatus.version : null,
     }),
     quitAndInstall: () => {
+      markUpdateInstallQuit()
       setImmediate(() => {
         autoUpdater.quitAndInstall(false, true)
       })

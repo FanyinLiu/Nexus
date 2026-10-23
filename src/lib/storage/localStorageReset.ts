@@ -12,10 +12,12 @@
 // are still removed, so a failed reset can never lose non-memory data.
 
 import {
+  AMBIENT_PRESENCE_STORAGE_KEY,
   flushPendingStorageWrites,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
+  PRESENCE_HISTORY_STORAGE_KEY,
 } from './core.ts'
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 
@@ -24,6 +26,10 @@ export const MEMORY_LOCAL_STORAGE_DROP_KEYS: readonly string[] = Object.freeze([
   MEMORY_STORAGE_KEY,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
+  // Presence greetings quote memory text, so the LevelDB compaction must drop
+  // them too; otherwise the migrated memory survives in a different key.
+  AMBIENT_PRESENCE_STORAGE_KEY,
+  PRESENCE_HISTORY_STORAGE_KEY,
 ])
 
 /** Minimal slice of window.desktopPet the reset needs (fakeable in tests). */

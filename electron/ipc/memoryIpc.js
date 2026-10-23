@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { clearMemoryUserData } from '../services/memoryUserDataClear.js'
-import { createMemoryFlushAckGate } from '../services/memoryFlushAckGate.js'
+import { createMemoryFlushAckGate, createMemoryQuitFlushHandler } from '../services/memoryFlushAckGate.js'
+import { isUpdateInstallQuit } from '../services/updateInstallQuitFlag.js'
 import * as memoryVectorStore from '../services/memoryVectorStore.js'
 import {
   createLongTermMemoryFileStore,
@@ -28,28 +29,15 @@ export function register() {
 
   // The renderer buffers memory writes for 250 ms; `beforeunload` cannot await
   // the IPC save. Block the first quit so the debounced value lands on disk,
-  // but never longer than the timeout if a renderer is gone.
-  let quitFlushStarted = false
-  app.on('before-quit', (event) => {
-    if (quitFlushStarted) return
-    quitFlushStarted = true
-    const windows = BrowserWindow.getAllWindows().filter((window) => (
-      !window.isDestroyed() && !window.webContents.isDestroyed()
-    ))
-    if (!windows.length) return
-    event.preventDefault()
-    flushGate.expect(windows.length)
-    for (const window of windows) {
-      try {
-        window.webContents.send('memory:flush-request')
-      } catch {
-        flushGate.acknowledge()
-      }
-    }
-    void flushGate.waitForAck(MEMORY_FLUSH_QUIT_TIMEOUT_MS).then(() => {
-      app.quit()
-    })
-  })
+  // but never longer than the timeout if a renderer is gone. An update install
+  // owns its quit, so the handler lets that one through untouched.
+  app.on('before-quit', createMemoryQuitFlushHandler({
+    getWindows: () => BrowserWindow.getAllWindows(),
+    gate: flushGate,
+    timeoutMs: MEMORY_FLUSH_QUIT_TIMEOUT_MS,
+    quit: () => app.quit(),
+    isUpdateInstallQuit,
+  }))
 
   ipcMain.handle('memory:flush-complete', async (event) => {
     requireTrustedSender(event)
@@ -134,6 +122,7 @@ export function register() {
       ok: true,
       removed: cleared.removed,
       localDataCleared: cleared.localDataCleared,
+      snapshotMemoryFilesRemoved: cleared.snapshotMemoryFilesRemoved,
     }
   })
 
