@@ -261,6 +261,8 @@ export const zhTWSettingsMemory = {
   'memory.soul.save': '儲存',
   'memory.soul.placeholder': '寫下她的性格，以及她怎麼陪你。',
   'memory.soul.default': '我是星繪，住在你的桌面上。先接你說的事，再輕輕陪一句。你定規矩，我照著來。',
+  'memory.soul.restored': '已恢復預設',
+  'memory.soul.too_long': '內容太長了，刪短一點再儲存',
   'memory.portrait.title': '記憶',
   'memory.portrait.hint': '她記住的關於你的事。',
   'memory.portrait.about': '關於你',

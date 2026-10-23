@@ -5,10 +5,10 @@
  * if no SOUL.md file exists.
  */
 
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
-import { loadPersonaProfileFromReader } from './personaProfileLoader.js'
+import { loadPersonaProfileFromReader, resolvePersonaProfileSoulPath } from './personaProfileLoader.js'
 
 const PERSONA_DIR = 'persona'
 const SOUL_FILE = 'SOUL.md'
@@ -68,8 +68,16 @@ export async function loadPersonaMemory() {
 
 /**
  * Save content to SOUL.md.
+ * Empty content clears an override by removing the file. Writing it would
+ * create a 0-byte SOUL.md, and a restore must not create MEMORY.md or any
+ * other new empty file. A missing file already loads as the fallback.
  */
 export async function saveSoul(content) {
+  if (content === '') {
+    await removeFileIfPresent(getSoulPath())
+    _soulCache = { content: '', mtime: 0 }
+    return
+  }
   const dir = getPersonaDir()
   await mkdir(dir, { recursive: true })
   await writeFile(getSoulPath(), content, 'utf8')
@@ -117,6 +125,39 @@ export function getPersonaPaths() {
     personaDir: getDisplayPath(PERSONA_DIR),
     soulPath: getDisplayPath(PERSONA_DIR, SOUL_FILE),
     memoryPath: getDisplayPath(PERSONA_DIR, MEMORY_FILE),
+  }
+}
+
+/**
+ * Replace one profile's soul.md. Returns false when the id could point at a
+ * different directory than the loader uses. Other persona files stay put.
+ * @param {unknown} profileId
+ * @param {string} content
+ * @returns {Promise<boolean>}
+ */
+export async function savePersonaProfileSoul(profileId, content) {
+  const filePath = resolvePersonaProfileSoulPath(app.getPath('userData'), profileId)
+  if (!filePath) return false
+  if (content === '') {
+    await removeFileIfPresent(filePath)
+    return true
+  }
+  await mkdir(path.dirname(filePath), { recursive: true })
+  await writeFile(filePath, content, 'utf8')
+  return true
+}
+
+/**
+ * Remove a persona file when an empty save clears it.
+ * A missing file is already the empty state, so ENOENT is success and no
+ * sibling file is created to stand in for it.
+ * @param {string} filePath
+ */
+async function removeFileIfPresent(filePath) {
+  try {
+    await unlink(filePath)
+  } catch (error) {
+    if (!error || error.code !== 'ENOENT') throw error
   }
 }
 

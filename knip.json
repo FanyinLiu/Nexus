@@ -10,6 +10,8 @@
     "tests/helpers/mcp-host-hooks.mjs",
     "tests/helpers/memory-vector-electron-hooks.mjs",
     "tests/helpers/memory-vector-electron-stub.mjs",
+    "tests/helpers/persona-ipc-electron-stub.mjs",
+    "tests/helpers/tsx-test-loader.mjs",
     "tests/helpers/wakewordHarness.ts",
     "tests/helpers/window-ipc-stub-hooks.mjs"
   ],
