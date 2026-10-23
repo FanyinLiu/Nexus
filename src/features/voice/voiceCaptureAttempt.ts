@@ -151,6 +151,30 @@ export function voiceCaptureGrantIsUsable(id: number, visible: boolean): boolean
 }
 
 /**
+ * The click-owned microphone is live. This is the proof the permission prompt
+ * was granted, so any stale recovery line can leave the surface.
+ */
+const captureOpenedListeners = new Set<() => void>()
+
+/** Subscribe to a click-owned microphone becoming usable. Returns an unsubscribe. */
+export function onVoiceCaptureOpened(listener: () => void): () => void {
+  captureOpenedListeners.add(listener)
+  return () => {
+    captureOpenedListeners.delete(listener)
+  }
+}
+
+function notifyVoiceCaptureOpened() {
+  for (const listener of [...captureOpenedListeners]) {
+    try {
+      listener()
+    } catch {
+      // A surface listener must not break the capture that just succeeded.
+    }
+  }
+}
+
+/**
  * The grant is usable only while this click is still the pending one and the
  * window is visible. A late grant after hide must be discarded by the caller.
  */
@@ -161,6 +185,7 @@ export function markVoiceCaptureOpened(id: number, visible: boolean): boolean {
     return false
   }
   finish(current, 'open')
+  notifyVoiceCaptureOpened()
   return true
 }
 

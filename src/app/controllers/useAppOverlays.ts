@@ -17,6 +17,7 @@ import { settingsSavedForUiLanguageChoice } from '../../features/onboarding/comp
 import { resolveGuideLaunch } from '../../features/onboarding/guideDeferral.ts'
 import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
 import type { PetModelDefinition } from '../../features/pet'
+import { useClearChatErrorOnVoiceCapture } from '../../hooks/voice/useClearChatErrorOnVoiceCapture.ts'
 import {
   loadGuideDeferral,
   loadOnboardingCompleted,
@@ -242,6 +243,7 @@ export function useAppOverlays({
     openPanel: () => window.desktopPet!.openPanel('chat'),
   }))
   const setChatError = chat.setError
+  useClearChatErrorOnVoiceCapture(setChatError)
 
   useEffect(() => {
     if (firstUseGuideHost !== 'panel') return
@@ -283,6 +285,7 @@ export function useAppOverlays({
       baselineSettings: AppSettings
       closeSettings?: boolean
       completeOnboarding?: boolean
+      vaultFree?: boolean
     },
   ) => {
     const launchOnStartupChanged = !Object.is(
@@ -319,7 +322,12 @@ export function useAppOverlays({
       markOnboardingInProgress()
     }
 
-    const committedSettings = await updateSettingsFromDraft(options.baselineSettings, finalSettings)
+    const committedSettings = await updateSettingsFromDraft(
+      options.baselineSettings,
+      finalSettings,
+      undefined,
+      { vaultFree: options.vaultFree === true },
+    )
     // The voice start reads this ref in the same turn as the save. Waiting
     // for the settings effect would let the click run against the old switches.
     if (settingsRef) settingsRef.current = committedSettings
@@ -491,6 +499,7 @@ export function useAppOverlays({
         return await applySettingsSave(nextSettings, {
           baselineSettings,
           closeSettings: saveOptions?.closeSettings !== false,
+          vaultFree: saveOptions?.vaultFree === true,
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : t('settings.save_failed_fallback')

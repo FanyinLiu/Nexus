@@ -112,7 +112,7 @@ export type SettingsDrawerProps = {
   onSave: (
     settings: AppSettings,
     baseline: AppSettings,
-    options?: { closeSettings?: boolean },
+    options?: { closeSettings?: boolean; vaultFree?: boolean },
   ) => Promise<AppSettings>
   onExportChatHistory: () => Promise<{
     canceled: boolean
@@ -629,7 +629,7 @@ export function SettingsDrawer({
 
   function commitDraft(
     override?: AppSettings,
-    options?: { closeSettings?: boolean },
+    options?: { closeSettings?: boolean; vaultFree?: boolean },
   ): Promise<void> {
     if (saveInFlightRef.current) return saveInFlightRef.current
 
@@ -709,7 +709,7 @@ export function SettingsDrawer({
         revertSwitches: () => {
           const reverted = voiceSwitchesAfterMicrophoneDenied(nextDraft)
           setDraft(reverted)
-          return commitDraft(reverted, { closeSettings: false })
+          return commitDraft(reverted, { closeSettings: false, vaultFree: true })
         },
         closeSurface: () => {
           onClose()

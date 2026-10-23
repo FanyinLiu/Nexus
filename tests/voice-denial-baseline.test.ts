@@ -28,7 +28,12 @@ const { VoiceMicrophoneDenialLine, VoiceSectionV3 } = await import('../src/featu
 const { LocalVoiceModelsPanel } = await import('../src/features/settingsV3/LocalVoiceModelsPanel.tsx')
 const { ConfirmDialog } = await import('../src/components/ConfirmDialog.tsx')
 const { loadSettings, saveSettings } = await import('../src/lib/storage.ts')
-const { updateSettingsFromDraft } = await import('../src/app/store/settingsStore.ts')
+const {
+  getSettingsSnapshot,
+  initializeSettingsWithVault,
+  updateSettingsFromDraft,
+} = await import('../src/app/store/settingsStore.ts')
+const { useClearChatErrorOnVoiceCapture } = await import('../src/hooks/voice/useClearChatErrorOnVoiceCapture.ts')
 const { requestVoiceInputStream } = await import('../src/features/voice/runtimeSupport.ts')
 const {
   pendingVoiceCaptureAttempt,
@@ -283,6 +288,35 @@ async function resolveComponent(type: unknown): Promise<unknown> {
 
 type StorageBucket = Map<string, string>
 
+const BULK_OP_WINDOW_MS = 60_000
+const BULK_OP_MAX_PER_WINDOW = 6
+
+function createBulkVaultLimiter() {
+  const history: number[] = []
+  return {
+    take() {
+      const now = Date.now()
+      const recent = history.filter((time) => now - time < BULK_OP_WINDOW_MS)
+      if (recent.length >= BULK_OP_MAX_PER_WINDOW) {
+        // Same stable shape the real vaultIpc limiter throws.
+        throw new Error(
+          `vault retrieve-many rate-limited: more than ${BULK_OP_MAX_PER_WINDOW} bulk operations in 60s — `
+          + 'looks like programmatic enumeration. Check the audit log.',
+        )
+      }
+      recent.push(now)
+      history.splice(0, history.length, ...recent)
+    },
+    get calls() {
+      return history.length
+    },
+    /** Equivalent to the 60s window elapsing. */
+    expire() {
+      history.length = 0
+    },
+  }
+}
+
 function installBrowser(requests: Array<{ purpose: string }>) {
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window')
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
@@ -299,8 +333,12 @@ function installBrowser(requests: Array<{ purpose: string }>) {
   const storage: StorageBucket = new Map()
   const target = new EventTarget()
   const pendingTimers = new Map<number, () => void>()
+  const vaultEntries: Record<string, string> = {}
+  const bulkLimiter = createBulkVaultLimiter()
+  let retrieveAttempts = 0
   let grants = 0
   let timerSeq = 0
+  let denyFirstPrompt: (() => void) | null = null
   const win = Object.assign(target, {
     localStorage: {
       getItem: (key: string) => storage.get(key) ?? null,
@@ -319,6 +357,20 @@ function installBrowser(requests: Array<{ purpose: string }>) {
         ready: true,
         missingRequired: [],
       }),
+      vaultStore: async () => undefined,
+      vaultStoreMany: async (entries: Record<string, string>) => {
+        Object.assign(vaultEntries, entries)
+      },
+      vaultRetrieveMany: async (slots: string[]) => {
+        retrieveAttempts += 1
+        bulkLimiter.take()
+        const values: Record<string, string> = {}
+        for (const slot of slots) {
+          const value = vaultEntries[slot]
+          if (value) values[slot] = value
+        }
+        return values
+      },
     },
     requestAnimationFrame: (callback: () => void) => {
       callback()
@@ -343,40 +395,69 @@ function installBrowser(requests: Array<{ purpose: string }>) {
     addEventListener: () => {},
     removeEventListener: () => {},
   }
+  const requestMicrophone = () => {
+    requests.push({ purpose: 'audio' })
+    grants += 1
+    if (grants === 1) {
+      return new Promise<never>((_resolve, reject) => {
+        denyFirstPrompt = () => reject(new DOMException('Permission denied', 'NotAllowedError'))
+      })
+    }
+    const track = {
+      enabled: true,
+      stopped: false,
+      stop() { track.stopped = true },
+      getSettings: () => ({}),
+    }
+    return Promise.resolve({
+      getAudioTracks: () => [track],
+      getTracks: () => [track],
+    })
+  }
   const navigatorStub = {
     mediaDevices: {
-      getUserMedia: async () => {
-        requests.push({ purpose: 'audio' })
-        grants += 1
-        if (grants === 1) throw new DOMException('Permission denied', 'NotAllowedError')
-        const track = {
-          enabled: true,
-          stopped: false,
-          stop() { track.stopped = true },
-          getSettings: () => ({}),
-        }
-        return {
-          getAudioTracks: () => [track],
-          getTracks: () => [track],
-        }
-      },
+      getUserMedia: requestMicrophone,
     },
   }
   Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: win })
   Object.defineProperty(globalThis, 'document', { configurable: true, writable: true, value: documentStub })
   Object.defineProperty(globalThis, 'navigator', { configurable: true, writable: true, value: navigatorStub })
-  return () => {
-    pendingTimers.clear()
-    if (previousWindow) Object.defineProperty(globalThis, 'window', previousWindow)
-    else delete (globalThis as { window?: unknown }).window
-    if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument)
-    else delete (globalThis as { document?: unknown }).document
-    if (previousNavigator) Object.defineProperty(globalThis, 'navigator', previousNavigator)
-    else delete (globalThis as { navigator?: unknown }).navigator
-    if (createdHtml) delete (globalThis as { HTMLElement?: unknown }).HTMLElement
-    else if (previousHtml) Object.defineProperty(globalThis, 'HTMLElement', previousHtml)
+  return {
+    restore: () => {
+      pendingTimers.clear()
+      if (previousWindow) Object.defineProperty(globalThis, 'window', previousWindow)
+      else delete (globalThis as { window?: unknown }).window
+      if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument)
+      else delete (globalThis as { document?: unknown }).document
+      if (previousNavigator) Object.defineProperty(globalThis, 'navigator', previousNavigator)
+      else delete (globalThis as { navigator?: unknown }).navigator
+      if (createdHtml) delete (globalThis as { HTMLElement?: unknown }).HTMLElement
+      else if (previousHtml) Object.defineProperty(globalThis, 'HTMLElement', previousHtml)
+    },
+    denyFirstPrompt: () => {
+      denyFirstPrompt?.()
+      denyFirstPrompt = null
+    },
+    async exhaustBulkVault() {
+      for (let attempt = 0; attempt < BULK_OP_MAX_PER_WINDOW + 4; attempt += 1) {
+        try {
+          await win.desktopPet.vaultRetrieveMany(['settings:probe'])
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error)
+        }
+      }
+      throw new Error('bulk vault limiter did not trip')
+    },
+    get retrieveAttempts() {
+      return retrieveAttempts
+    },
+    get bulkCalls() {
+      return bulkLimiter.calls
+    },
+    expireBulkWindow: () => bulkLimiter.expire(),
   }
 }
+
 
 const platformProfile = {
   platform: 'darwin',
@@ -427,18 +508,31 @@ function denialLine(tree: unknown) {
 
 async function runDenial(switchesOn: boolean) {
   const requests: Array<{ purpose: string }> = []
-  const restore = installBrowser(requests)
+  const browser = installBrowser(requests)
   resetVoiceCaptureAttemptForTests()
   const seeded = {
     ...loadSettings(),
     speechInputEnabled: switchesOn,
     speechOutputEnabled: switchesOn,
+    apiKey: 'sk-denial-secret',
     uiLanguage: 'zh-CN' as const,
   }
   saveSettings(seeded)
-  const settings = loadSettings()
+  // Prime the window's hydrated cache the way app startup does, so the
+  // vault-free revert has real secrets to carry over.
+  const settings = await initializeSettingsWithVault()
+  assert.equal(settings.apiKey, 'sk-denial-secret')
   const settingsRef = { current: settings }
   let closes = 0
+  let chatError: string | null = null
+  const chatErrorHarness = createRenderer(() => {
+    useClearChatErrorOnVoiceCapture((next) => {
+      chatError = next
+    })
+    return null
+  })
+  chatErrorHarness.render({})
+  assert.equal(chatError, null)
   const props = {
     open: true,
     preferredSectionId: 'voice' as const,
@@ -475,8 +569,12 @@ async function runDenial(switchesOn: boolean) {
     },
     onStopVoiceConversation: () => {},
     onCancelVoiceTurn: () => {},
-    onSave: async (next: AppSettings, baseline: AppSettings) => {
-      const persisted = await updateSettingsFromDraft(baseline, next)
+    onSave: async (
+      next: AppSettings,
+      baseline: AppSettings,
+      saveOptions?: { closeSettings?: boolean; vaultFree?: boolean },
+    ) => {
+      const persisted = await updateSettingsFromDraft(baseline, next, undefined, saveOptions)
       settingsRef.current = persisted
       props.settings = persisted
       return persisted
@@ -555,10 +653,29 @@ async function runDenial(switchesOn: boolean) {
     ;(screen.shown.button.props.onClick as () => void)()
     await flushPromises()
     screen = paint()
+    // The permission prompt for the click is open. Spend the vault bulk-read
+    // budget before the denial so the revert save cannot rely on hydration.
+    assert.equal(requests.length, 1)
+    const limiterMessage = await browser.exhaustBulkVault()
+    assert.match(limiterMessage, /vault retrieve-many rate-limited/)
+    const vaultAttemptsBeforeDeny = browser.retrieveAttempts
+    const bulkCallsBeforeDeny = browser.bulkCalls
+    chatError = 'ui_v2.error_recovery'
+    browser.denyFirstPrompt()
+    await flushPromises()
+    screen = paint()
+    assert.equal(browser.retrieveAttempts, vaultAttemptsBeforeDeny)
+    assert.equal(browser.bulkCalls, bulkCallsBeforeDeny)
+    assert.equal(chatError, 'ui_v2.error_recovery')
     const stored = loadSettings()
+    const snapshot = getSettingsSnapshot()
     assert.equal(stored.speechInputEnabled, false)
     assert.equal(stored.speechOutputEnabled, false)
     assert.equal(stored.speechOutputVoice, settings.speechOutputVoice)
+    assert.equal(stored.apiKey, '', 'the denial write must never persist the plaintext key')
+    assert.equal(snapshot.speechInputEnabled, false)
+    assert.equal(snapshot.speechOutputEnabled, false)
+    assert.equal(snapshot.apiKey, 'sk-denial-secret')
     assert.equal(screen.voiceProps.draft.speechInputEnabled, false)
     assert.equal(screen.voiceProps.draft.speechOutputEnabled, false)
     assert.equal(screen.voiceProps.microphoneDenied, true)
@@ -578,6 +695,8 @@ async function runDenial(switchesOn: boolean) {
     const dialog = findElement(v2AfterDismiss, (element) => element.type === ConfirmDialog)
     assert.equal(dialog.props.options, null)
     assert.equal(requests.length, 1)
+    // The user waits out the vault limit window before trying again.
+    browser.expireBulkWindow()
 
     const listen = findElement(voicePage.render(findElement(screen.pageTree, (element) => element.type === VoiceSimplePage).props as never), (element) => element.props.label === listenCopy)
     const speak = findElement(voicePage.render(findElement(screen.pageTree, (element) => element.type === VoiceSimplePage).props as never), (element) => element.props.label === speakCopy)
@@ -595,11 +714,12 @@ async function runDenial(switchesOn: boolean) {
     assert.equal(screen.closes, 2)
     assert.equal(screen.voiceProps.microphoneDenied, false)
     assert.equal(screen.shown.line, null)
+    assert.equal(chatError, null)
     assert.equal(loadSettings().speechInputEnabled, true)
     assert.equal(loadSettings().speechOutputEnabled, true)
     await flushPromises()
   } finally {
-    restore()
+    browser.restore()
     resetVoiceCaptureAttemptForTests()
   }
 }
