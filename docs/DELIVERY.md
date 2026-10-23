@@ -125,8 +125,9 @@ via `--x64 --arm64`):
    panel view and offers a one-click download for the 4 required models
    (KWS EN, KWS ZH, SenseVoice, Silero VAD — ~280 MB total). The wizard
    subscribes to `models:download-progress` IPC events and renders per-model
-   progress bars; dismissal via "稍后再说" is session-scoped so the wizard
-   reappears after the next launch.
+   progress bars; "稍后再说" is remembered on this computer, so the wizard
+   does not open again on a later launch. The next time the user tries to
+   talk, the pet says once where to download the models.
 8. **Python fallback.** On a mac without `pip install -r requirements.txt`,
    the OmniVoice / GLM-ASR sidecars are skipped at startup. Log output
    should show one of: `[OmniVoice] Skipping auto-start — Python

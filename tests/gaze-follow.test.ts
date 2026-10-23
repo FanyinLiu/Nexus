@@ -72,28 +72,28 @@ test('gaze sampler throttles repeats and unchanged cursor points', () => {
   }), true)
 })
 
-test('Linux gaze prefers a global hook point over the stale Electron cursor', () => {
+test('Linux gaze prefers a global pointer point over the stale Electron cursor', () => {
   const chosen = selectGazeCursor({
     platform: 'linux',
-    hookPoint: { x: 80, y: 180 },
+    globalPoint: { x: 80, y: 180 },
     electronPoint: { x: 1523, y: 812 },
   })
-  assert.deepEqual(chosen, { source: 'hook', physical: { x: 80, y: 180 } })
+  assert.deepEqual(chosen, { source: 'global', physical: { x: 80, y: 180 } })
 
   const fallback = selectGazeCursor({
     platform: 'linux',
-    hookPoint: null,
+    globalPoint: null,
     electronPoint: { x: 12, y: 40 },
   })
   assert.deepEqual(fallback, { source: 'electron', dip: { x: 12, y: 40 } })
 
   assert.deepEqual(selectGazeCursor({
     platform: 'darwin',
-    hookPoint: { x: 80, y: 180 },
+    globalPoint: { x: 80, y: 180 },
     electronPoint: { x: 12, y: 40 },
   }), { source: 'electron', dip: { x: 12, y: 40 } })
 
-  assert.equal(selectGazeCursor({ platform: 'linux', hookPoint: null, electronPoint: null }), null)
+  assert.equal(selectGazeCursor({ platform: 'linux', globalPoint: null, electronPoint: null }), null)
 })
 
 test('gaze sampling pauses when the pet is hidden, minimized, locked, or idle', () => {

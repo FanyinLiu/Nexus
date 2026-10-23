@@ -1,5 +1,6 @@
 import type { MutableRefObject } from 'react'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
+import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import {
   startSenseVoiceStream,
   type SenseVoiceStreamSession,
@@ -313,6 +314,7 @@ export async function startSenseVoiceConversation(
     session?.abort()
     params.sensevoiceSessionRef.current?.abort()
     params.sensevoiceSessionRef.current = null
+    if (isVoiceCaptureCancelled(error)) return
 
     const message = error instanceof Error
       ? error.message

@@ -529,6 +529,7 @@ export function useVoice(ctx: UseVoiceContext) {
     },
     hookCallbacks: {
       showPetStatus,
+      presentCompanionNotice: ctx.presentCompanionNotice,
       updateVoicePipeline,
       appendVoiceTrace,
       clearPendingVoiceRestart,

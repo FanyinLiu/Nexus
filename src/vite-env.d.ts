@@ -190,20 +190,13 @@ type ModelInventory = {
   missingRequired: string[]
   primaryDir: string
   searchRoots: string[]
+  downloading?: string[]
   disk?: {
     ok: boolean
     freeBytes: number | null
     neededBytes: number
     resumable: boolean
   }
-}
-
-type PythonRuntimeStatus = {
-  pythonAvailable: boolean
-  binary: string | null
-  version: string | null
-  omniVoice: { ready: boolean; missingImports: string[] }
-  glmAsr: { ready: boolean; missingImports: string[] }
 }
 
 type ModelProgressEvent = {
@@ -510,7 +503,12 @@ declare global {
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
       dragBy: (delta: { x: number; y: number }) => Promise<void>
       openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
-      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }>
+      requestModelSetup: (options?: { delayMs?: number; cancel?: boolean }) => Promise<void>
+      claimModelSetupReminder?: (options?: { peek?: boolean }) => Promise<{ declined: boolean; remind: boolean }>
+      consumeModelSetupRequest?: () => Promise<boolean>
+      declineModelSetup?: () => Promise<void>
+      subscribeModelSetupRequest?: (listener: () => void) => () => void
+      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null; intentToken?: number }>
       openPetMenu: () => Promise<void>
       closePanel: () => Promise<void>
       closeSettings?: () => Promise<void>
@@ -518,7 +516,7 @@ declare global {
       getPanelWindowState: () => Promise<PanelWindowState>
       setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
       isPanelWindow: () => Promise<boolean>
-      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null }) => void) => () => void
+      subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null; intentToken?: number }) => void) => () => void
       subscribeSettingsReturnFocus?: (listener: () => void) => () => void
       subscribePanelWindowState: (listener: (state: PanelWindowState) => void) => () => void
       subscribeRuntimeState: (listener: (state: RuntimeStateSnapshot) => void) => () => void
@@ -892,7 +890,7 @@ declare global {
       // Model manager (first-launch setup wizard)
       modelsGetInventory: () => Promise<ModelInventory>
       modelsDownload: (modelId: string) => Promise<ModelInventory>
-      modelsDownloadMissing: () => Promise<{ results: { id: string; ok: boolean; message?: string }[]; inventory: ModelInventory }>
+      modelsDownloadMissing: (payload?: { speechInputProviderId?: string }) => Promise<{ results: { id: string; ok: boolean; message?: string }[]; inventory: ModelInventory }>
       modelsNetworkProbe: () => Promise<{ huggingFaceReachable: boolean }>
       voiceProfileProbe: (payload?: { benchmark?: boolean }) => Promise<{
         ok: boolean
@@ -913,7 +911,6 @@ declare global {
         benchmark: { status: 'ok' | 'timeout' | 'skipped' | 'error' | 'not-run'; sttRtf: number | null }
       }>
       subscribeModelsProgress: (listener: (event: ModelProgressEvent) => void) => () => void
-      pythonRuntimeStatus: () => Promise<PythonRuntimeStatus>
 
       // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
       sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; installState?: 'installed' | 'not-installed' | 'engine-missing'; modelsDir: string; currentModelId: string | null }>

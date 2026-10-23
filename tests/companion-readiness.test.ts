@@ -6,6 +6,11 @@ import {
   FIRST_CONVERSATION_TARGET_MINUTES,
   type CompanionReadinessInput,
 } from '../src/features/onboarding/companionReadiness.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
+import { koMessages } from '../src/i18n/locales/ko/index.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
+import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 
 const baseInput: CompanionReadinessInput = {
   userName: 'Klein',
@@ -68,7 +73,7 @@ test('warns when a keyed text provider has no api key yet', () => {
   })
 
   assert.equal(readiness.status, 'warning')
-  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.warning')
+  assert.equal(readiness.timeboxKey, null)
   assert.equal(itemStatus({ ...baseInput, textProviderRequiresApiKey: true }, 'text'), 'warning')
 })
 
@@ -79,7 +84,7 @@ test('warns when the text model fields are filled but the connection test has no
   })
 
   assert.equal(readiness.status, 'warning')
-  assert.equal(readiness.timeboxKey, 'onboarding.readiness.timebox.warning')
+  assert.equal(readiness.timeboxKey, null)
   assert.deepEqual(
     readiness.items.find((item) => item.id === 'text'),
     {
@@ -140,3 +145,21 @@ function readinessInputWithLocalVoice(): CompanionReadinessInput {
     continuousVoiceModeEnabled: true,
   }
 }
+
+test('the complete-state readiness line says everything is set in every locale', () => {
+  const messages = [zhCNMessages, zhTWMessages, enMessages, jaMessages, koMessages]
+
+  for (const dictionary of messages) {
+    const ready = dictionary['onboarding.readiness.timebox.ready']
+    // The complete state is reached after the connection test passed, so its
+    // line must neither promise a duration nor ask for another test.
+    assert.doesNotMatch(ready, /\{minutes\}/)
+    assert.doesNotMatch(ready, /connect|连接|連線|接続|연결/i)
+  }
+
+  assert.equal(zhCNMessages['onboarding.readiness.timebox.ready'], '都设好了，点下面的按钮就能开始。')
+  assert.equal(zhTWMessages['onboarding.readiness.timebox.ready'], '都設定好了，按下面的按鈕就能開始。')
+  assert.equal(enMessages['onboarding.readiness.timebox.ready'], "You're all set. Click the button below to get started.")
+  assert.equal(jaMessages['onboarding.readiness.timebox.ready'], '準備ができました。下のボタンを押して始めましょう。')
+  assert.equal(koMessages['onboarding.readiness.timebox.ready'], '준비됐어요. 아래 버튼을 눌러 시작하세요.')
+})

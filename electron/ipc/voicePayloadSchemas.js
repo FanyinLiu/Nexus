@@ -1,3 +1,4 @@
+import { LOCAL_SPEECH_INPUT_PROVIDER_IDS } from '../../shared/voiceModelDownloads.js'
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   AUDIO_BASE64_MAX,
@@ -11,6 +12,21 @@ const modelDownloadSchema = {
   type: 'object',
   fields: {
     modelId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
+  },
+}
+
+const modelDownloadMissingSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    // Only the two local listeners. Any other value is rejected so a
+    // payload cannot name an arbitrary catalog id.
+    speechInputProviderId: {
+      type: 'enum',
+      optional: true,
+      values: [...LOCAL_SPEECH_INPUT_PROVIDER_IDS],
+    },
   },
 }
 
@@ -153,6 +169,10 @@ export function validateTtsStreamAbortPayload(payload) {
 
 export function validateModelDownloadPayload(payload) {
   return validateIpcPayload('models:download', payload, modelDownloadSchema)
+}
+
+export function validateModelDownloadMissingPayload(payload) {
+  return validateIpcPayload('models:download-missing', payload, modelDownloadMissingSchema)
 }
 
 export function validateTencentAsrConnectPayload(payload) {

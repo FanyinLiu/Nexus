@@ -26,6 +26,13 @@ import type { PetModelDefinition } from '../features/pet/index.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
+import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLanguages.ts'
+import {
+  microphonePermissionDeniedAfter,
+  runStartVoiceClick,
+  saveVoiceStartSwitches,
+  voiceSwitchesAfterMicrophoneDenied,
+} from '../features/voice/voiceCaptureAttempt.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
 import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
 import { SettingsHomeView } from './SettingsHomeView.tsx'
@@ -59,6 +66,7 @@ import {
   clearRecentCompanionCheckInDecision,
   clearRecentCompanionSummary,
 } from '../features/context/index.ts'
+import { buildSettingsSavePayload } from './settingsDrawerHooks/settingsDraftModel.ts'
 import { commitSettingsDraft } from './settingsSaveEffects.ts'
 import { SettingsDrawerV2 } from './SettingsDrawerV2.tsx'
 import type {
@@ -101,7 +109,11 @@ export type SettingsDrawerProps = {
   onStartVoiceConversation: () => void
   onStopVoiceConversation: () => void
   onCancelVoiceTurn: () => void
-  onSave: (settings: AppSettings, baseline: AppSettings) => Promise<void>
+  onSave: (
+    settings: AppSettings,
+    baseline: AppSettings,
+    options?: { closeSettings?: boolean; vaultFree?: boolean },
+  ) => Promise<AppSettings>
   onExportChatHistory: () => Promise<{
     canceled: boolean
     filePath?: string
@@ -226,7 +238,7 @@ export function SettingsDrawer({
 }: SettingsDrawerProps) {
   const {
     draft,
-    baseline,
+    baselineRef,
     setDraft,
     resetDraftForOpen,
     getRollbackThemeId,
@@ -234,6 +246,7 @@ export function SettingsDrawer({
     mergeHydratedSecrets,
     ensurePetModelPreset,
     patchCommittedField,
+    rememberSavedSettings,
     createSavePayload,
     isDirty,
   } = useSettingsDraftState(settings)
@@ -242,6 +255,7 @@ export function SettingsDrawer({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
   const [voiceActionPending, setVoiceActionPending] = useState(false)
+  const [microphoneDenied, setMicrophoneDenied] = useState(false)
   const themePreview = useTheme()
   const settingsDialogRef = useRef<HTMLElement | null>(null)
   const settingsOpenerRef = useRef<HTMLElement | null>(null)
@@ -255,16 +269,19 @@ export function SettingsDrawer({
   const voiceActionPendingRef = useRef(false)
 
   const applyDraftLanguage = useCallback((nextLanguage: AppSettings['uiLanguage']) => {
-    setDraft((prev) => syncWakeWordWithCompanionNameChange(prev, {
-      ...prev,
-      uiLanguage: nextLanguage,
-      companionName: isLocaleDefaultCompanionName(prev.companionName)
-        ? getDefaultCompanionName(nextLanguage)
-        : prev.companionName,
-      userName: isLocaleDefaultUserName(prev.userName)
-        ? getDefaultUserName(nextLanguage)
-        : prev.userName,
-    }))
+    setDraft((prev) => {
+      const followed = voiceFieldsFollowingUiLanguage(prev, nextLanguage)
+      return syncWakeWordWithCompanionNameChange(prev, {
+        ...followed,
+        uiLanguage: nextLanguage,
+        companionName: isLocaleDefaultCompanionName(prev.companionName)
+          ? getDefaultCompanionName(nextLanguage)
+          : prev.companionName,
+        userName: isLocaleDefaultUserName(prev.userName)
+          ? getDefaultUserName(nextLanguage)
+          : prev.userName,
+      })
+    })
   }, [setDraft])
 
   const languageControl = useSettingsLanguageControl({
@@ -610,15 +627,25 @@ export function SettingsDrawer({
     restoreSettingsOpenerFocus()
   }
 
-  function commitDraft(): Promise<void> {
+  function commitDraft(
+    override?: AppSettings,
+    options?: { closeSettings?: boolean; vaultFree?: boolean },
+  ): Promise<void> {
     if (saveInFlightRef.current) return saveInFlightRef.current
 
     setSaveError(false)
     setSaving(true)
+    const requested = override ? buildSettingsSavePayload(override) : createSavePayload()
+    // Captured now, not at render. The denial revert is a second save in this
+    // click, and it has to diff against what the enable save just stored.
+    const baselineAtSave = baselineRef.current
     const savePromise = commitSettingsDraft({
-      committed: baseline,
-      draft: createSavePayload(),
-      onSave: (nextDraft) => onSave(nextDraft, baseline),
+      committed: baselineAtSave,
+      draft: requested,
+      onSave: async (nextDraft) => {
+        const persisted = await onSave(nextDraft, baselineAtSave, options)
+        rememberSavedSettings(persisted, nextDraft)
+      },
       onContextAwarenessDisabled: () => {
         clearRecentCompanionCheckInDecision()
         clearRecentCompanionSummary()
@@ -643,21 +670,53 @@ export function SettingsDrawer({
     }
   }
 
-  async function handleStartVoiceConversation() {
+  async function handleStartVoiceConversation(patch?: {
+    speechInputEnabled: boolean
+    speechOutputEnabled: boolean
+  }) {
     if (voiceActionPendingRef.current || saveInFlightRef.current) return
+    const nextDraft = patch ? { ...draft, ...patch } : draft
+    if (patch) setDraft(nextDraft)
     voiceActionPendingRef.current = true
     setVoiceActionPending(true)
     setSaveError(false)
     try {
-      if (isDirty) {
-        await commitDraft()
-      } else {
-        onClose()
-      }
-
-      restoreSettingsOpenerFocus(() => {
-        window.requestAnimationFrame(() => onStartVoiceConversation())
+      // The save used to hide the window and then ask for the microphone on
+      // the next frame. Chromium holds that request until the window is
+      // shown again, so a grant that arrives after the macOS prompt is
+      // discarded. Keep the window up until the stream is live. A denial
+      // puts the switches back, leaves Settings open, and shows the existing
+      // permission line until a later click actually opens the microphone.
+      // Hiding first drops the click instead of replaying it.
+      const outcome = await runStartVoiceClick({
+        visible: () => document.visibilityState !== 'hidden',
+        subscribeHidden: (onHidden) => {
+          const handleHide = () => {
+            if (document.visibilityState === 'hidden') onHidden()
+          }
+          document.addEventListener('visibilitychange', handleHide)
+          return () => document.removeEventListener('visibilitychange', handleHide)
+        },
+        saveSwitches: () => saveVoiceStartSwitches({
+          patch,
+          dirty: isDirty,
+          draft,
+          commitDraft: (draftToSave) => commitDraft(draftToSave, { closeSettings: false }),
+        }),
+        start: () => {
+          onStartVoiceConversation()
+        },
+        revertSwitches: () => {
+          const reverted = voiceSwitchesAfterMicrophoneDenied(nextDraft)
+          setDraft(reverted)
+          return commitDraft(reverted, { closeSettings: false, vaultFree: true })
+        },
+        closeSurface: () => {
+          onClose()
+        },
       })
+      setMicrophoneDenied((showing) => microphonePermissionDeniedAfter(outcome, showing))
+      if (outcome === 'open') restoreSettingsOpenerFocus()
     } catch (error) {
       console.error('[SettingsDrawer] voice start save failed:', getRedactedLogErrorMessage(error))
     } finally {
@@ -798,6 +857,7 @@ export function SettingsDrawer({
       voicePipeline,
       voiceState,
       voiceActionPending,
+      microphoneDenied,
       voiceTrace,
       windowState,
     }

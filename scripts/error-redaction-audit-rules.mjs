@@ -27,6 +27,7 @@ export const CHECKED_FILES = [
   'electron/services/memoryVectorStore.js',
   'electron/services/modelDownloader.js',
   'electron/services/modelManager.js',
+  'electron/services/modelSetupDeferralStore.js',
   'electron/services/notificationBridge.js',
   'electron/services/notificationBridgeUtils.js',
   'electron/services/personaLoader.js',

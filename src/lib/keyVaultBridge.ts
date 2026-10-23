@@ -146,6 +146,56 @@ export async function dehydrateSettingsKeys(settings: AppSettings): Promise<AppS
   return stripKeys(settings)
 }
 
+/**
+ * Overlay the secrets already decrypted in this window onto a persisted
+ * snapshot that was written without touching the vault. The persisted copy is
+ * stripped, so this is what keeps the committed in-memory settings usable
+ * after a non-secret write that deliberately skipped vault hydration.
+ */
+export function carryHydratedSettingsSecrets(
+  persisted: AppSettings,
+  hydrated: AppSettings | null | undefined,
+): AppSettings {
+  if (!hydrated) return persisted
+
+  const merged = { ...persisted }
+
+  for (const field of SETTINGS_KEY_FIELDS) {
+    const secret = hydrated[field]
+    if (typeof secret === 'string' && secret !== '' && !isVaultRefString(secret)) {
+      ;(merged as Record<string, unknown>)[field] = secret
+    }
+  }
+
+  merged.textProviderProfiles = carryProfileApiKeys(persisted.textProviderProfiles, hydrated.textProviderProfiles)
+  merged.speechInputProviderProfiles = carryProfileApiKeys(
+    persisted.speechInputProviderProfiles,
+    hydrated.speechInputProviderProfiles,
+  )
+  merged.speechOutputProviderProfiles = carryProfileApiKeys(
+    persisted.speechOutputProviderProfiles,
+    hydrated.speechOutputProviderProfiles,
+  )
+
+  return merged
+}
+
+function carryProfileApiKeys<T extends Record<string, { apiKey?: string }>>(
+  persisted: T,
+  hydrated: T,
+): T {
+  const result: Record<string, { apiKey?: string }> = {}
+
+  for (const [providerId, profile] of Object.entries(persisted)) {
+    const secret = hydrated[providerId]?.apiKey
+    result[providerId] = typeof secret === 'string' && secret !== '' && !isVaultRefString(secret)
+      ? { ...profile, apiKey: secret }
+      : profile
+  }
+
+  return result as T
+}
+
 function stripKeys(settings: AppSettings): AppSettings {
   const stripped = { ...settings }
 

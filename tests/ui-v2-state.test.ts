@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  captionPhaseForCompanionNotice,
   resolveCompanionSurfaceBasePhase,
   resolveCompanionSurfaceCaption,
+  resolveFramelessCompanionCaption,
   type CompanionSurfaceCaptionInput,
 } from '../src/features/uiV2/state.ts'
-import { getCaptionReadingDurationMs } from '../src/features/uiV2/caption.ts'
+import {
+  companionCaptionPhaseAcceptsText,
+  getCaptionReadingDurationMs,
+} from '../src/features/uiV2/caption.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
@@ -164,6 +169,54 @@ test('V2 voice actions have accurate localized names in every locale', () => {
     assert.equal(messages['panel.voice.cancel_reply'], expected[index][1])
     assert.equal(messages['panel.voice.interrupt_response'], expected[index][2])
   })
+})
+
+test('the new pet bubble shows the model-setup reminder instead of the error', () => {
+  const reminder = '语音还没装好，去「设置 → 语音 → 高级」里下载。'
+  const missingModel = 'voice-model-missing'
+  const generic = '刚才出了点问题，可以检查设置后再试。'
+  const shared = {
+    errorRecovery: generic,
+    offlineRecovery: 'offline',
+    petDialogBubble: { content: reminder, replacesSurfaceError: true as const },
+  }
+
+  assert.equal(resolveFramelessCompanionCaption({
+    ...shared,
+    phase: 'error',
+    chatError: missingModel,
+    wakewordError: 'wake word stopped',
+    assistantReply: 'older reply',
+  }), reminder, 'the reminder replaces the missing-model error')
+
+  assert.equal(resolveFramelessCompanionCaption({
+    ...shared,
+    phase: 'error',
+    chatError: '   ',
+    wakewordError: '\n',
+  }), reminder, 'the reminder replaces the generic recovery line')
+
+  assert.equal(resolveFramelessCompanionCaption({
+    ...shared,
+    phase: 'idle',
+    assistantReply: reminder,
+  }), reminder)
+
+  assert.equal(
+    companionCaptionPhaseAcceptsText(captionPhaseForCompanionNotice('idle', true)),
+    true,
+    'an idle pet still shows the reminder',
+  )
+  assert.equal(companionCaptionPhaseAcceptsText(captionPhaseForCompanionNotice('idle', false)), false)
+
+  assert.equal(resolveFramelessCompanionCaption({
+    phase: 'error',
+    petDialogBubble: { content: reminder, replacesSurfaceError: false },
+    assistantReply: reminder,
+    chatError: missingModel,
+    errorRecovery: generic,
+    offlineRecovery: 'offline',
+  }), missingModel, 'an ordinary reply still loses to a current error')
 })
 
 test('caption reading time is independent from the short done transition', () => {
