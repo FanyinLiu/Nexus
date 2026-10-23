@@ -12,10 +12,12 @@ import net from 'node:net'
 import { fileURLToPath } from 'node:url'
 import { _electron as electron } from 'playwright'
 import { createFirstUseMockProvider } from './lib/first-use-mock-provider.mjs'
+import { quitWithDeadline } from './lib/quit-with-deadline.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = path.resolve(ROOT, process.env.FIRST_USE_SMOKE_OUTPUT_DIR || 'output/first-use-smoke')
 const TIMEOUT = Number(process.env.FIRST_USE_SMOKE_TIMEOUT_MS || 30000)
+const QUIT_TIMEOUT = Number(process.env.FIRST_USE_SMOKE_QUIT_TIMEOUT_MS || 5000)
 const FIRST_PROMPT = 'First use deterministic message 731.'
 const RETRY_PROMPT = 'Retry deterministic message 947.'
 const FAKE_KEY = 'nexus-smoke-synthetic-key'
@@ -92,6 +94,18 @@ async function quitNormally() {
   await application.evaluate(({ app }) => { app.quit() })
   await closed
   application = null
+}
+
+// After a failure the app may be wedged; never let cleanup hang the run.
+async function quitAfterFailure() {
+  const closing = application
+  application = null
+  const outcome = await quitWithDeadline({
+    application: closing,
+    timeoutMs: QUIT_TIMEOUT,
+    closeTimeoutMs: QUIT_TIMEOUT,
+  })
+  if (outcome === 'kill') console.warn('[first-use-smoke] forced SIGKILL after quit and close timed out')
 }
 
 async function dismissOptionalSetup(page) {
@@ -448,7 +462,7 @@ try {
   if (activePage && !activePage.isClosed()) await screenshot(activePage, 'failure').catch(() => {})
   process.exitCode = 1
 } finally {
-  if (application) await quitNormally().catch(async () => { await application.close().catch(() => {}) })
+  if (application) await quitAfterFailure()
   if (provider) await provider.close()
   await fs.mkdir(OUTPUT, { recursive: true })
   await fs.writeFile(path.join(OUTPUT, 'results.json'), JSON.stringify({

@@ -192,8 +192,8 @@ class SherpaSenseVoiceService {
       const stream = this.recognizer.createStream()
       stream.acceptWaveform({ samples: fullAudio, sampleRate: SAMPLE_RATE })
       this.recognizer.decode(stream)
-      const result = stream.result
-      const raw = (result.text || '').trim()
+      const result = this.recognizer.getResult(stream)
+      const raw = (result?.text || '').trim()
       return parseSenseVoiceOutput(raw)
     } catch (error) {
       console.error('[SenseVoice] Recognition error:', error)
@@ -210,8 +210,8 @@ class SherpaSenseVoiceService {
       const stream = this.recognizer.createStream()
       stream.acceptWaveform({ samples: float32, sampleRate })
       this.recognizer.decode(stream)
-      const result = stream.result
-      const raw = (result.text || '').trim()
+      const result = this.recognizer.getResult(stream)
+      const raw = (result?.text || '').trim()
       return parseSenseVoiceOutput(raw)
     } catch (error) {
       console.error('[SenseVoice] Transcribe error:', error)
