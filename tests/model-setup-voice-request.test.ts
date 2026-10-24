@@ -252,7 +252,7 @@ test('the installer opens with the voice invite in every locale', () => {
     [zhCNMessages, '想跟我说话的话，要先装一下语音模型。'],
     [zhTWMessages, '想跟我說話的話，要先裝一下語音模型。'],
     [enMessages, 'Want to talk to me out loud? Install the voice models first.'],
-    [jaMessages, '声で話したいなら、先に音声モデルを入れてね。'],
+    [jaMessages, '音声で会話したい場合は、先に音声モデルを入れてください。'],
     [koMessages, '목소리로 대화하려면 먼저 음성 모델을 설치해 주세요.'],
   ] as const
 
@@ -266,7 +266,7 @@ test('the installer promises the one reminder in every locale', () => {
     [zhCNMessages, '先跳过也行 —— 下次想说话的时候我再提醒你一次。'],
     [zhTWMessages, '先跳過也行 —— 下次想說話的時候我再提醒你一次。'],
     [enMessages, 'Skip it for now — I will nudge you once next time you want to talk.'],
-    [jaMessages, '今はスキップしても大丈夫 —— 次に話したくなったら一度だけ声をかけるね。'],
+    [jaMessages, '今はスキップしても大丈夫です —— 次に話したくなったら一度だけ声をかけます。'],
     [koMessages, '지금은 넘어가도 돼요 — 다음에 이야기하고 싶을 때 한 번만 알려드릴게요.'],
   ] as const
 
@@ -280,7 +280,7 @@ test('the reminder and the missing-model lines point at Voice → Advanced', () 
     [zhCNMessages, '语音还没装好，去「设置 → 语音 → 高级」里下载。', '语音组件没装好，重新安装一下应用就行。', '还差 {count} 个模型没装'],
     [zhTWMessages, '語音還沒裝好，去「設定 → 語音 → 進階」裡下載。', '語音元件沒裝好，重新安裝一下 App 就行。', '還差 {count} 個模型沒裝'],
     [enMessages, 'Voice isn\'t ready yet. Download it in Settings → Voice → Advanced.', 'Part of voice is missing. Reinstall the app to fix it.', '{count} model isn\'t installed yet'],
-    [jaMessages, '音声がまだ入ってないよ。「設定 → 音声 → 詳細」でダウンロードしてね。', '音声に必要なファイルが足りないみたい。アプリを入れ直してね。', 'まだ {count} 個のモデルが入っていません'],
+    [jaMessages, '音声がまだインストールされていません。「設定 → 音声 → 詳細」からダウンロードしてください。', '音声に必要なファイルが不足しています。アプリを入れ直してください。', 'まだ {count} 個のモデルが入っていません'],
     [koMessages, '음성이 아직 준비되지 않았어요. 「설정 → 음성 → 고급」에서 다운로드해 주세요.', '음성에 필요한 파일이 빠져 있어요. 앱을 다시 설치해 주세요.', '아직 모델 {count}개가 설치되지 않았어요'],
   ] as const
   const guidanceKeys = [

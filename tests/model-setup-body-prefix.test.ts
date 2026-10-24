@@ -14,7 +14,7 @@ const BODY_PREFIX: Record<string, string> = {
   'zh-CN': '装好以后，就能用声音喊我、跟我说话。模型放在你自己的电脑上，不用注册账号。',
   'zh-TW': '裝好以後，就能用聲音叫我、跟我說話。模型放在你自己的電腦上，不用註冊帳號。',
   'en-US': 'Once they’re in, you can call me and talk to me out loud. The models stay on your computer, no account needed.',
-  ja: '入れたら、声で呼んだり話しかけたりできるよ。モデルはこのパソコンの中に置くから、アカウント登録はいらないよ。',
+  ja: '入れると、声で呼んだり話しかけたりできます。モデルはこのパソコンの中に置かれるため、アカウント登録は不要です。',
   ko: '설치하면 목소리로 저를 부르고 말을 걸 수 있어요. 모델은 이 컴퓨터에 두고 쓰니까 계정 가입은 필요 없어요.',
 }
 

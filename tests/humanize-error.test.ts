@@ -515,3 +515,62 @@ describe('humanizeError — fallbacks', () => {
     assert.match(out, /Settings.*Model/i)
   })
 })
+
+// Every locale must produce its own platform-specific privacy-pane sentence
+// for a denied mic — the wakeword runtime feeds its denial through this
+// helper, and a locale missing one of the three variants would surface
+// either the zh-CN fallback or the raw Chromium text.
+describe('humanizeMicPermissionError — all locales x platforms', () => {
+  const locales = [
+    { name: 'zh-CN', code: 'zh-CN', messages: zhCNMessages },
+    { name: 'zh-TW', code: 'zh-TW', messages: zhTWMessages },
+    { name: 'en', code: 'en-US', messages: enMessages },
+    { name: 'ja', code: 'ja', messages: jaMessages },
+    { name: 'ko', code: 'ko', messages: koMessages },
+  ] as const
+  const platforms = [
+    { platform: 'darwin', suffix: '_mac' },
+    { platform: 'win32', suffix: '_windows' },
+    { platform: 'linux', suffix: '' },
+  ] as const
+  const deniedError = Object.assign(new Error('Permission denied'), { name: 'NotAllowedError' })
+
+  for (const { name, code, messages } of locales) {
+    test(`${name}: denied mic maps to that locale's platform-specific sentence`, async () => {
+      await ensureLocaleLoaded(code)
+      setLocale(code)
+      try {
+        for (const { platform, suffix } of platforms) {
+          const key = `humanize.voice.mic_permission${suffix}` as TranslationKey
+          const out = humanizeMicPermissionError(deniedError, { platform })
+          assert.equal(out, messages[key], `${name} / ${platform}`)
+          assert.doesNotMatch(out ?? '', /Permission denied/)
+        }
+      } finally {
+        setLocale('en-US')
+      }
+    })
+  }
+
+  test('non-permission errors return null in every locale', async () => {
+    const nonPermission = [
+      new Error('Requested device not found'),
+      new Error('Could not start audio source'),
+      new Error('Microphone track ended unexpectedly — triggering recovery.'),
+      'fetch failed',
+      null,
+      undefined,
+    ]
+    for (const { code } of locales) {
+      await ensureLocaleLoaded(code)
+      setLocale(code)
+      try {
+        for (const error of nonPermission) {
+          assert.equal(humanizeMicPermissionError(error, { platform: 'darwin' }), null)
+        }
+      } finally {
+        setLocale('en-US')
+      }
+    }
+  })
+})

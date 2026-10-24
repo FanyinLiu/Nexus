@@ -402,6 +402,7 @@ export const koCore = {
   'humanize.voice.mic_permission_mac': '마이크 권한이 없어요. 「시스템 설정 → 개인정보 보호 및 보안 → 마이크」에서 Nexus를 허용한 다음 다시 눌러 주세요.',
   'humanize.voice.mic_permission_windows': '마이크 권한이 없어요. 「설정 → 개인 정보 보호 및 보안 → 마이크」에서 「데스크톱 앱에서 마이크에 액세스하도록 허용」을 켠 다음 다시 눌러 주세요.',
   'humanize.voice.mic_busy': '마이크를 다른 앱이 사용 중이에요 — 그걸 닫고 다시 해볼래요?',
+  'humanize.voice.mic_not_responding': '마이크가 응답하지 않아요. 연결돼 있는지, 다른 앱이 쓰고 있지 않은지 확인한 다음 다시 시도해 주세요.',
   'humanize.tts.voice_unavailable': '이 음성은 사용할 수 없어요. 「설정 → 음성 출력」에서 다른 것을 선택해 주세요.',
   'humanize.stt.model_missing': '음성이 아직 준비되지 않았어요. 「{settings} → {voice} → {advanced}」에서 다운로드해 주세요.',
   'humanize.model.no_disk_space': '다운로드할 디스크 공간이 부족해요 — 공간을 확보하고 다시 해볼래요?',

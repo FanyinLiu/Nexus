@@ -400,6 +400,7 @@ export const zhCNCore = {
   'humanize.voice.mic_permission_mac': '没有拿到麦克风权限。去「系统设置 → 隐私与安全性 → 麦克风」里允许 Nexus，再点一次「开始语音」。',
   'humanize.voice.mic_permission_windows': '没有拿到麦克风权限。去「设置 → 隐私和安全性 → 麦克风」里打开「允许桌面应用访问麦克风」，再点一次「开始语音」。',
   'humanize.voice.mic_busy': '麦克风被别的 app 占用了。关掉它再试。',
+  'humanize.voice.mic_not_responding': '麦克风没反应。看看有没有插好、是不是被别的应用占着，再试一次。',
   'humanize.tts.voice_unavailable': '这个声音用不了。去「设置 → 语音输出」换一个。',
   'humanize.stt.model_missing': '语音还没装好，去「{settings} → {voice} → {advanced}」里下载。',
   'humanize.model.no_disk_space': '硬盘空间不够下载。腾点空间再试。',

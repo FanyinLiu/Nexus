@@ -95,7 +95,7 @@ export const jaProvider = {
   'provider.tts.elevenlabs-tts.model.eleven_flash_v2_5.label': 'eleven_flash_v2_5（最小遅延）',
   'provider.tts.elevenlabs-tts.adjustment.note': '話速・ピッチ・音量は選んだ声に従います。ここでは個別に変えられません。',
   'provider.tts.local-tts.label': '[ローカル] MeloTTS 中英の声（無料）',
-  'provider.tts.local-tts.notes': 'このパソコンの中で声を出します。中国語と英語に対応、無料でオフラインでも使えます。初めて使う前に、設定 → 音声 →「ローカル音声モデル」から約 165 MB の声のモデルをダウンロードしてね。',
+  'provider.tts.local-tts.notes': 'このパソコンの中で声を出します。中国語と英語に対応、無料でオフラインでも使えます。初めて使う前に、設定 → 音声 →「ローカル音声モデル」から約 165 MB の声のモデルをダウンロードしてください。',
   'provider.tts.local-tts.adjustment.note': '話速は変えられます。ピッチと音量は変えられません。',
   'provider.tts.edge-tts.label': '[クラウド] Edge TTS（無料・推奨）',
   'provider.tts.edge-tts.notes': '無料で、API キーは不要。自然な声で、日常使いに向いています。',

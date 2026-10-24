@@ -163,7 +163,7 @@ export async function testSpeechInputReadinessRuntime(
   } catch (caught) {
     return {
       ok: false,
-      message: humanizeMicPermissionError(caught)
+      message: humanizeMicPermissionError(caught, { ti: options.ti })
         ?? mapMicrophoneDiagnosticError(
           caught,
           isSenseVoiceSpeechInputProvider(providerId),
@@ -226,7 +226,7 @@ async function runSenseVoiceRecognitionProbe(
   } catch (error) {
     return {
       ok: false,
-      message: humanizeError(error, 'stt'),
+      message: humanizeError(error, 'stt', { ti: options.ti }),
     }
   }
 }
@@ -268,7 +268,7 @@ async function runParaformerRecognitionProbe(
     try { await api.paraformerAbort?.() } catch { /* the session is already closed */ }
     return {
       ok: false,
-      message: humanizeError(error, 'stt'),
+      message: humanizeError(error, 'stt', { ti: options.ti }),
     }
   }
 }

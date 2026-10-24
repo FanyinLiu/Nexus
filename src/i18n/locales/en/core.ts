@@ -402,6 +402,7 @@ export const enCore = {
   'humanize.voice.mic_permission_mac': 'Nexus can\'t use the microphone yet. Allow it in System Settings → Privacy & Security → Microphone, then try again.',
   'humanize.voice.mic_permission_windows': 'Nexus can\'t use the microphone yet. In Settings → Privacy & security → Microphone, turn on "Let desktop apps access your microphone", then try again.',
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
+  'humanize.voice.mic_not_responding': 'The microphone isn\'t responding. Check that it\'s plugged in and not in use by another app, then try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
   'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
