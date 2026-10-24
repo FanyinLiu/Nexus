@@ -154,6 +154,28 @@ export function shouldShowModelSetupOverlay({
   return requested && !suppressed && !dismissed && inventoryReady === false
 }
 
+/**
+ * Optional blocks the install dialog renders above the model list.
+ *
+ * The dialog used to end with a Python services block. Its copy was
+ * developer facing (pip, OmniVoice, GLM-ASR) and the product never needed
+ * it, so the block is gone: only the two user-facing hints are left.
+ */
+export type ModelSetupInfoBlock = 'network_hint' | 'error_banner'
+
+export function modelSetupInfoBlocks({
+  huggingFaceReachable,
+  errorMessage,
+}: {
+  huggingFaceReachable: boolean | undefined
+  errorMessage: string | null
+}): ModelSetupInfoBlock[] {
+  const blocks: ModelSetupInfoBlock[] = []
+  if (huggingFaceReachable === false) blocks.push('network_hint')
+  if (errorMessage) blocks.push('error_banner')
+  return blocks
+}
+
 export function buildTextModelSetupSnapshot(settings: Pick<
   AppSettings,
   'apiProviderId' | 'apiKey' | 'apiBaseUrl' | 'model' | 'uiLanguage'

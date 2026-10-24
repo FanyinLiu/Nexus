@@ -15,6 +15,7 @@ import type {
 } from '../../features/voice/sessionMachine.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { blobToBase64 } from '../../lib/common.ts'
+import { humanizeMicPermissionError } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { recordSttUsage } from '../../features/metering/speechCost.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
@@ -294,9 +295,10 @@ export async function startVadConversation(
       await session.tearDown().catch(() => undefined)
 
       params.handleVoiceListeningFailure(
-        error instanceof Error
-          ? error.message
-          : params.ti('voice.provider.api.failed_retry'),
+        humanizeMicPermissionError(error)
+          ?? (error instanceof Error
+            ? error.message
+            : params.ti('voice.provider.api.failed_retry')),
       )
     }
   }
@@ -468,9 +470,10 @@ export async function startVadConversation(
     params.resetSpeechLevel()
     if (isVoiceCaptureCancelled(error)) return
     const originalMessage = (
-      error instanceof Error
-        ? error.message
-        : params.ti('voice.provider.vad.start_failed')
+      humanizeMicPermissionError(error)
+        ?? (error instanceof Error
+          ? error.message
+          : params.ti('voice.provider.vad.start_failed'))
     )
     const fallbackMessage = params.ti('voice.provider.vad.silero_fallback')
 

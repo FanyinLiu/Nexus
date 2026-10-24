@@ -1,4 +1,5 @@
 import type { MutableRefObject, RefObject } from 'react'
+import { detectVoicePermissionPlatform } from '../../features/voice/runtimeSupport.ts'
 import {
   createWakewordRuntime,
   type WakewordRuntimeController,
@@ -184,6 +185,26 @@ export function cancelPendingWakewordAck(options: {
   options.wakewordAcknowledgingRef.current = false
 }
 
+/**
+ * The humanized mic sentences are complete copy on their own: the wakeword
+ * runtime turns a denial into the full per-platform sentence and a dead
+ * mic track into the recording-device guidance. Wrapping either in the
+ * generic `voice.wakeword.unavailable_with_reason` shell would re-prefix
+ * actionable privacy-pane instructions, exactly the
+ * "唤醒词监听不可用：Permission denied" shape this copy class exists to kill.
+ */
+const HUMANIZED_MIC_SENTENCE_KEYS: TranslationKey[] = [
+  'humanize.voice.mic_permission',
+  'humanize.voice.mic_permission_mac',
+  'humanize.voice.mic_permission_windows',
+  'humanize.voice.mic_not_responding',
+]
+
+function isHumanizedMicSentence(ti: Translator, reason: string): boolean {
+  if (!reason.trim()) return false
+  return HUMANIZED_MIC_SENTENCE_KEYS.some((key) => reason === ti(key))
+}
+
 export function handleWakewordRuntimeStateChangeRuntime(
   options: HandleWakewordRuntimeStateChangeRuntimeOptions,
 ) {
@@ -235,13 +256,20 @@ export function handleWakewordRuntimeStateChangeRuntime(
     && options.nextState.reason
     && (phaseChanged || wakeWordChanged || reasonChanged)
   ) {
-    console.warn('[Voice] Wake word unavailable:', options.nextState.reason)
+    const reason = options.nextState.reason
+    console.warn('[Voice] Wake word unavailable:', reason)
     options.appendVoiceTrace(
       'Wake word unavailable',
-      `wake word "${options.nextState.wakeWord || '(unset)'}" unavailable: ${options.nextState.reason}`,
+      `wake word "${options.nextState.wakeWord || '(unset)'}" unavailable: ${reason}`,
       'error',
     )
-    options.showPetStatus(options.ti('voice.wakeword.unavailable_with_reason', { reason: options.nextState.reason }), 4_200, 4_500)
+    options.showPetStatus(
+      isHumanizedMicSentence(options.ti, reason)
+        ? reason
+        : options.ti('voice.wakeword.unavailable_with_reason', { reason }),
+      4_200,
+      4_500,
+    )
     options.busEmit?.({
       type: 'wake:error',
       message: options.nextState.reason,
@@ -365,6 +393,7 @@ export function createWakewordRuntimeBinding(
       options.wakewordKeywordDetectedRef.current(keyword)
     },
     ti: options.ti,
+    permissionPlatform: detectVoicePermissionPlatform(),
   })
 
   options.wakewordRuntimeRef.current = runtime

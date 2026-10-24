@@ -1,5 +1,9 @@
 import type { MutableRefObject } from 'react'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
+import {
+  detectVoicePermissionPlatform,
+  pickMicrophonePermissionKey,
+} from '../../features/voice/runtimeSupport.ts'
 import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import type {
   VoiceSessionEvent,
@@ -8,7 +12,10 @@ import type {
 import { blobToBase64 } from '../../lib/common.ts'
 import { createId } from '../../lib/index.ts'
 import { recordSttUsage } from '../../features/metering/speechCost.ts'
-import { humanizeIfSpeechIpcError } from '../../lib/humanizeError.ts'
+import {
+  humanizeIfSpeechIpcError,
+  humanizeMicPermissionError,
+} from '../../lib/humanizeError.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
 import type {
   AppSettings,
@@ -214,6 +221,7 @@ export async function startApiRecordingConversation(
         } catch (error) {
           params.handleVoiceListeningFailure(
             humanizeIfSpeechIpcError(error, 'stt')
+              ?? humanizeMicPermissionError(error)
               ?? (error instanceof Error ? error.message : params.ti('voice.provider.api.failed_retry')),
           )
         }
@@ -226,9 +234,13 @@ export async function startApiRecordingConversation(
     if (isVoiceCaptureCancelled(error)) return
     params.setError(
       humanizeIfSpeechIpcError(error, 'stt')
+        ?? humanizeMicPermissionError(error)
         ?? (error instanceof Error
           ? error.message
-          : params.ti('voice.provider.api.permission_denied')),
+          : params.ti(pickMicrophonePermissionKey(
+            'voice.provider.api.permission_denied',
+            detectVoicePermissionPlatform(),
+          ))),
     )
   }
 }

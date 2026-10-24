@@ -1,4 +1,8 @@
 import { t } from '../i18n/runtime.ts'
+import {
+  detectVoicePermissionPlatform,
+  pickMicrophonePermissionKey,
+} from '../features/voice/runtimeSupport.ts'
 
 interface BrowserSpeechRecognitionAlternative {
   transcript: string
@@ -68,10 +72,18 @@ export function stopSpeaking() {
   window.speechSynthesis.cancel()
 }
 
-export function mapSpeechError(error: string) {
+/**
+ * Map a browser SpeechRecognition error code to localized, user-facing copy.
+ * `platform` is injectable so tests can assert the macOS / Windows microphone
+ * permission sentences without stubbing the navigator.
+ */
+export function mapSpeechError(
+  error: string,
+  platform: string | null | undefined = detectVoicePermissionPlatform(),
+) {
   switch (error) {
     case 'not-allowed':
-      return t('voice.stt.error.permission_denied')
+      return t(pickMicrophonePermissionKey('voice.stt.error.permission_denied', platform))
     case 'audio-capture':
       return t('voice.stt.error.no_microphone')
     case 'network':

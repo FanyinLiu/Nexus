@@ -23,7 +23,8 @@ export function voiceDownloadGuidance(
   key:
     | 'model_setup.deferred_reminder'
     | 'voice.provider.sensevoice.not_installed'
-    | 'voice.provider.paraformer.model_missing',
+    | 'voice.provider.paraformer.model_missing'
+    | 'humanize.stt.model_missing',
 ): string {
   return translate(key, {
     settings: translate(VOICE_DOWNLOAD_PATH.settings),

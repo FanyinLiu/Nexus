@@ -13,7 +13,7 @@ import {
   isSenseVoiceSpeechInputProvider,
 } from '../../lib/audioProviders.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
-import { humanizeError } from '../../lib/humanizeError.ts'
+import { humanizeError, humanizeMicPermissionError } from '../../lib/humanizeError.ts'
 import {
   buildSpeechRecognitionProbe,
   classifyRecognitionProbe,
@@ -163,11 +163,12 @@ export async function testSpeechInputReadinessRuntime(
   } catch (caught) {
     return {
       ok: false,
-      message: mapMicrophoneDiagnosticError(
-        caught,
-        isSenseVoiceSpeechInputProvider(providerId),
-        options.ti,
-      ),
+      message: humanizeMicPermissionError(caught, { ti: options.ti })
+        ?? mapMicrophoneDiagnosticError(
+          caught,
+          isSenseVoiceSpeechInputProvider(providerId),
+          options.ti,
+        ),
     }
   } finally {
     stream?.getTracks().forEach((track) => track.stop())
@@ -225,7 +226,7 @@ async function runSenseVoiceRecognitionProbe(
   } catch (error) {
     return {
       ok: false,
-      message: humanizeError(error, 'stt'),
+      message: humanizeError(error, 'stt', { ti: options.ti }),
     }
   }
 }
@@ -267,7 +268,7 @@ async function runParaformerRecognitionProbe(
     try { await api.paraformerAbort?.() } catch { /* the session is already closed */ }
     return {
       ok: false,
-      message: humanizeError(error, 'stt'),
+      message: humanizeError(error, 'stt', { ti: options.ti }),
     }
   }
 }

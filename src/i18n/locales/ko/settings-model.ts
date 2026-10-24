@@ -44,7 +44,7 @@ export const koSettingsModel = {
   'settings.model.testing': '테스트 중...',
   'settings.model.test_endpoint': '연결 테스트',
   'settings.model.provider': '제공자',
-  'settings.model.endpoint_url': '텍스트 엔드포인트 URL',
+  'settings.model.endpoint_url': '채팅 서비스 주소',
   'settings.model.api_key': '텍스트 API 키',
   'settings.model.model': '텍스트 모델',
   'settings.model.custom': '(사용자 지정)',

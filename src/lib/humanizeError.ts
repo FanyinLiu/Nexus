@@ -1,5 +1,5 @@
 import { t } from '../i18n/runtime.ts'
-import type { TranslationKey } from '../types/i18n.ts'
+import type { TranslationKey, TranslationParams } from '../types/i18n.ts'
 import { redactSensitiveText } from '../../shared/redaction.js'
 import {
   CHAT_IPC_ERROR_CODES,
@@ -17,6 +17,20 @@ import {
   NET_IPC_ERROR_CODES,
   extractNetIpcErrorCode,
 } from '../../shared/netErrorCodes.js'
+import {
+  detectVoicePermissionPlatform,
+  pickMicrophonePermissionKey,
+} from '../features/voice/runtimeSupport.ts'
+import { voiceDownloadGuidance } from '../features/setup/voiceDownloadGuidance.ts'
+
+/**
+ * Pluggable translator matching the per-window translators hooks build from
+ * `settings.uiLanguage`. The global `t` is a sane default, but callers that
+ * already hold a translator (wakeword runtime, voice diagnostics) must be
+ * able to pin translations to that window's locale instead of whatever the
+ * i18n runtime happens to have loaded.
+ */
+export type HumanizeTranslator = (key: TranslationKey, params?: TranslationParams) => string
 
 /**
  * humanizeError — translate raw runtime errors into companion-voice
@@ -57,6 +71,11 @@ interface KnownPattern {
    * Most patterns don't need this; the friendly message is enough.
    */
   withDetail?: boolean
+  /**
+   * If true, the key names a microphone-permission sentence whose `_mac` /
+   * `_windows` variants carry the platform-specific privacy-pane wording.
+   */
+  platformScoped?: boolean
 }
 
 /**
@@ -135,7 +154,7 @@ const CONTEXT_PATTERNS: Record<HumanizeContext, KnownPattern[]> = {
   ],
   voice: [
     { match: /Requested device not found|NotFoundError/i, key: 'humanize.voice.no_mic_device' },
-    { match: /NotAllowedError|permission.?denied/i, key: 'humanize.voice.mic_permission' },
+    { match: /NotAllowedError|permission.?denied/i, key: 'humanize.voice.mic_permission', platformScoped: true },
     { match: /Could not start audio source/i, key: 'humanize.voice.mic_busy' },
   ],
   tts: [
@@ -176,20 +195,33 @@ const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
   'humanize.chat.context_too_long': 'The conversation got too long for this model. Start a new chat or pick a model with bigger context.',
   'humanize.chat.empty_response': 'She came back empty — the model may not be compatible. Check the API URL or try a different model.',
   'humanize.voice.no_mic_device': 'Couldn\'t find a microphone. Check that one is plugged in and selected as the system input.',
-  'humanize.voice.mic_permission': 'Microphone access is blocked. Allow it in System Settings → Privacy & Security → Microphone.',
+  'humanize.voice.mic_permission': 'Nexus can\'t use the microphone yet. Allow it in your system settings, then try again.',
+  'humanize.voice.mic_permission_mac': 'Nexus can\'t use the microphone yet. Allow it in System Settings → Privacy & Security → Microphone, then try again.',
+  'humanize.voice.mic_permission_windows': 'Nexus can\'t use the microphone yet. In Settings → Privacy & security → Microphone, turn on "Let desktop apps access your microphone", then try again.',
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
+  'humanize.voice.mic_not_responding': 'The microphone isn\'t responding. Check that it\'s plugged in and not in use by another app, then try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
-  'humanize.stt.model_missing': 'The speech-to-text model isn\'t installed yet. Open Settings → Local Models to download it.',
+  'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
   'humanize.fallback': 'Something went wrong. ({detail})',
 }
 
-function lookupTranslation(key: TranslationKey, detail?: string): string {
+/**
+ * Resolve a humanize key through the runtime translator, then the English
+ * fallback table. The last-resort branch deliberately returns friendly copy
+ * instead of the raw error detail so no internal text reaches the user even
+ * when a key is missing from both dictionaries.
+ */
+export function lookupTranslation(
+  key: TranslationKey,
+  detail?: string,
+  translator: HumanizeTranslator = t,
+): string {
   // Try the runtime translator first; if it returns the key unchanged
   // (i.e. no entry), fall back to our hardcoded English so the user
   // never sees the raw key.
-  const translated = t(key, detail !== undefined ? { detail } : undefined)
+  const translated = translator(key, detail !== undefined ? { detail } : undefined)
   if (translated && translated !== key) return translated
 
   const fallback = ENGLISH_FALLBACKS[key]
@@ -199,8 +231,26 @@ function lookupTranslation(key: TranslationKey, detail?: string): string {
       : fallback
   }
 
-  // Should never hit this — every defined key has a fallback.
-  return detail !== undefined ? detail : 'Something went wrong.'
+  // Should never hit this — every defined key has a fallback. Never surface
+  // the raw detail here: it can contain provider internals or secrets.
+  return 'Something went wrong. Please try again.'
+}
+
+/**
+ * Translator for sentence templates that carry named params (the Settings
+ * path in the missing-model line). Mirrors lookupTranslation's dictionary-then-
+ * fallback order while filling params into the English fallback too.
+ */
+function translateWithFallback(key: TranslationKey, params?: TranslationParams, translator: HumanizeTranslator = t): string {
+  const translated = translator(key, params)
+  if (translated && translated !== key) return translated
+  const fallback = ENGLISH_FALLBACKS[key]
+  if (!fallback) return key
+  if (!params) return fallback
+  return Object.entries(params).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    fallback,
+  )
 }
 
 /**
@@ -222,9 +272,17 @@ function redactSensitive(raw: string): string {
 /**
  * Translate any error / string into a companion-voice user-facing message.
  * Falls back to a generic friendly wrapper around the raw text so users
- * never see naked stack traces.
+ * never see naked stack traces. `options.platform` lets callers (and tests)
+ * pin the microphone-permission platform instead of reading the navigator.
+ * `options.ti` pins the locale translator (see HumanizeTranslator).
  */
-export function humanizeError(error: unknown, context: HumanizeContext = 'generic'): string {
+export function humanizeError(
+  error: unknown,
+  context: HumanizeContext = 'generic',
+  options: { platform?: string | null; ti?: HumanizeTranslator } = {},
+): string {
+  const translator = options.ti ?? t
+  const platform = options.platform ?? detectVoicePermissionPlatform()
   const raw = error instanceof Error
     ? (error.message || error.name || 'Unknown error')
     : String(error ?? 'Unknown error')
@@ -255,24 +313,76 @@ export function humanizeError(error: unknown, context: HumanizeContext = 'generi
     ?? extractNetIpcErrorCode(classifyTarget)
   const codeMapping = ipcCode ? IPC_CODE_KEYS[ipcCode] : undefined
   if (codeMapping) {
-    return lookupTranslation(codeMapping.key, codeMapping.withDetail ? redactSensitive(raw) : undefined)
+    return lookupTranslation(codeMapping.key, codeMapping.withDetail ? redactSensitive(raw) : undefined, translator)
   }
 
   if (context === 'pet') {
-    return lookupTranslation('settings.pet.import_error')
+    return lookupTranslation('settings.pet.import_error', undefined, translator)
   }
 
   // Context-specific patterns first (more specific), then common.
   const patterns = [...(CONTEXT_PATTERNS[context] ?? []), ...COMMON_PATTERNS]
   for (const pattern of patterns) {
     if (pattern.match.test(classifyTarget)) {
-      return lookupTranslation(pattern.key, pattern.withDetail ? redactSensitive(raw) : undefined)
+      const key = pattern.platformScoped
+        ? pickMicrophonePermissionKey(pattern.key, platform)
+        : pattern.key
+      if (key === 'humanize.stt.model_missing') {
+        return voiceDownloadGuidance(
+          (guidanceKey, params) => translateWithFallback(guidanceKey, params, translator),
+          key,
+        )
+      }
+      return lookupTranslation(key, pattern.withDetail ? redactSensitive(raw) : undefined, translator)
     }
   }
 
   // No pattern matched — generic wrapper that still includes the raw
   // text so power users / developers can debug, but framed friendly.
-  return lookupTranslation('humanize.fallback', redactSensitive(raw))
+  return lookupTranslation('humanize.fallback', redactSensitive(raw), translator)
+}
+
+const MIC_PERMISSION_ERROR_NAMES = new Set(['NotAllowedError', 'PermissionDeniedError'])
+const MIC_PERMISSION_MESSAGE_PATTERN = /NotAllowedError|permission.?denied/i
+
+/**
+ * Detect a denied microphone without trusting the message alone: Chromium
+ * rejects getUserMedia with a DOMException whose `message` is often the bare
+ * English "Permission denied", so the `name` is the reliable classifier.
+ */
+function isMicrophonePermissionError(error: unknown): boolean {
+  if (error && typeof error === 'object') {
+    const name = (error as { name?: unknown }).name
+    if (typeof name === 'string' && MIC_PERMISSION_ERROR_NAMES.has(name)) return true
+  }
+  if (typeof error === 'string') return MIC_PERMISSION_MESSAGE_PATTERN.test(error)
+  if (error instanceof Error) return MIC_PERMISSION_MESSAGE_PATTERN.test(error.message)
+  return false
+}
+
+/**
+ * Return the per-platform microphone-permission sentence for a denied-mic
+ * error, or null when the error is something else.
+ *
+ * Voice start paths used to fall back to `error.message`, which surfaced
+ * Chromium's raw "Permission denied" to the user. Routing those paths through
+ * this helper keeps every denial on the canonical `voice.mic.permission_denied`
+ * copy (macOS / Windows / generic) regardless of whether the error is a
+ * DOMException name, a plain Error message, or a non-standard
+ * `PermissionDeniedError`. `options.ti` pins the locale translator (see
+ * HumanizeTranslator); `options.platform` pins the platform for tests.
+ */
+export function humanizeMicPermissionError(
+  error: unknown,
+  options: { platform?: string | null; ti?: HumanizeTranslator } = {},
+): string | null {
+  if (!isMicrophonePermissionError(error)) return null
+  const platform = options.platform ?? detectVoicePermissionPlatform()
+  return lookupTranslation(
+    pickMicrophonePermissionKey('humanize.voice.mic_permission', platform),
+    undefined,
+    options.ti ?? t,
+  )
 }
 
 /**

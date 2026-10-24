@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import {
+  buildVoiceModelReadiness,
+  type VoiceModelInventory,
+} from '../../voiceModelReadiness.ts'
 import { humanizeIfSpeechIpcError } from '../../../../lib/humanizeError.ts'
 import { getRedactedLogErrorMessage } from '../../../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../../../lib/uiLanguage.ts'
-import { missingVoiceModelIds } from '../../../setup/localModelRepair.ts'
 import type { AppSettings } from '../../../../types'
 
 type VoiceStepProps = {
@@ -15,22 +18,24 @@ export function VoiceStep({ draft, onPreviewSpeech }: VoiceStepProps) {
     pickTranslatedUiText(draft.uiLanguage, key)
   const [previewing, setPreviewing] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [modelsReady, setModelsReady] = useState(false)
+  const [inventory, setInventory] = useState<VoiceModelInventory | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    const load = window.desktopPet?.modelsGetInventory
-    void Promise.resolve(load ? load() : null).then((inventory) => {
+    const loadInventory = window.desktopPet?.modelsGetInventory
+    if (!loadInventory) return undefined
+
+    void Promise.resolve(loadInventory()).then((next) => {
       if (cancelled) return
-      const ready = Boolean(
-        inventory && missingVoiceModelIds(inventory.models, draft.speechInputProviderId).length === 0,
-      )
-      setModelsReady(ready)
-    }).catch(() => {
-      if (!cancelled) setModelsReady(false)
+      setInventory(next ?? null)
+    }).catch((error) => {
+      console.warn('[onboarding] voice model inventory failed:', getRedactedLogErrorMessage(error))
+      if (cancelled) return
+      setInventory(null)
     })
+
     return () => { cancelled = true }
-  }, [draft.speechInputProviderId])
+  }, [])
 
   async function preview() {
     if (!onPreviewSpeech || previewing) return
@@ -49,11 +54,20 @@ export function VoiceStep({ draft, onPreviewSpeech }: VoiceStepProps) {
     }
   }
 
+  const readiness = buildVoiceModelReadiness({
+    inventory,
+    speechInputProviderId: draft.speechInputProviderId,
+    speechOutputProviderId: draft.speechOutputProviderId,
+  })
+  const tipKey = readiness.status === 'models_missing'
+    ? 'onboarding.voice.needs_models'
+    : readiness.messageKey
+
   return (
     <div className="onboarding-grid onboarding-grid--stack">
-      <p className="onboarding-tip">
-        {ti(modelsReady ? 'onboarding.voice.ready' : 'onboarding.voice.needs_models')}
-      </p>
+      {tipKey ? (
+        <p className="onboarding-tip">{ti(tipKey)}</p>
+      ) : null}
       <div className="onboarding-test-connection">
         <button
           type="button"
