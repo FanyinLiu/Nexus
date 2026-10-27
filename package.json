@@ -26,6 +26,7 @@
     "ipc:audit": "node scripts/ipc-contract-audit.mjs",
     "storage:audit": "node scripts/storage-contract-audit.mjs",
     "heavy:audit": "node scripts/heavy-module-audit.mjs",
+    "memory:recall-benchmark": "node --experimental-strip-types --no-warnings scripts/memory-recall-benchmark.mjs",
     "architecture:audit": "node scripts/architecture-boundary-audit.mjs",
     "source-size:audit": "node scripts/source-size-audit.mjs",
     "ui:references:audit": "node scripts/open-source-ui-reference-audit.mjs",
