@@ -6,9 +6,16 @@ import {
   mergeDailyMemories,
   mergeMemories,
   parseMemoryArchive,
+  reindexMemoriesForEmbeddingModel,
   serializeMemoryArchive,
   warmupMemoryVectorModel,
 } from '../features/memory/index.ts'
+import {
+  getMemoryEmbeddingBackendStatus,
+  isOllamaMemoryModel,
+  resolveOllamaEmbedBaseUrl,
+  setOllamaEmbedBaseUrl,
+} from '../features/memory/ollamaEmbedding.ts'
 import { commitLongTermMemoryCap } from '../features/memory/memoryCapCommit.ts'
 import { formatMemoriesForPersonaFile } from '../features/memory/memoryPersistence.ts'
 import {
@@ -182,15 +189,37 @@ export function useMemory({ settings }: UseMemoryParams) {
     return () => window.removeEventListener('nexus:memories-replaced', onReplace)
   }, [])
 
+  // Ollama memory embeddings reuse the chat Ollama address when the chat
+  // provider is Ollama (minus its /v1 suffix), else the local default.
+  useEffect(() => {
+    setOllamaEmbedBaseUrl(resolveOllamaEmbedBaseUrl({
+      apiProviderId: settings.apiProviderId,
+      apiBaseUrl: settings.apiBaseUrl,
+    }))
+  }, [settings.apiProviderId, settings.apiBaseUrl])
+
   useEffect(() => {
     if (settings.memorySearchMode === 'keyword') return
 
+    const model = settings.memoryEmbeddingModel
     // Defer warmup to avoid blocking startup render
     const timerId = window.setTimeout(() => {
-      void warmupMemoryVectorModel(settings.memoryEmbeddingModel).catch(() => undefined)
+      void warmupMemoryVectorModel(model)
+        .then(() => {
+          // After switching to an Ollama model, re-embed the store in the
+          // background so the main-process index stops holding vectors from
+          // the previous model and the first recall stays fast.
+          const status = getMemoryEmbeddingBackendStatus()
+          if (!isOllamaMemoryModel(model) || status.state !== 'ready' || status.model !== model) return
+          const active = memoriesRef.current.filter((memory) => (
+            memory.enabled !== false && memory.status !== 'superseded' && memory.status !== 'archived'
+          ))
+          return reindexMemoriesForEmbeddingModel(active, model)
+        })
+        .catch(() => undefined)
     }, 3_000)
     return () => window.clearTimeout(timerId)
-  }, [settings.memoryEmbeddingModel, settings.memorySearchMode])
+  }, [settings.memoryEmbeddingModel, settings.memorySearchMode, settings.apiBaseUrl, settings.apiProviderId])
 
   const recentDailyMemoryEntries = useMemo(
     () => getRecentDailyEntries(dailyMemories, 1).slice(0, 8),

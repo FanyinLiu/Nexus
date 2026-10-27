@@ -23,7 +23,7 @@ const LOG_COMPACT_THRESHOLD_BYTES = 5 * 1024 * 1024
 // (just a stat call); only triggers a real rewrite if log > threshold.
 const COMPACTION_CHECK_INTERVAL_MS = 10 * 60 * 1000
 
-/** @type {Map<string, { content: string, embedding: number[], layer: string, updatedAt: string }>} */
+/** @type {Map<string, { content: string, embedding: number[], layer: string, updatedAt: string, model?: string }>} */
 const _index = new Map()
 
 let _loaded = false
@@ -106,6 +106,7 @@ function applyLogOp(op) {
       embedding: op.entry.embedding,
       layer: op.entry.layer ?? 'long_term',
       updatedAt: op.entry.updatedAt ?? new Date().toISOString(),
+      ...(typeof op.entry.model === 'string' && op.entry.model ? { model: op.entry.model } : {}),
     })
   } else if (op.kind === 'delete' && op.id) {
     _index.delete(String(op.id))
@@ -186,6 +187,7 @@ async function ensureLoaded() {
               embedding: entry.embedding,
               layer: entry.layer ?? 'long_term',
               updatedAt: entry.updatedAt ?? new Date().toISOString(),
+              ...(typeof entry.model === 'string' && entry.model ? { model: entry.model } : {}),
             })
           }
         }
@@ -384,9 +386,22 @@ function upsertEntry(id, entry) {
   appendLogOp({ kind: 'upsert', id, entry })
 }
 
+/**
+ * A stored vector can only be compared with a query vector from the same
+ * embedding space. Entries tagged with a different model, or of a different
+ * length (e.g. 256-dim local hash vs 1024-dim qwen3), are incompatible and
+ * are skipped rather than scored as 0 similarity.
+ */
+function isVectorCompatible(entry, queryDimensions, model) {
+  if (!entry || !Array.isArray(entry.embedding)) return false
+  if (entry.embedding.length !== queryDimensions) return false
+  if (model && entry.model && entry.model !== model) return false
+  return true
+}
+
 // ── Public API ──
 
-export async function indexMemory(id, content, embedding, layer = 'long_term') {
+export async function indexMemory(id, content, embedding, layer = 'long_term', model = undefined) {
   await ensureLoaded()
 
   upsertEntry(id, {
@@ -394,6 +409,7 @@ export async function indexMemory(id, content, embedding, layer = 'long_term') {
     embedding: Array.from(embedding),
     layer,
     updatedAt: new Date().toISOString(),
+    ...(typeof model === 'string' && model ? { model } : {}),
   })
 
   evictExcess()
@@ -409,6 +425,7 @@ export async function indexBatch(items) {
         embedding: Array.from(item.embedding),
         layer: item.layer ?? 'long_term',
         updatedAt: new Date().toISOString(),
+        ...(typeof item.model === 'string' && item.model ? { model: item.model } : {}),
       })
     }
   }
@@ -416,7 +433,7 @@ export async function indexBatch(items) {
   evictExcess()
 }
 
-/** @type {Array<{ id: string, content: string, embedding: number[], layer: string }> | null} */
+/** @type {Array<{ id: string, content: string, embedding: number[], layer: string, model?: string }> | null} */
 let _workerSnapshotCache = null
 let _snapshotDirty = true
 
@@ -424,7 +441,7 @@ function getWorkerSnapshot() {
   if (_workerSnapshotCache && !_snapshotDirty) return _workerSnapshotCache
   const entries = []
   for (const [id, entry] of _index) {
-    entries.push({ id, content: entry.content, embedding: entry.embedding, layer: entry.layer })
+    entries.push({ id, content: entry.content, embedding: entry.embedding, layer: entry.layer, model: entry.model })
   }
   _workerSnapshotCache = entries
   _snapshotDirty = false
@@ -434,7 +451,7 @@ function getWorkerSnapshot() {
 export async function searchSimilar(queryEmbedding, options = {}) {
   await ensureLoaded()
 
-  const { limit = 10, threshold = 0.05, layer = null } = options
+  const { limit = 10, threshold = 0.05, layer = null, model = null } = options
 
   const entries = getWorkerSnapshot()
 
@@ -466,6 +483,7 @@ export async function searchSimilar(queryEmbedding, options = {}) {
       limit,
       threshold,
       layer,
+      model,
     })
   })
 }
@@ -498,12 +516,12 @@ export async function searchKeyword(query, options = {}) {
 export async function searchHybrid(queryEmbedding, queryText, options = {}) {
   await ensureLoaded()
 
-  const { limit = 10, threshold = 0.02, layer = null } = options
+  const { limit = 10, threshold = 0.02, layer = null, model = null } = options
   const overFetch = limit * 4
 
   // Run vector + BM25 in parallel
   const [vectorResults, keywordResults] = await Promise.all([
-    searchSimilar(queryEmbedding, { limit: overFetch, threshold: 0, layer }),
+    searchSimilar(queryEmbedding, { limit: overFetch, threshold: 0, layer, model }),
     (async () => {
       ensureBm25()
       return _bm25.search(queryText, { limit: overFetch, threshold: 0, layer })
@@ -534,6 +552,11 @@ export async function searchHybrid(queryEmbedding, queryText, options = {}) {
     if (existing) {
       existing.keywordScore = normKw
     } else {
+      // A keyword hit whose stored vector came from another embedding model
+      // (or has another dimension) has no comparable vector score. Flag it
+      // so the renderer re-embeds it instead of trusting vectorScore: 0.
+      const stored = _index.get(r.id)
+      const vectorStale = !stored || !isVectorCompatible(stored, queryEmbedding.length, model)
       scoreMap.set(r.id, {
         id: r.id,
         content: r.content,
@@ -541,6 +564,7 @@ export async function searchHybrid(queryEmbedding, queryText, options = {}) {
         vectorScore: 0,
         keywordScore: normKw,
         score: 0,
+        ...(vectorStale ? { vectorStale: true } : {}),
       })
     }
   }
