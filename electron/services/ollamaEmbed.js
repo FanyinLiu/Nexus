@@ -106,3 +106,53 @@ export async function embedWithOllama(payload, request) {
     dimensions,
   }
 }
+
+const DETECT_TIMEOUT_MS = 1_500
+
+/**
+ * Ollama lists `qwen3-embedding:0.6b` as-is, but a model pulled without a
+ * tag shows up as `<name>:latest`. Compare on a canonical name:tag form.
+ * @param {unknown} name
+ */
+function canonicalOllamaModelName(name) {
+  const value = String(name ?? '').trim().toLowerCase()
+  if (!value) return ''
+  return value.includes(':') ? value : `${value}:latest`
+}
+
+/**
+ * Is a local Ollama reachable, and is `model` already pulled? Used to pick
+ * the memory embedding model automatically. Only lists installed models
+ * (GET /api/tags); never pulls anything.
+ *
+ * @param {{ baseUrl?: string, model: string, timeoutMs?: number }} payload
+ * @param {(url: string, options: Record<string, unknown>) => Promise<Response>} request
+ * @returns {Promise<{ reachable: boolean, installed: boolean, baseUrl: string, model: string }>}
+ */
+export async function detectOllamaModel(payload, request) {
+  const baseUrl = normalizeOllamaBaseUrl(payload?.baseUrl)
+  const model = String(payload?.model ?? '').trim()
+  const unreachable = { reachable: false, installed: false, baseUrl, model }
+  const timeoutMs = Number.isFinite(payload?.timeoutMs) ? payload.timeoutMs : DETECT_TIMEOUT_MS
+
+  let response
+  try {
+    response = await request(`${baseUrl}/api/tags`, {
+      method: 'GET',
+      timeoutMs,
+      allowPrivateNetwork: true,
+    })
+  } catch {
+    return unreachable
+  }
+  if (!response?.ok) return unreachable
+
+  const data = await response.json().catch(() => null)
+  if (!data || !Array.isArray(data.models)) return unreachable
+
+  const wanted = canonicalOllamaModelName(model)
+  const installed = Boolean(wanted) && data.models.some((entry) => (
+    canonicalOllamaModelName(entry?.name) === wanted || canonicalOllamaModelName(entry?.model) === wanted
+  ))
+  return { reachable: true, installed, baseUrl, model }
+}

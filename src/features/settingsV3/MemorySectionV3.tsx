@@ -19,6 +19,10 @@ import {
 import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView.ts'
 import { resolveMemoryEmbeddingStatusView } from '../../features/memory/memoryEmbeddingStatusView.ts'
 import {
+  getAutoMemoryEmbeddingState,
+  subscribeAutoMemoryEmbeddingState,
+} from '../../features/memory/memoryEmbeddingAuto.ts'
+import {
   getMemoryEmbeddingBackendStatus,
   isOllamaMemoryModel,
   subscribeMemoryEmbeddingBackendStatus,
@@ -224,10 +228,16 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
     getMemoryEmbeddingBackendStatus,
     getMemoryEmbeddingBackendStatus,
   )
+  const autoEmbeddingState = useSyncExternalStore(
+    subscribeAutoMemoryEmbeddingState,
+    getAutoMemoryEmbeddingState,
+    getAutoMemoryEmbeddingState,
+  )
   const embeddingStatusView = resolveMemoryEmbeddingStatusView(
     draft.memoryEmbeddingModel,
     embeddingBackendStatus,
     ti,
+    autoEmbeddingState,
   )
 
   const translateDiagnostic = (value: DesktopContextDiagnosticText) =>

@@ -64,10 +64,11 @@ function unique(text: string) {
   return `${text} #${uniqueCounter}`
 }
 
-test('qwen3 option is offered and hash stays the default', () => {
+test('qwen3 and local hash are offered, with auto listed first as the default', () => {
   assert.equal(QWEN3_MEMORY_EMBEDDING_MODEL_ID, 'ollama:qwen3-embedding:0.6b')
   assert.ok(MEMORY_EMBEDDING_MODEL_OPTIONS.some((option) => option.value === QWEN3_MEMORY_EMBEDDING_MODEL_ID))
-  assert.equal(MEMORY_EMBEDDING_MODEL_OPTIONS[0]!.value, LOCAL_HASH_MEMORY_MODEL_ID)
+  assert.ok(MEMORY_EMBEDDING_MODEL_OPTIONS.some((option) => option.value === LOCAL_HASH_MEMORY_MODEL_ID))
+  assert.equal(MEMORY_EMBEDDING_MODEL_OPTIONS[0]!.value, 'auto')
 })
 
 test('base URL: chat /v1 suffix is stripped and localhost canonicalized', () => {

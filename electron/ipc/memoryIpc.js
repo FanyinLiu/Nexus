@@ -7,7 +7,7 @@ import {
   createLongTermMemoryFileStore,
   resolveLongTermMemoryFilePath,
 } from '../services/longTermMemoryFileStore.js'
-import { embedWithOllama } from '../services/ollamaEmbed.js'
+import { detectOllamaModel, embedWithOllama } from '../services/ollamaEmbed.js'
 import { performNetworkRequest } from '../net.js'
 import { requireTrustedSender } from './validate.js'
 import {
@@ -15,6 +15,7 @@ import {
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
   validateMemoryLongTermSavePayload,
+  validateMemoryOllamaDetectPayload,
   validateMemoryOllamaEmbedPayload,
   validateMemoryRemovePayload,
   validateMemoryVectorIndexBatchPayload,
@@ -149,5 +150,13 @@ export function register() {
     requireTrustedSender(event)
     payload = validateMemoryOllamaEmbedPayload(payload)
     return embedWithOllama(payload, performNetworkRequest)
+  })
+
+  // Auto memory embedding: is Ollama up and is the embedding model pulled?
+  // GET /api/tags with a short timeout; never pulls a model.
+  ipcMain.handle('memory:ollama-detect', async (event, payload) => {
+    requireTrustedSender(event)
+    payload = validateMemoryOllamaDetectPayload(payload)
+    return detectOllamaModel(payload, performNetworkRequest)
   })
 }

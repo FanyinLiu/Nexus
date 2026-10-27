@@ -221,6 +221,18 @@ export function validateMemoryHybridSearchPayload(payload) {
   return validateIpcPayload('memory:hybrid-search', payload, memoryHybridSearchSchema)
 }
 
+const memoryOllamaDetectSchema = {
+  type: 'object',
+  fields: {
+    baseUrl: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX },
+    model: { type: 'string', maxLength: SHORT_TEXT_MAX, allowEmpty: false },
+  },
+}
+
+export function validateMemoryOllamaDetectPayload(payload) {
+  return validateIpcPayload('memory:ollama-detect', payload, memoryOllamaDetectSchema)
+}
+
 export function validateMemoryOllamaEmbedPayload(payload) {
   return validateIpcPayload('memory:ollama-embed', payload, memoryOllamaEmbedSchema)
 }

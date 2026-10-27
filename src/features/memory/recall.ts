@@ -228,33 +228,38 @@ function indexMemoriesToVectorStore<T extends { id: string; content: string }>(
   layer: string,
 ) {
   const job = _indexQueue.then(() => doIndexMemoriesToVectorStore(items, embeddingModel, layer))
-  _indexQueue = job.catch((err) => {
+  const settled = job.catch((err) => {
     console.warn('[memory] Vector index queue job failed:', getRedactedLogErrorMessage(err))
+    return false
   })
-  // Return the caught chain so callers using `void` never trigger unhandled rejections.
-  return _indexQueue
+  _indexQueue = settled.then(() => undefined)
+  // Return the caught chain so callers using `void` never trigger unhandled
+  // rejections. Resolves true when every item was indexed with the model.
+  return settled
 }
 
 // What this session already sent to the main-process vector store, keyed
-// by memory id -> `${model}\u0000${content}`. Recall scores every active
+// by `${model}\u0000${memory id}` -> content. Recall scores every active
 // memory now, so without this every chat turn would re-send ~500 vectors.
-// An edited memory or a model switch changes the key and is re-indexed.
+// An edited memory is re-indexed. Keyed per model so a session that moves
+// between two models (auto mode: hash while qwen3 re-embeds, or a fallback)
+// does not re-send each model's vectors every time it switches back.
 const indexedThisSession = new Map<string, string>()
 const INDEX_BATCH_SIZE = 32
 
-function indexLedgerKey(model: string, content: string) {
-  return `${model}\u0000${content}`
+function indexLedgerKey(model: string, id: string) {
+  return `${model}\u0000${id}`
 }
 
 async function doIndexMemoriesToVectorStore<T extends { id: string; content: string }>(
   items: T[],
   embeddingModel: string,
   layer: string,
-) {
-  if (!window.desktopPet?.memoryVectorIndexBatch) return
+): Promise<boolean> {
+  if (!window.desktopPet?.memoryVectorIndexBatch) return true
 
   const pending = items.filter((item) => (
-    item.content.trim() && indexedThisSession.get(item.id) !== indexLedgerKey(embeddingModel, item.content)
+    item.content.trim() && indexedThisSession.get(indexLedgerKey(embeddingModel, item.id)) !== item.content
   ))
 
   for (let start = 0; start < pending.length; start += INDEX_BATCH_SIZE) {
@@ -266,7 +271,7 @@ async function doIndexMemoriesToVectorStore<T extends { id: string; content: str
     )
     // Never store a fallback vector under another model's slot: if Ollama
     // dropped out, stop and let a later recall index the rest.
-    if (model !== embeddingModel) return
+    if (model !== embeddingModel) return false
 
     const batch = chunk
       .map((item, index) => ({ id: item.id, content: item.content, embedding: embeddings[index] ?? [], layer, model }))
@@ -276,13 +281,14 @@ async function doIndexMemoriesToVectorStore<T extends { id: string; content: str
     try {
       await window.desktopPet.memoryVectorIndexBatch(batch)
       for (const entry of batch) {
-        indexedThisSession.set(entry.id, indexLedgerKey(model, entry.content))
+        indexedThisSession.set(indexLedgerKey(model, entry.id), entry.content)
       }
     } catch (error) {
       console.warn('[Memory] Vector index batch failed:', getRedactedLogErrorMessage(error))
-      return
+      return false
     }
   }
+  return true
 }
 
 /**
@@ -295,8 +301,11 @@ export function reindexMemoriesForEmbeddingModel<T extends { id: string; content
   items: T[],
   embeddingModel: string,
   layer: 'long_term' | 'daily' = 'long_term',
-) {
-  return indexMemoriesToVectorStore(items, resolveActiveMemoryEmbeddingModel(embeddingModel), layer)
+): Promise<boolean> {
+  const active = resolveActiveMemoryEmbeddingModel(embeddingModel)
+  // The requested model is cooling down after a failure: nothing to do now.
+  if (active !== embeddingModel) return Promise.resolve(false)
+  return indexMemoriesToVectorStore(items, active, layer)
 }
 
 type ScoreMapEntry = { vectorScore: number; bm25Score: number }

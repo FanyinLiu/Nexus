@@ -17,6 +17,10 @@ import {
   setOllamaEmbedBaseUrl,
 } from '../features/memory/ollamaEmbedding.ts'
 import { commitLongTermMemoryCap } from '../features/memory/memoryCapCommit.ts'
+import {
+  isAutoMemoryEmbeddingModel,
+  resolveAutoMemoryEmbedding,
+} from '../features/memory/memoryEmbeddingAuto.ts'
 import { formatMemoriesForPersonaFile } from '../features/memory/memoryPersistence.ts'
 import {
   applyLongTermMemoryCap,
@@ -199,9 +203,34 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [settings.apiProviderId, settings.apiBaseUrl])
 
   useEffect(() => {
-    if (settings.memorySearchMode === 'keyword') return
-
     const model = settings.memoryEmbeddingModel
+    const keywordOnly = settings.memorySearchMode === 'keyword'
+    const activeMemories = () => memoriesRef.current.filter((memory) => (
+      memory.enabled !== false && memory.status !== 'superseded' && memory.status !== 'archived'
+    ))
+
+    if (isAutoMemoryEmbeddingModel(model)) {
+      // Auto: pick qwen3 when Ollama is up with the model already pulled,
+      // else the local hash. Detection is one short GET in the main
+      // process; the re-embed after a switch runs in the background and
+      // recall stays on the hash until it finishes.
+      const baseUrl = resolveOllamaEmbedBaseUrl({
+        apiProviderId: settings.apiProviderId,
+        apiBaseUrl: settings.apiBaseUrl,
+      })
+      const timerId = window.setTimeout(() => {
+        void resolveAutoMemoryEmbedding({
+          baseUrl,
+          reindex: keywordOnly
+            ? undefined
+            : (target) => reindexMemoriesForEmbeddingModel(activeMemories(), target),
+        }).catch(() => undefined)
+      }, 500)
+      return () => window.clearTimeout(timerId)
+    }
+
+    if (keywordOnly) return
+
     // Defer warmup to avoid blocking startup render
     const timerId = window.setTimeout(() => {
       void warmupMemoryVectorModel(model)
@@ -211,10 +240,7 @@ export function useMemory({ settings }: UseMemoryParams) {
           // the previous model and the first recall stays fast.
           const status = getMemoryEmbeddingBackendStatus()
           if (!isOllamaMemoryModel(model) || status.state !== 'ready' || status.model !== model) return
-          const active = memoriesRef.current.filter((memory) => (
-            memory.enabled !== false && memory.status !== 'superseded' && memory.status !== 'archived'
-          ))
-          return reindexMemoriesForEmbeddingModel(active, model)
+          return reindexMemoriesForEmbeddingModel(activeMemories(), model)
         })
         .catch(() => undefined)
     }, 3_000)

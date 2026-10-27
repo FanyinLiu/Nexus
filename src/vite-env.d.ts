@@ -801,6 +801,11 @@ declare global {
           message: string
         }
       >
+      /** Is a local Ollama reachable and the embedding model pulled? (GET /api/tags) */
+      memoryOllamaDetect?: (payload: {
+        baseUrl?: string
+        model: string
+      }) => Promise<{ reachable: boolean; installed: boolean; baseUrl?: string; model?: string }>
 
       // Long-term memory file store
       memoryLongTermLoad: () => Promise<{

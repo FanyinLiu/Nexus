@@ -1,4 +1,5 @@
 import { LOCAL_HASH_MEMORY_MODEL_ID } from './constants.ts'
+import { resolveMemoryEmbeddingModelSetting } from './memoryEmbeddingAuto.ts'
 import {
   embedTextsWithOllama,
   isOllamaMemoryModel,
@@ -91,8 +92,9 @@ export function embedLocalHashMemoryText(text: string): number[] {
   return buildLocalHashEmbedding(normalized)
 }
 
+/** True for the local hash, including `auto` while it resolves to the hash. */
 export function isLocalHashMemoryModel(model: string) {
-  return normalizeForEmbedding(model) === LOCAL_HASH_MEMORY_MODEL_ID
+  return normalizeForEmbedding(resolveMemoryEmbeddingModelSetting(model)) === LOCAL_HASH_MEMORY_MODEL_ID
 }
 
 /**
@@ -101,7 +103,7 @@ export function isLocalHashMemoryModel(model: string) {
  * ends, so one recall never mixes vectors from two spaces.
  */
 export function resolveActiveMemoryEmbeddingModel(model: string) {
-  const trimmed = String(model ?? '').trim() || LOCAL_HASH_MEMORY_MODEL_ID
+  const trimmed = resolveMemoryEmbeddingModelSetting(model) || LOCAL_HASH_MEMORY_MODEL_ID
   if (isOllamaMemoryModel(trimmed) && isOllamaMemoryModelCoolingDown(trimmed)) {
     return LOCAL_HASH_MEMORY_MODEL_ID
   }
@@ -109,7 +111,8 @@ export function resolveActiveMemoryEmbeddingModel(model: string) {
 }
 
 function normalizeModelId(model: string) {
-  const trimmed = String(model ?? '').trim()
+  // `auto` -> whatever it currently resolves to (qwen3 or the local hash).
+  const trimmed = resolveMemoryEmbeddingModelSetting(model)
   if (!trimmed) return LOCAL_HASH_MEMORY_MODEL_ID
   return isLocalHashMemoryModel(trimmed) ? LOCAL_HASH_MEMORY_MODEL_ID : trimmed
 }
@@ -123,6 +126,7 @@ async function getRemoteVectorRuntime() {
 }
 
 export async function warmupMemoryVectorModel(model: string) {
+  model = resolveMemoryEmbeddingModelSetting(model)
   if (isLocalHashMemoryModel(model)) {
     return
   }
