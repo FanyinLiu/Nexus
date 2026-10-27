@@ -1,4 +1,5 @@
 import type { TranslationKey } from '../../types/i18n.ts'
+import { QWEN3_MEMORY_EMBEDDING_MODEL_ID } from './ollamaEmbedding.ts'
 
 export const LOCAL_HASH_MEMORY_MODEL_ID = 'local-hash-v1'
 
@@ -13,6 +14,11 @@ export const MEMORY_EMBEDDING_MODEL_OPTIONS: readonly MemoryEmbeddingModelOption
     value: LOCAL_HASH_MEMORY_MODEL_ID,
     label: 'memory.embedding.local-hash-v1.label',
     hint: 'memory.embedding.local-hash-v1.hint',
+  },
+  {
+    value: QWEN3_MEMORY_EMBEDDING_MODEL_ID,
+    label: 'memory.embedding.ollama-qwen3-embedding-0.6b.label',
+    hint: 'memory.embedding.ollama-qwen3-embedding-0.6b.hint',
   },
   {
     value: 'Xenova/paraphrase-multilingual-MiniLM-L12-v2',

@@ -305,6 +305,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   memoryVectorStats: () => ipcRenderer.invoke('memory:vector-stats'),
   memoryKeywordSearch: (payload) => ipcRenderer.invoke('memory:keyword-search', payload),
   memoryHybridSearch: (payload) => ipcRenderer.invoke('memory:hybrid-search', payload),
+  memoryOllamaEmbed: (payload) => ipcRenderer.invoke('memory:ollama-embed', payload),
 
   // Long-term memory file store (userData/memory/long-term-memory.json)
   memoryLongTermLoad: () => ipcRenderer.invoke('memory:long-term-load'),
