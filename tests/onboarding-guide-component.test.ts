@@ -5,6 +5,7 @@ import { afterEach, beforeEach, test } from 'node:test'
 import React from 'react'
 
 import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import { createConnectionVerificationRecord } from '../src/features/models/connectionTestFreshness.ts'
 import type { OnboardingGuideProps } from '../src/features/onboarding/components/OnboardingGuide.tsx'
@@ -234,7 +235,13 @@ type GuideCalls = {
   dismisses: number
 }
 
-function createGuide(overrides: Partial<AppSettings> = {}) {
+function createGuide(
+  overrides: Partial<AppSettings> = {},
+  hooks: {
+    onSave?: OnboardingGuideProps['onSave']
+    onPersistUiLanguage?: OnboardingGuideProps['onPersistUiLanguage']
+  } = {},
+) {
   const settings = makeSettings(overrides)
   const calls: GuideCalls = { saves: [], dismisses: 0 }
   const renderer = createComponentRenderer<OnboardingGuideProps>(OnboardingGuide)
@@ -245,7 +252,8 @@ function createGuide(overrides: Partial<AppSettings> = {}) {
     platformProfile: { startup: { supported: true } } as OnboardingGuideProps['platformProfile'],
     petModelPresets: [],
     onDismiss: () => { calls.dismisses += 1 },
-    onSave: async (next) => { calls.saves.push(next) },
+    onSave: hooks.onSave ?? (async (next) => { calls.saves.push(next) }),
+    onPersistUiLanguage: hooks.onPersistUiLanguage,
   }
   let tree: unknown
 
@@ -601,4 +609,58 @@ test('the last-step hint switches from missing-key to untested-connection once t
     0,
   )
   guide.unmount()
+})
+
+test('a failed setup save shows the fixed sentence and never the raw error', async () => {
+  const marker = 'RAW-ERR-MARKER-onboarding-save'
+  const warnings: string[] = []
+  const originalWarn = console.warn
+  console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')) }
+  try {
+    const guide = createGuide({}, {
+      onSave: async () => { throw new Error(marker) },
+    })
+    guide.render()
+    guide.advanceToLastStep()
+    guide.clickPrimary()
+    await new Promise((resolve) => setImmediate(resolve))
+    guide.render()
+
+    const text = collectText(guide.tree).join('\n')
+    assert.equal(text.includes(marker), false, 'raw save error leaked into the guide')
+    assert.ok(text.includes(enMessages['onboarding.error.save_failed']))
+    assert.ok(warnings.some((line) => line.includes(marker)), 'raw save error must reach the log')
+    guide.unmount()
+  } finally {
+    console.warn = originalWarn
+  }
+})
+
+test('a failed language persist shows the fixed sentence and never the raw error', async () => {
+  const marker = 'RAW-ERR-MARKER-onboarding-language'
+  const warnings: string[] = []
+  const originalWarn = console.warn
+  console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')) }
+  try {
+    const guide = createGuide({}, {
+      onPersistUiLanguage: async () => { throw new Error(marker) },
+    })
+    guide.render()
+    const [languageStep] = findElements(
+      guide.tree,
+      (element) => typeof element.props.onChooseLanguage === 'function',
+    )
+    assert.ok(languageStep, 'missing language step')
+    ;(languageStep.props.onChooseLanguage as (language: string) => void)('ja')
+    await new Promise((resolve) => setImmediate(resolve))
+    guide.render()
+
+    const text = collectText(guide.tree).join('\n')
+    assert.equal(text.includes(marker), false, 'raw language error leaked into the guide')
+    assert.ok(text.includes(jaMessages['onboarding.error.language_failed']))
+    assert.ok(warnings.some((line) => line.includes(marker)), 'raw language error must reach the log')
+    guide.unmount()
+  } finally {
+    console.warn = originalWarn
+  }
 })

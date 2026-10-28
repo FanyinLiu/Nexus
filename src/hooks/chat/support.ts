@@ -1,6 +1,5 @@
 import { parseAssistantPerformanceContent } from '../../features/pet/performance.ts'
-import { t } from '../../i18n/runtime.ts'
-import { humanizeIfSpeechIpcError } from '../../lib/humanizeError.ts'
+import { humanizeIfSpeechIpcError, humanizeVoiceError } from '../../lib/humanizeError.ts'
 import type { ChatMessage } from '../../types/index.ts'
 
 export function formatReminderNextRunLabel(timestamp: string | undefined, locale: string) {
@@ -20,8 +19,13 @@ export function formatReminderNextRunLabel(timestamp: string | undefined, locale
 export function getSpeechOutputErrorMessage(error: unknown, fallback?: string) {
   const coded = humanizeIfSpeechIpcError(error, 'tts')
   if (coded) return coded
-  if (error instanceof Error) return error.message
-  return fallback ?? t('voice.tts.playback_failed_fallback')
+  // No code means the renderer cannot classify the failure any further;
+  // playback is the honest category. The raw text is logged inside
+  // humanizeVoiceError and never returned to the caller.
+  if (error === null || error === undefined) {
+    return fallback?.trim() || humanizeVoiceError(error, { category: 'playback' })
+  }
+  return humanizeVoiceError(error, { category: 'playback' })
 }
 
 export function sanitizeLoadedMessages(messages: ChatMessage[]) {

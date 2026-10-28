@@ -86,7 +86,7 @@ function createParams(errors: Array<string | null>): StartApiRecordingConversati
     handleRecognizedVoiceTranscript: async () => true,
     handleVoiceListeningFailure: () => undefined,
     shouldAutoRestartVoice: () => false,
-    ti: (key) => key,
+    ti: (key) => enMessages[key] ?? key,
   }
 }
 

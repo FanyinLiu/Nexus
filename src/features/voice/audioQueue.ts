@@ -1,4 +1,5 @@
 import { t } from '../../i18n/runtime.ts'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 
 export type AudioQueueSegment<TMeta = unknown> = {
   audioBase64: string
@@ -38,28 +39,10 @@ function buildAudioObjectUrl(mimeType: string, audioBase64: string) {
 }
 
 function formatAudioPlaybackStartError(error: unknown) {
-  const errorName =
-    error && typeof error === 'object' && 'name' in error
-      ? String(error.name ?? '').trim()
-      : ''
-  const errorMessage =
-    error instanceof Error
-      ? error.message.trim()
-      : String(error ?? '').trim()
-
-  if (errorName === 'NotAllowedError') {
-    return t('voice.audio.playback_start_not_allowed')
-  }
-
-  if (errorName === 'NotSupportedError') {
-    return t('voice.audio.playback_start_not_supported')
-  }
-
-  return errorMessage
-    ? t('voice.audio.playback_start_original', {
-        detail: errorName ? `${errorName}: ${errorMessage}` : errorMessage,
-      })
-    : t('voice.audio.playback_start_generic')
+  // Playback never explains itself with the underlying DOMException /
+  // decoder string. The raw error is logged by humanizeVoiceError; the user
+  // gets the fixed playback sentence.
+  return humanizeVoiceError(error, { category: 'playback' })
 }
 
 export class AudioPlaybackQueue<TMeta = unknown> {
@@ -136,8 +119,11 @@ export class AudioPlaybackQueue<TMeta = unknown> {
           await this.playSegment(next, generation)
           next.resolve()
         } catch (error) {
-          const message = error instanceof Error ? error.message : t('voice.audio.playback_failed')
-          const rejectError = error instanceof Error ? error : new Error(message)
+          const stopped = error instanceof Error && error.message === t('voice.audio.playback_stopped')
+          const message = stopped
+            ? error.message
+            : humanizeVoiceError(error, { category: 'playback' })
+          const rejectError = new Error(message)
           this.options.onSegmentError?.(next, message)
           next.reject(rejectError)
 
@@ -147,7 +133,10 @@ export class AudioPlaybackQueue<TMeta = unknown> {
             remaining?.reject(rejectError)
           }
 
-          throw rejectError
+          // The failing segment's caller already received rejectError. Do not
+          // throw out of the fire-and-forget drain(): that would surface an
+          // unhandled rejection alongside the intended per-caller rejection.
+          return
         }
       }
     } finally {
@@ -223,7 +212,7 @@ export class AudioPlaybackQueue<TMeta = unknown> {
           }
 
           void audio.play().catch((error) => {
-            rejectWithError(new Error(t('voice.audio.playback_start_failed', { detail: formatAudioPlaybackStartError(error) })))
+            rejectWithError(new Error(formatAudioPlaybackStartError(error)))
           })
         }, AUDIO_PLAY_START_DELAY_MS)
       }

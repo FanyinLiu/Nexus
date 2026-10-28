@@ -1,5 +1,6 @@
 import type { AppSettings, AudioSynthesisRequest, TranslationKey, TranslationParams } from '../../types'
 import { t } from '../../i18n/runtime.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import {
   boundVoiceCaptureAttempt,
   denyVoiceCapture,
@@ -362,12 +363,32 @@ export function mapMicrophoneDiagnosticError(
   ti: Translator = t,
   platform: string | null | undefined = detectVoicePermissionPlatform(),
 ) {
+  // Check a denied permission before the device branches: any error-like
+  // object may carry the DOMException name (NotAllowedError /
+  // PermissionDeniedError / SecurityError) or Chromium's bare "Permission
+  // denied" text, and the privacy-pane copy is the only useful advice then.
+  const errorName = error && typeof error === 'object'
+    ? (error as { name?: unknown }).name
+    : undefined
+  const errorMessage = error && typeof error === 'object'
+    ? (error as { message?: unknown }).message
+    : error
+  const permissionDenied = (
+    typeof errorName === 'string'
+    && (errorName === 'NotAllowedError'
+      || errorName === 'PermissionDeniedError'
+      || errorName === 'SecurityError')
+  ) || (
+    typeof errorMessage === 'string'
+    && /NotAllowedError|PermissionDeniedError|SecurityError|permission.?denied/i.test(errorMessage)
+  )
+  if (permissionDenied) {
+    console.warn('[Voice] Microphone permission check failed:', getRedactedLogErrorMessage(error))
+    return ti(pickMicrophonePermissionDeniedKey(platform))
+  }
+
   if (error instanceof DOMException) {
     switch (error.name) {
-      case 'NotAllowedError':
-      case 'PermissionDeniedError':
-      case 'SecurityError':
-        return ti(pickMicrophonePermissionDeniedKey(platform))
       case 'NotFoundError':
       case 'DevicesNotFoundError':
         return ti('voice.mic.not_found')
@@ -384,9 +405,11 @@ export function mapMicrophoneDiagnosticError(
   if (error instanceof Error) {
     const message = error.message.trim()
     if (message) {
-      return localMode
-        ? ti('voice.mic.local_readiness_failed_with_detail', { detail: message })
-        : ti('voice.mic.readiness_failed_with_detail', { detail: message })
+      // The raw message is diagnostics-only; the readiness UI shows the fixed
+      // device sentence instead of interpolating it (the old detail-template
+      // copy leaked Chromium/provider wording into the banner).
+      console.warn('[Voice] Microphone readiness check failed:', getRedactedLogErrorMessage(error))
+      return ti('voice.error.device')
     }
   }
 

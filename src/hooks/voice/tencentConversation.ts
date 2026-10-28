@@ -16,8 +16,7 @@ import type {
 } from '../../features/voice/sessionMachine.ts'
 import { clamp } from '../../lib/common.ts'
 import {
-  humanizeIfSpeechIpcError,
-  humanizeMicPermissionError,
+  humanizeVoiceError,
 } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
@@ -225,9 +224,7 @@ export async function startTencentConversation(
       } catch (error) {
         params.tencentAsrSessionRef.current = null
         params.handleVoiceListeningFailure(
-          humanizeIfSpeechIpcError(error, 'stt')
-            ?? humanizeMicPermissionError(error)
-            ?? (error instanceof Error ? error.message : params.ti('voice.provider.tencent.failed_retry')),
+          humanizeVoiceError(error, { ti: params.ti }),
         )
       }
     }
@@ -359,10 +356,7 @@ export async function startTencentConversation(
     params.tencentAsrSessionRef.current = null
     if (isVoiceCaptureCancelled(error)) return
 
-    const message = humanizeMicPermissionError(error)
-      ?? (error instanceof Error
-        ? error.message
-        : params.ti('voice.provider.tencent.start_failed'))
+    const message = humanizeVoiceError(error, { ti: params.ti })
 
     params.updateVoicePipeline('idle', message)
     params.setError(message)

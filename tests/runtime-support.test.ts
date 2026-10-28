@@ -211,12 +211,37 @@ test('mapMicrophoneDiagnosticError maps DOM and generic errors through translato
   )
   assert.equal(
     mapMicrophoneDiagnosticError(new Error('driver failed'), true, ti),
-    'voice.mic.local_readiness_failed_with_detail:driver failed',
+    'voice.error.device',
   )
   assert.equal(
     mapMicrophoneDiagnosticError(null, true, ti),
     'voice.mic.local_readiness_failed_generic',
   )
+})
+
+test('mapMicrophoneDiagnosticError keeps the permission sentence for non-DOMException denials', () => {
+  const ti = (key: string) => key
+  const denials = [
+    new Error('Permission denied'),
+    Object.assign(new Error('capture blocked'), { name: 'SecurityError' }),
+    { name: 'NotAllowedError', message: 'The request is not allowed' },
+    'Permission denied',
+  ]
+
+  for (const error of denials) {
+    assert.equal(
+      mapMicrophoneDiagnosticError(error, false, ti, 'darwin'),
+      'voice.mic.permission_denied_mac',
+    )
+    assert.equal(
+      mapMicrophoneDiagnosticError(error, false, ti, 'win32'),
+      'voice.mic.permission_denied_windows',
+    )
+    assert.equal(
+      mapMicrophoneDiagnosticError(error, false, ti, 'linux'),
+      'voice.mic.permission_denied',
+    )
+  }
 })
 
 test('microphone permission copy follows the platform', () => {

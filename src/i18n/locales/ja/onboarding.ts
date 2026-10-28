@@ -59,6 +59,8 @@ export const jaOnboarding = {
   'onboarding.error.voice.no_input_api_base': '現在の音声入力方式にはエンドポイント URL が必要です。',
   'onboarding.error.voice.no_output_provider': '音声出力方式を先に選んでください。',
   'onboarding.error.voice.no_output_api_base': '現在の音声出力方式にはエンドポイント URL が必要です。',
+  'onboarding.error.save_failed': '保存できませんでした。もう一度お試しください。',
+  'onboarding.error.language_failed': '言語を切り替えられませんでした。もう一度選んでください。',
   'onboarding.eyebrow': '始める前に',
   'onboarding.title': 'まずはデスクトップに常駐して会話できる状態に',
   'onboarding.body': 'これは最小限のセットアップです。まずテキストモデル、キャラクター、常駐ウィンドウを整えます。音声、ツール権限、記憶方針、デスクトップコンテキストは後から設定で調整できます。',

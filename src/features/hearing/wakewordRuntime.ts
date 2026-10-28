@@ -2,8 +2,7 @@ import type {
   WakewordModelKind,
   WakewordRuntimeState,
 } from '../../types'
-import { humanizeMicPermissionError, type HumanizeTranslator } from '../../lib/humanizeError.ts'
-import { detectVoicePermissionPlatform } from '../voice/runtimeSupport.ts'
+import { humanizeVoiceError, isMicrophonePermissionError, type HumanizeTranslator } from '../../lib/humanizeError.ts'
 import {
   checkWakewordAvailability,
   startWakewordListener,
@@ -305,48 +304,28 @@ export function createWakewordRuntime(
   }
 
   /**
-   * Convert a raw detector/runtime error into user-facing copy. Permission
-   * denials become the per-platform microphone-permission sentence and the
-   * mic-track telemetry line becomes the recording-device guidance — in
-   * both cases the sentence is the WHOLE message, never wrapped in a
-   * localized shell (see handleRecoverableError). Everything else keeps the
-   * raw text: the caller wraps it in a localized template, so it can only
-   * reach the user inside a shell sentence, never bare.
-   *
-   * Permission detection goes through humanizeMicPermissionError so a
-   * DOMException whose `message` reads as an innocuous "The request is not
-   * allowed" is still recognised by its `name` and classified as permanent:
-   * retrying a denied permission can never succeed.
+   * Convert a raw detector/runtime error into the fixed, localized voice
+   * sentence. Classification follows the cause (engine / device / network)
+   * and falls back to generic; the raw text goes to the log inside
+   * humanizeVoiceError and is never interpolated into user copy. Permission
+   * denials stay permanent so retrying cannot loop forever.
    */
   function buildWakewordErrorCopy(rawMessage: string, rawError: unknown) {
-    const permissionSentence = humanizeMicPermissionError(rawError ?? rawMessage, {
-      platform: options.permissionPlatform ?? detectVoicePermissionPlatform(),
+    const permissionDenied = isMicrophonePermissionError(rawError ?? rawMessage)
+      || isPermanentWakewordError(rawMessage)
+    const category = MIC_TRACK_ENDED_PATTERN.test(rawMessage) ? 'device' : undefined
+    const message = humanizeVoiceError(rawError ?? rawMessage, {
+      category,
+      platform: options.permissionPlatform,
       ti,
     })
-    if (permissionSentence) {
-      return { message: permissionSentence, humanized: true, permissionDenied: true }
-    }
-    if (MIC_TRACK_ENDED_PATTERN.test(rawMessage)) {
-      return {
-        message: ti('humanize.voice.mic_not_responding'),
-        humanized: true,
-        permissionDenied: false,
-      }
-    }
-    return { message: rawMessage, humanized: false, permissionDenied: false }
+    return { message, permissionDenied }
   }
 
   function handleRecoverableError(rawMessage: string, modelKind: WakewordModelKind, rawError?: unknown) {
     stopListener()
 
     const copy = buildWakewordErrorCopy(rawMessage, rawError)
-    // A humanized message means the raw input was an internal/detector
-    // wording (mic-track telemetry, permission denial) that must never be
-    // shown as raw text — log the raw form so the trace stays debuggable.
-    if (copy.humanized) {
-      console.warn('[Wake] listener error:', rawMessage)
-    }
-
     const permanent = copy.permissionDenied || isPermanentWakewordError(rawMessage)
     const giveUp = permanent || state.retryCount >= retryMaxAttempts
     if (giveUp) {
@@ -357,14 +336,9 @@ export function createWakewordRuntime(
         active: false,
         available: false,
         modelKind,
-        // A humanized sentence is complete copy on its own; wrapping it in
-        // the unavailable_with_detail / retry_max_attempts_failed shell
-        // would only prefix it with "Wake-word listener unavailable:".
-        reason: copy.humanized
-          ? copy.message
-          : permanent
-            ? ti('voice.wakeword.unavailable_with_detail', { message: copy.message })
-            : ti('voice.wakeword.retry_max_attempts_failed', { max: retryMaxAttempts, message: copy.message }),
+        // The category sentence is complete copy on its own — wrapping it in
+        // an old "unavailable: {detail}" shell would only repeat internals.
+        reason: copy.message,
         error: copy.message,
         retryCount: 0,
       })

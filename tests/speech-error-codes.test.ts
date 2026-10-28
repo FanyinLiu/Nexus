@@ -9,6 +9,7 @@ import {
 } from '../shared/speechErrorCodes.js'
 import { humanizeError, humanizeIfSpeechIpcError } from '../src/lib/humanizeError.ts'
 import { getSpeechOutputErrorMessage } from '../src/hooks/chat/support.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
 
 before(async () => {
@@ -44,14 +45,14 @@ test('humanizeIfSpeechIpcError ignores non-coded speech copy', () => {
   )
 })
 
-test('getSpeechOutputErrorMessage humanizes coded timeouts and keeps other copy', () => {
+test('getSpeechOutputErrorMessage humanizes coded timeouts and maps other copy to playback', () => {
   assert.match(
     getSpeechOutputErrorMessage(new Error(SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT)),
     /(too long|faster|try)/i,
   )
   assert.equal(
     getSpeechOutputErrorMessage(new Error('请先填写语音输出 API Base URL。')),
-    '请先填写语音输出 API Base URL。',
+    enMessages['voice.error.playback'],
   )
 })
 

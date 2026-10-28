@@ -59,6 +59,8 @@ export const enOnboarding = {
   'onboarding.error.voice.no_input_api_base': 'The selected speech input provider needs an API base URL.',
   'onboarding.error.voice.no_output_provider': 'Please choose a speech output provider first.',
   'onboarding.error.voice.no_output_api_base': 'The selected speech output provider needs an API base URL.',
+  'onboarding.error.save_failed': 'Couldn\'t save that. Try again.',
+  'onboarding.error.language_failed': 'Couldn\'t switch the language. Pick it again.',
   'onboarding.eyebrow': 'Before we begin',
   'onboarding.title': 'Let\'s get your desktop companion visible and chatting',
   'onboarding.body': 'This is the minimum viable setup: text model, character, and always-on window first. Voice, tools, memory strategy, and desktop context can keep getting tuned in Settings later.',

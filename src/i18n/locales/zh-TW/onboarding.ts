@@ -59,6 +59,8 @@ export const zhTWOnboarding = {
   'onboarding.error.voice.no_input_api_base': '目前的語音輸入方案需要填寫介面位址。',
   'onboarding.error.voice.no_output_provider': '先選擇一個語音輸出方案。',
   'onboarding.error.voice.no_output_api_base': '目前的語音輸出方案需要填寫介面位址。',
+  'onboarding.error.save_failed': '沒能儲存，再點一次試試。',
+  'onboarding.error.language_failed': '語言沒切換成功，再選一次試試。',
   'onboarding.eyebrow': '開始前',
   'onboarding.title': '先把桌面夥伴配置到能常駐、能對話',
   'onboarding.body': '這是一輪最小可用首配。先完成文字模型、角色和常駐視窗，語音、工具權限、記憶策略和桌面上下文都可以稍後在設定中繼續細調。',
