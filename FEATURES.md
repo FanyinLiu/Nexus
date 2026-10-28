@@ -13,8 +13,8 @@
 | Stage | Status | Capabilities |
 |---|---|---|
 | Phase 1 必需 | Shipped foundation | 桌面常驻小窗口、Live2D 默认形象、Ollama / DeepSeek 文本主路径、简单对话 |
-| 0.4 当前稳定 | v0.4.7 public stable | 桌面陪伴感知、Live2D 导入校验、分层立绘 v4、记忆可信度、语音（含 Grok）、更新后的模型目录 |
-| 后续核心 | Next line | v0.5 桌宠跟随 / 打字反应；签名安装包 |
+| 0.4 当前稳定 | v0.4.8 public stable | 桌面陪伴感知（视线跟随、打字感知）、Live2D 唯一形象、记忆 v2 与未完成约定、语音自动探测、更新后的模型目录 |
+| 后续核心 | Next line | v0.5 窗口互动、本地 Kokoro TTS、游戏语音陪伴；签名安装包 |
 | 高级/实验 | Keep gated | 完整 Agent、MCP、插件、多平台网关、游戏集成 |
 
 Read the inventory below as modules that may be reused or reintroduced by
