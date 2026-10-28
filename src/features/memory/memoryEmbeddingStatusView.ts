@@ -5,6 +5,7 @@ import {
 } from './memoryEmbeddingAuto.ts'
 import {
   QWEN3_EMBEDDING_OLLAMA_MODEL,
+  describeOllamaEmbedFailure,
   getOllamaModelName,
   isOllamaMemoryModel,
   type MemoryEmbeddingBackendStatus,
@@ -57,10 +58,7 @@ export function resolveMemoryEmbeddingStatusView(
     return { tone: 'success', key: 'memory.embedding.status.ready', params: { dimensions: status.dimensions } }
   }
 
-  const reason = status.code === 'model-missing'
-    ? translate('memory.embedding.status.model_missing', { model: getOllamaModelName(selectedModel) })
-    : status.code === 'unreachable'
-      ? translate('memory.embedding.status.unreachable')
-      : translate('memory.embedding.status.error', { message: status.message })
+  const notice = describeOllamaEmbedFailure(status.code, getOllamaModelName(selectedModel))
+  const reason = translate(notice.key, notice.params)
   return { tone: 'warning', key: 'memory.embedding.status.fallback', params: { reason } }
 }

@@ -146,12 +146,13 @@ test('fallback: Ollama down -> local hash, visible status, cooldown keeps the re
   assert.equal(view?.params.reason, 'memory.embedding.status.unreachable')
 })
 
-test('fallback: missing model explains how to pull it', async () => {
+test('fallback: missing model explains how to install it without a shell command', async () => {
   setOllamaEmbedTransport(async () => ({ ok: false, code: 'model-missing', message: "model 'qwen3-embedding:0.6b' not found" }))
   await embedMemorySearchTextWithModel(unique('测试'), QWEN3_MEMORY_EMBEDDING_MODEL_ID, 'document')
   const status = getMemoryEmbeddingBackendStatus()
   assert.equal(status.state, 'fallback')
-  assert.match(status.state === 'fallback' ? status.message : '', /ollama pull qwen3-embedding:0\.6b/)
+  assert.equal(status.state === 'fallback' ? status.code : '', 'model-missing')
+  assert.equal('message' in status, false)
 
   const view = resolveMemoryEmbeddingStatusView(
     QWEN3_MEMORY_EMBEDDING_MODEL_ID,
@@ -159,6 +160,27 @@ test('fallback: missing model explains how to pull it', async () => {
     (key, params) => `${key}:${params?.model ?? ''}`,
   )
   assert.equal(view?.params.reason, 'memory.embedding.status.model_missing:qwen3-embedding:0.6b')
+})
+
+test('raw Ollama error text never reaches the status line', async () => {
+  const raw = 'RAW-OLLAMA-ERROR-do-not-render /home/secret/path'
+  setOllamaEmbedTransport(async () => ({ ok: false, code: 'error', message: raw }))
+  const text = unique('我住在杭州')
+  const result = await embedMemorySearchTextWithModel(text, QWEN3_MEMORY_EMBEDDING_MODEL_ID, 'document')
+  assert.equal(result.model, LOCAL_HASH_MEMORY_MODEL_ID)
+
+  const status = getMemoryEmbeddingBackendStatus()
+  assert.equal(status.state, 'fallback')
+  assert.equal(JSON.stringify(status).includes(raw), false)
+
+  const view = resolveMemoryEmbeddingStatusView(
+    QWEN3_MEMORY_EMBEDDING_MODEL_ID,
+    status,
+    (key, params) => `${key}:${JSON.stringify(params ?? {})}`,
+  )
+  assert.equal(view?.key, 'memory.embedding.status.fallback')
+  assert.match(String(view?.params.reason), /memory\.embedding\.status\.error/)
+  assert.equal(JSON.stringify(view).includes(raw), false)
 })
 
 test('cache is keyed by model: a fallback hash vector never shadows the real one', async () => {

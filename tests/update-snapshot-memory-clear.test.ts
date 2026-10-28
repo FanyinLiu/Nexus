@@ -216,3 +216,37 @@ test('a missing update-snapshots directory removes nothing', async () => {
     await fs.rm(userData, { recursive: true, force: true })
   }
 })
+
+test('update snapshots copied with the vector store format lose it too', async () => {
+  const userData = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-update-snapshot-vector-'))
+  try {
+    const directory = path.join(userData, 'update-snapshots', 'vector-snapshot')
+    await fs.mkdir(path.join(directory, 'memory-v2'), { recursive: true })
+    await fs.writeFile(path.join(directory, 'memory-v2', 'long-term.json'), JSON.stringify([{ id: 'm1', content: MARKER }]))
+    await fs.writeFile(path.join(directory, 'memory-vectors.json'), JSON.stringify({
+      version: 1,
+      entries: [{
+        id: 'm1',
+        content: MARKER,
+        embedding: [1, 0, 0],
+        model: 'local-hash-v1',
+        altEmbeddings: { 'ollama:qwen3-embedding:0.6b': [0.6, 0.8] },
+      }],
+    }))
+    await fs.writeFile(path.join(directory, 'memory-vectors.log'), `${MARKER}\n`)
+    await fs.writeFile(path.join(directory, 'manifest.json'), '{"format":"nexus-update-snapshot"}')
+    assert.equal(await treeContains(directory, MARKER), true)
+
+    const result = await removeMemoryFromUpdateSnapshots(userData)
+
+    assert.deepEqual(
+      result.removed.map((entry) => path.basename(entry)).sort(),
+      ['long-term.json', 'memory-vectors.json', 'memory-vectors.log'],
+    )
+    assert.equal(await treeContains(userData, MARKER), false)
+    await assert.rejects(() => fs.access(path.join(directory, 'memory-vectors.json')))
+    await assert.rejects(() => fs.access(path.join(directory, 'memory-vectors.log')))
+  } finally {
+    await fs.rm(userData, { recursive: true, force: true })
+  }
+})

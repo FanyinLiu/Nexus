@@ -24,6 +24,30 @@ function setEmbeddingCache(key: string, value: Promise<number[]>): void {
   embeddingCache.set(key, value)
 }
 
+/**
+ * Drop every cached vector. Cache keys contain the memory text itself, so a
+ * memory clear has to empty this map even though only vectors are stored.
+ */
+export function clearMemoryEmbeddingCache(): void {
+  embeddingCache.clear()
+}
+
+/**
+ * Drop the cached vectors for one deleted memory. Ollama keys keep the
+ * collapsed text while the local hash keeps the normalized text, so both
+ * spellings are checked.
+ */
+export function clearMemoryEmbeddingCacheForText(text: string): void {
+  const compact = String(text).replace(/\s+/g, ' ').trim()
+  const normalized = normalizeForEmbedding(text)
+  if (!compact && !normalized) return
+  for (const key of [...embeddingCache.keys()]) {
+    if ((compact && key.endsWith(`::${compact}`)) || (normalized && key.endsWith(`::${normalized}`))) {
+      embeddingCache.delete(key)
+    }
+  }
+}
+
 // Re-exported so external callers go through setEmbeddingCache.
 
 function normalizeForEmbedding(text: string) {

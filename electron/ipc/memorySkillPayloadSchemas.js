@@ -77,6 +77,7 @@ const memoryOllamaEmbedSchema = {
       maxItems: 64,
       items: { type: 'string', maxLength: BODY_TEXT_MAX },
     },
+    timeoutMs: { type: 'number', optional: true },
   },
 }
 
@@ -226,15 +227,32 @@ const memoryOllamaDetectSchema = {
   fields: {
     baseUrl: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX },
     model: { type: 'string', maxLength: SHORT_TEXT_MAX, allowEmpty: false },
+    timeoutMs: { type: 'number', optional: true },
   },
 }
 
+const OLLAMA_TIMEOUT_MIN_MS = 500
+const OLLAMA_TIMEOUT_MAX_MS = 30_000
+
+/**
+ * A renderer-supplied timeout is advisory: clamp it so a stuck or hostile
+ * caller cannot hold the main process on a request for minutes.
+ * @param {{ timeoutMs?: number } | null | undefined} payload
+ */
+function clampOllamaTimeout(payload) {
+  if (!payload || payload.timeoutMs === undefined) return payload
+  return {
+    ...payload,
+    timeoutMs: Math.min(OLLAMA_TIMEOUT_MAX_MS, Math.max(OLLAMA_TIMEOUT_MIN_MS, payload.timeoutMs)),
+  }
+}
+
 export function validateMemoryOllamaDetectPayload(payload) {
-  return validateIpcPayload('memory:ollama-detect', payload, memoryOllamaDetectSchema)
+  return clampOllamaTimeout(validateIpcPayload('memory:ollama-detect', payload, memoryOllamaDetectSchema))
 }
 
 export function validateMemoryOllamaEmbedPayload(payload) {
-  return validateIpcPayload('memory:ollama-embed', payload, memoryOllamaEmbedSchema)
+  return clampOllamaTimeout(validateIpcPayload('memory:ollama-embed', payload, memoryOllamaEmbedSchema))
 }
 
 export function validateMemoryRemovePayload(payload) {

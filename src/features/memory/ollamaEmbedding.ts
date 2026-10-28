@@ -12,6 +12,9 @@
  * settings panel can show it instead of failing silently.
  */
 
+import type { TranslationKey } from '../../types/i18n.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+
 export const OLLAMA_MEMORY_MODEL_PREFIX = 'ollama:'
 export const QWEN3_EMBEDDING_OLLAMA_MODEL = 'qwen3-embedding:0.6b'
 export const QWEN3_MEMORY_EMBEDDING_MODEL_ID = `${OLLAMA_MEMORY_MODEL_PREFIX}${QWEN3_EMBEDDING_OLLAMA_MODEL}`
@@ -32,6 +35,7 @@ export type MemoryEmbeddingPurpose = 'query' | 'document'
 
 export type OllamaEmbedFailureCode =
   | 'unreachable'
+  | 'not-local'
   | 'model-missing'
   | 'not-embedding-model'
   | 'bad-response'
@@ -47,7 +51,12 @@ export type OllamaEmbedTransport = (request: OllamaEmbedRequest) => Promise<Olla
 export type MemoryEmbeddingBackendStatus =
   | { state: 'idle' }
   | { state: 'ready'; model: string; dimensions: number }
-  | { state: 'fallback'; model: string; code: OllamaEmbedFailureCode; message: string }
+  | { state: 'fallback'; model: string; code: OllamaEmbedFailureCode }
+
+export type OllamaEmbedFailureNotice = {
+  key: TranslationKey
+  params: Record<string, string | number>
+}
 
 export class OllamaEmbeddingError extends Error {
   readonly code: OllamaEmbedFailureCode
@@ -207,18 +216,28 @@ function normalizeVector(values: ArrayLike<number>) {
   return magnitude ? raw.map((value) => value / magnitude) : raw
 }
 
-/** Human-readable reason, including the fix for a missing model. */
-export function describeOllamaEmbedFailure(code: OllamaEmbedFailureCode, ollamaModel: string, message: string) {
+/**
+ * User-facing explanation for a failed Ollama call. Returns a translation
+ * key plus params instead of prose so every locale (and the Settings status
+ * line) shares one source of truth; the raw Ollama reply is log-only.
+ */
+export function describeOllamaEmbedFailure(
+  code: OllamaEmbedFailureCode,
+  ollamaModel: string,
+): OllamaEmbedFailureNotice {
   if (code === 'model-missing') {
-    return `Ollama model "${ollamaModel}" is not installed. Run: ollama pull ${ollamaModel}`
+    return { key: 'memory.embedding.status.model_missing', params: { model: ollamaModel } }
   }
-  if (code === 'unreachable') {
-    return message || 'Ollama is not running'
+  if (code === 'not-local') {
+    return { key: 'memory.embedding.status.not_local', params: {} }
   }
   if (code === 'not-embedding-model') {
-    return `"${ollamaModel}" is not an embedding model`
+    return { key: 'memory.embedding.status.not_embedding_model', params: { model: ollamaModel } }
   }
-  return message || 'Ollama embedding failed'
+  if (code === 'unreachable') {
+    return { key: 'memory.embedding.status.unreachable', params: {} }
+  }
+  return { key: 'memory.embedding.status.error', params: {} }
 }
 
 /** True while a recent failure says Ollama should be skipped for this model. */
@@ -244,7 +263,8 @@ export async function embedTextsWithOllama(
   }
   if (isOllamaMemoryModelCoolingDown(model)) {
     const current = status.state === 'fallback' ? status : null
-    throw new OllamaEmbeddingError(current?.code ?? 'unreachable', current?.message ?? 'Ollama temporarily unavailable')
+    const notice = describeOllamaEmbedFailure(current?.code ?? 'unreachable', ollamaModel)
+    throw new OllamaEmbeddingError(current?.code ?? 'unreachable', notice.key)
   }
 
   const transport = transportOverride ?? defaultTransport
@@ -267,10 +287,12 @@ export async function embedTextsWithOllama(
     }
 
     if (!result.ok) {
-      const message = describeOllamaEmbedFailure(result.code, ollamaModel, result.message)
+      const notice = describeOllamaEmbedFailure(result.code, ollamaModel)
+      // Diagnostic only: the UI renders `notice`, never the provider reply.
+      console.warn('[memory] Ollama embedding failed:', getRedactedLogErrorMessage(result.message))
       unavailableUntil.set(key, Date.now() + FAILURE_COOLDOWN_MS)
-      setStatus({ state: 'fallback', model, code: result.code, message })
-      throw new OllamaEmbeddingError(result.code, message)
+      setStatus({ state: 'fallback', model, code: result.code })
+      throw new OllamaEmbeddingError(result.code, notice.key)
     }
 
     for (const row of result.embeddings) {
