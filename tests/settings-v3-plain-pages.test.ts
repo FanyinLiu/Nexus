@@ -11,9 +11,23 @@ import { after, before, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 
+import { zhCNSettingsModel } from '../src/i18n/locales/zh-CN/settings-model.ts'
+import { zhCNSettingsVoice } from '../src/i18n/locales/zh-CN/settings-voice.ts'
+import { zhCNVoice } from '../src/i18n/locales/zh-CN/voice.ts'
+
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const VITE_CLI_PATH = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url))
 const HOST = '127.0.0.1'
+
+// Copy is owned by the locale files; the tests below pin behavior, so they
+// read the current zh-CN wording instead of duplicating it.
+const ENDPOINT_LABEL = zhCNSettingsModel['settings.model.endpoint_url']
+const TRIGGER_MODE_LABEL = zhCNSettingsVoice['settings.voice.trigger_mode']
+const TRIGGER_OPTION_LABELS = [
+  zhCNVoice['voice_trigger.direct_send.label'],
+  zhCNVoice['voice_trigger.wake_word.label'],
+  zhCNVoice['voice_trigger.manual_confirm.label'],
+]
 
 async function reservePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
@@ -160,11 +174,11 @@ test('the voice page can still pick the fill-the-box trigger', { timeout: 150_00
   })
   await openAdvanced(page, '换服务、语速、一直听')
 
-  const trigger = page.getByRole('combobox', { name: '语音触发方式' })
+  const trigger = page.getByRole('combobox', { name: TRIGGER_MODE_LABEL })
   await trigger.waitFor({ state: 'visible' })
   assert.deepEqual(
     await trigger.locator('option').allTextContents(),
-    ['识别后直接发送', '命中唤醒词再发送', '只填入输入框'],
+    TRIGGER_OPTION_LABELS,
   )
   // The plain page owns the wake word field, so the advanced section must
   // not show a second one.
@@ -191,7 +205,7 @@ test('a preset service keeps its address editable in the advanced section', { ti
   })
   await openAdvanced(page, '地址、Telegram、Discord、花费上限')
 
-  const endpoint = page.getByLabel('文本接口地址')
+  const endpoint = page.getByLabel(ENDPOINT_LABEL)
   await endpoint.waitFor({ state: 'visible' })
   assert.equal(await endpoint.count(), 1)
   assert.equal(await endpoint.inputValue(), 'https://proxy.example/v1')
@@ -215,7 +229,7 @@ test('a service the person fills in keeps its address on the plain page', { time
   const address = page.getByLabel('地址', { exact: true })
   await address.waitFor({ state: 'visible' })
   assert.equal(await address.inputValue(), 'https://proxy.example/v1')
-  assert.equal(await page.getByLabel('文本接口地址').count(), 0)
+  assert.equal(await page.getByLabel(ENDPOINT_LABEL).count(), 0)
   await page.close()
 })
 
