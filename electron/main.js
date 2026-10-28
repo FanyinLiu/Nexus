@@ -1,9 +1,4 @@
 import { app, BrowserWindow, dialog, session } from 'electron'
-import path from 'node:path'
-import fs from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { spawn } from 'node:child_process'
-import net from 'node:net'
 
 import { initPetModelService } from './services/petModelService.js'
 import {
@@ -30,7 +25,7 @@ import { closeAuditLog } from './services/auditLog.js'
 import { runMacPermissionChecks } from './services/macPermissions.js'
 import { runWindowsPermissionChecks } from './services/windowsPermissions.js'
 import { initModelManager } from './services/modelManager.js'
-import { ensurePythonRuntimeStatus, getPythonRuntimeStatus } from './services/pythonRuntime.js'
+import { createDefaultVoiceSidecarHost } from './services/voiceSidecarHost.js'
 import { initializeLocalDataStore } from './services/localDataStore.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { createRendererReloadGuard, shouldReloadAfterRendererGone } from './crashRecovery.js'
@@ -204,133 +199,12 @@ function isTrustedRendererOrigin(origin, ownerUrl = getRendererServerUrl()) {
   }
 }
 
-// ── AI service auto-start (OmniVoice TTS + GLM-ASR STT) ──
+// ── On-demand local voice sidecars (OmniVoice TTS + GLM-ASR STT) ──
 
-const OMNIVOICE_PORT = 8000
-const GLM_ASR_PORT = 8001
-
-const childServices = []
-
-function isPortOpen(host, port) {
-  return new Promise((resolve) => {
-    const socket = new net.Socket()
-    socket.setTimeout(1000)
-    socket.once('connect', () => { socket.destroy(); resolve(true) })
-    socket.once('error', () => resolve(false))
-    socket.once('timeout', () => { socket.destroy(); resolve(false) })
-    socket.connect(port, host)
-  })
-}
-
-// Allow users to override the Python binary used for OmniVoice / GLM-ASR.
-// Fixes the common case on macOS where `python3` is Apple's stock 3.9 which
-// can't install transformers>=5.0.0. Users can set NEXUS_PYTHON=/opt/homebrew/bin/python3.11
-function resolvePythonCommand() {
-  const status = getPythonRuntimeStatus()
-  if (status?.binary) return status.binary
-  if (process.env.NEXUS_PYTHON) return process.env.NEXUS_PYTHON
-  return process.platform === 'win32' ? 'python' : 'python3'
-}
-
-async function ensureServiceRunning({ tag, port, command, args, cwd, timeoutSec = 60 }) {
-  if (await isPortOpen('127.0.0.1', port)) {
-    console.info(`[${tag}] Already running on port ${port}`)
-    return
-  }
-
-  console.info(`[${tag}] Starting on port ${port} via ${command}...`)
-  // Pipe stderr so we can surface startup failures (missing deps, Python version
-  // mismatch, etc.) to the main-process console instead of silently giving up.
-  const child = spawn(command, args, {
-    cwd,
-    stdio: ['ignore', 'ignore', 'pipe'],
-    detached: true,
-    windowsHide: true,
-  })
-  child.unref()
-  childServices.push(child)
-
-  // Capture stderr into a ring buffer and only surface it if the process
-  // fails — live-streaming + tail-on-exit used to double-print 200+ line
-  // Python tracebacks when a sidecar exited early during boot. Now the
-  // user sees a single summary on exit, and nothing noisy while things
-  // are healthy.
-  let stderrTail = ''
-  child.stderr?.setEncoding('utf8')
-  child.stderr?.on('data', (chunk) => {
-    stderrTail = (stderrTail + chunk).slice(-4000)
-  })
-  child.on('exit', (code, signal) => {
-    if (code !== 0) {
-      console.warn(`[${tag}] Process exited early (code=${code}, signal=${signal}).`)
-      if (stderrTail.trim()) {
-        console.warn(`[${tag}] stderr tail:\n${stderrTail.trim()}`)
-      }
-    }
-  })
-  child.on('error', (err) => {
-    console.warn(`[${tag}] Spawn error: ${getRedactedErrorMessage(err)}`)
-  })
-
-  for (let i = 0; i < timeoutSec; i++) {
-    if (await isPortOpen('127.0.0.1', port)) {
-      console.info(`[${tag}] Ready`)
-      return
-    }
-    await new Promise(r => setTimeout(r, 1000))
-  }
-  console.warn(`[${tag}] Did not start within ${timeoutSec}s`)
-}
-
-// Python sidecar scripts live in scripts/ and are listed under asarUnpack in
-// package.json. Packaged builds see them on disk at
-// `<resourcesPath>/app.asar.unpacked/scripts/*.py`. Dev runs read the repo
-// root directly. We must return a real on-disk path because child_process
-// spawn bypasses Electron's asar fs shim — a virtual asar path would ENOTDIR.
-function resolveAppRoot() {
-  return path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
-}
-
-function pythonScriptPath(relativePath) {
-  if (app.isPackaged) {
-    const unpacked = path.join(process.resourcesPath, 'app.asar.unpacked', relativePath)
-    if (fs.existsSync(unpacked)) return unpacked
-  }
-  const devCandidate = path.join(resolveAppRoot(), relativePath)
-  return fs.existsSync(devCandidate) ? devCandidate : null
-}
-
-function ensureOmniVoiceRunning() {
-  const scriptPath = pythonScriptPath('scripts/omnivoice_server.py')
-  if (!scriptPath) {
-    console.info('[OmniVoice] Script not bundled in this build — skipping auto-start.')
-    return Promise.resolve()
-  }
-  return ensureServiceRunning({
-    tag: 'OmniVoice',
-    port: OMNIVOICE_PORT,
-    command: resolvePythonCommand(),
-    args: [scriptPath, '--port', String(OMNIVOICE_PORT)],
-    cwd: path.dirname(scriptPath),
-    timeoutSec: 90,
-  })
-}
-
-function ensureGlmAsrRunning() {
-  const scriptPath = pythonScriptPath('scripts/glm_asr_server.py')
-  if (!scriptPath) {
-    console.info('[GLM-ASR] Script not bundled in this build — skipping auto-start.')
-    return Promise.resolve()
-  }
-  return ensureServiceRunning({
-    tag: 'GLM-ASR',
-    port: GLM_ASR_PORT,
-    command: resolvePythonCommand(),
-    args: [scriptPath, '--port', String(GLM_ASR_PORT)],
-    cwd: path.dirname(scriptPath),
-    timeoutSec: 120,
-  })
-}
+// The Python servers are expensive and optional. They are started/stopped by
+// the renderer's voice-runtime sync (selected engine + matching voice switch),
+// never unconditionally at launch. See voiceSidecarService.js.
+const voiceSidecarSupervisor = createDefaultVoiceSidecarHost()
 
 function registerMediaPermissionHandlers() {
   const defaultSession = session.defaultSession
@@ -404,7 +278,7 @@ app.whenReady()
       console.warn('[local-data] main-process storage adapter unavailable:', localDataStatus.errorMessage)
     }
     registerMediaPermissionHandlers()
-    registerIpc()
+    registerIpc({ voiceSidecarSupervisor })
     initModelManager()
 
     // macOS: hide dock icon for desktop pet (floating widget mode)
@@ -431,25 +305,6 @@ app.whenReady()
     runMacPermissionChecks().catch((err) => console.warn('[mac-perm] auto-check error:', getRedactedErrorMessage(err)))
     runWindowsPermissionChecks().catch((err) => console.warn('[windows-perm] auto-check error:', getRedactedErrorMessage(err)))
     autoStartPlugins().catch((err) => console.warn('[pluginHost] auto-start error:', getRedactedErrorMessage(err)))
-
-    // Probe Python + dependencies before attempting to spawn the optional
-    // AI services. If Python is missing or torch/transformers aren't
-    // installed, skip the spawn quietly — users shouldn't see ImportError
-    // tracebacks just because they haven't set up the optional Python stack.
-    ensurePythonRuntimeStatus()
-      .then((status) => {
-        if (status.omniVoice.ready) {
-          ensureOmniVoiceRunning().catch((err) => console.warn('[OmniVoice] auto-start error:', getRedactedErrorMessage(err)))
-        } else {
-          console.info('[OmniVoice] Skipping auto-start — Python prerequisites not met.')
-        }
-        if (status.glmAsr.ready) {
-          ensureGlmAsrRunning().catch((err) => console.warn('[GLM-ASR] auto-start error:', getRedactedErrorMessage(err)))
-        } else {
-          console.info('[GLM-ASR] Skipping auto-start — Python prerequisites not met.')
-        }
-      })
-      .catch((err) => console.warn('[Python] Runtime probe failed:', getRedactedErrorMessage(err)))
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -496,10 +351,6 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   closeRendererServer()
-  for (const child of childServices) {
-    if (child && !child.killed) {
-      try { if (child.pid) process.kill(child.pid) } catch {}
-    }
-  }
+  voiceSidecarSupervisor.stopAllNow()
   closeAuditLog()
 })

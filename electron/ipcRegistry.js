@@ -23,6 +23,7 @@ import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
+import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
 import * as localDataIpc from './ipc/localDataIpc.js'
 import * as desktopPresenceIpc from './ipc/desktopPresenceIpc.js'
 
@@ -80,7 +81,7 @@ function loadDeferredModules() {
   return _deferredModulesPromise
 }
 
-export function registerIpc() {
+export function registerIpc(options = {}) {
   installIpcChannelBinding()
   windowIpc.register()
 
@@ -109,6 +110,7 @@ export function registerIpc() {
   proactiveNotificationIpc.register()
   mcpIpc.register()
   externalActionPolicyIpc.register()
+  voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
   localDataIpc.register()
   desktopPresenceIpc.register()
 

@@ -39,6 +39,7 @@ export const CHECKED_FILES = [
   'electron/services/tencentAsr.js',
   'electron/services/ttsService.js',
   'electron/services/updaterService.js',
+  'electron/services/voiceSidecarService.js',
   'electron/services/vtsBridge.js',
   'electron/services/windowsPermissions.js',
   'electron/services/windowBoundsStore.js',
@@ -159,6 +160,12 @@ export const UNSAFE_PATTERNS = [
     file: 'electron/main.js',
     pattern: /console\.warn\(`\[\$\{tag\}\] Spawn error: \$\{err\?\.message\}`\)/,
     message: 'sidecar spawn support logs must redact platform errors before logging',
+  },
+  {
+    id: 'voice-sidecar-raw-dependency-error-log',
+    file: 'electron/services/voiceSidecarService.js',
+    pattern: /logger\.(?:warn|info)\(`[^`]*\$\{(?:error|err)(?:\?\.|\.)message\}/,
+    message: 'voice sidecar support logs must redact dependency errors before logging',
   },
   {
     id: 'main-process-raw-dock-error-log',

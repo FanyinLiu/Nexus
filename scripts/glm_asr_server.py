@@ -17,6 +17,8 @@ Then in Nexus settings:
     - Model: glm-asr-nano (or anything, ignored by this server)
 """
 
+SIDECAR_VERSION = "1"
+
 import argparse
 import io
 import logging

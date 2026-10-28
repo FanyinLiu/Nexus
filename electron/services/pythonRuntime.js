@@ -6,12 +6,9 @@
  * ready — spawning anyway produces a stream of ImportError tracebacks that
  * mask real startup problems and make the app look broken.
  *
- * Instead we probe once at startup:
- *   - Is there a python binary?
- *   - Can it import the modules each service needs?
- * If either check fails we mark the service as "disabled — requires Python"
- * and skip the spawn entirely. The probe stays in the main process; the
- * window no longer asks for it.
+ * Probes are now lazy and per service: the on-demand voice supervisor only
+ * asks about the engine the user actually selected, so launching with a
+ * cloud/browser engine never starts Python at all.
  *
  * All probes run with `spawn` (async). The previous implementation used
  * `spawnSync` inside `app.whenReady`, which stalled the main event loop
@@ -20,6 +17,11 @@
  */
 
 import { spawn } from 'node:child_process'
+
+const SERVICE_MODULES = Object.freeze({
+  omniVoice: ['torch', 'torchaudio', 'transformers', 'fastapi', 'uvicorn', 'omnivoice'],
+  glmAsr: ['torch', 'transformers', 'fastapi', 'uvicorn'],
+})
 
 function resolveCandidateBinaries() {
   if (process.env.NEXUS_PYTHON) return [process.env.NEXUS_PYTHON]
@@ -105,80 +107,146 @@ async function probeImports(binary, modules) {
 
 let _cachedStatus = null
 let _inflightProbe = null
+let _detectedPython = null
+let _detectedResolved = false
+let _inflightDetect = null
+let _noPythonLogged = false
+const _serviceStatuses = { omniVoice: null, glmAsr: null }
+const _serviceInflight = { omniVoice: null, glmAsr: null }
+const _serviceUnavailableLogged = { omniVoice: false, glmAsr: false }
 
-async function computeStatus() {
-  const candidates = resolveCandidateBinaries()
-  let detected = null
-  // Candidate order matters (the first hit wins), so keep this serial.
-  for (const candidate of candidates) {
-    detected = await probeBinary(candidate)
-    if (detected) break
-  }
-
-  if (!detected) {
-    return {
-      pythonAvailable: false,
-      binary: null,
-      version: null,
-      omniVoice: { ready: false, missingImports: ['python'] },
-      glmAsr: { ready: false, missingImports: ['python'] },
+async function detectPython() {
+  if (_detectedResolved) return _detectedPython
+  if (_inflightDetect) return _inflightDetect
+  _inflightDetect = (async () => {
+    const candidates = resolveCandidateBinaries()
+    let detected = null
+    // Candidate order matters (the first hit wins), so keep this serial.
+    for (const candidate of candidates) {
+      detected = await probeBinary(candidate)
+      if (detected) break
     }
-  }
-
-  // Probe the top-level imports each sidecar performs immediately at module
-  // load. `omnivoice` is a separate pip package the user must install
-  // alongside torch/transformers — without it the OmniVoice server crashes
-  // with `ModuleNotFoundError: No module named 'omnivoice'` before the
-  // FastAPI server can even bind a port. GLM-ASR only needs the common
-  // stack — its runtime failure modes (wrong transformers version for the
-  // GLM architecture) happen during model.from_pretrained() which we can't
-  // cheaply probe without downloading weights.
-  //
-  // Parallelise the two import probes — they spawn independent python
-  // processes and benefit fully from concurrency.
-  const omniVoiceModules = ['torch', 'torchaudio', 'transformers', 'fastapi', 'uvicorn', 'omnivoice']
-  const glmAsrModules = ['torch', 'transformers', 'fastapi', 'uvicorn']
-
-  const [omni, glm] = await Promise.all([
-    probeImports(detected.binary, omniVoiceModules),
-    probeImports(detected.binary, glmAsrModules),
-  ])
-
-  return {
-    pythonAvailable: true,
-    binary: detected.binary,
-    version: detected.version,
-    omniVoice: { ready: omni.ok, missingImports: omni.missing },
-    glmAsr: { ready: glm.ok, missingImports: glm.missing },
-  }
+    _detectedPython = detected
+    _detectedResolved = true
+    return detected
+  })().finally(() => {
+    _inflightDetect = null
+  })
+  return _inflightDetect
 }
 
-export function getPythonRuntimeStatus() {
-  return _cachedStatus
+/**
+ * Return the Python binary found by the most recent probe, if any.
+ * The sidecar supervisor uses this after a ready probe to choose the command.
+ *
+ * @returns {string | null}
+ */
+export function getDetectedPythonBinary() {
+  if (_detectedResolved) return _detectedPython?.binary ?? null
+  return _cachedStatus?.binary ?? null
 }
 
+/**
+ * Probe only the Python imports a single sidecar needs. Results are cached
+ * per service so repeated settings syncs do not re-run import checks.
+ *
+ * @param {'omniVoice' | 'glmAsr'} serviceId
+ * @returns {Promise<{
+ *   pythonAvailable: boolean,
+ *   binary: string | null,
+ *   version: string | null,
+ *   ready: boolean,
+ *   missingImports: string[],
+ * }>}
+ */
+export async function ensurePythonRuntimeStatusFor(serviceId) {
+  const key = serviceId === 'glmAsr' ? 'glmAsr' : serviceId === 'omniVoice' ? 'omniVoice' : null
+  if (!key) {
+    return { pythonAvailable: false, binary: null, version: null, ready: false, missingImports: ['unknown'] }
+  }
+  if (_serviceStatuses[key]) return _serviceStatuses[key]
+  if (_serviceInflight[key]) return _serviceInflight[key]
+
+  _serviceInflight[key] = (async () => {
+    const detected = await detectPython()
+    if (!detected) {
+      if (!_noPythonLogged) {
+        _noPythonLogged = true
+        console.info('[Python] No Python interpreter found — OmniVoice TTS and GLM-ASR will be disabled. Install Python 3.10+ and pip install -r requirements.txt to enable them.')
+      }
+      return {
+        pythonAvailable: false,
+        binary: null,
+        version: null,
+        ready: false,
+        missingImports: ['python'],
+      }
+    }
+
+    const probe = await probeImports(detected.binary, SERVICE_MODULES[key])
+    if (!probe.ok && !_serviceUnavailableLogged[key]) {
+      _serviceUnavailableLogged[key] = true
+      const tag = key === 'omniVoice' ? 'OmniVoice TTS' : 'GLM-ASR'
+      console.info(`[Python] ${tag} disabled — missing modules: ${probe.missing.join(', ')}`)
+    }
+
+    return {
+      pythonAvailable: true,
+      binary: detected.binary,
+      version: detected.version,
+      ready: probe.ok,
+      missingImports: probe.missing,
+    }
+  })().finally(() => {
+    _serviceInflight[key] = null
+  })
+  return _serviceInflight[key]
+}
+
+/**
+ * Probe both optional services. Kept for callers that need the complete
+ * runtime snapshot; the launch path uses the per-service variant instead so
+ * unselected engines never spawn Python.
+ *
+ * @returns {Promise<{
+ *   pythonAvailable: boolean,
+ *   binary: string | null,
+ *   version: string | null,
+ *   omniVoice: { ready: boolean, missingImports: string[] },
+ *   glmAsr: { ready: boolean, missingImports: string[] },
+ * }>}
+ */
 export async function ensurePythonRuntimeStatus() {
   if (_cachedStatus) return _cachedStatus
   if (_inflightProbe) return _inflightProbe
-  _inflightProbe = computeStatus().then((status) => {
+  _inflightProbe = (async () => {
+    const [omni, glm] = await Promise.all([
+      ensurePythonRuntimeStatusFor('omniVoice'),
+      ensurePythonRuntimeStatusFor('glmAsr'),
+    ])
+    const status = {
+      pythonAvailable: omni.pythonAvailable || glm.pythonAvailable,
+      binary: omni.binary ?? glm.binary,
+      version: omni.version ?? glm.version,
+      omniVoice: { ready: omni.ready, missingImports: omni.missingImports },
+      glmAsr: { ready: glm.ready, missingImports: glm.missingImports },
+    }
     _cachedStatus = status
-    _inflightProbe = null
-    logStatus(status)
+    if (status.pythonAvailable) {
+      console.info(`[Python] Detected ${status.binary} ${status.version}`)
+    }
     return status
+  })().finally(() => {
+    _inflightProbe = null
   })
   return _inflightProbe
 }
 
-function logStatus(status) {
-  if (!status.pythonAvailable) {
-    console.info('[Python] No Python interpreter found — OmniVoice TTS and GLM-ASR will be disabled. Install Python 3.10+ and pip install -r requirements.txt to enable them.')
-    return
-  }
-  console.info(`[Python] Detected ${status.binary} ${status.version}`)
-  if (!status.omniVoice.ready) {
-    console.info(`[Python] OmniVoice TTS disabled — missing modules: ${status.omniVoice.missingImports.join(', ')}`)
-  }
-  if (!status.glmAsr.ready) {
-    console.info(`[Python] GLM-ASR disabled — missing modules: ${status.glmAsr.missingImports.join(', ')}`)
-  }
+/**
+ * Return the last complete runtime snapshot, if one was computed.
+ *
+ * @returns {object | null}
+ */
+export function getPythonRuntimeStatus() {
+  return _cachedStatus
 }
