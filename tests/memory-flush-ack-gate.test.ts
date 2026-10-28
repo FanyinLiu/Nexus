@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs/promises'
+import { register } from 'node:module'
 import { test } from 'node:test'
 
 import {
   createMemoryFlushAckGate,
   createMemoryQuitFlushHandler,
 } from '../electron/services/memoryFlushAckGate.js'
+import {
+  isUpdateInstallQuit,
+} from '../electron/services/updateInstallQuitFlag.js'
+import { autoUpdater } from './helpers/electron-main-stub-hooks.mjs'
+
+// updaterService statically imports electron and electron-updater; the shared
+// main-process stub hook resolves both to its in-memory implementations.
+register(new URL('./helpers/electron-main-stub-hooks.mjs', import.meta.url))
 
 function createWindow(sends: string[]) {
   return {
@@ -136,16 +144,81 @@ test('a second before-quit after the flush started does not prevent default', as
   assert.deepEqual(sends, ['memory:flush-request'])
 })
 
-test('updaterService marks the install quit before calling quitAndInstall', async () => {
-  const source = await fs.readFile(
-    new URL('../electron/services/updaterService.js', import.meta.url),
-    'utf8',
-  )
-  const markIndex = source.indexOf('markUpdateInstallQuit()')
-  const quitIndex = source.indexOf('autoUpdater.quitAndInstall(false, true)')
+test('a cancelled quit re-arms the flush so the next quit waits again', async () => {
+  const sends: string[] = []
+  let quitCalls = 0
+  const quitWaiters: Array<() => void> = []
+  const nextQuit = () => new Promise<void>((resolve) => { quitWaiters.push(resolve) })
+  const gate = createMemoryFlushAckGate()
+  const first = createEvent()
+  const handler = createMemoryQuitFlushHandler({
+    getWindows: () => [createWindow(sends)],
+    gate,
+    timeoutMs: 1_000,
+    quit: () => { quitCalls += 1; quitWaiters.shift()?.() },
+    isUpdateInstallQuit: () => false,
+  })
 
-  assert.ok(markIndex >= 0, 'the install path marks the update quit')
-  assert.ok(quitIndex > markIndex, 'the mark happens before quitAndInstall')
+  const firstDone = nextQuit()
+  handler(first.event)
+  assert.equal(first.state.prevented, 1)
+  gate.acknowledge()
+  await firstDone
+
+  // Another handler cancelled that quit: no will-quit follows, so the flush
+  // gate must re-arm for the next quit attempt.
+  await new Promise<void>((resolve) => setImmediate(resolve))
+
+  const second = createEvent()
+  const secondDone = nextQuit()
+  handler(second.event)
+  assert.equal(second.state.prevented, 1, 'the next quit waits for a fresh save')
+  assert.deepEqual(sends, ['memory:flush-request', 'memory:flush-request'])
+  assert.equal(quitCalls, 1, 'ack from the cancelled quit cannot release the next one')
+  gate.acknowledge()
+  await secondDone
+  assert.equal(quitCalls, 2)
+})
+
+test('an updater error clears the install flag so the next normal quit waits for the save', async (t) => {
+  process.env.NEXUS_MAC_AUTO_UPDATE_MODE = 'electron-updater'
+  t.after(() => {
+    delete process.env.NEXUS_MAC_AUTO_UPDATE_MODE
+  })
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+
+  const updater = await import('../electron/services/updaterService.js')
+  updater.initAutoUpdater({ getWindows: () => [] })
+  t.mock.timers.tick(8_000)
+
+  // The installer starts its own quit, then fails before it can take over.
+  autoUpdater.emit('before-quit-for-update')
+  assert.equal(isUpdateInstallQuit(), true)
+  autoUpdater.emit('error', new Error('installer failed'))
+  assert.equal(isUpdateInstallQuit(), false)
+
+  const sends: string[] = []
+  let quitCalls = 0
+  let resolveQuit = () => {}
+  const quitDone = new Promise<void>((resolve) => { resolveQuit = resolve })
+  const gate = createMemoryFlushAckGate()
+  const { event, state } = createEvent()
+  const handler = createMemoryQuitFlushHandler({
+    getWindows: () => [createWindow(sends)],
+    gate,
+    timeoutMs: 2_500,
+    quit: () => { quitCalls += 1; resolveQuit() },
+    isUpdateInstallQuit,
+  })
+
+  handler(event)
+
+  assert.equal(state.prevented, 1, 'the normal quit waits for the memory save')
+  assert.deepEqual(sends, ['memory:flush-request'])
+  assert.equal(quitCalls, 0, 'quit is held until the renderer acks')
+  gate.acknowledge()
+  await quitDone
+  assert.equal(quitCalls, 1)
 })
 
 test('the 2500 ms quit budget holds at the boundary and an update install returns untouched', (t) => {

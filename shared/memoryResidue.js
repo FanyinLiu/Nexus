@@ -12,6 +12,29 @@ const GREETING_QUOTE_LENGTH = 19
 const MIN_GREETING_QUOTE_LENGTH = 12
 
 /**
+ * Object keys whose string values can carry memory wording. The renderer
+ * purge and the main-process snapshot scrub share this list so a field
+ * added on one side cannot silently survive on the other.
+ */
+export const MEMORY_TEXT_FIELD_NAMES = Object.freeze([
+  'content',
+  'quote',
+  'evidenceQuote',
+  'summary',
+  'title',
+  'prompt',
+  'speechText',
+  'place',
+  'loopPlace',
+  'dueText',
+  'loopDueText',
+  'instruction',
+  'query',
+  'location',
+  'text',
+])
+
+/**
  * Needles worth searching for. Very short fragments are skipped so a
  * two-letter memory cannot punch holes in unrelated storage.
  * @param {readonly unknown[]} needles

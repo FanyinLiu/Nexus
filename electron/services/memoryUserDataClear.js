@@ -50,7 +50,9 @@ export async function clearMemoryUserData(options = {}) {
       console.warn('[memory] storage log scrub failed:', getRedactedErrorMessage(error))
     }
     try {
-      const snapshots = await removeMemoryFromUpdateSnapshots(options.userDataPath)
+      const snapshots = await removeMemoryFromUpdateSnapshots(options.userDataPath, {
+        needles: options.needles ?? [],
+      })
       snapshotMemoryFilesRemoved = snapshots.removed.length
     } catch (error) {
       console.warn('[memory] update snapshot memory removal failed:', getRedactedErrorMessage(error))

@@ -7,6 +7,7 @@
  */
 
 import type { MemoryItem } from '../../types/memory.ts'
+import { MEMORY_TEXT_FIELD_NAMES } from '../../../shared/memoryResidue.js'
 
 /** Wording stored in place of a deleted quote. It is not the deleted text. */
 export const REDACTED_MEMORY_NOTE = '已删除一条记忆'
@@ -25,23 +26,7 @@ export const MEMORY_DATA_FILES = {
   callbacks: 'callbacks.json',
 } as const
 
-const TEXT_FIELDS = new Set([
-  'content',
-  'quote',
-  'evidenceQuote',
-  'summary',
-  'title',
-  'prompt',
-  'speechText',
-  'place',
-  'loopPlace',
-  'dueText',
-  'loopDueText',
-  'instruction',
-  'query',
-  'location',
-  'text',
-])
+const TEXT_FIELDS = new Set(MEMORY_TEXT_FIELD_NAMES)
 
 export interface MemoryPurgeRequest {
   ids: readonly string[]

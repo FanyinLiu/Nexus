@@ -11,6 +11,11 @@ export function markUpdateInstallQuit() {
   updateInstallQuit = true
 }
 
+/** Clear the install marker when the install fails or is cancelled. */
+export function clearUpdateInstallQuit() {
+  updateInstallQuit = false
+}
+
 /** True while the current quit belongs to an update install. */
 export function isUpdateInstallQuit() {
   return updateInstallQuit

@@ -29,6 +29,9 @@ export function createMemoryFlushAckGate() {
 
   function expect(count) {
     expected = Math.max(0, Math.trunc(count))
+    // A later quit starts a new handshake; acks from the previous one must
+    // not release it before the renderer has saved again.
+    acknowledged = 0
     if (expected === 0) settleIfReady()
   }
 
@@ -78,9 +81,15 @@ export function createMemoryQuitFlushHandler({
   isUpdateInstallQuit,
 }) {
   let quitFlushStarted = false
+  let quitDispatched = false
 
   return function handleBeforeQuit(event) {
     if (isUpdateInstallQuit()) return
+    if (quitDispatched) {
+      // Re-entry from our own quit() after the flush wait. Let it proceed.
+      quitDispatched = false
+      return
+    }
     if (quitFlushStarted) return
     quitFlushStarted = true
     const windows = getWindows().filter((window) => (
@@ -97,7 +106,14 @@ export function createMemoryQuitFlushHandler({
       }
     }
     void gate.waitForAck(timeoutMs).then(() => {
+      quitDispatched = true
       quit()
+      // If another handler cancelled the quit, no will-quit follows. Clearing
+      // on the next turn makes the next quit wait for a fresh memory save.
+      setImmediate(() => {
+        quitFlushStarted = false
+        quitDispatched = false
+      })
     })
   }
 }
