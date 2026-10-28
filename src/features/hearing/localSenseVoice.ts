@@ -9,6 +9,7 @@
  */
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import type { TranslationKey, TranslationParams, VoiceEmotionLabel } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
@@ -134,7 +135,7 @@ export async function startSenseVoiceStream(
       try {
         await api.sensevoiceFeed({ samples: buffered })
       } catch (error) {
-        fail(error instanceof Error ? error.message : (ti?.('voice.provider.sensevoice.generic_error') ?? 'SenseVoice error.'))
+        fail(error)
       }
     })
   }
@@ -162,13 +163,13 @@ export async function startSenseVoiceStream(
     void audioContext.close().catch(() => undefined)
   }
 
-  function fail(message: string) {
+  function fail(error: unknown) {
     if (destroyed) return
     destroyed = true
     finalizing = true
     teardownAudioGraph()
     api.sensevoiceAbort().catch(() => undefined)
-    callbacks.onError?.(message)
+    callbacks.onError?.(humanizeVoiceError(error, { ti }))
   }
 
   // Live audio handler
@@ -190,7 +191,7 @@ export async function startSenseVoiceStream(
       try {
         await api.sensevoiceFeed({ samples })
       } catch (error) {
-        fail(error instanceof Error ? error.message : (ti?.('voice.provider.sensevoice.generic_error') ?? 'SenseVoice error.'))
+        fail(error)
       }
     })
   }

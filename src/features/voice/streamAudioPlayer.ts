@@ -1,5 +1,6 @@
 import { clamp } from '../../lib/common.ts'
 import { t } from '../../i18n/runtime.ts'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 
 type StreamAudioPlayerOptions = {
   initialBufferSeconds?: number
@@ -181,9 +182,9 @@ export class StreamAudioPlayer {
       void context.resume().catch(() => undefined)
       return Promise.resolve()
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('voice.audio.stream_playback_failed')
+      const message = humanizeVoiceError(error, { category: 'playback' })
       this.options.onPlaybackError?.(message)
-      return Promise.reject(error instanceof Error ? error : new Error(message))
+      return Promise.reject(new Error(message))
     }
   }
 

@@ -4,6 +4,7 @@ import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { prepareTextForTts } from '../../features/voice/text.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { createId } from '../../lib'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { recordTtsUsage } from '../../features/metering/speechCost.ts'
 import type { AppSettings, TranslationKey, TranslationParams } from '../../types'
 
@@ -190,8 +191,9 @@ export function createStreamingSpeechOutputController(
     cleanup()
     player.stopAndClear()
     runtime.resetPlayer?.()
-    options?.onError?.(error.message)
-    rejectAllPlayed?.(error)
+    const playbackMessage = humanizeVoiceError(error, { category: 'playback', ti: options?.ti })
+    options?.onError?.(playbackMessage)
+    rejectAllPlayed?.(new Error(playbackMessage))
   }
 
   function maybeResolve() {

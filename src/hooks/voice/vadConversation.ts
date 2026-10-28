@@ -15,7 +15,7 @@ import type {
 } from '../../features/voice/sessionMachine.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { blobToBase64 } from '../../lib/common.ts'
-import { humanizeMicPermissionError } from '../../lib/humanizeError.ts'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { recordSttUsage } from '../../features/metering/speechCost.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
@@ -295,10 +295,7 @@ export async function startVadConversation(
       await session.tearDown().catch(() => undefined)
 
       params.handleVoiceListeningFailure(
-        humanizeMicPermissionError(error)
-          ?? (error instanceof Error
-            ? error.message
-            : params.ti('voice.provider.api.failed_retry')),
+        humanizeVoiceError(error, { ti: params.ti }),
       )
     }
   }
@@ -469,18 +466,13 @@ export async function startVadConversation(
     params.setMood('idle')
     params.resetSpeechLevel()
     if (isVoiceCaptureCancelled(error)) return
-    const originalMessage = (
-      humanizeMicPermissionError(error)
-        ?? (error instanceof Error
-          ? error.message
-          : params.ti('voice.provider.vad.start_failed'))
-    )
+    const originalMessage = humanizeVoiceError(error, { ti: params.ti })
     const fallbackMessage = params.ti('voice.provider.vad.silero_fallback')
 
     console.warn('[Voice] Silero VAD unavailable, falling back to legacy recording', error)
     params.updateVoicePipeline('idle', fallbackMessage)
     params.showPetStatus(fallbackMessage, 4_800, 4_500)
-    params.setError(params.ti('voice.provider.vad.silero_fallback_detail', { fallback: fallbackMessage, original: originalMessage }))
+    params.setError(originalMessage)
 
     await params.startFallbackConversation(params.options)
   }

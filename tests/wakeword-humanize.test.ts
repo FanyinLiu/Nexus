@@ -171,7 +171,7 @@ describe('wakeword runtime copy — mic track ended', () => {
 
       listenerCallbacks?.onError?.(TRACK_ENDED_MESSAGE)
 
-      const deviceSentence = messages['humanize.voice.mic_not_responding']
+      const deviceSentence = messages['voice.error.device']
       const final = states.at(-1)
       assert.ok(final)
       assert.equal(final.phase, 'error')
@@ -199,7 +199,7 @@ describe('wakeword runtime copy — mic track ended', () => {
 
       const final = states.at(-1)
       assert.ok(final)
-      const deviceSentence = messages['humanize.voice.mic_not_responding']
+      const deviceSentence = messages['voice.error.device']
       assert.equal(final.phase, 'unavailable')
       assert.equal(final.reason, deviceSentence)
       assert.equal(final.error, deviceSentence)
@@ -238,6 +238,11 @@ describe('wakeword pet-status bridge copy', () => {
     'humanize.voice.mic_permission_mac',
     'humanize.voice.mic_permission_windows',
     'humanize.voice.mic_not_responding',
+    'voice.error.engine',
+    'voice.error.device',
+    'voice.error.network',
+    'voice.error.playback',
+    'voice.error.generic',
   ]
 
   for (const [localeName, messages] of LOCALES) {
