@@ -1,9 +1,9 @@
 import type {
-  TranslationKey,
-  TranslationParams,
   WakewordModelKind,
   WakewordRuntimeState,
 } from '../../types'
+import { humanizeMicPermissionError, type HumanizeTranslator } from '../../lib/humanizeError.ts'
+import { detectVoicePermissionPlatform } from '../voice/runtimeSupport.ts'
 import {
   checkWakewordAvailability,
   startWakewordListener,
@@ -14,7 +14,7 @@ import {
 } from './wakewordListener.ts'
 import { getPrimaryWakeWord } from './core.ts'
 
-type Translator = (key: TranslationKey, params?: TranslationParams) => string
+type Translator = HumanizeTranslator
 
 type TimerHandle = ReturnType<typeof globalThis.setTimeout>
 
@@ -67,6 +67,10 @@ type WakewordRuntimeOptions = {
   retryMaxMs?: number
   retryMaxAttempts?: number
   ti?: Translator
+  // Voice-permission platform token used to pick the microphone-permission
+  // sentence (`darwin` / `win32` / …). Defaults to runtime feature
+  // detection; hooks pass the tab's detected platform so tests can pin it.
+  permissionPlatform?: string | null
 }
 
 // Lowered from 1500 ms: the 1.5 s cooldown was long enough that a user
@@ -145,6 +149,13 @@ function normalizeRuntimeError(error: unknown, fallbackMessage: string) {
 
   return message.trim() || fallbackMessage
 }
+
+// The wakewordListener reports an OS-level mic-track death with an internal
+// wording ("… — triggering recovery.") that only makes sense for the trace
+// log. Users get the recording-device guidance instead; the detector text
+// stays log-only (the runtime warns with the raw text below, and this
+// pattern is the net for arbitrary listener error strings).
+const MIC_TRACK_ENDED_PATTERN = /microphone track ended/i
 
 export function createInitialWakewordRuntimeState(): WakewordRuntimeState {
   return {
@@ -275,7 +286,7 @@ export function createWakewordRuntime(
     currentListener?.stop()
   }
 
-  function scheduleRetry() {
+  function scheduleRetry(errorMessage: string) {
     clearRetryTimer()
     const delayMs = getWakewordRetryDelayMs(state.retryCount, retryBaseMs, retryMaxMs)
     retryTimer = setTimeoutFn(() => {
@@ -288,14 +299,56 @@ export function createWakewordRuntime(
       active: false,
       available: true,
       reason: ti('voice.wakeword.retry_in_seconds', { seconds: Math.round(delayMs / 100) / 10 }),
+      error: errorMessage,
       retryCount: state.retryCount + 1,
     })
   }
 
-  function handleRecoverableError(message: string, modelKind: WakewordModelKind) {
+  /**
+   * Convert a raw detector/runtime error into user-facing copy. Permission
+   * denials become the per-platform microphone-permission sentence and the
+   * mic-track telemetry line becomes the recording-device guidance — in
+   * both cases the sentence is the WHOLE message, never wrapped in a
+   * localized shell (see handleRecoverableError). Everything else keeps the
+   * raw text: the caller wraps it in a localized template, so it can only
+   * reach the user inside a shell sentence, never bare.
+   *
+   * Permission detection goes through humanizeMicPermissionError so a
+   * DOMException whose `message` reads as an innocuous "The request is not
+   * allowed" is still recognised by its `name` and classified as permanent:
+   * retrying a denied permission can never succeed.
+   */
+  function buildWakewordErrorCopy(rawMessage: string, rawError: unknown) {
+    const permissionSentence = humanizeMicPermissionError(rawError ?? rawMessage, {
+      platform: options.permissionPlatform ?? detectVoicePermissionPlatform(),
+      ti,
+    })
+    if (permissionSentence) {
+      return { message: permissionSentence, humanized: true, permissionDenied: true }
+    }
+    if (MIC_TRACK_ENDED_PATTERN.test(rawMessage)) {
+      return {
+        message: ti('humanize.voice.mic_not_responding'),
+        humanized: true,
+        permissionDenied: false,
+      }
+    }
+    return { message: rawMessage, humanized: false, permissionDenied: false }
+  }
+
+  function handleRecoverableError(rawMessage: string, modelKind: WakewordModelKind, rawError?: unknown) {
     stopListener()
 
-    const giveUp = isPermanentWakewordError(message) || state.retryCount >= retryMaxAttempts
+    const copy = buildWakewordErrorCopy(rawMessage, rawError)
+    // A humanized message means the raw input was an internal/detector
+    // wording (mic-track telemetry, permission denial) that must never be
+    // shown as raw text — log the raw form so the trace stays debuggable.
+    if (copy.humanized) {
+      console.warn('[Wake] listener error:', rawMessage)
+    }
+
+    const permanent = copy.permissionDenied || isPermanentWakewordError(rawMessage)
+    const giveUp = permanent || state.retryCount >= retryMaxAttempts
     if (giveUp) {
       clearRetryTimer()
       emitState({
@@ -304,23 +357,28 @@ export function createWakewordRuntime(
         active: false,
         available: false,
         modelKind,
-        reason: isPermanentWakewordError(message)
-          ? ti('voice.wakeword.unavailable_with_detail', { message })
-          : ti('voice.wakeword.retry_max_attempts_failed', { max: retryMaxAttempts, message }),
-        error: message,
+        // A humanized sentence is complete copy on its own; wrapping it in
+        // the unavailable_with_detail / retry_max_attempts_failed shell
+        // would only prefix it with "Wake-word listener unavailable:".
+        reason: copy.humanized
+          ? copy.message
+          : permanent
+            ? ti('voice.wakeword.unavailable_with_detail', { message: copy.message })
+            : ti('voice.wakeword.retry_max_attempts_failed', { max: retryMaxAttempts, message: copy.message }),
+        error: copy.message,
         retryCount: 0,
       })
       return
     }
 
-    scheduleRetry()
+    scheduleRetry(copy.message)
     emitState({
       ...buildBaseStatePatch(config),
       phase: 'error',
       active: false,
       available: true,
       modelKind,
-      error: message,
+      error: copy.message,
     })
   }
 
@@ -480,6 +538,7 @@ export function createWakewordRuntime(
       handleRecoverableError(
         normalizeRuntimeError(error, ti('voice.wakeword.status_check_failed')),
         null,
+        error,
       )
       return
     }
@@ -554,6 +613,7 @@ export function createWakewordRuntime(
       handleRecoverableError(
         normalizeRuntimeError(error, ti('voice.wakeword.listener_start_failed')),
         availability.modelKind ?? null,
+        error,
       )
     }
   }

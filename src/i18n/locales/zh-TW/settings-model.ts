@@ -44,7 +44,7 @@ export const zhTWSettingsModel = {
   'settings.model.testing': '測試中...',
   'settings.model.test_endpoint': '測試連線',
   'settings.model.provider': '提供商',
-  'settings.model.endpoint_url': '文字介面地址',
+  'settings.model.endpoint_url': '聊天服務地址',
   'settings.model.api_key': '文字介面密鑰',
   'settings.model.model': '文字模型',
   'settings.model.custom': '(自訂)',

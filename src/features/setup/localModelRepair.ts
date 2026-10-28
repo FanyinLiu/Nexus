@@ -79,6 +79,29 @@ export function buildLocalModelRows(
 const OPTIONAL_LABEL_SUFFIX = /(?:\s*[（(]\s*(?:可选|可選|optional)\s*[）)])+\s*$/i
 
 /**
+ * Catalog ids with a translated name and description. The catalog itself
+ * only carries the fallback text, so every locale can say the same thing
+ * in its own words.
+ */
+const LOCAL_MODEL_NAME_KEYS: Record<string, TranslationKey> = {
+  vad: 'model_setup.model.vad.name',
+  'kws-en': 'model_setup.model.kws-en.name',
+  'kws-zh': 'model_setup.model.kws-zh.name',
+  sensevoice: 'model_setup.model.sensevoice.name',
+  'paraformer-zh-en': 'model_setup.model.paraformer-zh-en.name',
+  'tts-melo-zh-en': 'model_setup.model.tts-melo-zh-en.name',
+}
+
+const LOCAL_MODEL_PURPOSE_KEYS: Record<string, TranslationKey> = {
+  vad: 'model_setup.model.vad.purpose',
+  'kws-en': 'model_setup.model.kws-en.purpose',
+  'kws-zh': 'model_setup.model.kws-zh.purpose',
+  sensevoice: 'model_setup.model.sensevoice.purpose',
+  'paraformer-zh-en': 'model_setup.model.paraformer-zh-en.purpose',
+  'tts-melo-zh-en': 'model_setup.model.tts-melo-zh-en.purpose',
+}
+
+/**
  * Catalog names sometimes end with "optional". The row status already says
  * that, so the title should not repeat it.
  */
@@ -87,11 +110,11 @@ export function localModelDisplayLabel(label: string): string {
 }
 
 function localModelNameKey(id: string): TranslationKey | null {
-  return id === 'vad' ? 'model_setup.model.vad.name' : null
+  return LOCAL_MODEL_NAME_KEYS[id] ?? null
 }
 
 function localModelPurposeKey(id: string): TranslationKey | null {
-  return id === 'vad' ? 'model_setup.model.vad.purpose' : null
+  return LOCAL_MODEL_PURPOSE_KEYS[id] ?? null
 }
 
 /**

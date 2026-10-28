@@ -16,6 +16,7 @@ import type {
   VoiceSessionTransport,
 } from '../../features/voice/sessionMachine.ts'
 import { clamp } from '../../lib/common.ts'
+import { humanizeMicPermissionError } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
 import type {
@@ -190,7 +191,8 @@ export async function startParaformerConversation(
       } catch (error) {
         params.paraformerSessionRef.current = null
         params.handleVoiceListeningFailure(
-          error instanceof Error ? error.message : params.ti('voice.provider.paraformer.failed_retry'),
+          humanizeMicPermissionError(error)
+            ?? (error instanceof Error ? error.message : params.ti('voice.provider.paraformer.failed_retry')),
         )
       }
     }
@@ -315,9 +317,10 @@ export async function startParaformerConversation(
     }
     if (isVoiceCaptureCancelled(error)) return
 
-    const message = error instanceof Error
-      ? error.message
-      : params.ti('voice.provider.paraformer.start_failed')
+    const message = humanizeMicPermissionError(error)
+      ?? (error instanceof Error
+        ? error.message
+        : params.ti('voice.provider.paraformer.start_failed'))
 
     params.updateVoicePipeline('idle', message)
     params.setError(message)

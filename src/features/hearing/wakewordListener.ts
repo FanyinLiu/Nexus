@@ -15,6 +15,12 @@ type Translator = (key: TranslationKey, params?: TranslationParams) => string
 const KWS_SAMPLE_RATE = 16000
 const KWS_BUFFER_SIZE = 2048
 
+// The OS can silently end the mic track (unplug / default-device switch /
+// sleep resume). The wording is internal telemetry: the runtime's
+// MIC_TRACK_ENDED_PATTERN maps it to the recording-device guidance sentence
+// before anything reaches a user-facing state; the log line lives there too.
+const MIC_TRACK_ENDED_MESSAGE = 'Microphone track ended unexpectedly — triggering recovery.'
+
 export type WakewordListenerCallbacks = {
   onKeywordDetected: (keyword: string) => void
   onError?: (message: string) => void
@@ -133,12 +139,15 @@ export async function startWakewordListener(
     if (track) {
       track.onended = () => {
         if (!destroyed) {
-          callbacks.onError?.('Microphone track ended unexpectedly — triggering recovery.')
+          // The literal detector wording is internal telemetry, log-only at
+          // the runtime layer; onError carries it raw so the caller (always
+          // the wakeword runtime) maps it to the user-facing device sentence.
+          callbacks.onError?.(MIC_TRACK_ENDED_MESSAGE)
         }
       }
     }
 
-        await wakewordApi.kwsStart({ wakeWord: activeKeywords })
+    await wakewordApi.kwsStart({ wakeWord: activeKeywords })
     kwsStarted = true
     callbacks.onStatusChange?.(true)
 

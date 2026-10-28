@@ -367,3 +367,41 @@ test('startWakewordListener releases the acquired microphone when audio setup fa
     restoreWindow()
   }
 })
+
+// The OS can silently end the mic track (unplug / default-device switch /
+// sleep resume). The listener reports the internal detector wording; the
+// wakeword runtime owns the mapping to the user-facing recording-device
+// sentence and the log line (see wakeword-humanize.test.ts).
+test('track.onended reports the internal detector wording to the runtime', async () => {
+  const stream = createStream()
+  const audio = createAudioContextHarness()
+  const restoreWindow = installDesktopPet({
+    kwsStart: async () => undefined,
+    kwsFeed: async () => ({}),
+    kwsStop: async () => undefined,
+  })
+
+  try {
+    const pauses: boolean[] = []
+    const errors: string[] = []
+    await startWakewordListener({
+      onKeywordDetected: () => undefined,
+      onError: (message) => errors.push(message),
+      onStatusChange: (active) => pauses.push(active),
+    }, {
+      wakeWord: '星辉',
+      requestInputStream: async () => ({ stream, profileId: 'raw', trackSettings: null }),
+      AudioContextCtor: audio.AudioContextCtor,
+    })
+
+    const track = stream.track as unknown as { onended: (() => void) | null }
+    assert.equal(typeof track.onended, 'function')
+    track.onended?.()
+
+    assert.equal(errors.length, 1)
+    assert.equal(errors[0], 'Microphone track ended unexpectedly — triggering recovery.')
+    assert.equal(stream.track.stopped, false, 'teardown is the runtime\u2019s decision, not the track watcher\u2019s')
+  } finally {
+    restoreWindow()
+  }
+})
