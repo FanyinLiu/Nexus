@@ -167,13 +167,14 @@ describe('humanizeMicPermissionError', () => {
 
 // Product decision: the dictation-model error reuses the SenseVoice
 // "not installed" sentence verbatim, so every surface gives the user the
-// same instruction for a missing local speech model.
+// same instruction for a missing local speech model. ja is the exception:
+// plain "音声" leaves it unclear whether the recogniser or the voice is
+// missing, so that sentence names 音声認識モデル instead.
 describe('humanizeError — stt model_missing matches SenseVoice not_installed', () => {
   const locales = [
     { name: 'zh-CN', messages: zhCNMessages },
     { name: 'zh-TW', messages: zhTWMessages },
     { name: 'en', messages: enMessages },
-    { name: 'ja', messages: jaMessages },
     { name: 'ko', messages: koMessages },
   ]
 
@@ -185,6 +186,14 @@ describe('humanizeError — stt model_missing matches SenseVoice not_installed',
       )
     })
   }
+
+  test('ja: names the speech recognition model and keeps the download path', () => {
+    const message = jaMessages['humanize.stt.model_missing']
+    assert.match(message, /音声認識モデル/)
+    for (const placeholder of ['{settings}', '{voice}', '{advanced}']) {
+      assert.ok(message.includes(placeholder), `ja stt.model_missing lost ${placeholder}`)
+    }
+  })
 
   test('English fallback equals the en SenseVoice sentence', () => {
     // The fallback table is module-private, so pin its literal from source.
