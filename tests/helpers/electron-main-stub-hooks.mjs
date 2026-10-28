@@ -3,29 +3,31 @@
 // Registered via `register(new URL('./helpers/electron-main-stub-hooks.mjs', ...))`
 // before the dynamic import of the module under test.
 //
-// Only electron/ipcRegistry.js and electron/services/errorRedaction.js load
-// for real: 'electron' itself resolves to a virtual stub, and every eager
-// IPC module / TTS service the registry pulls in is swapped for a no-op
-// stub so no real handlers, windows, or network services start.
+// Only electron/ipcRegistry.js, updaterService.js, and
+// electron/services/errorRedaction.js load for real: 'electron' and
+// 'electron-updater' resolve to this module's stubs, and every eager IPC
+// module / TTS service the registry pulls in is swapped for a no-op stub so
+// no real handlers, windows, or network services start.
+
+import { EventEmitter } from 'node:events'
 
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier === 'electron') {
-    return { url: 'electron-stub:electron', shortCircuit: true }
+  if (specifier === 'electron' || specifier === 'electron-updater') {
+    return { url: import.meta.url, shortCircuit: true }
   }
   return nextResolve(specifier, context)
 }
 
 export async function load(url, context, nextLoad) {
-  if (url === 'electron-stub:electron') {
-    // ipcRegistry.js only uses `app.once`.
-    return { format: 'module', shortCircuit: true, source: 'export const app = { once() {} }\n' }
-  }
   if (url.endsWith('/electron/ipc/validate.js')) {
     return {
       format: 'module',
       shortCircuit: true,
       source: 'export function installIpcChannelBinding() {}\nexport function requireTrustedSender() {}\n',
     }
+  }
+  if (url.endsWith('/electron/ipc/windowCapabilities.js')) {
+    return nextLoad(url, context)
   }
   if (url.endsWith('/electron/ipc/skillIpc.js')) {
     // Simulated flaky module: the module itself loads fine (so Node caches
@@ -60,3 +62,53 @@ export async function load(url, context, nextLoad) {
   }
   return nextLoad(url, context)
 }
+
+class StubAutoUpdater extends EventEmitter {
+  constructor() {
+    super()
+    this.autoDownload = false
+    this.autoInstallOnAppQuit = true
+    this.allowDowngrade = true
+    this.quitAndInstallCalls = 0
+  }
+
+  checkForUpdates() {
+    return Promise.resolve({ updateInfo: { version: '0.5.0' } })
+  }
+
+  quitAndInstall() {
+    this.quitAndInstallCalls += 1
+  }
+}
+
+export const autoUpdater = new StubAutoUpdater()
+export default { autoUpdater }
+
+export const app = {
+  isPackaged: true,
+  isQuitting: false,
+  name: 'Nexus',
+  getVersion: () => '0.4.8',
+  getPath: () => '',
+  on: () => undefined,
+  once: () => undefined,
+  whenReady: () => Promise.resolve(),
+}
+
+export class BrowserWindow {
+  static getAllWindows() {
+    return []
+  }
+}
+
+export const dialog = { showErrorBox: () => undefined }
+export const Menu = { buildFromTemplate: () => ({}), setApplicationMenu: () => undefined }
+export const nativeImage = {
+  createFromPath: () => ({ isEmpty: () => true, resize: () => ({}) }),
+  createEmpty: () => ({ isEmpty: () => true }),
+}
+export const screen = { getAllDisplays: () => [] }
+export const session = { defaultSession: {} }
+export const shell = { openExternal: () => Promise.resolve() }
+export class Tray {}
+export const ipcMain = { handle: () => undefined }

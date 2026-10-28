@@ -9,6 +9,7 @@
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { clearMemoryLocalDataContent } from './localDataMemoryStore.js'
 import { scrubChromiumStorageResidue } from './chromiumStorageScrub.js'
+import { removeMemoryFromUpdateSnapshots } from './updateInstallPrep.js'
 import * as memoryVectorStore from './memoryVectorStore.js'
 
 /**
@@ -17,7 +18,13 @@ import * as memoryVectorStore from './memoryVectorStore.js'
  *   needles?: readonly string[],
  *   flushStorage?: () => Promise<unknown> | unknown,
  * }} [options]
- * @returns {Promise<{ ok: true, removed: number, localDataCleared: boolean, storageFilesRewritten: number }>}
+ * @returns {Promise<{
+ *   ok: true,
+ *   removed: number,
+ *   localDataCleared: boolean,
+ *   storageFilesRewritten: number,
+ *   snapshotMemoryFilesRemoved: number,
+ * }>}
  */
 export async function clearMemoryUserData(options = {}) {
   if (typeof options.flushStorage === 'function') {
@@ -34,12 +41,21 @@ export async function clearMemoryUserData(options = {}) {
     options.userDataPath ? { userDataPath: options.userDataPath } : {},
   )
   let storageFilesRewritten = 0
+  let snapshotMemoryFilesRemoved = 0
   if (options.userDataPath) {
     try {
       const scrub = await scrubChromiumStorageResidue(options.userDataPath, options.needles ?? [])
       storageFilesRewritten = scrub.filesRewritten
     } catch (error) {
       console.warn('[memory] storage log scrub failed:', getRedactedErrorMessage(error))
+    }
+    try {
+      const snapshots = await removeMemoryFromUpdateSnapshots(options.userDataPath, {
+        needles: options.needles ?? [],
+      })
+      snapshotMemoryFilesRemoved = snapshots.removed.length
+    } catch (error) {
+      console.warn('[memory] update snapshot memory removal failed:', getRedactedErrorMessage(error))
     }
   }
 
@@ -48,5 +64,6 @@ export async function clearMemoryUserData(options = {}) {
     removed,
     localDataCleared: localData.ok === true,
     storageFilesRewritten,
+    snapshotMemoryFilesRemoved,
   }
 }

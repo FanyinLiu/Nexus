@@ -6,6 +6,7 @@ import {
 import {
   normalizeDailyMemoryStore,
   normalizeMemoryItemsForStorage,
+  readLongTermMemoryRaw,
 } from './memory.ts'
 import { isObject } from '../guards.ts'
 import { nowIso } from '../localDate.ts'
@@ -422,7 +423,7 @@ export function loadMemoryStorageMigrationDryRun(
 ): MemoryMigrationDryRunReport {
   const localStorage = typeof window === 'undefined' ? null : window.localStorage
   return buildMemoryStorageMigrationDryRun({
-    longTermRaw: localStorage?.getItem(MEMORY_STORAGE_KEY) ?? null,
+    longTermRaw: readLongTermMemoryRaw(),
     legacyRaw: localStorage?.getItem(LEGACY_MEMORY_STORAGE_KEY) ?? null,
     dailyRaw: localStorage?.getItem(DAILY_MEMORY_STORAGE_KEY) ?? null,
   }, options)

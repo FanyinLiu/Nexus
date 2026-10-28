@@ -43,6 +43,7 @@ import {
 } from './updateInstallPrep.js'
 import { flushWindowBoundsStore } from './windowBoundsStore.js'
 import { flushRuntimeLogWriteBuffer } from '../windowManager.js'
+import { markUpdateInstallQuit, clearUpdateInstallQuit } from './updateInstallQuitFlag.js'
 
 const { autoUpdater } = electronUpdater
 
@@ -129,11 +130,19 @@ export function initAutoUpdater({ getWindows }) {
   })
 
   autoUpdater.on('error', (error) => {
+    // quitAndInstall can fail before the installer takes over. Leaving the
+    // install marker set would make every later normal quit skip the memory
+    // flush, so the error path clears it.
+    clearUpdateInstallQuit()
     broadcast({
       type: 'error',
       message: getRedactedErrorMessage(error ?? 'unknown error'),
     })
   })
+
+  // electron-updater emits this before its own quit. Marking it here keeps
+  // the memory flush handshake out of the installer path.
+  autoUpdater.on('before-quit-for-update', markUpdateInstallQuit)
 
   // Silent background check shortly after startup.
   setTimeout(() => {
@@ -340,14 +349,28 @@ export function quitAndInstallUpdate() {
       toVersion: lastStatus?.type === 'downloaded' ? lastStatus.version : null,
     }),
     quitAndInstall: () => {
+      markUpdateInstallQuit()
       setImmediate(() => {
-        autoUpdater.quitAndInstall(false, true)
+        try {
+          autoUpdater.quitAndInstall(false, true)
+        } catch (error) {
+          clearUpdateInstallQuit()
+          broadcast({
+            type: 'error',
+            message: getRedactedErrorMessage(error),
+          })
+        }
       })
     },
     onPrepFailure: broadcastPrepFailure,
   }))
   installChain = run.then(() => undefined, () => undefined)
-  return run.then((result) => result.ok)
+  return run.then((result) => {
+    // No quit belongs to the updater when prep failed, the app is in dev
+    // mode, or the manual release page was opened instead.
+    if (result.reason !== 'install') clearUpdateInstallQuit()
+    return result.ok
+  })
 }
 
 export function getUpdaterStatus() {

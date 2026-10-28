@@ -36,7 +36,8 @@ import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { appendMemoryOpLog } from '../lib/storage/memoryOpLog.ts'
 import { saveMemoryRunSnapshot } from '../lib/storage/memoryRunSnapshot.ts'
 import { applyBookedLoopAction, applyLoopCardAction, type LoopBookedAction, type LoopCardAction } from '../features/memory/loopCardActions.ts'
-import { bookClearPlanReminders, buildLoopOutreach, loopReminderDraft } from '../features/memory/loopOutreach.ts'
+import { bookClearPlanReminders, buildLoopOutreach } from '../features/memory/loopOutreach.ts'
+import { acceptLoopOffer } from '../features/memory/loopOfferAccept.ts'
 import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
 import type { ChatMessage } from '../types/chat.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/schedule.ts'
@@ -385,14 +386,15 @@ export function useProactiveAgenda(options: {
       const current = optionsRef.current
       const memory = current.memoriesRef.current.find((row) => row.id === detail.memoryId)
       if (!memory) return
-      const draft = loopReminderDraft(memory, appNowMs())
-      const created = draft ? current.addReminderTask?.(draft) : null
-      if (created?.id) {
-        const next = current.memoriesRef.current.map((row) => (
-          row.id === memory.id ? { ...row, loopReminderTaskId: created.id, updatedAt: new Date(appNowMs()).toISOString() } : row
-        ))
-        current.memoriesRef.current = next
-        current.setMemories(next)
+      const accepted = acceptLoopOffer(
+        current.memoriesRef.current,
+        detail.memoryId,
+        appNowMs(),
+        (draft) => current.addReminderTask?.(draft) ?? null,
+      )
+      if (accepted.created) {
+        current.memoriesRef.current = accepted.memories
+        current.setMemories(accepted.memories)
       }
       current.setMessages?.((messages) => messages.map((message) => {
         const offer = message.loopOffer

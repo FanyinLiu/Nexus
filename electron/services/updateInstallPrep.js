@@ -13,12 +13,20 @@ import {
   DURABLE_STORAGE_FLUSH_EVENT,
   DURABLE_UPDATE_SNAPSHOT_GLOBAL,
 } from '../../shared/durableUpdateFlush.js'
+import {
+  expandMemoryResidueNeedles,
+  MEMORY_TEXT_FIELD_NAMES,
+} from '../../shared/memoryResidue.js'
 import { nowIso } from '../../shared/time.js'
 import {
   UPDATE_INSTALL_PREP_FAILED,
   UPDATE_INSTALL_SNAPSHOT_FAILED,
 } from '../../shared/updateErrorCodes.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
 import {
+  LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID,
+  LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID,
+  ensureSqliteTables,
   openSqliteDatabase,
   resolveLocalDataPaths,
 } from './localDataStoreCore.js'
@@ -34,7 +42,14 @@ const PREP_RECOMMENDATION_KEY = 'updater.error.install_prep_failed_rec'
 const SNAPSHOT_MESSAGE_KEY = 'updater.error.snapshot_failed'
 const SNAPSHOT_RECOMMENDATION_KEY = 'updater.error.snapshot_failed_rec'
 
-const MEMORY_V2_FIELDS = ['longTerm', 'daily', 'opLog', 'v1Backup']
+const MEMORY_V2_FIELDS = ['longTerm', 'daily', 'opLog']
+const MEMORY_DOMAIN_IDS = [
+  LOCAL_DATA_MEMORY_LONG_TERM_DOMAIN_ID,
+  LOCAL_DATA_MEMORY_DAILY_DOMAIN_ID,
+]
+const MEMORY_TEXT_FIELDS = new Set(MEMORY_TEXT_FIELD_NAMES)
+const CLEARED_MEMORY_TEXT = '[memory cleared]'
+const SQLITE_FILE_PATTERN = /\.(?:sqlite|sqlite3|db)$/iu
 
 /**
  * Step names recorded by prepareForUpdateInstall. Snapshot runs after these
@@ -307,7 +322,6 @@ export async function writeUpdateSnapshot(input) {
         longTerm: input.memoryV2.longTerm !== null,
         daily: input.memoryV2.daily !== null,
         opLog: input.memoryV2.opLog !== null,
-        v1Backup: input.memoryV2.v1Backup !== null,
       },
       localDataPresent,
     }, null, 2)}\n`)
@@ -325,6 +339,199 @@ export async function writeUpdateSnapshot(input) {
       error,
     )
   }
+}
+
+/**
+ * Delete every memory copy under userData/update-snapshots.
+ *
+ * Snapshots are write-only backups: nothing reads them at startup, so a
+ * memory clear has to remove them explicitly or the wording survives there.
+ * The local-data copy is scrubbed in place (only the memory rows are
+ * deleted, so the snapshot still works as a rollback source), and any
+ * memory wording in settings.json is redacted. Manifests stay untouched.
+ * @param {string} userDataPath
+ * @param {{ needles?: readonly string[] }} [options]
+ * @returns {Promise<{ removed: string[] }>} Deleted paths relative to userData.
+ */
+export async function removeMemoryFromUpdateSnapshots(userDataPath, options = {}) {
+  const root = path.join(userDataPath, UPDATE_SNAPSHOTS_DIRNAME)
+  let entries
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true })
+  } catch (error) {
+    if (error?.code === 'ENOENT') return { removed: [] }
+    throw error
+  }
+  const needles = new Set(expandMemoryResidueNeedles(options.needles ?? []))
+  const removed = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const directory = path.join(root, entry.name)
+    const memoryDir = path.join(directory, 'memory-v2')
+    await collectMemoryV2Needles(memoryDir, needles)
+    await scrubSnapshotLocalData(path.join(directory, 'local-data'), needles)
+    await scrubSnapshotSettings(directory, needles)
+    for (const name of ['long-term.json', 'daily.json', 'op-log.json']) {
+      const filePath = path.join(memoryDir, name)
+      if (!(await fileExists(filePath))) continue
+      await fs.rm(filePath, { force: true })
+      removed.push(path.relative(userDataPath, filePath))
+    }
+    // Fails with ENOTEMPTY when the snapshot kept other files; ignore that.
+    await fs.rmdir(memoryDir).catch(() => {})
+  }
+  return { removed }
+}
+
+/**
+ * Read JSON string fields that can carry memory wording. The snapshot is
+ * deleted straight after, so collect the needles before removing the files.
+ * @param {string} memoryDir
+ * @param {Set<string>} needles
+ */
+async function collectMemoryV2Needles(memoryDir, needles) {
+  for (const name of ['long-term.json', 'daily.json', 'op-log.json']) {
+    const filePath = path.join(memoryDir, name)
+    let raw
+    try {
+      raw = await fs.readFile(filePath, 'utf8')
+    } catch (error) {
+      if (error?.code === 'ENOENT') continue
+      throw error
+    }
+    try {
+      collectMemoryText(JSON.parse(raw), needles)
+    } catch {
+      // A malformed memory file carries no trustworthy field boundaries.
+    }
+  }
+}
+
+/**
+ * @param {unknown} value
+ * @param {Set<string>} needles
+ */
+function collectMemoryText(value, needles) {
+  if (typeof value === 'string') {
+    const text = value.trim()
+    if (text.length >= 2) needles.add(text)
+    return
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectMemoryText(item, needles)
+    return
+  }
+  if (!value || typeof value !== 'object') return
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item === 'string') {
+      const text = item.trim()
+      if (MEMORY_TEXT_FIELDS.has(key) && text.length >= 2) needles.add(text)
+    } else {
+      collectMemoryText(item, needles)
+    }
+  }
+}
+
+/**
+ * Delete only the memory rows from every SQLite copy in the snapshot and
+ * rewrite the files so the removed text is not left in free pages or WAL.
+ * @param {string} localDataDir
+ * @param {Set<string>} needles
+ */
+async function scrubSnapshotLocalData(localDataDir, needles) {
+  let entries
+  try {
+    entries = await fs.readdir(localDataDir, { withFileTypes: true })
+  } catch (error) {
+    if (error?.code === 'ENOENT') return
+    throw error
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !SQLITE_FILE_PATTERN.test(entry.name)) continue
+    await scrubSnapshotDatabase(path.join(localDataDir, entry.name), needles)
+  }
+}
+
+/**
+ * @param {string} databasePath
+ * @param {Set<string>} needles
+ */
+async function scrubSnapshotDatabase(databasePath, needles) {
+  let db = null
+  let rewritten = false
+  try {
+    db = openSqliteDatabase(databasePath)
+    ensureSqliteTables(db)
+
+    const rows = db.prepare(
+      'SELECT payload_json AS payloadJson FROM local_data_records WHERE domain_id IN (?, ?)',
+    ).all(...MEMORY_DOMAIN_IDS)
+    for (const row of rows) {
+      try {
+        collectMemoryText(JSON.parse(row.payloadJson), needles)
+      } catch {
+        // Damaged payloads are deleted below but cannot seed the scrub list.
+      }
+    }
+
+    db.exec('PRAGMA secure_delete = ON;')
+    db.exec('BEGIN IMMEDIATE')
+    try {
+      db.prepare('DELETE FROM local_data_records WHERE domain_id IN (?, ?)').run(...MEMORY_DOMAIN_IDS)
+      db.exec('COMMIT')
+    } catch (error) {
+      try { db.exec('ROLLBACK') } catch {}
+      throw error
+    }
+
+    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);') } catch {}
+    try { db.exec('VACUUM;') } catch {}
+    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);') } catch {}
+    // Checkpointed data lives in the main file; dropping WAL mode removes
+    // both sidecars even when a stale copy still held old pages.
+    db.exec('PRAGMA journal_mode = DELETE;')
+    rewritten = true
+  } catch (error) {
+    console.warn('[updater] snapshot local-data scrub failed:', getRedactedErrorMessage(error))
+  } finally {
+    if (db) db.close()
+    if (rewritten) {
+      for (const suffix of ['-wal', '-shm']) {
+        await fs.rm(`${databasePath}${suffix}`, { force: true }).catch(() => {})
+      }
+    }
+  }
+}
+
+/**
+ * @param {string} directory
+ * @param {Set<string>} needles
+ */
+async function scrubSnapshotSettings(directory, needles) {
+  const filePath = path.join(directory, 'settings.json')
+  let raw
+  try {
+    raw = await fs.readFile(filePath, 'utf8')
+  } catch (error) {
+    if (error?.code === 'ENOENT') return
+    throw error
+  }
+  const scrubbed = redactNeedles(raw, needles)
+  if (scrubbed !== raw) await writeExact(filePath, scrubbed)
+}
+
+/**
+ * @param {string} text
+ * @param {Set<string>} needles
+ */
+function redactNeedles(text, needles) {
+  let next = text
+  const expanded = expandMemoryResidueNeedles([...needles])
+    .sort((left, right) => right.length - left.length)
+  for (const needle of expanded) {
+    if (next.includes(needle)) next = next.split(needle).join(CLEARED_MEMORY_TEXT)
+  }
+  return next
 }
 
 /**
@@ -375,7 +582,7 @@ async function writeExact(filePath, text) {
 
 /**
  * @param {string} partial
- * @param {{ longTerm: string | null, daily: string | null, opLog: string | null, v1Backup: string | null }} memoryV2
+ * @param {{ longTerm: string | null, daily: string | null, opLog: string | null }} memoryV2
  */
 async function writeMemoryV2(partial, memoryV2) {
   const dir = path.join(partial, 'memory-v2')
@@ -384,7 +591,6 @@ async function writeMemoryV2(partial, memoryV2) {
     ['long-term.json', memoryV2.longTerm],
     ['daily.json', memoryV2.daily],
     ['op-log.json', memoryV2.opLog],
-    ['v1-backup.txt', memoryV2.v1Backup],
   ]
   for (const [name, contents] of files) {
     if (contents === null) continue

@@ -8,12 +8,12 @@ import { isObject } from '../guards.ts'
 import {
   CHAT_STORAGE_KEY,
   DAILY_MEMORY_STORAGE_KEY,
-  MEMORY_STORAGE_KEY,
   ONBOARDING_STORAGE_KEY,
   readJson,
   SETTINGS_STORAGE_KEY,
   writeJson,
 } from './core.ts'
+import { hasStoredLongTermMemories } from './memory.ts'
 
 export type OnboardingState = {
   completedAt: string
@@ -204,7 +204,7 @@ export function loadOnboardingCompleted() {
   return Boolean(
     window.localStorage.getItem(SETTINGS_STORAGE_KEY)
     || window.localStorage.getItem(CHAT_STORAGE_KEY)
-    || window.localStorage.getItem(MEMORY_STORAGE_KEY)
+    || hasStoredLongTermMemories()
     || window.localStorage.getItem(DAILY_MEMORY_STORAGE_KEY),
   )
 }

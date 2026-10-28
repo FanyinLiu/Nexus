@@ -1,8 +1,10 @@
 /**
- * Place, clock, and slot details on an open loop.
+ * Place, clock, due date, and slot details on an open loop.
  *
  * A later turn that only adds a hall or a clock updates the loop the user
- * already started. It does not invent a second commitment.
+ * already started. It does not invent a second commitment. The due words
+ * live here too, so a follow-up can read a new day without going through
+ * the capture path.
  */
 
 import { localDayKey } from '../../lib/localDate.ts'
@@ -87,6 +89,113 @@ export function applyClock(text: string, due: Date): Date {
   return next
 }
 
+type DueRule = {
+  pattern: RegExp
+  resolve: (now: Date, match: RegExpMatchArray) => Date
+}
+
+function atLocalHour(now: Date, dayOffset: number): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, 18, 0, 0, 0)
+}
+
+/**
+ * 下周 / 来週 is the weekday in the next Monday-based week.
+ * On Friday 16 Oct, 下周二 is 20 Oct, not the Tuesday after that.
+ */
+function nextCalendarWeekday(now: Date, target: number): Date {
+  const sinceMonday = (now.getDay() + 6) % 7
+  const daysUntilNextMonday = 7 - sinceMonday
+  const fromMonday = target === 0 ? 6 : target - 1
+  return atLocalHour(now, daysUntilNextMonday + fromMonday)
+}
+
+function weekdayDate(now: Date, target: number, mode: 'upcoming' | 'following-week' | 'named-next'): Date {
+  if (mode === 'following-week') return nextCalendarWeekday(now, target)
+  let delta = (target - now.getDay() + 7) % 7
+  if (mode === 'named-next' && delta === 0) {
+    delta = 7
+  } else if (delta === 0 && now.getHours() >= 18) {
+    delta = 7
+  }
+  return atLocalHour(now, delta)
+}
+
+function dayOffsetDate(now: Date, offset: number): Date {
+  return atLocalHour(now, offset)
+}
+
+const WEEKDAY_NAMED: Array<{ pattern: RegExp; day: number; mode: 'upcoming' | 'following-week' | 'named-next' }> = [
+  { pattern: /下(?:个)?(?:周|星期)([一二三四五六日天])/u, day: -1, mode: 'following-week' },
+  { pattern: /(?:周|星期)([一二三四五六日天])/u, day: -1, mode: 'upcoming' },
+  { pattern: /来週の?(日曜|月曜|火曜|水曜|木曜|金曜|土曜)/u, day: -1, mode: 'following-week' },
+  { pattern: /(日曜|月曜|火曜|水曜|木曜|金曜|土曜)/u, day: -1, mode: 'upcoming' },
+  { pattern: /다음\s*주\s*(일요일|월요일|화요일|수요일|목요일|금요일|토요일)/u, day: -1, mode: 'following-week' },
+  { pattern: /(일요일|월요일|화요일|수요일|목요일|금요일|토요일)/u, day: -1, mode: 'upcoming' },
+  { pattern: /next\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)/iu, day: -1, mode: 'named-next' },
+  { pattern: /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/iu, day: -1, mode: 'upcoming' },
+]
+
+const ZH_DAY: Record<string, number> = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 0, 天: 0 }
+const JA_DAY: Record<string, number> = { 日曜: 0, 月曜: 1, 火曜: 2, 水曜: 3, 木曜: 4, 金曜: 5, 土曜: 6 }
+const KO_DAY: Record<string, number> = {
+  일요일: 0, 월요일: 1, 화요일: 2, 수요일: 3, 목요일: 4, 금요일: 5, 토요일: 6,
+}
+const EN_DAY: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+}
+
+function weekdayFromMatch(match: RegExpMatchArray): number | null {
+  const token = (match[1] ?? match[0]).toLowerCase()
+  if (token in ZH_DAY) return ZH_DAY[token]!
+  if (match[1] && match[1] in JA_DAY) return JA_DAY[match[1]]!
+  if (match[1] && match[1] in KO_DAY) return KO_DAY[match[1]]!
+  if (token in EN_DAY) return EN_DAY[token]!
+  for (const [key, day] of Object.entries(JA_DAY)) {
+    if (match[0].includes(key)) return day
+  }
+  for (const [key, day] of Object.entries(KO_DAY)) {
+    if (match[0].includes(key)) return day
+  }
+  return null
+}
+
+const OFFSET_RULES: DueRule[] = [
+  { pattern: /后天|모레/u, resolve: (now) => dayOffsetDate(now, 2) },
+  { pattern: /明天|明日|내일|tomorrow/iu, resolve: (now) => dayOffsetDate(now, 1) },
+  { pattern: /今天|今晚|今日|오늘|today|tonight/iu, resolve: (now) => dayOffsetDate(now, 0) },
+]
+
+/**
+ * The day the words name, with the clock they carry. The first day phrase
+ * in the text wins, and a clock anywhere in the text sets the hour.
+ */
+export function findDue(text: string, now: Date): { at: string; text: string } | null {
+  const hits: Array<{ index: number; at: Date; text: string }> = []
+  for (const rule of OFFSET_RULES) {
+    const match = rule.pattern.exec(text)
+    if (match) hits.push({ index: match.index, at: rule.resolve(now, match), text: match[0] })
+  }
+  for (const rule of WEEKDAY_NAMED) {
+    const match = rule.pattern.exec(text)
+    if (!match) continue
+    const day = weekdayFromMatch(match)
+    if (day === null) continue
+    hits.push({ index: match.index, at: weekdayDate(now, day, rule.mode), text: match[0] })
+  }
+  hits.sort((left, right) => left.index - right.index)
+  const best = hits[0]
+  if (!best) return null
+  const at = hasExplicitClock(text) ? applyClock(text, best.at) : best.at
+  return { at: at.toISOString(), text: best.text }
+}
+
+/** Re-parse a due phrase after the user edits a loop in the memory view. */
+export function dueFromText(text: string, nowIso: string): { loopDueAt?: string; loopDueText?: string } {
+  const due = findDue(text, new Date(nowIso))
+  if (!due) return {}
+  return { loopDueAt: due.at, loopDueText: due.text }
+}
+
 const PLACE_LEAD = /^(?:我|已经|已|选择了|选了|约了|去了|到了|在|去|到|下(?:周|星期)|明[天日]|后[天日]|今[天晚日]|今晚|上午|下午|晚上|早上|凌晨|中午|傍晚|(?:周|星期)[一二三四五六日天]|[零〇一二两三兩四五六七八九十0-9]{1,3}(?:点|點|时|時)(?:半|一刻|[0-9]{1,2})?)/u
 
 /** Drop the clock and the verb that the hall pattern swallowed. */
@@ -166,6 +275,24 @@ function stampUpdate(
   }
 }
 
+const STATEMENT_BREAK = /[。！？!?;\n]/u
+
+/**
+ * The statement of a follow-up that moves the due date. A turn can hold
+ * several sentences, and only the one that names a clock is about the
+ * time. A statement that repeats the loop's own words is not a move.
+ */
+function dueStatement(text: string, target: MemoryItem): string {
+  const own = target.content.trim()
+  for (const part of text.split(STATEMENT_BREAK)) {
+    const statement = part.trim()
+    if (!statement || statement === own) continue
+    if (!hasExplicitClock(statement)) continue
+    return statement
+  }
+  return ''
+}
+
 export interface LoopAbsorbResult {
   memories: MemoryItem[]
   ops: MemoryOpRecord[]
@@ -195,10 +322,19 @@ export function absorbLoopFollowUp(
     : open.length === 1 ? open[0] : undefined
   if (!target) return { memories: [...memories], ops: [] }
   if (!place && !clock && !known) return { memories: [...memories], ops: [] }
-  if (!place && !clock) return { memories: [...memories], ops: [] }
+  // A follow-up may name a new day without naming a clock or a hall.
+  const spoken = dueStatement(text, target)
+  const spokenDue = spoken ? dueFromText(spoken, nowIso) : {}
+  if (!place && !clock && !spokenDue.loopDueAt) return { memories: [...memories], ops: [] }
 
   let dueAt = target.loopDueAt
-  if (clock && dueAt) {
+  let dueText = target.loopDueText
+  if (spokenDue.loopDueAt) {
+    // The follow-up names a day, so it replaces the stored one and the
+    // words that go with it.
+    dueAt = spokenDue.loopDueAt
+    dueText = spokenDue.loopDueText
+  } else if (clock && dueAt) {
     dueAt = applyClock(text, new Date(dueAt)).toISOString()
   }
   const evidence = appendEvidence(
@@ -212,10 +348,12 @@ export function absorbLoopFollowUp(
     slotKey: target.slotKey ?? (known ? slot : target.slotKey),
     ...(place ? { loopPlace: place } : {}),
     ...(dueAt ? { loopDueAt: dueAt } : {}),
+    ...(dueText ? { loopDueText: dueText } : {}),
     evidence,
   }
   const changed = nextMemory.loopPlace !== target.loopPlace
     || nextMemory.loopDueAt !== target.loopDueAt
+    || nextMemory.loopDueText !== target.loopDueText
     || (nextMemory.evidence?.length ?? 0) !== (target.evidence?.length ?? 0)
   if (!changed) return { memories: [...memories], ops: [] }
   return {

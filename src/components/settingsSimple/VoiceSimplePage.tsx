@@ -15,9 +15,8 @@ import {
   isVoiceSpeechInputAvailable,
   isVoiceSpeechOutputAvailable,
 } from '../../lib/platformProfile.ts'
-import { keepTalkingPatch } from '../../features/settingsSimplify/index.ts'
+import { keepTalkingPatch, voiceTriggerPatch } from '../../features/settingsSimplify/index.ts'
 import { pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
-import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
 import type { AppSettings, PlatformProfile, SpeechVoiceOption } from '../../types/index.ts'
 import { SettingsV3Field, SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
 import { simpleTranslate } from './settingsSimpleCopy.ts'
@@ -132,11 +131,7 @@ export function VoiceSimplePage({
             if (value !== 'direct_send' && value !== 'wake_word') return
             setDraft((current) => ({
               ...current,
-              voiceTriggerMode: value,
-              wakeWordEnabled: value === 'wake_word',
-              ...(value === 'wake_word' && !current.wakeWord.trim()
-                ? { wakeWord: getDirectSendFallbackWakeWord(current) }
-                : {}),
+              ...voiceTriggerPatch(value, current),
             }))
           }}
         />

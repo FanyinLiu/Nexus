@@ -7,6 +7,7 @@
  */
 
 import type { MemoryItem } from '../../types/memory.ts'
+import { MEMORY_TEXT_FIELD_NAMES } from '../../../shared/memoryResidue.js'
 
 /** Wording stored in place of a deleted quote. It is not the deleted text. */
 export const REDACTED_MEMORY_NOTE = '已删除一条记忆'
@@ -16,7 +17,6 @@ export const MEMORY_DATA_FILES = {
   daily: 'daily.json',
   opLog: 'op-log.json',
   snapshots: 'run-snapshots.json',
-  v1Backup: 'v1-backup.txt',
   archive: 'archive.json',
   narrative: 'narrative.json',
   agenda: 'agenda.json',
@@ -26,23 +26,7 @@ export const MEMORY_DATA_FILES = {
   callbacks: 'callbacks.json',
 } as const
 
-const TEXT_FIELDS = new Set([
-  'content',
-  'quote',
-  'evidenceQuote',
-  'summary',
-  'title',
-  'prompt',
-  'speechText',
-  'place',
-  'loopPlace',
-  'dueText',
-  'loopDueText',
-  'instruction',
-  'query',
-  'location',
-  'text',
-])
+const TEXT_FIELDS = new Set(MEMORY_TEXT_FIELD_NAMES)
 
 export interface MemoryPurgeRequest {
   ids: readonly string[]
@@ -95,9 +79,6 @@ export function scrubMemoryDataFiles(
   write(MEMORY_DATA_FILES.chatSessions, scrubSessions(readArray(files[MEMORY_DATA_FILES.chatSessions]), needles))
   write(MEMORY_DATA_FILES.callbacks, scrubCallbacks(readArray(files[MEMORY_DATA_FILES.callbacks]), ids, request.clearAll))
   write(MEMORY_DATA_FILES.opLog, scrubOpLog(readArray(files[MEMORY_DATA_FILES.opLog]), ids, needles, request))
-  if (files[MEMORY_DATA_FILES.v1Backup] !== undefined) {
-    next[MEMORY_DATA_FILES.v1Backup] = scrubBackup(files[MEMORY_DATA_FILES.v1Backup], ids, needles, request.clearAll)
-  }
 
   for (const [name, text] of Object.entries(next)) {
     next[name] = replaceNeedles(text, needles)
@@ -261,17 +242,6 @@ function clearOp(request: MemoryPurgeRequest): Record<string, unknown> {
   }
 }
 
-function scrubBackup(raw: string, ids: Set<string>, needles: string[], clearAll: boolean | undefined): string {
-  const replaced = replaceNeedles(raw, needles)
-  try {
-    const parsed = JSON.parse(replaced) as unknown
-    if (!Array.isArray(parsed)) return replaced
-    return writeJson(scrubMemoryRows(parsed, ids, needles, clearAll))
-  } catch {
-    return clearAll ? '[]' : replaced
-  }
-}
-
 function scrubValue(value: unknown, needles: string[]): unknown {
   if (typeof value === 'string') return hits(value, needles) ? REDACTED_MEMORY_NOTE : value
   if (Array.isArray(value)) return value.map((item) => scrubValue(item, needles))
@@ -319,7 +289,6 @@ function collectClearNeedles(files: Readonly<Record<string, string>>): string[] 
     MEMORY_DATA_FILES.opLog,
     MEMORY_DATA_FILES.archive,
     MEMORY_DATA_FILES.narrative,
-    MEMORY_DATA_FILES.v1Backup,
   ]
   const found: string[] = []
   for (const name of sources) {

@@ -161,7 +161,7 @@ test('memory migration package does not resurrect legacy memories when current k
   }
 })
 
-test('memory migration package is empty when no memory keys exist and rejects malformed JSON', () => {
+test('memory migration package is empty when no memory keys exist and normalizes malformed long-term JSON', () => {
   installStorage()
   try {
     const emptyPackage = buildMemoryLocalDataMigrationPackage(new Date('2026-06-19T11:00:00.000Z'))
@@ -174,7 +174,14 @@ test('memory migration package is empty when no memory keys exist and rejects ma
     assert.deepEqual(emptyPackage.longTerm, [])
     assert.deepEqual(emptyPackage.daily, [])
 
+    // The canonical store normalizes a corrupt blob to an empty list; only the
+    // legacy/daily migration sources still reject unparsable JSON.
     installStorage({ [MEMORY_STORAGE_KEY]: '{not valid json' })
+    const corruptLongTerm = buildMemoryLocalDataMigrationPackage()
+    assert.equal(corruptLongTerm.source.longTermKeyPresent, true)
+    assert.deepEqual(corruptLongTerm.longTerm, [])
+
+    installStorage({ [DAILY_MEMORY_STORAGE_KEY]: '{not valid json' })
     assert.throws(
       () => buildMemoryLocalDataMigrationPackage(),
       /memory migration source JSON is invalid/u,

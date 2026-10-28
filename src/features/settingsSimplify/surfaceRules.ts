@@ -58,6 +58,33 @@ export function lookupPatch(enabled: boolean) {
   }
 }
 
+export type WeatherCityPlacement = 'simple' | 'advanced' | null
+
+/**
+ * Where the weather city is edited. When search and weather agree the
+ * plain connection page owns it. When they disagree the plain page sends
+ * the person to the advanced tools section, so that section owns it.
+ * Weather off means no editor anywhere, and the stored city is kept.
+ */
+export function weatherCityPlacement(
+  searchEnabled: boolean,
+  weatherEnabled: boolean,
+): WeatherCityPlacement {
+  if (!weatherEnabled) return null
+  return searchEnabled ? 'simple' : 'advanced'
+}
+
+export type EndpointEditorPlacement = 'simple' | 'advanced'
+
+/**
+ * Where the text endpoint address is edited. A service the person fills
+ * in keeps its address on the plain connection page; a preset keeps it in
+ * the advanced model section, so the plain page stays short.
+ */
+export function endpointEditorPlacement(providerId: string): EndpointEditorPlacement {
+  return providerId === 'custom' ? 'simple' : 'advanced'
+}
+
 type AwarenessFlags = {
   activeWindowContextEnabled: boolean
   clipboardContextEnabled: boolean

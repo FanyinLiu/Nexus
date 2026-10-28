@@ -4,6 +4,7 @@ import { getCoreRuntime, removeAuthProfileFromRuntime, upsertAuthProfileInRuntim
 import { displaySecretInputValue, isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { getLocalizedApiProviderNote } from '../models/providerNotes.ts'
+import { endpointEditorPlacement } from '../settingsSimplify/index.ts'
 import { isHttpHeaderSafeCredential } from '../../core/routing/AuthProfileStore.ts'
 import type { AppSettings, ServiceConnectionCapability, UiLanguage } from '../../types'
 import { UrlInput } from './UrlInput.tsx'
@@ -91,6 +92,7 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
 }: Props) {
   const ti = (key: Parameters<typeof pickTranslatedUiText>[1]) => pickTranslatedUiText(uiLanguage, key)
   const preset = getApiProviderPreset(draft.apiProviderId)
+  const endpointPlacement = endpointEditorPlacement(draft.apiProviderId)
   const keyValue = displaySecretInputValue(draft.apiKey)
   const keyStored = isVaultRefString(draft.apiKey)
   const keyError = preset.requiresApiKey && draft.apiKey && !keyStored && !isHttpHeaderSafeCredential(draft.apiKey)
@@ -184,6 +186,16 @@ export const ModelSectionV3 = memo(function ModelSectionV3({
         </div>
       </SettingsV3Section>
       </>}
+
+      {surface === 'rest' && endpointPlacement === 'advanced' ? (
+        <SettingsV3Section title={ti('settings.model.endpoint_url')} description={getLocalizedApiProviderNote(preset, uiLanguage)}>
+          <div className="settings-v3-editor">
+            <SettingsV3Field label={ti('settings.model.endpoint_url')}>
+              <UrlInput uiLanguage={draft.uiLanguage} value={draft.apiBaseUrl} onChange={(event) => setDraft((prev) => ({ ...prev, apiBaseUrl: event.target.value }))} />
+            </SettingsV3Field>
+          </div>
+        </SettingsV3Section>
+      ) : null}
 
       <SettingsV3Disclosure title={ti('settings.model.advanced_settings')} description={ti('settings.model.failover_hint')}>
         <SettingsV3Row label={ti('settings.model.failover_toggle')} hint={ti('settings.model.failover_hint')}>

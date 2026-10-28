@@ -3,14 +3,21 @@ import test from 'node:test'
 import {
   companionInitiativePatch,
   desktopAwarenessPatch,
+  endpointEditorPlacement,
   inferCompanionInitiative,
   keepTalkingPatch,
   lookupPatch,
   quietHoursPatch,
   sharedLookup,
+  showsVoiceWakeWord,
   unifiedQuietHours,
   voiceLanguagesAfterSettingsOpen,
+  voiceTriggerPatch,
+  weatherCityPlacement,
+  VOICE_TRIGGER_MODES,
 } from '../src/features/settingsSimplify/index.ts'
+import { API_PROVIDER_PRESETS } from '../src/features/models/providerCatalog.ts'
+import type { VoiceTriggerMode } from '../src/types/voice.ts'
 
 const factory = {
   autonomyEnabled: false,
@@ -85,6 +92,29 @@ test('search and weather are not flipped together when they disagree', () => {
   })
 })
 
+test('the weather city has one editor for every switch combination', () => {
+  assert.equal(weatherCityPlacement(true, true), 'simple')
+  assert.equal(weatherCityPlacement(false, true), 'advanced')
+  assert.equal(weatherCityPlacement(true, false), null)
+  assert.equal(weatherCityPlacement(false, false), null)
+  assert.equal(sharedLookup(true, true), true)
+})
+
+test('every service keeps exactly one place to edit its address', () => {
+  assert.equal(endpointEditorPlacement('custom'), 'simple')
+  assert.equal(endpointEditorPlacement('openai'), 'advanced')
+  assert.equal(endpointEditorPlacement('anthropic'), 'advanced')
+  assert.equal(endpointEditorPlacement('ollama'), 'advanced')
+  for (const provider of API_PROVIDER_PRESETS) {
+    const placement = endpointEditorPlacement(provider.id)
+    assert.equal(
+      placement === 'simple' || placement === 'advanced',
+      true,
+      `${provider.id} needs one address editor`,
+    )
+  }
+})
+
 test('desktop awareness turns on the window title only when every source is off', () => {
   assert.deepEqual(desktopAwarenessPatch(true, {
     activeWindowContextEnabled: false,
@@ -114,4 +144,55 @@ test('opening settings does not rewrite a customized speech language', () => {
   })
   assert.equal(customized.speechRecognitionLang, 'ja-JP')
   assert.equal(customized.speechSynthesisLang, 'en-US')
+})
+
+test('the trigger mode can go back to manual confirm and keeps the wake word', () => {
+  const manual = voiceTriggerPatch('manual_confirm', {
+    voiceTriggerMode: 'wake_word',
+    wakeWord: '小N',
+    wakeWordEnabled: true,
+    companionName: 'Nexus',
+  })
+  assert.equal(manual.voiceTriggerMode, 'manual_confirm')
+  assert.equal(manual.wakeWordEnabled, false)
+  assert.equal(manual.wakeWord, '小N')
+})
+
+test('an empty wake word is filled in when the wake word mode is picked', () => {
+  const wake = voiceTriggerPatch('wake_word', {
+    voiceTriggerMode: 'direct_send',
+    wakeWord: '',
+    wakeWordEnabled: false,
+    companionName: 'Nexus',
+  })
+  assert.equal(wake.voiceTriggerMode, 'wake_word')
+  assert.equal(wake.wakeWordEnabled, true)
+  assert.equal(wake.wakeWord, 'Nexus')
+})
+
+test('every trigger mode stays selectable in the advanced section', () => {
+  assert.deepEqual([...VOICE_TRIGGER_MODES], ['direct_send', 'wake_word', 'manual_confirm'])
+  assert.equal(showsVoiceWakeWord('rest', 'wake_word'), false)
+  assert.equal(showsVoiceWakeWord('full', 'wake_word'), true)
+  assert.equal(showsVoiceWakeWord('rest', 'direct_send'), false)
+})
+
+test('the trigger mode survives a round trip through every mode', () => {
+  let draft: {
+    voiceTriggerMode: VoiceTriggerMode
+    wakeWord: string
+    wakeWordEnabled: boolean
+    companionName: string
+  } = {
+    voiceTriggerMode: 'direct_send',
+    wakeWord: '小N',
+    wakeWordEnabled: false,
+    companionName: 'Nexus',
+  }
+  for (const mode of ['manual_confirm', 'direct_send', 'manual_confirm'] as const) {
+    draft = { ...draft, ...voiceTriggerPatch(mode, draft) }
+    assert.equal(draft.voiceTriggerMode, mode)
+    assert.equal(draft.wakeWordEnabled, mode === 'wake_word')
+    assert.equal(draft.wakeWord, '小N')
+  }
 })

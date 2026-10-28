@@ -16,7 +16,6 @@ import {
   MEMORY_OP_LOG_STORAGE_KEY,
   MEMORY_RUN_SNAPSHOT_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
-  MEMORY_V1_BACKUP_STORAGE_KEY,
   PROACTIVE_AGENDA_STORAGE_KEY,
   REMINDER_TASKS_STORAGE_KEY,
 } from '../src/lib/storage/core.ts'
@@ -73,7 +72,6 @@ function filesWithSecret(): Record<string, string> {
       evidenceQuote: SECRET,
       before: [row],
     }]),
-    [MEMORY_DATA_FILES.v1Backup]: JSON.stringify([row]),
     [MEMORY_DATA_FILES.archive]: JSON.stringify([{ id: 'mem-secret', content: SECRET }]),
     [MEMORY_DATA_FILES.narrative]: JSON.stringify({
       threads: [{ id: 'thread-1', title: SECRET, summary: SECRET, memoryIds: ['mem-secret'] }],
@@ -195,7 +193,7 @@ test('clear all removes every memory wording from the memory data dir', () => {
   assert.equal(after[MEMORY_DATA_FILES.reminders]?.includes(OTHER_REMINDER), true)
 })
 
-test('stored delete and clear all leave the wording out of the memory data dir', () => {
+test('stored delete and clear all leave the wording out of the memory data dir', async () => {
   clearDeletedMemorySession()
   const row = memory({
     id: 'mem-secret',
@@ -218,7 +216,6 @@ test('stored delete and clear all leave the wording out of the memory data dir',
       evidenceQuote: SECRET,
       before: [row],
     }]),
-    [MEMORY_V1_BACKUP_STORAGE_KEY]: JSON.stringify([row]),
     [ARCHIVE_STORAGE_KEY]: JSON.stringify([{ id: 'mem-secret', content: SECRET }]),
     [PROACTIVE_AGENDA_STORAGE_KEY]: JSON.stringify({ items: [{ id: 'agenda-1', kind: 'open_loop', sourceId: 'mem-secret', summary: SECRET }] }),
     [REMINDER_TASKS_STORAGE_KEY]: JSON.stringify([{ id: 'reminder-secret', title: SECRET, prompt: PLACE }]),
@@ -236,7 +233,7 @@ test('stored delete and clear all leave the wording out of the memory data dir',
   assert.equal(readDir(deletedDir)[MEMORY_DATA_FILES.longTerm]?.includes(KEPT), true)
   assert.equal(peekDeletedMemory('mem-secret')?.content, SECRET)
 
-  purgeClearedMemories([kept], { '2026-10-16': [{ id: 'day-2', day: '2026-10-16', role: 'user', content: KEPT, source: 'chat', createdAt: AT }] }, AT)
+  await purgeClearedMemories([kept], { '2026-10-16': [{ id: 'day-2', day: '2026-10-16', role: 'user', content: KEPT, source: 'chat', createdAt: AT }] }, AT)
   const clearedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-memory-data-'))
   writeDir(clearedDir, readMemoryDataFiles())
   assert.deepEqual(filesContaining(clearedDir, SECRET), [])
@@ -245,7 +242,7 @@ test('stored delete and clear all leave the wording out of the memory data dir',
   assert.equal(peekDeletedMemory('mem-secret'), null)
 })
 
-test('a delete drops the vector row and a clear asks the vector store for the wipe', () => {
+test('a delete drops the vector row and a clear asks the vector store for the wipe', async () => {
   const calls: Array<{ kind: 'remove', ids: string[] } | { kind: 'clear', needles: string[] }> = []
   installStorage({}, {
     memoryVectorRemove: (payload: { ids?: string[] }) => {
@@ -260,7 +257,7 @@ test('a delete drops the vector row and a clear asks the vector store for the wi
 
   const row = memory({ id: 'mem-vector', content: SECRET })
   purgeDeletedMemory(row, AT)
-  purgeClearedMemories([row], {}, AT)
+  await purgeClearedMemories([row], {}, AT)
 
   assert.deepEqual(calls, [
     { kind: 'remove', ids: ['mem-vector'] },

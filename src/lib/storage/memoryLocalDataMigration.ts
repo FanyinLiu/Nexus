@@ -2,11 +2,11 @@ import {
   DAILY_MEMORY_STORAGE_KEY,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_LOCAL_DATA_AUTHORITY_CONSENT_KEY,
-  MEMORY_STORAGE_KEY,
 } from './core.ts'
 import {
   normalizeDailyMemoryStore,
   normalizeMemoryItemsForStorage,
+  readLongTermMemoryMigrationSource,
 } from './memory.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../../types/memory.ts'
 import type { MemoryMigrationDryRunReport } from './memoryMigrationDryRun.ts'
@@ -97,16 +97,14 @@ export function buildMemoryLocalDataMigrationPackage(
   now = new Date(),
 ): MemoryLocalDataMigrationPackage {
   const storage = getStorage()
-  const longTermRaw = storage?.getItem(MEMORY_STORAGE_KEY) ?? null
   const legacyRaw = storage?.getItem(LEGACY_MEMORY_STORAGE_KEY) ?? null
   const dailyRaw = storage?.getItem(DAILY_MEMORY_STORAGE_KEY) ?? null
-  // Only fall back to the legacy key when the current key is genuinely absent
-  // (first launch after the store split). A key that exists but holds an
-  // empty array means the user deleted every memory — falling back here
-  // would resurrect the legacy memories they just removed. Same rule as
-  // loadMemories in memory.ts.
-  const longTermKeyPresent = storage?.getItem(MEMORY_STORAGE_KEY) !== null
-  const current = normalizeMemoryItemsForStorage(parseRaw(longTermRaw, []))
+  // Long-term memory lives in the main-process file store after hydration;
+  // loadMemories() still falls back to localStorage in browser preview. The
+  // legacy key is read directly because it is only a migration source.
+  const longTermSource = readLongTermMemoryMigrationSource()
+  const longTermKeyPresent = longTermSource.canonicalPresent
+  const current = longTermSource.memories
   const legacy = normalizeMemoryItemsForStorage(parseRaw(legacyRaw, []))
   const daily = normalizeDailyMemoryStore(parseRaw(dailyRaw, {}))
   return buildMemoryLocalDataMigrationPackageFromState(
@@ -114,7 +112,7 @@ export function buildMemoryLocalDataMigrationPackage(
     daily,
     now,
     {
-      longTermKeyPresent: Boolean(longTermRaw),
+      longTermKeyPresent,
       legacyLongTermKeyPresent: Boolean(legacyRaw),
       dailyKeyPresent: Boolean(dailyRaw),
       legacyLongTermUsed: !longTermKeyPresent && legacy.length > 0,

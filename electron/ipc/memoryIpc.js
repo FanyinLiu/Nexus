@@ -1,18 +1,75 @@
-import { app, ipcMain, session } from 'electron'
+import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { clearMemoryUserData } from '../services/memoryUserDataClear.js'
+import { createMemoryFlushAckGate, createMemoryQuitFlushHandler } from '../services/memoryFlushAckGate.js'
+import { isUpdateInstallQuit } from '../services/updateInstallQuitFlag.js'
 import * as memoryVectorStore from '../services/memoryVectorStore.js'
+import {
+  createLongTermMemoryFileStore,
+  resolveLongTermMemoryFilePath,
+} from '../services/longTermMemoryFileStore.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateMemoryClearUserDataPayload,
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
+  validateMemoryLongTermSavePayload,
   validateMemoryRemovePayload,
   validateMemoryVectorIndexBatchPayload,
   validateMemoryVectorIndexPayload,
   validateMemoryVectorSearchPayload,
 } from './payloadSchemas.js'
 
+const MEMORY_FLUSH_QUIT_TIMEOUT_MS = 2_500
+
 export function register() {
+  const longTermMemoryStore = createLongTermMemoryFileStore({
+    filePath: resolveLongTermMemoryFilePath(app.getPath('userData')),
+  })
+  const flushGate = createMemoryFlushAckGate()
+
+  // The renderer buffers memory writes for 250 ms; `beforeunload` cannot await
+  // the IPC save. Block the first quit so the debounced value lands on disk,
+  // but never longer than the timeout if a renderer is gone. An update install
+  // owns its quit, so the handler lets that one through untouched.
+  app.on('before-quit', createMemoryQuitFlushHandler({
+    getWindows: () => BrowserWindow.getAllWindows(),
+    gate: flushGate,
+    timeoutMs: MEMORY_FLUSH_QUIT_TIMEOUT_MS,
+    quit: () => app.quit(),
+    isUpdateInstallQuit,
+  }))
+
+  ipcMain.handle('memory:flush-complete', async (event) => {
+    requireTrustedSender(event)
+    flushGate.acknowledge()
+    return { ok: true }
+  })
+
+  ipcMain.handle('memory:long-term-load', async (event) => {
+    requireTrustedSender(event)
+    return longTermMemoryStore.load()
+  })
+
+  ipcMain.handle('memory:long-term-save', async (event, payload) => {
+    requireTrustedSender(event)
+    const parsed = validateMemoryLongTermSavePayload(payload)
+    return longTermMemoryStore.save(parsed?.memories ?? [])
+  })
+
+  ipcMain.handle('memory:long-term-clear', async (event) => {
+    requireTrustedSender(event)
+    return longTermMemoryStore.clear()
+  })
+
+  // Chromium keeps removed localStorage values in LevelDB tombstones. Only the
+  // session-level clear compacts them away; the renderer restores every
+  // non-memory key afterwards.
+  ipcMain.handle('memory:reset-local-storage', async (event) => {
+    requireTrustedSender(event)
+    await session.defaultSession.clearStorageData({ storages: ['localstorage'] })
+    return { ok: true }
+  })
+
   ipcMain.handle('memory:vector-index', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateMemoryVectorIndexPayload(payload)
@@ -65,6 +122,7 @@ export function register() {
       ok: true,
       removed: cleared.removed,
       localDataCleared: cleared.localDataCleared,
+      snapshotMemoryFilesRemoved: cleared.snapshotMemoryFilesRemoved,
     }
   })
 
