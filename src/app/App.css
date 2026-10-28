@@ -5283,9 +5283,7 @@ html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window_
 .model-setup__row-desc,
 .model-setup__row-status,
 .model-setup__hint,
-.model-setup__error,
-.model-setup__python,
-.model-setup__python-note {
+.model-setup__error {
   font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -5402,35 +5400,6 @@ html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window_
   border-radius: 8px;
   background: color-mix(in srgb, #d95555 14%, var(--color-surface-elevated, #fff));
   color: color-mix(in srgb, #d95555 64%, var(--color-text-primary, #1a1f29));
-}
-
-.model-setup__python {
-  padding: 10px 12px;
-  border: 1px dashed var(--color-border-strong, #d0d5de);
-  border-radius: 8px;
-  background: var(--color-surface-muted, #fafbfc);
-  color: var(--color-text-muted, #4c5361);
-}
-
-.model-setup__python strong {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--color-text-primary, #1a1f29);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.model-setup__python-note {
-  margin-top: 6px;
-  color: var(--color-text-muted, #5d6575);
-}
-
-.model-setup__python-note code {
-  padding: 1px 6px;
-  border-radius: 8px;
-  background: var(--color-surface-muted, #eef0f4);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .model-setup-card__actions {
@@ -5642,8 +5611,7 @@ html[data-theme='warm-day'] .panel-window--companion.is-collapsed .panel-window_
   }
 
   .model-setup__hint,
-  .model-setup__error,
-  .model-setup__python {
+  .model-setup__error {
     padding: 8px;
   }
 }

@@ -42,7 +42,7 @@ export const zhCNSettingsModel = {
   'settings.model.testing': '测试中...',
   'settings.model.test_endpoint': '测试连接',
   'settings.model.provider': '提供商',
-  'settings.model.endpoint_url': '文本接口地址',
+  'settings.model.endpoint_url': '聊天服务地址',
   'settings.model.api_key': '文本接口密钥',
   'settings.model.model': '文本模型',
   'settings.model.custom': '(自定义)',

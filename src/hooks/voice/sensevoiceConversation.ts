@@ -11,6 +11,7 @@ import type {
   VoiceSessionTransport,
 } from '../../features/voice/sessionMachine.ts'
 import { clamp } from '../../lib/common.ts'
+import { humanizeMicPermissionError } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
 import type {
@@ -210,7 +211,8 @@ export async function startSenseVoiceConversation(
       } catch (error) {
         params.sensevoiceSessionRef.current = null
         params.handleVoiceListeningFailure(
-          error instanceof Error ? error.message : params.ti('voice.provider.sensevoice.failed_retry'),
+          humanizeMicPermissionError(error)
+            ?? (error instanceof Error ? error.message : params.ti('voice.provider.sensevoice.failed_retry')),
         )
       }
     }
@@ -316,9 +318,10 @@ export async function startSenseVoiceConversation(
     params.sensevoiceSessionRef.current = null
     if (isVoiceCaptureCancelled(error)) return
 
-    const message = error instanceof Error
-      ? error.message
-      : params.ti('voice.provider.sensevoice.start_failed')
+    const message = humanizeMicPermissionError(error)
+      ?? (error instanceof Error
+        ? error.message
+        : params.ti('voice.provider.sensevoice.start_failed'))
 
     params.updateVoicePipeline('idle', message)
     params.setError(message)

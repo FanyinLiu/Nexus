@@ -44,7 +44,7 @@ export const enSettingsModel = {
   'settings.model.testing': 'Testing...',
   'settings.model.test_endpoint': 'Test connection',
   'settings.model.provider': 'Provider',
-  'settings.model.endpoint_url': 'Text endpoint URL',
+  'settings.model.endpoint_url': 'Chat service address',
   'settings.model.api_key': 'Text API key',
   'settings.model.model': 'Text model',
   'settings.model.custom': '(custom)',

@@ -298,13 +298,76 @@ export function calculateAudioRms(samples: ArrayLike<number>) {
   return Math.sqrt(total / samples.length)
 }
 
-export function mapMicrophoneDiagnosticError(error: unknown, localMode = false, ti: Translator = t) {
+/**
+ * Normalize a platform token to the `process.platform` vocabulary used by
+ * microphone permission copy (`darwin` / `win32` / `linux` / `unknown`).
+ * Accepts both navigator platform strings (`MacIntel`, `Win32`) and already
+ * normalized tokens. `darwin` MUST be checked before `win` because the macOS
+ * token itself contains "win".
+ */
+function normalizeVoicePermissionPlatform(
+  platform: string | null | undefined,
+): 'darwin' | 'win32' | 'linux' | 'unknown' {
+  const normalized = (platform ?? '').trim().toLowerCase()
+  if (normalized === 'darwin' || normalized.includes('mac')) return 'darwin'
+  if (normalized === 'win32' || normalized.includes('win')) return 'win32'
+  if (normalized.includes('linux')) return 'linux'
+  return 'unknown'
+}
+
+/**
+ * Renderer-side platform token used to pick microphone permission copy.
+ * Mirrors the `process.platform` vocabulary exposed by PlatformProfile
+ * (`darwin` / `win32` / `linux`) so callers can inject a known value.
+ */
+export function detectVoicePermissionPlatform(): string {
+  if (typeof navigator === 'undefined') return 'unknown'
+  const userAgentData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+  const raw = userAgentData?.platform || navigator.platform || ''
+  return normalizeVoicePermissionPlatform(raw)
+}
+
+/**
+ * Append the platform suffix to any microphone-permission message key.
+ * Every surface that reports a denied microphone shares the same three
+ * sentences per locale, so the key differs only by suffix: macOS and Windows
+ * point users at their own privacy panes; everything else keeps the generic
+ * wording. Passing a platform keeps this testable without touching the
+ * navigator.
+ */
+export function pickMicrophonePermissionKey(
+  baseKey: TranslationKey,
+  platform: string | null | undefined,
+): TranslationKey {
+  const normalized = normalizeVoicePermissionPlatform(platform)
+  if (normalized === 'darwin') return `${baseKey}_mac` as TranslationKey
+  if (normalized === 'win32') return `${baseKey}_windows` as TranslationKey
+  return baseKey
+}
+
+/**
+ * Pure platform-to-key decision for microphone permission copy. macOS and
+ * Windows point users at their own privacy panes; everything else gets the
+ * generic system-settings wording.
+ */
+export function pickMicrophonePermissionDeniedKey(
+  platform: string | null | undefined,
+): TranslationKey {
+  return pickMicrophonePermissionKey('voice.mic.permission_denied', platform)
+}
+
+export function mapMicrophoneDiagnosticError(
+  error: unknown,
+  localMode = false,
+  ti: Translator = t,
+  platform: string | null | undefined = detectVoicePermissionPlatform(),
+) {
   if (error instanceof DOMException) {
     switch (error.name) {
       case 'NotAllowedError':
       case 'PermissionDeniedError':
       case 'SecurityError':
-        return ti('voice.mic.permission_denied')
+        return ti(pickMicrophonePermissionDeniedKey(platform))
       case 'NotFoundError':
       case 'DevicesNotFoundError':
         return ti('voice.mic.not_found')

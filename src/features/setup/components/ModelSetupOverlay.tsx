@@ -10,6 +10,7 @@ import {
   isModelProgressComplete,
   isModelProgressError,
   mergeModelProgress,
+  modelSetupInfoBlocks,
   shouldShowModelSetupOverlay,
   type Inventory,
   type ModelEntry,
@@ -268,6 +269,10 @@ export function ModelSetupOverlay({
   const missingIds = missingVoiceModelIds(inventory.models, speechInputProviderId ?? '')
   const requiredModels = inventory.models.filter(m => m.required)
   const optionalModels = inventory.models.filter(m => !m.required)
+  const infoBlocks = modelSetupInfoBlocks({
+    huggingFaceReachable: networkProbe?.huggingFaceReachable,
+    errorMessage: errorBanner,
+  })
   const optionalStatus = (required: boolean) => (
     required ? '' : ` · ${t('model_setup.optional_tag')}`
   )
@@ -368,13 +373,13 @@ export function ModelSetupOverlay({
         </header>
 
         <div className="model-setup-card__body">
-          {networkProbe && !networkProbe.huggingFaceReachable ? (
+          {infoBlocks.includes('network_hint') ? (
             <div className="model-setup__hint">
               {t('model_setup.network_hf_unreachable')}
             </div>
           ) : null}
 
-          {errorBanner ? (
+          {infoBlocks.includes('error_banner') ? (
             <div className="model-setup__error" role="alert" aria-live="assertive" aria-atomic="true">
               {errorBanner}
             </div>
