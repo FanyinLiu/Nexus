@@ -13,6 +13,7 @@ import {
   migrateKeysToVault,
 } from '../../lib/keyVaultBridge.ts'
 import { syncExternalActionPolicyToMain } from '../../features/integrations/externalActionPolicySync.ts'
+import { syncVoiceRuntimeToMain } from '../../features/voice/voiceRuntimeSync.ts'
 import { voiceSwitchesAfterMicrophoneDenied } from '../../features/voice/voiceCaptureAttempt.ts'
 import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
@@ -87,6 +88,7 @@ function commitSettingsCache(settings: AppSettings): AppSettings {
   pendingHydration = null
   settingsCommitGeneration += 1
   syncMainProcessPermissionPolicy(settings)
+  syncVoiceRuntimeToMain(settings)
   return settings
 }
 

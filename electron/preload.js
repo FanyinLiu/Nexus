@@ -251,6 +251,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
   externalActionPolicyGet: () => ipcRenderer.invoke('external-action-policy:get'),
   externalActionPolicySync: (payload) => ipcRenderer.invoke('external-action-policy:sync', payload),
 
+  // On-demand local voice sidecars (engine ids + switches only)
+  voiceRuntimeSync: (payload) => ipcRenderer.invoke('voice-runtime:sync', payload),
+
   // Main-process local data foundation. Renderer storage remains authoritative in M4.
   localDataStatus: () => ipcRenderer.invoke('local-data:status'),
   localDataMirrorOnboarding: (payload) => ipcRenderer.invoke('local-data:mirror-onboarding', payload),

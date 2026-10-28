@@ -8,6 +8,8 @@ Usage:
     python scripts/omnivoice_server.py [--port 8000] [--model k2-fsa/OmniVoice]
 """
 
+SIDECAR_VERSION = "1"
+
 import argparse
 import io
 import logging

@@ -187,6 +187,26 @@ export function validateVadStartPayload(payload) {
   return validateIpcPayload('vad:start', payload, vadStartSchema)
 }
 
+/**
+ * Validate the compact voice-engine snapshot that drives on-demand sidecar
+ * lifecycle in the main process.
+ * @param {unknown} payload
+ */
+export function validateVoiceRuntimeSyncPayload(payload) {
+  return validateIpcPayload('voice-runtime:sync', payload, voiceRuntimeSyncSchema)
+}
+
+const voiceRuntimeSyncSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    speechInputEnabled: { type: 'boolean' },
+    speechInputProviderId: { type: 'string', maxLength: SHORT_TEXT_MAX },
+    speechOutputEnabled: { type: 'boolean' },
+    speechOutputProviderId: { type: 'string', maxLength: SHORT_TEXT_MAX },
+  },
+}
+
 const voiceProfileProbeSchema = {
   type: 'object',
   optional: true,

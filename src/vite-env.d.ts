@@ -638,6 +638,12 @@ declare global {
         changes: Array<{ integration: string; from: string; to: string; active: boolean }>
         rejected: Array<{ integration: string; from: string; to: string; active: boolean }>
       }>
+      voiceRuntimeSync: (payload: {
+        speechInputEnabled: boolean
+        speechInputProviderId: string
+        speechOutputEnabled: boolean
+        speechOutputProviderId: string
+      }) => Promise<{ ok: boolean }>
       localDataStatus: () => Promise<LocalDataStatus>
       localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>
       localDataChatMigrationStatus: () => Promise<LocalDataChatMigrationStatusResult>

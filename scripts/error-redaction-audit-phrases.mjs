@@ -157,14 +157,22 @@ export const REQUIRED_PHRASES = [
     phrases: [
       '[main] stream error: ${getRedactedErrorMessage(err)}',
       "console.warn('[windows] Failed to set AppUserModelId:', getRedactedErrorMessage(err))",
-      'console.warn(`[${tag}] Spawn error: ${getRedactedErrorMessage(err)}`)',
       "console.warn('[macOS] Failed to hide dock icon:', getRedactedErrorMessage(err))",
       "console.warn('[mac-perm] auto-check error:', getRedactedErrorMessage(err))",
       "console.warn('[windows-perm] auto-check error:', getRedactedErrorMessage(err))",
       "console.warn('[pluginHost] auto-start error:', getRedactedErrorMessage(err))",
-      "console.warn('[OmniVoice] auto-start error:', getRedactedErrorMessage(err))",
-      "console.warn('[GLM-ASR] auto-start error:', getRedactedErrorMessage(err))",
-      "console.warn('[Python] Runtime probe failed:', getRedactedErrorMessage(err))",
+    ],
+  },
+  {
+    // Sidecar start/stop is on demand now, so these dependency logs live in the
+    // supervisor instead of main.js; the redaction requirement follows them.
+    id: 'voice-sidecar-redacts-dependency-logs',
+    file: 'electron/services/voiceSidecarService.js',
+    phrases: [
+      "import { getRedactedErrorMessage } from './errorRedaction.js'",
+      'Spawn error: ${getRedactedErrorMessage(error)}',
+      'Start failed: ${getRedactedErrorMessage(error)}',
+      'Reconcile failed: ${getRedactedErrorMessage(error)}',
     ],
   },
   {
