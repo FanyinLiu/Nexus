@@ -342,15 +342,21 @@ export function humanizeError(
   return lookupTranslation('humanize.fallback', redactSensitive(raw), translator)
 }
 
-const MIC_PERMISSION_ERROR_NAMES = new Set(['NotAllowedError', 'PermissionDeniedError'])
-const MIC_PERMISSION_MESSAGE_PATTERN = /NotAllowedError|permission.?denied/i
+const MIC_PERMISSION_ERROR_NAMES = new Set([
+  'NotAllowedError',
+  'PermissionDeniedError',
+  // Chromium reports an insecure origin / blocked capture as SecurityError;
+  // it is still a permission problem, not a dead or busy device.
+  'SecurityError',
+])
+const MIC_PERMISSION_MESSAGE_PATTERN = /NotAllowedError|PermissionDeniedError|SecurityError|permission.?denied/i
 
 /**
  * Detect a denied microphone without trusting the message alone: Chromium
  * rejects getUserMedia with a DOMException whose `message` is often the bare
  * English "Permission denied", so the `name` is the reliable classifier.
  */
-function isMicrophonePermissionError(error: unknown): boolean {
+export function isMicrophonePermissionError(error: unknown): boolean {
   if (error && typeof error === 'object') {
     const name = (error as { name?: unknown }).name
     if (typeof name === 'string' && MIC_PERMISSION_ERROR_NAMES.has(name)) return true
@@ -383,6 +389,94 @@ export function humanizeMicPermissionError(
     undefined,
     options.ti ?? t,
   )
+}
+
+/**
+ * Categories for the fixed voice/onboarding error sentences introduced by
+ * the raw-error-copy cleanup. The category is chosen from the *cause*, not
+ * from which component happened to throw: a failed recognizer start is an
+ * engine problem, a denied/dead microphone is a device problem, and socket
+ * or DNS failures are network problems. Anything unrecognised stays
+ * `generic` so an internal message can never leak into user copy.
+ */
+export type VoiceErrorCategory = 'engine' | 'device' | 'network' | 'playback' | 'generic'
+
+// Kept deliberately broad: provider/runtime wording changes often, but the
+// underlying cause still contains one of these tokens. Device wins over
+// network because Chromium often prefixes permission failures with a
+// generic "failed to fetch device" style sentence.
+const VOICE_DEVICE_PATTERN = /NotAllowedError|PermissionDeniedError|SecurityError|NotFoundError|DevicesNotFoundError|NotReadableError|TrackStartError|OverconstrainedError|permission.?denied|microphone|mic\b|getUserMedia|audio.?source|audio.?track|MediaRecorder|recording|sample.?rate|audio.?context|device/i
+const VOICE_NETWORK_PATTERN = /network|fetch|ECONN|ENOTFOUND|EAI_AGAIN|getaddrinfo|\bdns\b|socket|websocket|timed?\s*out|timeout|ETIMEDOUT|offline|connection|unreachable|\b(?:502|503|504)\b|NEXUS_ERR_(?:STT|TTS)_TIMEOUT/i
+const VOICE_ENGINE_PATTERN = /engine|recognizer|recognition|\bmodel\b|sherpa|paraformer|sensevoice|tencent|whisper|wake.?word|\bkws\b|onnx|wasm|initializ|\binit\b|\bload\b|not.?installed|unavailable|not.?supported|desktop.?client|\bIPC\b/i
+
+function readRawErrorText(error: unknown): string {
+  if (error instanceof Error) {
+    // `name` carries the DOMException classifier even when the message is an
+    // unrelated sentence, so both halves must reach the category patterns.
+    return `${error.name || ''} ${error.message || ''}`.trim()
+  }
+  if (typeof error === 'string') return error
+  if (error && typeof error === 'object') {
+    // DOMException-like plain objects (tests, cross-realm errors) carry the
+    // useful classifier in `name` even when the message is innocuous.
+    const record = error as { name?: unknown; message?: unknown }
+    const name = typeof record.name === 'string' ? record.name : ''
+    const message = typeof record.message === 'string' ? record.message : ''
+    return `${name} ${message}`.trim()
+  }
+  if (error === null || error === undefined) return ''
+  return String(error)
+}
+
+/**
+ * Classify an arbitrary voice failure into the fixed sentence family.
+ * Exposed separately from `humanizeVoiceError` so callers that already hold
+ * a translated string (wakeword state transitions) can make the same call.
+ */
+export function classifyVoiceError(error: unknown): Exclude<VoiceErrorCategory, 'playback'> {
+  const raw = readRawErrorText(error)
+  if (VOICE_DEVICE_PATTERN.test(raw)) return 'device'
+  if (VOICE_NETWORK_PATTERN.test(raw)) return 'network'
+  if (VOICE_ENGINE_PATTERN.test(raw)) return 'engine'
+  return 'generic'
+}
+
+/**
+ * Return the fixed, localized sentence for a voice failure and log the raw
+ * error for diagnostics. This is the single gate used by onboarding-adjacent
+ * voice paths, recognizer engines, wakeword retries, and playback — the raw
+ * message must never be interpolated into the returned string.
+ *
+ * A denied microphone is checked FIRST: "check it's plugged in / not used by
+ * another app" is the wrong advice when the user simply has to grant access,
+ * so every capture path keeps the per-platform privacy-pane sentence from
+ * `humanizeMicPermissionError`. Playback errors are exempt because Chromium
+ * reports an autoplay rejection with the same `NotAllowedError` name.
+ */
+export function humanizeVoiceError(
+  error: unknown,
+  options: {
+    category?: VoiceErrorCategory
+    platform?: string | null
+    ti?: HumanizeTranslator
+  } = {},
+): string {
+  const category = options.category ?? classifyVoiceError(error)
+  const raw = readRawErrorText(error)
+  if (raw.trim()) {
+    console.warn(
+      `[Voice] ${category} error:`,
+      redactSensitive(raw),
+    )
+  }
+  if (options.category !== 'playback') {
+    const permissionSentence = humanizeMicPermissionError(error, {
+      platform: options.platform,
+      ti: options.ti,
+    })
+    if (permissionSentence) return permissionSentence
+  }
+  return lookupTranslation(`voice.error.${category}` as TranslationKey, undefined, options.ti ?? t)
 }
 
 /**

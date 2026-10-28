@@ -57,6 +57,8 @@ export const zhCNOnboarding = {
   'onboarding.error.voice.no_input_api_base': '当前语音输入方案需要填写接口地址。',
   'onboarding.error.voice.no_output_provider': '先选择一个语音输出方案。',
   'onboarding.error.voice.no_output_api_base': '当前语音输出方案需要填写接口地址。',
+  'onboarding.error.save_failed': '没能保存，再点一次试试。',
+  'onboarding.error.language_failed': '语言没切换成功，再选一次试试。',
   'onboarding.eyebrow': '开始前',
   'onboarding.title': '先把桌面伙伴配置到能常驻、能对话',
   'onboarding.body': '这是一轮最小可用首配。先完成文本模型、角色和常驻窗口，语音、工具权限、记忆策略和桌面上下文都可以稍后在设置里继续细调。',

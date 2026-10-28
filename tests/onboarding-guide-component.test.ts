@@ -5,6 +5,7 @@ import { afterEach, beforeEach, test } from 'node:test'
 import React from 'react'
 
 import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import { createConnectionVerificationRecord } from '../src/features/models/connectionTestFreshness.ts'
 import type { OnboardingGuideProps } from '../src/features/onboarding/components/OnboardingGuide.tsx'
@@ -234,7 +235,13 @@ type GuideCalls = {
   dismisses: number
 }
 
-function createGuide(overrides: Partial<AppSettings> = {}) {
+function createGuide(
+  overrides: Partial<AppSettings> = {},
+  hooks: {
+    onSave?: OnboardingGuideProps['onSave']
+    onPersistUiLanguage?: OnboardingGuideProps['onPersistUiLanguage']
+  } = {},
+) {
   const settings = makeSettings(overrides)
   const calls: GuideCalls = { saves: [], dismisses: 0 }
   const renderer = createComponentRenderer<OnboardingGuideProps>(OnboardingGuide)
@@ -245,7 +252,8 @@ function createGuide(overrides: Partial<AppSettings> = {}) {
     platformProfile: { startup: { supported: true } } as OnboardingGuideProps['platformProfile'],
     petModelPresets: [],
     onDismiss: () => { calls.dismisses += 1 },
-    onSave: async (next) => { calls.saves.push(next) },
+    onSave: hooks.onSave ?? (async (next) => { calls.saves.push(next) }),
+    onPersistUiLanguage: hooks.onPersistUiLanguage,
   }
   let tree: unknown
 
@@ -339,6 +347,27 @@ function createGuide(overrides: Partial<AppSettings> = {}) {
     unmount: renderer.unmount,
     get tree() { return tree },
   }
+}
+
+/**
+ * Render and drain event-loop turns until the guide shows `copy.shows`.
+ * Async handlers outlive a single turn: picking a language first awaits a
+ * dynamic locale import, which Node 22 settles a turn later than Node 24, so
+ * one `setImmediate` is not a portable settle point. `copy.neverShows` is
+ * re-checked on every turn, so a transient raw-text leak still fails.
+ */
+async function waitForGuideCopy(
+  guide: { render: () => unknown; readonly tree: unknown },
+  copy: { shows: string; neverShows: string },
+) {
+  for (let turn = 0; turn < 100; turn += 1) {
+    guide.render()
+    const text = collectText(guide.tree).join('\n')
+    assert.equal(text.includes(copy.neverShows), false, `raw error leaked on turn ${turn}`)
+    if (text.includes(copy.shows)) return
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  assert.fail(`guide never rendered: ${copy.shows}`)
 }
 
 let restoreDom: (() => void) | null = null
@@ -601,4 +630,54 @@ test('the last-step hint switches from missing-key to untested-connection once t
     0,
   )
   guide.unmount()
+})
+
+test('a failed setup save shows the fixed sentence and never the raw error', async () => {
+  const marker = 'RAW-ERR-MARKER-onboarding-save'
+  const warnings: string[] = []
+  const originalWarn = console.warn
+  console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')) }
+  try {
+    const guide = createGuide({}, {
+      onSave: async () => { throw new Error(marker) },
+    })
+    guide.render()
+    guide.advanceToLastStep()
+    guide.clickPrimary()
+    await waitForGuideCopy(guide, {
+      shows: enMessages['onboarding.error.save_failed'],
+      neverShows: marker,
+    })
+    assert.ok(warnings.some((line) => line.includes(marker)), 'raw save error must reach the log')
+    guide.unmount()
+  } finally {
+    console.warn = originalWarn
+  }
+})
+
+test('a failed language persist shows the fixed sentence and never the raw error', async () => {
+  const marker = 'RAW-ERR-MARKER-onboarding-language'
+  const warnings: string[] = []
+  const originalWarn = console.warn
+  console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(' ')) }
+  try {
+    const guide = createGuide({}, {
+      onPersistUiLanguage: async () => { throw new Error(marker) },
+    })
+    guide.render()
+    const [languageStep] = findElements(
+      guide.tree,
+      (element) => typeof element.props.onChooseLanguage === 'function',
+    )
+    assert.ok(languageStep, 'missing language step')
+    ;(languageStep.props.onChooseLanguage as (language: string) => void)('ja')
+    await waitForGuideCopy(guide, {
+      shows: jaMessages['onboarding.error.language_failed'],
+      neverShows: marker,
+    })
+    assert.ok(warnings.some((line) => line.includes(marker)), 'raw language error must reach the log')
+    guide.unmount()
+  } finally {
+    console.warn = originalWarn
+  }
 })

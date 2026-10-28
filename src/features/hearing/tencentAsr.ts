@@ -6,6 +6,7 @@
  */
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { isVaultRefString } from '../../lib/keyVaultBridge.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
 
@@ -154,14 +155,14 @@ export async function startTencentAsrStream(
     void audioContext.close().catch(() => undefined)
   }
 
-  function fail(message: string) {
+  function fail(error: unknown) {
     if (destroyed) return
     destroyed = true
     finalizing = true
     teardownAudioGraph()
     unsubscribeResults()
     api.tencentAsrAbort().catch(() => undefined)
-    callbacks.onError?.(message)
+    callbacks.onError?.(humanizeVoiceError(error, { ti }))
   }
 
   // Subscribe to streaming results from the main process
@@ -205,7 +206,7 @@ export async function startTencentAsrStream(
           sampleRate: audioContext.sampleRate,
         })
       } catch (error) {
-        fail(error instanceof Error ? error.message : (ti?.('voice.provider.tencent.audio_error') ?? 'Tencent Cloud ASR audio transmission error.'))
+        fail(error)
       }
     })
   }

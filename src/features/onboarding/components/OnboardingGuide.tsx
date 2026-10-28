@@ -239,10 +239,11 @@ export function OnboardingGuide({
       await onPersistUiLanguage(nextDraft)
     } catch (caught) {
       if (languageRequestRef.current !== request) return
+      // The raw failure belongs in the log only — the guide shows the fixed
+      // sentence so IPC/provider wording never reaches the user.
+      console.warn('[onboarding] Failed to persist language:', getRedactedLogErrorMessage(caught))
       setError({
-        message: caught instanceof Error
-          ? caught.message
-          : pickTranslatedUiText(nextDraft.uiLanguage, 'onboarding.save_failed'),
+        message: pickTranslatedUiText(nextDraft.uiLanguage, 'onboarding.error.language_failed'),
       })
     }
   }
@@ -303,7 +304,10 @@ export function OnboardingGuide({
       recordDisclosureAck()
       onDismiss()
     } catch (caught) {
-      setError({ message: caught instanceof Error ? caught.message : ti('onboarding.save_failed') })
+      // Keep diagnostics in the log; the onboarding UI only ever shows the
+      // fixed save-failed sentence.
+      console.warn('[onboarding] Failed to save setup:', getRedactedLogErrorMessage(caught))
+      setError({ message: ti('onboarding.error.save_failed') })
     } finally {
       setSaving(false)
     }

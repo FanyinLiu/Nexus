@@ -186,18 +186,23 @@ export function cancelPendingWakewordAck(options: {
 }
 
 /**
- * The humanized mic sentences are complete copy on their own: the wakeword
- * runtime turns a denial into the full per-platform sentence and a dead
- * mic track into the recording-device guidance. Wrapping either in the
- * generic `voice.wakeword.unavailable_with_reason` shell would re-prefix
- * actionable privacy-pane instructions, exactly the
- * "唤醒词监听不可用：Permission denied" shape this copy class exists to kill.
+ * The fixed humanized sentences are complete copy on their own: the wakeword
+ * runtime turns failures into the category sentence (engine / device /
+ * network / generic). Wrapping one in the generic
+ * `voice.wakeword.unavailable_with_reason` shell would re-prefix actionable
+ * guidance — exactly the "唤醒词监听不可用：Permission denied" shape this copy
+ * class exists to kill.
  */
 const HUMANIZED_MIC_SENTENCE_KEYS: TranslationKey[] = [
   'humanize.voice.mic_permission',
   'humanize.voice.mic_permission_mac',
   'humanize.voice.mic_permission_windows',
   'humanize.voice.mic_not_responding',
+  'voice.error.engine',
+  'voice.error.device',
+  'voice.error.network',
+  'voice.error.playback',
+  'voice.error.generic',
 ]
 
 function isHumanizedMicSentence(ti: Translator, reason: string): boolean {
@@ -291,7 +296,13 @@ export function handleWakewordRuntimeStateChangeRuntime(
       _lastLoggedListenerError = message
       console.warn('[Voice] Wake word listener error:', message)
       options.appendVoiceTrace('Wake word listener error', message, 'error')
-      options.showPetStatus(options.ti('voice.wakeword.listener_error_with_reason', { error: message }), 4_200, 4_500)
+      options.showPetStatus(
+        isHumanizedMicSentence(options.ti, message)
+          ? message
+          : options.ti('voice.wakeword.listener_error_with_reason', { error: message }),
+        4_200,
+        4_500,
+      )
       options.busEmit?.({
         type: 'wake:error',
         message,

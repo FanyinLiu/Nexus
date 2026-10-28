@@ -37,7 +37,13 @@ import type {
 type AssistantReplyStreamResponse = Awaited<ReturnType<typeof requestAssistantReplyStreaming>>
 
 function isSpeechAuthFailure(error: unknown): boolean {
-  const message = getSpeechOutputErrorMessage(error)
+  // Inspect the raw error here — the user-facing accessor now returns the
+  // fixed playback sentence, which can no longer carry auth diagnostics.
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : ''
   return /(api\s*key|api\s*secret|authorization|bearer|credential|unauthori[sz]ed|\b401\b|\b403\b|鉴权|认证|授权|登录|login)/i
     .test(message)
 }

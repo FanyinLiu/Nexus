@@ -59,6 +59,8 @@ export const koOnboarding = {
   'onboarding.error.voice.no_input_api_base': '현재 음성 입력 방식에는 API URL 이 필요합니다.',
   'onboarding.error.voice.no_output_provider': '음성 출력 방식을 먼저 선택하세요.',
   'onboarding.error.voice.no_output_api_base': '현재 음성 출력 방식에는 API URL 이 필요합니다.',
+  'onboarding.error.save_failed': '저장하지 못했어요. 다시 눌러 주세요.',
+  'onboarding.error.language_failed': '언어를 바꾸지 못했어요. 다시 골라 주세요.',
   'onboarding.eyebrow': '시작하기 전에',
   'onboarding.title': '먼저 데스크톱에 머물며 대화할 수 있게 설정해요',
   'onboarding.body': '최소한의 초기 설정입니다. 먼저 텍스트 모델, 캐릭터, 상시 창을 맞춥니다. 음성, 도구 권한, 기억 전략, 데스크톱 컨텍스트는 이후 설정에서 계속 조정할 수 있습니다.',

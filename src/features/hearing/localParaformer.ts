@@ -8,6 +8,7 @@
  */
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
+import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
@@ -134,7 +135,7 @@ export async function startParaformerStream(
         callbacks.onEndpoint?.(result.text)
       }
     } catch (error) {
-      fail(error instanceof Error ? error.message : (ti?.('voice.provider.paraformer.generic_error') ?? 'Paraformer error.'))
+      fail(error)
     }
   }
 
@@ -155,13 +156,13 @@ export async function startParaformerStream(
     void audioContext.close().catch(() => undefined)
   }
 
-  function fail(message: string) {
+  function fail(error: unknown) {
     if (destroyed) return
     destroyed = true
     finalizing = true
     teardownAudioGraph()
     api.paraformerAbort().catch(() => undefined)
-    callbacks.onError?.(message)
+    callbacks.onError?.(humanizeVoiceError(error, { ti }))
   }
 
   // Live audio handler
