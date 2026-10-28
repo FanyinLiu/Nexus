@@ -6,16 +6,12 @@
 
 ## [Unreleased]
 
-### [0.4.8]
+## [0.4.8] - 2026-10-29
 
-Stability, a slimmer install, desktop presence, voice auto-detect, a memory
-upgrade, and the model catalog. Not the stable release yet. The stable
-target is before 2026-11-15. `v0.4.8-beta.1` is already a GitHub prerelease
-(2026-10-15); the next build is `0.4.8-beta.2`. v0.4.7 remains the current
-stable release, and the README stable entry stays there until the stable
-release. `package.json` may be `0.4.8-beta.N` during beta. Notes for the
-first prerelease stay in
-[`docs/RELEASE-NOTES-v0.4.8-beta.1.md`](docs/RELEASE-NOTES-v0.4.8-beta.1.md).
+v0.4.8 is the current stable companion presence and stability release,
+promoted through the standard beta flow from `v0.4.8-beta.1` (published
+2026-10-15; the planned `0.4.8-beta.2` was dropped). Full detail in
+[`docs/RELEASE-NOTES-v0.4.8.md`](docs/RELEASE-NOTES-v0.4.8.md).
 
 - Appearance: Settings can switch among Warm companion, System look, and A little character. Warm companion is the default. Each look has a light and a dark version and changes without reopening the app. On a Mac, System look uses the desktop blur; other computers keep a translucent panel. Settings cards and rows use a line icon in a soft badge. Notification cards on the companion panel use that look's card color, corner, and type. Keyboard focus is a light accent ring. In A little character, your messages use the berry accent.
 - Stability: updates flush your data and wait until you confirm install.
@@ -48,11 +44,19 @@ first prerelease stay in
   OpenAI recommends for a finished recording. A saved `custom-openai-stt`
   value moves only when it is still `gpt-4o-mini-transcribe`. A name you
   typed for your own service stays.
+- Beta follow-up: clearing memory now removes it from the vector snapshot,
+  local-data pages, app storage logs, presence notes, and update snapshots.
+  Setup and voice errors show plain wording while raw detail stays in the log.
+  GLM-ASR and OmniVoice start only when chosen and voice is on, both Live2D
+  eyes blink together, SenseVoice returns transcripts, and the five locales
+  drop developer wording.
+
+The release commit is published only through the protected stable-tag workflow.
 
 ## [0.4.7] - 2026-08-27
 
-v0.4.7 is the current stable companion-avatar and catalog release. Full detail
-in [`docs/RELEASE-NOTES-v0.4.7.md`](docs/RELEASE-NOTES-v0.4.7.md).
+v0.4.7 is the previous stable companion-avatar and catalog release. Full
+detail in [`docs/RELEASE-NOTES-v0.4.7.md`](docs/RELEASE-NOTES-v0.4.7.md).
 
 - Imported Cubism models validate Moc, textures, and declared local resources
   before activation; missing motions/expressions stay renderable with a

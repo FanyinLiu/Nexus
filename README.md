@@ -8,11 +8,11 @@ Nexus 是一个 **本地优先的 AI 桌面伙伴**。
 
 一句话：**Nexus 是一个住在电脑里的 AI 伙伴。**
 
-> **当前稳定版：** v0.4.7；发行说明见 [RELEASE-NOTES-v0.4.7.md](docs/RELEASE-NOTES-v0.4.7.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
+> **当前稳定版：** v0.4.8；发行说明见 [RELEASE-NOTES-v0.4.8.md](docs/RELEASE-NOTES-v0.4.8.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
 
 ## 这个项目是什么
 
-Nexus 是一种“陪伴式桌面 AI”。当前公开稳定版是 **v0.4.7**：
+Nexus 是一种“陪伴式桌面 AI”。当前公开稳定版是 **v0.4.8**：
 
 - **桌宠形象**：伙伴以 Live2D 常驻桌面，而不是只存在于聊天记录里。内置形象是 Mao、Haru 和 Hiyori，默认是 Mao。导入 Cubism 模型会在激活前检查资源；缺动作或表情仍可显示并说明限制。
 - **自然对话**：文字是默认入口；语音输入/输出可选，目录里包含 Grok STT/TTS。
@@ -46,7 +46,7 @@ Nexus 的形象应该服务于三个感觉：
 
 ## 第一阶段只做什么
 
-> 这一节是项目起点的设计约束，不是当前稳定版的功能上限。当前公开产品是 v0.4.7。
+> 这一节是项目起点的设计约束，不是当前稳定版的功能上限。当前公开产品是 v0.4.8。
 
 第一阶段的目标不是做完整产品，而是验证一个最小体验闭环：
 
@@ -101,7 +101,7 @@ Nexus 的形象应该服务于三个感觉：
 
 ## 当前实现状态
 
-v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认体验建立在它上面：
+v0.4.8 是当前公开稳定版。第一阶段最小闭环已经成立，默认体验建立在它上面：
 
 - 当前桌宠只有 Live2D：内置形象是 Mao、Haru 和 Hiyori，默认是 Mao。导入前检查 Moc、纹理和已声明资源。Grok 语音与 Qwen 3.8-max / GLM-5.3 进入默认目录。
 - 桌面陪伴感知保持短期、粗粒度、可暂停和可清理；时间说法是“一会儿 / 半小时左右”，不是精确到分秒。
@@ -123,16 +123,18 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-## 本次 beta 候选 — v0.4.8-beta.1
+## 本次稳定更新 — v0.4.8
 
-> **已作为预发布打 tag，不是稳定版。** 下一包是 v0.4.8-beta.2。当前稳定入口仍是 v0.4.7。候选说明见 [English release notes](docs/RELEASE-NOTES-v0.4.8-beta.1.md)。
+> **主题：更近的伙伴，更稳的日常。** 桌宠会跟着视线移动、察觉你在打字；面板上就能处理 Telegram / Discord 消息；记忆会主动跟进没完成的约定，清理时会连更新快照里的残留一起删掉。详见 [中文发行说明](docs/RELEASE-NOTES-v0.4.8.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.8.md)。
 
-- #139 的 2026 年 10 月目录刷新已经在 main 上：设置 schema v10，以及 v8–v10 迁移和新的模型默认值。
-- `MiniMax-M2.7` 和 `MiniMax-M2.7-highspeed` 在 2026-11-18 退役前移出选择列表。已保存的选择会迁到 `MiniMax-M3`，原来的套餐不变。更早的 Token Plan `MiniMax-M2.7` 仍迁到 `MiniMax-M3.1-Flash-Preview`。
-- 自定义 OpenAI 兼容 STT 的默认模型是 `gpt-transcribe`。只有仍停在旧默认 `gpt-4o-mini-transcribe` 的配置会跟着迁，自己填写的模型名保持不变。
-- #137 已包含：桌面端首次使用在面板里打开引导，设置可以重新打开引导，模型保存失败会显示错误。#133 已包含：恢复引导里的消息操作示例样式，发行审计保持 README 稳定入口停在公开稳定版。
+一句话记住 0.4.8：
 
-## 本次稳定更新 — v0.4.7
+- **伙伴会跟着鼠标、察觉打字；无边框背景默认关闭。**
+- **记忆会跟进你答应过的事，清理时从搜索副本、存储日志和更新快照一起删掉。**
+- **GLM-ASR / OmniVoice 只在你选择它并打开语音时启动；SenseVoice 转写恢复正常。**
+- **错误提示改成日常说法，原始技术文字只写进日志。**
+
+## 上一公开版本 — v0.4.7
 
 > **主题：形象兼容、立绘 v4 与模型目录。** 导入 Cubism 模型会在激活前检查资源；分层立绘 v4、Live2D 导入提示和配件穿戴进入正式版；Qwen 3.8-max / GLM-5.3 / Grok 语音进入默认目录。详见 [中文发行说明](docs/RELEASE-NOTES-v0.4.7.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.7.md)。
 
@@ -142,7 +144,7 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 - **分层立绘 v4 是默认形象路径；从图片生成 sprite atlas 仍不在稳定版里。**
 - **Grok 语音、Qwen 3.8-max 与 GLM-5.3 进入默认模型目录。**
 
-## 上一公开版本 — v0.4.6
+## 更早更新 — v0.4.6
 
 > **主题：形象运行时可靠性。** 详见 [中文发行说明](docs/RELEASE-NOTES-v0.4.6.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.4.6.md)。
 
@@ -213,7 +215,7 @@ v0.4.7 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 
 ## 旧版本记录
 
-README 顶部只保留当前稳定版 v0.4.7 和上一公开版本 v0.4.6 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
+README 顶部只保留当前稳定版 v0.4.8 和上一公开版本 v0.4.7 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
 
 ## 设计原则
 
@@ -239,10 +241,10 @@ README 顶部只保留当前稳定版 v0.4.7 和上一公开版本 v0.4.6 的重
 
 普通用户的安装主路径不是 npm，而是桌面安装包：
 
-> 以下文件名是 v0.4.7 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
+> 以下文件名是 v0.4.8 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
 
 - Windows x64：从官方 GitHub Releases 下载 `Nexus-Setup-<版本号>.exe`；同一 release 的校验清单是 `SHA256SUMS-windows.txt`。
-- macOS arm64：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`；同一 release 的校验清单是 `SHA256SUMS-macos.txt`；v0.4.7 不提供 macOS x64 / universal 包。
+- macOS arm64：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`；同一 release 的校验清单是 `SHA256SUMS-macos.txt`；v0.4.8 不提供 macOS x64 / universal 包。
 - Linux x64：下载 `.AppImage`、`.deb` 或 `.tar.gz`，并使用同一 release 的 `SHA256SUMS-linux.txt` 校验 SHA-256。只下载其中一种格式时，可在下载目录直接运行：
 
   ```bash
@@ -253,8 +255,8 @@ README 顶部只保留当前稳定版 v0.4.7 和上一公开版本 v0.4.6 的重
 
 当前桌面安装包还没有 Apple Developer ID、公证和 Windows 代码签名证书，所以首次启动会看到系统信任提示。这是当前发行策略，不代表系统已经信任安装包。官方 GitHub Releases 是唯一下载来源；如果你不确定文件来源，删除它并从 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 重新下载，不要从镜像或转载压缩包安装。
 
-- **macOS / Gatekeeper**：v0.4.7 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
-- **Windows / SmartScreen**：v0.4.7 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
+- **macOS / Gatekeeper**：v0.4.8 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
+- **Windows / SmartScreen**：v0.4.8 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
 
 #### macOS unsigned auto-update limitation
 
@@ -277,7 +279,7 @@ Nexus 仍在活跃开发，更适合愿意测试本地 AI 桌面伙伴、能接�
 | 未签名安装包 | Windows / macOS 首次启动会出现 SmartScreen 或 Gatekeeper 提示。 | 只从 GitHub Releases 下载；不确定来源时删除后重新下载。 |
 | 资源占用 | Electron、Live2D、语音、OCR、WASM 和本地模型会带来一定内存、包体和首次运行下载成本。 | 先用文本模型主路径；语音、本地识别和桌面感知按需开启。 |
 | provider 联网 | Ollama 可以本地运行；DeepSeek、OpenAI-compatible 和其他云 provider 会把请求发给对应服务商。 | 使用前确认 provider 的数据政策；API Key 只保存在本机加密存储里。 |
-| 桌面感知 | v0.4.7 保持短期、粗粒度、可暂停和可清理的陪伴摘要，并继续阻止精确计时和原始桌面内容进入模型边界。 | 在 Memory 设置里查看说明，按需要暂停或清理近期陪伴摘要。 |
+| 桌面感知 | v0.4.8 保持短期、粗粒度、可暂停和可清理的陪伴摘要，并继续阻止精确计时和原始桌面内容进入模型边界。 | 在 Memory 设置里查看说明，按需要暂停或清理近期陪伴摘要。 |
 | 语音和本地模型 | 本地语音模型、麦克风权限和平台音频设备可能影响语音链路。 | 语音失败时先回到文字对话；用设置里的自检和模型向导排查。 |
 
 ## 本地开发
@@ -375,7 +377,7 @@ npm run distribution:audit
 [COMMUNITY.md](docs/COMMUNITY.md)，0.4 系列方向见
 [v0.4 Desktop Companion Awareness](docs/V0.4_DESKTOP_COMPANION_AWARENESS.md)，
 0.4 当前稳定版说明见
-[RELEASE-NOTES-v0.4.7.md](docs/RELEASE-NOTES-v0.4.7.md)，
+[RELEASE-NOTES-v0.4.8.md](docs/RELEASE-NOTES-v0.4.8.md)，
 发布加固清单见
 [RELEASE-CANDIDATE-v0.4-HARDENING.md](docs/RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 提交人格、提示词或桌宠素材前，请先看 [Nexus Companion Prompt Baseline](docs/NEXUS_COMPANION_PROMPT.md)；
@@ -388,7 +390,7 @@ Nexus 的长期想象空间很大，但当前最重要的是把已经公开的�
 
 **Nexus 是一个住在电脑里的 AI 伙伴。**
 
-v0.4.7 已经能常驻桌面、对话、记住重要的事，并在授权后提供轻量帮助。0.5 才做桌宠跟随鼠标、打字反应和窗口互动；签名安装包也还不是当前发行策略。
+v0.4.8 已经能常驻桌面、对话、记住重要的事，并在授权后提供轻量帮助；它也会跟着鼠标、察觉打字。窗口互动、本地 Kokoro 语音和游戏陪伴留给 0.5；签名安装包也还不是当前发行策略。
 
 ## License
 

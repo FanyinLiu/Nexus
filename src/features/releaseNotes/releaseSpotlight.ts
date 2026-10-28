@@ -22,7 +22,7 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.4.8-beta.1',
+  version: '0.4.8',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',

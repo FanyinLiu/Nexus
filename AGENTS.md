@@ -13,7 +13,7 @@ defaults. When rules conflict, the more specific section wins. If you believe a 
 is wrong, change this file first (own commit, `docs:` prefix), then the code —
 never the reverse.
 
-Verified against the tree at v0.4.7 (2026-08). Canonical gate: `npm run verify:pr`.
+Verified against the tree at v0.4.8 (2026-10). Canonical gate: `npm run verify:pr`.
 
 ---
 

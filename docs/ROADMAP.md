@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-08-27. Stewardship follows Klein's product direction.
+> Last updated 2026-10-29. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -27,9 +27,12 @@ The larger product steps are:
   hardening, check-in policy, companion-surface cohesion and transparency,
   maintenance and hardening, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; the current
-  public stable release is v0.4.7, which shipped as the current stable release
-  on 2026-08-27 under a version-scoped maintainer exception after the
-  automated gate, as a companion-avatar and catalog release. `v0.4.6` was the
+  public stable release is v0.4.8, which shipped as the current stable release
+  on 2026-10-29 through the standard beta flow (`v0.4.8-beta.1`, published
+  2026-10-15, followed by the beta validation window; the planned
+  `0.4.8-beta.2` was dropped) as a companion presence and stability release.
+  `v0.4.7` was the previous companion-avatar and catalog release, shipped on
+  2026-08-27 under a version-scoped maintainer exception. `v0.4.6` was the
   previous avatar runtime reliability release, shipped on 2026-08-21 through
   the standard beta flow (`v0.4.6-beta.1`, followed by the beta validation
   window). `v0.4.5` was the previous memory integrity and maintenance release,
@@ -41,11 +44,8 @@ The larger product steps are:
   (the [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.4.7` until a later release is explicitly prepared. The v0.4.7 stable
-  promotion is the current release boundary. `v0.4.8-beta.1` is a published
-  GitHub prerelease (2026-10-15). The next package bump is `0.4.8-beta.2`.
-  During beta, `package.json` may be `0.4.8-beta.N`. The README stable entry
-  stays on v0.4.7 until the v0.4.8 stable release.
+  `v0.4.8` until a later release is explicitly prepared. The v0.4.8 stable
+  promotion is the current release boundary.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
   fallback, and prove Mao/Haru/Hiyori cold start, switching, and recovery in
@@ -60,11 +60,10 @@ The larger product steps are:
   defaults are included. The 2026-08-10 `v0.4.7-beta.1` preparation record remains
   historical. This remains a compatibility/catalog release, not a v0.5
   behavior release.
-- **v0.4.8 — stability, slimdown, presence, voice, memory, and catalog.**
-  Beta builds are `0.4.8-beta.N` now. `v0.4.8-beta.1` is already published;
-  the next one is `0.4.8-beta.2`. The stable target is before 2026-11-15.
-  The visible companion reacts to mouse proximity, coarse typing rhythm,
-  idleness, and window edges, with the frameless backdrop off unless the
+- **v0.4.8 — companion presence and stability.** Shipped as stable on
+  2026-10-29 through the standard beta flow from `v0.4.8-beta.1`; the planned
+  `0.4.8-beta.2` was dropped. The visible companion follows the cursor and
+  notices coarse typing rhythm, with the frameless backdrop off unless the
   user turns it on. Onboarding can suggest a speech model from a local
   hardware check. Long-term memory uses the v2 record lifecycle, open loops,
   and one proactive agenda. This line also carries the Electron 43.7.11
@@ -73,9 +72,7 @@ The larger product steps are:
   samples (Mao, Haru, and Hiyori). Sprite pets and portrait puppets are
   removed, and a saved choice of either becomes Mao. Minecraft
   and Factorio stay hidden. Inputs stay derived and content-free, with
-  explicit pause/permission controls. `package.json` may be `0.4.8-beta.N`
-  during beta. The README stable entry stays on v0.4.7 until the stable
-  release.
+  explicit pause/permission controls.
 - **v0.5.0 — future major.** Reserved for headline features, not this
   batch. Planned scope is local Kokoro TTS for Chinese and English, downloaded
   on demand; a voice companion while gaming, with Minecraft first through a

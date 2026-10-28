@@ -65,10 +65,10 @@ const localizedReadmes = {
 const desktopShortcutInstaller = readText('scripts/install-desktop-shortcut.ps1')
 const hiddenLauncher = readText('scripts/launch-nexus-hidden.vbs')
 const currentVersion = `v${pkg.version}`
-const CURRENT_STABLE_VERSION = 'v0.4.7'
-// v0.4.7 is the current stable release; future beta work may legitimately
+const CURRENT_STABLE_VERSION = 'v0.4.8'
+// v0.4.8 is the current stable release; future beta work may legitimately
 // leave the stable release number while the stable entry point stays here.
-const DRAFT_BETA_VERSION_PATTERN = /^v0\.4\.8-beta\.\d+$/
+const DRAFT_BETA_VERSION_PATTERN = /^v0\.4\.9-beta\.\d+$/
 const readmeFiles = {
   'README.md': readme,
   ...localizedReadmes,
@@ -533,7 +533,7 @@ check('v0.4 draft stack stays in quick PR-safe state', () => {
       && (currentVersion === CURRENT_STABLE_VERSION || DRAFT_BETA_VERSION_PATTERN.test(currentVersion)),
     `v0.4 draft stack audit must report current stable release ${CURRENT_STABLE_VERSION} (package is ${currentVersion})`,
   )
-  assert(report.previousPublicRelease === 'v0.4.6', 'v0.4 draft stack audit must retain v0.4.6 as the previous public release')
+  assert(report.previousPublicRelease === 'v0.4.7', 'v0.4 draft stack audit must retain v0.4.7 as the previous public release')
   assert(report.releaseState === 'stable', 'v0.4 draft stack audit must report stable release state')
   assert(
     JSON.stringify(report.draftReleases) === JSON.stringify([]),

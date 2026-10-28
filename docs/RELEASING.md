@@ -143,6 +143,25 @@ be `0.4.8-beta.N`. The README stable entry stays on v0.4.7 until the
 v0.4.8 stable release. The stable target is before 2026-11-15. This batch
 is the v0.4.8 line. v0.5.0 stays reserved for later headline features.
 
+### v0.4.8-beta.2 dropped — 2026-10-28
+
+The planned `0.4.8-beta.2` package was dropped before any tag or GitHub
+Release was created. The memory-clear, voice, onboarding, and copy fixes that
+would have made up that build were merged to `main` instead, and `v0.4.8`
+ships directly as stable from `v0.4.8-beta.1` plus those merged changes.
+
+### v0.4.8 stable record — 2026-10-29
+
+v0.4.8 is the current stable companion presence and stability release. It was
+promoted through the standard beta flow after the `v0.4.8-beta.1` validation
+window, with no maintainer exception. It keeps gaze follow and typing
+awareness, the three companion looks, message cards on the panel, voice
+auto-detect, memory v2 records with open-loop follow-ups, five plain settings
+pages, Live2D-only pets, and the October 2026 catalog. The stable handoff lives
+in `RELEASE-CANDIDATE-v0.4.8-HANDOFF.md`. Official binaries must still be
+rebuilt from the release commit by the protected workflow; no physical-device
+evidence is claimed.
+
 This doc is the source of truth for every release. The short version:
 
 ```
