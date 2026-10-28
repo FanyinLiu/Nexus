@@ -349,6 +349,27 @@ function createGuide(
   }
 }
 
+/**
+ * Render and drain event-loop turns until the guide shows `copy.shows`.
+ * Async handlers outlive a single turn: picking a language first awaits a
+ * dynamic locale import, which Node 22 settles a turn later than Node 24, so
+ * one `setImmediate` is not a portable settle point. `copy.neverShows` is
+ * re-checked on every turn, so a transient raw-text leak still fails.
+ */
+async function waitForGuideCopy(
+  guide: { render: () => unknown; readonly tree: unknown },
+  copy: { shows: string; neverShows: string },
+) {
+  for (let turn = 0; turn < 100; turn += 1) {
+    guide.render()
+    const text = collectText(guide.tree).join('\n')
+    assert.equal(text.includes(copy.neverShows), false, `raw error leaked on turn ${turn}`)
+    if (text.includes(copy.shows)) return
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+  assert.fail(`guide never rendered: ${copy.shows}`)
+}
+
 let restoreDom: (() => void) | null = null
 
 beforeEach(() => {
@@ -623,12 +644,10 @@ test('a failed setup save shows the fixed sentence and never the raw error', asy
     guide.render()
     guide.advanceToLastStep()
     guide.clickPrimary()
-    await new Promise((resolve) => setImmediate(resolve))
-    guide.render()
-
-    const text = collectText(guide.tree).join('\n')
-    assert.equal(text.includes(marker), false, 'raw save error leaked into the guide')
-    assert.ok(text.includes(enMessages['onboarding.error.save_failed']))
+    await waitForGuideCopy(guide, {
+      shows: enMessages['onboarding.error.save_failed'],
+      neverShows: marker,
+    })
     assert.ok(warnings.some((line) => line.includes(marker)), 'raw save error must reach the log')
     guide.unmount()
   } finally {
@@ -652,12 +671,10 @@ test('a failed language persist shows the fixed sentence and never the raw error
     )
     assert.ok(languageStep, 'missing language step')
     ;(languageStep.props.onChooseLanguage as (language: string) => void)('ja')
-    await new Promise((resolve) => setImmediate(resolve))
-    guide.render()
-
-    const text = collectText(guide.tree).join('\n')
-    assert.equal(text.includes(marker), false, 'raw language error leaked into the guide')
-    assert.ok(text.includes(jaMessages['onboarding.error.language_failed']))
+    await waitForGuideCopy(guide, {
+      shows: jaMessages['onboarding.error.language_failed'],
+      neverShows: marker,
+    })
     assert.ok(warnings.some((line) => line.includes(marker)), 'raw language error must reach the log')
     guide.unmount()
   } finally {
