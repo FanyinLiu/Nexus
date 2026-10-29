@@ -23,6 +23,7 @@ import type {
   ProactiveAgendaState,
 } from '../../types/proactive.ts'
 import type { ProactiveChannel } from './proactiveBudget.ts'
+import { isTooSimilar } from './proactiveEtiquette.ts'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const STALE_LOOP_MS = 3 * DAY_MS
@@ -245,7 +246,9 @@ export function selectAgendaItem(
   items: readonly AgendaItem[],
   nowMs: number,
   channel: ProactiveChannel,
+  options?: { recentLines?: readonly string[] },
 ): AgendaItem | null {
+  const recentLines = options?.recentLines ?? []
   const due = items.filter((item) => {
     if (item.state === 'done' || item.state === 'dismissed') return false
     if (item.state === 'snoozed' && (item.snoozeUntil ?? Infinity) > nowMs) return false
@@ -254,6 +257,9 @@ export function selectAgendaItem(
     if (item.notAfter != null && item.notAfter < nowMs) return false
     if (item.firedAt != null && nowMs - item.firedAt < DAY_MS) return false
     if (item.deliverOn !== 'either' && item.deliverOn !== channel) return false
+    // A repeat is skipped so the next topic can surface instead. If every due
+    // row is a repeat, saying nothing is the better outcome.
+    if (recentLines.length && isTooSimilar(item.summary, recentLines)) return false
     return true
   })
   if (!due.length) return null

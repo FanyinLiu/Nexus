@@ -40,6 +40,8 @@ import {
 } from '../lib/storage.ts'
 import { loadProactiveAgenda } from '../lib/storage/proactiveAgenda.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import { localDayKey } from '../lib/localDate.ts'
 import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { CompanionNoticePayload } from './chat/types.ts'
@@ -221,6 +223,20 @@ export function useBracketScheduler({
           deliveredErrandId = next.id
         }
       }
+
+      const admission = admitProactiveMessage({
+        nowMs,
+        kind: decision.bracket === 'morning' && deliveredErrandId ? 'errand' : 'bracket',
+        text: `${result.title} ${body}`,
+        enabled: true,
+        preset: s.proactiveFrequency,
+        quietStart: s.proactiveQuietHoursStart,
+        quietEnd: s.proactiveQuietHoursEnd,
+        userTyping: isUserTypingAnywhere(s),
+        focusState: 'active',
+        channel: 'next_turn',
+      })
+      if (!admission.allow) return
 
       await live.pushCompanionNotice({
         chatContent: body,

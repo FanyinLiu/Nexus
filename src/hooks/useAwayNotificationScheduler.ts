@@ -5,6 +5,8 @@ import {
   saveAwayLastFiredMs,
 } from '../lib/storage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings, ChatMessage } from '../types'
 
@@ -70,6 +72,20 @@ export function useAwayNotificationScheduler({
         relationshipType: s.companionRelationshipType,
         companionName: s.companionName,
       })
+
+      const admission = admitProactiveMessage({
+        nowMs: Date.now(),
+        kind: 'away',
+        text: `${copy.title} ${copy.body}`,
+        enabled: true,
+        preset: s.proactiveFrequency,
+        quietStart: s.proactiveQuietHoursStart,
+        quietEnd: s.proactiveQuietHoursEnd,
+        userTyping: isUserTypingAnywhere(s),
+        focusState: 'active',
+        channel: 'next_turn',
+      })
+      if (!admission.allow) return
 
       try {
         await window.desktopPet?.showProactiveNotification?.({
