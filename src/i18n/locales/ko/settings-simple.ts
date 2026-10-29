@@ -35,6 +35,8 @@ export const koSettingsSimple = {
   'settings.simple.letter_count': '편지 {count}통',
   'settings.simple.letter_unread_count': '편지 {count}통 · 안 읽음 {unread}통',
   'settings.simple.letter_none': '아직 편지가 없어요.',
+  'settings.simple.bracket': '아침과 저녁의 한마디',
+  'settings.simple.bracket_hint': '처음 나타났을 때 짧은 아침 인사, 저녁에 한 번 오늘 어땠는지 물어봅니다. 하루에 각각 한 번이고, 바쁠 때는 조용히 있습니다.',
   'settings.simple.relationship': '어떻게 지낼지',
   'settings.simple.her_name': '그녀의 이름',
   'settings.simple.your_name': '당신을 부르는 말',

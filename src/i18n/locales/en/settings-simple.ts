@@ -35,6 +35,8 @@ export const enSettingsSimple = {
   'settings.simple.letter_count': '{count} letters',
   'settings.simple.letter_unread_count': '{count} letters · {unread} unread',
   'settings.simple.letter_none': 'No letters yet.',
+  'settings.simple.bracket': 'A hello at each end of the day',
+  'settings.simple.bracket_hint': 'A short good morning when you first show up, and one gentle check-in at night. Once each a day, and she stays quiet when you are busy.',
   'settings.simple.relationship': 'How you get along',
   'settings.simple.her_name': 'Her name',
   'settings.simple.your_name': 'What she calls you',

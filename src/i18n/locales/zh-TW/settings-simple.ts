@@ -35,6 +35,8 @@ export const zhTWSettingsSimple = {
   'settings.simple.letter_count': '{count} 封信',
   'settings.simple.letter_unread_count': '{count} 封信 · {unread} 封未讀',
   'settings.simple.letter_none': '還沒有信。',
+  'settings.simple.bracket': '早晚的一句問候',
+  'settings.simple.bracket_hint': '你出現時，早上說聲早，晚上問一句今天怎麼樣。一天各一次，忙的時候不來打擾。',
   'settings.simple.relationship': '你們怎麼相處',
   'settings.simple.her_name': '她的名字',
   'settings.simple.your_name': '她怎麼叫你',

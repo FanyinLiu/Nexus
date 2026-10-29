@@ -74,6 +74,20 @@ export function AppearanceSimplePage({ draft, setDraft, petModelPresets }: Appea
       </section>
 
       <section className="settings-v3-section__body">
+        <SimpleRow
+          icon="bell"
+          title={ti('settings.simple.bracket')}
+          hint={ti('settings.simple.bracket_hint')}
+        >
+          <SettingsV3Switch
+            checked={draft.proactiveBracketEnabled}
+            label={ti('settings.simple.bracket')}
+            onChange={(proactiveBracketEnabled) => patchDraft({ proactiveBracketEnabled })}
+          />
+        </SimpleRow>
+      </section>
+
+      <section className="settings-v3-section__body">
         <SettingsV3Field label={ti('settings.simple.her_name')}>
           <input
             value={draft.companionName}
