@@ -74,8 +74,11 @@ export function PanelView({
         voice={voice}
         chat={chat}
         runtimeSnapshot={runtimeSnapshot}
+        memories={memory.memories}
+        dailyMemories={memory.dailyMemories}
         panelCollapsed={panelCollapsed}
         openSettingsPanel={openSettingsPanel}
+        openMemorySettings={() => openSettingsSection('memory')}
         togglePanelCollapse={togglePanelCollapse}
         closePanel={closePanel}
         settingsDrawer={settingsDrawer}
