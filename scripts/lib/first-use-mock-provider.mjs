@@ -5,6 +5,33 @@
  */
 import { createServer } from 'node:http'
 
+/** Reminder blocks the chat pipeline prepends to the last user turn. */
+const GENERATED_BLOCK_TAGS = ['system-reminder', 'character-reminder']
+
+/**
+ * Remove pipeline-generated reminder blocks from the head of the latest user
+ * turn so the reply echoes only what the user actually typed. The pipeline
+ * prepends the clock reminder and the persona reminder separated by blank
+ * lines, but this mock must not depend on their order or spacing: strip any
+ * leading run of known blocks, then the whitespace that separated them.
+ * @param {string} message
+ * @returns {string}
+ */
+export function stripLeadingGeneratedBlocks(message) {
+  let rest = message
+  let stripped = false
+  for (;;) {
+    const head = rest.replace(/^\s+/, '')
+    const tag = GENERATED_BLOCK_TAGS.find((name) => head.startsWith(`<${name}>`))
+    if (!tag) return stripped ? head : message
+    const closing = `</${tag}>`
+    const end = head.indexOf(closing)
+    if (end === -1) return stripped ? head : message
+    rest = head.slice(end + closing.length)
+    stripped = true
+  }
+}
+
 /**
  * Start an isolated provider on an ephemeral IPv4 loopback port.
  * @returns {Promise<{
@@ -81,9 +108,9 @@ export async function createFirstUseMockProvider() {
       return
     }
 
-    // The English smoke profile receives a clock reminder from the real chat
-    // pipeline; exclude only that generated prefix from the deterministic echo.
-    const submittedMessage = record.userMessage.replace(/^<system-reminder>Current date\/time:[\s\S]*?<\/system-reminder>\s*/, '')
+    // The real chat pipeline prepends generated reminder blocks (clock, then
+    // persona) to the last user turn; only the submitted text is echoed.
+    const submittedMessage = stripLeadingGeneratedBlocks(record.userMessage)
     record.reply = `NEXUS_MOCK_REPLY: ${submittedMessage}`
     const envelope = { id: `nexus-smoke-${requests.length}`, created: 0, model }
     if (!record.stream) {

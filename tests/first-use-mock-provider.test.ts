@@ -134,13 +134,23 @@ test('first-use provider closes its listener and allows repeated cleanup', async
 })
 
 
-test('first-use provider omits the generated clock prefix while retaining request evidence', async (t) => {
+test('first-use provider omits generated reminder prefixes while retaining request evidence', async (t) => {
   const provider = await createFirstUseMockProvider()
   t.after(() => provider.close())
-  const userMessage = '<system-reminder>Current date/time: Thursday, 01/01/2026, 12:00 PM.</system-reminder>\n\nFIRST_USE_CLOCK_MARKER'
-  const response = await fetch(`${provider.baseUrl}/chat/completions`, {
-    method: 'POST', body: JSON.stringify({ model: provider.model, messages: [{ role: 'user', content: userMessage }] }),
-  })
-  assert.equal((await response.json()).choices[0].message.content, 'NEXUS_MOCK_REPLY: FIRST_USE_CLOCK_MARKER')
-  assert.equal(provider.requests[0].userMessage, userMessage)
+  const clock = '<system-reminder>Current date/time: Thursday, 01/01/2026, 12:00 PM.</system-reminder>'
+  const character = '<character-reminder>You are Nexus.\nStay in character.</character-reminder>'
+  const cases = [
+    `${clock}\n\nFIRST_USE_CLOCK_MARKER`,
+    `${clock}\n\n${character}\n\nFIRST_USE_BOTH_MARKER`,
+    `${character}\n\n${clock}\n\nFIRST_USE_REVERSED_MARKER`,
+    `\n ${character}\n\n\n${clock}  \nFIRST_USE_WHITESPACE_MARKER`,
+  ]
+  for (const [index, userMessage] of cases.entries()) {
+    const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+      method: 'POST', body: JSON.stringify({ model: provider.model, messages: [{ role: 'user', content: userMessage }] }),
+    })
+    const expected = userMessage.slice(userMessage.lastIndexOf('FIRST_USE_'))
+    assert.equal((await response.json()).choices[0].message.content, `NEXUS_MOCK_REPLY: ${expected}`)
+    assert.equal(provider.requests[index].userMessage, userMessage)
+  }
 })
