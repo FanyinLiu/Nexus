@@ -5,6 +5,7 @@
  */
 
 import type { CompanionRelationshipType } from '../../../types'
+import type { TimeReminderContext } from '../timeAwareness.ts'
 
 export interface ChatPromptStrings {
   /** Wraps the loaded MEMORY.md contents with a locale-appropriate header. */
@@ -37,8 +38,12 @@ export interface ChatPromptStrings {
   intentContextHeader: (content: string) => string
   /** Tool-result wrapper. */
   toolContextHeader: (content: string) => string
-  /** `<system-reminder>` with current date/time — reminder tag MUST be preserved. */
-  currentTimeReminder: (dateTime: string) => string
+  /** `<system-reminder>` with local date/time, part of day, weekend flag,
+   *  and the gap since the previous user message — reminder tag MUST be
+   *  preserved. */
+  currentTimeReminder: (context: TimeReminderContext) => string
+  /** Static, cache-friendly guidance on using time context sparingly. */
+  timeAwarenessGuidance: string
   /** Self-correction nudge when the user repeats / corrects themselves. */
   userCorrection: (latest: string) => string
   /**

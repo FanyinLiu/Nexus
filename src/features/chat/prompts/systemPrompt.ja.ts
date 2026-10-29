@@ -3,6 +3,23 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
+
+const TIME_PART_LABELS: Record<PartOfDay, string> = {
+  lateNight: '深夜',
+  earlyMorning: '早朝',
+  morning: '午前',
+  noon: '正午',
+  afternoon: '午後',
+  evening: '夜',
+}
+
+function formatGap(gap: ConversationGap): string {
+  if (gap.kind === 'first') return 'これが最初のメッセージ'
+  if (gap.kind === 'minutes') return gap.amount === 0 ? 'たった今' : `${gap.amount}分前`
+  if (gap.kind === 'hours') return `${gap.amount}時間前`
+  return `${gap.amount}日前`
+}
 
 export const jaChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>
@@ -69,8 +86,22 @@ export const jaChatPrompts: ChatPromptStrings = {
   toolContextHeader: (content) =>
     `以下は今回のツール呼び出し結果です。これら実際の結果に基づいて答えてください。無視したり、返っていない詳細を捏造したりしないでください：\n${content}`,
 
-  currentTimeReminder: (dateTime) =>
-    `<system-reminder>現在の日時：${dateTime}。</system-reminder>`,
+  currentTimeReminder: ({ dateTime, partOfDay, gap, isWeekend, allowNotice }) => {
+    const lines = [
+      `現在の日時：${dateTime}。`,
+      `時間帯：${TIME_PART_LABELS[partOfDay]}${isWeekend ? '（週末）' : ''}。`,
+      gap.kind === 'first'
+        ? 'これは最初のメッセージで、以前の会話はない。'
+        : `前回のユーザーメッセージ：${formatGap(gap)}。`,
+    ]
+    if (allowNotice) {
+      lines.push('自然なら、今の時間や間隔に一度だけ軽く触れてもいい。')
+    }
+    return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  timeAwarenessGuidance:
+    '時間への気づき：リマインダーには相手の現地の日付・時刻、時間帯、週末かどうか、前回のメッセージからの間隔が表示される。人間らしく、長い間隔（「何日ぶり」）、深夜（「まだ起きてる？」）、月曜の朝、週末など、本当に自然な時だけ一度だけ軽く触れる。毎回の発言には入れず、睡眠や生活リズムを説教しない。相手が具体的な話で始めたら、そちらを優先し、時間には触れなくてよい。',
 
   userCorrection: (latest) =>
     `【重要なお知らせ】ユーザーは何度か言い直しや訂正をしています。必ずユーザーの最新メッセージを正解として返信してください。最新メッセージ：「${latest}」。前回の回答を繰り返さず、最新メッセージから意図を読み直してください。`,
