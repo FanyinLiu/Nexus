@@ -9,6 +9,8 @@ import {
 import { getPetModelPreset } from '../features/pet/models.ts'
 import { createRemoteMoodApply } from '../features/pet/moodPublish.ts'
 import { createIdleSequenceController, type IdleSequenceController } from '../features/pet/idleSequence.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import {
   createId,
   loadAmbientPresence,
@@ -308,6 +310,24 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
       })
 
       if (!line) return
+
+      const settings = ctx.settingsRef.current
+      const admission = admitProactiveMessage({
+        nowMs: now,
+        kind: 'presence',
+        text: line.text,
+        enabled: true,
+        preset: settings.proactiveFrequency,
+        quietStart: settings.proactiveQuietHoursStart,
+        quietEnd: settings.proactiveQuietHoursEnd,
+        userTyping: isUserTypingAnywhere(settings, now),
+        focusState: 'active',
+        channel: 'next_turn',
+      })
+      if (!admission.allow) {
+        proactivePresenceDeferredUntilRef.current = now + PROACTIVE_PRESENCE_RETRY_DELAY_MS
+        return
+      }
 
       publishAmbientPresence(line)
     }, PRESENCE_CHECK_INTERVAL_MS)

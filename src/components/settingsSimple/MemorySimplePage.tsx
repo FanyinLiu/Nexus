@@ -11,6 +11,7 @@ import { buildRememberedCardView } from '../../features/memory/memoryTimeline.ts
 import type { SavedLetter } from '../../features/letter/letterStore.ts'
 import { formatLetterDate, isLetterUnread } from '../../features/letter/letterView.ts'
 import { useLetters } from '../../hooks/useLetters.ts'
+import { useProactiveEtiquette } from '../../hooks/useProactiveEtiquette.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -56,6 +57,7 @@ export function MemorySimplePage({
   const [letterShelfOpen, setLetterShelfOpen] = useState(false)
   const [openLetter, setOpenLetter] = useState<SavedLetter | null>(null)
   const { letters, unreadCount, markRead } = useLetters()
+  const { quietUntil, resumeMessages } = useProactiveEtiquette()
   const remembered = useMemo(
     () => buildRememberedCardView({
       memories,
@@ -254,6 +256,24 @@ export function MemorySimplePage({
             ]}
             onChange={(proactiveFrequency) => patch({ proactiveFrequency })}
           />
+        ) : null}
+        {quietUntil ? (
+          <SimpleRow
+            icon="bell"
+            tone="warning"
+            title={ti('proactive.etiquette.settings_active', {
+              when: new Intl.DateTimeFormat(draft.uiLanguage, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(new Date(quietUntil)),
+            })}
+          >
+            <button type="button" className="settings-v3-action" onClick={resumeMessages}>
+              {ti('proactive.etiquette.undo')}
+            </button>
+          </SimpleRow>
         ) : null}
       </section>
 

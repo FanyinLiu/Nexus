@@ -24,6 +24,8 @@ import {
 } from '../features/autonomy/v2/personaTypes.ts'
 import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import {
   acquireBackgroundChatLease,
   classifyBackgroundChatFailure,
@@ -185,6 +187,19 @@ export function useLetterScheduler({
         memoryPaused: s.memoryPaused,
       })
       if (!decision.shouldFire) return
+
+      const admission = admitProactiveMessage({
+        nowMs: Date.now(),
+        kind: 'letter',
+        enabled: true,
+        preset: s.proactiveFrequency,
+        quietStart: s.proactiveQuietHoursStart,
+        quietEnd: s.proactiveQuietHoursEnd,
+        userTyping: isUserTypingAnywhere(s),
+        focusState: 'active',
+        channel: 'next_turn',
+      })
+      if (!admission.allow) return
 
       runningRef.current = true
       try {

@@ -32,6 +32,7 @@ import {
   tryAcquireChatSubmission,
 } from './submissionGuard.ts'
 import { bumpMemoryReconcileRevision, scheduleMemoryReconcile } from './memoryReconcile.ts'
+import { recordProactiveUserMessage } from '../../features/autonomy/proactiveEtiquette.ts'
 import { executeAssistantTurn } from './turnExecution.ts'
 import type { PendingReminderDraft, UseChatContext } from './types.ts'
 
@@ -62,6 +63,12 @@ type SendMessageDependencies = {
   runLocalReminderAction: (options: LocalReminderActionOptions) => Promise<boolean>
   runAssistantReplyTurn: (options: AssistantReplyRunnerOptions) => Promise<boolean>
   flushDeferredCompanionNotices: () => Promise<void>
+  pushCompanionNotice: (payload: {
+    chatContent: string
+    bubbleContent?: string
+    speechContent?: string
+    dedupeKey?: string
+  }) => Promise<void>
 }
 
 /**
@@ -93,6 +100,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
     runLocalReminderAction,
     runAssistantReplyTurn,
     flushDeferredCompanionNotices,
+    pushCompanionNotice,
   } = dependencies
 
   return async function sendMessage(
@@ -217,6 +225,11 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
         ...(attachedImage ? { images: [attachedImage] } : {}),
       }
 
+      // Every user turn resets the ignored-proactive streak. A leave-me-alone
+      // phrase is handled locally below, so no model call can talk over it.
+      const etiquetteResult = recordProactiveUserMessage(content, Date.now())
+      const leaveAlone = etiquetteResult.action === 'leave_alone'
+
       // Consume the pending image as soon as it's attached to the outgoing
       // message — both the ref (for reentrancy) and React state (for the UI chip).
       if (attachedImage) {
@@ -227,7 +240,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
       const nextMessages = [...messagesRef.current, userMessage]
       const memoryRevision = bumpMemoryReconcileRevision()
       const memoryPaused = currentSettings.memoryPaused === true
-      const candidates = memoryPaused
+      const candidates = memoryPaused || leaveAlone
         ? []
         : extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.())
       const plan = planTurnMemoryWrite({
@@ -291,6 +304,30 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
 
       messagesRef.current = nextMessages
       setMessages(nextMessages)
+
+      if (leaveAlone) {
+        const ack = etiquetteResult.ack
+        if (ack) {
+          const key = ack.span === 'hours'
+            ? 'proactive.etiquette.ack_hours'
+            : ack.span === 'today'
+              ? 'proactive.etiquette.ack_today'
+              : ack.span === 'tomorrow'
+                ? 'proactive.etiquette.ack_tomorrow'
+                : 'proactive.etiquette.ack_week'
+          const text = t(key, { hours: ack.hours ?? 3 })
+          await pushCompanionNotice({
+            chatContent: text,
+            bubbleContent: text,
+            speechContent: '',
+            dedupeKey: `etiquette:leave:${ack.untilMs}`,
+          })
+        }
+        if (composerSnapshot !== null && shouldClearSubmittedInput(inputRef.current, composerSnapshot)) {
+          setInputValue('')
+        }
+        return true
+      }
 
       // Periodic AI-disclosure reminder (Tier 1.1 chunk E). Fires every
       // 30 user messages AND every 3 hours of wall-clock since the last

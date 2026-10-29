@@ -14,6 +14,8 @@ import {
   writeJson,
 } from '../lib/storage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings } from '../types'
 
@@ -91,6 +93,20 @@ export function useBracketScheduler({
           deliveredErrandId = next.id
         }
       }
+
+      const admission = admitProactiveMessage({
+        nowMs: Date.now(),
+        kind: decision.bracket === 'morning' && deliveredErrandId ? 'errand' : 'bracket',
+        text: `${notification.title} ${notification.body}`,
+        enabled: true,
+        preset: s.proactiveFrequency,
+        quietStart: s.proactiveQuietHoursStart,
+        quietEnd: s.proactiveQuietHoursEnd,
+        userTyping: isUserTypingAnywhere(s),
+        focusState: 'active',
+        channel: 'next_turn',
+      })
+      if (!admission.allow) return
 
       try {
         await window.desktopPet?.showProactiveNotification?.(notification)
