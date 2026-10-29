@@ -159,4 +159,6 @@ export const zhCNChat = {
   'chat.slash.search.no_hits': '没有在本地聊天历史中找到与「{query}」相关的片段。',
   'chat.failover.no_api_base': '请先在设置里填写接口地址和模型名称。',
   'chat.failover.no_api_key': '请先在设置里填写当前文本提供商的接口密钥。',
+  'chat.letter.card_title': '她给你写了一封信',
+  'chat.letter.card_open': '读这封信',
 } as const satisfies Record<string, string>

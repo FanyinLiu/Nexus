@@ -161,4 +161,6 @@ export const koChat = {
   'chat.slash.search.no_hits': '로컬 채팅 기록에서 "{query}" 관련 내용을 찾지 못했어요.',
   'chat.failover.no_api_base': '설정에서 API Base URL과 모델 이름을 먼저 입력해 주세요.',
   'chat.failover.no_api_key': '설정에서 현재 텍스트 제공자의 API 키를 먼저 입력해 주세요.',
+  'chat.letter.card_title': '그녀가 편지를 썼어요',
+  'chat.letter.card_open': '읽어 보기',
 } as const satisfies Partial<TranslationDictionary>

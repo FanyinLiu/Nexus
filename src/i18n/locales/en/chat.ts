@@ -161,4 +161,6 @@ export const enChat = {
   'chat.slash.search.no_hits': 'No matches for "{query}" in local chat history.',
   'chat.failover.no_api_base': 'Please fill in the API Base URL and model name in settings first.',
   'chat.failover.no_api_key': 'Please fill in the API key for the current text provider in settings first.',
+  'chat.letter.card_title': 'She wrote you a letter',
+  'chat.letter.card_open': 'Read it',
 } as const satisfies Partial<TranslationDictionary>

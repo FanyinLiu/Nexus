@@ -4,6 +4,7 @@ import { LoopOutreachNote } from '../../components/LoopOutreachNote.tsx'
 import { loopNoteProps } from '../../components/loopNoteProps.ts'
 import { MemoryTraceDisclosure } from '../../components/MemoryTraceDisclosure.tsx'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import { SundayLetterCard, type SundayLetterNotice } from '../../components/SundayLetterCard.tsx'
 import type { ChatMemoryTraceDetails } from '../../features/memory/traceDetails.ts'
 import type { ChatMessage } from '../../types/chat.ts'
 import { useModalFocusTrap } from '../../hooks/useModalFocusTrap.ts'
@@ -58,6 +59,9 @@ export interface ChatSheetV2Props {
   onCancel: () => void
   onClose: () => void
   onOpenMemorySettings?: () => void
+  /** Latest unread Sunday letter, shown as a gentle card above history. */
+  letterNotice?: SundayLetterNotice | null
+  onOpenLetterNotice?: () => void
   className?: string
   replyMode?: {
     hint: string
@@ -80,6 +84,8 @@ export function ChatSheetV2({
   onCancel,
   onClose,
   onOpenMemorySettings,
+  letterNotice = null,
+  onOpenLetterNotice,
   className,
   replyMode = null,
   focusComposerRequestId = 0,
@@ -308,6 +314,12 @@ export function ChatSheetV2({
           aria-relevant="additions text"
           onScroll={handleHistoryScroll}
         >
+          {letterNotice ? (
+            <SundayLetterCard
+              notice={letterNotice}
+              onOpen={() => onOpenLetterNotice?.()}
+            />
+          ) : null}
           {messages.length === 0 ? (
             <div className="chat-sheet-v2__empty">
               <p className="chat-sheet-v2__empty-title">{companionName}</p>

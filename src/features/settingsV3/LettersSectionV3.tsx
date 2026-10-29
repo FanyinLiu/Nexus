@@ -1,5 +1,10 @@
 import { memo, useEffect, useState } from 'react'
-import { loadLetters, type SavedLetter } from '../letter/letterStore.ts'
+import {
+  loadLetters,
+  markLetterRead,
+  type SavedLetter,
+} from '../letter/letterStore.ts'
+import { formatLetterDate, isLetterUnread, letterParagraphs } from '../letter/letterView.ts'
 import { saveTextFileWithFallback } from '../../lib/textFiles.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
@@ -8,14 +13,6 @@ import { SettingsV3Empty, SettingsV3Page, SettingsV3Section, SettingsV3Toolbar }
 import './settings-v3-collection.css'
 
 type LettersSectionV3Props = { active: boolean; uiLanguage: UiLanguage }
-
-function formatLetterDate(value: string, language: UiLanguage): string {
-  const timestamp = Date.parse(value)
-  if (!Number.isFinite(timestamp)) return value
-  return new Intl.DateTimeFormat(language === 'en-US' ? 'en-US' : language, {
-    dateStyle: 'long',
-  }).format(new Date(timestamp))
-}
 
 async function exportLetter(letter: SavedLetter, title: string): Promise<void> {
   try {
@@ -42,6 +39,15 @@ export const LettersSectionV3 = memo(function LettersSectionV3({ active, uiLangu
     return () => window.clearTimeout(timeoutId)
   }, [active])
 
+  const toggleLetter = (letter: SavedLetter) => {
+    const expanded = letter.id === expandedId
+    if (!expanded) {
+      markLetterRead(letter.id)
+      setLetters(loadLetters())
+    }
+    setExpandedId(expanded ? null : letter.id)
+  }
+
   return (
     <SettingsV3Page className={`${letters.length === 0 ? 'settings-v3-page--fill' : ''} ${active ? '' : 'is-hidden'}`.trim()}>
       <SettingsV3Section
@@ -55,15 +61,8 @@ export const LettersSectionV3 = memo(function LettersSectionV3({ active, uiLangu
           <ul className="settings-v3-collection" aria-label={ti('settings.section_eyebrow.letters')}>
             {letters.map((letter) => {
               const expanded = letter.id === expandedId
+              const unread = isLetterUnread(letter)
               const bodyId = `settings-v3-letter-${encodeURIComponent(letter.id)}`
-              const paragraphs = [
-                letter.content.greeting,
-                letter.content.summary,
-                letter.content.suggestion,
-                letter.content.intention,
-                letter.content.experiment,
-                letter.content.closing,
-              ]
               return (
                 <li key={letter.id} className="settings-v3-collection-row">
                   <button
@@ -71,11 +70,14 @@ export const LettersSectionV3 = memo(function LettersSectionV3({ active, uiLangu
                     className="settings-v3-collection-row__main"
                     aria-expanded={expanded}
                     aria-controls={bodyId}
-                    onClick={() => setExpandedId(expanded ? null : letter.id)}
+                    onClick={() => toggleLetter(letter)}
                   >
-                    <span className="settings-v3-collection-row__title">{formatLetterDate(letter.letterDate, uiLanguage)}</span>
+                    <span className="settings-v3-collection-row__title">
+                      {formatLetterDate(letter.letterDate, uiLanguage)}
+                    </span>
                     <span className="settings-v3-collection-row__preview">{letter.content.greeting}</span>
                     <span className="settings-v3-collection-row__meta">
+                      {unread ? `${ti('settings.letters.unread_badge')} · ` : ''}
                       {ti('settings.letters.active_days_label', { n: letter.weekDayCount })}
                     </span>
                   </button>
@@ -84,7 +86,7 @@ export const LettersSectionV3 = memo(function LettersSectionV3({ active, uiLangu
                   </SettingsV3Toolbar>
                   {expanded ? (
                     <div id={bodyId} className="settings-v3-letter-body">
-                      {paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+                      {letterParagraphs(letter).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
                     </div>
                   ) : null}
                 </li>

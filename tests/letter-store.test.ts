@@ -2,12 +2,18 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  countUnreadLetters,
+  createSavedLetter,
   findLetterByDate,
+  getLatestUnreadLetter,
+  getMostRecentLetterDate,
   getMostRecentLetterMs,
   loadLetters,
+  markLetterRead,
   saveLetter,
   type SavedLetter,
 } from '../src/features/letter/letterStore.ts'
+import { letterShelfSummary } from '../src/features/letter/letterView.ts'
 import { LETTER_STORE_STORAGE_KEY } from '../src/lib/storage/core.ts'
 
 function createLocalStorageMock(initial: Record<string, string> = {}) {
@@ -144,4 +150,90 @@ test('saveLetter ignores invalid records without corrupting existing storage', (
   saveLetter(letter({ id: 'bad', letterDate: '2026-13-01' }))
 
   assert.deepEqual(loadLetters().map((item) => item.id), ['letter-a'])
+})
+
+test('new letters are unread; legacy letters are treated as already read', () => {
+  installStorage()
+  saveLetter(letter({ id: 'new', letterDate: '2026-06-14', readAt: null }))
+  window.localStorage.setItem(LETTER_STORE_STORAGE_KEY, JSON.stringify([
+    ...JSON.parse(window.localStorage.getItem(LETTER_STORE_STORAGE_KEY) ?? '[]'),
+    {
+      ...letter({ id: 'legacy', letterDate: '2026-06-07' }),
+    },
+  ]))
+
+  const letters = loadLetters()
+  assert.equal(letters.find((item) => item.id === 'new')?.readAt, null)
+  assert.equal(letters.find((item) => item.id === 'legacy')?.readAt, undefined)
+  assert.equal(getLatestUnreadLetter()?.id, 'new')
+  assert.equal(countUnreadLetters(), 1)
+  const summary = letterShelfSummary(letters)
+  assert.equal(summary.count, 2)
+  assert.equal(summary.unreadCount, 1)
+})
+
+test('markLetterRead records the timestamp and drops the unread badge', () => {
+  installStorage()
+  saveLetter(letter({ id: 'unread', readAt: null }))
+  const at = '2026-06-08T09:30:00.000Z'
+
+  const updated = markLetterRead('unread', at)
+
+  assert.equal(updated?.readAt, at)
+  assert.equal(getLatestUnreadLetter(), null)
+  assert.equal(countUnreadLetters(), 0)
+  assert.equal(loadLetters()[0]?.readAt, at)
+})
+
+test('a same-week rewrite preserves an existing read timestamp', () => {
+  installStorage()
+  saveLetter(letter({ id: 'first', readAt: null }))
+  markLetterRead('first', '2026-06-08T09:30:00.000Z')
+
+  saveLetter(letter({
+    id: 'rewrite',
+    createdAt: '2026-06-08T10:00:00.000Z',
+    readAt: null,
+  }))
+
+  assert.equal(loadLetters()[0]?.id, 'rewrite')
+  assert.equal(loadLetters()[0]?.readAt, '2026-06-08T09:30:00.000Z')
+})
+
+test('a failed generation does not create a letter date and leaves the week available', () => {
+  installStorage()
+  const failed = createSavedLetter({
+    letterDate: '2026-06-07',
+    personaId: 'xinghui',
+    uiLanguage: 'zh-CN',
+    content: null,
+    weekDayCount: 4,
+    themes: ['project'],
+  })
+  assert.equal(failed, null)
+  assert.equal(getMostRecentLetterDate(), null)
+
+  const ok = createSavedLetter({
+    letterDate: '2026-06-07',
+    personaId: 'xinghui',
+    uiLanguage: 'zh-CN',
+    content: content(),
+    weekDayCount: 4,
+    themes: ['project'],
+  })
+  assert.ok(ok)
+  saveLetter(ok)
+  assert.equal(getMostRecentLetterDate(), '2026-06-07')
+  assert.equal(loadLetters()[0]?.readAt, null)
+})
+
+test('getMostRecentLetterDate returns the newest Sunday key', () => {
+  installStorage({
+    [LETTER_STORE_STORAGE_KEY]: JSON.stringify([
+      letter({ id: 'newer', letterDate: '2026-06-14', createdAt: '2026-06-14T12:00:00.000Z' }),
+      letter({ id: 'older', letterDate: '2026-06-07', createdAt: '2026-06-07T12:00:00.000Z' }),
+    ]),
+  })
+
+  assert.equal(getMostRecentLetterDate(), '2026-06-14')
 })

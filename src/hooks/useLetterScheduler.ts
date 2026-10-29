@@ -14,9 +14,9 @@ import {
   parseLetterResponse,
 } from '../features/letter/letterPromptBuilder.ts'
 import {
-  getMostRecentLetterMs,
+  createSavedLetter,
+  getMostRecentLetterDate,
   saveLetter,
-  type SavedLetter,
 } from '../features/letter/letterStore.ts'
 import {
   DEFAULT_PERSONA_PROFILE_ID,
@@ -33,7 +33,7 @@ import {
   recordBackgroundChatSuccess,
   releaseBackgroundChatLease,
 } from '../features/autonomy/backgroundChatPolicy.ts'
-import type { AppSettings, ChatMessage, MemoryItem } from '../types'
+import type { AppSettings, ChatMessage, DailyMemoryEntry, DailyMemoryStore, MemoryItem } from '../types'
 
 const POLL_INTERVAL_MS = 30 * 60_000
 const WEEK_MS = 7 * 24 * 60 * 60_000
@@ -44,7 +44,7 @@ type UseLetterSchedulerOptions = {
   settings: AppSettings
   messages: ChatMessage[]
   memories: MemoryItem[]
-  panelOpen: boolean
+  dailyMemories?: DailyMemoryStore
   /** Only the background runtime owner may create timers or call IPC. */
   enabled?: boolean
   onEvent?: (event: {
@@ -54,22 +54,48 @@ type UseLetterSchedulerOptions = {
   }) => void
 }
 
-function activeDayKeysFromMessages(messages: ChatMessage[], windowStartMs: number): string[] {
-  const keys = new Set<string>()
-  for (const m of messages) {
-    if (m.role !== 'user') continue
-    const t = Date.parse(m.createdAt)
-    if (!Number.isFinite(t) || t < windowStartMs) continue
-    keys.add(localDayKey(t))
-  }
-  return [...keys]
+function userMessagesIn(
+  messages: ChatMessage[],
+  windowStartMs: number,
+  windowEndMs: number,
+): ChatMessage[] {
+  return messages.filter((message) => {
+    if (message.role !== 'user') return false
+    const time = Date.parse(message.createdAt)
+    return Number.isFinite(time) && time >= windowStartMs && time <= windowEndMs
+  })
 }
 
-function recentMemoriesIn(memories: MemoryItem[], windowStartMs: number): MemoryItem[] {
-  return memories.filter((m) => {
-    const t = Date.parse(m.createdAt)
-    return Number.isFinite(t) && t >= windowStartMs
+function activeDayKeysFromMessages(messages: readonly ChatMessage[]): string[] {
+  return [...new Set(messages.map((message) => localDayKey(Date.parse(message.createdAt))))]
+}
+
+function recentMemoriesIn(
+  memories: MemoryItem[],
+  windowStartMs: number,
+  windowEndMs: number,
+): MemoryItem[] {
+  return memories.filter((memory) => {
+    const time = Date.parse(memory.createdAt)
+    return Number.isFinite(time) && time >= windowStartMs && time <= windowEndMs
   })
+}
+
+function recentDiaryEntriesIn(
+  dailyMemories: DailyMemoryStore,
+  windowStartMs: number,
+  windowEndMs: number,
+): DailyMemoryEntry[] {
+  const out: DailyMemoryEntry[] = []
+  for (const entries of Object.values(dailyMemories)) {
+    for (const entry of entries) {
+      const time = Date.parse(entry.createdAt)
+      if (Number.isFinite(time) && time >= windowStartMs && time <= windowEndMs) {
+        out.push(entry)
+      }
+    }
+  }
+  return out
 }
 
 async function loadActivePersona(settings: AppSettings): Promise<LoadedPersona | null> {
@@ -121,23 +147,24 @@ async function callLetterLLM(
 }
 
 /**
- * Polls every 30 min, fires the Sunday-letter generation when the
- * scheduler + aggregator both pass. The actual letter (a JSON object)
- * is parsed, persisted to the letter store, and surfaced via an OS
- * notification. UI rendering of the artifact is a follow-up.
+ * Polls every 30 min. The scheduler decides which Sunday slot is due; the
+ * aggregator decides whether that week had enough life in it. A letter is
+ * persisted only after the LLM response parses, so a failure never consumes
+ * the week. `memoryPaused` skips generation entirely.
  */
 export function useLetterScheduler({
   settings,
   messages,
   memories,
-  panelOpen,
+  dailyMemories = {},
   enabled = true,
   onEvent,
 }: UseLetterSchedulerOptions) {
-  const liveRef = useRef({ settings, messages, memories, panelOpen, onEvent })
+  const liveRef = useRef({ settings, messages, memories, dailyMemories, onEvent })
+  const runningRef = useRef(false)
   useEffect(() => {
-    liveRef.current = { settings, messages, memories, panelOpen, onEvent }
-  }, [settings, messages, memories, panelOpen, onEvent])
+    liveRef.current = { settings, messages, memories, dailyMemories, onEvent }
+  }, [settings, messages, memories, dailyMemories, onEvent])
 
   useEffect(() => {
     if (!enabled) return
@@ -145,133 +172,144 @@ export function useLetterScheduler({
     if (typeof window === 'undefined') return
 
     const tick = async () => {
+      if (runningRef.current) return
       const live = liveRef.current
       const s = live.settings
       if (!s.proactiveLetterEnabled) return
-      if (live.panelOpen) return
 
       const decision = decideLetter({
         enabled: true,
         nowMs: Date.now(),
-        lastFiredMs: getMostRecentLetterMs(),
+        lastLetterDate: getMostRecentLetterDate(),
         relationshipType: s.companionRelationshipType,
+        memoryPaused: s.memoryPaused,
       })
       if (!decision.shouldFire) return
 
-      const windowStartMs = Date.now() - WEEK_MS
-      // Pull the past-week / prior-4-week affect snapshots so the letter
-      // prompt can reference how the user's mood actually moved this
-      // week (Russell circumplex valence + Kuppens inertia). The
-      // aggregator gates on min-samples; if the timeline is too sparse
-      // the affectShape simply isn't attached and the letter falls back
-      // to memory-only.
-      const affectThisWeek = computeAffectSnapshot(loadUserAffectWindow(7))
-      const priorFourWeek = computeAffectSnapshot(
-        loadUserAffectWindow(35).filter((s) => Date.parse(s.ts) < windowStartMs),
-      )
-      const affectShift = affectThisWeek.n > 0 && priorFourWeek.n > 0
-        ? compareAffectSnapshots(priorFourWeek, affectThisWeek)
-        : undefined
-      const aggregate = aggregateSundayLetter({
-        nowMs: Date.now(),
-        recentMemories: recentMemoriesIn(live.memories, windowStartMs),
-        activeDayKeys: activeDayKeysFromMessages(live.messages, windowStartMs),
-        affectThisWeek,
-        affectShift,
-      })
-      if (!aggregate.shouldFire) {
-        live.onEvent?.({
-          title: '[letter] skipped',
-          detail: `aggregate gate: ${aggregate.reason} (active days ${aggregate.weekDayCount})`,
-          tone: 'info',
+      runningRef.current = true
+      try {
+        const windowStartMs = decision.dueAtMs - WEEK_MS
+        const windowEndMs = decision.dueAtMs
+        const userMessages = userMessagesIn(live.messages, windowStartMs, windowEndMs)
+        // Catch-up letters describe the week that just ended. Reading the
+        // current affect window would mix in days that belong to the next
+        // letter, so catch-up skips the affect paragraph instead.
+        const affectThisWeek = decision.catchUp
+          ? undefined
+          : computeAffectSnapshot(loadUserAffectWindow(7))
+        const priorFourWeek = decision.catchUp
+          ? undefined
+          : computeAffectSnapshot(
+              loadUserAffectWindow(35).filter((sample) => Date.parse(sample.ts) < windowStartMs),
+            )
+        const affectShift = affectThisWeek && priorFourWeek
+          && affectThisWeek.n > 0 && priorFourWeek.n > 0
+          ? compareAffectSnapshots(priorFourWeek, affectThisWeek)
+          : undefined
+        const aggregate = aggregateSundayLetter({
+          nowMs: decision.dueAtMs,
+          recentMemories: recentMemoriesIn(live.memories, windowStartMs, windowEndMs),
+          recentDiaryEntries: recentDiaryEntriesIn(live.dailyMemories, windowStartMs, windowEndMs),
+          activeDayKeys: activeDayKeysFromMessages(userMessages),
+          userMessageCount: userMessages.length,
+          ...(affectThisWeek ? { affectThisWeek } : {}),
+          ...(affectShift ? { affectShift } : {}),
         })
-        return
-      }
-
-      const policyInput = {
-        providerId: s.apiProviderId,
-        baseUrl: s.apiBaseUrl,
-        model: s.model,
-        apiKey: s.apiKey,
-      }
-      const gate = getBackgroundChatGate(policyInput)
-      if (!gate.allowed) {
-        if (gate.shouldNotify) {
+        if (!aggregate.shouldFire) {
           live.onEvent?.({
             title: '[letter] skipped',
-            detail: `background:letter blocked: ${gate.reason}`,
+            detail: `aggregate gate: ${aggregate.reason} (active days ${aggregate.weekDayCount})`,
             tone: 'info',
           })
+          return
         }
-        return
-      }
-      if (!isBackgroundChatLeaseAvailable()) return
 
-      const persona = await loadActivePersona(s)
-      if (!persona) {
-        live.onEvent?.({
-          title: '[letter] skipped',
-          detail: 'persona not loaded',
-          tone: 'warn',
-        })
-        return
-      }
+        const policyInput = {
+          providerId: s.apiProviderId,
+          baseUrl: s.apiBaseUrl,
+          model: s.model,
+          apiKey: s.apiKey,
+        }
+        const gate = getBackgroundChatGate(policyInput)
+        if (!gate.allowed) {
+          if (gate.shouldNotify) {
+            live.onEvent?.({
+              title: '[letter] skipped',
+              detail: `background:letter blocked: ${gate.reason}`,
+              tone: 'info',
+            })
+          }
+          return
+        }
+        if (!isBackgroundChatLeaseAvailable()) return
 
-      const letterDate = new Date().toISOString().slice(0, 10)
-      let raw: string | null
-      const lease = acquireBackgroundChatLease()
-      if (!lease) return
-      try {
-        raw = await callLetterLLM(s, aggregate, persona, letterDate)
-        recordBackgroundChatSuccess(policyInput)
-      } catch (err) {
-        recordBackgroundChatFailure(policyInput, classifyBackgroundChatFailure(err))
-        live.onEvent?.({
-          title: '[letter] LLM call failed',
-          detail: getRedactedLogErrorMessage(err),
-          tone: 'warn',
+        const persona = await loadActivePersona(s)
+        if (!persona) {
+          live.onEvent?.({
+            title: '[letter] skipped',
+            detail: 'persona not loaded',
+            tone: 'warn',
+          })
+          return
+        }
+
+        const letterDate = decision.letterDate
+        let raw: string | null
+        const lease = acquireBackgroundChatLease()
+        if (!lease) return
+        try {
+          raw = await callLetterLLM(s, aggregate, persona, letterDate)
+          recordBackgroundChatSuccess(policyInput)
+        } catch (err) {
+          recordBackgroundChatFailure(policyInput, classifyBackgroundChatFailure(err))
+          live.onEvent?.({
+            title: '[letter] LLM call failed',
+            detail: getRedactedLogErrorMessage(err),
+            tone: 'warn',
+          })
+          return
+        } finally {
+          releaseBackgroundChatLease(lease)
+        }
+
+        const parsed = raw ? parseLetterResponse(raw) : null
+        if (!parsed) {
+          live.onEvent?.({
+            title: '[letter] parse failed',
+            detail: 'JSON contract not honoured — skipping save',
+            tone: 'warn',
+          })
+          return
+        }
+
+        const saved = createSavedLetter({
+          letterDate,
+          personaId: persona.id,
+          uiLanguage: s.uiLanguage,
+          content: parsed,
+          weekDayCount: aggregate.weekDayCount,
+          themes: aggregate.themes,
         })
-        return
+        if (!saved) return
+        saveLetter(saved)
+
+        try {
+          await window.desktopPet?.showProactiveNotification?.({
+            title: `${s.companionName?.trim() || 'Nexus'}`,
+            body: parsed.greeting,
+          })
+        } catch {
+          // Notification failure shouldn't undo the save.
+        }
+
+        live.onEvent?.({
+          title: '[letter] generated',
+          detail: `Saved letter for ${letterDate} — ${aggregate.weekDayCount} active days, ${aggregate.themes.length} themes`,
+          tone: 'info',
+        })
       } finally {
-        releaseBackgroundChatLease(lease)
+        runningRef.current = false
       }
-
-      const parsed = raw ? parseLetterResponse(raw) : null
-      if (!parsed) {
-        live.onEvent?.({
-          title: '[letter] parse failed',
-          detail: 'JSON contract not honoured — skipping save',
-          tone: 'warn',
-        })
-        return
-      }
-
-      const saved: SavedLetter = {
-        id: `letter-${letterDate}-${Date.now()}`,
-        letterDate,
-        createdAt: new Date().toISOString(),
-        personaId: persona.id,
-        uiLanguage: s.uiLanguage,
-        content: parsed,
-        weekDayCount: aggregate.weekDayCount,
-        themes: aggregate.themes,
-      }
-      saveLetter(saved)
-
-      try {
-        await window.desktopPet?.showProactiveNotification?.({
-          title: `${s.companionName?.trim() || 'Nexus'}`,
-          body: parsed.greeting,
-        })
-      } catch {
-        // Notification failure shouldn't undo the save.
-      }
-
-      live.onEvent?.({
-        title: '[letter] generated',
-        detail: `Saved letter for ${letterDate} — ${aggregate.weekDayCount} active days, ${aggregate.themes.length} themes`,
-        tone: 'info',
-      })
     }
 
     void tick()

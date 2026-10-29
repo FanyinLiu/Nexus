@@ -5,12 +5,13 @@ import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler
 import { useGuidanceAnalysisScheduler } from '../../hooks/useGuidanceAnalysisScheduler.ts'
 import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useOpenArcScheduler } from '../../hooks/useOpenArcScheduler.ts'
-import type { AppSettings, ChatMessage, MemoryItem } from '../../types'
+import type { AppSettings, ChatMessage, DailyMemoryStore, MemoryItem } from '../../types'
 
 type UseBackgroundSchedulersOptions = {
   settings: AppSettings
   messages: ChatMessage[]
   memories: MemoryItem[]
+  dailyMemories?: DailyMemoryStore
   panelCollapsed: boolean
   /** Renderer-level scheduler switch; defaults on for isolated callers/tests. */
   enabled?: boolean
@@ -22,6 +23,7 @@ export function useBackgroundSchedulers({
   settings,
   messages,
   memories,
+  dailyMemories = {},
   panelCollapsed,
   enabled = true,
   runtimeOwner = true,
@@ -46,7 +48,7 @@ export function useBackgroundSchedulers({
     settings,
     messages,
     memories,
-    panelOpen,
+    dailyMemories,
     enabled: schedulerEnabled,
   })
 

@@ -1,6 +1,10 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import { SundayLetterReader } from '../../components/SundayLetterReader.tsx'
+import { useLetters } from '../../hooks/useLetters.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
+import { formatLetterDate } from '../letter/letterView.ts'
+import type { SavedLetter } from '../letter/letterStore.ts'
 import type {
   AppSettings,
   AssistantRuntimeActivity,
@@ -146,6 +150,8 @@ export function CompanionPanelV2({
   const [utilityOpen, setUtilityOpen] = useState(false)
   const [chatSheetOpen, setChatSheetOpen] = useState(false)
   const [captionPaused, setCaptionPaused] = useState(false)
+  const { latestUnread, markRead } = useLetters()
+  const [openLetter, setOpenLetter] = useState<SavedLetter | null>(null)
   const hasModalOverlay = Boolean(settingsDrawer) || Boolean(onboardingGuide) || modelSetupOverlayOpen
   const utilityButtonRef = useRef<HTMLButtonElement>(null)
   const captionButtonRef = useRef<HTMLButtonElement>(null)
@@ -204,6 +210,20 @@ export function CompanionPanelV2({
   const latestCaption = captionRepeatsVisibleNotification(readableCaption, notificationMessages)
     ? undefined
     : readableCaption
+  const openLatestLetter = () => {
+    if (!latestUnread) return
+    markRead(latestUnread.id)
+    setOpenLetter(latestUnread)
+  }
+  const letterNotice = latestUnread
+    ? {
+        title: ti('chat.letter.card_title'),
+        dateLabel: formatLetterDate(latestUnread.letterDate, settings.uiLanguage),
+        preview: latestUnread.content.greeting,
+        actionLabel: ti('chat.letter.card_open'),
+      }
+    : null
+
   const openChatSheet = (trigger?: HTMLButtonElement | null) => {
     chatReturnTargetRef.current = trigger ?? document.activeElement as HTMLElement | null
     setChatSheetOpen(true)
@@ -432,7 +452,17 @@ export function CompanionPanelV2({
             setChatSheetOpen(false)
             openMemorySettings()
           }}
+          letterNotice={letterNotice}
+          onOpenLetterNotice={openLatestLetter}
         />
+        ) : null}
+
+        {openLetter ? (
+          <SundayLetterReader
+            letter={openLetter}
+            uiLanguage={settings.uiLanguage}
+            onClose={() => setOpenLetter(null)}
+          />
         ) : null}
 
       {!panelCollapsed && !chatSheetOpen ? (

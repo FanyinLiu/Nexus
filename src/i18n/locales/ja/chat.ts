@@ -161,4 +161,6 @@ export const jaChat = {
   'chat.slash.search.no_hits': 'ローカル履歴に「{query}」に一致するものは見つかりませんでした。',
   'chat.failover.no_api_base': '設定で API Base URL とモデル名を入力してください。',
   'chat.failover.no_api_key': '設定で現在のテキストプロバイダーの API キーを入力してください。',
+  'chat.letter.card_title': '彼女から手紙が届いています',
+  'chat.letter.card_open': '読んでみる',
 } as const satisfies Partial<TranslationDictionary>

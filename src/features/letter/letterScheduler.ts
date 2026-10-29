@@ -1,25 +1,37 @@
 /**
- * Sunday-letter fire scheduler — pure decision logic. Same shape as
- * bracketScheduler / awayScheduler so it can be unit-tested without
- * IPC, storage, or timers.
+ * Sunday-letter fire scheduler — pure decision logic.
  *
- * Fires once per Sunday inside an evening window (default 18-22
- * local) when the user hasn't already received this week's letter
- * AND the relationship type doesn't opt out. The 3-active-days gate
- * is applied separately by the aggregator — this scheduler only
- * decides "is now the moment to *try* generating one?".
+ * The letter belongs to a Sunday slot: it is due at the local Sunday evening
+ * hour, and if the app was closed then it is written on the next open. Only
+ * the latest slot is considered, so a person who missed three weeks gets one
+ * letter, not three. Sunday morning is intentionally quiet: the previous
+ * slot is already in catch-up territory, but waiting for the current evening
+ * avoids two letters landing on the same day.
+ *
+ * One letter per Sunday week is enforced by the stored `letterDate` of the
+ * latest successful letter. Failures never update that date, so a failed LLM
+ * call leaves the week available for the next tick.
  */
 
-import { isSameLocalWeek } from '../../lib/localDate.ts'
+import { localDayKey, startOfLocalSunday } from '../../lib/localDate.ts'
 import type { CompanionRelationshipType } from '../../types'
 
 export type LetterDecision =
-  | { shouldFire: true; reason: 'fire' }
+  | {
+      shouldFire: true
+      reason: 'fire'
+      /** Local date (YYYY-MM-DD) of the Sunday this letter belongs to. */
+      letterDate: string
+      /** Local timestamp of the Sunday-evening deadline. */
+      dueAtMs: number
+      /** True when the app is opening after the slot instead of on Sunday evening. */
+      catchUp: boolean
+    }
   | {
       shouldFire: false
       reason:
         | 'disabled'
-        | 'not_sunday'
+        | 'memory_paused'
         | 'outside_window'
         | 'already_fired_this_week'
         | 'relationship_type_opted_out'
@@ -28,36 +40,61 @@ export type LetterDecision =
 export interface LetterDecisionInput {
   enabled: boolean
   nowMs: number
-  /** Last successful letter generation timestamp; null if never. */
-  lastFiredMs: number | null
-  /** Inclusive start hour, exclusive end. Defaults to 18-22 local. */
-  window?: { startHour: number; endHour: number }
+  /** Latest successfully delivered letter date; failed attempts never set it. */
+  lastLetterDate?: string | null
+  /** Sunday-evening hour the letter becomes due. Defaults to 18 local. */
+  window?: { startHour: number }
   relationshipType: CompanionRelationshipType
+  /** Memory pause suppresses the letter and does not consume the week. */
+  memoryPaused?: boolean
 }
 
-const DEFAULT_WINDOW = { startHour: 18, endHour: 22 }
+const DEFAULT_START_HOUR = 18
 const SUNDAY = 0
+
+/**
+ * Latest Sunday-evening slot that is already due, or null on Sunday before
+ * the evening hour. Only the latest slot is returned by design.
+ */
+export function resolveLetterSlot(
+  nowMs: number,
+  startHour = DEFAULT_START_HOUR,
+): { dueAtMs: number; letterDate: string; catchUp: boolean } | null {
+  const now = new Date(nowMs)
+  const sundayStart = startOfLocalSunday(nowMs)
+  const sunday = new Date(sundayStart)
+  const dueAtMs = new Date(
+    sunday.getFullYear(),
+    sunday.getMonth(),
+    sunday.getDate(),
+    startHour,
+    0,
+    0,
+    0,
+  ).getTime()
+
+  if (now.getDay() === SUNDAY && nowMs < dueAtMs) return null
+
+  return {
+    dueAtMs,
+    letterDate: localDayKey(dueAtMs),
+    catchUp: localDayKey(nowMs) !== localDayKey(dueAtMs),
+  }
+}
 
 export function decideLetter(input: LetterDecisionInput): LetterDecision {
   if (!input.enabled) return { shouldFire: false, reason: 'disabled' }
+  if (input.memoryPaused === true) return { shouldFire: false, reason: 'memory_paused' }
   if (input.relationshipType === 'quiet_companion') {
     return { shouldFire: false, reason: 'relationship_type_opted_out' }
   }
 
-  const now = new Date(input.nowMs)
-  if (now.getDay() !== SUNDAY) {
-    return { shouldFire: false, reason: 'not_sunday' }
-  }
+  const slot = resolveLetterSlot(input.nowMs, input.window?.startHour ?? DEFAULT_START_HOUR)
+  if (!slot) return { shouldFire: false, reason: 'outside_window' }
 
-  const window = input.window ?? DEFAULT_WINDOW
-  const hour = now.getHours()
-  if (hour < window.startHour || hour >= window.endHour) {
-    return { shouldFire: false, reason: 'outside_window' }
-  }
-
-  if (input.lastFiredMs != null && isSameLocalWeek(input.nowMs, input.lastFiredMs)) {
+  if (input.lastLetterDate && input.lastLetterDate >= slot.letterDate) {
     return { shouldFire: false, reason: 'already_fired_this_week' }
   }
 
-  return { shouldFire: true, reason: 'fire' }
+  return { shouldFire: true, reason: 'fire', ...slot }
 }
