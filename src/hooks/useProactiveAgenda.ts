@@ -12,9 +12,14 @@ import {
 } from '../features/autonomy/backgroundChatPolicy.ts'
 import {
   PROACTIVE_RESUME_GRACE_MS,
-  evaluateProactiveEtiquette,
   isLikelyFullscreenSurface,
+  isLikelyMeetingSurface,
 } from '../features/autonomy/proactiveBudget.ts'
+import {
+  admitProactiveMessage,
+  loadProactiveEtiquetteState,
+  recentLinesForRepeat,
+} from '../features/autonomy/proactiveEtiquette.ts'
 import {
   agendaDeliveryAllowed,
   buildAgendaPrompt,
@@ -24,7 +29,7 @@ import {
   selectAgendaItem,
   syncProactiveAgenda,
 } from '../features/autonomy/proactiveAgenda.ts'
-import { isUserTyping } from '../features/autonomy/userTyping.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import {
   consolidateDailyMemory,
   decideDailyConsolidation,
@@ -41,6 +46,7 @@ import { applyBookedLoopAction, applyLoopCardAction, applyLoopEventAction, type 
 import { bookClearPlanReminders, buildLoopOutreach } from '../features/memory/loopOutreach.ts'
 import { acceptLoopOffer } from '../features/memory/loopOfferAccept.ts'
 import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
+import { loopKindOf } from '../features/memory/loopDetails.ts'
 import type { ChatMessage } from '../types/chat.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/schedule.ts'
 import { loadMessageFollowUps, settleMessageFollowUp } from '../lib/storage/messageFollowUps.ts'
@@ -116,6 +122,7 @@ export function useProactiveAgenda(options: {
     try {
       const snapshot = await window.desktopPet?.getDesktopContext?.({ includeActiveWindow: true })
       fullscreenRef.current = isLikelyFullscreenSurface(snapshot?.activeWindowTitle, snapshot?.activeWindowAppName)
+        || isLikelyMeetingSurface(snapshot?.activeWindowTitle, snapshot?.activeWindowAppName)
     } catch {
       fullscreenRef.current = false
     }
@@ -228,23 +235,10 @@ export function useProactiveAgenda(options: {
       if (current.busyRef?.current) return
       await refreshFullscreen()
       const state = syncProactiveAgenda(current.memoriesRef.current, nowMs)
-      const etiquette = evaluateProactiveEtiquette({
-        nowMs,
-        enabled: true,
-        preset: settings.proactiveFrequency,
-        quietStart: settings.proactiveQuietHoursStart,
-        quietEnd: settings.proactiveQuietHoursEnd,
-        firedAt: state.firedAt,
-        dismissedAt: state.dismissedAt,
-        userTyping: isUserTyping(nowMs),
-        fullscreen: fullscreenRef.current,
-        focusState: current.focusStateRef.current,
-        channel: 'return',
-        resumedAtMs: resumedAtRef.current,
-        resumeGraceMs: resolveResumeGraceMs(PROACTIVE_RESUME_GRACE_MS),
+      const etiquetteState = loadProactiveEtiquetteState(nowMs)
+      const item = selectAgendaItem(state.items, nowMs, 'return', {
+        recentLines: recentLinesForRepeat(etiquetteState, nowMs),
       })
-      if (!etiquette.allow) return
-      const item = selectAgendaItem(state.items, nowMs, 'return')
       if (!item) return
       const memory = item.kind === 'open_loop'
         ? current.memoriesRef.current.find((row) => row.id === item.sourceId)
@@ -254,6 +248,31 @@ export function useProactiveAgenda(options: {
         ?? (item.kind === 'message_follow_up'
           ? current.t('proactive.bubble.follow_up', { summary: item.summary })
           : current.t('proactive.bubble.loop', { summary: item.summary }))
+      const admission = admitProactiveMessage({
+        nowMs,
+        kind: item.kind === 'message_follow_up'
+          ? 'message_follow_up'
+          : memory && loopKindOf(memory) === 'event'
+            ? 'event_follow_up'
+            : 'open_loop',
+        text,
+        enabled: true,
+        preset: settings.proactiveFrequency,
+        quietStart: settings.proactiveQuietHoursStart,
+        quietEnd: settings.proactiveQuietHoursEnd,
+        firedAt: state.firedAt,
+        dismissedAt: state.dismissedAt,
+        userTyping: isUserTypingAnywhere(settings, nowMs),
+        fullscreen: fullscreenRef.current,
+        focusState: current.focusStateRef.current,
+        channel: 'return',
+        resumedAtMs: resumedAtRef.current,
+        resumeGraceMs: resolveResumeGraceMs(PROACTIVE_RESUME_GRACE_MS),
+      })
+      if (!admission.allow) {
+        current.onLog('Proactive agenda held', admission.reason)
+        return
+      }
       // Claim the slot before the bubble. The in-memory notice dedupe does not
       // survive a restart or update, so a crash after the bubble would send it again.
       saveProactiveAgenda(markAgendaFired(state, item.id, nowMs))
@@ -326,8 +345,23 @@ export function useProactiveAgenda(options: {
       const nowMs = appNowMs()
       const state = syncProactiveAgenda(current.memoriesRef.current, nowMs)
       const items = filterAgendaItemsForNextTurn(state.items, settings.memoryPaused === true)
-      const etiquette = evaluateProactiveEtiquette({
+      const etiquetteState = loadProactiveEtiquetteState(nowMs)
+      const item = selectAgendaItem(items, nowMs, 'next_turn', {
+        recentLines: recentLinesForRepeat(etiquetteState, nowMs),
+      })
+      if (!item) return ''
+      const memory = item.kind === 'open_loop'
+        ? current.memoriesRef.current.find((row) => row.id === item.sourceId)
+        : undefined
+      const outreach = memory ? buildLoopOutreach(memory, nowMs, current.t) : null
+      const admission = admitProactiveMessage({
         nowMs,
+        kind: item.kind === 'message_follow_up'
+          ? 'message_follow_up'
+          : memory && loopKindOf(memory) === 'event'
+            ? 'event_follow_up'
+            : 'open_loop',
+        text: outreach?.text ?? item.summary,
         enabled: true,
         preset: settings.proactiveFrequency,
         quietStart: settings.proactiveQuietHoursStart,
@@ -339,13 +373,7 @@ export function useProactiveAgenda(options: {
         focusState: 'active',
         channel: 'next_turn',
       })
-      if (!etiquette.allow) return ''
-      const item = selectAgendaItem(items, nowMs, 'next_turn')
-      if (!item) return ''
-      const memory = item.kind === 'open_loop'
-        ? current.memoriesRef.current.find((row) => row.id === item.sourceId)
-        : undefined
-      const outreach = memory ? buildLoopOutreach(memory, nowMs, current.t) : null
+      if (!admission.allow) return ''
       saveProactiveAgenda(markAgendaFired({ ...state, items: state.items }, item.id, nowMs))
       if (item.kind === 'message_follow_up') settleMessageFollowUp(item.sourceId, nowMs)
       if (item.kind === 'open_loop') {

@@ -60,6 +60,12 @@ import {
 import { PERSONA_SOUL_SAVED_CHANNEL } from '../../features/settingsV3/soulCardPersona.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { admitProactiveMessage } from '../../features/autonomy/proactiveEtiquette.ts'
+import {
+  isLikelyFullscreenSurface,
+  isLikelyMeetingSurface,
+} from '../../features/autonomy/proactiveBudget.ts'
+import { isUserTypingAnywhere } from '../../features/autonomy/userTyping.ts'
 
 const DEFAULT_PROFILE_ID = DEFAULT_PERSONA_PROFILE_ID
 
@@ -355,6 +361,30 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
           })
         }
       } else if (outcome.result.kind === 'speak') {
+        const nowMs = Date.now()
+        const activeTitle = opts.activeWindowTitleRef.current ?? null
+        const admission = admitProactiveMessage({
+          nowMs,
+          kind: 'idle',
+          text: outcome.result.text,
+          enabled: true,
+          preset: settings.proactiveFrequency,
+          quietStart: settings.proactiveQuietHoursStart,
+          quietEnd: settings.proactiveQuietHoursEnd,
+          userTyping: isUserTypingAnywhere(settings, nowMs),
+          fullscreen: isLikelyFullscreenSurface(activeTitle)
+            || isLikelyMeetingSurface(activeTitle),
+          focusState: tickState.focusState,
+          channel: 'next_turn',
+        })
+        if (!admission.allow) {
+          opts.onDebugEvent?.({
+            source: 'autonomy',
+            title: '[V2] held by etiquette',
+            detail: admission.reason,
+          })
+          return
+        }
         const now = new Date().toISOString()
         lastUtteranceRef.current = { text: outcome.result.text, at: now }
         try {

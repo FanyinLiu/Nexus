@@ -2,6 +2,8 @@ import { autoDropExpiredArcs, loadOpenArcs, recordCheckInFired } from '../featur
 import { decideNextCheckIn } from '../features/arc/openArcPolicy.ts'
 import { buildArcCheckIn } from '../features/arc/openArcDelivery.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { AppSettings } from '../types'
 
@@ -48,6 +50,20 @@ export function useOpenArcScheduler({ settings, enabled = true }: UseOpenArcSche
         companionName: s.companionName,
         milestoneDay: decision.milestoneDay,
       })
+
+      const admission = admitProactiveMessage({
+        nowMs: Date.now(),
+        kind: 'open_arc',
+        text: `${payload.title} ${payload.body}`,
+        enabled: true,
+        preset: s.proactiveFrequency,
+        quietStart: s.proactiveQuietHoursStart,
+        quietEnd: s.proactiveQuietHoursEnd,
+        userTyping: isUserTypingAnywhere(s),
+        focusState: 'active',
+        channel: 'next_turn',
+      })
+      if (!admission.allow) return
 
       try {
         await window.desktopPet?.showProactiveNotification?.(payload)

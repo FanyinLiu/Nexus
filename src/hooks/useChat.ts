@@ -26,6 +26,7 @@ import { useChatPersistence } from './chat/useChatPersistence.ts'
 import { createSendMessageHandler } from './chat/sendMessage.ts'
 import { usePetDialogBubbles } from './chat/usePetDialogBubbles.ts'
 import { useCompanionNotices } from './chat/useCompanionNotices.ts'
+import { noteRecentCompanionChatLine } from '../features/autonomy/proactiveEtiquette.ts'
 import { useChatHistoryArchive } from './chat/useChatHistoryArchive.ts'
 import type {
   AssistantRuntimeActivity,
@@ -145,6 +146,9 @@ export function useChat(ctx: UseChatContext) {
   }, [])
 
   const appendChatMessage = useCallback((message: ChatMessage) => {
+    if (message.role === 'assistant') {
+      noteRecentCompanionChatLine(message.content)
+    }
     setMessages((current) => {
       const appended = [...current, message]
       const updatedMessages =
@@ -312,6 +316,7 @@ export function useChat(ctx: UseChatContext) {
     runLocalReminderAction,
     runAssistantReplyTurn,
     flushDeferredCompanionNotices,
+    pushCompanionNotice,
   })
 
   const sendMessageRef = useRef(sendMessage)

@@ -5,6 +5,7 @@
 import { useEffect, useRef } from 'react'
 import { resolveGlobalGaze, shouldPublishGaze } from '../features/desktopPresence/gazePolicy.ts'
 import { shouldPublishTypingActivity } from '../features/desktopPresence/typingPresence.ts'
+import { noteDesktopTyping } from '../features/autonomy/userTyping.ts'
 import type { GazeTargetPoint } from '../../shared/gazeFollow.js'
 
 type TypingActivity = { active: boolean; keysPerSecond: number }
@@ -78,6 +79,7 @@ export function useDesktopPresence(input: {
       }
       if (!shouldPublishTypingActivity(typingRef.current, next)) return
       typingRef.current = next
+      noteDesktopTyping(next.active)
       setTypingActivity(next)
     })
   }, [setTypingActivity])

@@ -4,8 +4,9 @@
  * This is deliberately the smallest possible delivery path: one line through
  * `pushCompanionNotice`, with the same dedupe key shape every other proactive
  * scheduler uses. The pure priority/frequency rules live in
- * features/dream/dreamSurfacing.ts, so the shared proactive-etiquette layer
- * can later admit `kind: 'dream'` here without changing any decision logic.
+ * features/dream/dreamSurfacing.ts; the shared proactive-etiquette layer then
+ * admits the line here as the lowest-priority (`kind: 'dream'`) open, so the
+ * daily budget, backoff, leave-me-alone span, and anti-repeat check apply.
  */
 
 import { useCallback, useEffect, useRef } from 'react'
@@ -17,7 +18,8 @@ import {
 } from '../features/dream/dreamDiaryStore.ts'
 import { hasDueAgendaItem } from '../features/autonomy/proactiveAgenda.ts'
 import { hasRecentChatActivity } from '../features/autonomy/proactiveBudget.ts'
-import { isUserTyping } from '../features/autonomy/userTyping.ts'
+import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { isUserTyping, isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import { decideLetter } from '../features/letter/letterScheduler.ts'
 import { getMostRecentLetterDate } from '../features/letter/letterStore.ts'
 import { loadProactiveAgenda } from '../lib/storage/proactiveAgenda.ts'
@@ -130,9 +132,26 @@ export function useDreamSurfacing({
     })
     if (!decision.shouldSurface) return
 
+    const body = live.t('chat.dream.line', { dream: dream.text })
+    // The dream schedule already deferred to a due follow-up, letter, and
+    // bracket; this shared gate is what keeps it inside the one daily budget
+    // and the current leave-me-alone/backoff state.
+    const admission = admitProactiveMessage({
+      nowMs,
+      kind: 'dream',
+      text: body,
+      enabled: true,
+      preset: s.proactiveFrequency,
+      quietStart: s.proactiveQuietHoursStart,
+      quietEnd: s.proactiveQuietHoursEnd,
+      userTyping: isUserTypingAnywhere(s, nowMs),
+      focusState: live.focusState,
+      channel: 'next_turn',
+    })
+    if (!admission.allow) return
+
     runningRef.current = true
     try {
-      const body = live.t('chat.dream.line', { dream: dream.text })
       await live.pushCompanionNotice({
         chatContent: body,
         bubbleContent: body,

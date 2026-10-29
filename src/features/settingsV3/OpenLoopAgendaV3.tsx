@@ -15,6 +15,7 @@ import {
 } from '../autonomy/proactiveAgenda.ts'
 import { loadProactiveAgenda, saveProactiveAgenda } from '../../lib/storage/proactiveAgenda.ts'
 import { loadMessageFollowUps, settleMessageFollowUp } from '../../lib/storage/messageFollowUps.ts'
+import { useProactiveEtiquette } from '../../hooks/useProactiveEtiquette.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { AppSettings, MemoryItem, TranslationKey, UiLanguage } from '../../types'
 import type { AgendaItem, ProactiveAgendaState, ProactiveFrequencyPreset } from '../../types/proactive.ts'
@@ -83,6 +84,7 @@ export function OpenLoopAgendaV3({
     pickTranslatedUiText(uiLanguage, key, params)
   const [clock, setClock] = useState(currentTime)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const { quietUntil, resumeMessages } = useProactiveEtiquette()
   const [editingContent, setEditingContent] = useState('')
   const [editingDue, setEditingDue] = useState('')
   const agenda = visibleAgenda(memories, clock)
@@ -156,6 +158,23 @@ export function OpenLoopAgendaV3({
           />
         </SettingsV3Field>
       </div>
+
+      {quietUntil ? (
+        <SettingsV3Row
+          label={ti('proactive.etiquette.settings_active', {
+            when: new Intl.DateTimeFormat(uiLanguage, {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            }).format(new Date(quietUntil)),
+          })}
+        >
+          <button type="button" onClick={resumeMessages}>
+            {ti('proactive.etiquette.undo')}
+          </button>
+        </SettingsV3Row>
+      ) : null}
 
       {loops.length ? (
         <ul className="settings-v3-collection">

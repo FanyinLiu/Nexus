@@ -103,6 +103,17 @@ export function hasRecentChatActivity(
   })
 }
 
+/**
+ * The same active-window snapshot can also show an ongoing meeting. This adds
+ * no new signal: it only recognises names the existing window context already
+ * exposes. Kept separate so fullscreen copy stays accurate.
+ */
+export function isLikelyMeetingSurface(title?: string | null, appName?: string | null): boolean {
+  const text = `${title ?? ''} ${appName ?? ''}`.trim()
+  if (!text) return false
+  return /\b(?:zoom|teams|meet|webex|whereby|bluejeans)\b|腾讯会议|騰訊會議|飞书会议|飛書會議|钉钉会议|釘釘會議|zoom\s*会议|google\s*meet|microsoft\s*teams|会議中|회의\s*중/iu.test(text)
+}
+
 export function evaluateProactiveEtiquette(input: ProactiveEtiquetteInput): ProactiveEtiquetteDecision {
   if (!input.enabled) return { allow: false, reason: 'disabled' }
   if (input.focusState === 'away' || input.focusState === 'locked') {
