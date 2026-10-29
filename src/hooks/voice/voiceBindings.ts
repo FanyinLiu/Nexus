@@ -12,6 +12,7 @@ import {
   type VoiceSessionTransport,
 } from '../../features/voice'
 import { hearingConfigFromSettings } from '../../features/hearing'
+import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import type { AppSettings } from '../../types'
 import {
   canInterruptSpeech as canInterruptSpeechForSettings,
@@ -312,9 +313,11 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
   // ── Speech interrupt monitor (cyclic — needs lifecycle.scheduleVoiceRestart)
   async function startSpeechInterruptMonitor(
     speechGeneration: number,
+    source?: InterruptMicTurnSource,
   ) {
     await startSpeechInterruptMonitorRuntime({
       speechGeneration,
+      source,
       speechInterruptMonitorRef: refs.speechInterruptMonitorRef,
       assistantSpeechGenerationRef: refs.assistantSpeechGenerationRef,
       interruptedSpeechGenerationRef: refs.interruptedSpeechGenerationRef,
