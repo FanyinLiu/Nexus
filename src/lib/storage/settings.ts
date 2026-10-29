@@ -161,7 +161,9 @@ const defaultSettings: AppSettings = {
   proactivePresenceIntervalMinutes: 25,
   proactiveAwayNotificationsEnabled: false,
   proactiveAwayNotificationThresholdMinutes: 240,
-  proactiveBracketEnabled: false,
+  // A short hello at each end of the day is light enough to default on.
+  // Existing stores keep whatever boolean they already saved.
+  proactiveBracketEnabled: true,
   // On by default: a weekly letter is the "remembers you" layer, not a
   // high-frequency interruption, and the explicit choice field below lets
   // an older store keep a switch value the person actually picked.
@@ -659,6 +661,11 @@ export function loadSettings(): AppSettings {
     proactiveAgendaEnabled: typeof stored.proactiveAgendaEnabled === 'boolean'
       ? stored.proactiveAgendaEnabled
       : defaultSettings.proactiveAgendaEnabled,
+    // Only an absent key gets the new default. A saved false is a real
+    // choice (and was the old factory value), so it is not rewritten.
+    proactiveBracketEnabled: typeof stored.proactiveBracketEnabled === 'boolean'
+      ? stored.proactiveBracketEnabled
+      : defaultSettings.proactiveBracketEnabled,
     proactiveFrequency: stored.proactiveFrequency === 'low' || stored.proactiveFrequency === 'normal'
       ? stored.proactiveFrequency
       : defaultSettings.proactiveFrequency,

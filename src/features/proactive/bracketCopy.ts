@@ -8,10 +8,18 @@ import { normalizeUiLanguage } from '../../lib/uiLanguage.ts'
 export type BracketTemplates = {
   /** Open questions used when there's no previous evening to anchor on. */
   morningOpenQuestions: string[]
+  /** Short line before the morning question. */
+  morningGreeting: string
   /** Callback template; replace {topic} with the prior evening's gist. */
   morningCallback: string
+  /** Callback when today has a dated event instead; {topic} is the event. */
+  morningEventCallback: string
+  /** Short line before the evening check-in. */
+  eveningGreeting: string
   eveningHighlightPool: string[]
   eveningStressfulPool: string[]
+  /** One gentle question about tomorrow, so the next morning can call back. */
+  eveningTomorrowPrompt: string
   /** Button / inline prompt offering to extend the evening callback. */
   eveningGoDeeperPrompt: string
   /** Pool of follow-ups picked when the user opts into "go deeper". */
@@ -19,7 +27,7 @@ export type BracketTemplates = {
   /** OS-notification title for the morning ping. {companionName} interpolated. */
   morningNotificationTitle: string
   eveningNotificationTitle: string
-  /** Glue between the two evening questions in the notification body. */
+  /** Glue between the evening questions in the notification body. */
   eveningJoiner: string
 }
 
@@ -38,7 +46,10 @@ const ZH_CN: BracketTemplates = {
     '今天的天气，适合做什么？',
     '有没有什么话是昨天想说但没说出口的？',
   ],
-  morningCallback: '昨晚你说{topic}——今天再看，感觉变了吗？',
+  morningGreeting: '早安。',
+  morningCallback: '昨晚你提到「{topic}」。今天也一起加油。',
+  morningEventCallback: '今天有「{topic}」，我记着呢。',
+  eveningGreeting: '晚上好。',
   eveningHighlightPool: [
     '今天最让你开心的一个瞬间是什么？',
     '今天有没有什么小事让你意外地高兴？',
@@ -51,6 +62,7 @@ const ZH_CN: BracketTemplates = {
     '今天最不想重来一次的是哪个部分？',
     '如果今天能删掉一件事，你会删哪件？',
   ],
+  eveningTomorrowPrompt: '明天有什么要早起的吗？',
   eveningGoDeeperPrompt: '想多坐一会儿这件事吗？',
   eveningGoDeeperPool: [
     '当时你心里第一反应是什么？',
@@ -82,7 +94,10 @@ const ZH_TW: BracketTemplates = {
     '今天的天氣，適合做什麼？',
     '有沒有什麼話是昨天想說但沒說出口的？',
   ],
-  morningCallback: '昨晚你說{topic}——今天再看，感覺變了嗎？',
+  morningGreeting: '早安。',
+  morningCallback: '昨晚你提到「{topic}」。今天也一起加油。',
+  morningEventCallback: '今天有「{topic}」，我記著呢。',
+  eveningGreeting: '晚上好。',
   eveningHighlightPool: [
     '今天最讓你開心的一個瞬間是什麼？',
     '今天有沒有什麼小事讓你意外地高興？',
@@ -95,6 +110,7 @@ const ZH_TW: BracketTemplates = {
     '今天最不想重來一次的是哪個部分？',
     '如果今天能刪掉一件事，你會刪哪件？',
   ],
+  eveningTomorrowPrompt: '明天有什麼要早起的嗎？',
   eveningGoDeeperPrompt: '想多坐一會兒這件事嗎？',
   eveningGoDeeperPool: [
     '當時你心裡第一反應是什麼？',
@@ -126,7 +142,10 @@ const EN_US: BracketTemplates = {
     'Weather aside, what kind of day do you want this to be?',
     'Is there something you wanted to say yesterday but didn’t?',
   ],
-  morningCallback: 'Last night you said {topic} — does it look different this morning?',
+  morningGreeting: 'Good morning.',
+  morningCallback: 'Last night you mentioned “{topic}”. I remembered — hope today goes gently.',
+  morningEventCallback: 'You have “{topic}” today. I remembered.',
+  eveningGreeting: 'Evening.',
   eveningHighlightPool: [
     'What was the highlight of your day?',
     'Did anything catch you off guard in a good way today?',
@@ -139,6 +158,7 @@ const EN_US: BracketTemplates = {
     'What part of today would you rather not do again?',
     'If you could erase one thing from today, what would it be?',
   ],
+  eveningTomorrowPrompt: 'Anything early tomorrow?',
   eveningGoDeeperPrompt: 'Want to sit with this a little longer?',
   eveningGoDeeperPool: [
     'What was your first reaction in the moment?',
@@ -170,7 +190,10 @@ const JA: BracketTemplates = {
     '今日の天気、何するのに合いそう？',
     '昨日言いたくて言えなかったことはある？',
   ],
-  morningCallback: '昨晩、{topic}って言ってたよね — 今朝になって感じ方は変わった？',
+  morningGreeting: 'おはよう。',
+  morningCallback: '昨晩「{topic}」って言ってたね。今日も無理せず。',
+  morningEventCallback: '今日は「{topic}」だね。覚えてるよ。',
+  eveningGreeting: 'こんばんは。',
   eveningHighlightPool: [
     '今日いちばん嬉しかった瞬間は？',
     '今日、思いがけず良かったことはある？',
@@ -183,6 +206,7 @@ const JA: BracketTemplates = {
     '今日の中で、もう一回はやりたくない部分は？',
     '今日から一つだけ消せるとしたら、何にする？',
   ],
+  eveningTomorrowPrompt: '明日、早く起きる用事ある？',
   eveningGoDeeperPrompt: 'もう少しこのことに付き合おうか？',
   eveningGoDeeperPool: [
     'その瞬間、最初に浮かんだ気持ちは？',
@@ -214,7 +238,10 @@ const KO: BracketTemplates = {
     '오늘 날씨는 뭐 하기에 좋을까?',
     '어제 하고 싶었는데 못 한 말 있어?',
   ],
-  morningCallback: '어젯밤에 {topic}라고 했잖아 — 아침이 되니까 좀 달라 보여?',
+  morningGreeting: '좋은 아침이야.',
+  morningCallback: '어젯밤 "{topic}"라고 했지. 오늘도 힘내.',
+  morningEventCallback: '오늘 "{topic}" 있지. 기억하고 있어.',
+  eveningGreeting: '좋은 저녁이야.',
   eveningHighlightPool: [
     '오늘 가장 기뻤던 순간은?',
     '오늘 뜻밖에 좋았던 일 있어?',
@@ -227,6 +254,7 @@ const KO: BracketTemplates = {
     '오늘 중에 다시 하긴 싫은 부분은?',
     '오늘에서 하나만 지울 수 있으면 뭘 지울 거야?',
   ],
+  eveningTomorrowPrompt: '내일 일찍 일어날 일 있어?',
   eveningGoDeeperPrompt: '이 얘기 조금만 더 같이 있을까?',
   eveningGoDeeperPool: [
     '그 순간 처음 든 기분은 뭐였어?',
@@ -324,6 +352,8 @@ export type BuildBracketNotificationInput = {
   bracket: 'morning' | 'evening'
   /** Used by the morning callback when present; ignored for evening. */
   previousEveningTopic?: string | null
+  /** A dated event on today's calendar; used when no evening topic exists. */
+  todayEventTopic?: string | null
   randomFn?: () => number
   /** Last-picked indices to avoid back-to-back repeats. */
   lastPicks?: BracketLastPicks
@@ -344,9 +374,25 @@ export function buildBracketNotification(
   const last = input.lastPicks ?? {}
 
   if (input.bracket === 'morning') {
+    const eveningTopic = input.previousEveningTopic?.trim()
+    if (eveningTopic) {
+      return {
+        title: t.morningNotificationTitle.replace('{companionName}', companionName),
+        body: t.morningCallback.replace('{topic}', eveningTopic),
+        pickedIndices: { morning: last.morning },
+      }
+    }
+    const eventTopic = input.todayEventTopic?.trim()
+    if (eventTopic) {
+      return {
+        title: t.morningNotificationTitle.replace('{companionName}', companionName),
+        body: t.morningEventCallback.replace('{topic}', eventTopic),
+        pickedIndices: { morning: last.morning },
+      }
+    }
     const pick = pickMorningPrompt({
       uiLanguage: input.uiLanguage,
-      previousEveningTopic: input.previousEveningTopic ?? null,
+      previousEveningTopic: null,
       randomFn: input.randomFn,
       avoidIdx: last.morning,
     })
@@ -363,7 +409,20 @@ export function buildBracketNotification(
 
   return {
     title: t.eveningNotificationTitle.replace('{companionName}', companionName),
-    body: `${hPick.value}${t.eveningJoiner}${sPick.value}`,
+    body: `${hPick.value}${t.eveningJoiner}${sPick.value}${t.eveningJoiner}${t.eveningTomorrowPrompt}`,
     pickedIndices: { highlight: hPick.idx, stressful: sPick.idx },
   }
+}
+
+/**
+ * Chat/bubble version of the same bracket: a short greeting line before
+ * the question. The OS notification keeps the compact body.
+ */
+export function buildBracketMessage(
+  input: BuildBracketNotificationInput,
+): BracketNotificationResult {
+  const t = getBracketTemplates(input.uiLanguage)
+  const result = buildBracketNotification(input)
+  const greeting = input.bracket === 'morning' ? t.morningGreeting : t.eveningGreeting
+  return { ...result, body: `${greeting}${t.eveningJoiner}${result.body}` }
 }

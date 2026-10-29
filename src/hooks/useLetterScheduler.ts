@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { decideLetter } from '../features/letter/letterScheduler.ts'
+import { hasDueAgendaItem } from '../features/autonomy/proactiveAgenda.ts'
 import {
   aggregateSundayLetter,
   type SundayLetterDataReady,
@@ -33,7 +34,14 @@ import {
   recordBackgroundChatSuccess,
   releaseBackgroundChatLease,
 } from '../features/autonomy/backgroundChatPolicy.ts'
-import type { AppSettings, ChatMessage, DailyMemoryEntry, DailyMemoryStore, MemoryItem } from '../types'
+import type {
+  AppSettings,
+  ChatMessage,
+  DailyMemoryEntry,
+  DailyMemoryStore,
+  FocusState,
+  MemoryItem,
+} from '../types'
 
 const POLL_INTERVAL_MS = 30 * 60_000
 const WEEK_MS = 7 * 24 * 60 * 60_000
@@ -45,6 +53,7 @@ type UseLetterSchedulerOptions = {
   messages: ChatMessage[]
   memories: MemoryItem[]
   dailyMemories?: DailyMemoryStore
+  focusState?: FocusState
   /** Only the background runtime owner may create timers or call IPC. */
   enabled?: boolean
   onEvent?: (event: {
@@ -157,14 +166,15 @@ export function useLetterScheduler({
   messages,
   memories,
   dailyMemories = {},
+  focusState = 'active',
   enabled = true,
   onEvent,
 }: UseLetterSchedulerOptions) {
-  const liveRef = useRef({ settings, messages, memories, dailyMemories, onEvent })
+  const liveRef = useRef({ settings, messages, memories, dailyMemories, focusState, onEvent })
   const runningRef = useRef(false)
   useEffect(() => {
-    liveRef.current = { settings, messages, memories, dailyMemories, onEvent }
-  }, [settings, messages, memories, dailyMemories, onEvent])
+    liveRef.current = { settings, messages, memories, dailyMemories, focusState, onEvent }
+  }, [settings, messages, memories, dailyMemories, focusState, onEvent])
 
   useEffect(() => {
     if (!enabled) return
@@ -176,6 +186,10 @@ export function useLetterScheduler({
       const live = liveRef.current
       const s = live.settings
       if (!s.proactiveLetterEnabled) return
+
+      // While the user is here, a due follow-up is the more personal
+      // open. Away from the machine the letter can still be prepared.
+      if (live.focusState === 'active' && hasDueAgendaItem(live.memories, Date.now())) return
 
       const decision = decideLetter({
         enabled: true,

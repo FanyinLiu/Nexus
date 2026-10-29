@@ -33,6 +33,8 @@ export const zhCNSettingsSimple = {
   'settings.simple.letter_count': '{count} 封信',
   'settings.simple.letter_unread_count': '{count} 封信 · {unread} 封未读',
   'settings.simple.letter_none': '还没有信。',
+  'settings.simple.bracket': '早晚的一句问候',
+  'settings.simple.bracket_hint': '你出现时，早上说声早，晚上问一句今天怎么样。一天各一次，忙的时候不来打扰。',
   'settings.simple.relationship': '你们怎么相处',
   'settings.simple.her_name': '她的名字',
   'settings.simple.your_name': '她怎么叫你',
