@@ -539,7 +539,8 @@ function isStructuredBracket(inner: string) {
   return /[：:]/u.test(inner)
 }
 
-function isKnownAsciiStageDirectionAlias(inner: string) {
+/** @internal Shared with the speech-text filter so TTS agrees with the avatar. */
+export function isKnownAsciiStageDirectionAlias(inner: string) {
   return ASCII_STAGE_DIRECTION_ALIAS_PATTERN.test(inner.trim())
 }
 
@@ -888,13 +889,14 @@ export class PerformanceTagStreamFilter {
 export { PerformanceTagStreamFilter as ExpressionOverrideStreamFilter }
 
 const STAGE_DIRECTION_OPEN_CHARS = '（【'
+const MAX_SUFFIX_LOOKAHEAD = 40
 
 /**
  * Streaming counterpart of the speech-side aside strip: removes complete
  * bracketed stage directions from the TTS delta stream and holds back a
- * trailing partial "（…" until it closes (or clearly isn't an aside), so the
- * voice never speaks an aside even mid-stream. Display keeps the asides; only
- * this speech stream drops them. Mirrors PerformanceTagStreamFilter.
+ * trailing partial "（…" / "(…" / "*…" until it closes (or clearly isn't an
+ * aside), so the voice never speaks an aside even mid-stream. Display keeps the
+ * asides; only this speech stream drops them. Mirrors PerformanceTagStreamFilter.
  */
 export class StageDirectionStreamFilter {
   private buffer = ''
@@ -929,29 +931,51 @@ export class StageDirectionStreamFilter {
       return out
     }
 
-    let lastOpenIdx = -1
-    for (const ch of STAGE_DIRECTION_OPEN_CHARS) {
-      lastOpenIdx = Math.max(lastOpenIdx, this.buffer.lastIndexOf(ch))
-    }
-    if (lastOpenIdx === -1) {
+    const holdIndex = this.findHoldIndex()
+    if (holdIndex === -1) {
       const out = this.buffer
       this.buffer = ''
       return out
     }
 
-    // A runaway open bracket (no close after more than a stage direction's worth
-    // of text) is almost certainly not an aside — release it so speech doesn't
-    // stall waiting for a close that never comes.
-    const suffix = this.buffer.slice(lastOpenIdx)
-    const MAX_SUFFIX_LOOKAHEAD = 40
+    // A runaway open delimiter (no close after more than a stage direction's
+    // worth of text) is almost certainly not an aside — release it so speech
+    // doesn't stall waiting for a close that never comes.
+    const suffix = this.buffer.slice(holdIndex)
     if (suffix.length >= MAX_SUFFIX_LOOKAHEAD) {
       const out = this.buffer
       this.buffer = ''
       return out
     }
 
-    const out = this.buffer.slice(0, lastOpenIdx)
+    const out = this.buffer.slice(0, holdIndex)
     this.buffer = suffix
     return out
+  }
+
+  // Full-width opens only ever open, so their last occurrence is enough. ASCII
+  // "(" needs a balance check (ordinary parsed parentheticals close normally),
+  // and "*" must use parity: lastIndexOf would otherwise treat the closing
+  // star of *smile* as a fresh opener and swallow the words after it.
+  private findHoldIndex() {
+    let holdIndex = -1
+    for (const ch of STAGE_DIRECTION_OPEN_CHARS) {
+      holdIndex = Math.max(holdIndex, this.buffer.lastIndexOf(ch))
+    }
+
+    const lastOpenParen = this.buffer.lastIndexOf('(')
+    if (lastOpenParen > this.buffer.lastIndexOf(')')) {
+      holdIndex = Math.max(holdIndex, lastOpenParen)
+    }
+
+    let starCount = 0
+    for (const ch of this.buffer) {
+      if (ch === '*') starCount += 1
+    }
+    if (starCount % 2 === 1) {
+      holdIndex = Math.max(holdIndex, this.buffer.lastIndexOf('*'))
+    }
+
+    return holdIndex
   }
 }

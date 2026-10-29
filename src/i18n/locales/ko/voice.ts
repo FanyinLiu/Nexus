@@ -189,6 +189,7 @@ export const koVoice = {
   'voice.audio.stream_mono_only': '현재 스트리밍 플레이어는 모노 PCM만 지원합니다.',
   'voice.audio.stream_playback_failed': '스트리밍 오디오 재생에 좀 문제가 있었어요.',
   'voice.tts.playback_failed_fallback': '음성 재생이 안 됐어요',
+  'voice.tts.code_block_placeholder': '코드는 화면에 띄워 뒀어',
   'voice.mic.no_audio_track': '녹음 스트림은 받았지만 사용 가능한 오디오 트랙을 찾지 못했습니다.',
   'voice.mic.open_failed_generic': '마이크가 안 열려요 — 시스템 권한, 장치 점유, 입력 장치 상태를 한번 봐주세요.',
   'voice.mic.permission_denied': '마이크 권한이 없어요. 시스템 설정에서 Nexus의 마이크 사용을 허용한 다음 다시 눌러 주세요.',
