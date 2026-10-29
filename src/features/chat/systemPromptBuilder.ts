@@ -336,7 +336,7 @@ async function buildSystemPrompt(
 
   const bridgedMessageSection = prompts.bridgedMessage({ userName: settings.userName })
 
-  // 当前关系状态：跟 narrative 同源（"我们关系到了什么程度"），放在 header 之前。
+  // 当前关系状态：跟 narrative 同源（"我们关系到了什么程度"），紧跟在人设与记忆之后。
   const relationshipSection = options.relationshipPromptText ?? ''
   // 升级里程碑：仅在刚跨越关系等级的那一轮注入，紧贴 relationship，让模型
   // 在读到"你们现在是什么关系"之后立刻看到"这一刻刚刚发生了什么变化"。
@@ -349,7 +349,7 @@ async function buildSystemPrompt(
   // 来信跟进：用户离开时收到的消息，下次对话温柔带一句"处理了吗"。
   // 一次性消费，与 onThisDay 同族（"值得被提起的时刻"）。
   const messageFollowUpSection = options.messageFollowUpPromptText ?? ''
-  // 当前情绪状态：紧贴 header 的 tone 指令，让模型先读到"她现在感觉如何"。
+  // 当前情绪状态：作为"用户此刻状态"的一部分，放在通用规则之前。
   const emotionSection = options.emotionPromptText ?? ''
   // 用户作息感知：紧贴 emotion，让模型自然对比 header 里的 currentDateTime
   // —— "现在是不是用户的活跃时段"是 rhythm 学习的核心价值。
@@ -387,6 +387,10 @@ async function buildSystemPrompt(
   const callbackSection = buildCallbackSection(options.pendingCallbacks)
 
   return [
+    // The header states only who is speaking and that the persona owns the
+    // voice. It goes FIRST so the persona text that follows is the later,
+    // stronger identity signal — the reverse order let generic wording win.
+    headerText,
     personaSection,
     relationshipTypeSection,
     personaMemorySection,
@@ -396,7 +400,6 @@ async function buildSystemPrompt(
     anniversarySection,
     onThisDaySection,
     messageFollowUpSection,
-    headerText,
     COHERENCE_GUIDANCE,
     REUNION_GUIDANCE,
     prompts.timeAwarenessGuidance,

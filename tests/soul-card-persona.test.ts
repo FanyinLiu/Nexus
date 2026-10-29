@@ -390,7 +390,9 @@ test('whitespace in a persona file is the text the model receives', async () => 
   const prompt = await systemPromptFor(settings)
 
   assert.equal(loaded.text, '   ')
-  assert.equal(prompt.startsWith('   '), true)
+  // The header now opens the prompt; the whitespace-only persona text is
+  // still passed through verbatim as the next section.
+  assert.equal(prompt.split('\n\n')[1], '   ')
   assert.doesNotMatch(prompt, /ENGLISH-DEFAULT-PROMPT/)
 })
 
