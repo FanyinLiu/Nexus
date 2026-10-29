@@ -227,6 +227,12 @@ export interface MemoryRecallContext {
   vectorSearchAvailable: boolean
   /** IDs of long-term memories that were selected for prompt injection (for recall feedback). */
   recalledLongTermIds?: string[]
+  /**
+   * How sure recall is that a stored memory is about the query (embedding
+   * models with calibrated thresholds only). 'none' means long-term recall
+   * was suppressed; 'low' means the memories may not fit.
+   */
+  recallConfidence?: 'high' | 'low' | 'none'
 }
 
 // ── Semantic Clustering ───────────────────────────────────────────────────

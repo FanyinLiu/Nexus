@@ -35,9 +35,14 @@ export function buildHotTierMemorySections(
     budget -= line.length
   }
 
-  const longTermSection = longTermLines.length
-    ? `Things you know about this person from your time together. When one naturally fits the moment, let it shape what you say — the way a memory surfaces on its own, not cited or announced. If nothing connects, they stay quiet:\n${longTermLines.join('\n')}`
+  const lowConfidenceNote = memoryContext.recallConfidence === 'low'
+    ? ' None of these clearly matches what they just said. If they are asking about something not written here, it is fine to say you don\'t remember or to ask, rather than stretching one of these to fit.'
     : ''
+  const longTermSection = longTermLines.length
+    ? `Things you know about this person from your time together. When one naturally fits the moment, let it shape what you say — the way a memory surfaces on its own, not cited or announced. If nothing connects, they stay quiet.${lowConfidenceNote}\n${longTermLines.join('\n')}`
+    : memoryContext.recallConfidence === 'none'
+      ? 'Nothing you remember about this person relates to what they just said. If they ask you to recall something about themselves, say honestly that you don\'t remember or haven\'t heard it yet — never invent it.'
+      : ''
 
   const dailySection = dailyLines.length
     ? `Recent days together — still fresh. You can pick a thread back up if it naturally connects to now, the way you would with someone you see every day. If they have moved on, so have you:\n${dailyLines.join('\n')}`

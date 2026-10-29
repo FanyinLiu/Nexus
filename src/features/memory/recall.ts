@@ -13,6 +13,7 @@ import {
   rankMemories,
 } from './memory.ts'
 import { scoreRecallKeywordOverlap } from './recallTokens.ts'
+import { classifyRecallConfidence } from './recallConfidence.ts'
 import {
   cosineSimilarity,
   embedMemorySearchTextWithModel,
@@ -323,7 +324,12 @@ export function reindexMemoriesForEmbeddingModel<T extends { id: string; content
   return indexMemoriesToVectorStore(items, active, layer)
 }
 
-type ScoreMapEntry = { vectorScore: number; bm25Score: number }
+/**
+ * vectorScore feeds ranking (the main-process hybrid search normalizes it
+ * by the best hit); rawVectorScore is always the plain cosine, which is what
+ * the low-confidence rule and the prompt's confidence read.
+ */
+type ScoreMapEntry = { vectorScore: number; bm25Score: number; rawVectorScore?: number }
 
 async function scoreLocally<T extends { id: string; content: string }>(
   items: T[],
@@ -386,7 +392,11 @@ async function buildScoreMapForEmbedding<T extends { id: string; content: string
           staleKeyword.set(r.id, r.keywordScore)
           continue
         }
-        scoreMap.set(r.id, { vectorScore: r.vectorScore, bm25Score: r.keywordScore })
+        scoreMap.set(r.id, {
+          vectorScore: r.vectorScore,
+          bm25Score: r.keywordScore,
+          rawVectorScore: typeof r.rawVectorScore === 'number' ? r.rawVectorScore : r.vectorScore,
+        })
       }
 
       // Fill missing items with local embeddings (not yet indexed in main
@@ -446,19 +456,26 @@ function buildSemanticMatches(
   longTerm: Array<ScoredItem<MemoryItem>>,
   daily: Array<ScoredItem<DailyMemoryEntry>>,
   limit: number,
+  rawOf: (id: string) => number = () => Number.NaN,
 ) {
+  // The confidence the prompt shows is the raw cosine: the hybrid search's
+  // vectorScore is normalized by the best hit, so it always read 1.00.
+  const confidence = (id: string, vectorScore: number) => {
+    const raw = rawOf(id)
+    return Number.isFinite(raw) ? raw : vectorScore
+  }
   const combined: MemorySemanticMatch[] = [
     ...longTerm.map(({ item, vectorScore }) => ({
       id: item.id,
       layer: 'long_term' as const,
       content: item.content,
-      score: vectorScore,
+      score: confidence(item.id, vectorScore),
     })),
     ...daily.map(({ item, vectorScore }) => ({
       id: item.id,
       layer: 'daily' as const,
       content: item.content,
-      score: vectorScore,
+      score: confidence(item.id, vectorScore),
     })),
   ]
 
@@ -564,15 +581,30 @@ export async function buildMemoryRecallContext({
     void indexMemoriesToVectorStore(longTermCandidates, usedEmbeddingModel, 'long_term')
     void indexMemoriesToVectorStore(dailyCandidates, usedEmbeddingModel, 'daily')
 
-    const selectedLongTerm = scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)
+    const rawOf = (id: string) => {
+      const entry = scoreMap.get(id)
+      return entry?.rawVectorScore ?? entry?.vectorScore ?? 0
+    }
+    const recallConfidence = longTermCandidates.length
+      ? classifyRecallConfidence(longTermCandidates.map((item) => rawOf(item.id)), usedEmbeddingModel)
+      : undefined
+    const selectedLongTerm = recallConfidence === 'none'
+      ? []
+      : scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)
     updatePrimingFromSelection(selectedLongTerm)
     return {
+      ...(recallConfidence ? { recallConfidence } : {}),
       longTerm: selectedLongTerm,
       daily: uniqueById([
         ...scoredDaily.slice(0, dailyLimit).map(({ item }) => item),
         ...recentDaily.slice(0, 2),
       ]).slice(0, dailyLimit),
-      semantic: buildSemanticMatches(scoredLongTerm, scoredDaily, semanticLimit),
+      semantic: buildSemanticMatches(
+        recallConfidence === 'none' ? [] : scoredLongTerm,
+        scoredDaily,
+        semanticLimit,
+        rawOf,
+      ),
       searchModeUsed: searchMode,
       vectorSearchAvailable: true,
       recalledLongTermIds: selectedLongTerm.map((m) => m.id),

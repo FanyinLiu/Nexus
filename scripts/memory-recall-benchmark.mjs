@@ -11,8 +11,8 @@
  *   --skip-pipeline                                       embedding-only metrics
  *
  * Dataset: tests/fixtures/memory-recall-zh/dataset.json (fictional user,
- * 40 memories, 45 queries: paraphrase / state change / English / mixed /
- * no-answer). Three measurements per model:
+ * 40 memories, 61 queries: paraphrase / state change / English / mixed /
+ * 20 no-answer, 9 of them confusable). Three measurements per model:
  *   1. embedding-only: cosine over all 40 memories (Recall@1/@3, MRR);
  *   2. pipeline, renderer path: buildMemoryRecallContext() with the default
  *      settings (hybrid, 4 long-term results) and no main-process store;
@@ -110,7 +110,20 @@ function metrics(rows) {
   const none = rows.filter((row) => !row.query.relevant.length);
   const maxNoneScore = Math.max(...none.map((row) => row.topScore), -Infinity);
   const separable = answerable.filter((row) => row.topScore > maxNoneScore).length;
+  // Low-confidence rule (pipeline rows only carry `confidence`). Miss queries
+  // should come back empty ('none') or at least flagged ('low'); answerable
+  // ones should never be suppressed.
+  const withConfidence = rows.some((row) => row.confidence !== void 0);
+  const count = (list, ...levels) => list.filter((row) => levels.includes(row.confidence)).length;
+  const rejection = withConfidence ? {
+    missSuppressed: `${count(none, "none")}/${none.length}`,
+    missSuppressedOrFlagged: `${count(none, "none", "low")}/${none.length}`,
+    confusableMissSuppressedOrFlagged: `${count(none.filter((row) => row.query.confusable), "none", "low")}/${none.filter((row) => row.query.confusable).length}`,
+    answerableSuppressed: `${count(answerable, "none")}/${answerable.length}`,
+    answerableFlaggedLow: `${count(answerable, "low")}/${answerable.length}`
+  } : void 0;
   return {
+    ...rejection ? { rejection } : {},
     n: answerable.length,
     recallAt1: r1 / answerable.length,
     recallAt3: r3 / answerable.length,
@@ -186,7 +199,7 @@ async function pipeline(model, mainProcess) {
       retentionDays: 7
     });
     const top = context.semantic?.[0]?.score ?? 0;
-    rows.push({ query, ranking: context.longTerm.map((item) => item.id), topScore: top });
+    rows.push({ query, ranking: context.longTerm.map((item) => item.id), topScore: top, confidence: context.recallConfidence ?? null });
   }
   installDesktopPet(false);
   return { metrics: metrics(rows), rows };

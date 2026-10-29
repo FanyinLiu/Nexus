@@ -604,6 +604,11 @@ export async function searchHybrid(queryEmbedding, queryText, options = {}) {
       content: r.content,
       layer: r.layer,
       vectorScore: normVec,
+      // Raw cosine, before the max-normalization above. The renderer uses
+      // it for the low-confidence rejection rule and the confidence the
+      // model sees: after normalization the top hit is always 1.0, even
+      // when nothing in the store is about the query.
+      rawVectorScore: r.score,
       keywordScore: 0,
       score: 0,
     })
@@ -625,6 +630,7 @@ export async function searchHybrid(queryEmbedding, queryText, options = {}) {
         content: r.content,
         layer: r.layer,
         vectorScore: 0,
+        rawVectorScore: 0,
         keywordScore: normKw,
         score: 0,
         ...(vectorStale ? { vectorStale: true } : {}),
