@@ -48,6 +48,8 @@ function draft(paused: boolean): AppSettings {
     screenContextEnabled: false,
     proactiveAgendaEnabled: false,
     proactiveFrequency: 'normal',
+    proactiveLetterEnabled: true,
+    proactiveLetterChoice: 'auto',
   } as unknown as AppSettings
 }
 

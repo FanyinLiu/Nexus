@@ -610,3 +610,67 @@
   overflow-wrap: anywhere;
   white-space: normal;
 }
+
+/* Sunday-letter notice above the chat history. */
+.chat-sheet-v2__letter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--chat-sheet-v2-amber) 42%, var(--chat-sheet-v2-line));
+  border-radius: var(--nx-radius-card, 16px);
+  background: color-mix(in srgb, var(--chat-sheet-v2-amber) 12%, var(--chat-sheet-v2-surface));
+  color: var(--chat-sheet-v2-ink);
+}
+
+.chat-sheet-v2__letter-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.chat-sheet-v2__letter-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.chat-sheet-v2__letter-title {
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.chat-sheet-v2__letter-date {
+  color: var(--chat-sheet-v2-muted);
+  font-size: 12px;
+}
+
+.chat-sheet-v2__letter-preview {
+  margin: 0;
+  overflow: hidden;
+  color: var(--chat-sheet-v2-ink-strong);
+  font-size: 13px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-sheet-v2__letter-open {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--nx-radius-control, 999px);
+  background: var(--chat-sheet-v2-lavender);
+  color: var(--chat-sheet-v2-on-accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chat-sheet-v2__letter-open:focus-visible {
+  outline: 2px solid var(--chat-sheet-v2-focus);
+  outline-offset: 2px;
+}
