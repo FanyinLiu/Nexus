@@ -405,6 +405,7 @@ export function useAppController() {
     settings,
     messages: chat.messages,
     memories: memory.memories,
+    dailyMemories: memory.dailyMemories,
     panelCollapsed,
     enabled: backgroundRuntimeOwner,
     runtimeOwner: backgroundRuntimeOwner,
