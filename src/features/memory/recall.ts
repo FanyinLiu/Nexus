@@ -13,7 +13,7 @@ import {
   rankMemories,
 } from './memory.ts'
 import { scoreRecallKeywordOverlap } from './recallTokens.ts'
-import { classifyRecallConfidence } from './recallConfidence.ts'
+import { classifyRecallConfidence, getRecallConfidenceThresholds } from './recallConfidence.ts'
 import {
   cosineSimilarity,
   embedMemorySearchTextWithModel,
@@ -583,11 +583,28 @@ export async function buildMemoryRecallContext({
 
     const rawOf = (id: string) => {
       const entry = scoreMap.get(id)
-      return entry?.rawVectorScore ?? entry?.vectorScore ?? 0
+      // A missing score is unknown, not zero: zero would look like a real
+      // (bad) neighbour and could push an answerable memory into rejection.
+      return entry?.rawVectorScore ?? entry?.vectorScore ?? Number.NaN
     }
-    const recallConfidence = longTermCandidates.length
-      ? classifyRecallConfidence(longTermCandidates.map((item) => rawOf(item.id)), usedEmbeddingModel)
-      : undefined
+    // Duplicate copies of one memory would flatten the top-two margin and
+    // make a real fact look like a field of unrelated neighbours. Confidence
+    // reads distinct contents; the selection below still keeps every copy.
+    const contentScores = new Map<string, number>()
+    for (const item of longTermCandidates) {
+      const content = item.content.trim()
+      const score = rawOf(item.id)
+      const previous = contentScores.get(content)
+      if (previous === undefined || (!Number.isFinite(previous) && Number.isFinite(score))) {
+        contentScores.set(content, score)
+      }
+    }
+    const confidenceScores = [...contentScores.values()]
+    const recallConfidence = confidenceScores.length
+      ? classifyRecallConfidence(confidenceScores, usedEmbeddingModel)
+      : getRecallConfidenceThresholds(usedEmbeddingModel)
+        ? 'none'
+        : undefined
     const selectedLongTerm = recallConfidence === 'none'
       ? []
       : scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)

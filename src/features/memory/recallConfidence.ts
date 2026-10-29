@@ -16,9 +16,14 @@ import { QWEN3_MEMORY_EMBEDDING_MODEL_ID } from './ollamaEmbedding.ts'
  *   low  -> borderline: keep them, but tell the model they may not fit
  *           and that "I don't remember" is an acceptable answer.
  *
+ * When the margin cannot be trusted — a single memory, or duplicate copies
+ * of one memory — the rule stops at 'low'. Suppressing there would silently
+ * forget a fact for no better reason than a missing second opinion.
+ *
  * Thresholds are per embedding model (cosine ranges differ by model) and
- * were picked on tests/fixtures/memory-recall-zh (41 answerable, 20 with
- * no answer). A model without calibrated thresholds is never rejected.
+ * were picked on the tuning split tests/fixtures/memory-recall-zh/dataset.json
+ * (41 answerable, 20 with no answer). The held-out split is never used to
+ * pick them. A model without calibrated thresholds is never rejected.
  */
 
 export type MemoryRecallConfidence = 'high' | 'low' | 'none'
@@ -33,13 +38,25 @@ export function getRecallConfidenceThresholds(model: string): Thresholds | null 
   return THRESHOLDS[model] ?? null
 }
 
-export function classifyRecallConfidence(rawCosines: number[], model: string): MemoryRecallConfidence | undefined {
+/**
+ * Classify one recall by the raw cosine of every long-term memory. Duplicate
+ * copies of the same memory should already be removed by the caller; exact
+ * ties that remain are treated as one match rather than a flat field.
+ */
+export function classifyRecallConfidence(rawCosines: readonly number[], model: string): MemoryRecallConfidence | undefined {
   const thresholds = getRecallConfidenceThresholds(model)
   if (!thresholds) return undefined
   const sorted = rawCosines.filter((value) => Number.isFinite(value)).sort((a, b) => b - a)
   if (!sorted.length) return undefined
-  const top = sorted[0]
-  const margin = top - (sorted[1] ?? 0)
+  const top = sorted[0]!
+  const runnerUp = sorted[1]
+  // No runner-up: no margin evidence. A weak single memory is flagged, never
+  // suppressed — it may be the only place that fact lives.
+  if (runnerUp === undefined) return top < thresholds.lowBelow ? 'low' : 'high'
+  const margin = top - runnerUp
+  // Exact ties are duplicate copies (or the same score twice). Treat them as
+  // one match: a duplicate must not make a real fact look like a flat field.
+  if (margin === 0) return top < thresholds.lowBelow ? 'low' : 'high'
   if (top < thresholds.rejectBelow && margin < thresholds.rejectMargin) return 'none'
   if (top < thresholds.lowBelow && margin < thresholds.lowMargin) return 'low'
   return 'high'
