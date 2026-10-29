@@ -2,12 +2,15 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  clearBracketEveningTopic,
   loadAutonomyGoals,
   loadAwayLastFiredMs,
   loadBracketState,
   normalizeAutonomyGoals,
   normalizeAwayLastFiredMs,
   normalizeBracketState,
+  recordBracketEveningPrompt,
+  recordBracketEveningTopic,
   recordBracketFire,
   saveAutonomyGoals,
   saveAwayLastFiredMs,
@@ -168,6 +171,36 @@ test('loadBracketState compacts malformed persisted scheduler state', () => {
     lastEveningFiredMs: Date.parse('2026-06-04T21:00:00Z'),
   })
   assert.deepEqual(JSON.parse(storage.getItem(PROACTIVE_BRACKET_STATE_STORAGE_KEY) ?? '{}'), state)
+})
+
+test('bracket state keeps the evening prompt and clears the tomorrow topic', () => {
+  const prompted = recordBracketEveningPrompt({
+    lastMorningFiredMs: null,
+    lastEveningFiredMs: 1000,
+    eveningTopic: 'old topic',
+    eveningTopicAtMs: 900,
+  }, 2000)
+  assert.equal(prompted.eveningPromptAtMs, 2000)
+  assert.equal('eveningTopic' in prompted, false)
+
+  const withTopic = recordBracketEveningTopic(prompted, '  今天要早起开会  ', 3000)
+  assert.equal(withTopic.eveningTopic, '今天要早起开会')
+  assert.equal(withTopic.eveningTopicAtMs, 3000)
+
+  const cleared = clearBracketEveningTopic(withTopic)
+  assert.equal('eveningPromptAtMs' in cleared, false)
+  assert.equal('eveningTopic' in cleared, false)
+  assert.equal('eveningTopicAtMs' in cleared, false)
+  assert.equal(cleared.lastEveningFiredMs, 1000)
+})
+
+test('bracket state drops a topic without a capture timestamp', () => {
+  assert.deepEqual(normalizeBracketState({
+    eveningTopic: '今天要早起开会',
+  }), {
+    lastMorningFiredMs: null,
+    lastEveningFiredMs: null,
+  })
 })
 
 test('away last-fired storage accepts finite timestamps and compacts bad values', () => {

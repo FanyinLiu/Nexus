@@ -27,6 +27,8 @@ export const zhCNSettingsSimple = {
   'settings.simple.quiet_split': '两套时间不一样，在高级里分开改。',
   'settings.simple.away': '离开一会儿说一声',
   'settings.simple.letter': '每周一封信',
+  'settings.simple.bracket': '早晚的一句问候',
+  'settings.simple.bracket_hint': '你出现时，早上说声早，晚上问一句今天怎么样。一天各一次，忙的时候不来打扰。',
   'settings.simple.relationship': '你们怎么相处',
   'settings.simple.her_name': '她的名字',
   'settings.simple.your_name': '她怎么叫你',

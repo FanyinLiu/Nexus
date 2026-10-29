@@ -262,6 +262,25 @@ export function selectAgendaItem(
   ))[0] ?? null
 }
 
+/**
+ * True when the agenda already has an open due on either channel.
+ * Higher-priority opens (event follow-ups, message follow-ups) read this
+ * before a letter or bracket so the same open never stacks.
+ */
+export function hasDueAgendaItem(
+  memories: readonly MemoryItem[],
+  nowMs: number,
+): boolean {
+  const state = projectAgenda({
+    memories,
+    followUps: loadMessageFollowUps(),
+    previous: loadProactiveAgenda(),
+    nowMs,
+  })
+  return selectAgendaItem(state.items, nowMs, 'return') != null
+    || selectAgendaItem(state.items, nowMs, 'next_turn') != null
+}
+
 export function markAgendaFired(
   state: ProactiveAgendaState,
   itemId: string,

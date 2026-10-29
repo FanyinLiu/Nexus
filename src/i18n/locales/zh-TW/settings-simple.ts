@@ -29,6 +29,8 @@ export const zhTWSettingsSimple = {
   'settings.simple.quiet_split': '兩套時間不一樣，在進階裡分開改。',
   'settings.simple.away': '離開一會兒說一聲',
   'settings.simple.letter': '每週一封信',
+  'settings.simple.bracket': '早晚的一句問候',
+  'settings.simple.bracket_hint': '你出現時，早上說聲早，晚上問一句今天怎麼樣。一天各一次，忙的時候不來打擾。',
   'settings.simple.relationship': '你們怎麼相處',
   'settings.simple.her_name': '她的名字',
   'settings.simple.your_name': '她怎麼叫你',

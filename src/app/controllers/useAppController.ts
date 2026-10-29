@@ -401,15 +401,6 @@ export function useAppController() {
     messagesRef.current = chat.messages
   }, [chat.messages])
 
-  useBackgroundSchedulers({
-    settings,
-    messages: chat.messages,
-    memories: memory.memories,
-    panelCollapsed,
-    enabled: backgroundRuntimeOwner,
-    runtimeOwner: backgroundRuntimeOwner,
-  })
-
   useEffect(() => {
     voiceStateRef.current = voice.voiceState
   }, [voice.voiceState])
@@ -506,6 +497,18 @@ export function useAppController() {
         stageDirection: `(autonomy:idle_motion:${gestureName})`,
       }])
     },
+  })
+
+  useBackgroundSchedulers({
+    settings,
+    messages: chat.messages,
+    memories: memory.memories,
+    panelCollapsed,
+    enabled: backgroundRuntimeOwner,
+    runtimeOwner: backgroundRuntimeOwner,
+    pushCompanionNotice: chat.pushCompanionNotice,
+    busyRef,
+    focusState: autonomy.focusAwareness.focusState,
   })
 
   // Install autonomy's emotion/relationship/rhythm prompt getters into the refs

@@ -5,6 +5,10 @@
  * Reading a draft never writes. A pace is applied only when the person
  * picks one. Anything that does not match a pace stays custom.
  *
+ * The daily morning/evening bracket is an independent ritual toggle: it
+ * does not make a saved pace read as custom, and Quiet can still turn it
+ * off as part of a quieter default.
+ *
  * Often turns the autonomy tick on. Idle ticks do not spend the daily
  * model budget, so that pace can stay on for the whole day.
  */
@@ -48,10 +52,9 @@ export function inferCompanionInitiative(raw: object): CompanionInitiative {
   const presence = flag(source, 'proactivePresenceEnabled', false)
   const interval = minutes(source, SOMETIMES_INTERVAL_MINUTES)
   const away = flag(source, 'proactiveAwayNotificationsEnabled', false)
-  const bracket = flag(source, 'proactiveBracketEnabled', false)
   const letter = flag(source, 'proactiveLetterEnabled', false)
 
-  if (!autonomyEnabled && !presence && !away && !bracket && !letter) return 'quiet'
+  if (!autonomyEnabled && !presence && !away && !letter) return 'quiet'
 
   if (!autonomyEnabled && presence && interval === SOMETIMES_INTERVAL_MINUTES && !away && letter) {
     return 'sometimes'
@@ -90,6 +93,7 @@ export function companionInitiativePatch(
       proactivePresenceEnabled: true,
       proactivePresenceIntervalMinutes: SOMETIMES_INTERVAL_MINUTES,
       proactiveAwayNotificationsEnabled: false,
+      proactiveBracketEnabled: true,
       proactiveLetterEnabled: true,
     }
   }
@@ -98,6 +102,7 @@ export function companionInitiativePatch(
     proactivePresenceEnabled: true,
     proactivePresenceIntervalMinutes: OFTEN_INTERVAL_MINUTES,
     proactiveAwayNotificationsEnabled: true,
+    proactiveBracketEnabled: true,
     proactiveLetterEnabled: true,
     proactiveFrequency: 'normal',
   }

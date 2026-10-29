@@ -29,6 +29,8 @@ export const jaSettingsSimple = {
   'settings.simple.quiet_split': '二つの静かな時間が違います。詳細で別々に変えてください。',
   'settings.simple.away': '席を外したら一声',
   'settings.simple.letter': '週に一通の手紙',
+  'settings.simple.bracket': '朝と夜のひとこと',
+  'settings.simple.bracket_hint': '最初に会ったときに朝のあいさつ、夜に一度だけ今日の調子を聞きます。それぞれ一日一回で、忙しいときは黙っています。',
   'settings.simple.relationship': 'どう付き合うか',
   'settings.simple.her_name': '彼女の名前',
   'settings.simple.your_name': 'あなたの呼び方',

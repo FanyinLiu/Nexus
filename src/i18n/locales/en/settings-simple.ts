@@ -29,6 +29,8 @@ export const enSettingsSimple = {
   'settings.simple.quiet_split': 'The two quiet times differ. Change them separately in Advanced.',
   'settings.simple.away': 'Say something if you have been away',
   'settings.simple.letter': 'A letter once a week',
+  'settings.simple.bracket': 'A hello at each end of the day',
+  'settings.simple.bracket_hint': 'A short good morning when you first show up, and one gentle check-in at night. Once each a day, and she stays quiet when you are busy.',
   'settings.simple.relationship': 'How you get along',
   'settings.simple.her_name': 'Her name',
   'settings.simple.your_name': 'What she calls you',

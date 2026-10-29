@@ -29,6 +29,8 @@ export const koSettingsSimple = {
   'settings.simple.quiet_split': '두 조용한 시간이 다릅니다. 고급에서 따로 바꾸세요.',
   'settings.simple.away': '자리를 비우면 한 마디',
   'settings.simple.letter': '일주일에 편지 한 통',
+  'settings.simple.bracket': '아침과 저녁의 한마디',
+  'settings.simple.bracket_hint': '처음 나타났을 때 짧은 아침 인사, 저녁에 한 번 오늘 어땠는지 물어봅니다. 하루에 각각 한 번이고, 바쁠 때는 조용히 있습니다.',
   'settings.simple.relationship': '어떻게 지낼지',
   'settings.simple.her_name': '그녀의 이름',
   'settings.simple.your_name': '당신을 부르는 말',

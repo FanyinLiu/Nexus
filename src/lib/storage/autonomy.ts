@@ -13,6 +13,12 @@ import { hasChanged, normalizeNullableString } from '../normalize.ts'
 export type BracketState = {
   lastMorningFiredMs: number | null
   lastEveningFiredMs: number | null
+  /** Last evening prompt that may collect a tomorrow plan. */
+  eveningPromptAtMs?: number
+  /** Short "tomorrow" topic captured after that prompt. */
+  eveningTopic?: string
+  /** When that topic was captured, so a stale quote is not reused. */
+  eveningTopicAtMs?: number
   /** Indices of the last questions picked, for back-to-back dedup. */
   lastPicks?: {
     morning?: number | null
@@ -155,6 +161,14 @@ export function normalizeBracketState(raw: unknown): BracketState {
     lastMorningFiredMs: normalizeTimestamp(raw.lastMorningFiredMs),
     lastEveningFiredMs: normalizeTimestamp(raw.lastEveningFiredMs),
   }
+  const promptAt = normalizeTimestamp(raw.eveningPromptAtMs)
+  if (promptAt != null) state.eveningPromptAtMs = promptAt
+  const topic = normalizeOptionalString(raw.eveningTopic)
+  const topicAt = normalizeTimestamp(raw.eveningTopicAtMs)
+  if (topic && topicAt != null) {
+    state.eveningTopic = topic.slice(0, 120)
+    state.eveningTopicAtMs = topicAt
+  }
   const picks = normalizeLastPicks(raw.lastPicks)
   if (picks) state.lastPicks = picks
   return state
@@ -175,6 +189,42 @@ export function recordBracketFire(state: BracketState, bracket: 'morning' | 'eve
   return bracket === 'morning'
     ? { ...normalized, lastMorningFiredMs: firedAt }
     : { ...normalized, lastEveningFiredMs: firedAt }
+}
+
+/** Remember the evening prompt so a later user reply can be captured. */
+export function recordBracketEveningPrompt(state: BracketState, nowMs: number): BracketState {
+  const normalized = normalizeBracketState(state)
+  const firedAt = normalizeTimestamp(nowMs) ?? Date.now()
+  const next: BracketState = { ...normalized, eveningPromptAtMs: firedAt }
+  delete next.eveningTopic
+  delete next.eveningTopicAtMs
+  return next
+}
+
+/** Store the short tomorrow topic the user mentioned after the evening prompt. */
+export function recordBracketEveningTopic(
+  state: BracketState,
+  topic: string,
+  nowMs: number,
+): BracketState {
+  const normalized = normalizeBracketState(state)
+  const text = topic.trim()
+  if (!text) return normalized
+  const at = normalizeTimestamp(nowMs) ?? Date.now()
+  return {
+    ...normalized,
+    eveningTopic: text.slice(0, 120),
+    eveningTopicAtMs: at,
+  }
+}
+
+/** The morning consumed the quote; clear it so it cannot repeat tomorrow. */
+export function clearBracketEveningTopic(state: BracketState): BracketState {
+  const next = { ...normalizeBracketState(state) }
+  delete next.eveningPromptAtMs
+  delete next.eveningTopic
+  delete next.eveningTopicAtMs
+  return next
 }
 
 export function normalizeAwayLastFiredMs(raw: unknown): number | null {
