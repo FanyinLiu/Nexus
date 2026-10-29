@@ -13,6 +13,7 @@
 
 import {
   AMBIENT_PRESENCE_STORAGE_KEY,
+  DREAM_DIARY_STORAGE_KEY,
   flushPendingStorageWrites,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
@@ -26,6 +27,9 @@ export const MEMORY_LOCAL_STORAGE_DROP_KEYS: readonly string[] = Object.freeze([
   MEMORY_STORAGE_KEY,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
+  // Dream rows are derived from memories, so clearing memory must take them
+  // too rather than leaving transformed excerpts behind.
+  DREAM_DIARY_STORAGE_KEY,
   // Presence greetings quote memory text, so the LevelDB compaction must drop
   // them too; otherwise the migrated memory survives in a different key.
   AMBIENT_PRESENCE_STORAGE_KEY,

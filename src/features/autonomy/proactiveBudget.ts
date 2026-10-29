@@ -8,6 +8,7 @@
 import { isSameLocalDay } from '../../lib/localDate.ts'
 import type { FocusState } from '../../types/autonomy.ts'
 import type { ProactiveFrequencyPreset } from '../../types/proactive.ts'
+import type { ChatMessage } from '../../types/chat.ts'
 
 export const PROACTIVE_HARD_CAP = 3
 export const PROACTIVE_MIN_GAP_MS = 90 * 60 * 1000
@@ -84,6 +85,22 @@ export function isLikelyFullscreenSurface(title?: string | null, appName?: strin
   const text = `${title ?? ''} ${appName ?? ''}`.trim()
   if (!text) return false
   return /fullscreen|full screen|全屏|全螢幕|フルスクリーン|전체\s*화면/iu.test(text)
+}
+
+/**
+ * True when the user or companion said anything within the window. Proactive
+ * schedulers use this so an open does not talk over an active conversation.
+ */
+export function hasRecentChatActivity(
+  messages: readonly ChatMessage[],
+  nowMs: number,
+  windowMs = 5 * 60_000,
+): boolean {
+  return messages.some((message) => {
+    if (message.role !== 'user' && message.role !== 'assistant') return false
+    const at = Date.parse(message.createdAt)
+    return Number.isFinite(at) && nowMs - at < windowMs
+  })
 }
 
 export function evaluateProactiveEtiquette(input: ProactiveEtiquetteInput): ProactiveEtiquetteDecision {

@@ -322,5 +322,6 @@ export const jaSettingsMemory = {
   'memory.timeline.this_week': '今週',
   'memory.timeline.memory_badge': '長期記憶',
   'memory.timeline.diary_badge': '日記',
+  'memory.timeline.dream_badge': '彼女の夢',
   'memory.timeline.close': '閉じる',
 } as const satisfies Partial<TranslationDictionary>

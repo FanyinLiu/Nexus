@@ -129,6 +129,7 @@ export const zhCNCore = {
   'memory_panel.clear_diary': '清空今日日志',
   'memory_panel.confirm_delete_memory': '确认删除这条记忆？',
   'memory_panel.confirm_delete_diary': '确认删除这条日志？',
+  'memory_panel.confirm_delete_dream': '确认删除这个梦？',
   'memory_panel.empty_memory_content': '记忆内容不能为空。',
   'memory_panel.empty_diary_content': '日志内容不能为空。',
   'memory_panel.edit_memory_failed': '记忆没能保存，稍后再试试吧。',

@@ -11,7 +11,7 @@
  */
 
 import { LETTER_STORE_STORAGE_KEY, readJson, writeJson } from '../../lib/storage/core.ts'
-import { isValidIsoTimestamp } from '../../lib/localDate.ts'
+import { isLocalDayKey, isValidIsoTimestamp } from '../../lib/localDate.ts'
 import { normalizeText } from '../../lib/normalize.ts'
 import type { LetterContent } from './letterPromptBuilder.ts'
 import type { UiLanguage } from '../../types'
@@ -48,18 +48,6 @@ const LETTER_CONTENT_KEYS: ReadonlyArray<keyof LetterContent> = [
   'experiment',
   'closing',
 ]
-
-function isValidLocalDate(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (!match) return false
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return date.getUTCFullYear() === year
-    && date.getUTCMonth() === month - 1
-    && date.getUTCDate() === day
-}
 
 function normalizeLetterContent(value: unknown): LetterContent | null {
   if (!value || typeof value !== 'object') return null
@@ -112,7 +100,7 @@ function normalizeSavedLetter(value: unknown): SavedLetter | null {
   const createdAt = normalizeText(obj.createdAt)
   const personaId = normalizeText(obj.personaId)
   const content = normalizeLetterContent(obj.content)
-  if (!id || !letterDate || !isValidLocalDate(letterDate)) return null
+  if (!id || !letterDate || !isLocalDayKey(letterDate)) return null
   if (!createdAt || !isValidIsoTimestamp(createdAt)) return null
   if (!personaId || !content) return null
   const uiLanguage = VALID_UI_LANGUAGES.has(obj.uiLanguage as UiLanguage)

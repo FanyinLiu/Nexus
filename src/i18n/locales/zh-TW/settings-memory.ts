@@ -322,5 +322,6 @@ export const zhTWSettingsMemory = {
   'memory.timeline.this_week': '這週',
   'memory.timeline.memory_badge': '長期記憶',
   'memory.timeline.diary_badge': '日記',
+  'memory.timeline.dream_badge': '她的夢',
   'memory.timeline.close': '關閉',
 } as const satisfies Partial<TranslationDictionary>

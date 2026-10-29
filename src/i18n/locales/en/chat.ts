@@ -163,4 +163,5 @@ export const enChat = {
   'chat.failover.no_api_key': 'Please fill in the API key for the current text provider in settings first.',
   'chat.letter.card_title': 'She wrote you a letter',
   'chat.letter.card_open': 'Read it',
+  'chat.dream.line': 'I dreamed last night that {dream}',
 } as const satisfies Partial<TranslationDictionary>

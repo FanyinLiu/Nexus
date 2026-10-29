@@ -320,5 +320,6 @@ export const zhCNSettingsMemory = {
   'memory.timeline.this_week': '这周',
   'memory.timeline.memory_badge': '长期记忆',
   'memory.timeline.diary_badge': '日记',
+  'memory.timeline.dream_badge': '她的梦',
   'memory.timeline.close': '关闭',
 } as const satisfies Record<string, string>

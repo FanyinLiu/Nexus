@@ -11,6 +11,7 @@ import { buildRememberedCardView } from '../../features/memory/memoryTimeline.ts
 import type { SavedLetter } from '../../features/letter/letterStore.ts'
 import { formatLetterDate, isLetterUnread } from '../../features/letter/letterView.ts'
 import { useLetters } from '../../hooks/useLetters.ts'
+import { useDreams } from '../../hooks/useDreams.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -56,6 +57,7 @@ export function MemorySimplePage({
   const [letterShelfOpen, setLetterShelfOpen] = useState(false)
   const [openLetter, setOpenLetter] = useState<SavedLetter | null>(null)
   const { letters, unreadCount, markRead } = useLetters()
+  const { dreams } = useDreams()
   const remembered = useMemo(
     () => buildRememberedCardView({
       memories,
@@ -81,6 +83,12 @@ export function MemorySimplePage({
     : unreadCount > 0
       ? ti('settings.simple.letter_unread_count', { count: letters.length, unread: unreadCount })
       : ti('settings.simple.letter_count', { count: letters.length })
+
+  const dreamHint = draft.memoryPaused
+    ? ti('settings.simple.dream_diary_paused')
+    : dreams.length > 0
+      ? ti('settings.simple.dream_diary_count', { count: dreams.length })
+      : ti('settings.simple.dream_diary_hint')
 
   function openSavedLetter(letter: SavedLetter) {
     markRead(letter.id)
@@ -127,6 +135,32 @@ export function MemorySimplePage({
               </li>
             ))}
           </ul>
+        ) : null}
+        <SimpleRow
+          icon="book"
+          title={ti('settings.simple.dream_diary')}
+          hint={dreamHint}
+        >
+          <SettingsV3Switch
+            checked={draft.dreamDiaryEnabled !== false}
+            label={ti('settings.simple.dream_diary')}
+            onChange={(dreamDiaryEnabled) => patch({ dreamDiaryEnabled })}
+          />
+        </SimpleRow>
+        {dreams.length > 0 ? (
+          <SimpleRow
+            icon="book"
+            title={ti('settings.simple.dream_diary_read')}
+            hint={ti('settings.simple.dream_diary_read_hint')}
+          >
+            <button
+              type="button"
+              className="settings-v3-action"
+              onClick={() => setTimelineOpen(true)}
+            >
+              {ti('settings.simple.memory_remembered_open')}
+            </button>
+          </SimpleRow>
         ) : null}
         <SimpleRow
           icon="window"

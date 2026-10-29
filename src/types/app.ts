@@ -256,6 +256,12 @@ interface VoiceControlSettings {
 
 interface MemorySettings {
   memoryPaused: boolean
+  /**
+   * Keep a short dream diary after a quiet night. It rides the autonomy
+   * sleep/dream cycle, so it does nothing while autonomy is off. Default on;
+   * `memoryPaused` still suppresses memory-shaped dreams.
+   */
+  dreamDiaryEnabled: boolean
   memorySearchMode: MemorySearchMode
   memoryEmbeddingModel: string
   memoryLongTermRecallCount: number

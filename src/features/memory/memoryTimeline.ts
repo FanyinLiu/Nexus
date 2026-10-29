@@ -8,12 +8,13 @@
 
 import type {
   DailyMemoryEntry,
+  DreamDiaryEntry,
   MemoryCategory,
   MemoryImportance,
   MemoryItem,
 } from '../../types/memory.ts'
 
-export type MemoryTimelineItemKind = 'memory' | 'diary'
+export type MemoryTimelineItemKind = 'memory' | 'diary' | 'dream'
 
 export type MemoryTimelineItem = {
   id: string
@@ -48,6 +49,8 @@ export type RememberedCardView = {
 type TimelineInput = {
   memories: readonly MemoryItem[]
   dailyEntries: readonly DailyMemoryEntry[]
+  /** Her own dream rows; excluded from the "what she remembers" card count. */
+  dreams?: readonly DreamDiaryEntry[]
   now?: Date
 }
 
@@ -112,6 +115,18 @@ function diaryItem(entry: DailyMemoryEntry): MemoryTimelineItem | null {
   }
 }
 
+function dreamItem(entry: DreamDiaryEntry): MemoryTimelineItem | null {
+  const at = parseTimestamp(entry.createdAt, entry.day)
+  if (at === null) return null
+  return {
+    id: entry.id,
+    kind: 'dream',
+    at: new Date(at).toISOString(),
+    text: entry.text.trim(),
+    day: entry.day,
+  }
+}
+
 function compareNewestFirst(left: MemoryTimelineItem, right: MemoryTimelineItem): number {
   const byTime = Date.parse(right.at) - Date.parse(left.at)
   if (byTime !== 0) return byTime
@@ -134,6 +149,7 @@ export function buildMemoryTimeline(input: TimelineInput): MemoryTimelineGroup[]
   const items = [
     ...input.memories.filter(isRememberedMemory).map(memoryItem),
     ...input.dailyEntries.map(diaryItem),
+    ...(input.dreams ?? []).map(dreamItem),
   ]
     .filter((item): item is MemoryTimelineItem => item !== null && item.text.length > 0)
     .sort(compareNewestFirst)

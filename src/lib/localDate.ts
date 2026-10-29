@@ -34,6 +34,24 @@ export function isSameLocalDay(aMs: number, bMs: number): boolean {
   return localDayKey(aMs) === localDayKey(bMs)
 }
 
+/**
+ * Validate a `YYYY-MM-DD` local day key, rejecting impossible dates such as
+ * 2026-02-30. The UTC round-trip is the cheapest way to catch those without
+ * importing a date library.
+ */
+export function isLocalDayKey(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return false
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day
+}
+
 /** Midnight of the most recent local-time Sunday at or before the given ms. */
 export function startOfLocalSunday(ms: number): number {
   const d = new Date(ms)

@@ -322,5 +322,6 @@ export const enSettingsMemory = {
   'memory.timeline.this_week': 'This week',
   'memory.timeline.memory_badge': 'Long-term',
   'memory.timeline.diary_badge': 'Diary',
+  'memory.timeline.dream_badge': 'Her dream',
   'memory.timeline.close': 'Close',
 } as const satisfies Partial<TranslationDictionary>

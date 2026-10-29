@@ -10,10 +10,12 @@ import { useMemo, useState } from 'react'
 import type { ConfirmFn } from '../../components/useConfirm.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import { formatPortraitDate } from '../memory/changeCopy.ts'
+import { useDreams } from '../../hooks/useDreams.ts'
 import {
   buildMemoryTimeline,
   type MemoryTimelineGroup,
   type MemoryTimelineItem,
+  type MemoryTimelineItemKind,
 } from '../memory/memoryTimeline.ts'
 import type {
   DailyMemoryEntry,
@@ -41,6 +43,18 @@ const GROUP_KEYS: Record<Exclude<MemoryTimelineGroup['kind'], 'month'>, Translat
   today: 'memory.timeline.today',
   yesterday: 'memory.timeline.yesterday',
   this_week: 'memory.timeline.this_week',
+}
+
+const BADGE_KEYS: Record<MemoryTimelineItemKind, TranslationKey> = {
+  memory: 'memory.timeline.memory_badge',
+  diary: 'memory.timeline.diary_badge',
+  dream: 'memory.timeline.dream_badge',
+}
+
+const CONFIRM_KEYS: Record<MemoryTimelineItemKind, TranslationKey> = {
+  memory: 'memory_panel.confirm_delete_memory',
+  diary: 'memory_panel.confirm_delete_diary',
+  dream: 'memory_panel.confirm_delete_dream',
 }
 
 function groupLabel(
@@ -74,11 +88,12 @@ export function MemoryTimelineV3({
 }: MemoryTimelineV3Props) {
   const ti = (key: TranslationKey, params?: Parameters<typeof pickTranslatedUiText>[2]) =>
     pickTranslatedUiText(uiLanguage, key, params)
+  const { dreams, remove: removeDream } = useDreams()
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const groups = useMemo(
-    () => buildMemoryTimeline({ memories, dailyEntries }),
-    [memories, dailyEntries],
+    () => buildMemoryTimeline({ memories, dailyEntries, dreams }),
+    [memories, dailyEntries, dreams],
   )
   const stampTemplate = ti('memory.portrait.stamp')
 
@@ -94,19 +109,20 @@ export function MemoryTimelineV3({
     const content = editingText.trim()
     if (!content) return
     if (item.kind === 'memory') onUpdateMemory(item.id, content)
-    else if (item.day) onUpdateDailyEntry?.(item.id, item.day, content)
+    else if (item.kind === 'diary' && item.day) onUpdateDailyEntry?.(item.id, item.day, content)
     cancelEdit()
   }
   const removeItem = async (item: MemoryTimelineItem) => {
     const accepted = confirm
       ? await confirm({
-          message: ti(item.kind === 'memory' ? 'memory_panel.confirm_delete_memory' : 'memory_panel.confirm_delete_diary'),
+          message: ti(CONFIRM_KEYS[item.kind]),
           tone: 'danger',
         })
       : true
     if (!accepted) return
     if (item.kind === 'memory') onRemoveMemory(item.id)
-    else if (item.day) onRemoveDailyEntry?.(item.id, item.day)
+    else if (item.kind === 'diary' && item.day) onRemoveDailyEntry?.(item.id, item.day)
+    else if (item.kind === 'dream') removeDream(item.id)
   }
 
   const body = memoryPaused ? (
@@ -124,7 +140,7 @@ export function MemoryTimelineV3({
                 <li key={key} className="memory-timeline__item" data-kind={item.kind}>
                   <div className="memory-timeline__meta">
                     <span className="memory-timeline__badge">
-                      {ti(item.kind === 'memory' ? 'memory.timeline.memory_badge' : 'memory.timeline.diary_badge')}
+                      {ti(BADGE_KEYS[item.kind])}
                     </span>
                     <span>{formatPortraitDate(item.at, stampTemplate)}</span>
                   </div>
@@ -144,7 +160,7 @@ export function MemoryTimelineV3({
                         <button type="button" onClick={() => saveEdit(item)}>{ti('memory.portrait.save')}</button>
                         <button type="button" onClick={cancelEdit}>{ti('memory_panel.cancel')}</button>
                       </>
-                    ) : (
+                    ) : item.kind === 'dream' ? null : (
                       <button type="button" onClick={() => startEdit(item)}>{ti('memory.portrait.edit')}</button>
                     )}
                     <button type="button" onClick={() => void removeItem(item)}>{ti('memory.portrait.delete')}</button>

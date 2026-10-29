@@ -100,5 +100,11 @@ export const jaSettingsSimple = {
   'settings.simple.memory_remembered_open': 'すべて見る',
   'settings.simple.memory_remembered_paused': '記憶は停止中です。上のスイッチを入れると、また覚え始めます。',
   'settings.simple.memory_remembered_empty': 'まだ何も覚えていません。もう少し話すと、ここに少しずつ増えていきます。',
+  'settings.simple.dream_diary': '夢の日記',
+  'settings.simple.dream_diary_hint': '静かな時間が長く続くと、短い夢をひとつ見ることがあります。翌日ここで読めます。',
+  'settings.simple.dream_diary_paused': '記憶を停止している間は、記憶を夢に持ち込みません。',
+  'settings.simple.dream_diary_count': '{count} 個の夢を書き留めています',
+  'settings.simple.dream_diary_read': '彼女の夢を読む',
+  'settings.simple.dream_diary_read_hint': '記憶のタイムラインにあります。ゆっくり読むことも、削除することもできます。',
   'settings.simple.summary_connect_lookup': '必要なとき調べられます',
 } as const satisfies Partial<TranslationDictionary>

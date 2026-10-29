@@ -131,6 +131,7 @@ export const zhTWCore = {
   'memory_panel.clear_diary': '清空今日日誌',
   'memory_panel.confirm_delete_memory': '確認刪除這條記憶？',
   'memory_panel.confirm_delete_diary': '確認刪除這條日誌？',
+  'memory_panel.confirm_delete_dream': '確認刪除這個夢？',
   'memory_panel.empty_memory_content': '記憶內容不能為空。',
   'memory_panel.empty_diary_content': '日誌內容不能為空。',
   'memory_panel.edit_memory_failed': '記憶沒能保存，稍後再試試吧。',

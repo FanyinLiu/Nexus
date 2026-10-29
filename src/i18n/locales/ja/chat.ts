@@ -163,4 +163,5 @@ export const jaChat = {
   'chat.failover.no_api_key': '設定で現在のテキストプロバイダーの API キーを入力してください。',
   'chat.letter.card_title': '彼女から手紙が届いています',
   'chat.letter.card_open': '読んでみる',
+  'chat.dream.line': 'ゆうべ、夢を見たよ。{dream}',
 } as const satisfies Partial<TranslationDictionary>

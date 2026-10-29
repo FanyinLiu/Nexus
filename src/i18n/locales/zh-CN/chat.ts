@@ -161,4 +161,5 @@ export const zhCNChat = {
   'chat.failover.no_api_key': '请先在设置里填写当前文本提供商的接口密钥。',
   'chat.letter.card_title': '她给你写了一封信',
   'chat.letter.card_open': '读这封信',
+  'chat.dream.line': '我昨晚梦到{dream}',
 } as const satisfies Record<string, string>
