@@ -4,6 +4,8 @@
 // character budgets the caller specifies.
 
 import type { MemoryRecallContext } from '../../types'
+import { enUSChatPrompts } from './prompts/systemPrompt.en-US.ts'
+import type { ChatPromptStrings } from './prompts/types.ts'
 
 /**
  * Build hot-tier memory sections (longTerm + daily) within a character budget.
@@ -13,6 +15,7 @@ import type { MemoryRecallContext } from '../../types'
 export function buildHotTierMemorySections(
   memoryContext: MemoryRecallContext,
   maxChars: number,
+  prompts: ChatPromptStrings = enUSChatPrompts,
 ) {
   let budget = maxChars
   const longTermLines: string[] = []
@@ -36,12 +39,12 @@ export function buildHotTierMemorySections(
   }
 
   const lowConfidenceNote = memoryContext.recallConfidence === 'low'
-    ? ' None of these clearly matches what they just said. If they are asking about something not written here, it is fine to say you don\'t remember or to ask, rather than stretching one of these to fit.'
+    ? ` ${prompts.memoryLongTermLowNote}`
     : ''
   const longTermSection = longTermLines.length
-    ? `Things you know about this person from your time together. When one naturally fits the moment, let it shape what you say — the way a memory surfaces on its own, not cited or announced. If nothing connects, they stay quiet.${lowConfidenceNote}\n${longTermLines.join('\n')}`
+    ? `${prompts.memoryLongTermHeader}${lowConfidenceNote}\n${longTermLines.join('\n')}`
     : memoryContext.recallConfidence === 'none'
-      ? 'Nothing you remember about this person relates to what they just said. If they ask you to recall something about themselves, say honestly that you don\'t remember or haven\'t heard it yet — never invent it.'
+      ? prompts.memoryLongTermEmptyNote
       : ''
 
   const dailySection = dailyLines.length
@@ -58,7 +61,10 @@ function formatConfidence(score: number): string {
   return clamped.toFixed(2)
 }
 
-export function buildSemanticMemorySection(memoryContext: MemoryRecallContext) {
+export function buildSemanticMemorySection(
+  memoryContext: MemoryRecallContext,
+  prompts: ChatPromptStrings = enUSChatPrompts,
+) {
   if (!memoryContext.semantic.length) {
     return ''
   }
@@ -71,5 +77,5 @@ export function buildSemanticMemorySection(memoryContext: MemoryRecallContext) {
     })
     .join('\n')
 
-  return `Associations this conversation stirred up. The confidence score (0.00–1.00) reflects how clearly each one connects: high means vivid and specific, low means a faint echo — mention it gently if at all. Let the clear ones inform you; let the faint ones stay at the edge:\n${lines}`
+  return prompts.memorySemanticSection(lines)
 }

@@ -12,6 +12,14 @@ export interface ChatPromptStrings {
   personaMemoryHeader: (memoryContent: string) => string
   /** Five-line persona header composed into a single string joined by spaces. */
   headerLines: (params: { companionName: string; userName: string }) => string
+  /** Intro for long-term memories that may fit the current turn. */
+  memoryLongTermHeader: string
+  /** Caveat appended when recall is borderline, in the companion's own voice. */
+  memoryLongTermLowNote: string
+  /** Guidance used when nothing in long-term memory fits the current turn. */
+  memoryLongTermEmptyNote: string
+  /** Wraps the warm-tier association lines (already numbered + scored). */
+  memorySemanticSection: (lines: string) => string
   /** Voice-profile style nudge (1-3 sentences). */
   responseStyleVoice: string
   /** Avatar stage-direction guide. */
