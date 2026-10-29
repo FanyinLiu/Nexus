@@ -216,7 +216,9 @@ export async function assembleAssistantPrompt(
       }),
       milestonePromptText: dependencies.ctx.consumeMilestonePromptText?.(),
       anniversaryPromptText: dependencies.ctx.consumeAnniversaryPromptText?.(currentSettings.uiLanguage),
-      onThisDayPromptText: dependencies.ctx.consumeOnThisDayPromptText?.(currentSettings.uiLanguage, nextMemories),
+      onThisDayPromptText: memoryPaused
+        ? ''
+        : dependencies.ctx.consumeOnThisDayPromptText?.(currentSettings.uiLanguage, nextMemories),
       messageFollowUpPromptText: dependencies.ctx.consumeMessageFollowUpPromptText?.(),
       pendingCallbacks: pendingCallbackHints,
       // First-impression hint — fires only on the upcoming 2nd or 3rd

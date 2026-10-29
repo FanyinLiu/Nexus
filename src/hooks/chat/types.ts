@@ -123,11 +123,17 @@ export type UseChatContext = {
    * calendar anniversary (year / half-year / month / week) of any
    * notable past memory, and if so returns the prompt fragment asking
    * the LLM to reference it. Caller supplies the active memories list
-   * so the controller doesn't need to keep its own ref. The call also
-   * marks the chosen memory fired in the lifetime ledger so it can't
-   * resurface day after day for the +/- tolerance window.
+   * so the controller doesn't need to keep its own ref. The chosen
+   * candidate stays pending until `commitOnThisDayPromptText` is called
+   * after a successful reply.
    */
   consumeOnThisDayPromptText?: (uiLanguage: string, memories: MemoryItem[]) => string
+  /**
+   * Commit the "on this day" candidate surfaced by the current turn into
+   * the lifetime ledger. Called only after the assistant reply succeeds,
+   * so a failed request leaves the anniversary available for a later turn.
+   */
+  commitOnThisDayPromptText?: () => void
   /**
    * Consume the one due message follow-up ("张三 messaged you while you were
    * away — ask once, gently") as a prompt fragment. One-shot: the entry is

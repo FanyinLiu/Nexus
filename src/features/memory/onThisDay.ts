@@ -52,13 +52,18 @@ const WINDOWS: GapWindow[] = [
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-function memoryWeight(memory: MemoryItem): number {
-  // Significance is the canonical weight when present (0..1).
-  // Importance buckets are coarser — fall back to a sane mapping.
-  if (typeof memory.significance === 'number' && Number.isFinite(memory.significance)) {
-    return memory.significance
-  }
-  if (typeof memory.importanceScore === 'number' && Number.isFinite(memory.importanceScore)) {
+// `computeMemorySignificance` returns exactly 0 for the neutral/default
+// emotion state (and tiny values for mild moods). That means "no emotional
+// signal", not "not worth recalling", so below this threshold we fall back to
+// the memory's importance instead of skipping an otherwise ordinary memory.
+const MIN_SIGNIFICANCE_WEIGHT = 0.05
+
+function importanceWeight(memory: MemoryItem): number {
+  if (
+    typeof memory.importanceScore === 'number'
+    && Number.isFinite(memory.importanceScore)
+    && memory.importanceScore > 0
+  ) {
     return memory.importanceScore
   }
   switch (memory.importance) {
@@ -66,9 +71,25 @@ function memoryWeight(memory: MemoryItem): number {
     case 'high': return 0.8
     case 'normal': return 0.5
     case 'low': return 0.2
-    case 'reflection': return 0  // reflections aren't callbacks; the chat layer handles them
     default: return 0.4
   }
+}
+
+function memoryWeight(memory: MemoryItem): number {
+  // Reflections aren't callbacks; the chat layer handles them separately.
+  if (memory.importance === 'reflection') return 0
+
+  // Significance is the canonical weight when it carries a real signal (0..1).
+  // Importance buckets are coarser — use them when significance is absent or
+  // indistinguishable from the neutral baseline.
+  if (
+    typeof memory.significance === 'number'
+    && Number.isFinite(memory.significance)
+    && memory.significance > MIN_SIGNIFICANCE_WEIGHT
+  ) {
+    return memory.significance
+  }
+  return importanceWeight(memory)
 }
 
 /**
