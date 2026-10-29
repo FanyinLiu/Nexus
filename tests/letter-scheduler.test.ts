@@ -7,6 +7,9 @@ import {
   type LetterDecisionInput,
 } from '../src/features/letter/letterScheduler.ts'
 import { localDayKey } from '../src/lib/localDate.ts'
+import { getDefaultSystemPrompt } from '../src/lib/settingsMigrations.ts'
+import { resolveActivePersona } from '../src/features/persona/resolveActivePersona.ts'
+import { buildLetterPrompt } from '../src/features/letter/letterPromptBuilder.ts'
 
 const SUN_19 = new Date('2026-04-26T19:00:00').getTime() // Sunday 7pm local
 const SUN_10 = new Date('2026-04-26T10:00:00').getTime() // Sunday 10am
@@ -123,4 +126,34 @@ test('resolveLetterSlot returns the latest due Sunday evening', () => {
   assert.ok(monday)
   assert.equal(monday?.letterDate, SUN_DATE)
   assert.equal(monday?.catchUp, true)
+})
+
+test('a default install hands the letter a real persona, not an empty soul', async () => {
+  const persona = await resolveActivePersona({
+    activeCharacterProfileId: '',
+    systemPrompt: getDefaultSystemPrompt('zh-CN'),
+    uiLanguage: 'zh-CN',
+    companionName: '星绘',
+    userName: '主人',
+  }, { bridge: {} })
+
+  assert.equal(persona.present, true)
+  assert.ok(persona.soul.trim().length > 0)
+
+  const messages = buildLetterPrompt({
+    persona,
+    data: {
+      shouldFire: true,
+      themes: [],
+      highlights: [],
+      stressors: [],
+      reflectionLines: [],
+      diaryLines: [],
+      milestonesNotedThisWeek: [],
+      weekDayCount: 3,
+    },
+    uiLanguage: 'zh-CN',
+    letterDate: SUN_DATE,
+  })
+  assert.ok(messages[0].content.includes(persona.soul))
 })

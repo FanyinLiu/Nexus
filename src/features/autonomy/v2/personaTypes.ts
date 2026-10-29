@@ -71,6 +71,12 @@ export interface LoadedPersona {
    * and the caller should treat the persona as "not configured".
    */
   present: boolean
+  /**
+   * mtime of soul.md, when the loader could stat it. The renderer cannot
+   * read files itself; the resolver records this with its cached persona so
+   * a stale entry can be recognised after a re-read.
+   */
+  soulMtimeMs?: number
 }
 
 /** The persona profile loaded by autonomy + proactive features when the

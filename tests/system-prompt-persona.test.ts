@@ -16,20 +16,20 @@ beforeEach(() => {
   })
 })
 
-test('loadActiveProfilePersona returns null when the flag is off (no IPC call)', async () => {
-  let called = false
+test('loadActiveProfilePersona no longer depends on the legacy chat flag', async () => {
+  let called = 0
   window.desktopPet = {
-    personaLoadProfile: async () => {
-      called = true
-      return { present: true, soul: 'x' }
+    personaLoadProfile: async (id: string) => {
+      called += 1
+      return { id, present: true, soul: 'x' }
     },
   } as unknown as typeof window.desktopPet
 
   const result = await loadActiveProfilePersona(
     settingsWith({ profilePersonaInChatEnabled: false, activeCharacterProfileId: 'card-1' }),
   )
-  assert.equal(result, null)
-  assert.equal(called, false)
+  assert.equal(result?.soul, 'x')
+  assert.equal(called, 1)
 })
 
 test('loadActiveProfilePersona returns the active profile persona when present', async () => {

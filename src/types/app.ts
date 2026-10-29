@@ -71,11 +71,10 @@ interface IdentitySettings {
   characterProfiles: CharacterProfile[]
   activeCharacterProfileId: string
   /**
-   * When true, the active character profile's per-file persona (soul.md /
-   * memory.md) drives chat replies — the same persona the autonomy engine
-   * already loads — instead of only the global SOUL.md. Lets an imported
-   * Character Card actually shape the conversation. Off by default (gradual
-   * rollout): changing the persona prefix invalidates the cached system prompt.
+   * Legacy compatibility flag: an active character profile used to drive chat
+   * replies only when this was on. Every generation path now resolves one
+   * persona, so the flag no longer gates anything; it stays readable so old
+   * stores migrate cleanly. New installs default it to true.
    */
   profilePersonaInChatEnabled: boolean
   /**

@@ -124,6 +124,17 @@ export async function loadPersonaProfileFromReader(options) {
     result.present = true
   }
 
+  if (typeof options.soulMtime === 'function') {
+    try {
+      const mtimeMs = await options.soulMtime()
+      if (typeof mtimeMs === 'number' && Number.isFinite(mtimeMs)) {
+        result.soulMtimeMs = mtimeMs
+      }
+    } catch {
+      // A missing or unreadable stat is not a load failure.
+    }
+  }
+
   return result
 }
 

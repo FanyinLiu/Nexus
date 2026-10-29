@@ -901,6 +901,8 @@ declare global {
         }
         tools: { allowlist?: string[]; blocklist?: string[] }
         present: boolean
+        /** mtime of soul.md; lets the renderer tell cached profiles apart. */
+        soulMtimeMs?: number
       }>
       personaProfileDir: (profileId: string) => Promise<{ dir: string }>
       personaImportCard: () => Promise<{

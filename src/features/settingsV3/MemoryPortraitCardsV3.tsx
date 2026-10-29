@@ -30,7 +30,7 @@ import type { MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
 import './memory-portrait.css'
 
 type MemoryPortraitCardsV3Props = {
-  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId' | 'systemPrompt'>
+  settings: Pick<AppSettings, 'activeCharacterProfileId' | 'systemPrompt'>
   memories: MemoryItem[]
   diaryCount?: number
   onPatchMemory?: (id: string, patch: Partial<Pick<MemoryItem, 'content' | 'pinned' | 'userEdited' | 'importance'>>) => void
@@ -68,7 +68,7 @@ export function MemoryPortraitCardsV3({
   const [soulDraft, setSoulDraft] = useState(restoredDraft ?? '')
   const [keepDraft, setKeepDraft] = useState(restoredDraft != null)
   const [soulNotice, setSoulNotice] = useState<'restored' | 'too-long' | null>(restoredDraft != null ? 'too-long' : null)
-  const personaKey = `${settings.profilePersonaInChatEnabled ? '1' : '0'}:${settings.activeCharacterProfileId ?? ''}`
+  const personaKey = settings.activeCharacterProfileId ?? ''
   const [loadedPersonaKey, setLoadedPersonaKey] = useState<string | null>(null)
   const soulReady = loadedPersonaKey === personaKey
   const [sheet, setSheet] = useState<'soul' | 'memory' | null>(null)
@@ -99,7 +99,6 @@ export function MemoryPortraitCardsV3({
   useEffect(() => {
     let current = true
     void loadSoulCard({
-      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
       activeCharacterProfileId: settings.activeCharacterProfileId,
       systemPrompt: settings.systemPrompt,
     }).then((note) => {
@@ -111,7 +110,7 @@ export function MemoryPortraitCardsV3({
     return () => {
       current = false
     }
-  }, [personaKey, settings.profilePersonaInChatEnabled, settings.activeCharacterProfileId, settings.systemPrompt, keepDraft])
+  }, [personaKey, settings.activeCharacterProfileId, settings.systemPrompt, keepDraft])
   // The sheet's own state dies with the Memory page. The session copy is what
   // comes back when Settings returns to this page.
   useEffect(() => {
@@ -129,7 +128,6 @@ export function MemoryPortraitCardsV3({
 
   const saveSoul = () => {
     void saveSoulCard({
-      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
       activeCharacterProfileId: settings.activeCharacterProfileId,
       systemPrompt: settings.systemPrompt,
     }, soulDraft).then((result) => {

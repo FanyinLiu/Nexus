@@ -16,7 +16,15 @@ import type {
   MemoryRecallContext,
 } from '../../types'
 import { buildLorebookSection } from './lorebookInjection.ts'
-import { DEFAULT_PERSONA_PROFILE_ID, type LoadedPersona } from '../autonomy/v2/personaTypes.ts'
+import {
+  createEmptyLoadedPersona,
+  DEFAULT_PERSONA_PROFILE_ID,
+  type LoadedPersona,
+} from '../autonomy/v2/personaTypes.ts'
+import {
+  type ResolvedPersona,
+  resolveActivePersona,
+} from '../persona/resolveActivePersona.ts'
 import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext.ts'
 import { classifyActivity } from '../autonomy/v2/contextGatherer.ts'
@@ -198,18 +206,19 @@ export type AssistantReplyRequestOptions = {
 }
 
 /**
- * When `profilePersonaInChatEnabled` is on, load the active character
- * profile's per-file persona (the same one the autonomy engine uses) so an
- * imported Character Card can actually drive chat. Mirrors the resolution in
- * useAutonomyV2Engine: active id → default fallback when the active profile
- * has no persona files. Returns null when the flag is off, the bridge is
- * unavailable, nothing is present, or loading fails — callers then keep the
- * existing global-SOUL.md behaviour.
+ * Load the active character profile's per-file persona (the same files the
+ * autonomy engine reads). Mirrors the resolver's profile step: active id →
+ * default fallback when the active profile has nothing on disk. Returns null
+ * when no profile is present or loading fails, so the SOUL card keeps
+ * targeting the global file unless a profile really drives the persona.
+ *
+ * The old `profilePersonaInChatEnabled` switch no longer gates this: chat,
+ * V2, and letters all resolve one persona. The settings flag stays readable
+ * for stored-data compatibility only.
  */
 export async function loadActiveProfilePersona(
-  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId'>,
+  settings: Pick<AppSettings, 'activeCharacterProfileId'>,
 ): Promise<LoadedPersona | null> {
-  if (!settings.profilePersonaInChatEnabled) return null
   const load = window.desktopPet?.personaLoadProfile
   if (!load) return null
   try {
@@ -226,35 +235,49 @@ export async function loadActiveProfilePersona(
   }
 }
 
+/**
+ * Resolve the persona for a chat turn. The resolver is designed not to throw;
+ * this guard keeps a chat reply possible if it ever does, falling back to the
+ * configured system prompt instead of sending an empty identity.
+ */
+async function resolvePersonaForChat(settings: AppSettings): Promise<ResolvedPersona> {
+  try {
+    return await resolveActivePersona(settings)
+  } catch (err) {
+    console.warn('[runtime] Persona file loading failed, using settings fallback:', getRedactedLogErrorMessage(err))
+    return {
+      ...createEmptyLoadedPersona(DEFAULT_PERSONA_PROFILE_ID, ''),
+      present: true,
+      soul: typeof settings.systemPrompt === 'string' ? settings.systemPrompt : '',
+      source: 'systemPrompt',
+      companionName: typeof settings.companionName === 'string' ? settings.companionName : '',
+      userName: typeof settings.userName === 'string' ? settings.userName : '',
+    }
+  }
+}
+
 async function buildSystemPrompt(
   settings: AppSettings,
   memoryContext: MemoryRecallContext,
   options: AssistantReplyRequestOptions,
 ) {
-  // Load SOUL.md persona file; fall back to settings.systemPrompt
-  let soulContent = ''
+  // Persona-private memory lives in the global MEMORY.md only; the identity
+  // chain itself is owned by the shared resolver so chat, V2, and letters
+  // cannot drift apart.
   let personaMemoryContent = ''
   try {
-    const [soul, pMem] = await Promise.all([
-      window.desktopPet?.personaLoadSoul?.() ?? Promise.resolve(''),
-      window.desktopPet?.personaLoadMemory?.() ?? Promise.resolve(''),
-    ])
-    soulContent = soul
-    personaMemoryContent = pMem
+    personaMemoryContent = await (window.desktopPet?.personaLoadMemory?.() ?? Promise.resolve(''))
   } catch (err) {
-    console.warn('[runtime] Persona file loading failed, using settings fallback:', getRedactedLogErrorMessage(err))
+    console.warn('[runtime] Persona memory loading failed:', getRedactedLogErrorMessage(err))
   }
 
-  // Per-profile persona (imported card / switched profile) takes precedence
-  // over the global SOUL.md when the feature is enabled. soul.md carries the
-  // card's full identity (description/personality/scenario/system instructions).
-  const profilePersona = await loadActiveProfilePersona(settings)
+  const resolvedPersona = await resolvePersonaForChat(settings)
 
   const prompts = getChatPromptStrings(settings.uiLanguage)
 
-  const personaSection = profilePersona?.soul || soulContent || settings.systemPrompt
+  const personaSection = resolvedPersona.soul || settings.systemPrompt
   const relationshipTypeSection = prompts.relationshipTypeBias(settings.companionRelationshipType)
-  const effectivePersonaMemory = profilePersona?.memory || personaMemoryContent
+  const effectivePersonaMemory = resolvedPersona.memory || personaMemoryContent
   const personaMemorySection = effectivePersonaMemory
     ? prompts.personaMemoryHeader(effectivePersonaMemory)
     : ''
