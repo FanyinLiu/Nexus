@@ -438,7 +438,7 @@ export function useMemory({ settings }: UseMemoryParams) {
   const clearMemoryArchive = useCallback(async () => {
     const currentMemories = memoriesRef.current
     const currentDaily = dailyMemoriesRef.current
-    purgeClearedMemories(currentMemories, currentDaily)
+    await purgeClearedMemories(currentMemories, currentDaily)
     memoriesRef.current = []
     dailyMemoriesRef.current = {}
     setMemories([])
