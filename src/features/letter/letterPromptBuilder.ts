@@ -156,6 +156,13 @@ export function buildLetterPrompt(
     )
   }
 
+  if (input.data.diaryLines.length) {
+    dataParts.push(
+      `${strings.sectionDiaryHeader}\n`
+      + input.data.diaryLines.map((line) => `- ${line}`).join('\n'),
+    )
+  }
+
   if (input.data.milestonesNotedThisWeek.length) {
     dataParts.push(
       `${strings.sectionMilestonesHeader}\n`

@@ -1,10 +1,15 @@
 /**
  * Sunday letter — week-roll-up aggregator.
  *
- * Pure function that turns the past 7 days of memories + reflections
- * into a structured input for letter rendering. The gate skips the
- * letter rather than fabricate one when the user wasn't active enough
- * this week.
+ * Pure function that turns the past week of memories, diary entries, and
+ * active chat days into a structured input for letter rendering. The gate is
+ * deliberately low: a week with two active days, a handful of messages on one
+ * day, or any remembered event/diary entry is enough for a short letter.
+ * Only a week with no interaction and nothing remembered is skipped.
+ *
+ * Privacy: disabled, migrated, archived/superseded, and sensitive-looking
+ * rows never reach the letter prompt, even if an older memory store still
+ * contains them.
  *
  * v0.4 addition: optionally attaches an `affectShape` summary derived
  * from the affect-dynamics base layer (Russell circumplex valence /
@@ -14,15 +19,20 @@
  * memory-only structure.
  */
 
-import type { MemoryItem } from '../../types/index.ts'
+import type { DailyMemoryEntry, MemoryItem } from '../../types/index.ts'
+import { isSensitiveMemoryText } from '../memory/memoryRules.ts'
 import type { AffectSnapshot, AffectShift } from '../autonomy/affectDynamics.ts'
 
 export interface AggregateLetterInput {
   nowMs: number
   /** Memories created within the trailing 7-day window. Caller filters. */
   recentMemories: readonly MemoryItem[]
+  /** Diary entries created within the same window. Caller filters. */
+  recentDiaryEntries?: readonly DailyMemoryEntry[]
   /** Distinct local-date keys on which the user sent at least one chat. */
   activeDayKeys: readonly string[]
+  /** Number of user messages in the window; a busy single day still counts. */
+  userMessageCount?: number
   /** Anniversary slugs reached during the week (e.g. ['days-100']). */
   milestonesReached?: readonly string[]
   /**
@@ -72,12 +82,14 @@ export interface SundayLetterDataReady {
   shouldFire: true
   /** Distinct memory categories that surfaced this week. */
   themes: string[]
-  /** Top significance memories with positive / mixed valence. */
+  /** Concrete moments the letter should reference, most important first. */
   highlights: MemoryHighlight[]
-  /** Top significance memories with negative valence. */
+  /** Stressful memories with negative valence. */
   stressors: MemoryHighlight[]
   /** Verbatim reflection content (importance === 'reflection'), highest confidence first. */
   reflectionLines: string[]
+  /** Short diary excerpts from the week, newest first. */
+  diaryLines: string[]
   /** Anniversary slugs surfaced this week (passed through). */
   milestonesNotedThisWeek: string[]
   weekDayCount: number
@@ -94,15 +106,16 @@ export type SundayLetterData =
   | SundayLetterDataReady
   | {
       shouldFire: false
-      reason: 'too_few_active_days' | 'no_significant_memory'
+      reason: 'empty_week'
       weekDayCount: number
     }
 
-const ACTIVE_DAY_THRESHOLD = 3
+const MIN_ACTIVE_DAYS = 2
+const MIN_MESSAGES_ON_ONE_DAY = 3
 const HIGHLIGHT_LIMIT = 4
 const STRESSOR_LIMIT = 3
+const DIARY_LINE_LIMIT = 3
 const REFLECTION_LIMIT = 5
-const MIN_SIGNIFICANCE = 0.2
 
 /**
  * Minimum sample count before we'll attach an affect shape to the
@@ -111,6 +124,13 @@ const MIN_SIGNIFICANCE = 0.2
  * computed from two voice utterances.
  */
 const AFFECT_SHAPE_MIN_SAMPLES = 6
+
+const IMPORTANCE_WEIGHT: Record<string, number> = {
+  pinned: 1,
+  high: 0.8,
+  normal: 0.4,
+  low: 0.1,
+}
 
 function buildAffectShape(input: AggregateLetterInput): AffectShape | undefined {
   const snapshot = input.affectThisWeek
@@ -125,58 +145,88 @@ function buildAffectShape(input: AggregateLetterInput): AffectShape | undefined 
   }
 }
 
+function memoryWeight(memory: MemoryItem): number {
+  const importance = memory.importance ? (IMPORTANCE_WEIGHT[memory.importance] ?? 0) : 0
+  return Math.max(memory.significance ?? 0, memory.importanceScore ?? 0, importance)
+}
+
+function isEligibleMemory(memory: MemoryItem): boolean {
+  if (memory.migrated === true) return false
+  if (memory.enabled === false) return false
+  if (memory.status === 'archived' || memory.status === 'superseded') return false
+  return !isSensitiveMemoryText(memory.content)
+}
+
+function isEligibleDiaryEntry(entry: DailyMemoryEntry): boolean {
+  return entry.content.trim().length > 0 && !isSensitiveMemoryText(entry.content)
+}
+
 function toHighlight(memory: MemoryItem): MemoryHighlight {
   return {
     id: memory.id,
     content: memory.content,
-    significance: memory.significance ?? 0,
+    significance: memoryWeight(memory),
   }
 }
 
-function bySignificanceDesc(a: MemoryItem, b: MemoryItem): number {
-  return (b.significance ?? 0) - (a.significance ?? 0)
+function byWeightDesc(a: MemoryItem, b: MemoryItem): number {
+  return memoryWeight(b) - memoryWeight(a)
 }
 
 function byReflectionConfidenceDesc(a: MemoryItem, b: MemoryItem): number {
   return (b.reflectionConfidence ?? 0) - (a.reflectionConfidence ?? 0)
 }
 
+function byCreatedAtDesc(a: DailyMemoryEntry, b: DailyMemoryEntry): number {
+  return Date.parse(b.createdAt) - Date.parse(a.createdAt)
+}
+
 export function aggregateSundayLetter(
   input: AggregateLetterInput,
 ): SundayLetterData {
-  const weekDayCount = new Set(input.activeDayKeys).size
+  const weekDayCount = new Set(input.activeDayKeys.filter(Boolean)).size
+  const userMessageCount = input.userMessageCount ?? 0
+  const memories = input.recentMemories.filter(isEligibleMemory)
+  const diaryEntries = (input.recentDiaryEntries ?? []).filter(isEligibleDiaryEntry)
+  const hasInteraction = weekDayCount >= MIN_ACTIVE_DAYS
+    || userMessageCount >= MIN_MESSAGES_ON_ONE_DAY
+    || memories.length > 0
+    || diaryEntries.length > 0
 
-  if (weekDayCount < ACTIVE_DAY_THRESHOLD) {
-    return { shouldFire: false, reason: 'too_few_active_days', weekDayCount }
+  if (!hasInteraction) {
+    return { shouldFire: false, reason: 'empty_week', weekDayCount }
   }
 
-  const significantMemories = input.recentMemories.filter(
-    (m) => m.importance !== 'reflection' && (m.significance ?? 0) >= MIN_SIGNIFICANCE,
-  )
+  const letterMemories = memories
+    .filter((m) => m.importance !== 'reflection')
+    .sort(byWeightDesc)
 
-  if (significantMemories.length === 0) {
-    return { shouldFire: false, reason: 'no_significant_memory', weekDayCount }
-  }
-
-  const sorted = [...significantMemories].sort(bySignificanceDesc)
-
-  const highlights = sorted
+  const highlights = letterMemories
     .filter((m) => m.emotionalValence === 'positive' || m.emotionalValence === 'mixed')
     .slice(0, HIGHLIGHT_LIMIT)
     .map(toHighlight)
 
-  const stressors = sorted
+  // A neutral week should still mention concrete things. Fill from the most
+  // important remaining rows instead of rendering a letter with no specifics.
+  if (highlights.length === 0) {
+    highlights.push(...letterMemories.slice(0, Math.min(3, HIGHLIGHT_LIMIT)).map(toHighlight))
+  }
+
+  const stressors = letterMemories
     .filter((m) => m.emotionalValence === 'negative')
     .slice(0, STRESSOR_LIMIT)
     .map(toHighlight)
 
-  const themes = [...new Set(sorted.map((m) => m.category))]
-
-  const reflectionLines = input.recentMemories
+  const themes = [...new Set(letterMemories.map((m) => m.category))]
+  const reflectionLines = memories
     .filter((m) => m.importance === 'reflection')
     .sort(byReflectionConfidenceDesc)
     .slice(0, REFLECTION_LIMIT)
     .map((m) => m.content)
+  const diaryLines = [...diaryEntries]
+    .sort(byCreatedAtDesc)
+    .slice(0, DIARY_LINE_LIMIT)
+    .map((entry) => entry.content.trim())
 
   const affectShape = buildAffectShape(input)
 
@@ -186,6 +236,7 @@ export function aggregateSundayLetter(
     highlights,
     stressors,
     reflectionLines,
+    diaryLines,
     milestonesNotedThisWeek: [...(input.milestonesReached ?? [])],
     weekDayCount,
     ...(affectShape ? { affectShape } : {}),
