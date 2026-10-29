@@ -1,5 +1,6 @@
 import { shorten } from '../lib/common.ts'
 import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
+import { formatConversationGap, type ConversationGap } from '../features/chat/timeAwareness.ts'
 import type {
   AppSettings,
   MemoryItem,
@@ -141,6 +142,30 @@ function getTimeGreeting(ti: Translator): string {
   return ti('time_greeting.evening')
 }
 
+/** Human-sized phrase for how long it has been since the last user message. */
+function getStartupGapPhrase(gap: ConversationGap, ti: Translator): string {
+  switch (gap.kind) {
+    case 'first':
+      return ti('startup_greeting.gap.first')
+    case 'minutes':
+      if (gap.amount === 0) return ti('startup_greeting.gap.now')
+      return ti(
+        gap.amount === 1 ? 'startup_greeting.gap.minute' : 'startup_greeting.gap.minutes',
+        { count: gap.amount },
+      )
+    case 'hours':
+      return ti(
+        gap.amount === 1 ? 'startup_greeting.gap.hour' : 'startup_greeting.gap.hours',
+        { count: gap.amount },
+      )
+    case 'days':
+      return ti(
+        gap.amount === 1 ? 'startup_greeting.gap.day' : 'startup_greeting.gap.days',
+        { count: gap.amount },
+      )
+  }
+}
+
 /** Startup greeting text plus whether it quoted long-term memory. */
 export interface StartupGreeting {
   text: string
@@ -155,9 +180,12 @@ export function buildStartupGreeting(
   settings: AppSettings,
   memories: MemoryItem[],
   ti: Translator,
+  options?: { now?: Date; lastUserMessageAt?: string | null },
 ): StartupGreeting {
   const greeting = getTimeGreeting(ti)
   const latestMemory = memories[0]?.content
+  const gap = formatConversationGap(options?.lastUserMessageAt ?? null, options?.now ?? new Date())
+  const gapPhrase = getStartupGapPhrase(gap, ti)
 
   if (latestMemory) {
     return {
@@ -165,6 +193,7 @@ export function buildStartupGreeting(
         greeting,
         userName: settings.userName,
         memory: shorten(latestMemory, 20),
+        gap: gapPhrase,
       }),
       quotesMemory: true,
     }
@@ -175,6 +204,7 @@ export function buildStartupGreeting(
       greeting,
       userName: settings.userName,
       companionName: settings.companionName,
+      gap: gapPhrase,
     }),
     quotesMemory: false,
   }
