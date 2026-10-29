@@ -251,6 +251,21 @@ function indexLedgerKey(model: string, id: string) {
   return `${model}\u0000${id}`
 }
 
+/** Forget the whole "indexed this session" ledger (memory clear). */
+export function resetMemoryRecallIndexLedger(): void {
+  indexedThisSession.clear()
+}
+
+/** Forget one memory id across models (single delete). */
+export function forgetMemoryFromRecallIndexLedger(id: string): void {
+  const target = String(id ?? '')
+  if (!target) return
+  const suffix = `\u0000${target}`
+  for (const key of [...indexedThisSession.keys()]) {
+    if (key.endsWith(suffix)) indexedThisSession.delete(key)
+  }
+}
+
 async function doIndexMemoriesToVectorStore<T extends { id: string; content: string }>(
   items: T[],
   embeddingModel: string,

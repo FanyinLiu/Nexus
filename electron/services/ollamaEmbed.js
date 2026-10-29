@@ -9,7 +9,43 @@
 
 export const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
 const DEFAULT_TIMEOUT_MS = 20_000
+const MIN_TIMEOUT_MS = 500
+const MAX_TIMEOUT_MS = 30_000
 const MAX_INPUTS = 64
+const MAX_INPUT_CHARS = 20_000
+const LOOPBACK_HOSTNAMES = new Set(['127.0.0.1', '::1', '[::1]', 'localhost'])
+
+/**
+ * Memory text may only be sent to an Ollama on the same machine. Anything
+ * else (a LAN box, a tunnelled HTTPS proxy, a typo'd public host) is refused
+ * before a socket is opened.
+ * @param {unknown} hostname
+ */
+function isLoopbackOllamaHostname(hostname) {
+  const value = String(hostname ?? '').trim().toLowerCase().replace(/\.$/u, '')
+  return LOOPBACK_HOSTNAMES.has(value)
+}
+
+/**
+ * @param {unknown} baseUrl
+ * @returns {boolean} true only when the normalized base URL is loopback.
+ */
+export function isLoopbackOllamaBaseUrl(baseUrl) {
+  try {
+    return isLoopbackOllamaHostname(new URL(normalizeOllamaBaseUrl(baseUrl)).hostname)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ */
+function resolveTimeoutMs(value, fallback) {
+  if (!Number.isFinite(value)) return fallback
+  return Math.min(MAX_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS, Number(value)))
+}
 
 /**
  * Turn whatever the user configured for chat ("http://127.0.0.1:11434/v1",
@@ -53,25 +89,32 @@ function isConnectionFailure(error) {
  * @param {{ baseUrl?: string, model: string, input: string[], timeoutMs?: number }} payload
  * @param {(url: string, options: Record<string, unknown>) => Promise<Response>} request
  * @returns {Promise<{ ok: true, embeddings: number[][], model: string, dimensions: number }
- *   | { ok: false, code: 'unreachable' | 'model-missing' | 'not-embedding-model' | 'bad-response' | 'error', message: string }>}
+ *   | { ok: false, code: 'unreachable' | 'not-local' | 'model-missing' | 'not-embedding-model' | 'bad-response' | 'error', message: string }>}
  */
 export async function embedWithOllama(payload, request) {
   const model = String(payload?.model ?? '').trim()
   const input = Array.isArray(payload?.input)
-    ? payload.input.map((value) => String(value ?? '')).slice(0, MAX_INPUTS)
+    ? payload.input
+      .map((value) => String(value ?? '').slice(0, MAX_INPUT_CHARS))
+      .slice(0, MAX_INPUTS)
     : []
   if (!model || !input.length) {
     return { ok: false, code: 'error', message: 'model and input are required' }
   }
 
   const baseUrl = normalizeOllamaBaseUrl(payload?.baseUrl)
+  if (!isLoopbackOllamaBaseUrl(baseUrl)) {
+    // Fail closed and stay offline: the payload may quote a memory.
+    return { ok: false, code: 'not-local', message: `Ollama base URL is not loopback: ${baseUrl}` }
+  }
+
   let response
   try {
     response = await request(`${baseUrl}/api/embed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, input, truncate: true }),
-      timeoutMs: Number.isFinite(payload?.timeoutMs) ? payload.timeoutMs : DEFAULT_TIMEOUT_MS,
+      timeoutMs: resolveTimeoutMs(payload?.timeoutMs, DEFAULT_TIMEOUT_MS),
       allowPrivateNetwork: true,
     })
   } catch (error) {
@@ -127,13 +170,18 @@ function canonicalOllamaModelName(name) {
  *
  * @param {{ baseUrl?: string, model: string, timeoutMs?: number }} payload
  * @param {(url: string, options: Record<string, unknown>) => Promise<Response>} request
- * @returns {Promise<{ reachable: boolean, installed: boolean, baseUrl: string, model: string }>}
+ * @returns {Promise<{ reachable: boolean, installed: boolean, baseUrl: string, model: string, code?: 'not-local' }>}
  */
 export async function detectOllamaModel(payload, request) {
   const baseUrl = normalizeOllamaBaseUrl(payload?.baseUrl)
   const model = String(payload?.model ?? '').trim()
   const unreachable = { reachable: false, installed: false, baseUrl, model }
-  const timeoutMs = Number.isFinite(payload?.timeoutMs) ? payload.timeoutMs : DETECT_TIMEOUT_MS
+  if (!isLoopbackOllamaBaseUrl(baseUrl)) {
+    // Detection is a read, but keeping it local makes the security boundary
+    // one rule instead of two.
+    return { ...unreachable, code: 'not-local' }
+  }
+  const timeoutMs = resolveTimeoutMs(payload?.timeoutMs, DETECT_TIMEOUT_MS)
 
   let response
   try {

@@ -18,6 +18,15 @@ import {
 } from '../../features/memory/deletedMemorySession.ts'
 import { NARRATIVE_STORAGE_KEY } from '../../features/memory/narrativeMemory.ts'
 import {
+  forgetMemoryFromRecallIndexLedger,
+  resetMemoryRecallIndexLedger,
+} from '../../features/memory/recall.ts'
+import { resetOllamaEmbeddingState } from '../../features/memory/ollamaEmbedding.ts'
+import {
+  clearMemoryEmbeddingCache,
+  clearMemoryEmbeddingCacheForText,
+} from '../../features/memory/vectorSearch.ts'
+import {
   MEMORY_DATA_FILES,
   memoryPlaintextNeedles,
   redactMemoryPlaintext,
@@ -89,6 +98,9 @@ export function readMemoryDataFiles(): Record<string, string> {
  */
 export function purgeDeletedMemory(memory: MemoryItem, at = new Date().toISOString()): void {
   holdDeletedMemory(memory)
+  // Cache keys and the per-model ledger both quote the removed memory.
+  forgetMemoryFromRecallIndexLedger(memory.id)
+  clearMemoryEmbeddingCacheForText(memory.content)
   const needles = memoryPlaintextNeedles(memory)
   applyPurge({
     ids: [memory.id],
@@ -114,6 +126,12 @@ export async function purgeClearedMemories(
   at = new Date().toISOString(),
 ): Promise<unknown> {
   clearDeletedMemorySession()
+  // Renderer-side recall state survives the stores unless it is reset here:
+  // cached vectors (keyed by the memory text), the per-model session index
+  // ledger, and the Ollama status line.
+  clearMemoryEmbeddingCache()
+  resetMemoryRecallIndexLedger()
+  resetOllamaEmbeddingState()
   const needles = [
     ...memories.flatMap((memory) => memoryPlaintextNeedles(memory)),
     ...Object.values(daily).flatMap((entries) => entries.map((entry) => entry.content)),

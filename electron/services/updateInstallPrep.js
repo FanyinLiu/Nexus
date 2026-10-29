@@ -347,8 +347,9 @@ export async function writeUpdateSnapshot(input) {
  * Snapshots are write-only backups: nothing reads them at startup, so a
  * memory clear has to remove them explicitly or the wording survives there.
  * The local-data copy is scrubbed in place (only the memory rows are
- * deleted, so the snapshot still works as a rollback source), and any
- * memory wording in settings.json is redacted. Manifests stay untouched.
+ * deleted, so the snapshot still works as a rollback source), any memory
+ * wording in settings.json is redacted, and a copied vector store (including
+ * its altEmbeddings) is deleted. Manifests stay untouched.
  * @param {string} userDataPath
  * @param {{ needles?: readonly string[] }} [options]
  * @returns {Promise<{ removed: string[] }>} Deleted paths relative to userData.
@@ -373,6 +374,15 @@ export async function removeMemoryFromUpdateSnapshots(userDataPath, options = {}
     await scrubSnapshotSettings(directory, needles)
     for (const name of ['long-term.json', 'daily.json', 'op-log.json']) {
       const filePath = path.join(memoryDir, name)
+      if (!(await fileExists(filePath))) continue
+      await fs.rm(filePath, { force: true })
+      removed.push(path.relative(userDataPath, filePath))
+    }
+    // Older/optional snapshots may also carry the memory vector store. Its
+    // content field repeats the memory text and its altEmbeddings belong to
+    // the same rows, so the whole file goes with the memory copy.
+    for (const name of ['memory-vectors.json', 'memory-vectors.log', 'memory-vectors.log.compacting']) {
+      const filePath = path.join(directory, name)
       if (!(await fileExists(filePath))) continue
       await fs.rm(filePath, { force: true })
       removed.push(path.relative(userDataPath, filePath))
