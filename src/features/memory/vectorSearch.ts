@@ -1,4 +1,13 @@
 import { LOCAL_HASH_MEMORY_MODEL_ID } from './constants.ts'
+import { resolveMemoryEmbeddingModelSetting } from './memoryEmbeddingAuto.ts'
+import {
+  embedTextsWithOllama,
+  isOllamaMemoryModel,
+  isOllamaMemoryModelCoolingDown,
+  type MemoryEmbeddingPurpose,
+} from './ollamaEmbedding.ts'
+
+export type { MemoryEmbeddingPurpose } from './ollamaEmbedding.ts'
 
 const localHashDimensions = 256
 const MAX_CACHE_SIZE = 1000
@@ -83,8 +92,29 @@ export function embedLocalHashMemoryText(text: string): number[] {
   return buildLocalHashEmbedding(normalized)
 }
 
+/** True for the local hash, including `auto` while it resolves to the hash. */
 export function isLocalHashMemoryModel(model: string) {
-  return normalizeForEmbedding(model) === LOCAL_HASH_MEMORY_MODEL_ID
+  return normalizeForEmbedding(resolveMemoryEmbeddingModelSetting(model)) === LOCAL_HASH_MEMORY_MODEL_ID
+}
+
+/**
+ * The embedding model a recall should actually use right now: an Ollama
+ * model that just failed is swapped for the local hash until its cooldown
+ * ends, so one recall never mixes vectors from two spaces.
+ */
+export function resolveActiveMemoryEmbeddingModel(model: string) {
+  const trimmed = resolveMemoryEmbeddingModelSetting(model) || LOCAL_HASH_MEMORY_MODEL_ID
+  if (isOllamaMemoryModel(trimmed) && isOllamaMemoryModelCoolingDown(trimmed)) {
+    return LOCAL_HASH_MEMORY_MODEL_ID
+  }
+  return trimmed
+}
+
+function normalizeModelId(model: string) {
+  // `auto` -> whatever it currently resolves to (qwen3 or the local hash).
+  const trimmed = resolveMemoryEmbeddingModelSetting(model)
+  if (!trimmed) return LOCAL_HASH_MEMORY_MODEL_ID
+  return isLocalHashMemoryModel(trimmed) ? LOCAL_HASH_MEMORY_MODEL_ID : trimmed
 }
 
 async function getRemoteVectorRuntime() {
@@ -96,7 +126,15 @@ async function getRemoteVectorRuntime() {
 }
 
 export async function warmupMemoryVectorModel(model: string) {
+  model = resolveMemoryEmbeddingModelSetting(model)
   if (isLocalHashMemoryModel(model)) {
+    return
+  }
+
+  if (isOllamaMemoryModel(model)) {
+    // Probe once so the settings status reflects reality (ready / missing
+    // model / Ollama down). Failures are recorded, not thrown.
+    await embedTextsWithOllama(['nexus memory warmup'], model, 'document').catch(() => undefined)
     return
   }
 
@@ -104,29 +142,19 @@ export async function warmupMemoryVectorModel(model: string) {
   await runtime.warmupRemoteMemoryVectorModel(model)
 }
 
-export async function embedMemorySearchText(text: string, model: string) {
-  const normalizedText = normalizeForEmbedding(text)
+export type MemoryEmbeddingResult = {
+  embedding: number[]
+  /** Model the vector really came from (local hash after an Ollama fallback). */
+  model: string
+}
 
-  if (!normalizedText) {
-    return []
-  }
-
-  const normalizedModel = normalizeForEmbedding(model) || LOCAL_HASH_MEMORY_MODEL_ID
-  const cacheKey = `${normalizedModel}::${normalizedText}`
+async function cachedEmbedding(cacheKey: string, compute: () => Promise<number[]>) {
   const cached = embeddingCache.get(cacheKey)
   if (cached) {
     return cached
   }
 
-  const nextEmbedding = (async () => {
-    if (isLocalHashMemoryModel(normalizedModel)) {
-      return buildLocalHashEmbedding(normalizedText)
-    }
-
-    const runtime = await getRemoteVectorRuntime()
-    return runtime.embedRemoteMemorySearchText(normalizedText, model)
-  })()
-
+  const nextEmbedding = compute()
   setEmbeddingCache(cacheKey, nextEmbedding)
 
   try {
@@ -135,6 +163,115 @@ export async function embedMemorySearchText(text: string, model: string) {
     embeddingCache.delete(cacheKey)
     throw error
   }
+}
+
+/**
+ * Embed one text and report which model produced the vector. Ollama models
+ * fall back to the local hash when Ollama is down or the model is missing;
+ * the fallback vector is cached under the hash model id, never under the
+ * Ollama id, so a later successful call is not shadowed by it.
+ *
+ * `purpose` matters for instruction-aware models (qwen3-embedding): queries
+ * get a task instruction, stored memories are embedded as-is.
+ */
+export async function embedMemorySearchTextWithModel(
+  text: string,
+  model: string,
+  purpose: MemoryEmbeddingPurpose = 'document',
+): Promise<MemoryEmbeddingResult> {
+  const normalizedText = normalizeForEmbedding(text)
+  const requestedModel = normalizeModelId(model)
+
+  if (!normalizedText) {
+    return { embedding: [], model: requestedModel }
+  }
+
+  if (isOllamaMemoryModel(requestedModel)) {
+    if (!isOllamaMemoryModelCoolingDown(requestedModel)) {
+      // Keep casing for the neural model; only collapse whitespace.
+      const modelText = String(text).replace(/\s+/g, ' ').trim()
+      try {
+        const embedding = await cachedEmbedding(
+          `${requestedModel}::${purpose}::${modelText}`,
+          async () => (await embedTextsWithOllama([modelText], requestedModel, purpose))[0] ?? [],
+        )
+        if (embedding.length) {
+          return { embedding, model: requestedModel }
+        }
+      } catch {
+        // Status + cooldown already recorded by the Ollama backend.
+      }
+    }
+
+    return {
+      embedding: await cachedEmbedding(
+        `${LOCAL_HASH_MEMORY_MODEL_ID}::${normalizedText}`,
+        async () => buildLocalHashEmbedding(normalizedText),
+      ),
+      model: LOCAL_HASH_MEMORY_MODEL_ID,
+    }
+  }
+
+  const embedding = await cachedEmbedding(`${requestedModel.toLowerCase()}::${normalizedText}`, async () => {
+    if (isLocalHashMemoryModel(requestedModel)) {
+      return buildLocalHashEmbedding(normalizedText)
+    }
+
+    const runtime = await getRemoteVectorRuntime()
+    return runtime.embedRemoteMemorySearchText(normalizedText, model)
+  })
+  return { embedding, model: requestedModel }
+}
+
+/**
+ * Batch version for stored memories. Ollama gets one request per 32 texts
+ * instead of one per memory; everything else goes through the single-text
+ * path. All returned vectors come from the same model (reported), falling
+ * back to the local hash for the whole batch if Ollama fails.
+ */
+export async function embedMemoryTextsWithModel(
+  texts: string[],
+  model: string,
+  purpose: MemoryEmbeddingPurpose = 'document',
+): Promise<{ embeddings: number[][]; model: string }> {
+  const requestedModel = normalizeModelId(model)
+  if (isOllamaMemoryModel(requestedModel) && !isOllamaMemoryModelCoolingDown(requestedModel)) {
+    const modelTexts = texts.map((text) => String(text).replace(/\s+/g, ' ').trim())
+    const keys = modelTexts.map((text) => `${requestedModel}::${purpose}::${text}`)
+    const pending = [...new Set(modelTexts.filter((text, index) => text && !embeddingCache.has(keys[index])))]
+    try {
+      if (pending.length) {
+        const vectors = await embedTextsWithOllama(pending, requestedModel, purpose)
+        pending.forEach((text, index) => {
+          setEmbeddingCache(`${requestedModel}::${purpose}::${text}`, Promise.resolve(vectors[index] ?? []))
+        })
+      }
+      const embeddings = await Promise.all(modelTexts.map((text, index) => (
+        text ? (embeddingCache.get(keys[index]) ?? embedMemorySearchText(text, requestedModel, purpose)) : Promise.resolve([])
+      )))
+      return { embeddings, model: requestedModel }
+    } catch {
+      // Fall through to the hash for the whole batch.
+    }
+  }
+
+  if (isOllamaMemoryModel(requestedModel)) {
+    return {
+      embeddings: texts.map((text) => embedLocalHashMemoryText(text)),
+      model: LOCAL_HASH_MEMORY_MODEL_ID,
+    }
+  }
+
+  const embeddings = await Promise.all(texts.map((text) => embedMemorySearchText(text, requestedModel, purpose)))
+  return { embeddings, model: requestedModel }
+}
+
+export async function embedMemorySearchText(
+  text: string,
+  model: string,
+  purpose: MemoryEmbeddingPurpose = 'document',
+) {
+  return (await embedMemorySearchTextWithModel(text, model, purpose)).embedding
 }
 
 export function cosineSimilarity(left: number[], right: number[]) {

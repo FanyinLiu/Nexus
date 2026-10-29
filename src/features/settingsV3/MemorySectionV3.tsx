@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useReducer, useState } from 'react'
+import { memo, useEffect, useMemo, useReducer, useState, useSyncExternalStore } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
 import type { ConfirmFn } from '../../components/useConfirm.ts'
@@ -17,6 +17,17 @@ import {
   SCREEN_VLM_MODEL_OPTIONS,
 } from '../../features/memory/constants.ts'
 import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView.ts'
+import { resolveMemoryEmbeddingStatusView } from '../../features/memory/memoryEmbeddingStatusView.ts'
+import {
+  getAutoMemoryEmbeddingState,
+  subscribeAutoMemoryEmbeddingState,
+} from '../../features/memory/memoryEmbeddingAuto.ts'
+import {
+  getMemoryEmbeddingBackendStatus,
+  isOllamaMemoryModel,
+  subscribeMemoryEmbeddingBackendStatus,
+} from '../../features/memory/ollamaEmbedding.ts'
+import { warmupMemoryVectorModel } from '../../features/memory/vectorSearch.ts'
 import type { ChatMemoryTraceFocusTarget } from '../../features/memory/traceDetails.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type {
@@ -212,6 +223,22 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
   const selectedEmbedding = MEMORY_EMBEDDING_MODEL_OPTIONS.find(
     (option) => option.value === draft.memoryEmbeddingModel,
   )
+  const embeddingBackendStatus = useSyncExternalStore(
+    subscribeMemoryEmbeddingBackendStatus,
+    getMemoryEmbeddingBackendStatus,
+    getMemoryEmbeddingBackendStatus,
+  )
+  const autoEmbeddingState = useSyncExternalStore(
+    subscribeAutoMemoryEmbeddingState,
+    getAutoMemoryEmbeddingState,
+    getAutoMemoryEmbeddingState,
+  )
+  const embeddingStatusView = resolveMemoryEmbeddingStatusView(
+    draft.memoryEmbeddingModel,
+    embeddingBackendStatus,
+    ti,
+    autoEmbeddingState,
+  )
 
   const translateDiagnostic = (value: DesktopContextDiagnosticText) =>
     value.params ? ti(value.key, value.params) : ti(value.key)
@@ -220,6 +247,13 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
     clearRecentCompanionSummary()
     refreshRecent()
   }
+
+  // Picking an Ollama model probes it once so the status line can say
+  // "ready", "not installed (ollama pull …)" or "Ollama not running".
+  useEffect(() => {
+    if (!isOllamaMemoryModel(draft.memoryEmbeddingModel)) return
+    void warmupMemoryVectorModel(draft.memoryEmbeddingModel).catch(() => undefined)
+  }, [draft.memoryEmbeddingModel])
 
   useEffect(() => {
     if (!focusedCount) return undefined
@@ -641,6 +675,13 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
             <option value="__custom__">{ti('settings.memory.custom_option')}</option>
           </select>
         </SettingsV3Field>
+        {embeddingStatusView ? (
+          <SettingsV3Notice
+            tone={embeddingStatusView.tone}
+            title={ti(embeddingStatusView.key, embeddingStatusView.params)}
+            announce
+          />
+        ) : null}
         <SettingsV3Field label={ti('settings.memory.long_term.embedding_custom_model')}>
           <input value={draft.memoryEmbeddingModel} onChange={(event) => setDraft((previous) => ({ ...previous, memoryEmbeddingModel: event.target.value }))} />
         </SettingsV3Field>

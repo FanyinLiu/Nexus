@@ -22,11 +22,17 @@ function cosineSimilarity(left, right) {
 parentPort.on('message', (msg) => {
   if (msg.type !== 'search') return
 
-  const { queryEmbedding, entries, limit, threshold, layer, requestId } = msg
+  const { queryEmbedding, entries, limit, threshold, layer, model, requestId } = msg
   const results = []
+  const dimensions = queryEmbedding?.length ?? 0
 
   for (const entry of entries) {
     if (layer && entry.layer !== layer) continue
+    // Skip vectors from another embedding space (different length or a
+    // different tagged model). Reporting them as score 0 would hide them
+    // from the renderer's re-embed path after a model switch.
+    if (!entry.embedding?.length || entry.embedding.length !== dimensions) continue
+    if (model && entry.model && entry.model !== model) continue
 
     const score = cosineSimilarity(queryEmbedding, entry.embedding)
     if (score >= threshold) {

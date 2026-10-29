@@ -11,9 +11,14 @@ import {
   getRecentDailyEntries,
   rankDailyEntries,
   rankMemories,
-  scoreLexicalSimilarity,
 } from './memory.ts'
-import { cosineSimilarity, embedMemorySearchText } from './vectorSearch.ts'
+import { scoreRecallKeywordOverlap } from './recallTokens.ts'
+import {
+  cosineSimilarity,
+  embedMemorySearchTextWithModel,
+  embedMemoryTextsWithModel,
+  resolveActiveMemoryEmbeddingModel,
+} from './vectorSearch.ts'
 import { getDecayedScore } from './decay.ts'
 import { getSupersededRecallPenalty } from './contradictionDetector.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
@@ -97,11 +102,13 @@ function scoreItem<T extends {
   mode: MemorySearchMode,
   scores: ScoreMapEntry,
   emotionContext: EmotionContext | null,
+  rankVectorScore: number = scores.vectorScore,
 ) {
-  // Use BM25 score from main process when available, fall back to Jaccard
+  // Use BM25 score from main process when available, fall back to a
+  // CJK-aware token overlap.
   const keywordScore = scores.bm25Score > 0
     ? scores.bm25Score
-    : scoreLexicalSimilarity(item.content, query)
+    : scoreRecallKeywordOverlap(item.content, query)
   const vectorScore = scores.vectorScore
   const recencyBoost = getRecencyBoost(item.createdAt)
   const categoryBoost = CATEGORY_WEIGHT[item.category ?? ''] ?? 0
@@ -136,7 +143,7 @@ function scoreItem<T extends {
     return {
       keywordScore,
       vectorScore,
-      finalScore: (vectorScore + recencyBoost + categoryBoost + decayBoost + emotionBoost) * supersededPenalty,
+      finalScore: (rankVectorScore + recencyBoost + categoryBoost + decayBoost + emotionBoost) * supersededPenalty,
     }
   }
 
@@ -144,9 +151,27 @@ function scoreItem<T extends {
     keywordScore,
     vectorScore,
     finalScore:
-      (keywordScore * 0.3 + vectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost + emotionBoost)
+      (keywordScore * 0.3 + rankVectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost + emotionBoost)
       * supersededPenalty,
   }
+}
+
+/**
+ * Spread vector scores over [0, 1] within this candidate set before they
+ * are mixed with the fixed boosts (recency ≤0.18, category ≤0.15, decay,
+ * emotion). Neural embeddings put every memory at cosine 0.3–0.6 with the
+ * right one often only ~0.05 ahead, so raw cosine let a category bonus
+ * outrank the actual semantic match. Raw scores are still reported for the
+ * semantic-match threshold.
+ */
+function buildVectorRankNormalizer(values: number[]) {
+  const finite = values.filter((value) => Number.isFinite(value))
+  if (finite.length < 2) return (value: number) => value
+  const min = Math.min(...finite)
+  const max = Math.max(...finite)
+  const spread = max - min
+  if (spread < 1e-6) return (value: number) => value
+  return (value: number) => (value - min) / spread
 }
 
 function sortScoredItems<T extends {
@@ -163,15 +188,18 @@ function sortScoredItems<T extends {
   emotionContext: EmotionContext | null,
 ) {
   const defaultScores: ScoreMapEntry = { vectorScore: 0, bm25Score: 0 }
+  const rankVector = buildVectorRankNormalizer(items.map((item) => (scoreMap.get(item.id) ?? defaultScores).vectorScore))
 
   return items
     .map((item) => {
+      const scores = scoreMap.get(item.id) ?? defaultScores
       const { keywordScore, vectorScore, finalScore } = scoreItem(
         item,
         query,
         mode,
-        scoreMap.get(item.id) ?? defaultScores,
+        scores,
         emotionContext,
+        rankVector(scores.vectorScore),
       )
 
       return {
@@ -200,47 +228,127 @@ function indexMemoriesToVectorStore<T extends { id: string; content: string }>(
   layer: string,
 ) {
   const job = _indexQueue.then(() => doIndexMemoriesToVectorStore(items, embeddingModel, layer))
-  _indexQueue = job.catch((err) => {
+  const settled = job.catch((err) => {
     console.warn('[memory] Vector index queue job failed:', getRedactedLogErrorMessage(err))
+    return false
   })
-  // Return the caught chain so callers using `void` never trigger unhandled rejections.
-  return _indexQueue
+  _indexQueue = settled.then(() => undefined)
+  // Return the caught chain so callers using `void` never trigger unhandled
+  // rejections. Resolves true when every item was indexed with the model.
+  return settled
+}
+
+// What this session already sent to the main-process vector store, keyed
+// by `${model}\u0000${memory id}` -> content. Recall scores every active
+// memory now, so without this every chat turn would re-send ~500 vectors.
+// An edited memory is re-indexed. Keyed per model so a session that moves
+// between two models (auto mode: hash while qwen3 re-embeds, or a fallback)
+// does not re-send each model's vectors every time it switches back.
+const indexedThisSession = new Map<string, string>()
+const INDEX_BATCH_SIZE = 32
+
+function indexLedgerKey(model: string, id: string) {
+  return `${model}\u0000${id}`
 }
 
 async function doIndexMemoriesToVectorStore<T extends { id: string; content: string }>(
   items: T[],
   embeddingModel: string,
   layer: string,
-) {
-  if (!window.desktopPet?.memoryVectorIndexBatch) return
+): Promise<boolean> {
+  if (!window.desktopPet?.memoryVectorIndexBatch) return true
 
-  const batch: Array<{ id: string; content: string; embedding: number[]; layer: string }> = []
-  for (const item of items) {
-    const embedding = await embedMemorySearchText(item.content, embeddingModel)
-    if (embedding.length) {
-      batch.push({ id: item.id, content: item.content, embedding, layer })
+  const pending = items.filter((item) => (
+    item.content.trim() && indexedThisSession.get(indexLedgerKey(embeddingModel, item.id)) !== item.content
+  ))
+
+  for (let start = 0; start < pending.length; start += INDEX_BATCH_SIZE) {
+    const chunk = pending.slice(start, start + INDEX_BATCH_SIZE)
+    const { embeddings, model } = await embedMemoryTextsWithModel(
+      chunk.map((item) => item.content),
+      embeddingModel,
+      'document',
+    )
+    // Never store a fallback vector under another model's slot: if Ollama
+    // dropped out, stop and let a later recall index the rest.
+    if (model !== embeddingModel) return false
+
+    const batch = chunk
+      .map((item, index) => ({ id: item.id, content: item.content, embedding: embeddings[index] ?? [], layer, model }))
+      .filter((entry) => entry.embedding.length)
+    if (!batch.length) continue
+
+    try {
+      await window.desktopPet.memoryVectorIndexBatch(batch)
+      for (const entry of batch) {
+        indexedThisSession.set(indexLedgerKey(model, entry.id), entry.content)
+      }
+    } catch (error) {
+      console.warn('[Memory] Vector index batch failed:', getRedactedLogErrorMessage(error))
+      return false
     }
   }
+  return true
+}
 
-  if (batch.length) {
-    await window.desktopPet.memoryVectorIndexBatch(batch).catch((error) => {
-      console.warn('[Memory] Vector index batch failed:', getRedactedLogErrorMessage(error))
-    })
-  }
+/**
+ * Re-embed memories with a newly selected model in the background (after a
+ * model switch), so the first recall does not pay for embedding the whole
+ * store and the main-process index stops holding vectors from the old
+ * model. Safe to call repeatedly: already-indexed items are skipped.
+ */
+export function reindexMemoriesForEmbeddingModel<T extends { id: string; content: string }>(
+  items: T[],
+  embeddingModel: string,
+  layer: 'long_term' | 'daily' = 'long_term',
+): Promise<boolean> {
+  const active = resolveActiveMemoryEmbeddingModel(embeddingModel)
+  // The requested model is cooling down after a failure: nothing to do now.
+  if (active !== embeddingModel) return Promise.resolve(false)
+  return indexMemoriesToVectorStore(items, active, layer)
 }
 
 type ScoreMapEntry = { vectorScore: number; bm25Score: number }
 
+async function scoreLocally<T extends { id: string; content: string }>(
+  items: T[],
+  queryEmbedding: number[],
+  embeddingModel: string,
+) {
+  const { embeddings } = await embedMemoryTextsWithModel(
+    items.map((item) => item.content),
+    embeddingModel,
+    'document',
+  )
+  return items.map((item, index) => [item.id, cosineSimilarity(queryEmbedding, embeddings[index] ?? [])] as const)
+}
+
 async function buildScoreMap<T extends { id: string; content: string }>(
   items: T[],
   query: string,
+  requestedModel: string,
+): Promise<{ scoreMap: Map<string, ScoreMapEntry>; embeddingModel: string }> {
+  // The query decides the embedding space for the whole recall: if Ollama
+  // is unavailable it comes back as a local-hash vector, and every memory
+  // below is then embedded with the hash too, so vectors always match.
+  const { embedding: queryEmbedding, model: embeddingModel } = await embedMemorySearchTextWithModel(
+    query,
+    requestedModel,
+    'query',
+  )
+  if (!queryEmbedding.length) {
+    return { scoreMap: new Map(), embeddingModel }
+  }
+  const scoreMap = await buildScoreMapForEmbedding(items, query, queryEmbedding, embeddingModel)
+  return { scoreMap, embeddingModel }
+}
+
+async function buildScoreMapForEmbedding<T extends { id: string; content: string }>(
+  items: T[],
+  query: string,
+  queryEmbedding: number[],
   embeddingModel: string,
 ): Promise<Map<string, ScoreMapEntry>> {
-  const queryEmbedding = await embedMemorySearchText(query, embeddingModel)
-  if (!queryEmbedding.length) {
-    return new Map()
-  }
-
   // Prefer hybrid search (vector + BM25 in main process)
   if (window.desktopPet?.memoryHybridSearch) {
     try {
@@ -249,25 +357,30 @@ async function buildScoreMap<T extends { id: string; content: string }>(
         queryText: query,
         limit: items.length,
         threshold: 0,
+        model: embeddingModel,
       })
 
       const itemIds = new Set(items.map((item) => item.id))
       const scoreMap = new Map<string, ScoreMapEntry>()
+      const staleKeyword = new Map<string, number>()
       for (const r of results) {
-        if (itemIds.has(r.id)) {
-          scoreMap.set(r.id, { vectorScore: r.vectorScore, bm25Score: r.keywordScore })
+        if (!itemIds.has(r.id)) continue
+        if (r.vectorStale) {
+          // Stored vector is from another model/dimension: keep the BM25
+          // score, recompute the vector score below.
+          staleKeyword.set(r.id, r.keywordScore)
+          continue
         }
+        scoreMap.set(r.id, { vectorScore: r.vectorScore, bm25Score: r.keywordScore })
       }
 
-      // Fill missing items with local embeddings (not yet indexed in main process)
+      // Fill missing items with local embeddings (not yet indexed in main
+      // process, or indexed under a different embedding model).
       const missingItems = items.filter((item) => !scoreMap.has(item.id))
       if (missingItems.length) {
-        const missingPairs = await Promise.all(missingItems.map(async (item) => {
-          const embedding = await embedMemorySearchText(item.content, embeddingModel)
-          return [item.id, cosineSimilarity(queryEmbedding, embedding)] as const
-        }))
+        const missingPairs = await scoreLocally(missingItems, queryEmbedding, embeddingModel)
         for (const [id, score] of missingPairs) {
-          scoreMap.set(id, { vectorScore: score, bm25Score: 0 })
+          scoreMap.set(id, { vectorScore: score, bm25Score: staleKeyword.get(id) ?? 0 })
         }
       }
 
@@ -284,6 +397,7 @@ async function buildScoreMap<T extends { id: string; content: string }>(
         queryEmbedding,
         limit: items.length,
         threshold: 0,
+        model: embeddingModel,
       })
 
       const itemIds = new Set(items.map((item) => item.id))
@@ -296,10 +410,7 @@ async function buildScoreMap<T extends { id: string; content: string }>(
 
       const missingItems = items.filter((item) => !scoreMap.has(item.id))
       if (missingItems.length) {
-        const missingPairs = await Promise.all(missingItems.map(async (item) => {
-          const embedding = await embedMemorySearchText(item.content, embeddingModel)
-          return [item.id, cosineSimilarity(queryEmbedding, embedding)] as const
-        }))
+        const missingPairs = await scoreLocally(missingItems, queryEmbedding, embeddingModel)
         for (const [id, score] of missingPairs) {
           scoreMap.set(id, { vectorScore: score, bm25Score: 0 })
         }
@@ -311,10 +422,7 @@ async function buildScoreMap<T extends { id: string; content: string }>(
     }
   }
 
-  const pairs = await Promise.all(items.map(async (item) => {
-    const embedding = await embedMemorySearchText(item.content, embeddingModel)
-    return [item.id, cosineSimilarity(queryEmbedding, embedding)] as const
-  }))
+  const pairs = await scoreLocally(items, queryEmbedding, embeddingModel)
 
   return new Map(pairs.map(([id, score]) => [id, { vectorScore: score, bm25Score: 0 }]))
 }
@@ -414,9 +522,13 @@ export async function buildMemoryRecallContext({
     }
   }
 
-  const longTermCandidates = searchMode === 'vector'
-    ? activeLongTermMemories
-    : keywordLongTerm.slice(0, Math.max(longTermLimit * 3, 12))
+  // Hybrid used to pre-filter long-term candidates to the keyword top 12,
+  // so a paraphrased query with little word overlap (the normal case in
+  // Chinese) never reached vector scoring at all. The long-term store is
+  // capped (MAX_LONG_TERM_MEMORIES), vectors are cached / indexed in the
+  // main process, and keyword overlap still carries 30% of the hybrid
+  // score, so every active memory is scored.
+  const longTermCandidates = activeLongTermMemories
   const dailyCandidates = searchMode === 'vector'
     ? recentDaily
     : uniqueById([
@@ -425,17 +537,17 @@ export async function buildMemoryRecallContext({
       ])
 
   try {
-    const scoreMap = await buildScoreMap(
+    const { scoreMap, embeddingModel: usedEmbeddingModel } = await buildScoreMap(
       [...longTermCandidates, ...dailyCandidates],
       query,
-      embeddingModel,
+      resolveActiveMemoryEmbeddingModel(embeddingModel),
     )
 
     const scoredLongTerm = sortScoredItems(longTermCandidates, query, searchMode, scoreMap, emotionContext)
     const scoredDaily = sortScoredItems(dailyCandidates, query, searchMode, scoreMap, emotionContext)
 
-    void indexMemoriesToVectorStore(longTermCandidates, embeddingModel, 'long_term')
-    void indexMemoriesToVectorStore(dailyCandidates, embeddingModel, 'daily')
+    void indexMemoriesToVectorStore(longTermCandidates, usedEmbeddingModel, 'long_term')
+    void indexMemoriesToVectorStore(dailyCandidates, usedEmbeddingModel, 'daily')
 
     const selectedLongTerm = scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)
     updatePrimingFromSelection(selectedLongTerm)

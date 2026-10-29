@@ -80,6 +80,8 @@ export {
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
   validateMemoryLongTermSavePayload,
+  validateMemoryOllamaDetectPayload,
+  validateMemoryOllamaEmbedPayload,
   validateMemoryRemovePayload,
   validateMemoryVectorIndexBatchPayload,
   validateMemoryVectorIndexPayload,

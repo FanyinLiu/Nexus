@@ -16,6 +16,7 @@ import { MEMORY_RECORD_SCHEMA_VERSION } from '../../types/memory.ts'
 import { commitLongTermMemoryCap } from './memoryCapCommit.ts'
 import { localDayKey } from '../../lib/localDate.ts'
 import { attachOpenLoops } from './openLoops.ts'
+import { scoreRecallKeywordOverlap } from './recallTokens.ts'
 
 const longTermDuplicateThreshold = 0.72
 const dailyDuplicateThreshold = 0.88
@@ -269,7 +270,9 @@ export function rankMemories(memories: MemoryItem[], query: string) {
       && memory.status !== 'archived'
     ))
     .map((memory) => {
-      const relevance = scoreLexicalSimilarity(memory.content, query)
+      // CJK-aware tokens: the plain word split sees a whole Chinese clause
+      // as one token, so Chinese queries never matched anything here.
+      const relevance = scoreRecallKeywordOverlap(memory.content, query)
       const retention = computeMemoryRetentionScore(memory, nowMs)
       // Superseded memories (contradiction resolution) surface less
       // often so the newer stance wins in conversation. Both tiers are
@@ -413,7 +416,7 @@ export function rankDailyEntries(entries: DailyMemoryEntry[], query: string) {
   return [...entries]
     .map((entry) => ({
       entry,
-      score: scoreLexicalSimilarity(entry.content, query),
+      score: scoreRecallKeywordOverlap(entry.content, query),
     }))
     .sort((left, right) => right.score - left.score)
     .map(({ entry }) => entry)

@@ -12,7 +12,8 @@
  * Versions 16–19 are left unused on purpose. The companion-theme
  * migration is 20. Version 21 only records which companionship pace
  * already matches the stored switches. Version 22 points a saved sprite
- * or portrait selection at Live2D Mao.
+ * or portrait selection at Live2D Mao. Version 23 moves the memory
+ * embedding model from the old local-hash default to `auto`.
  */
 
 import type { UiLanguage } from '../types'
@@ -443,7 +444,7 @@ function migrateRetiredNonLive2dPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 22
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 23
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -452,6 +453,20 @@ function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
     next[key] = migrateVoiceLanguageValue(next[key]).value
   }
   return next
+}
+
+/**
+ * Frozen: the memory embedding default before schema 23. Settings are saved
+ * whole, so a store holding exactly this id is (almost always) a user who
+ * never changed it; it becomes `auto`. Any other stored id was picked on
+ * purpose and stays.
+ */
+const V22_DEFAULT_MEMORY_EMBEDDING_MODEL = 'local-hash-v1'
+
+function migrateMemoryEmbeddingModelToAuto(raw: Record<string, unknown>) {
+  const stored = typeof raw.memoryEmbeddingModel === 'string' ? raw.memoryEmbeddingModel.trim() : ''
+  if (stored && stored.toLowerCase() !== V22_DEFAULT_MEMORY_EMBEDDING_MODEL) return raw
+  return { ...raw, memoryEmbeddingModel: 'auto' }
 }
 
 interface SettingsMigration {
@@ -651,6 +666,11 @@ const migrations: SettingsMigration[] = [
     toVersion: 22,
     description: 'Fall back to Live2D Mao when a saved pet is a sprite or portrait puppet',
     migrate: migrateRetiredNonLive2dPetModels,
+  },
+  {
+    toVersion: 23,
+    description: 'Move the memory embedding model from the old local-hash default to auto',
+    migrate: migrateMemoryEmbeddingModelToAuto,
   },
 ]
 

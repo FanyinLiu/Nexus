@@ -721,18 +721,23 @@ declare global {
         content: string
         embedding: number[]
         layer?: string
+        /** Embedding model id the vector came from. */
+        model?: string
       }) => Promise<{ ok: boolean }>
       memoryVectorIndexBatch: (payload: Array<{
         id: string
         content: string
         embedding: number[]
         layer?: string
+        model?: string
       }>) => Promise<{ ok: boolean; count: number }>
       memoryVectorSearch: (payload: {
         queryEmbedding: number[]
         limit?: number
         threshold?: number
         layer?: string
+        /** Skip stored vectors tagged with a different embedding model. */
+        model?: string
       }) => Promise<Array<{
         id: string
         content: string
@@ -772,6 +777,7 @@ declare global {
         limit?: number
         threshold?: number
         layer?: string
+        model?: string
       }) => Promise<Array<{
         id: string
         content: string
@@ -779,7 +785,27 @@ declare global {
         vectorScore: number
         keywordScore: number
         score: number
+        /** Keyword hit whose stored vector is from another model/dimension. */
+        vectorStale?: boolean
       }>>
+      /** Memory embeddings from a local Ollama (runs in the main process). */
+      memoryOllamaEmbed?: (payload: {
+        baseUrl?: string
+        model: string
+        input: string[]
+      }) => Promise<
+        | { ok: true; embeddings: number[][]; model?: string; dimensions?: number }
+        | {
+          ok: false
+          code: 'unreachable' | 'model-missing' | 'not-embedding-model' | 'bad-response' | 'error'
+          message: string
+        }
+      >
+      /** Is a local Ollama reachable and the embedding model pulled? (GET /api/tags) */
+      memoryOllamaDetect?: (payload: {
+        baseUrl?: string
+        model: string
+      }) => Promise<{ reachable: boolean; installed: boolean; baseUrl?: string; model?: string }>
 
       // Long-term memory file store
       memoryLongTermLoad: () => Promise<{

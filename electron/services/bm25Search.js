@@ -1,7 +1,7 @@
 /**
  * Pure-JS BM25 keyword search for memory entries.
- * CJK-aware tokenization: CJK characters are individual tokens,
- * Latin/digits are split on whitespace/punctuation.
+ * CJK-aware tokenization: CJK characters are individual tokens plus
+ * adjacent-character bigrams, Latin/digits are split on whitespace/punctuation.
  */
 
 const K1 = 1.2
@@ -12,7 +12,8 @@ const CJK_RANGE = /[\u2E80-\u9FFF\uF900-\uFAFF]/u
 
 /**
  * Tokenize text into an array of lowercase tokens.
- * CJK characters become individual tokens; Latin/digit words are split on non-alphanumeric.
+ * CJK characters become individual tokens plus adjacent bigrams; Latin/digit
+ * words are split on non-alphanumeric.
  */
 export function tokenize(text) {
   if (!text) return []
@@ -20,6 +21,7 @@ export function tokenize(text) {
   const normalized = String(text).toLowerCase()
   const tokens = []
   let buffer = ''
+  let previousCjk = ''
 
   for (const char of normalized) {
     if (CJK_RANGE.test(char)) {
@@ -28,13 +30,19 @@ export function tokenize(text) {
         buffer = ''
       }
       tokens.push(char)
-    } else if (/[\p{L}\p{N}]/u.test(char)) {
+      // Adjacent-character bigrams carry most of the word signal in Chinese
+      // ("过敏", "游泳"); unigrams alone match "过" or "游" anywhere.
+      if (previousCjk) tokens.push(previousCjk + char)
+      previousCjk = char
+      continue
+    }
+
+    previousCjk = ''
+    if (/[\p{L}\p{N}]/u.test(char)) {
       buffer += char
-    } else {
-      if (buffer) {
-        tokens.push(buffer)
-        buffer = ''
-      }
+    } else if (buffer) {
+      tokens.push(buffer)
+      buffer = ''
     }
   }
 

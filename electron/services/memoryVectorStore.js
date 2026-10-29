@@ -15,6 +15,8 @@ const STORE_DISPLAY_PATH = `app-user-data/${STORE_FILENAME}`
 const LOG_DISPLAY_PATH = `app-user-data/${LOG_FILENAME}`
 // Max entries kept in memory.
 const MAX_ENTRIES = 2000
+// Vectors from other embedding models kept per memory (besides the primary).
+const MAX_ALT_EMBEDDINGS = 2
 // Compaction threshold for the append-only log. When the log file exceeds
 // this size, we rewrite the snapshot and truncate the log. Sized to
 // roughly 100 mutations of typical embedding size (~50KB each).
@@ -23,7 +25,13 @@ const LOG_COMPACT_THRESHOLD_BYTES = 5 * 1024 * 1024
 // (just a stat call); only triggers a real rewrite if log > threshold.
 const COMPACTION_CHECK_INTERVAL_MS = 10 * 60 * 1000
 
-/** @type {Map<string, { content: string, embedding: number[], layer: string, updatedAt: string }>} */
+/**
+ * One row per memory id. `embedding`/`model` is the vector written last;
+ * `altEmbeddings` keeps vectors of the same content from other embedding
+ * models (e.g. qwen3 while the session fell back to the local hash), so a
+ * model switch back and forth does not throw the expensive vectors away.
+ * @type {Map<string, { content: string, embedding: number[], layer: string, updatedAt: string, model?: string, altEmbeddings?: Record<string, number[]> }>}
+ */
 const _index = new Map()
 
 let _loaded = false
@@ -97,6 +105,16 @@ function getLogPath() {
   return path.join(app.getPath('userData'), LOG_FILENAME)
 }
 
+/** Keep only well-formed `{ model: number[] }` pairs from disk. */
+function readAltEmbeddings(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const alt = {}
+  for (const [model, embedding] of Object.entries(value)) {
+    if (model && Array.isArray(embedding) && embedding.length) alt[model] = embedding
+  }
+  return Object.keys(alt).length ? { altEmbeddings: alt } : {}
+}
+
 function applyLogOp(op) {
   if (!op || typeof op !== 'object') return
   if (op.kind === 'upsert' && op.id && Array.isArray(op.entry?.embedding)) {
@@ -106,6 +124,8 @@ function applyLogOp(op) {
       embedding: op.entry.embedding,
       layer: op.entry.layer ?? 'long_term',
       updatedAt: op.entry.updatedAt ?? new Date().toISOString(),
+      ...(typeof op.entry.model === 'string' && op.entry.model ? { model: op.entry.model } : {}),
+      ...readAltEmbeddings(op.entry.altEmbeddings),
     })
   } else if (op.kind === 'delete' && op.id) {
     _index.delete(String(op.id))
@@ -186,6 +206,8 @@ async function ensureLoaded() {
               embedding: entry.embedding,
               layer: entry.layer ?? 'long_term',
               updatedAt: entry.updatedAt ?? new Date().toISOString(),
+              ...(typeof entry.model === 'string' && entry.model ? { model: entry.model } : {}),
+              ...readAltEmbeddings(entry.altEmbeddings),
             })
           }
         }
@@ -384,17 +406,65 @@ function upsertEntry(id, entry) {
   appendLogOp({ kind: 'upsert', id, entry })
 }
 
+/**
+ * A stored vector can only be compared with a query vector from the same
+ * embedding space. Entries tagged with a different model, or of a different
+ * length (e.g. 256-dim local hash vs 1024-dim qwen3), are incompatible and
+ * are skipped rather than scored as 0 similarity.
+ */
+function isVectorCompatible(entry, queryDimensions, model) {
+  const embedding = pickEmbeddingForModel(entry, model)
+  return Boolean(embedding) && embedding.length === queryDimensions
+}
+
+/**
+ * The stored vector to compare with a query from `model`: the primary one
+ * when it is from that model (or untagged legacy data), else a kept vector
+ * from that model, else null.
+ */
+function pickEmbeddingForModel(entry, model) {
+  if (!entry || !Array.isArray(entry.embedding)) return null
+  if (!model || !entry.model || entry.model === model) return entry.embedding
+  const alt = entry.altEmbeddings?.[model]
+  return Array.isArray(alt) && alt.length ? alt : null
+}
+
+/**
+ * Build the row for an upsert. When the content is unchanged and the new
+ * vector comes from another model, the previous model's vector moves to
+ * `altEmbeddings` instead of being dropped. Edited content invalidates
+ * every old vector.
+ */
+function buildEntry(id, { content, embedding, layer, model }) {
+  const entry = {
+    content: String(content ?? ''),
+    embedding: Array.from(embedding),
+    layer: layer ?? 'long_term',
+    updatedAt: new Date().toISOString(),
+    ...(typeof model === 'string' && model ? { model } : {}),
+  }
+  const previous = _index.get(id)
+  if (!previous || previous.content !== entry.content || !entry.model) return entry
+
+  const alt = { ...(previous.altEmbeddings ?? {}) }
+  if (previous.model && previous.model !== entry.model && Array.isArray(previous.embedding)) {
+    alt[previous.model] = previous.embedding
+  }
+  delete alt[entry.model]
+  const models = Object.keys(alt)
+  // Bound the row size: keep the most recently demoted vectors.
+  for (const stale of models.slice(0, Math.max(0, models.length - MAX_ALT_EMBEDDINGS))) {
+    delete alt[stale]
+  }
+  return Object.keys(alt).length ? { ...entry, altEmbeddings: alt } : entry
+}
+
 // ── Public API ──
 
-export async function indexMemory(id, content, embedding, layer = 'long_term') {
+export async function indexMemory(id, content, embedding, layer = 'long_term', model = undefined) {
   await ensureLoaded()
 
-  upsertEntry(id, {
-    content: String(content),
-    embedding: Array.from(embedding),
-    layer,
-    updatedAt: new Date().toISOString(),
-  })
+  upsertEntry(id, buildEntry(id, { content, embedding, layer, model }))
 
   evictExcess()
 }
@@ -404,39 +474,49 @@ export async function indexBatch(items) {
 
   for (const item of items) {
     if (item?.id && Array.isArray(item.embedding)) {
-      upsertEntry(item.id, {
-        content: String(item.content ?? ''),
-        embedding: Array.from(item.embedding),
-        layer: item.layer ?? 'long_term',
-        updatedAt: new Date().toISOString(),
-      })
+      upsertEntry(item.id, buildEntry(item.id, item))
     }
   }
 
   evictExcess()
 }
 
-/** @type {Array<{ id: string, content: string, embedding: number[], layer: string }> | null} */
-let _workerSnapshotCache = null
+/**
+ * Worker input per query model: each row carries the vector that matches
+ * that model (primary or kept alternate), tagged so the worker's model and
+ * dimension checks still skip anything from another space.
+ * @type {Map<string, Array<{ id: string, content: string, embedding: number[], layer: string, model?: string }>>}
+ */
+let _workerSnapshotCache = new Map()
 let _snapshotDirty = true
 
-function getWorkerSnapshot() {
-  if (_workerSnapshotCache && !_snapshotDirty) return _workerSnapshotCache
+function getWorkerSnapshot(model = null) {
+  if (_snapshotDirty) {
+    _workerSnapshotCache = new Map()
+    _snapshotDirty = false
+  }
+  const key = model ?? ''
+  const cached = _workerSnapshotCache.get(key)
+  if (cached) return cached
   const entries = []
   for (const [id, entry] of _index) {
-    entries.push({ id, content: entry.content, embedding: entry.embedding, layer: entry.layer })
+    const alt = model && entry.model && entry.model !== model ? entry.altEmbeddings?.[model] : null
+    if (Array.isArray(alt) && alt.length) {
+      entries.push({ id, content: entry.content, embedding: alt, layer: entry.layer, model })
+    } else {
+      entries.push({ id, content: entry.content, embedding: entry.embedding, layer: entry.layer, model: entry.model })
+    }
   }
-  _workerSnapshotCache = entries
-  _snapshotDirty = false
+  _workerSnapshotCache.set(key, entries)
   return entries
 }
 
 export async function searchSimilar(queryEmbedding, options = {}) {
   await ensureLoaded()
 
-  const { limit = 10, threshold = 0.05, layer = null } = options
+  const { limit = 10, threshold = 0.05, layer = null, model = null } = options
 
-  const entries = getWorkerSnapshot()
+  const entries = getWorkerSnapshot(model)
 
   const requestId = ++_searchRequestId
   const worker = getWorker()
@@ -466,6 +546,7 @@ export async function searchSimilar(queryEmbedding, options = {}) {
       limit,
       threshold,
       layer,
+      model,
     })
   })
 }
@@ -498,12 +579,12 @@ export async function searchKeyword(query, options = {}) {
 export async function searchHybrid(queryEmbedding, queryText, options = {}) {
   await ensureLoaded()
 
-  const { limit = 10, threshold = 0.02, layer = null } = options
+  const { limit = 10, threshold = 0.02, layer = null, model = null } = options
   const overFetch = limit * 4
 
   // Run vector + BM25 in parallel
   const [vectorResults, keywordResults] = await Promise.all([
-    searchSimilar(queryEmbedding, { limit: overFetch, threshold: 0, layer }),
+    searchSimilar(queryEmbedding, { limit: overFetch, threshold: 0, layer, model }),
     (async () => {
       ensureBm25()
       return _bm25.search(queryText, { limit: overFetch, threshold: 0, layer })
@@ -534,6 +615,11 @@ export async function searchHybrid(queryEmbedding, queryText, options = {}) {
     if (existing) {
       existing.keywordScore = normKw
     } else {
+      // A keyword hit whose stored vector came from another embedding model
+      // (or has another dimension) has no comparable vector score. Flag it
+      // so the renderer re-embeds it instead of trusting vectorScore: 0.
+      const stored = _index.get(r.id)
+      const vectorStale = !stored || !isVectorCompatible(stored, queryEmbedding.length, model)
       scoreMap.set(r.id, {
         id: r.id,
         content: r.content,
@@ -541,6 +627,7 @@ export async function searchHybrid(queryEmbedding, queryText, options = {}) {
         vectorScore: 0,
         keywordScore: normKw,
         score: 0,
+        ...(vectorStale ? { vectorStale: true } : {}),
       })
     }
   }
@@ -564,7 +651,7 @@ export async function removeMemory(id) {
   if (deleted) {
     _bm25Dirty = true
     _snapshotDirty = true
-    _workerSnapshotCache = null
+    _workerSnapshotCache = new Map()
     appendLogOp({ kind: 'delete', id })
     // Rewrite the snapshot and drop the append log. A delete line alone
     // would leave the old plaintext in memory-vectors.json until the next
@@ -587,7 +674,7 @@ export async function removeMemories(ids) {
   if (count) {
     _bm25Dirty = true
     _snapshotDirty = true
-    _workerSnapshotCache = null
+    _workerSnapshotCache = new Map()
     await flush()
   }
   return count
@@ -624,7 +711,7 @@ export async function clearAllEntries() {
   _index.clear()
   _bm25Dirty = true
   _snapshotDirty = true
-  _workerSnapshotCache = null
+  _workerSnapshotCache = new Map()
   appendLogOp({ kind: 'clearAll' })
   await flush()
   return count

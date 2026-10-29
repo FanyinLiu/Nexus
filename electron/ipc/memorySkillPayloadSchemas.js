@@ -13,6 +13,9 @@ const embeddingArraySchema = {
 }
 
 const memoryLayerSchema = { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX }
+// Embedding model id the vector was produced with. Lets the store skip
+// vectors from a different model instead of comparing incompatible spaces.
+const memoryEmbeddingModelSchema = { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX }
 
 const memoryIndexSchema = {
   type: 'object',
@@ -21,6 +24,7 @@ const memoryIndexSchema = {
     content: { type: 'string', maxLength: BODY_TEXT_MAX },
     embedding: embeddingArraySchema,
     layer: memoryLayerSchema,
+    model: memoryEmbeddingModelSchema,
   },
 }
 
@@ -37,6 +41,7 @@ const memoryVectorSearchSchema = {
     limit: { type: 'number', optional: true, min: 1, max: 2_000 },
     threshold: { type: 'number', optional: true, min: 0, max: 1 },
     layer: memoryLayerSchema,
+    model: memoryEmbeddingModelSchema,
   },
 }
 
@@ -58,6 +63,20 @@ const memoryHybridSearchSchema = {
     limit: { type: 'number', optional: true, min: 1, max: 2_000 },
     threshold: { type: 'number', optional: true, min: 0, max: 1 },
     layer: memoryLayerSchema,
+    model: memoryEmbeddingModelSchema,
+  },
+}
+
+const memoryOllamaEmbedSchema = {
+  type: 'object',
+  fields: {
+    baseUrl: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX },
+    model: { type: 'string', maxLength: SHORT_TEXT_MAX, allowEmpty: false },
+    input: {
+      type: 'array',
+      maxItems: 64,
+      items: { type: 'string', maxLength: BODY_TEXT_MAX },
+    },
   },
 }
 
@@ -200,6 +219,22 @@ export function validateMemoryKeywordSearchPayload(payload) {
 
 export function validateMemoryHybridSearchPayload(payload) {
   return validateIpcPayload('memory:hybrid-search', payload, memoryHybridSearchSchema)
+}
+
+const memoryOllamaDetectSchema = {
+  type: 'object',
+  fields: {
+    baseUrl: { type: 'string', optional: true, maxLength: PATH_TEXT_MAX },
+    model: { type: 'string', maxLength: SHORT_TEXT_MAX, allowEmpty: false },
+  },
+}
+
+export function validateMemoryOllamaDetectPayload(payload) {
+  return validateIpcPayload('memory:ollama-detect', payload, memoryOllamaDetectSchema)
+}
+
+export function validateMemoryOllamaEmbedPayload(payload) {
+  return validateIpcPayload('memory:ollama-embed', payload, memoryOllamaEmbedSchema)
 }
 
 export function validateMemoryRemovePayload(payload) {

@@ -6,10 +6,21 @@ import {
   mergeDailyMemories,
   mergeMemories,
   parseMemoryArchive,
+  reindexMemoriesForEmbeddingModel,
   serializeMemoryArchive,
   warmupMemoryVectorModel,
 } from '../features/memory/index.ts'
+import {
+  getMemoryEmbeddingBackendStatus,
+  isOllamaMemoryModel,
+  resolveOllamaEmbedBaseUrl,
+  setOllamaEmbedBaseUrl,
+} from '../features/memory/ollamaEmbedding.ts'
 import { commitLongTermMemoryCap } from '../features/memory/memoryCapCommit.ts'
+import {
+  isAutoMemoryEmbeddingModel,
+  resolveAutoMemoryEmbedding,
+} from '../features/memory/memoryEmbeddingAuto.ts'
 import { formatMemoriesForPersonaFile } from '../features/memory/memoryPersistence.ts'
 import {
   applyLongTermMemoryCap,
@@ -182,15 +193,59 @@ export function useMemory({ settings }: UseMemoryParams) {
     return () => window.removeEventListener('nexus:memories-replaced', onReplace)
   }, [])
 
+  // Ollama memory embeddings reuse the chat Ollama address when the chat
+  // provider is Ollama (minus its /v1 suffix), else the local default.
   useEffect(() => {
-    if (settings.memorySearchMode === 'keyword') return
+    setOllamaEmbedBaseUrl(resolveOllamaEmbedBaseUrl({
+      apiProviderId: settings.apiProviderId,
+      apiBaseUrl: settings.apiBaseUrl,
+    }))
+  }, [settings.apiProviderId, settings.apiBaseUrl])
+
+  useEffect(() => {
+    const model = settings.memoryEmbeddingModel
+    const keywordOnly = settings.memorySearchMode === 'keyword'
+    const activeMemories = () => memoriesRef.current.filter((memory) => (
+      memory.enabled !== false && memory.status !== 'superseded' && memory.status !== 'archived'
+    ))
+
+    if (isAutoMemoryEmbeddingModel(model)) {
+      // Auto: pick qwen3 when Ollama is up with the model already pulled,
+      // else the local hash. Detection is one short GET in the main
+      // process; the re-embed after a switch runs in the background and
+      // recall stays on the hash until it finishes.
+      const baseUrl = resolveOllamaEmbedBaseUrl({
+        apiProviderId: settings.apiProviderId,
+        apiBaseUrl: settings.apiBaseUrl,
+      })
+      const timerId = window.setTimeout(() => {
+        void resolveAutoMemoryEmbedding({
+          baseUrl,
+          reindex: keywordOnly
+            ? undefined
+            : (target) => reindexMemoriesForEmbeddingModel(activeMemories(), target),
+        }).catch(() => undefined)
+      }, 500)
+      return () => window.clearTimeout(timerId)
+    }
+
+    if (keywordOnly) return
 
     // Defer warmup to avoid blocking startup render
     const timerId = window.setTimeout(() => {
-      void warmupMemoryVectorModel(settings.memoryEmbeddingModel).catch(() => undefined)
+      void warmupMemoryVectorModel(model)
+        .then(() => {
+          // After switching to an Ollama model, re-embed the store in the
+          // background so the main-process index stops holding vectors from
+          // the previous model and the first recall stays fast.
+          const status = getMemoryEmbeddingBackendStatus()
+          if (!isOllamaMemoryModel(model) || status.state !== 'ready' || status.model !== model) return
+          return reindexMemoriesForEmbeddingModel(activeMemories(), model)
+        })
+        .catch(() => undefined)
     }, 3_000)
     return () => window.clearTimeout(timerId)
-  }, [settings.memoryEmbeddingModel, settings.memorySearchMode])
+  }, [settings.memoryEmbeddingModel, settings.memorySearchMode, settings.apiBaseUrl, settings.apiProviderId])
 
   const recentDailyMemoryEntries = useMemo(
     () => getRecentDailyEntries(dailyMemories, 1).slice(0, 8),

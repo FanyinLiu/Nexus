@@ -7,12 +7,16 @@ import {
   createLongTermMemoryFileStore,
   resolveLongTermMemoryFilePath,
 } from '../services/longTermMemoryFileStore.js'
+import { detectOllamaModel, embedWithOllama } from '../services/ollamaEmbed.js'
+import { performNetworkRequest } from '../net.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateMemoryClearUserDataPayload,
   validateMemoryHybridSearchPayload,
   validateMemoryKeywordSearchPayload,
   validateMemoryLongTermSavePayload,
+  validateMemoryOllamaDetectPayload,
+  validateMemoryOllamaEmbedPayload,
   validateMemoryRemovePayload,
   validateMemoryVectorIndexBatchPayload,
   validateMemoryVectorIndexPayload,
@@ -73,8 +77,8 @@ export function register() {
   ipcMain.handle('memory:vector-index', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateMemoryVectorIndexPayload(payload)
-    const { id, content, embedding, layer } = payload ?? {}
-    await memoryVectorStore.indexMemory(id, content, embedding, layer)
+    const { id, content, embedding, layer, model } = payload ?? {}
+    await memoryVectorStore.indexMemory(id, content, embedding, layer, model)
     return { ok: true }
   })
 
@@ -88,8 +92,8 @@ export function register() {
   ipcMain.handle('memory:vector-search', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateMemoryVectorSearchPayload(payload)
-    const { queryEmbedding, limit, threshold, layer } = payload ?? {}
-    return memoryVectorStore.searchSimilar(queryEmbedding, { limit, threshold, layer })
+    const { queryEmbedding, limit, threshold, layer, model } = payload ?? {}
+    return memoryVectorStore.searchSimilar(queryEmbedding, { limit, threshold, layer, model })
   })
 
   ipcMain.handle('memory:vector-remove', async (event, payload) => {
@@ -136,7 +140,23 @@ export function register() {
   ipcMain.handle('memory:hybrid-search', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateMemoryHybridSearchPayload(payload)
-    const { queryEmbedding, queryText, limit, threshold, layer } = payload ?? {}
-    return memoryVectorStore.searchHybrid(queryEmbedding, queryText, { limit, threshold, layer })
+    const { queryEmbedding, queryText, limit, threshold, layer, model } = payload ?? {}
+    return memoryVectorStore.searchHybrid(queryEmbedding, queryText, { limit, threshold, layer, model })
+  })
+
+  // Memory embeddings from a local Ollama (e.g. qwen3-embedding:0.6b). The
+  // renderer CSP blocks plain-http fetches, so the request runs here.
+  ipcMain.handle('memory:ollama-embed', async (event, payload) => {
+    requireTrustedSender(event)
+    payload = validateMemoryOllamaEmbedPayload(payload)
+    return embedWithOllama(payload, performNetworkRequest)
+  })
+
+  // Auto memory embedding: is Ollama up and is the embedding model pulled?
+  // GET /api/tags with a short timeout; never pulls a model.
+  ipcMain.handle('memory:ollama-detect', async (event, payload) => {
+    requireTrustedSender(event)
+    payload = validateMemoryOllamaDetectPayload(payload)
+    return detectOllamaModel(payload, performNetworkRequest)
   })
 }
