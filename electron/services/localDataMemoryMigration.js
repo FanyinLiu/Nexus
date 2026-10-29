@@ -18,6 +18,7 @@ const MEMORY_CATEGORIES = new Set([
 ])
 const MEMORY_IMPORTANCE = new Set(['low', 'normal', 'high', 'pinned', 'reflection'])
 const MEMORY_KINDS = new Set(['preference', 'fact', 'relationship', 'knowledge', 'open_loop'])
+const MEMORY_LOOP_KINDS = new Set(['commitment', 'event'])
 const MEMORY_VALENCES = new Set(['positive', 'negative', 'neutral', 'mixed'])
 
 function isPlainObject(value) {
@@ -170,6 +171,7 @@ export function normalizeMemoryMigrationItem(value, index = 0) {
   if (value.loopStatus === 'open' || value.loopStatus === 'done' || value.loopStatus === 'dismissed') {
     memory.loopStatus = value.loopStatus
   }
+  if (MEMORY_LOOP_KINDS.has(value.loopKind)) memory.loopKind = value.loopKind
   for (const field of ['loopDueAt', 'loopSnoozeUntil', 'loopLastSurfacedAt']) {
     const stamped = normalizeOptionalString(value[field], `memory ${index} ${field}`, 64)
     if (stamped) memory[field] = normalizeIsoTimestamp(stamped, `memory ${index} ${field}`)

@@ -277,11 +277,19 @@ function normalizeLoopCheck(value: unknown): ChatMessage['loopCheck'] {
   if (!value || typeof value !== 'object') return undefined
   const record = value as Record<string, unknown>
   const memoryId = typeof record.memoryId === 'string' ? record.memoryId.trim() : ''
-  const status = record.status === 'done' || record.status === 'later' || record.status === 'moved' || record.status === 'pending'
+  const status = record.status === 'done'
+    || record.status === 'later'
+    || record.status === 'moved'
+    || record.status === 'went_well'
+    || record.status === 'went_rough'
+    || record.status === 'not_yet'
+    || record.status === 'dont_ask'
+    || record.status === 'pending'
     ? record.status
     : 'pending'
+  const kind = record.kind === 'event' || record.kind === 'commitment' ? record.kind : undefined
   if (!memoryId) return undefined
-  return { memoryId, status }
+  return { memoryId, status, ...(kind ? { kind } : {}) }
 }
 
 function normalizeProactiveWhy(value: unknown): ChatMessage['proactiveWhy'] {

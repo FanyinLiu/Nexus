@@ -49,8 +49,15 @@ export interface MemoryOpRecord {
 
 export type MemoryKind = 'preference' | 'fact' | 'relationship' | 'knowledge' | 'open_loop'
 
-/** User-facing lifecycle for a commitment. Snooze is a deferral, not a status. */
+/** User-facing lifecycle for a commitment or event. Snooze is a deferral, not a status. */
 export type LoopStatus = 'open' | 'done' | 'dismissed'
+
+/**
+ * A commitment is something the user said they would do. An event is
+ * something happening to them on a date, such as an interview or a trip.
+ * Absent on legacy rows, which are treated as commitments.
+ */
+export type LoopKind = 'commitment' | 'event'
 
 export type EmotionalValence = 'positive' | 'negative' | 'neutral' | 'mixed'
 
@@ -135,7 +142,9 @@ export interface MemoryItem {
    * recreate the same commitment and nag again.
    */
   loopStatus?: LoopStatus
-  /** ISO time the commitment is due. Absent when the user named no time. */
+  /** Commitment or event. Absent on older rows, which are commitments. */
+  loopKind?: LoopKind
+  /** ISO time the commitment or event is due. Absent when no time was named. */
   loopDueAt?: string
   /** The time phrase as the user said it, kept for the memory view. */
   loopDueText?: string

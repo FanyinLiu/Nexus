@@ -83,10 +83,12 @@ export interface ChatMessage {
     nightBeforeAt: string
     status: 'pending' | 'accepted' | 'declined' | 'booked' | 'cancelled' | 'rescheduled'
   }
-  /** Post-due "did it get done" answers on the same card. */
+  /** Post-due answers on the same card. Event cards use their own answers. */
   loopCheck?: {
     memoryId: string
-    status: 'pending' | 'done' | 'later' | 'moved'
+    status: 'pending' | 'done' | 'later' | 'moved' | 'went_well' | 'went_rough' | 'not_yet' | 'dont_ask'
+    /** Present on an event follow-up so the card picks event wording. */
+    kind?: 'commitment' | 'event'
   }
   /** Why a proactive line was raised: the agenda item, quote, and date. */
   proactiveWhy?: {

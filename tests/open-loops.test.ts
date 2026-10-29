@@ -263,6 +263,7 @@ test('renderer and sqlite migration keep open-loop fields', () => {
     enabled: true,
     createdAt: '2026-10-15T02:00:00.000Z',
     loopStatus: 'open',
+    loopKind: 'event',
     loopDueAt: '2026-10-16T10:00:00.000Z',
     loopDueText: 'Friday',
     loopSnoozeUntil: '2026-10-16T06:00:00.000Z',
@@ -272,6 +273,7 @@ test('renderer and sqlite migration keep open-loop fields', () => {
   const normalized = normalizeMemoryItem(raw, 0)
   assert.equal(normalized?.kind, 'open_loop')
   assert.equal(normalized?.loopStatus, 'open')
+  assert.equal(normalized?.loopKind, 'event')
   assert.equal(normalized?.loopDueText, 'Friday')
   assert.equal(normalized?.loopSurfacedCount, 1)
   assert.equal(normalized?.loopDueAt, '2026-10-16T10:00:00.000Z')
@@ -279,6 +281,7 @@ test('renderer and sqlite migration keep open-loop fields', () => {
   const migrated = normalizeMemoryMigrationItem(raw, 0)
   assert.equal(migrated.kind, 'open_loop')
   assert.equal(migrated.loopStatus, 'open')
+  assert.equal(migrated.loopKind, 'event')
   assert.equal(migrated.loopDueText, 'Friday')
   assert.equal(migrated.loopDueAt, '2026-10-16T10:00:00.000Z')
   assert.equal(migrated.loopSnoozeUntil, '2026-10-16T06:00:00.000Z')
