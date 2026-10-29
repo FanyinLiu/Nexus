@@ -61,6 +61,8 @@ export type CompanionRelationshipType =
   | 'mentor'
   | 'quiet_companion'
 
+export type ProactiveLetterChoice = 'auto' | 'on' | 'off'
+
 interface IdentitySettings {
   companionName: string
   userName: string
@@ -324,12 +326,18 @@ interface PresenceSettings {
    */
   proactiveBracketEnabled: boolean
   /**
-   * Sunday letter — once-a-week persona-written letter generated in the
-   * 18-22 Sunday window when the user has been active at least 3 days.
-   * Independent toggle from the bracket so a user can keep brackets but
-   * skip the letter (or vice versa).
+   * Sunday letter — once-a-week persona-written letter. Delivered Sunday
+   * evening, or the next time the app opens after that, and only for the
+   * latest missed week. On by default; `memoryPaused` still suppresses it.
    */
   proactiveLetterEnabled: boolean
+  /**
+   * Whether the letter switch above reflects a real user choice. `auto`
+   * leaves the feature on by default and lets the loader apply the one-time
+   * default-on rule to older stores; `on`/`off` are written only when the
+   * person uses the switch, and always win.
+   */
+  proactiveLetterChoice: ProactiveLetterChoice
   /**
    * Look toward the global cursor, including when it is outside the pet
    * window. Pointer tracking inside the pet still wins. Default on.

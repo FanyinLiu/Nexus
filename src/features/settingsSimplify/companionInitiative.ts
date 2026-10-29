@@ -1,9 +1,13 @@
 /**
  * Maps the simple “how often she comes to you” choice onto the switches
- * that already drive presence, letters, and the agenda cap.
+ * that already drive presence and the agenda cap.
  *
  * Reading a draft never writes. A pace is applied only when the person
  * picks one. Anything that does not match a pace stays custom.
+ *
+ * The Sunday letter is deliberately not part of a pace: it has its own
+ * switch, so picking Quiet must not silently stop a weekly letter the
+ * person asked for.
  *
  * Often turns the autonomy tick on. Idle ticks do not spend the daily
  * model budget, so that pace can stay on for the whole day.
@@ -18,7 +22,6 @@ export type InitiativeFlags = {
   proactivePresenceIntervalMinutes: number
   proactiveAwayNotificationsEnabled: boolean
   proactiveBracketEnabled: boolean
-  proactiveLetterEnabled: boolean
 }
 
 const SOMETIMES_INTERVAL_MINUTES = 25
@@ -49,18 +52,17 @@ export function inferCompanionInitiative(raw: object): CompanionInitiative {
   const interval = minutes(source, SOMETIMES_INTERVAL_MINUTES)
   const away = flag(source, 'proactiveAwayNotificationsEnabled', false)
   const bracket = flag(source, 'proactiveBracketEnabled', false)
-  const letter = flag(source, 'proactiveLetterEnabled', false)
 
-  if (!autonomyEnabled && !presence && !away && !bracket && !letter) return 'quiet'
+  if (!autonomyEnabled && !presence && !away && !bracket) return 'quiet'
 
-  if (!autonomyEnabled && presence && interval === SOMETIMES_INTERVAL_MINUTES && !away && letter) {
+  if (!autonomyEnabled && presence && interval === SOMETIMES_INTERVAL_MINUTES && !away) {
     return 'sometimes'
   }
 
   // Tick on or off both read as often. Builds saved before the budget
   // fix stored this pace with the tick off; picking it again turns the
   // tick on. A different interval or cap stays custom.
-  if (presence && interval === OFTEN_INTERVAL_MINUTES && away && letter && agendaCap(source) === 'normal') {
+  if (presence && interval === OFTEN_INTERVAL_MINUTES && away && agendaCap(source) === 'normal') {
     return 'often'
   }
 
@@ -81,7 +83,6 @@ export function companionInitiativePatch(
       proactivePresenceEnabled: false,
       proactiveAwayNotificationsEnabled: false,
       proactiveBracketEnabled: false,
-      proactiveLetterEnabled: false,
     }
   }
   if (pace === 'sometimes') {
@@ -90,7 +91,6 @@ export function companionInitiativePatch(
       proactivePresenceEnabled: true,
       proactivePresenceIntervalMinutes: SOMETIMES_INTERVAL_MINUTES,
       proactiveAwayNotificationsEnabled: false,
-      proactiveLetterEnabled: true,
     }
   }
   return {
@@ -98,7 +98,6 @@ export function companionInitiativePatch(
     proactivePresenceEnabled: true,
     proactivePresenceIntervalMinutes: OFTEN_INTERVAL_MINUTES,
     proactiveAwayNotificationsEnabled: true,
-    proactiveLetterEnabled: true,
     proactiveFrequency: 'normal',
   }
 }

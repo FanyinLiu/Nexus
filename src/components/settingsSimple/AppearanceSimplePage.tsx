@@ -165,22 +165,13 @@ export function AppearanceSimplePage({ draft, setDraft, petModelPresets }: Appea
         ) : null}
         {showPaceExtras && !quiet ? <p>{ti('settings.simple.quiet_split')}</p> : null}
         {showPaceExtras ? (
-          <>
-            <SimpleRow icon="bell" tone="warning" title={ti('settings.simple.away')}>
-              <SettingsV3Switch
-                checked={draft.proactiveAwayNotificationsEnabled}
-                label={ti('settings.simple.away')}
-                onChange={(proactiveAwayNotificationsEnabled) => patchDraft({ proactiveAwayNotificationsEnabled })}
-              />
-            </SimpleRow>
-            <SimpleRow icon="letters" title={ti('settings.simple.letter')}>
-              <SettingsV3Switch
-                checked={draft.proactiveLetterEnabled}
-                label={ti('settings.simple.letter')}
-                onChange={(proactiveLetterEnabled) => patchDraft({ proactiveLetterEnabled })}
-              />
-            </SimpleRow>
-          </>
+          <SimpleRow icon="bell" tone="warning" title={ti('settings.simple.away')}>
+            <SettingsV3Switch
+              checked={draft.proactiveAwayNotificationsEnabled}
+              label={ti('settings.simple.away')}
+              onChange={(proactiveAwayNotificationsEnabled) => patchDraft({ proactiveAwayNotificationsEnabled })}
+            />
+          </SimpleRow>
         ) : null}
       </section>
     </>

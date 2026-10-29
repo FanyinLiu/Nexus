@@ -48,11 +48,20 @@ test('sometimes and often match only their own switches', () => {
   assert.equal(often.autonomyEnabled, true)
   assert.equal(often.proactivePresenceEnabled, true)
   assert.equal(often.proactiveAwayNotificationsEnabled, true)
-  assert.equal(often.proactiveLetterEnabled, true)
+  assert.equal('proactiveLetterEnabled' in often, false)
   assert.equal(often.proactiveFrequency, 'normal')
   assert.equal('proactiveAgendaEnabled' in often, false)
   assert.equal(inferCompanionInitiative({ ...factory, ...often, autonomyEnabled: false }), 'often')
   assert.equal(inferCompanionInitiative({ ...factory, ...often, proactiveFrequency: 'low' }), 'custom')
+})
+
+test('the weekly letter switch does not decide the companionship pace', () => {
+  assert.equal(inferCompanionInitiative({
+    ...factory,
+    proactiveLetterEnabled: true,
+  }), 'quiet')
+  const quiet = companionInitiativePatch('quiet')
+  assert.equal('proactiveLetterEnabled' in quiet, false)
 })
 
 test('often turns the autonomy tick on', () => {
