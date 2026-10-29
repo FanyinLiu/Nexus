@@ -189,6 +189,7 @@ export const zhTWVoice = {
   'voice.audio.stream_mono_only': '目前串流播放器僅支援單聲道 PCM。',
   'voice.audio.stream_playback_failed': '串流音訊播放遇到了點狀況。',
   'voice.tts.playback_failed_fallback': '語音播報沒成功',
+  'voice.tts.code_block_placeholder': '程式碼我放在螢幕上了',
   'voice.mic.no_audio_track': '已經拿到錄音串流，但沒有發現可用的音訊軌道。',
   'voice.mic.open_failed_generic': '麥克風沒能打開，看看系統權限、裝置佔用與輸入裝置狀態？',
   'voice.mic.permission_denied': '沒有拿到麥克風權限。到系統設定裡允許 Nexus 使用麥克風，再點一次「開始語音」。',

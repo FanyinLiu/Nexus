@@ -189,6 +189,7 @@ export const enVoice = {
   'voice.audio.stream_mono_only': 'The streaming player only supports mono PCM for now.',
   'voice.audio.stream_playback_failed': 'Streaming audio ran into a snag.',
   'voice.tts.playback_failed_fallback': 'Voice playback didn\'t work',
+  'voice.tts.code_block_placeholder': 'the code is on screen',
   'voice.mic.no_audio_track': 'Got a recording stream but no usable audio track.',
   'voice.mic.open_failed_generic': 'Couldn\'t open the microphone — check system permissions, device usage, and input device status?',
   'voice.mic.permission_denied': 'Nexus can\'t use the microphone yet. Allow it in your system settings, then try again.',
