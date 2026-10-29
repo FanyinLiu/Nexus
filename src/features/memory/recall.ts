@@ -64,24 +64,44 @@ function uniqueById<T extends { id: string }>(items: T[]) {
   })
 }
 
+/**
+ * Recency is a tie-break, not a ranking signal. At 0.18 a four-day-old
+ * unrelated memory could outrank an older exact answer ("What's my cat
+ * called?" lost to a recent movie note); semantic rank already carries the
+ * question, so a few hundredths only nudges otherwise-equal candidates.
+ */
+const RECENCY_BOOST_MAX = 0.05
+
 function getRecencyBoost(createdAt: string) {
   const parsed = Date.parse(createdAt)
   if (!Number.isFinite(parsed)) return 0
   const ageMs = Math.max(0, Date.now() - parsed)
   const ageHours = ageMs / (60 * 60 * 1000)
-  return Math.max(0, 1 - Math.min(ageHours, 96) / 96) * 0.18
+  return Math.max(0, 1 - Math.min(ageHours, 96) / 96) * RECENCY_BOOST_MAX
 }
 
+// Half of the previous weights: a category is a weak prior about where a kind
+// of fact lives, not evidence that it answers this question. A project boost
+// of 0.10 used to lift an unrelated work project over the asked-about hobby.
 const CATEGORY_WEIGHT: Record<string, number> = {
-  feedback: 0.15,
-  project: 0.10,
-  preference: 0.05,
-  goal: 0.05,
-  reference: 0.03,
-  manual: 0.08,
-  habit: 0.02,
+  feedback: 0.075,
+  project: 0.05,
+  preference: 0.025,
+  goal: 0.025,
+  reference: 0.015,
+  manual: 0.04,
+  habit: 0.01,
   profile: 0,
 }
+
+/**
+ * Hybrid rank weights. The lexical share only breaks near-ties: BM25 and the
+ * CJK bigram overlap are strong on exact wording but match generic particles
+ * ("最近", "什么") in many memories, so a larger share let those memories
+ * outrank the semantic answer. Vector semantics stays the primary signal.
+ */
+const HYBRID_VECTOR_WEIGHT = 0.8
+const HYBRID_KEYWORD_WEIGHT = 0.1
 
 type EmotionContext = {
   currentEmotion: EmotionState
@@ -152,14 +172,19 @@ function scoreItem<T extends {
     keywordScore,
     vectorScore,
     finalScore:
-      (keywordScore * 0.3 + rankVectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost + emotionBoost)
+      (keywordScore * HYBRID_KEYWORD_WEIGHT
+        + rankVectorScore * HYBRID_VECTOR_WEIGHT
+        + recencyBoost
+        + categoryBoost
+        + decayBoost
+        + emotionBoost)
       * supersededPenalty,
   }
 }
 
 /**
  * Spread vector scores over [0, 1] within this candidate set before they
- * are mixed with the fixed boosts (recency ≤0.18, category ≤0.15, decay,
+ * are mixed with the fixed boosts (recency ≤0.05, category ≤0.075, decay,
  * emotion). Neural embeddings put every memory at cosine 0.3–0.6 with the
  * right one often only ~0.05 ahead, so raw cosine let a category bonus
  * outrank the actual semantic match. Raw scores are still reported for the
