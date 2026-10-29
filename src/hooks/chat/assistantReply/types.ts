@@ -47,6 +47,7 @@ export type AssistantReplyRunnerDependencies = {
     | 'consumeMilestonePromptText'
     | 'consumeAnniversaryPromptText'
     | 'consumeOnThisDayPromptText'
+    | 'commitOnThisDayPromptText'
     | 'consumeMessageFollowUpPromptText'
     | 'getEmotionPromptText'
     | 'getEmotionSnapshot'

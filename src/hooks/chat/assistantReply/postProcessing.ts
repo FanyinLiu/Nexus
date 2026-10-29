@@ -215,6 +215,12 @@ export async function postProcessAssistantReply(
   }
 
   dependencies.appendChatMessage(assistantMessage)
+  // The reply actually landed, so the surfaced anniversary is now burned in
+  // the lifetime ledger. Doing this at prompt-build time would lose it when
+  // the request fails before a reply is committed.
+  if (!memoryPaused) {
+    dependencies.ctx.commitOnThisDayPromptText?.()
+  }
   if (source === 'text' || source === 'voice') {
     const firstConversationTelemetry = recordFirstConversationTelemetry(new Date(assistantMessage.createdAt))
     if (firstConversationTelemetry) {

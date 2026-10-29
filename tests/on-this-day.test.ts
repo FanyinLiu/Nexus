@@ -18,6 +18,28 @@ function memoryAt(daysAgo: number, overrides: Partial<MemoryItem> = {}, nowMs = 
 
 const NOW = Date.parse('2026-04-27T10:00:00.000Z')
 
+test('findOnThisDayCandidate: significance 0 falls back to importance instead of skipping', () => {
+  const memories = [memoryAt(365, {
+    id: 'neutral',
+    significance: 0,
+    importance: 'normal',
+  })]
+  const candidate = findOnThisDayCandidate(memories, NOW)
+  assert.ok(candidate, 'neutral-emotion memory should still be eligible')
+  assert.equal(candidate!.memoryId, 'neutral')
+})
+
+test('findOnThisDayCandidate: tiny significance falls back to importance', () => {
+  const memories = [memoryAt(365, {
+    id: 'mild',
+    significance: 0.045,
+    importance: 'normal',
+  })]
+  const candidate = findOnThisDayCandidate(memories, NOW)
+  assert.ok(candidate)
+  assert.equal(candidate!.memoryId, 'mild')
+})
+
 test('findOnThisDayCandidate: matches a memory exactly one year old', () => {
   const memories = [memoryAt(365, { id: 'a', significance: 0.6 })]
   const candidate = findOnThisDayCandidate(memories, NOW)
@@ -58,7 +80,7 @@ test('findOnThisDayCandidate: skips ids in excludeIds', () => {
 })
 
 test('findOnThisDayCandidate: skips reflections (importance="reflection")', () => {
-  const memories = [memoryAt(365, { id: 'r', importance: 'reflection' })]
+  const memories = [memoryAt(365, { id: 'r', importance: 'reflection', significance: 0.9 })]
   const candidate = findOnThisDayCandidate(memories, NOW)
   assert.equal(candidate, null)
 })

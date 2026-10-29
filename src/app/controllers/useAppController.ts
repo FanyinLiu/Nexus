@@ -258,6 +258,7 @@ export function useAppController() {
   const milestoneConsumerRef = useRef<() => string>(() => '')
   const anniversaryConsumerRef = useRef<(uiLanguage: string) => string>(() => '')
   const onThisDayConsumerRef = useRef<(uiLanguage: string, memories: MemoryItem[]) => string>(() => '')
+  const commitOnThisDayConsumerRef = useRef<() => void>(() => {})
   const messageFollowUpConsumerRef = useRef<() => string>(() => '')
   const assistantReplyFailedRef = useRef<(() => void) | null>(null)
   const emotionSignalApplyRef = useRef<((signal: import('../../features/autonomy/emotionModel.ts').EmotionSignal) => void) | null>(null)
@@ -359,6 +360,7 @@ export function useAppController() {
     consumeMilestonePromptText: () => milestoneConsumerRef.current(),
     consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
     consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),
+    commitOnThisDayPromptText: () => commitOnThisDayConsumerRef.current(),
     consumeMessageFollowUpPromptText: () => messageFollowUpConsumerRef.current(),
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
     addReminderTask: (input) => addReminderTaskFnRef.current?.(input) ?? null,
@@ -519,6 +521,7 @@ export function useAppController() {
     milestoneConsumerRef.current = autonomy.consumePendingMilestoneText
     anniversaryConsumerRef.current = autonomy.consumeAnniversaryPromptText
     onThisDayConsumerRef.current = autonomy.consumeOnThisDayPromptText
+    commitOnThisDayConsumerRef.current = autonomy.commitOnThisDayPromptText
     messageFollowUpConsumerRef.current = autonomy.consumeMessageFollowUpPromptText
     assistantReplyFailedRef.current = () => autonomy.applyEmotionSignal('error_occurred')
     emotionSignalApplyRef.current = autonomy.applyEmotionSignal
@@ -533,7 +536,7 @@ export function useAppController() {
     // useAutonomyController, so depending on the parent re-runs this effect
     // unnecessarily.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.consumeMessageFollowUpPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
+  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.commitOnThisDayPromptText, autonomy.consumeMessageFollowUpPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
 
   // Wake autonomy when user sends a chat message.
   //

@@ -133,16 +133,31 @@ export function useRelationshipState() {
    * half-year / month / week anniversaries) and asks the LLM to weave it
    * in if the moment fits. Lifetime ledger keeps each memory id from
    * firing on consecutive days through the +/- tolerance window.
+   *
+   * Selection only surfaces the candidate; the ledger is committed by
+   * `commitOnThisDayPromptText` after a successful reply, so a failed
+   * request doesn't burn the anniversary forever.
    */
+  const pendingOnThisDayMemoryIdRef = useRef<string | null>(null)
+
   const consumeOnThisDayPromptText = useCallback((uiLanguage: string, memories: MemoryItem[]) => {
+    // Every call starts a new turn; drop any candidate that was surfaced by
+    // a previous turn which never reached a successful reply.
+    pendingOnThisDayMemoryIdRef.current = null
     if (!memories.length) return ''
     const nowMs = Date.now()
     const ledger = loadOnThisDayLedger(nowMs)
     const excludeIds = new Set(Object.keys(ledger))
     const candidate = findOnThisDayCandidate(memories, nowMs, excludeIds)
     if (!candidate) return ''
-    recordOnThisDayFired(candidate.memoryId, new Date(nowMs).toISOString())
+    pendingOnThisDayMemoryIdRef.current = candidate.memoryId
     return formatOnThisDayPromptHint(candidate, uiLanguage)
+  }, [])
+
+  const commitOnThisDayPromptText = useCallback(() => {
+    const memoryId = pendingOnThisDayMemoryIdRef.current
+    pendingOnThisDayMemoryIdRef.current = null
+    if (memoryId) recordOnThisDayFired(memoryId)
   }, [])
 
   const getRelationshipPrompt = useCallback(() => {
@@ -166,6 +181,7 @@ export function useRelationshipState() {
     consumePendingMilestoneText,
     consumeAnniversaryPromptText,
     consumeOnThisDayPromptText,
+    commitOnThisDayPromptText,
     processMessage,
     getRelationshipPrompt,
     updateSessionContext,
