@@ -43,8 +43,21 @@ const VAGUE_TIME = /(?:过几天|過幾天|这几天|這幾天|找时间|找時�
 const SOMEONE_ELSE = /(?:我(?:的)?(?:同事|朋友|室友|老板|老闆|同学|同學)|别人|別人|(?:他|她|他们|她们|他們|她們)(?:说|說|要|会|會|打算|准备|準備|去))/u
 const OWN_WITH_THEM = /我(?:要|得|会|會|准备|準備|打算)陪|我和(?:同事|朋友|室友)/u
 const HYPOTHETICAL = /(?:如果|要是|假如|倘若|万一|萬一|\bif\b|what if)/iu
-const PAST_PLAN = /(?:昨天|昨日|前天|上周|上週|上个?星期|上個?星期|去年|已经去了|已經去了|已经办了|已經辦了|去过了|去過了|办过了|辦過了|\byesterday\b|\blast (?:week|year)\b)/iu
+const PAST_PLAN = /(?:昨天|昨日|前天|上周|上週|上个?星期|上個?星期|去年|已经去了|已經去了|已经办了|已經辦了|去过了|去過了|办过了|辦過了|先週|어제|지난\s*주|작년|\byesterday\b|\blast (?:week|year)\b)/iu
 const PLACE_MATTERS = /(?:护照|護照|passport|面试|面試|interview|会议|會議|meeting|大厅|大廳|去办|去辦|预约|預約)/iu
+
+/**
+ * Life events that carry a date but do not need a commitment verb.
+ * Kept narrow on purpose: a false capture is a nudge the user did not ask for.
+ */
+const EVENT_NOUN = /(?:面试|面試|考试|考試|体检|體檢|复查|復查|医院|醫院|看病|手术|手術|搬家|出差|旅行|旅游|旅遊|约会|約會|相亲|相親|演示|答辩|答辯|汇报|彙報|演讲|演講|比赛|比賽|生日|婚礼|婚禮|聚会|聚會|开会|開會|会议|會議|面接|試験|病院|検査|引っ越し|出張|デート|プレゼン|発表|誕生日|結婚式|会議|パーティー|면접|시험|병원|검진|이사|출장|여행|데이트|발표|생일|결혼식|회의|파티|\b(?:interview|exam|test|doctor|hospital|checkup|surgery|dentist|appointment|moving|move|trip|travel|flight|date|presentation|birthday|wedding|party|meeting)\b)/iu
+const EVENT_QUESTION = /(?:[?？]|(?:吗|嗎|か|까)\s*[。.!！]?$)/u
+const EVENT_NEGATION = /(?:不去|沒去|没去|不想去|不用去|不参加|不參加|取消|延期|推迟|推遲|改期|\bnot going\b|\bdidn'?t go\b|\bwon'?t go\b|\bcancel(?:led|ed)?\b|\bpostpon(?:e|ed)\b|\bcall(?:ed)? off\b|キャンセル|中止|行かない|취소|안\s*가)/iu
+const EVENT_OTHER = /(?:我(?:的)?(?:同事|朋友|室友|老板|老闆|同学|同學|家人|妈妈|媽媽|爸爸|对象|對象|男友|女友|孩子)|别人|別人|(?:他|她|他们|她们|他們|她們)(?:说|說|要|会|會|打算|准备|準備|去|有)|\b(?:my (?:friend|colleague|coworker|roommate|boss|mom|mum|dad|sister|brother|partner|wife|husband|kid|child)|he|she|they)\b)/iu
+/** Preparing for an event is a task, not the event itself. */
+const EVENT_PREP = /(?:(?:准备|準備|复习|複習|备考|備考|为了|為了).{0,8}(?:面试|面試|考试|考試|interview|exam)|(?:面试|面試|考试|考試|interview|exam)(?:的)?(?:准备|準備|复习|複習|材料|资料|資料)|prepar(?:e|ing) for (?:an? )?(?:interview|exam)|study(?:ing)? for (?:an? )?(?:interview|exam))/iu
+
+export type EventReading = 'event' | 'skip' | 'none'
 
 export type PlanClarity = 'clear' | 'ask' | 'none'
 const DISMISS = /(?:don'?t remind me|do not remind me|别再?提醒|別再?提醒|不用提醒|不要提醒|提醒しないで|リマインドしない|그만\s*알려|알리지\s*마)/iu
@@ -54,9 +67,9 @@ const BARE_DISMISS = /^(?:don'?t remind me(?: about this)?|别提醒我|別提�
 
 function splitSegments(content: string): string[] {
   return content
-    .split(/[。！？!?;\n]/)
+    .split(/(?<=[。！？!?;\n])/u)
     .map((segment) => segment.trim())
-    .filter((segment) => segment.length >= 6)
+    .filter((segment) => segment.length >= 4)
 }
 
 function looksLikeCommitment(text: string): boolean {
@@ -111,12 +124,31 @@ export function classifyPlanUtterance(text: string, now: Date | string): PlanCla
 }
 
 /**
+ * Whether a sentence is the user's own dated event.
+ * `skip` is an event-shaped sentence we deliberately do not keep: a question,
+ * a negation, someone else's plan, a hypothetical, or the past. It must not
+ * fall through to commitment capture.
+ */
+export function classifyEventUtterance(text: string, now: Date | string): EventReading {
+  const value = text.trim()
+  if (!value || isSensitiveMemoryText(value)) return 'skip'
+  if (!EVENT_NOUN.test(value)) return 'none'
+  if (EVENT_PREP.test(value)) return 'none'
+  if (HYPOTHETICAL.test(value) || PAST_PLAN.test(value) || EVENT_NEGATION.test(value)) return 'skip'
+  if (EVENT_QUESTION.test(value) || EVENT_OTHER.test(value)) return 'skip'
+  const clock = now instanceof Date ? now : new Date(now)
+  const at = Number.isNaN(clock.getTime()) ? new Date() : clock
+  return findDue(value, at) ? 'event' : 'none'
+}
+
+/**
  * Reading of a stored loop, including details added in a later turn.
  * The original sentence still has to be the user's own plan. A follow-up
  * can supply the clock and the hall that make it clear.
  */
 export function loopPlanReading(memory: MemoryItem): PlanClarity {
   if (memory.kind !== 'open_loop' || memory.migrated === true) return 'none'
+  if (memory.loopKind === 'event') return 'none'
   if ((memory.loopStatus ?? 'open') !== 'open') return 'none'
   const content = memory.content.trim()
   if (classifyPlanUtterance(content, memory.createdAt) === 'none') return 'none'
@@ -157,8 +189,8 @@ function isOpenLoop(memory: MemoryItem): boolean {
 }
 
 /**
- * Pull commitment segments out of one utterance. Completion and dismiss
- * lines are not new loops; the resolver handles those.
+ * Pull commitment and event segments out of one utterance. Completion and
+ * dismiss lines are not new loops; the resolver handles those.
  */
 export function extractOpenLoopItems(
   text: string,
@@ -171,8 +203,16 @@ export function extractOpenLoopItems(
   const stamp = Number.isNaN(now.getTime()) ? new Date().toISOString() : createdAt
   const seen = new Set<string>()
   const items: MemoryItem[] = []
-  for (const segment of splitSegments(text)) {
-    if (classifyPlanUtterance(segment, clock) === 'none') continue
+  for (const raw of splitSegments(text)) {
+    const question = /[?？]\s*$/u.test(raw)
+    const segment = raw.replace(/[。！？!?;\n]+$/u, '').trim()
+    if (!segment) continue
+    const eventReading = question && EVENT_NOUN.test(segment)
+      ? 'skip'
+      : classifyEventUtterance(segment, clock)
+    if (eventReading === 'skip') continue
+    const isEvent = eventReading === 'event'
+    if (!isEvent && classifyPlanUtterance(segment, clock) === 'none') continue
     const key = segment.toLowerCase().replace(/\s+/g, ' ')
     if (seen.has(key)) continue
     seen.add(key)
@@ -191,6 +231,7 @@ export function extractOpenLoopItems(
       createdAt: stamp,
       updatedAt: stamp,
       loopStatus: 'open',
+      loopKind: isEvent ? 'event' : 'commitment',
       slotKey: commitmentSlotKey(segment),
       sourceRef: messageId,
       evidence: [evidenceFromUtterance(segment, stamp, messageId)],
@@ -222,6 +263,7 @@ export function attachOpenLoops(items: MemoryItem[], text: string, createdAt: st
       kind: 'open_loop' as const,
       category: item.category === 'profile' ? 'goal' as const : item.category,
       loopStatus: 'open' as const,
+      ...(loop.loopKind ? { loopKind: loop.loopKind } : {}),
       slotKey: loop.slotKey ?? item.slotKey,
       evidence: loop.evidence ?? item.evidence,
       sourceRef: loop.sourceRef ?? item.sourceRef,

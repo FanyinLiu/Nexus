@@ -10,7 +10,7 @@
 import type { ReminderTaskDraftInput } from '../reminders/schedule.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { MemoryItem } from '../../types/memory.ts'
-import { hasExplicitClock } from './loopDetails.ts'
+import { eventFollowUpMs, hasExplicitClock, loopKindOf } from './loopDetails.ts'
 import { isNagFreeMemory } from './memoryRules.ts'
 import { loopPlanReading } from './openLoops.ts'
 
@@ -29,14 +29,31 @@ export interface LoopOutreachOffer {
 }
 
 export interface LoopOutreach {
-  phase: 'preview' | 'check'
+  phase: 'preview' | 'check' | 'callback'
   /** `confirm` means the night-before reminder is already booked. */
   mode: 'confirm' | 'ask'
   text: string
   why: LoopOutreachWhy
   offer: LoopOutreachOffer | null
   /** Set on the post-due ask so the card can offer done / not yet / reschedule. */
-  check: { memoryId: string } | null
+  check: { memoryId: string; kind?: 'event' } | null
+}
+
+export type LoopNoteVariant = 'commitment' | 'event' | 'callback'
+
+/**
+ * Which card shape one line needs. An event check wins over a booked offer,
+ * and a due-less memory with only a quote is the "recently mentioned" callback.
+ */
+export function loopNoteVariant(input: {
+  hasOffer: boolean
+  hasCheck: boolean
+  checkKind?: 'commitment' | 'event'
+  hasWhy: boolean
+}): LoopNoteVariant {
+  if (input.checkKind === 'event') return 'event'
+  if (input.hasCheck || input.hasOffer) return 'commitment'
+  return input.hasWhy ? 'callback' : 'commitment'
 }
 
 type Translate = Translator
@@ -114,7 +131,6 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
   if ((memory.loopStatus ?? 'open') !== 'open') return null
   if (isNagFreeMemory(memory)) return null
   const dueMs = memory.loopDueAt ? Date.parse(memory.loopDueAt) : Number.NaN
-  if (!Number.isFinite(dueMs)) return null
   const quote = memory.evidence?.[0]?.quote || memory.content
   const where = memory.loopPlace?.trim() ?? ''
   const when = formatLoopWhen(memory.loopDueAt ?? '', namedClock(memory), t)
@@ -125,6 +141,29 @@ export function buildLoopOutreach(memory: MemoryItem, nowMs: number, t: Translat
     at: memory.evidence?.[0]?.at || memory.createdAt,
     ...(where ? { place: where } : {}),
     ...(memory.loopDueText ? { dueText: memory.loopDueText } : {}),
+  }
+  if (!Number.isFinite(dueMs)) {
+    if (memory.loopCheckAskedAt) return null
+    return {
+      phase: 'callback',
+      mode: 'ask',
+      text: t('proactive.loop.callback'),
+      why,
+      offer: null,
+      check: null,
+    }
+  }
+  if (loopKindOf(memory) === 'event') {
+    const followUpMs = eventFollowUpMs(memory.loopDueAt)
+    if (!Number.isFinite(followUpMs) || nowMs < followUpMs || memory.loopCheckAskedAt) return null
+    return {
+      phase: 'check',
+      mode: 'ask',
+      text: t('proactive.loop.event_check'),
+      why,
+      offer: null,
+      check: { memoryId: memory.id, kind: 'event' },
+    }
   }
   if (nowMs >= dueMs) {
     if (memory.loopCheckAskedAt) return null

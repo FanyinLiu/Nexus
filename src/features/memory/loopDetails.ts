@@ -8,7 +8,7 @@
  */
 
 import { localDayKey } from '../../lib/localDate.ts'
-import type { MemoryEvidence, MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
+import type { LoopKind, MemoryEvidence, MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
 import { isSensitiveMemoryText } from './memoryRules.ts'
 
 const ZH_DIGIT: Record<string, number> = {
@@ -23,8 +23,17 @@ const PLACE_ZH = /((?:[\u4e00-\u9fff]{2,8}的)?[\u4e00-\u9fff]{2,12}(?:大厅|�
 const KNOWN_SLOTS: Array<[RegExp, string]> = [
   [/护照|護照|passport/iu, 'loop.passport'],
   [/报告|報告|report/iu, 'loop.report'],
-  [/面试|面試|interview/iu, 'loop.interview'],
-  [/会议|會議|meeting/iu, 'loop.meeting'],
+  [/面试|面試|interview|面接|면접/iu, 'loop.interview'],
+  [/会议|會議|meeting|会議|회의/iu, 'loop.meeting'],
+  [/考试|考試|exam|試験|시험/iu, 'loop.exam'],
+  [/医院|醫院|复查|復查|体检|體檢|doctor|hospital|checkup|病院|検査|병원|검진/iu, 'loop.doctor'],
+  [/搬家|moving|move\s+house|引っ越し|이사/iu, 'loop.move'],
+  [/出差|旅行|旅游|旅遊|business\s+trip|\btrip\b|\btravel\b|flight|出張|여행/iu, 'loop.trip'],
+  [/\bdate\b|约会|約會|デート|데이트/iu, 'loop.date'],
+  [/演示|答辩|答辯|presentation|defen[cs]e|発表|プレゼン|발표/iu, 'loop.presentation'],
+  [/生日|birthday|誕生日|생일/iu, 'loop.birthday'],
+  [/婚礼|婚禮|wedding|結婚式|결혼식/iu, 'loop.wedding'],
+  [/聚会|聚會|\bparty\b|パーティー|파티/iu, 'loop.party'],
 ]
 
 function parseZhNumber(token: string): number | null {
@@ -124,6 +133,18 @@ function dayOffsetDate(now: Date, offset: number): Date {
   return atLocalHour(now, offset)
 }
 
+/** End of the named week (Sunday 18:00), so "next week" is fully behind us. */
+function endOfWeekDate(now: Date, weekOffset: number): Date {
+  const sinceMonday = (now.getDay() + 6) % 7
+  const daysToSunday = 6 - sinceMonday + weekOffset * 7
+  return atLocalHour(now, daysToSunday)
+}
+
+/** Last day of the named month, so a month-only plan is not read as day one. */
+function endOfMonthDate(now: Date, monthOffset: number): Date {
+  return new Date(now.getFullYear(), now.getMonth() + monthOffset + 1, 0, 18, 0, 0, 0)
+}
+
 const WEEKDAY_NAMED: Array<{ pattern: RegExp; day: number; mode: 'upcoming' | 'following-week' | 'named-next' }> = [
   { pattern: /下(?:个)?(?:周|星期)([一二三四五六日天])/u, day: -1, mode: 'following-week' },
   { pattern: /(?:周|星期)([一二三四五六日天])/u, day: -1, mode: 'upcoming' },
@@ -166,6 +187,17 @@ const OFFSET_RULES: DueRule[] = [
 ]
 
 /**
+ * Week- and month-only phrases. They are used only when no precise day was
+ * named, so "下周三" still wins over the broader "下周".
+ */
+const COARSE_RULES: DueRule[] = [
+  { pattern: /这个月|這個月|本月|今月|이번\s*달|this month/iu, resolve: (now) => endOfMonthDate(now, 0) },
+  { pattern: /下个月|下個月|下月|来月|來月|다음\s*달|next month/iu, resolve: (now) => endOfMonthDate(now, 1) },
+  { pattern: /这周|這週|本周|今週|이번\s*주|this week/iu, resolve: (now) => endOfWeekDate(now, 0) },
+  { pattern: /下周|下週|下个星期|下個星期|来週|來週|다음\s*주|next week/iu, resolve: (now) => endOfWeekDate(now, 1) },
+]
+
+/**
  * The day the words name, with the clock they carry. The first day phrase
  * in the text wins, and a clock anywhere in the text sets the hour.
  */
@@ -182,6 +214,12 @@ export function findDue(text: string, now: Date): { at: string; text: string } |
     if (day === null) continue
     hits.push({ index: match.index, at: weekdayDate(now, day, rule.mode), text: match[0] })
   }
+  if (!hits.length) {
+    for (const rule of COARSE_RULES) {
+      const match = rule.pattern.exec(text)
+      if (match) hits.push({ index: match.index, at: rule.resolve(now, match), text: match[0] })
+    }
+  }
   hits.sort((left, right) => left.index - right.index)
   const best = hits[0]
   if (!best) return null
@@ -194,6 +232,21 @@ export function dueFromText(text: string, nowIso: string): { loopDueAt?: string;
   const due = findDue(text, new Date(nowIso))
   if (!due) return {}
   return { loopDueAt: due.at, loopDueText: due.text }
+}
+
+/** A full day after the event, so the ask lands after it is over. */
+export const EVENT_FOLLOW_UP_DELAY_MS = 24 * 60 * 60 * 1000
+
+/** The moment a post-event check becomes appropriate. NaN without a due time. */
+export function eventFollowUpMs(dueIso: string | undefined): number {
+  if (!dueIso) return Number.NaN
+  const due = Date.parse(dueIso)
+  return Number.isFinite(due) ? due + EVENT_FOLLOW_UP_DELAY_MS : Number.NaN
+}
+
+/** Legacy rows have no loopKind, so they stay commitments. */
+export function loopKindOf(memory: Pick<MemoryItem, 'loopKind'>): LoopKind {
+  return memory.loopKind === 'event' ? 'event' : 'commitment'
 }
 
 const PLACE_LEAD = /^(?:我|已经|已|选择了|选了|约了|去了|到了|在|去|到|下(?:周|星期)|明[天日]|后[天日]|今[天晚日]|今晚|上午|下午|晚上|早上|凌晨|中午|傍晚|(?:周|星期)[一二三四五六日天]|[零〇一二两三兩四五六七八九十0-9]{1,3}(?:点|點|时|時)(?:半|一刻|[0-9]{1,2})?)/u

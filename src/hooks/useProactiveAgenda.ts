@@ -16,7 +16,9 @@ import {
   isLikelyFullscreenSurface,
 } from '../features/autonomy/proactiveBudget.ts'
 import {
+  agendaDeliveryAllowed,
   buildAgendaPrompt,
+  filterAgendaItemsForNextTurn,
   markAgendaFired,
   recordLoopSurfaced,
   selectAgendaItem,
@@ -35,7 +37,7 @@ import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { appendMemoryOpLog } from '../lib/storage/memoryOpLog.ts'
 import { saveMemoryRunSnapshot } from '../lib/storage/memoryRunSnapshot.ts'
-import { applyBookedLoopAction, applyLoopCardAction, type LoopBookedAction, type LoopCardAction } from '../features/memory/loopCardActions.ts'
+import { applyBookedLoopAction, applyLoopCardAction, applyLoopEventAction, type LoopBookedAction, type LoopCardAction, type LoopEventCardAction } from '../features/memory/loopCardActions.ts'
 import { bookClearPlanReminders, buildLoopOutreach } from '../features/memory/loopOutreach.ts'
 import { acceptLoopOffer } from '../features/memory/loopOfferAccept.ts'
 import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
@@ -46,6 +48,7 @@ import { loadProactiveAgenda, saveProactiveAgenda } from '../lib/storage/proacti
 import type { AppSettings, DailyMemoryStore, FocusState, MemoryItem } from '../types'
 
 const TICK_MS = 60_000
+const EVENT_CARD_ACTIONS = new Set<LoopEventCardAction>(['went_well', 'went_rough', 'not_yet', 'dont_ask'])
 
 type Notice = {
   chatContent: string
@@ -64,7 +67,8 @@ type LoopOfferDetail = {
 
 type LoopCheckDetail = {
   memoryId?: string
-  action?: LoopCardAction
+  action?: LoopCardAction | LoopEventCardAction
+  kind?: 'commitment' | 'event'
   quote?: string
 }
 
@@ -209,7 +213,7 @@ export function useProactiveAgenda(options: {
     const current = optionsRef.current
     if (!current.enabled) return
     const settings = current.settingsRef.current
-    if (!settings?.proactiveAgendaEnabled || settings.memoryPaused) return
+    if (!settings || !agendaDeliveryAllowed(settings)) return
     try {
       const nowMs = appNowMs()
       const booked = bookClearPlanReminders(
@@ -275,7 +279,7 @@ export function useProactiveAgenda(options: {
             status: outreach.mode === 'confirm' ? 'booked' as const : 'pending' as const,
           },
         } : {}),
-        ...(outreach?.check ? { loopCheck: { memoryId: outreach.check.memoryId, status: 'pending' as const } } : {}),
+        ...(outreach?.check ? { loopCheck: { memoryId: outreach.check.memoryId, status: 'pending' as const, ...(outreach.check.kind ? { kind: outreach.check.kind } : {}) } } : {}),
       })
       const hidden = typeof document !== 'undefined' && (document.hidden || !document.hasFocus())
       if (hidden && settings.proactiveAwayNotificationsEnabled && outreach) {
@@ -321,9 +325,7 @@ export function useProactiveAgenda(options: {
       }
       const nowMs = appNowMs()
       const state = syncProactiveAgenda(current.memoriesRef.current, nowMs)
-      const items = settings.memoryPaused
-        ? state.items.filter((item) => item.kind !== 'open_loop')
-        : state.items
+      const items = filterAgendaItemsForNextTurn(state.items, settings.memoryPaused === true)
       const etiquette = evaluateProactiveEtiquette({
         nowMs,
         enabled: true,
@@ -358,6 +360,9 @@ export function useProactiveAgenda(options: {
       }
       if (outreach?.mode === 'confirm') {
         return `The user already has this reminder set. If it fits this turn, confirm it in one sentence: "${outreach.text}" Do not ask whether to remind them, and do not assert that they forgot.`
+      }
+      if (outreach?.check?.kind === 'event' || outreach?.phase === 'callback') {
+        return `Something the user mentioned is over or still on their mind. If it fits this turn, ask once how it went: "${outreach.text}" Do not assert the outcome. If they say they do not want to talk about it, accept that and drop it.`
       }
       if (outreach) {
         return `The user has an unfinished commitment. If it fits this turn, ask once, as a question, and do not assert that they forgot: "${outreach.text}" If they say it is done, or not to remind them, accept that and drop it.`
@@ -461,25 +466,38 @@ export function useProactiveAgenda(options: {
     const onCheck = (event: Event) => {
       const detail = (event as CustomEvent<LoopCheckDetail>).detail
       if (!detail?.memoryId || !detail.action) return
+      const isEventAction = EVENT_CARD_ACTIONS.has(detail.action as LoopEventCardAction)
+      if (detail.kind === 'event' && !isEventAction) return
+      if (detail.kind !== 'event' && isEventAction) return
+      const isEvent = detail.kind === 'event'
       const current = optionsRef.current
-      const result = applyLoopCardAction(
-        current.memoriesRef.current,
-        detail.memoryId,
-        detail.action,
-        new Date(appNowMs()).toISOString(),
-        detail.quote ?? '',
-      )
+      const nowIso = new Date(appNowMs()).toISOString()
+      const result = isEvent
+        ? applyLoopEventAction(
+          current.memoriesRef.current,
+          detail.memoryId,
+          detail.action as LoopEventCardAction,
+          nowIso,
+          detail.quote ?? '',
+        )
+        : applyLoopCardAction(
+          current.memoriesRef.current,
+          detail.memoryId,
+          detail.action as LoopCardAction,
+          nowIso,
+          detail.quote ?? '',
+        )
       if (!result.op) return
       current.memoriesRef.current = result.memories
       current.setMemories(result.memories)
       appendMemoryOpLog([result.op])
-      const status = detail.action === 'done' ? 'done' as const : detail.action === 'later' ? 'later' as const : 'moved' as const
+      const status = detail.action
       current.setMessages?.((messages) => messages.map((message) => {
         const check = message.loopCheck
         if (!check || check.memoryId !== detail.memoryId || check.status !== 'pending') return message
         return {
           ...message,
-          loopCheck: { memoryId: check.memoryId, status },
+          loopCheck: { ...check, status },
         }
       }))
     }

@@ -5,6 +5,8 @@
 
 import { useTranslation } from '../i18n/useTranslation.ts'
 import type { ChatMessage } from '../types/chat.ts'
+import type { LoopCardAction, LoopEventCardAction } from '../features/memory/loopCardActions.ts'
+import { loopNoteVariant } from '../features/memory/loopOutreach.ts'
 import {
   memoryTopicToken,
   plainMemoryName,
@@ -41,9 +43,16 @@ export function LoopOutreachNote({
   const { t } = useTranslation()
   if (!loopOffer && !loopCheck && !proactiveWhy && !body) return null
   const source = loopOffer?.title || proactiveWhy?.summary || body || ''
-  const heading = t('proactive.loop.card_title', {
-    topic: topicLabel(memoryTopicToken(source), plainMemoryName(source), t),
+  const variant = loopNoteVariant({
+    hasOffer: Boolean(loopOffer),
+    hasCheck: Boolean(loopCheck),
+    checkKind: loopCheck?.kind,
+    hasWhy: Boolean(proactiveWhy),
   })
+  const heading = t(
+    variant === 'commitment' ? 'proactive.loop.card_title' : 'proactive.loop.follow_up_title',
+    { topic: topicLabel(memoryTopicToken(source), plainMemoryName(source), t) },
+  )
   const accept = () => {
     if (!loopOffer || loopOffer.status !== 'pending') return
     window.dispatchEvent(new CustomEvent('nexus:accept-loop-offer', {
@@ -62,10 +71,16 @@ export function LoopOutreachNote({
       detail: { memoryId: loopOffer.memoryId, messageId, action, quote },
     }))
   }
-  const answer = (action: 'done' | 'later' | 'moved', quote: string) => {
+  const answer = (action: LoopCardAction | LoopEventCardAction, quote: string) => {
     if (!loopCheck || loopCheck.status !== 'pending') return
     window.dispatchEvent(new CustomEvent('nexus:loop-check', {
-      detail: { memoryId: loopCheck.memoryId, messageId, action, quote },
+      detail: {
+        memoryId: loopCheck.memoryId,
+        messageId,
+        action,
+        quote,
+        ...(loopCheck.kind ? { kind: loopCheck.kind } : {}),
+      },
     }))
   }
   const offerNote = loopOffer?.status === 'accepted'
@@ -83,7 +98,15 @@ export function LoopOutreachNote({
       ? t('proactive.loop.check_later_note')
       : loopCheck?.status === 'moved'
         ? t('proactive.loop.check_moved_note')
-        : ''
+        : loopCheck?.status === 'went_well'
+          ? t('proactive.loop.event_good_note')
+          : loopCheck?.status === 'went_rough'
+            ? t('proactive.loop.event_rough_note')
+            : loopCheck?.status === 'not_yet'
+              ? t('proactive.loop.event_not_yet_note')
+              : loopCheck?.status === 'dont_ask'
+                ? t('proactive.loop.event_dont_ask_note')
+                : ''
   return (
     <div
       className="loop-outreach"
@@ -123,27 +146,62 @@ export function LoopOutreachNote({
         ) : null}
         {loopCheck?.status === 'pending' ? (
           <div className="loop-outreach__actions">
-            <button
-              type="button"
-              className="loop-outreach__accept loop-outreach__check-done"
-              onClick={() => answer('done', t('proactive.loop.check_done'))}
-            >
-              {t('proactive.loop.check_done')}
-            </button>
-            <button
-              type="button"
-              className="loop-outreach__decline loop-outreach__check-later"
-              onClick={() => answer('later', t('proactive.loop.check_later'))}
-            >
-              {t('proactive.loop.check_later')}
-            </button>
-            <button
-              type="button"
-              className="loop-outreach__decline loop-outreach__check-moved"
-              onClick={() => answer('moved', t('proactive.loop.check_moved'))}
-            >
-              {t('proactive.loop.check_moved')}
-            </button>
+            {variant === 'event' ? (
+              <>
+                <button
+                  type="button"
+                  className="loop-outreach__accept loop-outreach__check-done"
+                  onClick={() => answer('went_well', t('proactive.loop.event_good'))}
+                >
+                  {t('proactive.loop.event_good')}
+                </button>
+                <button
+                  type="button"
+                  className="loop-outreach__decline loop-outreach__check-rough"
+                  onClick={() => answer('went_rough', t('proactive.loop.event_rough'))}
+                >
+                  {t('proactive.loop.event_rough')}
+                </button>
+                <button
+                  type="button"
+                  className="loop-outreach__decline loop-outreach__check-later"
+                  onClick={() => answer('not_yet', t('proactive.loop.event_not_yet'))}
+                >
+                  {t('proactive.loop.event_not_yet')}
+                </button>
+                <button
+                  type="button"
+                  className="loop-outreach__decline loop-outreach__check-moved"
+                  onClick={() => answer('dont_ask', t('proactive.loop.event_dont_ask'))}
+                >
+                  {t('proactive.loop.event_dont_ask')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="loop-outreach__accept loop-outreach__check-done"
+                  onClick={() => answer('done', t('proactive.loop.check_done'))}
+                >
+                  {t('proactive.loop.check_done')}
+                </button>
+                <button
+                  type="button"
+                  className="loop-outreach__decline loop-outreach__check-later"
+                  onClick={() => answer('later', t('proactive.loop.check_later'))}
+                >
+                  {t('proactive.loop.check_later')}
+                </button>
+                <button
+                  type="button"
+                  className="loop-outreach__decline loop-outreach__check-moved"
+                  onClick={() => answer('moved', t('proactive.loop.check_moved'))}
+                >
+                  {t('proactive.loop.check_moved')}
+                </button>
+              </>
+            )}
           </div>
         ) : null}
         {offerNote || checkNote ? <p className="loop-outreach__status">{offerNote || checkNote}</p> : null}

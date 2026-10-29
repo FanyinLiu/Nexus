@@ -14,6 +14,7 @@ import {
   type MessageFollowUpEntry,
 } from '../../lib/storage/messageFollowUps.ts'
 import { loadProactiveAgenda, saveProactiveAgenda } from '../../lib/storage/proactiveAgenda.ts'
+import { eventFollowUpMs, loopKindOf } from '../memory/loopDetails.ts'
 import type { MemoryItem } from '../../types/memory.ts'
 import type {
   AgendaDeliverOn,
@@ -30,6 +31,29 @@ const SNOOZE_MS = 4 * 60 * 60 * 1000
 
 export function emptyAgendaState(): ProactiveAgendaState {
   return { items: [], firedAt: [], dismissedAt: [], lastConsolidationAt: null }
+}
+
+/**
+ * Both switches have to agree before any proactive line leaves the app.
+ * Kept here so the timer hook owns wiring, not the decision.
+ */
+export function agendaDeliveryAllowed(settings: {
+  proactiveAgendaEnabled?: boolean
+  memoryPaused?: boolean
+}): boolean {
+  return settings.proactiveAgendaEnabled === true && settings.memoryPaused !== true
+}
+
+/**
+ * The next-turn channel still allows message follow-ups while memory is
+ * paused, but open loops (commitments and events) stay quiet.
+ */
+export function filterAgendaItemsForNextTurn(
+  items: readonly AgendaItem[],
+  memoryPaused: boolean,
+): AgendaItem[] {
+  if (!memoryPaused) return [...items]
+  return items.filter((item) => item.kind !== 'open_loop')
 }
 
 export function agendaItemId(kind: AgendaKind, sourceId: string): string {
@@ -79,16 +103,24 @@ function loopItem(memory: MemoryItem, nowMs: number, previous: AgendaItem | unde
   }
   const created = Date.parse(memory.createdAt)
   const due = memory.loopDueAt ? Date.parse(memory.loopDueAt) : Number.NaN
+  const isEvent = loopKindOf(memory) === 'event'
+  const followUpAt = isEvent ? eventFollowUpMs(memory.loopDueAt) : due
   const snooze = memory.loopSnoozeUntil ? Date.parse(memory.loopSnoozeUntil) : Number.NaN
   let priority = 1
   let notBefore: number
   let deliverOn: AgendaDeliverOn
-  if (Number.isFinite(due) && due <= nowMs && memory.loopCheckAskedAt) {
+  if (Number.isFinite(followUpAt) && followUpAt <= nowMs && memory.loopCheckAskedAt) {
     if (!previous) return null
     return { ...previous, summary: memory.content, state: 'done' }
   }
   if (Number.isFinite(due)) {
-    if (due <= nowMs) {
+    if (isEvent) {
+      // An event has no night-before preview; it becomes eligible only after
+      // the follow-up time, and only on the return surface where the card lives.
+      priority = Number.isFinite(followUpAt) && followUpAt <= nowMs ? 3 : 1
+      notBefore = Number.isFinite(followUpAt) ? followUpAt : due
+      deliverOn = 'return'
+    } else if (due <= nowMs) {
       priority = 3
       notBefore = due
       deliverOn = 'either'
@@ -104,10 +136,13 @@ function loopItem(memory: MemoryItem, nowMs: number, previous: AgendaItem | unde
     const staleAt = (Number.isFinite(created) ? created : nowMs) + STALE_LOOP_MS
     if (nowMs < staleAt) return null
     notBefore = staleAt
-    deliverOn = 'next_turn'
+    // "Either" lets the return path show a card instead of a text-only bubble.
+    deliverOn = 'either'
   }
   const snoozed = Number.isFinite(snooze) && snooze > nowMs
-  const checkWindow = Number.isFinite(due) && due <= nowMs && !memory.loopCheckAskedAt
+  const checkWindow = Number.isFinite(due)
+    && (isEvent ? Number.isFinite(followUpAt) && nowMs >= followUpAt : due <= nowMs)
+    && !memory.loopCheckAskedAt
   const built: AgendaItem = {
     id,
     kind: 'open_loop',
@@ -324,7 +359,7 @@ export function recordLoopSurfaced(
   memories: readonly MemoryItem[],
   memoryId: string,
   nowIso: string,
-  phase?: 'preview' | 'check',
+  phase?: 'preview' | 'check' | 'callback',
 ): MemoryItem[] {
   return memories.map((memory) => (
     memory.id === memoryId
