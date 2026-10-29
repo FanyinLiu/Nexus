@@ -52,6 +52,7 @@ import {
 } from './SettingsV3Primitives.tsx'
 import { CompanionMigrationAdapterV3, MemoryMigrationAdapterV3 } from './MemoryMigrationAdaptersV3.tsx'
 import { MemoryPortraitCardsV3 } from './MemoryPortraitCardsV3.tsx'
+import { MemoryTimelineV3 } from './MemoryTimelineV3.tsx'
 import { OpenLoopAgendaV3 } from './OpenLoopAgendaV3.tsx'
 import './settings-v3-collection.css'
 
@@ -348,6 +349,23 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
         onPatchMemory={onPatchMemory}
         onRemoveMemory={onRemoveMemory}
       />
+
+      <SettingsV3Disclosure
+        title={ti('memory.timeline.title')}
+        description={ti('memory.timeline.description')}
+      >
+        <MemoryTimelineV3
+          memories={memories}
+          dailyEntries={dailyMemoryEntries}
+          uiLanguage={uiLanguage}
+          memoryPaused={draft.memoryPaused}
+          confirm={confirm}
+          onUpdateMemory={onUpdateMemory}
+          onRemoveMemory={onRemoveMemory}
+          onUpdateDailyEntry={onUpdateDailyEntry}
+          onRemoveDailyEntry={onRemoveDailyEntry}
+        />
+      </SettingsV3Disclosure>
 
       <OpenLoopAgendaV3
         draft={draft}
