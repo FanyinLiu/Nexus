@@ -57,8 +57,15 @@ export function SettingsSimplePages(props: SettingsSimplePagesProps) {
         <MemorySimplePage
           draft={props.draft}
           setDraft={props.setDraft}
+          memories={props.memories}
+          dailyMemoryEntries={props.dailyMemoryEntries}
+          confirm={props.confirm}
           onCommitMemoryPaused={props.onCommitMemoryPaused}
           onOpenAdvanced={() => setAdvancedOpen(true)}
+          onUpdateMemory={props.onUpdateMemory}
+          onRemoveMemory={props.onRemoveMemory}
+          onUpdateDailyEntry={props.onUpdateDailyEntry}
+          onRemoveDailyEntry={props.onRemoveDailyEntry}
         />
       ) : null}
       {page === 'connect' ? (

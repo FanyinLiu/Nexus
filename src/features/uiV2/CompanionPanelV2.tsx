@@ -5,6 +5,8 @@ import type {
   AppSettings,
   AssistantRuntimeActivity,
   ChatMessage,
+  DailyMemoryStore,
+  MemoryItem,
   NotificationMessage,
   PetMood,
   PetTouchZone,
@@ -17,6 +19,7 @@ import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { PetPerformanceCue } from '../pet/types.ts'
 import { describeChatMemoryTrace } from '../memory/memoryTraceLabel.ts'
+import { resolveChatMemoryTraceDetails } from '../memory/traceDetails.ts'
 import { panelChatIntentDecision } from '../../../shared/panelSectionIntent.js'
 import { ChatSheetV2, type ChatSheetV2Message } from './ChatSheetV2.tsx'
 import { useReadableCaption } from './caption.ts'
@@ -63,8 +66,11 @@ export type CompanionPanelV2Props = {
     cancelActiveTurn: () => void
   }
   runtimeSnapshot: RuntimeStateSnapshot
+  memories: MemoryItem[]
+  dailyMemories: DailyMemoryStore
   panelCollapsed: boolean
   openSettingsPanel: () => void
+  openMemorySettings: () => void
   togglePanelCollapse: () => void
   closePanel: () => void
   settingsDrawer: ReactNode
@@ -86,6 +92,8 @@ export type CompanionPanelV2Props = {
 function toChatSheetMessages(
   messages: ChatMessage[],
   uiLanguage: AppSettings['uiLanguage'],
+  memories: MemoryItem[],
+  dailyMemories: DailyMemoryStore,
 ): ChatSheetV2Message[] {
   return messages.flatMap((message) => {
     if (message.role !== 'user' && message.role !== 'assistant') return []
@@ -94,11 +102,17 @@ function toChatSheetMessages(
     const memoryTraceLabel = trace
       ? pickTranslatedUiText(uiLanguage, trace.key, trace.params)
       : undefined
+    const memoryTraceDetails = resolveChatMemoryTraceDetails({
+      trace: message.memoryTrace,
+      memories,
+      dailyMemories,
+    })
     return [{
       id: message.id,
       role: message.role,
       content: message.content,
       ...(memoryTraceLabel ? { memoryTraceLabel } : {}),
+      ...(memoryTraceDetails ? { memoryTraceDetails } : {}),
       ...(message.loopOffer ? { loopOffer: message.loopOffer } : {}),
       ...(message.loopCheck ? { loopCheck: message.loopCheck } : {}),
       ...(message.proactiveWhy ? { proactiveWhy: message.proactiveWhy } : {}),
@@ -113,8 +127,11 @@ export function CompanionPanelV2({
   voice,
   chat,
   runtimeSnapshot,
+  memories,
+  dailyMemories,
   panelCollapsed,
   openSettingsPanel,
+  openMemorySettings,
   togglePanelCollapse,
   closePanel,
   settingsDrawer,
@@ -168,8 +185,8 @@ export function CompanionPanelV2({
     [petModel],
   )
   const messages = useMemo(
-    () => toChatSheetMessages(chat.messages, settings.uiLanguage),
-    [chat.messages, settings.uiLanguage],
+    () => toChatSheetMessages(chat.messages, settings.uiLanguage, memories, dailyMemories),
+    [chat.messages, dailyMemories, memories, settings.uiLanguage],
   )
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === 'assistant')
   const resolvedCaption = resolveCompanionSurfaceCaption({
@@ -411,6 +428,10 @@ export function CompanionPanelV2({
           error={chat.error}
           onCancel={chat.cancelActiveTurn}
           onClose={closeChatSheet}
+          onOpenMemorySettings={() => {
+            setChatSheetOpen(false)
+            openMemorySettings()
+          }}
         />
         ) : null}
 

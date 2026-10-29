@@ -2,7 +2,9 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { LoopOutreachNote } from '../../components/LoopOutreachNote.tsx'
 import { loopNoteProps } from '../../components/loopNoteProps.ts'
+import { MemoryTraceDisclosure } from '../../components/MemoryTraceDisclosure.tsx'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
+import type { ChatMemoryTraceDetails } from '../../features/memory/traceDetails.ts'
 import type { ChatMessage } from '../../types/chat.ts'
 import { useModalFocusTrap } from '../../hooks/useModalFocusTrap.ts'
 import {
@@ -19,6 +21,7 @@ export interface ChatSheetV2Message {
   role: ChatSheetV2MessageRole
   content: string
   memoryTraceLabel?: string
+  memoryTraceDetails?: ChatMemoryTraceDetails | null
   loopOffer?: ChatMessage['loopOffer']
   loopCheck?: ChatMessage['loopCheck']
   proactiveWhy?: ChatMessage['proactiveWhy']
@@ -54,6 +57,7 @@ export interface ChatSheetV2Props {
   error: string | null
   onCancel: () => void
   onClose: () => void
+  onOpenMemorySettings?: () => void
   className?: string
   replyMode?: {
     hint: string
@@ -75,6 +79,7 @@ export function ChatSheetV2({
   error,
   onCancel,
   onClose,
+  onOpenMemorySettings,
   className,
   replyMode = null,
   focusComposerRequestId = 0,
@@ -342,7 +347,11 @@ export function ChatSheetV2({
                       <div className="chat-sheet-v2__bubble">
                         <p className="chat-sheet-v2__message">{message.content}</p>
                         {message.memoryTraceLabel ? (
-                          <p className="chat-sheet-v2__memory-trace">{message.memoryTraceLabel}</p>
+                          <MemoryTraceDisclosure
+                            label={message.memoryTraceLabel}
+                            details={message.memoryTraceDetails}
+                            onOpenMemorySettings={onOpenMemorySettings}
+                          />
                         ) : null}
                       </div>
                     </>

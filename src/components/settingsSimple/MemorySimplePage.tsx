@@ -3,31 +3,70 @@
  * the labels from the memory pause change. Other rows stay in the draft.
  */
 
-import type { Dispatch, SetStateAction } from 'react'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import type { ConfirmFn } from '../useConfirm.ts'
 import { desktopAwarenessPatch } from '../../features/settingsSimplify/index.ts'
-import type { AppSettings, ProactiveFrequencyPreset } from '../../types/index.ts'
+import { formatPortraitDate } from '../../features/memory/changeCopy.ts'
+import { buildRememberedCardView } from '../../features/memory/memoryTimeline.ts'
+import type {
+  AppSettings,
+  DailyMemoryEntry,
+  MemoryItem,
+  ProactiveFrequencyPreset,
+} from '../../types/index.ts'
 import { SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
+import { MemoryTimelineV3 } from '../../features/settingsV3/MemoryTimelineV3.tsx'
 import { simpleTranslate } from './settingsSimpleCopy.ts'
 import { SimpleChoices, SimpleRow } from './settingsSimpleShared.tsx'
 
 type MemorySimplePageProps = {
   draft: AppSettings
   setDraft: Dispatch<SetStateAction<AppSettings>>
+  memories: readonly MemoryItem[]
+  dailyMemoryEntries: readonly DailyMemoryEntry[]
+  confirm: ConfirmFn
   onCommitMemoryPaused: (paused: boolean) => void
   onOpenAdvanced: () => void
+  onUpdateMemory: (id: string, content: string) => void
+  onRemoveMemory: (id: string) => void
+  onUpdateDailyEntry?: (id: string, day: string, content: string) => void
+  onRemoveDailyEntry?: (id: string, day: string) => void
 }
 
 export function MemorySimplePage({
   draft,
   setDraft,
+  memories,
+  dailyMemoryEntries,
+  confirm,
   onCommitMemoryPaused,
   onOpenAdvanced,
+  onUpdateMemory,
+  onRemoveMemory,
+  onUpdateDailyEntry,
+  onRemoveDailyEntry,
 }: MemorySimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
+  const [timelineOpen, setTimelineOpen] = useState(false)
+  const remembered = useMemo(
+    () => buildRememberedCardView({
+      memories,
+      dailyEntries: dailyMemoryEntries,
+      paused: draft.memoryPaused,
+    }),
+    [dailyMemoryEntries, draft.memoryPaused, memories],
+  )
+  const dateTemplate = ti('memory.portrait.stamp')
 
   function patch(next: Partial<AppSettings>) {
     setDraft((current) => ({ ...current, ...next }))
   }
+
+  const rememberedHint = remembered.state === 'paused'
+    ? ti('settings.simple.memory_remembered_paused')
+    : remembered.state === 'empty'
+      ? ti('settings.simple.memory_remembered_empty')
+      : ti('settings.simple.memory_remembered_count', { count: remembered.count })
 
   return (
     <>
@@ -44,6 +83,32 @@ export function MemorySimplePage({
             onChange={onCommitMemoryPaused}
           />
         </SimpleRow>
+        <SimpleRow
+          icon="bookmark"
+          tone="success"
+          title={ti('settings.simple.memory_remembered')}
+          hint={rememberedHint}
+        >
+          {remembered.state === 'ready' ? (
+            <button
+              type="button"
+              className="settings-v3-action"
+              onClick={() => setTimelineOpen(true)}
+            >
+              {ti('settings.simple.memory_remembered_open')}
+            </button>
+          ) : null}
+        </SimpleRow>
+        {remembered.state === 'ready' ? (
+          <ul className="memory-remembered__list">
+            {remembered.latest.map((item) => (
+              <li key={`${item.kind}:${item.id}`} className="memory-remembered__item">
+                <span className="memory-remembered__text">{item.text}</span>
+                <span className="memory-remembered__date">{formatPortraitDate(item.at, dateTemplate)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <SimpleRow
           icon="window"
           title={ti('settings.simple.memory_seeing')}
@@ -118,6 +183,21 @@ export function MemorySimplePage({
       <section className="settings-v3-section__body">
         <SimpleRow icon="bell" tone="warning" title={ti('settings.simple.memory_reminders')} hint={ti('settings.simple.memory_reminders_hint')} />
       </section>
+
+      {timelineOpen ? (
+        <MemoryTimelineV3
+          memories={memories}
+          dailyEntries={dailyMemoryEntries}
+          uiLanguage={draft.uiLanguage}
+          memoryPaused={draft.memoryPaused}
+          confirm={confirm}
+          onUpdateMemory={onUpdateMemory}
+          onRemoveMemory={onRemoveMemory}
+          onUpdateDailyEntry={onUpdateDailyEntry}
+          onRemoveDailyEntry={onRemoveDailyEntry}
+          onClose={() => setTimelineOpen(false)}
+        />
+      ) : null}
     </>
   )
 }
