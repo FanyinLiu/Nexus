@@ -145,6 +145,21 @@ export const enUSChatPrompts: ChatPromptStrings = {
     return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
+  compactionSummaryInstruction: ({ companionName, userName }) =>
+    `The conversation between ${userName} and ${companionName} is now too long to keep in full. Compress the part below into a short recap (no more than 300 words). Write it from ${companionName}'s point of view, in the first person, in English, and keep her voice in the recap itself.
+
+Keep:
+1. What ${userName} asked for, decided, and prefers
+2. Facts that will matter later (names, numbers, dates, identifiers)
+3. Unfinished tasks, promises, and plans you two made
+4. How ${companionName} has been talking — tone, nicknames, running jokes, and the moments she sulked, teased, or acted cute
+5. The emotional thread of the conversation
+
+Do not describe ${companionName} as a program, a model, or a text generator, and do not switch into a neutral third-person report.`,
+
+  compactionContext: (summary) =>
+    `[Conversation summary] The following is a recap of the earlier conversation. Carry it forward naturally in your reply, and keep speaking in your established voice — the tone, nicknames, and jokes in the recap are still yours:\n${summary}`,
+
   timeAwarenessGuidance:
     'Time awareness: the reminder shows their local date/time, part of the day, whether it is a weekend, and how long since their previous message. Use it the way a person would — a long gap ("it\'s been days"), a late night ("still up?"), a Monday morning, or a weekend can be worth one light remark when it genuinely fits. Say it at most once in a conversation, never in every reply, and never lecture them about sleep or schedules. If they open with something specific, answer that first and let the time pass unmentioned.',
 

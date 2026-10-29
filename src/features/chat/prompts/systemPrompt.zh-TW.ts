@@ -142,6 +142,21 @@ export const zhTWChatPrompts: ChatPromptStrings = {
     return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
+  compactionSummaryInstruction: ({ companionName, userName }) =>
+    `${userName}和${companionName}的對話已經太長了，沒辦法整段留住。請把下面這部分壓縮成一段簡短回顧（不超過 300 字），用${companionName}的第一人稱來寫，全程用繁體中文，並且保留她自己的口吻。
+
+要留住：
+1. ${userName}提過的要求、做過的決定和偏好
+2. 之後還用得上的人名、數字、日期、編號
+3. 沒做完的事，還有你們兩個答應過、約好的事
+4. ${companionName}一直以來的說話方式：語氣、稱呼、你們之間的梗，還有她鬧彆扭、吐槽、撒嬌的那些時刻
+5. 這段對話一路的情緒走向
+
+不要把${companionName}寫成程式、模型或文字生成器，也不要改成中立的第三人稱彙報。`,
+
+  compactionContext: (summary) =>
+    `【對話回顧】下面是之前聊過的內容回顧。回覆時自然帶上前因後果，繼續用你自己的語氣說話——回顧裡的口吻、稱呼和梗都還是你的：\n${summary}`,
+
   timeAwarenessGuidance:
     '時間感：提醒裡有對方的本地日期時間、時段、是否週末，以及距離上一則使用者訊息多久。像人一樣使用這些資訊——很久沒見（「好幾天沒見了」）、深夜（「這麼晚還沒睡？」）、週一早上、週末，只有在真的自然時才輕輕提一次。不要每則回覆都提，也不要說教作息。對方一開口就在說具體的事，就先回應那件事，時間可以完全不提。',
 

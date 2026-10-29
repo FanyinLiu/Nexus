@@ -538,20 +538,29 @@ async function toRequestMessages(
   memoryContext: MemoryRecallContext,
   options: AssistantReplyRequestOptions,
 ) {
+  // Resolve the persona first: it owns the names that label the transcript, so
+  // a recap of the dropped turns is written as her instead of as a generic
+  // narrator. The prompt build is independent of the compaction split.
+  const { systemPrompt, persona } = await buildSystemPrompt(settings, memoryContext, options)
+  const speakers = {
+    userName: persona.userName || settings.userName,
+    companionName: persona.companionName || settings.companionName,
+  }
+
   const tokenBudget = getModelTokenBudget(settings.model)
   const maxMessages = getMaxMessagesForBudget(tokenBudget)
   const { messages: contextMessages, compacted, olderMessagesText } = compactMessagesForRequest(
     history,
     maxMessages,
     tokenBudget,
+    speakers,
   )
 
-  const { systemPrompt, persona } = await buildSystemPrompt(settings, memoryContext, options)
   let systemContent = systemPrompt
 
   if (compacted && olderMessagesText) {
-    const summary = await summarizeOlderMessages(olderMessagesText, settings)
-    systemContent = `${systemPrompt}\n\n${formatCompactionContext(summary)}`
+    const summary = await summarizeOlderMessages(olderMessagesText, settings, speakers)
+    systemContent = `${systemPrompt}\n\n${formatCompactionContext(summary, settings.uiLanguage)}`
   }
 
   const correctionHint = detectUserCorrection(contextMessages, settings)

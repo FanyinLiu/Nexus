@@ -28,6 +28,15 @@ export interface CharacterReminderContext {
   escalated: boolean
 }
 
+/**
+ * Identity the compaction summarizer must keep in the recap. Both names are
+ * already trimmed; the locale owns the sentence around them.
+ */
+export interface CompactionSummaryContext {
+  companionName: string
+  userName: string
+}
+
 export interface ChatPromptStrings {
   /** Wraps the loaded MEMORY.md contents with a locale-appropriate header. */
   personaMemoryHeader: (memoryContent: string) => string
@@ -68,6 +77,17 @@ export interface ChatPromptStrings {
    * survives long histories and compaction. Prompt-only, never shown.
    */
   characterReminder: (context: CharacterReminderContext) => string
+  /**
+   * System instruction for the compaction summarizer. The recap replaces
+   * older turns, so it has to keep her voice — a neutral external summary
+   * teaches the model to talk about her instead of as her.
+   */
+  compactionSummaryInstruction: (context: CompactionSummaryContext) => string
+  /**
+   * Wraps the finished recap before it joins the system prompt. Reminds the
+   * model that the recap is hers to carry forward, not a report to quote.
+   */
+  compactionContext: (summary: string) => string
   /** Static, cache-friendly guidance on using time context sparingly. */
   timeAwarenessGuidance: string
   /** Self-correction nudge when the user repeats / corrects themselves. */

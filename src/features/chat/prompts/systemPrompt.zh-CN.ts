@@ -146,6 +146,21 @@ export const zhCNChatPrompts: ChatPromptStrings = {
     return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
+  compactionSummaryInstruction: ({ companionName, userName }) =>
+    `${userName}和${companionName}的对话已经太长了，没办法整段留住。请把下面这部分压缩成一段简短回顾（不超过 300 字），用${companionName}的第一人称来写，全程用中文，并且保留她自己的口吻。
+
+要留住：
+1. ${userName}提过的要求、做过的决定和偏好
+2. 之后还用得上的人名、数字、日期、编号
+3. 没做完的事，还有你们俩答应过、约好的事
+4. ${companionName}一直以来的说话方式：语气、称呼、你们之间的梗，还有她闹别扭、吐槽、撒娇的那些时刻
+5. 这段对话一路的情绪走向
+
+不要把${companionName}写成程序、模型或文字生成器，也不要改成中立的第三人称汇报。`,
+
+  compactionContext: (summary) =>
+    `【对话回顾】下面是之前聊过的内容回顾。回复时自然地带上前因后果，继续用你自己的语气说话——回顾里的口吻、称呼和梗都还是你的：\n${summary}`,
+
   timeAwarenessGuidance:
     '时间感：提醒里有对方的本地日期时间、时段、是否周末，以及距离上一条用户消息多久。像人一样用这些信息——很久没见（"好几天没见了"）、深夜（"这么晚还没睡？"）、周一早上、周末，只有在真的自然时才轻轻提一次。不要每条回复都提，也不要说教作息。对方一上来就在说具体的事，就先回应那件事，时间可以完全不提。',
 
