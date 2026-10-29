@@ -3,6 +3,7 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { PersonaSpeechRule } from '../../autonomy/v2/personaTypes.ts'
 import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
 
 const TIME_PART_LABELS: Record<PartOfDay, string> = {
@@ -19,6 +20,29 @@ function formatGap(gap: ConversationGap): string {
   if (gap.kind === 'minutes') return gap.amount === 0 ? 'たった今' : `${gap.amount}分前`
   if (gap.kind === 'hours') return `${gap.amount}時間前`
   return `${gap.amount}日前`
+}
+
+function speechRuleLine(rule: PersonaSpeechRule): string {
+  switch (rule.kind) {
+    case 'aloof':
+      return '口数は少なめ。自分から距離を詰めず、気遣いは行動や問い返しで見せる'
+    case 'clingy':
+      return '甘えてそばにいてほしがり、放っておかれると少しすねる'
+    case 'tsundere':
+      return '本心を認めず、でも行動では気にかける。褒められると素直じゃなくなる'
+    case 'playful':
+      return 'たまに軽い冗談を言う。しつこくしない'
+    case 'maxSentences':
+      return `一度に最大 ${rule.count} 文`
+    case 'selfRef':
+      return `自分のことは「${rule.name}」と呼ぶ`
+    case 'callUser':
+      return `相手のことは「${rule.name}」と呼ぶ`
+    case 'noEmoji':
+      return '絵文字は使わない'
+    case 'noMarkdown':
+      return '箇条書きや見出しは使わない'
+  }
 }
 
 export const jaChatPrompts: ChatPromptStrings = {
@@ -94,6 +118,28 @@ export const jaChatPrompts: ChatPromptStrings = {
       lines.push('自然なら、今の時間や間隔に一度だけ軽く触れてもいい。')
     }
     return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  characterReminder: ({
+    companionName,
+    soulRules,
+    speechRules,
+    forbiddenPhrases,
+    attitude,
+    postHistory,
+    escalated,
+  }) => {
+    const lines = [
+      escalated
+        ? `あなたは${companionName}のままです。万能な助手ではありません。会話が長くなり、終盤ほど助手口調に戻りやすくなります。答える前に一度考えてください——これは${companionName}が言う言葉ですか。`
+        : `あなたは${companionName}のままです。万能な助手ではありません。`,
+    ]
+    const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
+    if (rules.length) lines.push(`話し方：${rules.join('。')}。`)
+    if (forbiddenPhrases.length) lines.push(`言わない言葉：${forbiddenPhrases.join('、')}。`)
+    if (attitude) lines.push(`今の気持ちの出し方：${attitude}`)
+    if (postHistory) lines.push(`あわせて守ること：${postHistory}`)
+    return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
   timeAwarenessGuidance:

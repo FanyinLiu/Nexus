@@ -3,6 +3,7 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { PersonaSpeechRule } from '../../autonomy/v2/personaTypes.ts'
 import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
 
 const TIME_PART_LABELS: Record<PartOfDay, string> = {
@@ -22,6 +23,29 @@ function formatGap(gap: ConversationGap): string {
   }
   if (gap.kind === 'hours') return `${gap.amount} ${gap.amount === 1 ? 'hour' : 'hours'} ago`
   return `${gap.amount} ${gap.amount === 1 ? 'day' : 'days'} ago`
+}
+
+function speechRuleLine(rule: PersonaSpeechRule): string {
+  switch (rule.kind) {
+    case 'aloof':
+      return 'few words, no volunteered warmth; care shows in an action or a return question'
+    case 'clingy':
+      return 'asks for company and acts cute; gets quietly hurt when left on read'
+    case 'tsundere':
+      return 'denies the feeling while acting on it; goes prickly when praised'
+    case 'playful':
+      return 'the occasional quick joke, never greasy'
+    case 'maxSentences':
+      return `at most ${rule.count} sentence${rule.count === 1 ? '' : 's'}`
+    case 'selfRef':
+      return `calls herself "${rule.name}"`
+    case 'callUser':
+      return `calls the user "${rule.name}"`
+    case 'noEmoji':
+      return 'no emoji'
+    case 'noMarkdown':
+      return 'no lists or headings'
+  }
 }
 
 export const enUSChatPrompts: ChatPromptStrings = {
@@ -97,6 +121,28 @@ export const enUSChatPrompts: ChatPromptStrings = {
       lines.push('If it fits naturally, you may acknowledge the time or the gap once now — briefly.')
     }
     return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  characterReminder: ({
+    companionName,
+    soulRules,
+    speechRules,
+    forbiddenPhrases,
+    attitude,
+    postHistory,
+    escalated,
+  }) => {
+    const lines = [
+      escalated
+        ? `Still ${companionName}, not a generic assistant. This conversation is long, and the further it goes the easier it is to slide back into assistant voice. Before you answer, check: would ${companionName} really say this?`
+        : `Still ${companionName}, not a generic assistant.`,
+    ]
+    const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
+    if (rules.length) lines.push(`How you talk: ${rules.join('; ')}.`)
+    if (forbiddenPhrases.length) lines.push(`Never say: ${forbiddenPhrases.join(', ')}.`)
+    if (attitude) lines.push(`Right now: ${attitude}`)
+    if (postHistory) lines.push(`Also follow: ${postHistory}`)
+    return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
   timeAwarenessGuidance:

@@ -5,7 +5,28 @@
  */
 
 import type { CompanionRelationshipType } from '../../../types'
+import type { PersonaSpeechRule } from '../../autonomy/v2/personaTypes.ts'
 import type { TimeReminderContext } from '../timeAwareness.ts'
+
+/**
+ * Everything the post-history character reminder states, already reduced to
+ * short facts. The locale decides the wording and the tag stays
+ * `<character-reminder>` in every language.
+ */
+export interface CharacterReminderContext {
+  companionName: string
+  /** Short rules lifted from soul.md when the persona has no dials. */
+  soulRules: string[]
+  /** Dial-derived rules; the locale owns only the phrasing. */
+  speechRules: PersonaSpeechRule[]
+  forbiddenPhrases: string[]
+  /** How the current mood should show, from the emotion layer. */
+  attitude?: string
+  /** Card author's post-history instructions, verbatim. */
+  postHistory?: string
+  /** True once the conversation is long or was just compacted. */
+  escalated: boolean
+}
 
 export interface ChatPromptStrings {
   /** Wraps the loaded MEMORY.md contents with a locale-appropriate header. */
@@ -42,6 +63,11 @@ export interface ChatPromptStrings {
    *  and the gap since the previous user message — reminder tag MUST be
    *  preserved. */
   currentTimeReminder: (context: TimeReminderContext) => string
+  /**
+   * `<character-reminder>` that rides on the last user message so the persona
+   * survives long histories and compaction. Prompt-only, never shown.
+   */
+  characterReminder: (context: CharacterReminderContext) => string
   /** Static, cache-friendly guidance on using time context sparingly. */
   timeAwarenessGuidance: string
   /** Self-correction nudge when the user repeats / corrects themselves. */

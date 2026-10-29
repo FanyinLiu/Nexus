@@ -25,6 +25,7 @@ import {
   type ResolvedPersona,
   resolveActivePersona,
 } from '../persona/resolveActivePersona.ts'
+import { buildPersonaReminder } from '../persona/personaReminder.ts'
 import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext.ts'
 import { classifyActivity } from '../autonomy/v2/contextGatherer.ts'
@@ -260,7 +261,7 @@ async function buildSystemPrompt(
   settings: AppSettings,
   memoryContext: MemoryRecallContext,
   options: AssistantReplyRequestOptions,
-) {
+): Promise<{ systemPrompt: string; persona: ResolvedPersona }> {
   // Persona-private memory lives in the global MEMORY.md only; the identity
   // chain itself is owned by the shared resolver so chat, V2, and letters
   // cannot drift apart.
@@ -386,55 +387,58 @@ async function buildSystemPrompt(
 
   const callbackSection = buildCallbackSection(options.pendingCallbacks)
 
-  return [
-    // The header states only who is speaking and that the persona owns the
-    // voice. It goes FIRST so the persona text that follows is the later,
-    // stronger identity signal — the reverse order let generic wording win.
-    headerText,
-    personaSection,
-    relationshipTypeSection,
-    personaMemorySection,
-    narrativeSection,
-    relationshipSection,
-    milestoneSection,
-    anniversarySection,
-    onThisDaySection,
-    messageFollowUpSection,
-    COHERENCE_GUIDANCE,
-    REUNION_GUIDANCE,
-    prompts.timeAwarenessGuidance,
-    LOW_SIGNAL_GUIDANCE,
-    QUESTION_PACING_GUIDANCE,
-    TOPIC_EXHAUSTION_GUIDANCE,
-    SELF_DISCLOSURE_GUIDANCE,
-    emotionSection,
-    EMOTIONAL_TRANSITION_GUIDANCE,
-    rhythmSection,
-    activityToneSection,
-    affectGuidanceSection,
-    repairGuidanceSection,
-    crisisGuidanceSection,
-    responseStyleSection,
-    expressionGuideSection,
-    firstImpressionSection,
-    toolHonestySection,
-    screenDisplaySection,
-    bridgedMessageSection,
-    intentContextSection,
-    hotTier.longTermSection,
-    hotTier.dailySection,
-    buildLorebookSection(options.triggeredLorebookEntries ?? []),
-    buildSemanticMemorySection(memoryContext),
-    callbackSection,
-    mcpToolsSection,
-    skillGuideSection,
-    options.autoSkillContext ?? '',
-    toolContextSection,
-    desktopContextSection,
-    gameContextSection,
-  ]
-    .filter(Boolean)
-    .join('\n\n')
+  return {
+    systemPrompt: [
+      // The header states only who is speaking and that the persona owns the
+      // voice. It goes FIRST so the persona text that follows is the later,
+      // stronger identity signal — the reverse order let generic wording win.
+      headerText,
+      personaSection,
+      relationshipTypeSection,
+      personaMemorySection,
+      narrativeSection,
+      relationshipSection,
+      milestoneSection,
+      anniversarySection,
+      onThisDaySection,
+      messageFollowUpSection,
+      COHERENCE_GUIDANCE,
+      REUNION_GUIDANCE,
+      prompts.timeAwarenessGuidance,
+      LOW_SIGNAL_GUIDANCE,
+      QUESTION_PACING_GUIDANCE,
+      TOPIC_EXHAUSTION_GUIDANCE,
+      SELF_DISCLOSURE_GUIDANCE,
+      emotionSection,
+      EMOTIONAL_TRANSITION_GUIDANCE,
+      rhythmSection,
+      activityToneSection,
+      affectGuidanceSection,
+      repairGuidanceSection,
+      crisisGuidanceSection,
+      responseStyleSection,
+      expressionGuideSection,
+      firstImpressionSection,
+      toolHonestySection,
+      screenDisplaySection,
+      bridgedMessageSection,
+      intentContextSection,
+      hotTier.longTermSection,
+      hotTier.dailySection,
+      buildLorebookSection(options.triggeredLorebookEntries ?? []),
+      buildSemanticMemorySection(memoryContext),
+      callbackSection,
+      mcpToolsSection,
+      skillGuideSection,
+      options.autoSkillContext ?? '',
+      toolContextSection,
+      desktopContextSection,
+      gameContextSection,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    persona: resolvedPersona,
+  }
 }
 
 /**
@@ -542,7 +546,7 @@ async function toRequestMessages(
     tokenBudget,
   )
 
-  const systemPrompt = await buildSystemPrompt(settings, memoryContext, options)
+  const { systemPrompt, persona } = await buildSystemPrompt(settings, memoryContext, options)
   let systemContent = systemPrompt
 
   if (compacted && olderMessagesText) {
@@ -566,6 +570,19 @@ async function toRequestMessages(
     options.currentTime,
     previousUserMessageAt(history),
   )
+  // The persona only lives at the top of a long system prompt, so it is the
+  // first thing the model forgets. The character reminder rides on the same
+  // last user turn, right after the time block, making identity the freshest
+  // instruction the model reads. It escalates once the history is long or was
+  // just compacted.
+  const characterReminder = buildPersonaReminder({
+    persona,
+    companionName: persona.companionName || settings.companionName,
+    uiLanguage: settings.uiLanguage,
+    assistantTurns: contextMessages.filter((message) => message.role === 'assistant').length,
+    compacted,
+  })
+  const reminderPrefix = `${timeReminder}\n\n${characterReminder}\n\n`
   const augmentedMessages = contextMessages.slice()
   for (let i = augmentedMessages.length - 1; i >= 0; i -= 1) {
     if (augmentedMessages[i].role === 'user') {
@@ -576,8 +593,8 @@ async function toRequestMessages(
       // the images. Splice the reminder in as a leading text part instead so
       // the image parts survive intact.
       const nextContent: typeof original = Array.isArray(original)
-        ? [{ type: 'text', text: `${timeReminder}\n\n` }, ...original]
-        : `${timeReminder}\n\n${original}`
+        ? [{ type: 'text', text: reminderPrefix }, ...original]
+        : `${reminderPrefix}${original}`
       augmentedMessages[i] = {
         ...augmentedMessages[i],
         content: nextContent,

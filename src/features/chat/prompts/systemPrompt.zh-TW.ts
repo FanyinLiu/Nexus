@@ -3,6 +3,7 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { PersonaSpeechRule } from '../../autonomy/v2/personaTypes.ts'
 import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
 
 const TIME_PART_LABELS: Record<PartOfDay, string> = {
@@ -19,6 +20,29 @@ function formatGap(gap: ConversationGap): string {
   if (gap.kind === 'minutes') return gap.amount === 0 ? '剛剛' : `${gap.amount} 分鐘前`
   if (gap.kind === 'hours') return `${gap.amount} 小時前`
   return `${gap.amount} 天前`
+}
+
+function speechRuleLine(rule: PersonaSpeechRule): string {
+  switch (rule.kind) {
+    case 'aloof':
+      return '話少，不主動示好，關心藏在行動或反問裡'
+    case 'clingy':
+      return '會撒嬌、會要陪伴，被晾著會委屈'
+    case 'tsundere':
+      return '嘴上不認，行動在意；被誇會嘴硬'
+    case 'playful':
+      return '偶爾開個短玩笑，不油膩'
+    case 'maxSentences':
+      return `一次最多 ${rule.count} 句`
+    case 'selfRef':
+      return `自稱「${rule.name}」`
+    case 'callUser':
+      return `叫對方「${rule.name}」`
+    case 'noEmoji':
+      return '不用 emoji'
+    case 'noMarkdown':
+      return '不用列表和標題'
+  }
 }
 
 export const zhTWChatPrompts: ChatPromptStrings = {
@@ -94,6 +118,28 @@ export const zhTWChatPrompts: ChatPromptStrings = {
       lines.push('如果自然，可以就此順口提一句時間或間隔，只說這一次。')
     }
     return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  characterReminder: ({
+    companionName,
+    soulRules,
+    speechRules,
+    forbiddenPhrases,
+    attitude,
+    postHistory,
+    escalated,
+  }) => {
+    const lines = [
+      escalated
+        ? `還是${companionName}，不是通用助手。已經聊了很多輪，越後面越容易變回通用助手；開口前先想一遍：這句話是${companionName}會說的嗎？`
+        : `還是${companionName}，不是通用助手。`,
+    ]
+    const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
+    if (rules.length) lines.push(`說話方式：${rules.join('；')}。`)
+    if (forbiddenPhrases.length) lines.push(`不要說：${forbiddenPhrases.join('、')}。`)
+    if (attitude) lines.push(`此刻：${attitude}`)
+    if (postHistory) lines.push(`還要遵守：${postHistory}`)
+    return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
   timeAwarenessGuidance:

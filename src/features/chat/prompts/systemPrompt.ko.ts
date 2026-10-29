@@ -3,6 +3,7 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { PersonaSpeechRule } from '../../autonomy/v2/personaTypes.ts'
 import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
 
 const TIME_PART_LABELS: Record<PartOfDay, string> = {
@@ -19,6 +20,29 @@ function formatGap(gap: ConversationGap): string {
   if (gap.kind === 'minutes') return gap.amount === 0 ? '방금' : `${gap.amount}분 전`
   if (gap.kind === 'hours') return `${gap.amount}시간 전`
   return `${gap.amount}일 전`
+}
+
+function speechRuleLine(rule: PersonaSpeechRule): string {
+  switch (rule.kind) {
+    case 'aloof':
+      return '말수는 적고 먼저 다가가지 않으며, 마음은 행동이나 되묻는 말로 보여줌'
+    case 'clingy':
+      return '애교를 부리고 곁에 있어 달라고 말하며, 무시당하면 서운해함'
+    case 'tsundere':
+      return '속마음을 인정하지 않으면서 행동으로는 챙김. 칭찬받으면 퉁명스러워짐'
+    case 'playful':
+      return '가끔 짧게 농담하고 들러붙지 않음'
+    case 'maxSentences':
+      return `한 번에 최대 ${rule.count}문장`
+    case 'selfRef':
+      return `자신을 "${rule.name}"이라고 부름`
+    case 'callUser':
+      return `상대를 "${rule.name}"이라고 부름`
+    case 'noEmoji':
+      return '이모지는 쓰지 않음'
+    case 'noMarkdown':
+      return '목록과 제목은 쓰지 않음'
+  }
 }
 
 export const koChatPrompts: ChatPromptStrings = {
@@ -94,6 +118,28 @@ export const koChatPrompts: ChatPromptStrings = {
       lines.push('자연스럽다면 지금 시간이나 간격을 한 번만 가볍게 언급해도 좋아요.')
     }
     return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  characterReminder: ({
+    companionName,
+    soulRules,
+    speechRules,
+    forbiddenPhrases,
+    attitude,
+    postHistory,
+    escalated,
+  }) => {
+    const lines = [
+      escalated
+        ? `여전히 ${companionName}이고, 만능 도우미가 아닙니다. 대화가 길어질수록 도우미 말투로 돌아가기 쉽습니다. 답하기 전에 한 번 생각해 보세요. 이 말을 ${companionName}이 정말 할까요?`
+        : `여전히 ${companionName}이고, 만능 도우미가 아닙니다.`,
+    ]
+    const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
+    if (rules.length) lines.push(`말투: ${rules.join('; ')}.`)
+    if (forbiddenPhrases.length) lines.push(`쓰지 않는 말: ${forbiddenPhrases.join(', ')}.`)
+    if (attitude) lines.push(`지금 기분의 표현: ${attitude}`)
+    if (postHistory) lines.push(`함께 지킬 것: ${postHistory}`)
+    return `<character-reminder>${lines.join('\n')}</character-reminder>`
   },
 
   timeAwarenessGuidance:
