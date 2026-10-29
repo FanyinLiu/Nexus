@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import { aggregateSundayLetter } from '../src/features/letter/aggregator.ts'
-import type { MemoryItem } from '../src/types/memory.ts'
+import type { DailyMemoryEntry, MemoryItem } from '../src/types/index.ts'
 
 const NOW = new Date('2026-04-26T20:00:00').getTime()
 
@@ -17,30 +17,87 @@ function memory(overrides: Partial<MemoryItem> & { id: string; content: string }
   } as MemoryItem
 }
 
-test('skips letter when fewer than 3 active days', () => {
+function diary(overrides: Partial<DailyMemoryEntry> & { id: string; content: string }): DailyMemoryEntry {
+  return {
+    day: '2026-04-25',
+    role: 'user',
+    source: 'chat',
+    createdAt: new Date(NOW - 24 * 60 * 60_000).toISOString(),
+    ...overrides,
+  }
+}
+
+test('skips only a truly empty week', () => {
   const out = aggregateSundayLetter({
     nowMs: NOW,
-    recentMemories: [memory({ id: 'a', content: 'something nice' })],
-    activeDayKeys: ['2026-04-25', '2026-04-26'],
+    recentMemories: [],
+    recentDiaryEntries: [],
+    activeDayKeys: [],
   })
   assert.equal(out.shouldFire, false)
-  assert.equal(out.shouldFire === false && out.reason, 'too_few_active_days')
+  assert.equal(out.shouldFire === false && out.reason, 'empty_week')
+  assert.equal(out.weekDayCount, 0)
 })
 
-test('skips letter when no significant memory passes threshold', () => {
+test('a light week with two active days fires even with no stored memory', () => {
   const out = aggregateSundayLetter({
     nowMs: NOW,
-    recentMemories: [
-      memory({ id: 'a', content: 'tiny thing', significance: 0.05 }),
-      memory({ id: 'b', content: 'another tiny', significance: 0.1 }),
-    ],
-    activeDayKeys: ['2026-04-21', '2026-04-23', '2026-04-25'],
+    recentMemories: [],
+    activeDayKeys: ['2026-04-23', '2026-04-25'],
   })
-  assert.equal(out.shouldFire, false)
-  assert.equal(out.shouldFire === false && out.reason, 'no_significant_memory')
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.equal(out.weekDayCount, 2)
+  assert.deepEqual(out.highlights, [])
+  assert.deepEqual(out.diaryLines, [])
 })
 
-test('passes gate and rolls up highlights / stressors / themes', () => {
+test('one busy day with a few messages is enough', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [],
+    activeDayKeys: ['2026-04-25'],
+    userMessageCount: 3,
+  })
+  assert.equal(out.shouldFire, true)
+})
+
+test('one quiet day with two messages is not enough on its own', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [],
+    activeDayKeys: ['2026-04-25'],
+    userMessageCount: 2,
+  })
+  assert.equal(out.shouldFire, false)
+  assert.equal(out.shouldFire === false && out.reason, 'empty_week')
+})
+
+test('one remembered event is enough on a single-day week', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [memory({ id: 'event', content: '周四有面试', significance: 0 })],
+    activeDayKeys: ['2026-04-23'],
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.equal(out.highlights.length, 1)
+  assert.equal(out.highlights[0]?.id, 'event')
+})
+
+test('a diary entry alone is enough on a single-day week', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [],
+    recentDiaryEntries: [diary({ id: 'd1', content: '今天把搬家的事定下来了' })],
+    activeDayKeys: ['2026-04-25'],
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.deepEqual(out.diaryLines, ['今天把搬家的事定下来了'])
+})
+
+test('passes the gate and rolls up highlights / stressors / themes', () => {
   const out = aggregateSundayLetter({
     nowMs: NOW,
     recentMemories: [
@@ -59,6 +116,20 @@ test('passes gate and rolls up highlights / stressors / themes', () => {
   assert.equal(out.stressors[0].id, 'c')
   assert.deepEqual(out.themes.sort(), ['habit', 'preference', 'project'])
   assert.equal(out.weekDayCount, 4)
+})
+
+test('neutral memories still become concrete highlights', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [
+      memory({ id: 'n1', content: '把厨房收拾了', significance: 0, emotionalValence: 'neutral' }),
+      memory({ id: 'n2', content: '修好了台灯', significance: 0, emotionalValence: undefined }),
+    ],
+    activeDayKeys: ['d1', 'd2'],
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.deepEqual(out.highlights.map((item) => item.id), ['n1', 'n2'])
 })
 
 test('caps highlights at 4 and stressors at 3', () => {
@@ -115,6 +186,29 @@ test('reflections themselves do not pollute highlights', () => {
   assert.equal(out.highlights[0].id, 's1')
 })
 
+test('disabled, migrated, archived, superseded, and sensitive rows stay out of the letter', () => {
+  const out = aggregateSundayLetter({
+    nowMs: NOW,
+    recentMemories: [
+      memory({ id: 'ok', content: '一起去看展了' }),
+      memory({ id: 'off', content: '关掉的记忆', enabled: false }),
+      memory({ id: 'migrated', content: '迁移来的记忆', migrated: true }),
+      memory({ id: 'archived', content: '归档的记忆', status: 'archived' }),
+      memory({ id: 'superseded', content: '被替代的记忆', status: 'superseded' }),
+      memory({ id: 'secret', content: '我的密码是 hunter2' }),
+    ],
+    recentDiaryEntries: [
+      diary({ id: 'd-ok', content: '今天下班很早' }),
+      diary({ id: 'd-secret', content: '身份证号 110101199001011234' }),
+    ],
+    activeDayKeys: ['d1'],
+  })
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.deepEqual(out.highlights.map((item) => item.id), ['ok'])
+  assert.deepEqual(out.diaryLines, ['今天下班很早'])
+})
+
 test('milestones reached pass through', () => {
   const out = aggregateSundayLetter({
     nowMs: NOW,
@@ -133,8 +227,9 @@ test('dedups active day keys when caller passes the same date twice', () => {
     recentMemories: [memory({ id: 'a', content: 'something', significance: 0.5 })],
     activeDayKeys: ['d1', 'd1', 'd2'],
   })
-  // Only 2 distinct days → below threshold → skip
-  assert.equal(out.shouldFire, false)
+  assert.equal(out.shouldFire, true)
+  if (out.shouldFire !== true) return
+  assert.equal(out.weekDayCount, 2)
 })
 
 // ── affectShape attachment ────────────────────────────────────────────────
@@ -145,7 +240,7 @@ test('affectShape: omitted when sample count is below the min-samples gate', () 
     recentMemories: [memory({ id: 'a', content: 'thing', significance: 0.5 })],
     activeDayKeys: ['d1', 'd2', 'd3'],
     affectThisWeek: {
-      n: 3,  // below the 6-sample gate
+      n: 3,
       baselineValence: 0.4,
       baselineArousal: 0.5,
       variability: 0.1,

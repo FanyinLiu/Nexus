@@ -161,4 +161,6 @@ export const zhTWChat = {
   'chat.slash.search.no_hits': '沒有在本地聊天歷史中找到與「{query}」相關的片段。',
   'chat.failover.no_api_base': '請先在設定裡填寫介面地址和模型名稱。',
   'chat.failover.no_api_key': '請先在設定裡填寫目前文字提供商的介面密鑰。',
+  'chat.letter.card_title': '她給你寫了一封信',
+  'chat.letter.card_open': '讀這封信',
 } as const satisfies Partial<TranslationDictionary>

@@ -6,12 +6,13 @@ import { useGuidanceAnalysisScheduler } from '../../hooks/useGuidanceAnalysisSch
 import { useLetterScheduler } from '../../hooks/useLetterScheduler.ts'
 import { useOpenArcScheduler } from '../../hooks/useOpenArcScheduler.ts'
 import type { CompanionNoticePayload } from '../../hooks/chat/types.ts'
-import type { AppSettings, ChatMessage, FocusState, MemoryItem } from '../../types'
+import type { AppSettings, ChatMessage, DailyMemoryStore, FocusState, MemoryItem } from '../../types'
 
 type UseBackgroundSchedulersOptions = {
   settings: AppSettings
   messages: ChatMessage[]
   memories: MemoryItem[]
+  dailyMemories?: DailyMemoryStore
   panelCollapsed: boolean
   /** Renderer-level scheduler switch; defaults on for isolated callers/tests. */
   enabled?: boolean
@@ -27,6 +28,7 @@ export function useBackgroundSchedulers({
   settings,
   messages,
   memories,
+  dailyMemories = {},
   panelCollapsed,
   enabled = true,
   runtimeOwner = true,
@@ -61,7 +63,7 @@ export function useBackgroundSchedulers({
     settings,
     messages,
     memories,
-    panelOpen,
+    dailyMemories,
     focusState,
     enabled: schedulerEnabled,
   })

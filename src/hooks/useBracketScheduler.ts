@@ -28,7 +28,7 @@ import {
 } from '../features/agent/errandStore.ts'
 import { buildErrandDeliveryBody } from '../features/agent/errandDelivery.ts'
 import { decideLetter } from '../features/letter/letterScheduler.ts'
-import { getMostRecentLetterMs } from '../features/letter/letterStore.ts'
+import { getMostRecentLetterDate } from '../features/letter/letterStore.ts'
 import {
   PROACTIVE_BRACKET_STATE_STORAGE_KEY,
   clearBracketEveningTopic,
@@ -40,7 +40,7 @@ import {
 } from '../lib/storage.ts'
 import { loadProactiveAgenda } from '../lib/storage/proactiveAgenda.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
-import { isSameLocalDay, localDayKey } from '../lib/localDate.ts'
+import { localDayKey } from '../lib/localDate.ts'
 import { usePollingScheduler } from './usePollingScheduler.ts'
 import type { CompanionNoticePayload } from './chat/types.ts'
 import type { AppSettings, ChatMessage, FocusState, MemoryItem } from '../types'
@@ -152,15 +152,19 @@ export function useBracketScheduler({
       }
     }
 
-    const letterLastFiredMs = getMostRecentLetterMs()
+    // The letter scheduler now speaks in Sunday week keys, not timestamps:
+    // "due" means a slot is waiting, and "delivered today" covers the case
+    // where the letter already landed and the bracket should stay quiet.
+    const letterLastDate = getMostRecentLetterDate()
     const letterDecision = decideLetter({
       enabled: s.proactiveLetterEnabled,
       nowMs,
-      lastFiredMs: letterLastFiredMs,
+      lastLetterDate: letterLastDate,
       relationshipType: s.companionRelationshipType,
+      memoryPaused: s.memoryPaused === true,
     })
     const letterDue = letterDecision.shouldFire
-      || (letterLastFiredMs != null && isSameLocalDay(letterLastFiredMs, nowMs))
+      || letterLastDate === localDayKey(nowMs)
     const agendaState = loadProactiveAgenda()
     const lastOpenClaimAtMs = agendaState.firedAt.length
       ? Math.max(...agendaState.firedAt)

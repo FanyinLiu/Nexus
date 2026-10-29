@@ -15,6 +15,7 @@ export interface LetterPromptStrings {
   sectionHighlightsHeader: string
   sectionStressorsHeader: string
   sectionReflectionsHeader: string
+  sectionDiaryHeader: string
   sectionMilestonesHeader: string
 
   finalInstruction: string

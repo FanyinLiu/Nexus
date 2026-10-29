@@ -12,6 +12,10 @@ import {
 import { inferApiProviderId } from '../../features/models/providerCatalog.ts'
 import { inferCompanionInitiative } from '../../features/settingsSimplify/companionInitiative.ts'
 import {
+  normalizeProactiveLetterChoice,
+  resolveProactiveLetterEnabled,
+} from '../../features/letter/letterPreference.ts'
+import {
   normalizePetSceneLocation,
   normalizePetTimePreview,
   normalizePetWeatherPreview,
@@ -160,7 +164,11 @@ const defaultSettings: AppSettings = {
   // A short hello at each end of the day is light enough to default on.
   // Existing stores keep whatever boolean they already saved.
   proactiveBracketEnabled: true,
-  proactiveLetterEnabled: false,
+  // On by default: a weekly letter is the "remembers you" layer, not a
+  // high-frequency interruption, and the explicit choice field below lets
+  // an older store keep a switch value the person actually picked.
+  proactiveLetterEnabled: true,
+  proactiveLetterChoice: 'auto',
   gazeFollowEnabled: true,
   typingAwarenessEnabled: false,
   companionBackdropEnabled: false,
@@ -449,6 +457,14 @@ export function loadSettings(): AppSettings {
     stored.toolWebSearchApiBaseUrl ?? defaultSettings.toolWebSearchApiBaseUrl,
   )
 
+  const companionInitiative = resolveCompanionInitiative(stored)
+  const proactiveLetterChoice = normalizeProactiveLetterChoice(stored.proactiveLetterChoice)
+  const proactiveLetterEnabled = resolveProactiveLetterEnabled({
+    choice: proactiveLetterChoice,
+    storedEnabled: stored.proactiveLetterEnabled,
+    companionInitiative,
+  })
+
   const loadedSettings: AppSettings = {
     ...defaultSettings,
     ...stored,
@@ -462,7 +478,9 @@ export function loadSettings(): AppSettings {
     settingsSchemaVersion: storedVersion > CURRENT_SETTINGS_SCHEMA_VERSION
       ? storedVersion
       : CURRENT_SETTINGS_SCHEMA_VERSION,
-    companionInitiative: resolveCompanionInitiative(stored),
+    companionInitiative,
+    proactiveLetterChoice,
+    proactiveLetterEnabled,
     uiLanguage: resolvedUiLanguage,
     themeId: resolveThemeId(stored.themeId, stored.themeColorScheme),
     themeColorScheme: resolveThemeColorScheme(stored.themeId, stored.themeColorScheme),

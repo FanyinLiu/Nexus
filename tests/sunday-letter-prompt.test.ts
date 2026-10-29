@@ -41,6 +41,7 @@ function dataReady(overrides: Partial<SundayLetterDataReady> = {}): SundayLetter
       { id: 'c', content: '会议拖到九点', significance: 0.7 },
     ],
     reflectionLines: ['用户在压力期更需要被允许休息'],
+    diaryLines: [],
     milestonesNotedThisWeek: [],
     weekDayCount: 5,
     ...overrides,
@@ -98,13 +99,43 @@ test('user message inlines highlights, stressors, themes, reflections', () => {
 test('skips empty optional sections', () => {
   const messages = buildLetterPrompt({
     persona: persona(),
-    data: dataReady({ stressors: [], reflectionLines: [], milestonesNotedThisWeek: [] }),
+    data: dataReady({ stressors: [], reflectionLines: [], diaryLines: [], milestonesNotedThisWeek: [] }),
     uiLanguage: 'en-US',
   })
   const userMsg = messages[1].content
   assert.doesNotMatch(userMsg, /Stressful pieces/)
   assert.doesNotMatch(userMsg, /earlier reflections/i)
+  assert.doesNotMatch(userMsg, /Diary moments/i)
   assert.doesNotMatch(userMsg, /milestones/i)
+})
+
+test('inlines diary moments when present', () => {
+  const messages = buildLetterPrompt({
+    persona: persona(),
+    data: dataReady({ diaryLines: ['今天把搬家的事定下来了'] }),
+    uiLanguage: 'zh-CN',
+  })
+  assert.match(messages[1].content, /今天把搬家的事定下来了/)
+  assert.match(messages[1].content, /日记片段/)
+})
+
+test('every locale asks for concrete moments, one look-ahead, and privacy', () => {
+  const concreteMarkers: Record<UiLanguage, RegExp> = {
+    'en-US': /two or three/,
+    'zh-CN': /两三个/,
+    'zh-TW': /兩三個/,
+    ja: /2〜3/,
+    ko: /2~3/,
+  }
+  for (const locale of LOCALES) {
+    const messages = buildLetterPrompt({
+      persona: persona(),
+      data: dataReady(),
+      uiLanguage: locale,
+    })
+    assert.match(messages[0].content, concreteMarkers[locale], `${locale} asks for concrete items`)
+    assert.ok(messages[0].content.length > 120, `${locale} contract is substantive`)
+  }
 })
 
 test('every locale registers with task framing + contract', () => {

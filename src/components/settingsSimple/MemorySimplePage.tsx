@@ -8,6 +8,9 @@ import type { ConfirmFn } from '../useConfirm.ts'
 import { desktopAwarenessPatch } from '../../features/settingsSimplify/index.ts'
 import { formatPortraitDate } from '../../features/memory/changeCopy.ts'
 import { buildRememberedCardView } from '../../features/memory/memoryTimeline.ts'
+import type { SavedLetter } from '../../features/letter/letterStore.ts'
+import { formatLetterDate, isLetterUnread } from '../../features/letter/letterView.ts'
+import { useLetters } from '../../hooks/useLetters.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
@@ -16,6 +19,8 @@ import type {
 } from '../../types/index.ts'
 import { SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
 import { MemoryTimelineV3 } from '../../features/settingsV3/MemoryTimelineV3.tsx'
+import { SundayLetterReader } from '../SundayLetterReader.tsx'
+import { SundayLetterShelf } from '../SundayLetterShelf.tsx'
 import { simpleTranslate } from './settingsSimpleCopy.ts'
 import { SimpleChoices, SimpleRow } from './settingsSimpleShared.tsx'
 
@@ -48,6 +53,9 @@ export function MemorySimplePage({
 }: MemorySimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
   const [timelineOpen, setTimelineOpen] = useState(false)
+  const [letterShelfOpen, setLetterShelfOpen] = useState(false)
+  const [openLetter, setOpenLetter] = useState<SavedLetter | null>(null)
+  const { letters, unreadCount, markRead } = useLetters()
   const remembered = useMemo(
     () => buildRememberedCardView({
       memories,
@@ -67,6 +75,17 @@ export function MemorySimplePage({
     : remembered.state === 'empty'
       ? ti('settings.simple.memory_remembered_empty')
       : ti('settings.simple.memory_remembered_count', { count: remembered.count })
+
+  const letterShelfHint = letters.length === 0
+    ? ti('settings.simple.letter_none')
+    : unreadCount > 0
+      ? ti('settings.simple.letter_unread_count', { count: letters.length, unread: unreadCount })
+      : ti('settings.simple.letter_count', { count: letters.length })
+
+  function openSavedLetter(letter: SavedLetter) {
+    markRead(letter.id)
+    setOpenLetter(letter)
+  }
 
   return (
     <>
@@ -150,6 +169,64 @@ export function MemorySimplePage({
       </section>
 
       <section className="settings-v3-section__body">
+        <SimpleRow
+          icon="letters"
+          title={ti('settings.simple.letter')}
+          hint={ti('settings.simple.letter_hint')}
+        >
+          <SettingsV3Switch
+            checked={draft.proactiveLetterEnabled}
+            label={ti('settings.simple.letter')}
+            onChange={(enabled) => patch({
+              proactiveLetterEnabled: enabled,
+              proactiveLetterChoice: enabled ? 'on' : 'off',
+            })}
+          />
+        </SimpleRow>
+        <SimpleRow
+          icon="letters"
+          title={ti('settings.simple.letter_shelf')}
+          hint={letterShelfHint}
+        >
+          {letters.length > 0 ? (
+            <button
+              type="button"
+              className="settings-v3-action"
+              onClick={() => setLetterShelfOpen(true)}
+            >
+              {ti('settings.simple.letter_open')}
+            </button>
+          ) : null}
+        </SimpleRow>
+        {letters.length > 0 ? (
+          <ul className="sunday-letter-shelf__list">
+            {letters.slice(0, 3).map((letter) => {
+              const unread = isLetterUnread(letter)
+              return (
+                <li key={letter.id} className="sunday-letter-shelf__item">
+                  <button
+                    type="button"
+                    className="sunday-letter-shelf__open"
+                    onClick={() => openSavedLetter(letter)}
+                  >
+                    <span className="sunday-letter-shelf__meta">
+                      <span className="sunday-letter-shelf__date">
+                        {formatLetterDate(letter.letterDate, draft.uiLanguage)}
+                      </span>
+                      <span className="sunday-letter-shelf__badge" data-unread={unread ? 'true' : 'false'}>
+                        {unread ? ti('settings.letters.unread_badge') : ti('settings.letters.read_badge')}
+                      </span>
+                    </span>
+                    <span className="sunday-letter-shelf__preview">{letter.content.greeting}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="settings-v3-section__body">
         <SimpleRow icon="book" tone="warning" title={ti('settings.simple.memory_lore')} hint={ti('settings.simple.memory_lore_hint')}>
           <button type="button" className="settings-v3-action" onClick={onOpenAdvanced}>
             {ti('settings.simple.memory_lore_open')}
@@ -196,6 +273,22 @@ export function MemorySimplePage({
           onUpdateDailyEntry={onUpdateDailyEntry}
           onRemoveDailyEntry={onRemoveDailyEntry}
           onClose={() => setTimelineOpen(false)}
+        />
+      ) : null}
+
+      {letterShelfOpen ? (
+        <SundayLetterShelf
+          letters={letters}
+          uiLanguage={draft.uiLanguage}
+          onClose={() => setLetterShelfOpen(false)}
+        />
+      ) : null}
+
+      {openLetter ? (
+        <SundayLetterReader
+          letter={openLetter}
+          uiLanguage={draft.uiLanguage}
+          onClose={() => setOpenLetter(null)}
         />
       ) : null}
     </>
