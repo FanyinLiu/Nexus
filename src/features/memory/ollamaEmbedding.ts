@@ -259,7 +259,7 @@ export async function embedTextsWithOllama(
   const ollamaModel = getOllamaModelName(model)
   const key = `${configuredBaseUrl}::${model}`
   if (!ollamaModel) {
-    throw new OllamaEmbeddingError('error', 'Missing Ollama model name')
+    throw new OllamaEmbeddingError('error', 'memory.embedding.status.error')
   }
   if (isOllamaMemoryModelCoolingDown(model)) {
     const current = status.state === 'fallback' ? status : null
