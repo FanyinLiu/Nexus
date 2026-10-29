@@ -13,6 +13,7 @@ import type {
 import { useFocusAwareness } from '../../hooks/useFocusAwareness.ts'
 import { useAutonomyTick } from '../../hooks/useAutonomyTick.ts'
 import { useMemoryDream } from '../../hooks/useMemoryDream.ts'
+import { useDreamDiary } from '../../hooks/useDreamDiary.ts'
 import { useContextScheduler } from '../../hooks/useContextScheduler.ts'
 import { useNotificationBridge } from '../../hooks/useNotificationBridge.ts'
 import { useEmotionState } from './useEmotionState.ts'
@@ -131,6 +132,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const rhythmState = useRhythmState()
 
   const runDreamRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  const runDreamDiaryRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const evaluateTriggersRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const lastActiveWindowTitleRef = useRef<string | null>(null)
   const consumeLlmBudgetRef = useRef<() => boolean>(() => true)
@@ -171,6 +173,7 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
 
     if (tickState.phase === 'sleeping') {
       void runDreamRef.current()
+      void runDreamDiaryRef.current()
     }
     void evaluateTriggersRef.current()
     void v2Engine.considerTick(tickState)
@@ -206,6 +209,19 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   useEffect(() => {
     runDreamRef.current = memoryDream.runDream
   }, [memoryDream.runDream])
+
+  const dreamDiary = useDreamDiary({
+    settingsRef,
+    memoriesRef: memory.memoriesRef,
+    idleSecondsRef: focusAwareness.idleSecondsRef,
+    busyRef,
+    appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
+    enabled: backgroundRuntimeEnabled,
+  })
+
+  useEffect(() => {
+    runDreamDiaryRef.current = dreamDiary.runDreamDiary
+  }, [dreamDiary.runDreamDiary])
 
   const handleContextAction = useCallback((action: AutonomousAction, task: ContextTriggeredTask) => {
     debugConsole.appendDebugConsoleEvent({

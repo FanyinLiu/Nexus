@@ -131,6 +131,7 @@ export const enCore = {
   'memory_panel.clear_diary': 'Clear today\'s diary',
   'memory_panel.confirm_delete_memory': 'Delete this memory?',
   'memory_panel.confirm_delete_diary': 'Delete this diary entry?',
+  'memory_panel.confirm_delete_dream': 'Delete this dream?',
   'memory_panel.empty_memory_content': 'Memory content cannot be empty.',
   'memory_panel.empty_diary_content': 'Diary content cannot be empty.',
   'memory_panel.edit_memory_failed': 'Couldn\'t save the memory edit — try again in a moment?',

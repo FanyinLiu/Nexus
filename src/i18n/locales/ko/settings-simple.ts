@@ -100,5 +100,11 @@ export const koSettingsSimple = {
   'settings.simple.memory_remembered_open': '전체 보기',
   'settings.simple.memory_remembered_paused': '기억이 멈춰 있어요. 위 스위치를 다시 켜면 그녀가 다시 기억하기 시작해요.',
   'settings.simple.memory_remembered_empty': '아직 기억한 것이 없어요. 조금 더 이야기하면 여기에 하나씩 쌓여요.',
+  'settings.simple.dream_diary': '꿈 일기',
+  'settings.simple.dream_diary_hint': '조용한 시간이 길게 이어지면 짧은 꿈을 하나 꿀 수 있어요. 다음 날 여기서 읽을 수 있어요.',
+  'settings.simple.dream_diary_paused': '기억이 멈춰 있는 동안에는 기억을 꿈에 가져가지 않아요.',
+  'settings.simple.dream_diary_count': '꿈을 {count}개 적어 두었어요',
+  'settings.simple.dream_diary_read': '그녀의 꿈 읽기',
+  'settings.simple.dream_diary_read_hint': '기억 타임라인에 있어요. 천천히 읽거나 삭제할 수 있어요.',
   'settings.simple.summary_connect_lookup': '필요할 때 찾을 수 있음',
 } as const satisfies Partial<TranslationDictionary>

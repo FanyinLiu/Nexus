@@ -7,9 +7,9 @@
  * being ignored, a shared daily budget, and a term-weighted repeat check.
  *
  * All proactive hosts (agenda, autonomy, away, bracket, letter, capsule,
- * open arc, ambient presence) call `admitProactiveMessage`. Admission records
- * the delivery in one shared ledger, so unrelated schedulers cannot each
- * spend their own generous cap on the same afternoon.
+ * open arc, dream diary, ambient presence) call `admitProactiveMessage`.
+ * Admission records the delivery in one shared ledger, so unrelated
+ * schedulers cannot each spend their own generous cap on the same afternoon.
  */
 
 import { localDayKey } from '../../lib/localDate.ts'
@@ -47,6 +47,7 @@ export type ProactiveMessageKind =
   | 'capsule'
   | 'open_arc'
   | 'errand'
+  | 'dream'
   | 'return_bubble'
   | 'next_turn'
   | 'idle'
@@ -168,7 +169,7 @@ function normalizeBudgetEntries(value: unknown, nowMs: number): ProactiveBudgetE
   if (!Array.isArray(value)) return []
   const kinds = new Set<ProactiveMessageKind>([
     'event_follow_up', 'letter', 'reminder_follow_up', 'open_loop', 'message_follow_up',
-    'bracket', 'capsule', 'open_arc', 'errand', 'return_bubble', 'next_turn', 'idle',
+    'bracket', 'capsule', 'open_arc', 'errand', 'dream', 'return_bubble', 'next_turn', 'idle',
     'away', 'presence',
   ])
   const priorities = new Set<ProactivePriority>(['high', 'normal', 'low'])
@@ -244,7 +245,11 @@ export function clearLeaveMeAlone(nowMs = Date.now()): void {
   saveProactiveEtiquetteState({ ...state, quietUntil: null }, nowMs)
 }
 
-/** Priority gives high-value follow-ups and letters first claim on the day. */
+/**
+ * Priority gives high-value follow-ups and letters first claim on the day.
+ * A dream mention is deliberately `low`: it yields the day's last slot to
+ * every other line, including the morning bracket.
+ */
 export function proactiveMessagePriority(kind: ProactiveMessageKind): ProactivePriority {
   if (kind === 'event_follow_up' || kind === 'letter') return 'high'
   if (

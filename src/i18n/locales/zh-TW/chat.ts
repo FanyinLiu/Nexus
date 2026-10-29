@@ -163,4 +163,5 @@ export const zhTWChat = {
   'chat.failover.no_api_key': '請先在設定裡填寫目前文字提供商的介面密鑰。',
   'chat.letter.card_title': '她給你寫了一封信',
   'chat.letter.card_open': '讀這封信',
+  'chat.dream.line': '我昨晚夢到{dream}',
 } as const satisfies Partial<TranslationDictionary>

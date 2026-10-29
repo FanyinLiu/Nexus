@@ -121,6 +121,7 @@ const defaultSettings: AppSettings = {
   wakewordSessionIdleTimeoutMs: 10_000,
   memorySearchMode: 'hybrid',
   memoryPaused: false,
+  dreamDiaryEnabled: true,
   memoryEmbeddingModel: DEFAULT_MEMORY_EMBEDDING_MODEL,
   memoryLongTermRecallCount: 4,
   memoryDailyRecallCount: 4,
@@ -529,6 +530,9 @@ export function loadSettings(): AppSettings {
         ? stored.memorySearchMode
         : defaultSettings.memorySearchMode,
     memoryPaused: Boolean(stored.memoryPaused ?? defaultSettings.memoryPaused),
+    dreamDiaryEnabled: typeof stored.dreamDiaryEnabled === 'boolean'
+      ? stored.dreamDiaryEnabled
+      : defaultSettings.dreamDiaryEnabled,
     memoryEmbeddingModel: String(stored.memoryEmbeddingModel ?? defaultSettings.memoryEmbeddingModel).trim()
       || defaultSettings.memoryEmbeddingModel,
     memoryLongTermRecallCount: clampInteger(

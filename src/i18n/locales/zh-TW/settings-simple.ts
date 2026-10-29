@@ -100,5 +100,11 @@ export const zhTWSettingsSimple = {
   'settings.simple.memory_remembered_open': '看看全部',
   'settings.simple.memory_remembered_paused': '記憶先停著。打開上面的開關，她才會重新記起你。',
   'settings.simple.memory_remembered_empty': '她還沒記住什麼。多聊幾句，這裡會慢慢長出來。',
+  'settings.simple.dream_diary': '夢的日記',
+  'settings.simple.dream_diary_hint': '她安靜很久時，會做一個短短的夢。第二天可以在這裡翻到。',
+  'settings.simple.dream_diary_paused': '記憶暫停時，她不會把記憶帶進夢裡。',
+  'settings.simple.dream_diary_count': '她寫了 {count} 個夢',
+  'settings.simple.dream_diary_read': '翻翻她的夢',
+  'settings.simple.dream_diary_read_hint': '都在記憶時間線裡，可以慢慢看，也可以刪掉。',
   'settings.simple.summary_connect_lookup': '需要時可以查',
 } as const satisfies Partial<TranslationDictionary>

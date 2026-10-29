@@ -1,5 +1,6 @@
 import { useAwayNotificationScheduler } from '../../hooks/useAwayNotificationScheduler.ts'
 import { useBracketScheduler } from '../../hooks/useBracketScheduler.ts'
+import { useDreamSurfacing } from '../../hooks/useDreamSurfacing.ts'
 import { useErrandScheduler } from '../../hooks/useErrandScheduler.ts'
 import { useFutureCapsuleScheduler } from '../../hooks/useFutureCapsuleScheduler.ts'
 import { useGuidanceAnalysisScheduler } from '../../hooks/useGuidanceAnalysisScheduler.ts'
@@ -66,6 +67,19 @@ export function useBackgroundSchedulers({
     dailyMemories,
     focusState,
     enabled: schedulerEnabled,
+  })
+
+  // Lowest-priority morning open: event follow-ups, letters, and the bracket
+  // are all checked inside the pure decision before a dream is mentioned.
+  useDreamSurfacing({
+    settings,
+    messages,
+    memories,
+    panelCollapsed,
+    enabled: schedulerEnabled && Boolean(pushCompanionNotice),
+    pushCompanionNotice: pushCompanionNotice ?? (async () => undefined),
+    busyRef,
+    focusState,
   })
 
   useErrandScheduler({ settings, enabled: schedulerEnabled })

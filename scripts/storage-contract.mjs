@@ -48,6 +48,7 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'REMINDER_TASKS_STORAGE_KEY', key: REMINDER_TASKS_STORAGE_KEY, domain: 'reminders', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'DEBUG_CONSOLE_EVENTS_STORAGE_KEY', key: 'nexus:debug-console-events', domain: 'debug', classification: 'debug', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'AUTONOMY_DREAM_LOG_STORAGE_KEY', key: 'nexus:autonomy:dream-log', domain: 'companion-rhythm', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
+  { constant: 'DREAM_DIARY_STORAGE_KEY', key: 'nexus:dream:diary', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'AUTONOMY_CONTEXT_TRIGGERS_STORAGE_KEY', key: 'nexus:autonomy:context-triggers', domain: 'companion-rhythm', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
   { constant: 'COMPANION_SUMMARY_STORAGE_KEY', key: 'nexus:companion-awareness:recent-summary', domain: 'companion-awareness', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'COMPANION_CHECK_IN_DECISION_STORAGE_KEY', key: 'nexus:companion-awareness:recent-check-in-decision', domain: 'companion-awareness', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },

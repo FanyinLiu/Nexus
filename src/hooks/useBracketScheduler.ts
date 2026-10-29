@@ -20,7 +20,10 @@ import {
 import {
   hasDueAgendaItem,
 } from '../features/autonomy/proactiveAgenda.ts'
-import { isLikelyFullscreenSurface } from '../features/autonomy/proactiveBudget.ts'
+import {
+  hasRecentChatActivity,
+  isLikelyFullscreenSurface,
+} from '../features/autonomy/proactiveBudget.ts'
 import { isUserTyping } from '../features/autonomy/userTyping.ts'
 import {
   findUndeliveredErrands,
@@ -48,7 +51,6 @@ import type { CompanionNoticePayload } from './chat/types.ts'
 import type { AppSettings, ChatMessage, FocusState, MemoryItem } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60_000
-const RECENT_CHAT_WINDOW_MS = 5 * 60_000
 const BRACKET_BUBBLE_MS = 18_000
 
 type UseBracketSchedulerOptions = {
@@ -62,14 +64,6 @@ type UseBracketSchedulerOptions = {
   busyRef?: React.RefObject<boolean>
   focusState?: FocusState
   onEvent?: (event: { title: string; detail: string; tone: 'info' | 'warn' }) => void
-}
-
-function hasRecentChatActivity(messages: readonly ChatMessage[], nowMs: number): boolean {
-  return messages.some((message) => {
-    if (message.role !== 'user' && message.role !== 'assistant') return false
-    const at = Date.parse(message.createdAt)
-    return Number.isFinite(at) && nowMs - at < RECENT_CHAT_WINDOW_MS
-  })
 }
 
 export function useBracketScheduler({

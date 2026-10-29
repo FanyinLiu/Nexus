@@ -225,6 +225,8 @@ test('the daily budget is shared and reserves room for letters and event follow-
   assert.equal(proactiveMessagePriority('letter'), 'high')
   assert.equal(proactiveMessagePriority('event_follow_up'), 'high')
   assert.equal(proactiveMessagePriority('open_loop'), 'normal')
+  assert.equal(proactiveMessagePriority('bracket'), 'normal')
+  assert.equal(proactiveMessagePriority('dream'), 'low')
   assert.equal(proactiveMessagePriority('idle'), 'low')
   assert.equal(proactiveBudgetCap('normal', 'high'), 3)
   assert.equal(proactiveBudgetCap('normal', 'normal'), 2)
@@ -255,6 +257,42 @@ test('the daily budget is shared and reserves room for letters and event follow-
   }))
   assert.equal(event.allow, false)
   assert.equal(event.reason, 'daily-budget')
+})
+
+test('a dream mention is admitted last and spends the same shared slot', () => {
+  saveProactiveEtiquetteState(state({ lastUserMessageAt: NOW - HOUR }), NOW)
+
+  const dream = admitProactiveMessage(request({
+    kind: 'dream',
+    text: 'I dreamed the hallway was full of paper cranes',
+  }))
+  assert.equal(dream.allow, true)
+  const recorded = loadProactiveEtiquetteState(NOW).budgetEntries
+  assert.deepEqual(recorded.map((entry) => [entry.kind, entry.priority]), [['dream', 'low']])
+
+  // One normal line for the day leaves nothing for a dream, while an event
+  // follow-up or a letter still fits in its reserved slot.
+  saveProactiveEtiquetteState(state({
+    lastUserMessageAt: NOW - HOUR,
+    budgetEntries: recorded,
+  }), NOW)
+  const bracket = admitProactiveMessage(request({ nowMs: NOW + PROACTIVE_MIN_GAP_MS, kind: 'bracket', text: '' }))
+  assert.equal(bracket.allow, true)
+
+  const laterDream = admitProactiveMessage(request({
+    nowMs: NOW + 2 * PROACTIVE_MIN_GAP_MS,
+    kind: 'dream',
+    text: 'the garden again',
+  }))
+  assert.equal(laterDream.allow, false)
+  assert.equal(laterDream.reason, 'daily-budget')
+
+  const event = admitProactiveMessage(request({
+    nowMs: NOW + 2 * PROACTIVE_MIN_GAP_MS,
+    kind: 'event_follow_up',
+    text: 'how did the interview go?',
+  }))
+  assert.equal(event.allow, true)
 })
 
 test('proactive trigger prompts are not memories, even when replayed as assistant text', () => {

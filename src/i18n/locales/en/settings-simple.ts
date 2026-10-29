@@ -100,5 +100,11 @@ export const enSettingsSimple = {
   'settings.simple.memory_remembered_open': 'See all',
   'settings.simple.memory_remembered_paused': 'Memory is paused. Turn it back on above, and she will remember again.',
   'settings.simple.memory_remembered_empty': 'Nothing remembered yet. Talk a little more, and this will fill in.',
+  'settings.simple.dream_diary': 'Dream diary',
+  'settings.simple.dream_diary_hint': 'After a long quiet stretch she may have one short dream. You can read it here the next day.',
+  'settings.simple.dream_diary_paused': 'While memory is paused, she will not carry memories into a dream.',
+  'settings.simple.dream_diary_count': 'She has written down {count} dreams',
+  'settings.simple.dream_diary_read': 'Read her dreams',
+  'settings.simple.dream_diary_read_hint': 'They live in the memory timeline, where you can read or delete them.',
   'settings.simple.summary_connect_lookup': 'Can look things up',
 } as const satisfies Partial<TranslationDictionary>

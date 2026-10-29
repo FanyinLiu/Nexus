@@ -131,6 +131,7 @@ export const koCore = {
   'memory_panel.clear_diary': '오늘 일지 비우기',
   'memory_panel.confirm_delete_memory': '이 기억을 삭제할까요?',
   'memory_panel.confirm_delete_diary': '이 일지를 삭제할까요?',
+  'memory_panel.confirm_delete_dream': '이 꿈을 삭제할까요?',
   'memory_panel.empty_memory_content': '기억 내용은 비워둘 수 없습니다.',
   'memory_panel.empty_diary_content': '일지 내용은 비워둘 수 없습니다.',
   'memory_panel.edit_memory_failed': '기억 편집이 안 됐어요, 잠시 후 다시 해볼까요?',

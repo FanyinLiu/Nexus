@@ -284,6 +284,14 @@
   background: color-mix(in srgb, var(--sv3-line, var(--settings-v2-line)) 70%, transparent);
 }
 
+.memory-timeline__item[data-kind='dream'] .memory-timeline__badge {
+  background: color-mix(in srgb, var(--memory-portrait-memory, var(--nx-poster-memory)) 35%, transparent);
+}
+
+.memory-timeline__item[data-kind='dream'] .memory-timeline__text {
+  font-style: italic;
+}
+
 .memory-timeline__text {
   margin: 0;
   color: var(--sv3-ink, var(--settings-v2-ink));

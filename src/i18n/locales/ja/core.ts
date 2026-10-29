@@ -131,6 +131,7 @@ export const jaCore = {
   'memory_panel.clear_diary': '今日の日誌をクリア',
   'memory_panel.confirm_delete_memory': 'この記憶を削除しますか？',
   'memory_panel.confirm_delete_diary': 'この日誌を削除しますか？',
+  'memory_panel.confirm_delete_dream': 'この夢を削除しますか？',
   'memory_panel.empty_memory_content': '記憶の内容は空にできません。',
   'memory_panel.empty_diary_content': '日誌の内容は空にできません。',
   'memory_panel.edit_memory_failed': 'うまく保存できませんでした。少し待ってからもう一度お試しください。',

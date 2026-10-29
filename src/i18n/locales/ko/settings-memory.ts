@@ -328,5 +328,6 @@ export const koSettingsMemory = {
   'memory.timeline.this_week': '이번 주',
   'memory.timeline.memory_badge': '장기 기억',
   'memory.timeline.diary_badge': '일기',
+  'memory.timeline.dream_badge': '그녀의 꿈',
   'memory.timeline.close': '닫기',
 } as const satisfies Partial<TranslationDictionary>

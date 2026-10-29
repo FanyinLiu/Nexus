@@ -189,6 +189,27 @@ export interface DailyMemoryEntry {
 
 export type DailyMemoryStore = Record<string, DailyMemoryEntry[]>
 
+/**
+ * One short dream she wrote down after a quiet night.
+ *
+ * This is her own artifact, not a memory about the user: `text` is imagery,
+ * `sourceMemoryIds` only records which memories coloured it so the row can be
+ * audited without turning the dream into a factual claim.
+ */
+export interface DreamDiaryEntry {
+  id: string
+  /** Local night key (YYYY-MM-DD). At most one entry exists per night. */
+  night: string
+  /** Local calendar day the row is dated to; equals `night` for new rows. */
+  day: string
+  createdAt: string
+  text: string
+  /** Up to two memory ids used as loose thematic material. */
+  sourceMemoryIds?: string[]
+  /** ISO timestamp the one-line morning mention landed; null when never. */
+  surfacedAt?: string | null
+}
+
 export type MemorySearchMode = 'keyword' | 'hybrid' | 'vector'
 
 export interface MemorySemanticMatch {

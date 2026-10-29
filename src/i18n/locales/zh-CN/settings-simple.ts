@@ -98,5 +98,11 @@ export const zhCNSettingsSimple = {
   'settings.simple.memory_remembered_open': '看看全部',
   'settings.simple.memory_remembered_paused': '记忆先停着。打开上面的开关，她才会重新记起你。',
   'settings.simple.memory_remembered_empty': '她还没记住什么。多聊几句，这里会慢慢长出来。',
+  'settings.simple.dream_diary': '梦的日记',
+  'settings.simple.dream_diary_hint': '她安静很久时，会做一个短短的梦。第二天可以在这里翻到。',
+  'settings.simple.dream_diary_paused': '记忆暂停时，她不会把记忆带进梦里。',
+  'settings.simple.dream_diary_count': '她写了 {count} 个梦',
+  'settings.simple.dream_diary_read': '翻翻她的梦',
+  'settings.simple.dream_diary_read_hint': '都在记忆时间线里，可以慢慢看，也可以删掉。',
   'settings.simple.summary_connect_lookup': '需要时可以查',
 } as const satisfies Record<string, string>

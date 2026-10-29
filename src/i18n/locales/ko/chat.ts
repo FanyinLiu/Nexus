@@ -163,4 +163,5 @@ export const koChat = {
   'chat.failover.no_api_key': '설정에서 현재 텍스트 제공자의 API 키를 먼저 입력해 주세요.',
   'chat.letter.card_title': '그녀가 편지를 썼어요',
   'chat.letter.card_open': '읽어 보기',
+  'chat.dream.line': '어젯밤 꿈을 꿨어. {dream}',
 } as const satisfies Partial<TranslationDictionary>
