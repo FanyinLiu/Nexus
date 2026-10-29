@@ -31,7 +31,12 @@ export type MemoryRecallConfidence = 'high' | 'low' | 'none'
 type Thresholds = { rejectBelow: number; rejectMargin: number; lowBelow: number; lowMargin: number }
 
 const THRESHOLDS: Record<string, Thresholds> = {
-  [QWEN3_MEMORY_EMBEDDING_MODEL_ID]: { rejectBelow: 0.40, rejectMargin: 0.045, lowBelow: 0.47, lowMargin: 0.07 },
+  // Tuned on the tuning split after the hybrid weights changed (41
+  // answerable, 20 with no answer). The low band was widened from 0.47/0.07:
+  // it flags one more no-answer query while keeping every answerable query
+  // out of 'none'. Held-out is reported by memory-recall-benchmark, never used
+  // to pick these.
+  [QWEN3_MEMORY_EMBEDDING_MODEL_ID]: { rejectBelow: 0.40, rejectMargin: 0.045, lowBelow: 0.52, lowMargin: 0.10 },
 }
 
 export function getRecallConfidenceThresholds(model: string): Thresholds | null {

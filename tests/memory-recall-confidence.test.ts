@@ -22,7 +22,9 @@ test('a weak but standing-out match is only flagged low', () => {
 test('a clear match is high confidence', () => {
   assert.equal(classifyRecallConfidence([0.62, 0.39, 0.37], QWEN3), 'high')
   // weak absolute score but a wide margin still counts as a real match
-  assert.equal(classifyRecallConfidence([0.39, 0.3, 0.29], QWEN3), 'high')
+  assert.equal(classifyRecallConfidence([0.39, 0.25, 0.24], QWEN3), 'high')
+  // the widened low band flags a weak score with only a narrow lead
+  assert.equal(classifyRecallConfidence([0.50, 0.44, 0.41], QWEN3), 'low')
 })
 
 test('a single weak memory is flagged low, never suppressed', () => {
