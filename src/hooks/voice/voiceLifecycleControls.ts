@@ -11,6 +11,7 @@ import {
 } from './conversationEntrypoints.ts'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
+import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { requestModelSetupForVoiceUse } from '../../lib/modelSetupBridge.ts'
 import { voiceDownloadGuidance } from '../../features/setup/voiceDownloadGuidance.ts'
@@ -79,11 +80,16 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
   }
 
   // ── speakAssistantReply ─────────────────────────────────────────────────
-  async function speakAssistantReply(text: string, shouldResumeContinuousVoice: boolean) {
+  async function speakAssistantReply(
+    text: string,
+    shouldResumeContinuousVoice: boolean,
+    source?: InterruptMicTurnSource,
+  ) {
     await speakAssistantReplyRuntime({
       text,
       speechGeneration: ++refs.assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
+      source,
       currentSettings: settingsWithEmotionVoice(),
       startSpeechOutput: bindings.startSpeechOutput,
       setMood: ctx.setMood,
@@ -105,10 +111,14 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
    * playing as soon as the first sentence completes — no waiting for the full
    * response.
    */
-  function beginStreamingSpeechReply(shouldResumeContinuousVoice: boolean) {
+  function beginStreamingSpeechReply(
+    shouldResumeContinuousVoice: boolean,
+    source?: InterruptMicTurnSource,
+  ) {
     return beginStreamingSpeechReplyRuntime({
       speechGeneration: ++refs.assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
+      source,
       currentSettings: settingsWithEmotionVoice(),
       setMood: ctx.setMood,
       setError: ctx.setError,

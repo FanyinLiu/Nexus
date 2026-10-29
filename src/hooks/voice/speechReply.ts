@@ -1,6 +1,7 @@
 import type { AppSettings, PetMood } from '../../types'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { voiceResumeStore } from '../../features/voice/voiceResumeStore.ts'
+import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import {
   createStreamingSpeechOutputController,
   type StreamingSpeechOutputRuntime,
@@ -10,12 +11,15 @@ import type { StreamingSpeechOutputController } from './types.ts'
 type BaseSpeechReplyOptions = {
   speechGeneration: number
   shouldResumeContinuousVoice: boolean
+  /** Origin of this turn — typed replies must not open the interrupt mic. */
+  source?: InterruptMicTurnSource
   currentSettings: AppSettings
   setMood: (mood: PetMood) => void
   setError: (error: string | null) => void
   busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   startSpeechInterruptMonitor: (
     speechGeneration: number,
+    source?: InterruptMicTurnSource,
   ) => Promise<void>
   stopSpeechInterruptMonitor: () => void
   isSpeechInterrupted: (speechGeneration: number) => boolean
@@ -71,6 +75,7 @@ function createSpeechReplyCallbacks(
       // — if it's off it just no-ops.
       void options.startSpeechInterruptMonitor(
         options.speechGeneration,
+        options.source,
       )
     },
     onEnd: () => {

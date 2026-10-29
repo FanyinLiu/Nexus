@@ -43,6 +43,7 @@ import type {
 } from '../../features/voice'
 import type { VoiceBus } from '../../features/voice/bus.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
+import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import type { BrowserSpeechRecognition } from '../../lib'
 import type { ParaformerConversationState } from './paraformerConversation.ts'
 import type { SenseVoiceConversationState } from './sensevoiceConversation.ts'
@@ -152,6 +153,7 @@ export type VoiceBindings = {
   stopSpeechInterruptMonitor: () => void
   startSpeechInterruptMonitor: (
     speechGeneration: number,
+    source?: InterruptMicTurnSource,
   ) => Promise<void>
   // Recording / VAD teardown
   stopApiRecording: (cancel?: boolean) => void
@@ -217,9 +219,14 @@ export type VoiceEngines = {
 
 export type VoiceLifecycle = {
   scheduleVoiceRestart: (statusText?: string, delay?: number, force?: boolean) => void
-  speakAssistantReply: (text: string, shouldResumeContinuousVoice: boolean) => Promise<void>
+  speakAssistantReply: (
+    text: string,
+    shouldResumeContinuousVoice: boolean,
+    source?: InterruptMicTurnSource,
+  ) => Promise<void>
   beginStreamingSpeechReply: (
     shouldResumeContinuousVoice: boolean,
+    source?: InterruptMicTurnSource,
   ) => StreamingSpeechOutputController | null
   toggleVoiceConversation: () => void
   startVoiceConversation: (options?: VoiceConversationOptions) => void
