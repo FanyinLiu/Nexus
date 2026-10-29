@@ -2,6 +2,11 @@ import assert from 'node:assert/strict'
 import { before, beforeEach, test } from 'node:test'
 
 import { createAssistantReplyRunner } from '../src/hooks/chat/assistantReply.ts'
+import {
+  __resetOnThisDayLedger,
+  loadOnThisDayLedger,
+  recordOnThisDayFired,
+} from '../src/features/memory/onThisDayLedger.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
 import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings } from '../src/types/app.ts'
@@ -76,6 +81,9 @@ type RecordedCalls = {
   voiceTraces: Array<{ label: string; detail: string; tone: string }>
   voicePipeline: Array<{ stage: string; status: string }>
   busEvents: Array<Record<string, unknown>>
+  onThisDayConsumeCount: number
+  onThisDayCommitCount: number
+  onThisDayPromptText: string | undefined
 }
 
 function createFailingRunner(
@@ -83,6 +91,7 @@ function createFailingRunner(
   options: {
     beginStreamingSpeechReply?: () => StreamingSpeechOutputController | null
     markStale?: () => void
+    onThisDay?: { consume?: () => string; commit?: () => void }
   } = {},
 ) {
   const calls: RecordedCalls = {
@@ -97,6 +106,9 @@ function createFailingRunner(
     voiceTraces: [],
     voicePipeline: [],
     busEvents: [],
+    onThisDayConsumeCount: 0,
+    onThisDayCommitCount: 0,
+    onThisDayPromptText: undefined,
   }
 
   const ctx = {
@@ -113,6 +125,14 @@ function createFailingRunner(
     appendDailyMemoryEntries: () => {},
     appendDebugConsoleEvent: () => {},
     queuePetPerformanceCue: () => {},
+    consumeOnThisDayPromptText: () => {
+      calls.onThisDayConsumeCount += 1
+      return options.onThisDay?.consume?.() ?? ''
+    },
+    commitOnThisDayPromptText: () => {
+      calls.onThisDayCommitCount += 1
+      options.onThisDay?.commit?.()
+    },
     settingsRef: { current: null },
     setSettings: () => {},
     updateVoicePipelineStage: () => {},
@@ -136,7 +156,9 @@ function createFailingRunner(
   return { runner, calls }
 }
 
-function createSuccessfulRunner() {
+function createSuccessfulRunner(options: {
+  onThisDay?: { consume?: () => string; commit?: () => void }
+} = {}) {
   const calls: RecordedCalls = {
     appendedMessages: [],
     dailyMemoryAppendCount: 0,
@@ -149,6 +171,9 @@ function createSuccessfulRunner() {
     voiceTraces: [],
     voicePipeline: [],
     busEvents: [],
+    onThisDayConsumeCount: 0,
+    onThisDayCommitCount: 0,
+    onThisDayPromptText: undefined,
   }
 
   const ctx = {
@@ -166,6 +191,14 @@ function createSuccessfulRunner() {
     appendDebugConsoleEvent: () => {},
     queuePetPerformanceCue: () => {},
     onAssistantReplyDelivered: () => {},
+    consumeOnThisDayPromptText: () => {
+      calls.onThisDayConsumeCount += 1
+      return options.onThisDay?.consume?.() ?? ''
+    },
+    commitOnThisDayPromptText: () => {
+      calls.onThisDayCommitCount += 1
+      options.onThisDay?.commit?.()
+    },
     settingsRef: { current: null },
     setSettings: () => {},
     updateVoicePipelineStage: () => {},
@@ -184,6 +217,7 @@ function createSuccessfulRunner() {
     requestStreaming: (_settings, _history, memoryContext, _onDelta, requestOptions) => {
       calls.memoryContexts.push(memoryContext)
       calls.pendingCallbackCount = requestOptions.pendingCallbacks?.length ?? null
+      calls.onThisDayPromptText = requestOptions.onThisDayPromptText
       return Promise.resolve({
         providerId: 'ollama',
         response: { content: 'I am here.' },
@@ -379,4 +413,67 @@ test('memory pause sends an empty recall context and skips diary capture', async
     dailyEntryIds: [],
     semanticIds: [],
   })
+})
+
+test('memory pause does not surface the on-this-day hint', async () => {
+  __resetOnThisDayLedger()
+  const { runner, calls } = createSuccessfulRunner({
+    onThisDay: { consume: () => 'ON THIS DAY HINT' },
+  })
+
+  const result = await runner(makePausedMemoryOptions())
+
+  assert.equal(result, true)
+  assert.equal(calls.onThisDayConsumeCount, 0, 'paused memory must not even select a candidate')
+  assert.equal(calls.onThisDayPromptText, '')
+  assert.equal(calls.onThisDayCommitCount, 0)
+  assert.deepEqual(loadOnThisDayLedger(Date.now()), {})
+})
+
+test('a failed reply does not burn the on-this-day ledger', async () => {
+  __resetOnThisDayLedger()
+  let surfacedId: string | null = null
+  const { runner, calls } = createFailingRunner(new Error('transport failed'), {
+    onThisDay: {
+      consume: () => {
+        surfacedId = 'memory-anniversary'
+        return 'ON THIS DAY HINT'
+      },
+      commit: () => {
+        if (surfacedId) recordOnThisDayFired(surfacedId)
+      },
+    },
+  })
+
+  const result = await runner(makeOptions(false))
+
+  assert.equal(result, false)
+  assert.equal(calls.onThisDayConsumeCount, 1, 'the failed turn did surface the hint')
+  assert.equal(calls.onThisDayCommitCount, 0)
+  assert.deepEqual(loadOnThisDayLedger(Date.now()), {})
+})
+
+test('a successful reply commits the surfaced on-this-day candidate', async () => {
+  __resetOnThisDayLedger()
+  let surfacedId: string | null = null
+  const { runner, calls } = createSuccessfulRunner({
+    onThisDay: {
+      consume: () => {
+        surfacedId = 'memory-anniversary'
+        return 'ON THIS DAY HINT'
+      },
+      commit: () => {
+        if (surfacedId) recordOnThisDayFired(surfacedId)
+      },
+    },
+  })
+
+  const result = await runner(makeOptions(false))
+
+  assert.equal(result, true)
+  assert.equal(calls.onThisDayPromptText, 'ON THIS DAY HINT')
+  assert.equal(calls.onThisDayCommitCount, 1)
+  const ledger = loadOnThisDayLedger(Date.now())
+  assert.deepEqual(Object.keys(ledger), ['memory-anniversary'])
+  assert.match(ledger['memory-anniversary'] ?? '', /^\d{4}-\d{2}-\d{2}T/)
 })
