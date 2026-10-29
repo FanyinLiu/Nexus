@@ -3,6 +3,26 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
+
+const TIME_PART_LABELS: Record<PartOfDay, string> = {
+  lateNight: 'late night',
+  earlyMorning: 'early morning',
+  morning: 'morning',
+  noon: 'noon',
+  afternoon: 'afternoon',
+  evening: 'evening',
+}
+
+function formatGap(gap: ConversationGap): string {
+  if (gap.kind === 'first') return 'this is the first message ever'
+  if (gap.kind === 'minutes') {
+    if (gap.amount === 0) return 'just now'
+    return `${gap.amount} ${gap.amount === 1 ? 'minute' : 'minutes'} ago`
+  }
+  if (gap.kind === 'hours') return `${gap.amount} ${gap.amount === 1 ? 'hour' : 'hours'} ago`
+  return `${gap.amount} ${gap.amount === 1 ? 'day' : 'days'} ago`
+}
 
 export const enUSChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>
@@ -69,8 +89,22 @@ export const enUSChatPrompts: ChatPromptStrings = {
   toolContextHeader: (content) =>
     `The following are tool-call results from this turn. Base your answer on these real results; do not ignore them and do not invent details that were not returned:\n${content}`,
 
-  currentTimeReminder: (dateTime) =>
-    `<system-reminder>Current date/time: ${dateTime}.</system-reminder>`,
+  currentTimeReminder: ({ dateTime, partOfDay, gap, isWeekend, allowNotice }) => {
+    const lines = [
+      `Current date/time: ${dateTime}.`,
+      `Part of day: ${TIME_PART_LABELS[partOfDay]}${isWeekend ? ' (weekend)' : ''}.`,
+      gap.kind === 'first'
+        ? 'This is the first message ever — there is no earlier conversation.'
+        : `Previous user message: ${formatGap(gap)}.`,
+    ]
+    if (allowNotice) {
+      lines.push('If it fits naturally, you may acknowledge the time or the gap once now — briefly.')
+    }
+    return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  timeAwarenessGuidance:
+    'Time awareness: the reminder shows their local date/time, part of the day, whether it is a weekend, and how long since their previous message. Use it the way a person would — a long gap ("it\'s been days"), a late night ("still up?"), a Monday morning, or a weekend can be worth one light remark when it genuinely fits. Say it at most once in a conversation, never in every reply, and never lecture them about sleep or schedules. If they open with something specific, answer that first and let the time pass unmentioned.',
 
   userCorrection: (latest) =>
     `[Important] The user has corrected or repeated themselves several times. Treat their most recent message as the source of truth: "${latest}". Do not repeat your previous answer — re-interpret the user's intent from the latest message.`,

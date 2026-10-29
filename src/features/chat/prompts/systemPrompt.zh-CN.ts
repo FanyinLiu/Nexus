@@ -7,6 +7,23 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
+
+const TIME_PART_LABELS: Record<PartOfDay, string> = {
+  lateNight: '深夜',
+  earlyMorning: '清晨',
+  morning: '上午',
+  noon: '中午',
+  afternoon: '下午',
+  evening: '晚上',
+}
+
+function formatGap(gap: ConversationGap): string {
+  if (gap.kind === 'first') return '这是你们的第一条消息'
+  if (gap.kind === 'minutes') return gap.amount === 0 ? '刚刚' : `${gap.amount} 分钟前`
+  if (gap.kind === 'hours') return `${gap.amount} 小时前`
+  return `${gap.amount} 天前`
+}
 
 export const zhCNChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>
@@ -73,8 +90,22 @@ export const zhCNChatPrompts: ChatPromptStrings = {
   toolContextHeader: (content) =>
     `以下是本轮工具调用结果，请基于这些真实结果回答，不要忽略它们，也不要编造未出现的细节：\n${content}`,
 
-  currentTimeReminder: (dateTime) =>
-    `<system-reminder>当前日期时间：${dateTime}。</system-reminder>`,
+  currentTimeReminder: ({ dateTime, partOfDay, gap, isWeekend, allowNotice }) => {
+    const lines = [
+      `当前日期时间：${dateTime}。`,
+      `时段：${TIME_PART_LABELS[partOfDay]}${isWeekend ? '（周末）' : ''}。`,
+      gap.kind === 'first'
+        ? '这是你们的第一条消息，之前没有聊过。'
+        : `上一条用户消息：${formatGap(gap)}。`,
+    ]
+    if (allowNotice) {
+      lines.push('如果自然，可以就此顺口提一句时间或间隔，只说这一次。')
+    }
+    return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  timeAwarenessGuidance:
+    '时间感：提醒里有对方的本地日期时间、时段、是否周末，以及距离上一条用户消息多久。像人一样用这些信息——很久没见（"好几天没见了"）、深夜（"这么晚还没睡？"）、周一早上、周末，只有在真的自然时才轻轻提一次。不要每条回复都提，也不要说教作息。对方一上来就在说具体的事，就先回应那件事，时间可以完全不提。',
 
   userCorrection: (latest) =>
     `【重要提醒】用户已经多次纠正或重复表达，请严格以用户最新一条消息为准来回复。用户最新想说的是："${latest}"。请勿重复之前的回答，请根据最新消息重新理解用户意图。`,

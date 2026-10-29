@@ -30,6 +30,7 @@ import { QUESTION_PACING_GUIDANCE } from './questionPacingGuidance.ts'
 import { TOPIC_EXHAUSTION_GUIDANCE } from './topicExhaustionGuidance.ts'
 import { SELF_DISCLOSURE_GUIDANCE } from './selfDisclosureGuidance.ts'
 import { getChatPromptStrings } from './prompts/index.ts'
+import { buildTimeReminderContext, createTimeNoticeGate, previousUserMessageAt } from './timeAwareness.ts'
 import type { BuiltInToolResult } from '../tools/toolTypes.ts'
 import {
   compactMessagesForRequest,
@@ -48,6 +49,13 @@ import {
   selectRelevantTools,
   type McpToolDescriptor,
 } from './toolCallLoop.ts'
+
+/**
+ * Once-per-app-session permission for the "you may notice the time" nudge.
+ * The factual time context is injected every turn; this gate only stops her
+ * from greeting the same absence over and over.
+ */
+const timeNoticeGate = createTimeNoticeGate()
 
 /**
  * Tool delivery mode policy:
@@ -368,6 +376,7 @@ async function buildSystemPrompt(
     headerText,
     COHERENCE_GUIDANCE,
     REUNION_GUIDANCE,
+    prompts.timeAwarenessGuidance,
     LOW_SIGNAL_GUIDANCE,
     QUESTION_PACING_GUIDANCE,
     TOPIC_EXHAUSTION_GUIDANCE,
@@ -464,8 +473,17 @@ function detectUserCorrection(
   return ''
 }
 
-function formatCurrentTimeReminder(settings: AppSettings, now: Date = new Date()): string {
+function formatCurrentTimeReminder(
+  settings: AppSettings,
+  now: Date = new Date(),
+  previousUserAt: string | null = null,
+): string {
   const prompts = getChatPromptStrings(settings.uiLanguage)
+  const { partOfDay, gap, isWeekend, allowNotice } = buildTimeReminderContext({
+    now,
+    previousUserAt,
+    gate: timeNoticeGate,
+  })
   const currentDateTime = now.toLocaleString(prompts.timeLocaleTag, {
     year: 'numeric',
     month: '2-digit',
@@ -475,7 +493,13 @@ function formatCurrentTimeReminder(settings: AppSettings, now: Date = new Date()
     minute: '2-digit',
     timeZoneName: 'long',
   })
-  return prompts.currentTimeReminder(currentDateTime)
+  return prompts.currentTimeReminder({
+    dateTime: currentDateTime,
+    partOfDay,
+    gap,
+    isWeekend,
+    allowNotice,
+  })
 }
 
 async function toRequestMessages(
@@ -508,8 +532,14 @@ async function toRequestMessages(
   // Inject current time as a <system-reminder> prefix on the most recent user
   // message so the cached system prefix stays byte-stable. Only the last user
   // turn carries the reminder; earlier turns keep their historical content
-  // so conversation replay remains coherent.
-  const timeReminder = formatCurrentTimeReminder(settings, options.currentTime)
+  // so conversation replay remains coherent. The same block carries the
+  // local part of day, weekend flag, and the gap since the previous user
+  // message — one compact injection, no duplicate time sections.
+  const timeReminder = formatCurrentTimeReminder(
+    settings,
+    options.currentTime,
+    previousUserMessageAt(history),
+  )
   const augmentedMessages = contextMessages.slice()
   for (let i = augmentedMessages.length - 1; i >= 0; i -= 1) {
     if (augmentedMessages[i].role === 'user') {

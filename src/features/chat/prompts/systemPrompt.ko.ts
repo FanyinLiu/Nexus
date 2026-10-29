@@ -3,6 +3,23 @@
  */
 
 import type { ChatPromptStrings } from './types.ts'
+import type { ConversationGap, PartOfDay } from '../timeAwareness.ts'
+
+const TIME_PART_LABELS: Record<PartOfDay, string> = {
+  lateNight: '늦은 밤',
+  earlyMorning: '이른 아침',
+  morning: '오전',
+  noon: '정오',
+  afternoon: '오후',
+  evening: '저녁',
+}
+
+function formatGap(gap: ConversationGap): string {
+  if (gap.kind === 'first') return '이번이 첫 메시지'
+  if (gap.kind === 'minutes') return gap.amount === 0 ? '방금' : `${gap.amount}분 전`
+  if (gap.kind === 'hours') return `${gap.amount}시간 전`
+  return `${gap.amount}일 전`
+}
 
 export const koChatPrompts: ChatPromptStrings = {
   personaMemoryHeader: (memory) =>
@@ -69,8 +86,22 @@ export const koChatPrompts: ChatPromptStrings = {
   toolContextHeader: (content) =>
     `다음은 이번 턴의 도구 호출 결과입니다. 이 실제 결과를 기반으로 답하고, 무시하거나 반환되지 않은 세부 사항을 지어내지 마세요:\n${content}`,
 
-  currentTimeReminder: (dateTime) =>
-    `<system-reminder>현재 날짜/시간: ${dateTime}.</system-reminder>`,
+  currentTimeReminder: ({ dateTime, partOfDay, gap, isWeekend, allowNotice }) => {
+    const lines = [
+      `현재 날짜/시간: ${dateTime}.`,
+      `시간대: ${TIME_PART_LABELS[partOfDay]}${isWeekend ? ' (주말)' : ''}.`,
+      gap.kind === 'first'
+        ? '이번이 첫 메시지이며 이전 대화는 없습니다.'
+        : `이전 사용자 메시지: ${formatGap(gap)}.`,
+    ]
+    if (allowNotice) {
+      lines.push('자연스럽다면 지금 시간이나 간격을 한 번만 가볍게 언급해도 좋아요.')
+    }
+    return `<system-reminder>${lines.join('\n')}</system-reminder>`
+  },
+
+  timeAwarenessGuidance:
+    '시간 감각: 알림에는 상대의 현지 날짜·시간, 시간대, 주말 여부, 이전 메시지로부터 얼마나 지났는지가 표시됩니다. 사람처럼, 긴 공백("며칠 만이네요"), 늦은 밤("아직 안 자요?"), 월요일 아침, 주말 같은 순간에만 정말 자연스러울 때 한 번 가볍게 언급하세요. 매 답변마다 넣지 말고, 수면이나 생활 리듬을 훈계하지 마세요. 상대가 구체적인 이야기로 시작하면 그것을 먼저 받아 주고 시간은 언급하지 않아도 됩니다.',
 
   userCorrection: (latest) =>
     `【중요】 사용자가 여러 번 정정하거나 같은 말을 되풀이했습니다. 반드시 사용자의 가장 최신 메시지를 기준으로 답하세요. 최신 메시지: "${latest}". 이전 답을 반복하지 말고, 최신 메시지에서 의도를 다시 해석하세요.`,

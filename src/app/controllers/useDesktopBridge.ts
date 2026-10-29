@@ -16,6 +16,7 @@ import {
   makeTranslator,
 } from '../appSupport.ts'
 import { getDirectSendFallbackWakeWord } from '../../features/hearing/companionWakeWordSync.ts'
+import { lastUserMessageAt as findLastUserMessageAt } from '../../features/chat/timeAwareness.ts'
 import { requestModelSetupOnVoiceUse } from '../../features/setup/modelSetupRequests.ts'
 import {
   getPetModelPreset,
@@ -75,7 +76,7 @@ type UseDesktopBridgeOptions = {
   setReminderTasks: Dispatch<SetStateAction<ReminderTask[]>>
   setDebugConsoleEvents: Dispatch<SetStateAction<DebugConsoleEvent[]>>
   memory: Pick<MemoryController, 'memories' | 'setMemories' | 'setDailyMemories' | 'applyRemoteMemories'>
-  chat: Pick<ChatController, 'input' | 'busy' | 'assistantActivity' | 'setMessages' | 'applyRemoteMessages'>
+  chat: Pick<ChatController, 'messages' | 'input' | 'busy' | 'assistantActivity' | 'setMessages' | 'applyRemoteMessages'>
   pet: Pick<
     PetController,
     | 'ambientPresence'
@@ -548,7 +549,9 @@ export function useDesktopBridge({
       return
     }
 
-    const greeting = buildStartupGreeting(settings, memory.memories, makeTranslator(settings.uiLanguage))
+    const greeting = buildStartupGreeting(settings, memory.memories, makeTranslator(settings.uiLanguage), {
+      lastUserMessageAt: findLastUserMessageAt(chat.messages),
+    })
     publishAmbientPresence(
       {
         text: greeting.text,
@@ -558,7 +561,7 @@ export function useDesktopBridge({
       { sessionOnly: greeting.quotesMemory },
     )
     window.sessionStorage.setItem(STARTUP_GREETING_SESSION_KEY, '1')
-  }, [ambientPresence, memory.memories, publishAmbientPresence, settings, view])
+  }, [ambientPresence, chat.messages, memory.memories, publishAmbientPresence, settings, view])
 
   // These four effects previously depended on the whole `pet` memo object.
   // `pet` rotates identity on every internal state change (mood, gazeTarget,
