@@ -187,6 +187,7 @@ export const zhCNVoice = {
   'voice.audio.stream_mono_only': '当前流式播放器仅支持单声道 PCM。',
   'voice.audio.stream_playback_failed': '流式音频没能播出来。',
   'voice.tts.playback_failed_fallback': '语音没能播出来',
+  'voice.tts.code_block_placeholder': '代码我放在屏幕上了',
   'voice.mic.no_audio_track': '已经拿到录音流，但没有发现可用的音频轨道。',
   'voice.mic.open_failed_generic': '麦克风没能打开，看看系统权限、设备占用和输入设备状态？',
   'voice.mic.permission_denied': '没有拿到麦克风权限。去系统设置里允许 Nexus 使用麦克风，再点一次「开始语音」。',

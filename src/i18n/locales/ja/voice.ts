@@ -189,6 +189,7 @@ export const jaVoice = {
   'voice.audio.stream_mono_only': '現在のストリーミングプレーヤーはモノラル PCM のみサポートしています。',
   'voice.audio.stream_playback_failed': 'ストリーミング音声の再生で問題が発生しました。',
   'voice.tts.playback_failed_fallback': '音声再生がうまくいきませんでした',
+  'voice.tts.code_block_placeholder': 'コードは画面に出しておいたよ',
   'voice.mic.no_audio_track': '録音ストリームは取得できましたが、利用可能な音声トラックが見つかりませんでした。',
   'voice.mic.open_failed_generic': 'マイクを開けませんでした。システムの権限、デバイスの占有状況、入力デバイスの状態をご確認ください。',
   'voice.mic.permission_denied': 'マイクを使う許可がありません。システムの設定で Nexus にマイクを許可してから、もう一度お試しください。',

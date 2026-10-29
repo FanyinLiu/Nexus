@@ -266,10 +266,10 @@ test('applies built-in hotword correction for lyric search aliases', () => {
   assert.equal(correction.text, '\u5e2e\u6211\u641c\u7d22\u5468\u4f20\u96c4\u9ec4\u660f\u6b4c\u8bcd')
 })
 
-test('prepareTextForTts strips links, urls and stage directions', () => {
+test('prepareTextForTts strips links and urls but keeps unrecognised bracket notes', () => {
   assert.equal(
     prepareTextForTts('查看[黄昏](https://example.com)歌词 https://foo.bar [掌声]'),
-    '查看黄昏歌词',
+    '查看黄昏歌词 [掌声]',
   )
 })
 
