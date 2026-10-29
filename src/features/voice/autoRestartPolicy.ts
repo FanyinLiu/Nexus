@@ -140,6 +140,55 @@ export function canInterruptSpeech(
   return settings.voiceInterruptionEnabled
 }
 
+// ── Speech-interrupt microphone policy ─────────────────────────────────────
+
+/** Turn origin the interrupt monitor needs to know before touching the mic. */
+export type InterruptMicTurnSource =
+  | 'text'
+  | 'voice'
+  | 'telegram'
+  | 'discord'
+  | 'notification'
+
+/** How the interrupt monitor may listen, if at all. */
+export type InterruptMicArmMode = 'none' | 'frame-driver' | 'own-mic'
+
+export type InterruptMicPolicyInput = {
+  /** Origin of the assistant turn whose playback may be interrupted. */
+  source?: InterruptMicTurnSource | null
+  /** Whether a click-owned continuous session is active right now. */
+  continuousActive: boolean
+  /** Whether the wake-word listener already owns a live microphone. */
+  wakewordLive: boolean
+}
+
+/**
+ * Decide whether the barge-in monitor may listen, and through which source.
+ *
+ * The invariant is that a microphone opens only after a user click or an
+ * explicitly enabled wake word. A typed turn therefore never gets `own-mic`;
+ * an already-live wake-word listener is the one exception because reusing its
+ * frames costs no new `getUserMedia` call.
+ */
+export function interruptMicMode(input: InterruptMicPolicyInput): InterruptMicArmMode {
+  if (input.wakewordLive) {
+    return 'frame-driver'
+  }
+  if (input.continuousActive || input.source === 'voice') {
+    return 'own-mic'
+  }
+  return 'none'
+}
+
+/**
+ * Boolean form of {@link interruptMicMode}: true when any monitor may arm.
+ * `own-mic` callers still gate on `getUserMedia` availability and the user's
+ * speech-input switch; this helper only encodes mic ownership.
+ */
+export function mayOpenInterruptMic(input: InterruptMicPolicyInput): boolean {
+  return interruptMicMode(input) !== 'none'
+}
+
 /**
  * Inspect the current runtime snapshot and decide whether starting a voice
  * conversation right now is safe. Returns the first blocker found (the

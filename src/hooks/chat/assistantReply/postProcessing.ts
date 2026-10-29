@@ -368,7 +368,7 @@ export async function postProcessAssistantReply(
     && !(fromVoice && dependencies.ctx.suppressVoiceReplyRef.current)
   ) {
     try {
-      await dependencies.ctx.speakAssistantReply(assistantSpeechOutput, shouldResumeContinuousVoice)
+      await dependencies.ctx.speakAssistantReply(assistantSpeechOutput, shouldResumeContinuousVoice, source)
     } catch (speechError) {
       dependencies.handleSpeechPlaybackFailure(speechError, {
         traceId,
@@ -388,7 +388,7 @@ export async function postProcessAssistantReply(
     && !(fromVoice && dependencies.ctx.suppressVoiceReplyRef.current)
   ) {
     try {
-      await dependencies.ctx.speakAssistantReply(assistantSpeechOutput, shouldResumeContinuousVoice)
+      await dependencies.ctx.speakAssistantReply(assistantSpeechOutput, shouldResumeContinuousVoice, source)
     } catch (speechError) {
       dependencies.handleSpeechPlaybackFailure(speechError, {
         traceId,

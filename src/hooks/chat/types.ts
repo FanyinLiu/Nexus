@@ -1,5 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import type { PetPerformanceCue } from '../../features/pet/performance.ts'
+import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import type { StreamingSpeechOutputController } from '../voice/types.ts'
 import type {
   AppSettings,
@@ -65,8 +66,15 @@ export type UseChatContext = {
   setLiveTranscript: (text: string) => void
   updateVoicePipeline: (step: VoicePipelineState['step'], detail: string, transcript?: string) => void
   appendVoiceTrace: (title: string, detail: string, status?: 'success' | 'error' | 'info') => void
-  speakAssistantReply: (text: string, shouldRestart: boolean) => Promise<void>
-  beginStreamingSpeechReply: (shouldRestart: boolean) => StreamingSpeechOutputController | null
+  speakAssistantReply: (
+    text: string,
+    shouldRestart: boolean,
+    source?: InterruptMicTurnSource,
+  ) => Promise<void>
+  beginStreamingSpeechReply: (
+    shouldRestart: boolean,
+    source?: InterruptMicTurnSource,
+  ) => StreamingSpeechOutputController | null
   scheduleVoiceRestart: (statusText: string, delayMs: number, force?: boolean) => void
   busEmit: (event: import('../../features/voice/busEvents').VoiceBusEvent) => void
   shouldAutoRestartVoice: () => boolean

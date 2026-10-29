@@ -42,7 +42,7 @@ export async function consumeAssistantStream(
   const wantStreamingTts = currentSettings.speechOutputEnabled
     && !(fromVoice && dependencies.ctx.suppressVoiceReplyRef.current)
   const streamingTtsController = wantStreamingTts
-    ? dependencies.ctx.beginStreamingSpeechReply(shouldResumeContinuousVoice)
+    ? dependencies.ctx.beginStreamingSpeechReply(shouldResumeContinuousVoice, options.source)
     : null
   turnState.streamingTtsControllerHolder = streamingTtsController
 

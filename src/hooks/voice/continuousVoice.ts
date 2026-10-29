@@ -2,8 +2,11 @@ import type { MutableRefObject, RefObject } from 'react'
 import {
   canInterruptSpeech as policyCanInterruptSpeech,
   getNoSpeechRestartDelay as policyGetNoSpeechRestartDelay,
+  interruptMicMode,
+  mayOpenInterruptMic,
   shouldAutoRestart,
   shouldKeepContinuousSession,
+  type InterruptMicTurnSource,
 } from '../../features/voice/autoRestartPolicy.ts'
 import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
@@ -54,6 +57,8 @@ type PauseContinuousVoiceOptions = {
 
 type StartSpeechInterruptMonitorOptions = {
   speechGeneration: number
+  /** Origin of the turn being spoken; typed turns must not open their own mic. */
+  source?: InterruptMicTurnSource
   speechInterruptMonitorRef: MutableRefObject<SpeechInterruptMonitorSession | null>
   assistantSpeechGenerationRef: MutableRefObject<number>
   interruptedSpeechGenerationRef: MutableRefObject<number | null>
@@ -195,19 +200,44 @@ export function clearSpeechInterruptedFlag(
   }
 }
 
-function shouldMonitorSpeechInterruptions(
-  options: ContinuousVoiceOptions,
+type MonitorEligibilityOptions = Pick<
+  StartSpeechInterruptMonitorOptions,
+  'settingsRef' | 'continuousVoiceActiveRef' | 'wakewordRuntimeRef' | 'source'
+>
+
+function wakewordFramesLive(
+  runtime: WakewordRuntimeController | null | undefined,
 ) {
-  // Monitor activation decoupled from `shouldResumeContinuousVoice`: previously
-  // barge-in only worked when the turn originated from a continuous voice
-  // session, which made typed-text TTS un-interruptible. Now the monitor
-  // spawns whenever the user has opted in (`voiceInterruptionEnabled`) and a
-  // mic is available.
-  return (
-    canInterruptSpeech(options)
-    && options.settingsRef.current.speechInputEnabled
-    && Boolean(navigator.mediaDevices?.getUserMedia)
-  )
+  const phase = runtime?.getState().phase
+  return Boolean(runtime && (phase === 'listening' || phase === 'paused'))
+}
+
+function shouldMonitorSpeechInterruptions(
+  options: MonitorEligibilityOptions,
+) {
+  // The monitor may never open a microphone the user did not ask for. A typed
+  // turn is allowed to reuse the wake-word listener's existing frames (no new
+  // getUserMedia), but its own-mic path stays closed unless this turn came
+  // from voice or a click-owned continuous session is running.
+  if (
+    !canInterruptSpeech({ settingsRef: options.settingsRef })
+    || !options.settingsRef.current.speechInputEnabled
+  ) {
+    return false
+  }
+
+  const micPolicy = {
+    source: options.source,
+    continuousActive: options.continuousVoiceActiveRef.current,
+    wakewordLive: wakewordFramesLive(options.wakewordRuntimeRef?.current),
+  }
+  if (!mayOpenInterruptMic(micPolicy)) {
+    return false
+  }
+  if (interruptMicMode(micPolicy) === 'frame-driver') {
+    return true
+  }
+  return Boolean(navigator.mediaDevices?.getUserMedia)
 }
 
 export function pauseContinuousVoice(options: PauseContinuousVoiceOptions) {
@@ -225,22 +255,21 @@ export async function startSpeechInterruptMonitor(
 ) {
   stopSpeechInterruptMonitor(options.speechInterruptMonitorRef)
 
-  if (!shouldMonitorSpeechInterruptions({
-    settingsRef: options.settingsRef,
-  })) {
+  if (!shouldMonitorSpeechInterruptions(options)) {
     return
   }
 
   // Prefer wakeword frames when the KWS listener is already running: avoids
   // opening a second getUserMedia on the same device (which occasionally
   // contends on macOS), and means the monitor starts instantly — no
-  // permission / mic-init latency. Fall back to opening our own mic when
-  // the wakeword listener isn't up.
+  // permission / mic-init latency. Fall back to opening our own mic only for a
+  // click- or voice-owned session; a typed turn never reaches that branch.
   const wakewordRuntime = options.wakewordRuntimeRef?.current
-  const wakewordPhase = wakewordRuntime?.getState().phase
-  const useFrameDriver = Boolean(
-    wakewordRuntime && (wakewordPhase === 'listening' || wakewordPhase === 'paused'),
-  )
+  const useFrameDriver = interruptMicMode({
+    source: options.source,
+    continuousActive: options.continuousVoiceActiveRef.current,
+    wakewordLive: wakewordFramesLive(wakewordRuntime),
+  }) === 'frame-driver'
   voiceDebug(
     'BargeIn',
     'monitor armed',
@@ -396,14 +425,19 @@ export async function startSpeechInterruptMonitor(
         //   continuation back up via the wake word; forcing a VAD session
         //   here would conflict with the always-on listener and also
         //   violate the "mic only opens after wake word" setting.
-        // - Otherwise (continuous, push-to-talk, or typed-turn barge-in):
-        //   force a VAD restart. The user just spoke to interrupt — they
-        //   clearly intend to continue. This makes barge-in useful on
-        //   typed-text TTS too, not just when continuous mode happens to
-        //   be on.
+        // - A click-owned session (continuous or this voice turn): force a
+        //   VAD restart. The user just spoke to interrupt — they clearly
+        //   intend to continue.
+        // - A typed turn with no active voice session: do nothing. Nothing
+        //   was clicked, so the mic stays closed.
         const settings = options.settingsRef.current
+        const voiceSessionOwnsMic = (
+          options.continuousVoiceActiveRef.current
+          || options.source === 'voice'
+        )
         const canForceBargeInRestart = (
-          settings.voiceTriggerMode !== 'wake_word'
+          voiceSessionOwnsMic
+          && settings.voiceTriggerMode !== 'wake_word'
           && !settings.wakewordAlwaysOn
         )
         if (canForceBargeInRestart) {
