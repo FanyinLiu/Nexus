@@ -10,10 +10,20 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { formatExceptionDetails } from './lib/cdp-exception-details.mjs'
+import {
+  APP_DOCUMENT_POLL_MS,
+  APP_DOCUMENT_TIMEOUT_MS,
+  FATAL_DOCUMENT_CODE,
+  isStorageSecurityError,
+  selectPetPageTargets,
+  shouldRetryEvaluateError,
+  waitForAppDocument,
+} from './lib/packaged-gaze-page-readiness.mjs'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const RELEASE_DIR = path.resolve(ROOT, process.env.PACKAGED_SMOKE_RELEASE_DIR || 'release')
 const PORT = Number.parseInt(process.env.PACKAGED_GAZE_PORT || '47829', 10)
+const PET_TARGET_TIMEOUT_MS = 45000
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -95,22 +105,66 @@ function connect(url) {
   })
 }
 
-async function waitForPetTarget() {
-  const started = Date.now()
-  while (Date.now() - started < 45000) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${PORT}/json/list`)
-      if (response.ok) {
-        const pages = await response.json()
-        const pet = pages.find((target) => target.type === 'page' && String(target.url).includes('view=pet') && target.webSocketDebuggerUrl)
-        if (pet) return pet
-      }
-    } catch {
-      // The port is not open yet.
-    }
-    await sleep(200)
+async function listPetTargets() {
+  try {
+    const response = await fetch(`http://127.0.0.1:${PORT}/json/list`)
+    if (!response.ok) return []
+    return selectPetPageTargets(await response.json())
+  } catch {
+    // The port is not open yet.
+    return []
   }
-  throw new Error('packaged pet page did not open a debugger target')
+}
+
+async function waitForPetAppDocument(session, options = {}) {
+  return waitForAppDocument({ evaluate: (expression) => evaluate(session, expression), sleep, ...options })
+}
+
+async function openPetPage() {
+  const started = Date.now()
+  let lastReason = 'no packaged pet page debugger target'
+  while (Date.now() - started < PET_TARGET_TIMEOUT_MS) {
+    for (const target of await listPetTargets()) {
+      let session = null
+      try {
+        session = await connect(target.webSocketDebuggerUrl)
+        // Page.enable is a prerequisite for addScriptToEvaluateOnNewDocument.
+        await session.send('Page.enable')
+        await waitForPetAppDocument(session)
+        return { session, target }
+      } catch (error) {
+        lastReason = error instanceof Error ? error.message : String(error)
+        try { session?.close() } catch { /* already closed */ }
+        if (error?.code === FATAL_DOCUMENT_CODE) {
+          throw new Error(`packaged pet page is not usable: ${lastReason}`, { cause: error })
+        }
+      }
+    }
+    await sleep(APP_DOCUMENT_POLL_MS)
+  }
+  throw new Error(`packaged pet page did not open a usable app document: ${lastReason}`)
+}
+
+async function seedPetStorage(session, seed) {
+  const started = Date.now()
+  let lastReason = 'no seed attempt'
+  while (Date.now() - started < APP_DOCUMENT_TIMEOUT_MS) {
+    try {
+      await evaluate(session, seed)
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (!isStorageSecurityError(message) && !shouldRetryEvaluateError(message)) {
+        throw new Error(`packaged pet storage seed failed: ${message}`, { cause: error })
+      }
+      lastReason = message
+      await waitForPetAppDocument(session)
+      await sleep(APP_DOCUMENT_POLL_MS)
+    }
+  }
+  throw new Error(
+    `packaged pet page could not persist the smoke seed within ${APP_DOCUMENT_TIMEOUT_MS}ms: ${lastReason}`,
+  )
 }
 
 async function evaluate(session, expression) {
@@ -279,23 +333,23 @@ const child = spawn(executable, [
 
 let failed = false
 try {
-  const petTarget = await waitForPetTarget()
-  const session = await connect(petTarget.webSocketDebuggerUrl)
+  const petPage = await openPetPage()
+  const session = petPage.session
   const seed = `(() => {
     localStorage.setItem('nexus:onboarding', JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' }))
     sessionStorage.setItem('nexus.modelSetup.dismissedUntilRestart', '1')
   })()`
-  await session.send('Page.enable')
   await session.send('Page.addScriptToEvaluateOnNewDocument', { source: seed })
-  await evaluate(session, seed)
+  await seedPetStorage(session, seed)
+  // Clearing the marker before the reload proves the post-reload wait sees the
+  // new document (which re-runs the injected seed), not the old one.
+  await evaluate(session, "sessionStorage.removeItem('nexus.modelSetup.dismissedUntilRestart')")
   await session.send('Page.reload', { ignoreCache: true })
-  await sleep(500)
-  const reloaded = await waitForPetTarget()
-  const gazeSession = await connect(reloaded.webSocketDebuggerUrl)
+  await waitForPetAppDocument(session, { requireSeeded: true })
   await sleep(1200)
   const pet = await revealPet()
-  const left = await sampleGaze(gazeSession, 'left')
-  const right = await sampleGaze(gazeSession, 'right')
+  const left = await sampleGaze(session, 'left')
+  const right = await sampleGaze(session, 'right')
   console.log('[packaged-gaze-smoke]', JSON.stringify({ pet, left, right }))
   if (!left || typeof left.gazeX !== 'number' || !right || typeof right.gazeX !== 'number') {
     throw new Error(`gaze samples missing: ${JSON.stringify({ left, right })}`)
@@ -305,7 +359,6 @@ try {
   }
   console.log('[packaged-gaze-smoke] OS cursor changed data-gaze-x sign.')
   session.close()
-  gazeSession.close()
 } catch (error) {
   failed = true
   console.error(`[packaged-gaze-smoke] ${error instanceof Error ? error.message : String(error)}`)
