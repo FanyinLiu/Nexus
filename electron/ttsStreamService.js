@@ -19,7 +19,7 @@ function chunkSamples(samples, chunkSize = STREAM_CHUNK_SIZE) {
   return chunks
 }
 
-function emitSampleChunk(session, samples, sampleRate, text, isFinal = false) {
+function emitSampleChunk(session, samples, sampleRate, text, isFinal = false, segmentIndex = 0) {
   if (!session?.sender || session.sender.isDestroyed()) {
     // Sender is gone mid-stream (window reload / crash). Mark the session
     // closed so the main-process synthesis chain short-circuits on its next
@@ -40,6 +40,7 @@ function emitSampleChunk(session, samples, sampleRate, text, isFinal = false) {
     sampleRate,
     channels: 1,
     text,
+    segmentIndex,
     isFinal,
     samples,
   })
@@ -60,6 +61,25 @@ function emitSampleChunk(session, samples, sampleRate, text, isFinal = false) {
       session.sender.send('tts:stream-event', latencyEvent)
     }
   }
+}
+
+/**
+ * Report one sentence's text and total audio duration to the renderer. Emitted
+ * before playback (non-streaming provider) or once the sentence's PCM has all
+ * been handed over (streaming provider); the renderer combines it with its own
+ * audio clock so a barge-in knows how much of the sentence was actually heard.
+ */
+function emitSegmentProgress(session, segmentIndex, text, durationMs) {
+  if (!session?.sender || session.sender.isDestroyed() || session.closed) {
+    return
+  }
+  session.sender.send('tts:stream-event', {
+    type: 'segment',
+    requestId: session.requestId,
+    segmentIndex,
+    text,
+    durationMs: Math.max(0, Math.round(durationMs)),
+  })
 }
 
 function takeBufferedSamples(bufferedChunks, sampleCount) {
@@ -225,18 +245,19 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     }
   }
 
-  function emitSamples(session, samples, sampleRate, text) {
+  function emitSamples(session, samples, sampleRate, text, segmentIndex) {
     const chunks = chunkSamples(samples)
     chunks.forEach((chunk, index) => {
-      emitSampleChunk(session, chunk, sampleRate, text, index === chunks.length - 1)
+      emitSampleChunk(session, chunk, sampleRate, text, index === chunks.length - 1, segmentIndex)
     })
   }
 
-  async function emitStreamedPcmResult(session, text, result) {
+  async function emitStreamedPcmResult(session, text, result, segmentIndex) {
     const sampleRate = result.pcmSampleRate || DEFAULT_PCM_SAMPLE_RATE
     let residual = Buffer.alloc(0)
     const bufferedChunks = []
     let bufferedSampleCount = 0
+    let emittedSampleCount = 0
     let emittedChunkInThisPass = false
     let preparedLeadInForThisPass = false
 
@@ -262,7 +283,8 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
           const emittedSamples = takeBufferedSamples(bufferedChunks, emitCount)
           bufferedSampleCount -= emittedSamples.length
           emittedChunkInThisPass = true
-          emitSampleChunk(session, emittedSamples, sampleRate, text, false)
+          emittedSampleCount += emittedSamples.length
+          emitSampleChunk(session, emittedSamples, sampleRate, text, false, segmentIndex)
         }
       }
 
@@ -355,6 +377,11 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         resolve()
       })
     })
+
+    return {
+      sampleRate,
+      emittedSampleCount,
+    }
   }
 
   function decodeRemoteResult(result) {
@@ -387,13 +414,24 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     }
   }
 
-  async function emitRemoteResult(session, text, result) {
+  async function emitRemoteResult(session, text, result, segmentIndex) {
     if (session.closed) {
       return
     }
 
     if (result.pcmStream) {
-      await emitStreamedPcmResult(session, text, result)
+      const { sampleRate, emittedSampleCount } = await emitStreamedPcmResult(
+        session,
+        text,
+        result,
+        segmentIndex,
+      )
+      emitSegmentProgress(
+        session,
+        segmentIndex,
+        text,
+        sampleRate > 0 ? (emittedSampleCount / sampleRate) * 1000 : 0,
+      )
       return
     }
 
@@ -401,11 +439,18 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     // Non-streaming provider: the whole clip arrived at once, so "first PCM
     // chunk" and "synthesis finished" are the same instant.
     session.timing?.mark('firstPcmChunk')
+    emitSegmentProgress(
+      session,
+      segmentIndex,
+      text,
+      decoded.sampleRate > 0 ? (decoded.samples.length / decoded.sampleRate) * 1000 : 0,
+    )
     emitSamples(
       session,
       enhanceSpeechSamples(decoded.samples, decoded.sampleRate, buildLeadInOptions(session)),
       decoded.sampleRate,
       text,
+      segmentIndex,
     )
   }
 
@@ -454,12 +499,12 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     return result
   }
 
-  async function emitSegmentResult(session, text, result) {
+  async function emitSegmentResult(session, entry, result) {
     if (!result || session.closed) {
       destroyResultStream(result)
       return
     }
-    await emitRemoteResult(session, text, result)
+    await emitRemoteResult(session, entry.text, result, entry.segmentIndex)
   }
 
   function destroyResultStream(result) {
@@ -493,7 +538,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         next.synthesis = beginSynthesis(session, next)
       }
 
-      await emitSegmentResult(session, entry.text, result)
+      await emitSegmentResult(session, entry, result)
     }
   }
 
@@ -598,6 +643,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         timing: createTtsTimingMarks(),
         firstSegmentChars: null,
         latencyReported: false,
+        nextSegmentIndex: 0,
       }
 
       // If the renderer tears down mid-stream, mark the session closed and
@@ -635,7 +681,8 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         session.firstSegmentChars = text.length
       }
       session.timing?.mark('firstSegmentQueued')
-      session.queue.push({ text, style })
+      const segmentIndex = session.nextSegmentIndex++
+      session.queue.push({ text, style, segmentIndex })
       scheduleQueue(session)
 
       return { ok: true }

@@ -10,11 +10,22 @@ type StreamAudioPlayerOptions = {
   onLevel?: (level: number) => void
 }
 
+export type StreamAudioChunkSchedule = {
+  /** performance.now() domain; when this chunk is scheduled to become audible. */
+  startedAtMs: number
+  /** Audio duration of this chunk in milliseconds. */
+  durationMs: number
+}
+
 const DEFAULT_INITIAL_BUFFER_SECONDS = 0.03
 const SCHEDULE_LOOKAHEAD_SECONDS = 0.02
 const CHUNK_TRANSITION_SMOOTH_MS = 2
 const STREAM_START_PREROLL_MS = 12
 const STREAM_START_RAMP_MS = 1
+
+function performanceNowMs() {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
 
 function calculateChunkLevel(samples: Float32Array) {
   if (!samples.length) {
@@ -117,7 +128,11 @@ export class StreamAudioPlayer {
     this.options = options
   }
 
-  appendPcmChunk(samples: Float32Array | number[], sampleRate: number, channels = 1) {
+  appendPcmChunk(
+    samples: Float32Array | number[],
+    sampleRate: number,
+    channels = 1,
+  ): Promise<StreamAudioChunkSchedule> {
     if (this.stopped) {
       return Promise.reject(new Error(t('voice.audio.playback_stopped')))
     }
@@ -134,7 +149,9 @@ export class StreamAudioPlayer {
       const context = this.ensureAudioContext()
       let chunk = samples instanceof Float32Array ? samples : new Float32Array(samples)
       if (!chunk.length) {
-        return Promise.resolve()
+        // Nothing audible to report; callers treat a zero-length chunk as a
+        // no-op rather than a played segment.
+        return Promise.resolve({ startedAtMs: performanceNowMs(), durationMs: 0 })
       }
 
       const sameRateAsPrevious = this.lastQueuedSampleRate === sampleRate
@@ -189,7 +206,10 @@ export class StreamAudioPlayer {
 
       source.start(startAt)
       void context.resume().catch(() => undefined)
-      return Promise.resolve()
+      return Promise.resolve({
+        startedAtMs: performanceNowMs() + Math.max(0, startAt - context.currentTime) * 1000,
+        durationMs: buffer.duration * 1000,
+      })
     } catch (error) {
       const message = humanizeVoiceError(error, { category: 'playback' })
       this.options.onPlaybackError?.(message)

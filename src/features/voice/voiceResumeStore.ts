@@ -4,6 +4,7 @@
 //
 // Lifecycle:
 //   setActiveText(text)        — TTS started; remember the full original text.
+//   appendActiveText(chunk)    — streaming queued another sentence.
 //   recordChunkPlayed(chunk)   — a chunk was definitely heard by the user.
 //   markCompleted()            — TTS finished cleanly; clear all state.
 //   markInterrupted()          — TTS was cut off; freeze remaining text.
@@ -45,6 +46,15 @@ class VoiceResumeStoreImpl {
     // chunker may have stripped whitespace or normalized punctuation; approximate
     // length is good enough for "where to resume from".
     this.playedChars = Math.min(this.originalText.length, this.playedChars + chunkText.length)
+  }
+
+  /**
+   * Streaming synthesis queues sentences after playback has already started.
+   * Add them to the original text without resetting how much was played.
+   */
+  appendActiveText(chunkText: string): void {
+    if (!chunkText) return
+    this.originalText = `${this.originalText}${chunkText}`
   }
 
   markCompleted(): void {

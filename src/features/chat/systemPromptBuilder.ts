@@ -62,6 +62,7 @@ import {
   selectRelevantTools,
   type McpToolDescriptor,
 } from './toolCallLoop.ts'
+import { t } from '../../i18n/runtime.ts'
 
 /**
  * Once-per-app-session permission for the "you may notice the time" nudge.
@@ -650,7 +651,19 @@ async function toRequestMessages(
       role: 'system' as const,
       content: systemContent,
     },
-    ...augmentedMessages,
+    ...augmentedMessages.map((message) => {
+      if (message.role !== 'assistant' || !message.interrupted) {
+        return message
+      }
+      // The model must know the previous line was cut off, or it treats the
+      // trailing marker as her full reply. The hint is prompt-only — it never
+      // becomes visible chat content or memory text.
+      const hint = t('chat.voice.interrupted_hint', undefined, settings.uiLanguage)
+      const content: ChatMessageContent = Array.isArray(message.content)
+        ? [...message.content, { type: 'text', text: hint }]
+        : `${message.content}\n${hint}`
+      return { ...message, content }
+    }),
   ]
 }
 

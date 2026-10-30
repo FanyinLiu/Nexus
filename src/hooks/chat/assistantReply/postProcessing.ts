@@ -23,6 +23,8 @@ import {
 } from '../../../features/persona/assistantToneFilter.ts'
 import { logVoiceEvent } from '../../../features/voice/shared.ts'
 import { voiceEmotionCueFromTag } from '../../../features/voice/voiceEmotion.ts'
+import type { HeardSpeechSnapshot } from '../../../features/voice/heardSpeech.ts'
+import { isInterruptedError } from '../../../features/voice/interruptedError.ts'
 import { shorten } from '../../../lib/common.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
 import { createId } from '../../../lib/index.ts'
@@ -244,75 +246,8 @@ export async function postProcessAssistantReply(
     )
   }
 
-  const assistantMessage: ChatMessage = {
-    id: createId('msg'),
-    role: 'assistant',
-    content: assistantMessageContent,
-    createdAt: new Date().toISOString(),
-    memoryTrace: buildChatMemoryTrace({ memoryContext, memoryPaused }),
-    ...(response.response.reasoning_content
-      ? { reasoning_content: response.response.reasoning_content }
-      : {}),
-  }
-
-  dependencies.appendChatMessage(assistantMessage)
-  // Local telemetry only: counts and shape, never the reply text. The signal
-  // is read by the next turn's post-history reminder, which phrases the nudge
-  // as a positive behavior ("end on the concrete line"), not as a ban list.
-  if (toneCheck) {
-    recordAssistantToneReport(toneCheck)
-    if (toneCheck.worthReporting) {
-      dependencies.ctx.appendDebugConsoleEvent({
-        source: 'system',
-        title: 'Assistant tone check',
-        detail: `hits=${toneCheck.hitCount} aiPer1k=${toneCheck.densityPer1k.toFixed(1)} overLong=${toneCheck.overLong} markdownFlattened=${toneCheck.changed}`,
-        tone: toneCheck.hitCount > 0 || toneCheck.overLong ? 'warning' : 'info',
-      })
-    }
-  }
-  // The reply actually landed, so the surfaced anniversary is now burned in
-  // the lifetime ledger. Doing this at prompt-build time would lose it when
-  // the request fails before a reply is committed.
-  if (!memoryPaused) {
-    dependencies.ctx.commitOnThisDayPromptText?.()
-  }
-  if (source === 'text' || source === 'voice') {
-    const firstConversationTelemetry = recordFirstConversationTelemetry(new Date(assistantMessage.createdAt))
-    if (firstConversationTelemetry) {
-      const elapsedSeconds = Math.round(firstConversationTelemetry.elapsedMs / 1000)
-      dependencies.ctx.appendDebugConsoleEvent({
-        source: 'system',
-        title: firstConversationTelemetry.withinTarget
-          ? 'First conversation target met'
-          : 'First conversation target missed',
-        detail: `First assistant reply arrived after ${elapsedSeconds}s; target is ${firstConversationTelemetry.targetMinutes}min.`,
-        tone: firstConversationTelemetry.withinTarget ? 'success' : 'warning',
-      })
-    }
-  }
-  try {
-    // Bridge listeners (Telegram/Discord auto-reply) hang off this; their
-    // failures must never break the chat turn itself.
-    dependencies.ctx.onAssistantReplyDelivered?.({
-      source,
-      displayText: assistantMessageContent,
-      spokenText: assistantSpeechOutput,
-    })
-  } catch (listenerError) {
-    console.warn('[chat] onAssistantReplyDelivered listener failed:', listenerError)
-  }
-  if (!memoryPaused) {
-    dependencies.ctx.appendDailyMemoryEntries(
-      [createDailyMemoryEntry(assistantMessage, fromVoice ? 'voice' : 'chat')].filter(
-        (entry): entry is NonNullable<ReturnType<typeof createDailyMemoryEntry>> => Boolean(entry),
-      ),
-    )
-  }
-  dependencies.ctx.queuePetPerformanceCue([
-    ...assistantPerformance.cues,
-    ...inlineExpressionOverrideCues,
-    ...inlineGestureCues,
-  ])
+  // The reply mood is applied after playback resets the face, so compute it
+  // before the TTS settle block below. It depends only on the text.
   const replyMood = petMoodForAssistantReply({
     replyText: `${assistantMessageContent}\n${assistantSpeechOutput}`,
     moodWord: inlineMoodCues[0]?.mood ?? null,
@@ -346,6 +281,26 @@ export async function postProcessAssistantReply(
   const handledByStreamingTts = Boolean(activeStreamingTtsController)
   let shouldFallbackToDirectSpeech = false
   let ttsWaitTimedOut = false
+  // Captured only when a barge-in stops playback. Null means the reply was
+  // spoken (or never spoken) normally.
+  let interruptedSpeech: HeardSpeechSnapshot | null = null
+  const wasInterrupted = (speechError: unknown) => (
+    isInterruptedError(speechError)
+    || activeStreamingTtsController?.wasInterrupted?.() === true
+  )
+  const captureInterruption = () => {
+    interruptedSpeech = activeStreamingTtsController?.getInterruption?.() ?? {
+      heardText: '',
+      heardChars: 0,
+      fullChars: assistantSpeechOutput.length,
+      completeSegments: 0,
+    }
+    logVoiceEvent('speech interrupted by user; keeping heard text only', {
+      source,
+      heardChars: interruptedSpeech.heardChars,
+      fullChars: interruptedSpeech.fullChars,
+    })
+  }
   // session:completed and tts:completed both force idle (tts:started forces
   // happy while the voice is playing). The reply mood has to land after
   // those resets, on every path, or the face depends on whether voice is on.
@@ -384,7 +339,10 @@ export async function postProcessAssistantReply(
         })
       }
     } catch (speechError) {
-      if (!streamingSpeechController.hasStarted()) {
+      if (wasInterrupted(speechError)) {
+        // A barge-in is a clean stop, never a playback failure.
+        captureInterruption()
+      } else if (!streamingSpeechController.hasStarted()) {
         if (isSpeechAuthFailure(speechError)) {
           dependencies.handleSpeechPlaybackFailure(speechError, {
             traceId,
@@ -430,13 +388,17 @@ export async function postProcessAssistantReply(
         directSpeechCue ?? undefined,
       )
     } catch (speechError) {
-      dependencies.handleSpeechPlaybackFailure(speechError, {
-        traceId,
-        traceLabel,
-        source,
-        fromVoice,
-        shouldResumeContinuousVoice,
-      })
+      if (wasInterrupted(speechError)) {
+        captureInterruption()
+      } else {
+        dependencies.handleSpeechPlaybackFailure(speechError, {
+          traceId,
+          traceLabel,
+          source,
+          fromVoice,
+          shouldResumeContinuousVoice,
+        })
+      }
     }
   } else if (handledByStreamingTts) {
     // Streaming TTS recovers voice via its own onEnd. Do not emit
@@ -455,13 +417,17 @@ export async function postProcessAssistantReply(
         directSpeechCue ?? undefined,
       )
     } catch (speechError) {
-      dependencies.handleSpeechPlaybackFailure(speechError, {
-        traceId,
-        traceLabel,
-        source,
-        fromVoice,
-        shouldResumeContinuousVoice,
-      })
+      if (wasInterrupted(speechError)) {
+        captureInterruption()
+      } else {
+        dependencies.handleSpeechPlaybackFailure(speechError, {
+          traceId,
+          traceLabel,
+          source,
+          fromVoice,
+          shouldResumeContinuousVoice,
+        })
+      }
     }
   } else {
     // No TTS playback — emit session:completed for bus phase → idle,
@@ -489,6 +455,93 @@ export async function postProcessAssistantReply(
   } else {
     applyReplyMood()
   }
+
+  // Commit only the heard prefix when a barge-in cut the reply short. The
+  // chat bubble appends "…" from the marker; daily memory is fed the same
+  // content below. The full reply never enters history in that case.
+  const interrupted = interruptedSpeech !== null
+  const heardText = interrupted ? interruptedSpeech!.heardText.trimEnd() : ''
+  const committedAssistantContent = interrupted
+    ? (heardText || '…')
+    : assistantMessageContent
+  const assistantMessage: ChatMessage = {
+    id: createId('msg'),
+    role: 'assistant',
+    content: committedAssistantContent,
+    createdAt: new Date().toISOString(),
+    memoryTrace: buildChatMemoryTrace({ memoryContext, memoryPaused }),
+    ...(interrupted
+      ? {
+          runStatus: 'interrupted' as const,
+          interrupted: {
+            heardChars: heardText.length,
+            fullChars: interruptedSpeech!.fullChars || assistantSpeechOutput.length,
+          },
+        }
+      : {}),
+    ...(response.response.reasoning_content
+      ? { reasoning_content: response.response.reasoning_content }
+      : {}),
+  }
+
+  dependencies.appendChatMessage(assistantMessage)
+  // Local telemetry only: counts and shape, never the reply text. The signal
+  // is read by the next turn's post-history reminder, which phrases the nudge
+  // as a positive behavior ("end on the concrete line"), not as a ban list.
+  if (toneCheck) {
+    recordAssistantToneReport(toneCheck)
+    if (toneCheck.worthReporting) {
+      dependencies.ctx.appendDebugConsoleEvent({
+        source: 'system',
+        title: 'Assistant tone check',
+        detail: `hits=${toneCheck.hitCount} aiPer1k=${toneCheck.densityPer1k.toFixed(1)} overLong=${toneCheck.overLong} markdownFlattened=${toneCheck.changed}`,
+        tone: toneCheck.hitCount > 0 || toneCheck.overLong ? 'warning' : 'info',
+      })
+    }
+  }
+  // The reply actually landed, so the surfaced anniversary is now burned in
+  // the lifetime ledger. Doing this at prompt-build time would lose it when
+  // the request fails before a reply is committed.
+  if (!memoryPaused) {
+    dependencies.ctx.commitOnThisDayPromptText?.()
+  }
+  if (source === 'text' || source === 'voice') {
+    const firstConversationTelemetry = recordFirstConversationTelemetry(new Date(assistantMessage.createdAt))
+    if (firstConversationTelemetry) {
+      const elapsedSeconds = Math.round(firstConversationTelemetry.elapsedMs / 1000)
+      dependencies.ctx.appendDebugConsoleEvent({
+        source: 'system',
+        title: firstConversationTelemetry.withinTarget
+          ? 'First conversation target met'
+          : 'First conversation target missed',
+        detail: `First assistant reply arrived after ${elapsedSeconds}s; target is ${firstConversationTelemetry.targetMinutes}min.`,
+        tone: firstConversationTelemetry.withinTarget ? 'success' : 'warning',
+      })
+    }
+  }
+  try {
+    // Bridge listeners (Telegram/Discord auto-reply) hang off this; their
+    // failures must never break the chat turn itself.
+    dependencies.ctx.onAssistantReplyDelivered?.({
+      source,
+      displayText: assistantMessage.content,
+      spokenText: interrupted ? assistantMessage.content : assistantSpeechOutput,
+    })
+  } catch (listenerError) {
+    console.warn('[chat] onAssistantReplyDelivered listener failed:', listenerError)
+  }
+  if (!memoryPaused && !(interrupted && heardText.length === 0)) {
+    dependencies.ctx.appendDailyMemoryEntries(
+      [createDailyMemoryEntry(assistantMessage, fromVoice ? 'voice' : 'chat')].filter(
+        (entry): entry is NonNullable<ReturnType<typeof createDailyMemoryEntry>> => Boolean(entry),
+      ),
+    )
+  }
+  dependencies.ctx.queuePetPerformanceCue([
+    ...assistantPerformance.cues,
+    ...inlineExpressionOverrideCues,
+    ...inlineGestureCues,
+  ])
 
   return true
 }
@@ -524,6 +577,15 @@ export function handleAssistantTurnFailure(
       try { streamingTtsControllerHolder.abort() } catch (abortError) {
         console.warn('[assistantReply] stale streaming TTS abort failed', abortError)
       }
+    }
+    return false
+  }
+
+  if (isInterruptedError(caught)) {
+    // Barge-in reached the runner as a rejection. It is a clean stop: no
+    // error bubble, no tts:error, no voice recovery copy.
+    if (streamingTtsControllerHolder) {
+      try { streamingTtsControllerHolder.abort() } catch { /* already torn down */ }
     }
     return false
   }

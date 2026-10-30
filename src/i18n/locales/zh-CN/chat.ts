@@ -110,6 +110,7 @@ export const zhCNChat = {
   'chat.voice.no_interrupt_pet_status': '当前关闭了语音打断，请等我说完。',
   'chat.voice.sent_trace': '#{label} 用户消息已写入聊天记录',
   'chat.voice.sent_label': '语音已发送',
+  'chat.voice.interrupted_hint': '（你在这里被用户打断了。）',
   'chat.local_intent.failed': '本地任务没处理成',
   'chat.local_intent.voice_detail': '本地任务没处理成：{preview}',
   'chat.local_intent.voice_label': '本地任务没成功',

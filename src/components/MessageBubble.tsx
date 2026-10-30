@@ -138,6 +138,11 @@ function renderAssistantContent(content: string) {
   )
 }
 
+function displayMessageContent(message: ChatMessage): string {
+  if (!message.interrupted || !message.content) return message.content
+  return message.content.endsWith('…') ? message.content : `${message.content}…`
+}
+
 function getMemoryTraceLabel(message: ChatMessage, t: ReturnType<typeof useTranslation>['t']) {
   const trace = describeChatMemoryTrace(message)
   if (!trace) return null
@@ -172,6 +177,7 @@ export const MessageBubble = memo(function MessageBubble({
   }
   const runStatusLabel = getRunStatusLabel(message, t)
   const memoryTraceLabel = getMemoryTraceLabel(message, t)
+  const contentToDisplay = displayMessageContent(message)
 
   return (
     <article className={bubbleClassName} data-chat-surface-state={chatSurfaceState}>
@@ -195,11 +201,11 @@ export const MessageBubble = memo(function MessageBubble({
             ))}
           </div>
         ) : null}
-        {message.content ? (
+        {contentToDisplay ? (
           <div>
             {message.role === 'assistant'
-              ? renderAssistantContent(message.content)
-              : renderLinkedContent(message.content)}
+              ? renderAssistantContent(contentToDisplay)
+              : renderLinkedContent(contentToDisplay)}
           </div>
         ) : null}
         {runStatusLabel ? (

@@ -112,6 +112,7 @@ export const zhTWChat = {
   'chat.voice.no_interrupt_pet_status': '目前關閉了語音打斷，請等我說完。',
   'chat.voice.sent_trace': '#{label} 使用者訊息已寫入聊天記錄',
   'chat.voice.sent_label': '語音已傳送',
+  'chat.voice.interrupted_hint': '（你在這裡被使用者打斷了。）',
   'chat.local_intent.failed': '本地任務沒處理成',
   'chat.local_intent.voice_detail': '本地任務沒處理成：{preview}',
   'chat.local_intent.voice_label': '本地任務沒成功',

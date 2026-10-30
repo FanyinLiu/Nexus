@@ -268,8 +268,23 @@ export interface TtsStreamChunkEvent {
   sampleRate: number
   channels: number
   text?: string
+  /** Queue position of the sentence this chunk belongs to. */
+  segmentIndex?: number
   isFinal: boolean
   samples: number[]
+}
+
+/**
+ * Per-sentence playback metadata. Main reports the text and total audio
+ * duration once the sentence's PCM has been fully handed to the renderer; the
+ * renderer pairs it with the local audio clock to know how much was heard.
+ */
+export interface TtsStreamSegmentEvent {
+  type: 'segment'
+  requestId: string
+  segmentIndex: number
+  text: string
+  durationMs: number
 }
 
 export interface TtsStreamEndEvent {
@@ -306,6 +321,7 @@ export interface TtsStreamLatencyEvent {
 
 export type TtsStreamEvent =
   | TtsStreamChunkEvent
+  | TtsStreamSegmentEvent
   | TtsStreamEndEvent
   | TtsStreamErrorEvent
   | TtsStreamLatencyEvent

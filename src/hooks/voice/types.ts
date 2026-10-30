@@ -12,6 +12,7 @@ import type { VoiceActivityDetector } from '../../features/hearing/browserVad.ts
 import type { MainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
 import type { EmotionState } from '../../features/autonomy/emotionModel.ts'
 import type { PersonaSpeechStyle } from '../../features/autonomy/v2/personaTypes.ts'
+import type { HeardSpeechSnapshot } from '../../features/voice/heardSpeech.ts'
 
 export type ApiRecordingSession = {
   mediaRecorder: MediaRecorder
@@ -101,6 +102,12 @@ export type StreamingSpeechOutputController = {
   waitForCompletion: () => Promise<void>
   hasStarted: () => boolean
   abort: () => void
+  /** Cleaned text of every sentence queued so far (for resume accounting). */
+  getSpokenText?: () => string
+  /** Heard prefix captured at abort time; null when never interrupted. */
+  getInterruption?: () => HeardSpeechSnapshot | null
+  /** True after abort(), so callers can suppress playback errors. */
+  wasInterrupted?: () => boolean
 }
 
 export type UseVoiceContext = {

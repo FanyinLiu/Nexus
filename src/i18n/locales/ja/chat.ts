@@ -112,6 +112,7 @@ export const jaChat = {
   'chat.voice.no_interrupt_pet_status': '音声割り込みがオフです。話し終わるまで待ってください。',
   'chat.voice.sent_trace': '#{label} ユーザーメッセージをチャット履歴に書き込み',
   'chat.voice.sent_label': '音声送信済み',
+  'chat.voice.interrupted_hint': '（ここでユーザーに話を遮られました。）',
   'chat.local_intent.failed': 'ローカルタスクの処理がうまくいきませんでした',
   'chat.local_intent.voice_detail': 'ローカルタスクの処理がうまくいきませんでした：{preview}',
   'chat.local_intent.voice_label': 'ローカルタスクがうまくいきませんでした',
