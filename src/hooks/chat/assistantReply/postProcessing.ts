@@ -140,10 +140,16 @@ export async function postProcessAssistantReply(
   } = extractPerformanceTags(transformedAssistantText)
   // The first `[tts:…]` cue colours direct-speech playback (the streaming path
   // already captured cues inline before the tags were scrubbed). Without this
-  // the cue would be parsed and thrown away again.
+  // the cue would be parsed and thrown away again. With no explicit tag, the
+  // `[mood:…]` read of the USER may still soften the delivery — it never
+  // becomes her emotion, and the per-sentence resolver puts it below every
+  // sentence-level cue.
+  const firstMoodCue = inlineMoodCues[0]
   const directSpeechCue = inlineTtsCues[0]
     ? voiceEmotionCueFromTag('tts', inlineTtsCues[0].mode)
-    : null
+    : firstMoodCue
+      ? voiceEmotionCueFromTag('mood', `${firstMoodCue.mood}-${firstMoodCue.intensity}`)
+      : null
   // Assistant-tone check (T8) runs on ordinary chat turns only. Tool rounds
   // speak about real results, so their wording must stay untouched. The check
   // never rewrites words: it may flatten markdown when the persona says

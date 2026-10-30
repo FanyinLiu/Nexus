@@ -6,7 +6,7 @@ import {
   StageDirectionStreamFilter,
   parseAssistantPerformanceContent,
 } from '../../../features/pet/performance.ts'
-import { voiceEmotionCueFromTag } from '../../../features/voice/voiceEmotion.ts'
+import { voiceEmotionCueFromStageDirection, voiceEmotionCueFromTag } from '../../../features/voice/voiceEmotion.ts'
 import type { VoiceEmotionCue } from '../../../types/index.ts'
 import { bindStreamingAbort } from '../streamAbort.ts'
 import type { AssembledAssistantPrompt } from './promptAssembly.ts'
@@ -71,8 +71,15 @@ export async function consumeAssistantStream(
   // The bubble keeps her parenthetical asides (（眼睛亮了）) so they read as
   // intentional stage directions, but she should never SPEAK them. This twin
   // strips them from the TTS stream only, mid-stream, so voice and display
-  // diverge exactly where they should.
-  const stageDirectionSpeechFilter = new StageDirectionStreamFilter()
+  // diverge exactly where they should. Because the aside is already gone when
+  // the sentence reaches the chunker, report it here: 「（委屈）…」 must reach
+  // the per-sentence resolver as a cue, not disappear with the text.
+  const stageDirectionSpeechFilter = new StageDirectionStreamFilter((aside) => {
+    // An explicit [tts:] tag in the same delta is the model speaking directly;
+    // it outranks the invented aside.
+    if (pendingVoiceCue) return
+    pendingVoiceCue = voiceEmotionCueFromStageDirection(aside)
+  })
 
   const requestStreaming = dependencies.requestStreaming ?? requestAssistantReplyStreaming
   const request = bindStreamingAbort(

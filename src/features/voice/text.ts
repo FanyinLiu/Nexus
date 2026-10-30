@@ -1,6 +1,6 @@
 import { t } from '../../i18n/runtime.ts'
 import { normalizeWhitespace } from '../../lib/normalize.ts'
-import { isKnownAsciiStageDirectionAlias } from '../pet/performance.ts'
+import { isKnownAsciiStageDirectionAlias, stripPerformanceTags } from '../pet/performance.ts'
 import { filterSpeechText } from './speechTextFilter.ts'
 
 // Full-width asides are the Chinese RP convention the model actually uses, so
@@ -43,14 +43,31 @@ export function normalizeVoiceDedupText(content: string) {
   return normalizeWhitespace(content).toLocaleLowerCase()
 }
 
-export function prepareTextForTts(content: string) {
-  const withoutMarkup = String(content ?? '')
+/**
+ * Normalize one chunk of reply text for the engine.
+ *
+ * `keepStageDirections` is for the caller that feeds the streaming chunker:
+ * the per-sentence resolver reads the aside that opens a sentence, and each
+ * queued segment is cleaned again before synthesis, so the aside is never
+ * spoken either way. Everything else (markdown, code blocks, punctuation)
+ * still gets the full treatment up front, which keeps a fenced code block from
+ * being split across segments and read aloud.
+ */
+export function prepareTextForTts(
+  content: string,
+  options?: { keepStageDirections?: boolean },
+) {
+  const withoutMarkup = stripPerformanceTags(String(content ?? ''))
     .replace(MARKDOWN_LINK_PATTERN, '$1')
     .replace(MARKDOWN_EMPHASIS_PATTERN, '$2')
     .replace(MARKDOWN_INLINE_CODE_PATTERN, '$1')
     .replace(URL_PATTERN, ' ')
 
-  const normalized = filterSpeechText(stripStageDirections(withoutMarkup), {
+  const spoken = options?.keepStageDirections
+    ? withoutMarkup
+    : stripStageDirections(withoutMarkup)
+
+  const normalized = filterSpeechText(spoken, {
     codeBlockPlaceholder: t('voice.tts.code_block_placeholder'),
   })
     .replace(SOFT_SEPARATOR_PATTERN, '，')

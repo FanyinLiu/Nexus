@@ -13,6 +13,7 @@ import {
 } from '../src/hooks/voice/providerFallbacks.ts'
 import { executeWithFailover } from '../src/features/failover/orchestrator.ts'
 import { buildQwen3TtsSpeechRequestPayload } from '../electron/services/qwen3TtsPayload.js'
+import { resolveQwen3TtsSeed } from '../electron/services/ttsSeed.js'
 import { createTtsStreamService } from '../electron/ttsStreamService.js'
 import type { AppSettings } from '../src/types/index.ts'
 
@@ -127,10 +128,13 @@ test('health failure and first-chunk timeout both hand the reply to Edge once, w
   assert.equal(notices, 1)
 })
 
-test('Qwen3 speech payload carries speaker, instructions, language, and PCM format', () => {
+test('Qwen3 speech payload carries speaker, instructions, language, PCM format, and a stable seed', () => {
+  const characterId = 'char-a'
+  const seed = resolveQwen3TtsSeed(characterId, 'serena')
   assert.deepEqual(
     buildQwen3TtsSpeechRequestPayload({
       voice: 'serena',
+      characterId,
       instructions: '带点傲娇，语气轻快',
       language: 'zh-CN',
       rate: 1.2,
@@ -139,6 +143,7 @@ test('Qwen3 speech payload carries speaker, instructions, language, and PCM form
       input: '你好呀。',
       voice: 'serena',
       response_format: 'pcm',
+      seed,
       speed: 1.2,
       instructions: '带点傲娇，语气轻快',
       language: 'zh-CN',
@@ -151,6 +156,7 @@ test('Qwen3 speech payload carries speaker, instructions, language, and PCM form
       input: 'Hello.',
       voice: 'vivian',
       response_format: 'pcm',
+      seed: resolveQwen3TtsSeed(undefined, 'vivian'),
     },
   )
 })

@@ -115,3 +115,17 @@ test('StageDirectionStreamFilter matches whole-string output when fed char by ch
 
   assert.equal(actual, expected)
 })
+
+test('prepareTextForTts can keep an opening stage direction for the tone resolver', () => {
+  const sentence = '（生气）你怎么又这样？'
+
+  // Default speech text never contains the aside.
+  assert.equal(prepareTextForTts(sentence), '你怎么又这样？')
+  // The chunker input keeps it so the per-sentence resolver can read the cue;
+  // code blocks are still normalised before chunking.
+  assert.equal(prepareTextForTts(sentence, { keepStageDirections: true }), sentence)
+  assert.match(
+    prepareTextForTts('（小声）看这个。\n```js\nconst a = 1;\n```', { keepStageDirections: true }),
+    /（小声）/u,
+  )
+})
