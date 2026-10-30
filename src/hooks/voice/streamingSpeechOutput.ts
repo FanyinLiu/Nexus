@@ -3,13 +3,17 @@ import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.t
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { prepareTextForTts } from '../../features/voice/text.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
-import { createId } from '../../lib'
+import { createId } from '../../lib/storage.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { recordTtsUsage } from '../../features/metering/speechCost.ts'
 import {
   isNeutralSegmentStyle,
   type SegmentStyleResolver,
 } from '../../features/voice/voiceEmotion.ts'
+import {
+  meetsMinimumSegmentWeight,
+  StreamingTtsChunker,
+} from '../../features/voice/streamingTts.ts'
 import type {
   AppSettings,
   TranslationKey,
@@ -20,8 +24,9 @@ import type {
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 import {
   getMaxRequestCharsForProvider,
+  getMaxSegmentCharsForProvider,
+  prefersWholeSentenceSegments,
   splitLongTextAtSentences,
-  splitTextIntoSentences,
 } from './speechTextSegmentation.ts'
 import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.ts'
 
@@ -55,7 +60,6 @@ export function createStreamingSpeechOutputController(
     throw new Error('Desktop client is not connected in the current environment; streaming speech playback is unavailable.')
   }
 
-  let accumulatedText = ''
   const player = runtime.getPlayer()
   // Voice cloning disabled — always use the provider's configured voice.
   const effectiveVoice = speechSettings.speechOutputVoice
@@ -63,6 +67,31 @@ export function createStreamingSpeechOutputController(
   const busEmit = options?.busEmit
   const speechGeneration = options?.speechGeneration ?? 0
   const providerId = speechSettings.speechOutputProviderId
+
+  // Text is chunked as the model streams: each completed sentence goes to the
+  // provider right away, so she starts speaking on sentence one instead of
+  // waiting for the whole reply. One requestId (and therefore one pinned
+  // speaker) covers the entire reply.
+  const maxSegmentChars = getMaxSegmentCharsForProvider(providerId)
+  const wholeSentenceSegments = prefersWholeSentenceSegments(providerId)
+  const chunker = new StreamingTtsChunker({
+    maxChunkLength: maxSegmentChars,
+    // Buffering providers wait for a sentence terminator (or the ceiling)
+    // instead of splitting at a comma; streaming providers keep the early
+    // split so PCM can start inside a long sentence.
+    ...(wholeSentenceSegments
+      ? {
+          preferredEarlySplitLength: maxSegmentChars,
+          minForcedChunkLength: maxSegmentChars,
+        }
+      : {}),
+  })
+  const maxRequestChars = getMaxRequestCharsForProvider(providerId)
+  // A lone "嗯，" is not worth a full synthesis request: hold the first chunk
+  // until the next sentence arrives — or until the stream is flushed, so a
+  // short reply is never swallowed.
+  let heldFirstFragment = ''
+  let hasQueuedSegment = false
   // Hard ceiling on how long we'll wait for the first audio chunk after the
   // stream has been started. Catches providers whose socket is half-closed
   // after a long play — observed as the "text rendered but no audio on the
@@ -129,6 +158,18 @@ export function createStreamingSpeechOutputController(
           pendingAudioAppends = Math.max(0, pendingAudioAppends - 1)
           maybeResolve()
         })
+      return
+    }
+
+    if (event.type === 'latency') {
+      // Main-process timing marks. Dev-console only, numbers only — no reply
+      // text ever leaves the stream as text.
+      voiceDebug('TTS-Latency', {
+        requestId,
+        provider: providerId,
+        firstSegmentChars: event.firstSegmentChars,
+        ...event.stages,
+      })
       return
     }
 
@@ -258,19 +299,47 @@ export function createStreamingSpeechOutputController(
       volume: speechSettings.speechVolume,
     }).then(() => {
       streamStarted = true
-      // Arm the first-audio watchdog. If the provider never sends a chunk
-      // within FIRST_AUDIO_TIMEOUT_MS we fail the controller explicitly,
-      // which lets the upstream chat handler fall back to direct-speech.
-      if (firstAudioWatchdog === null && !settled && !aborted) {
-        firstAudioWatchdog = setTimeout(() => {
-          firstAudioWatchdog = null
-          if (firstAudioEmitted || settled || aborted) return
-          fail(new Error(options?.ti?.('voice.streaming_tts.first_audio_timeout') ?? 'Streaming TTS did not produce audio within 6 seconds.'))
-        }, FIRST_AUDIO_TIMEOUT_MS)
+      // The watchdog is armed from the first queued segment; if the stream
+      // start was still pending (local warm-up), arm it now that synthesis can
+      // actually begin. It never re-arms after the first chunk, so a long
+      // multi-sentence reply cannot trip it.
+      if (firstSegmentQueuedAt !== null) {
+        armFirstAudioWatchdog()
       }
     })
 
     return startPromise
+  }
+
+  let firstSegmentQueuedAt: number | null = null
+
+  function armFirstAudioWatchdog() {
+    if (firstAudioWatchdog !== null || firstAudioEmitted || settled || aborted) {
+      return
+    }
+
+    firstAudioWatchdog = setTimeout(() => {
+      firstAudioWatchdog = null
+      if (firstAudioEmitted || settled || aborted) return
+      // Still warming a local checkpoint: checkpoint load is not synthesis
+      // latency, and the main process bounds it on its own. Re-arm once the
+      // stream start settles instead of failing a cold local provider.
+      if (!streamStarted && startPromise) {
+        void startPromise.then(() => armFirstAudioWatchdog()).catch(() => undefined)
+        return
+      }
+      fail(new Error(options?.ti?.('voice.streaming_tts.first_audio_timeout') ?? 'Streaming TTS did not produce audio within 6 seconds.'))
+    }, FIRST_AUDIO_TIMEOUT_MS)
+  }
+
+  function noteFirstSegmentQueued() {
+    if (firstSegmentQueuedAt !== null) {
+      return
+    }
+    firstSegmentQueuedAt = Date.now()
+    if (streamStarted) {
+      armFirstAudioWatchdog()
+    }
   }
 
   let finishSent = false
@@ -298,10 +367,10 @@ export function createStreamingSpeechOutputController(
       })
   }
 
-  function queueSegment(segment: string) {
+  function queueSegment(segment: string): boolean {
     const cleaned = prepareTextForTts(segment)
     if (!cleaned || settled || aborted) {
-      return
+      return false
     }
 
     // Resolve from the RAW sentence: prepareTextForTts strips terminal
@@ -315,6 +384,7 @@ export function createStreamingSpeechOutputController(
 
     const segmentIndex = segmentCounter++
     pendingSegments += 1
+    noteFirstSegmentQueued()
     busEmit?.({
       type: 'tts:segment_queued',
       segmentIndex,
@@ -371,30 +441,52 @@ export function createStreamingSpeechOutputController(
         }
         maybeResolve()
       })
+    return true
   }
 
-  // Drain `accumulatedText` into segments. Pulled out of finish() so we can
-  // flush between agent-loop rounds (pre-tool text goes first, post-tool text
-  // appended after the tool result lands) without finalizing the stream.
-  const flushAccumulatedText = () => {
-    const fullText = accumulatedText
-    accumulatedText = ''
-    if (!fullText) return
-    const maxChars = getMaxRequestCharsForProvider(providerId)
+  /**
+   * Push one completed chunk (usually one sentence) toward the provider,
+   * merging a too-short FIRST chunk with the next one so the reply's first
+   * request is not a single "嗯，". `force` bypasses the merge for flush/finish.
+   */
+  function queueChunkText(rawChunk: string, force: boolean) {
+    const text = heldFirstFragment ? `${heldFirstFragment}${rawChunk}` : rawChunk
+    heldFirstFragment = ''
+
+    if (!text) {
+      return
+    }
+
+    if (!hasQueuedSegment && !force && !meetsMinimumSegmentWeight(text)) {
+      heldFirstFragment = text
+      return
+    }
+
     // One push_text per sentence: Qwen3 applies a single `instructions` to the
     // whole request, so batching sentences would flatten them onto one tone.
-    // Long single sentences still split by length afterwards.
-    const sentences = splitTextIntoSentences(fullText)
-    for (const sentence of sentences) {
-      for (const segment of splitLongTextAtSentences(sentence, maxChars)) {
-        queueSegment(segment)
+    // Long single sentences still split by the provider's length ceiling.
+    for (const segment of splitLongTextAtSentences(text, maxRequestChars)) {
+      if (queueSegment(segment)) {
+        hasQueuedSegment = true
       }
+    }
+  }
+
+  // Drain the chunker into segments. Pulled out of finish() so we can flush
+  // between agent-loop rounds (pre-tool text goes first, post-tool text
+  // appended after the tool result lands) without finalizing the stream.
+  function flushChunker() {
+    for (const chunk of chunker.flush()) {
+      queueChunkText(chunk, true)
+    }
+    if (heldFirstFragment) {
+      queueChunkText('', true)
     }
   }
 
   const controller: StreamingSpeechOutputController = {
     pushDelta(delta: string, cue?: VoiceEmotionCue | null) {
-      if (!delta || settled || aborted) {
+      if (!delta || finishRequested || settled || aborted) {
         return
       }
 
@@ -402,23 +494,24 @@ export function createStreamingSpeechOutputController(
         activeCue = cue
       }
 
-      // Accumulate silently until the next flush. Sentences are split at
-      // flush time, each with its own style, while the TTS session keeps the
-      // voice/speaker pinned.
-      accumulatedText += delta
+      // Feed the streaming chunker: every sentence it completes is queued for
+      // synthesis immediately, so playback overlaps the rest of the reply.
+      for (const chunk of chunker.pushText(delta)) {
+        queueChunkText(chunk, false)
+      }
     },
     flushPending() {
       if (finishRequested || settled || aborted) {
         return
       }
-      flushAccumulatedText()
+      flushChunker()
     },
     finish() {
       if (finishRequested || settled || aborted) {
         return
       }
 
-      flushAccumulatedText()
+      flushChunker()
 
       finishRequested = true
       if (!streamStarted && pendingSegments === 0) {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { decodePcm16LeBufferToFloat32, enhanceSpeechSamples } from './audioPostprocess.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
+import { computeTtsStageDurations, createTtsTimingMarks } from './services/ttsStreamTiming.js'
 
 const STREAM_CHUNK_SIZE = 4096
 const INITIAL_STREAM_CHUNK_SIZE = 1024
@@ -42,6 +43,23 @@ function emitSampleChunk(session, samples, sampleRate, text, isFinal = false) {
     isFinal,
     samples,
   })
+
+  // The first chunk handed to the renderer is the earliest point main can
+  // call "audible" (the renderer schedules it into the audio graph right
+  // away). Report the stage durations once, in dev console only.
+  if (session.timing && !session.latencyReported) {
+    session.timing.mark('firstAudibleSample')
+    session.latencyReported = true
+    const latencyEvent = {
+      type: 'latency',
+      requestId: session.requestId,
+      stages: computeTtsStageDurations(session.timing.snapshot()),
+      firstSegmentChars: session.firstSegmentChars ?? null,
+    }
+    if (!session.sender.isDestroyed()) {
+      session.sender.send('tts:stream-event', latencyEvent)
+    }
+  }
 }
 
 function takeBufferedSamples(bufferedChunks, sampleCount) {
@@ -282,6 +300,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         }
 
         streamYieldedData = true
+        session.timing?.mark('firstPcmChunk')
         const merged = residual.length > 0 ? Buffer.concat([residual, chunk]) : chunk
         const usableLength = merged.length - (merged.length % 2)
         if (usableLength > 0) {
@@ -379,6 +398,9 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     }
 
     const decoded = decodeRemoteResult(result)
+    // Non-streaming provider: the whole clip arrived at once, so "first PCM
+    // chunk" and "synthesis finished" are the same instant.
+    session.timing?.mark('firstPcmChunk')
     emitSamples(
       session,
       enhanceSpeechSamples(decoded.samples, decoded.sampleRate, buildLeadInOptions(session)),
@@ -391,17 +413,23 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     await session.remoteWarmup?.catch(() => undefined)
   }
 
-  async function synthesizeAndEmitRemote(session, text, style) {
+  async function synthesizeSegment(session, text, style) {
     await warmupRemoteSession(session)
-    if (session.closed) return
+    if (session.closed) return null
     // `session.payload` stays the pinned voice/speaker. Only this sentence's
     // copy carries its own tone instruction and pace nudge.
+    session.timing?.mark('firstSegmentSynthStart')
     const styledPayload = applySegmentStyle(session.payload, style)
     const result = await synthesizeRemote(styledPayload, text, session.abortController?.signal)
-    if (session.closed) return
+    if (session.closed) {
+      destroyResultStream(result)
+      return null
+    }
     // Pin the resolved voice/cluster after the first chunk so subsequent
     // chunks reuse the exact same combo instead of re-walking the fallback
     // chain (which otherwise stitches chunks together with different voices).
+    // With one-segment-ahead pipelining the next request may already be in
+    // flight; it resolves this same pin when its own result lands.
     if (result?.resolvedVoice && session.payload.voice !== result.resolvedVoice) {
       // Loud warning: an in-session voice swap is the exact mechanism behind
       // the "timbre changes when the pet speaks" reports. Pair this with the
@@ -423,7 +451,101 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     if (result?.resolvedCluster && session.payload.model !== result.resolvedCluster) {
       session.payload = { ...session.payload, model: result.resolvedCluster }
     }
+    return result
+  }
+
+  async function emitSegmentResult(session, text, result) {
+    if (!result || session.closed) {
+      destroyResultStream(result)
+      return
+    }
     await emitRemoteResult(session, text, result)
+  }
+
+  function destroyResultStream(result) {
+    try {
+      result?.pcmStream?.destroy?.()
+    } catch {
+      // Already torn down by the provider or the abort signal.
+    }
+  }
+
+  /**
+   * Synthesize the queue one segment at a time, but start segment N+1's
+   * synthesis as soon as N's synthesis resolves — while N is still emitting
+   * PCM. Emission order stays strictly N, N+1, N+2 because only the emission
+   * is awaited serially.
+   */
+  async function runSynthesisQueue(session) {
+    while (!session.closed) {
+      const entry = session.queue.shift()
+      if (!entry) break
+
+      const result = await (entry.synthesis ?? beginSynthesis(session, entry))
+      if (session.closed) {
+        destroyResultStream(result)
+        break
+      }
+      if (!result) break
+
+      const next = session.queue[0]
+      if (next && !next.synthesis) {
+        next.synthesis = beginSynthesis(session, next)
+      }
+
+      await emitSegmentResult(session, entry.text, result)
+    }
+  }
+
+  function beginSynthesis(session, entry) {
+    const promise = synthesizeSegment(session, entry.text, entry.style)
+    // The lookahead promise is awaited one iteration later; it may also reject
+    // on abort before anyone awaits it, so keep a no-op observer attached.
+    promise.catch(() => undefined)
+    return promise
+  }
+
+  function scheduleQueue(session) {
+    if (session.driver || session.closed) return
+    session.driver = runSynthesisQueue(session)
+      .catch((error) => {
+        closeSessionWithError(session, error)
+      })
+      .finally(() => {
+        session.driver = null
+        // A pushText that landed while the loop was finishing needs its own
+        // driver, otherwise its audio would never be synthesized.
+        if (!session.closed && session.queue.length) {
+          scheduleQueue(session)
+        }
+      })
+  }
+
+  async function waitForQueue(session) {
+    while (session.driver) {
+      await session.driver.catch(() => undefined)
+      if (!session.driver) break
+    }
+  }
+
+  function closeSessionWithError(session, error) {
+    if (session.closed) {
+      // Abort/teardown already owns the session; a late AbortError from the
+      // cancelled lookahead synthesis is a clean stop, not a failure.
+      return
+    }
+
+    session.closed = true
+    // Cancels both in-flight syntheses: the segment that failed and the
+    // lookahead started for the segment after it.
+    session.abortController?.abort()
+    detachSenderListener(session)
+    clearSession(session.requestId)
+    emit(session.sender, {
+      type: 'error',
+      requestId: session.requestId,
+      message: error instanceof Error ? error.message : '语音合成好像没接上。',
+    })
   }
 
   return {
@@ -465,11 +587,17 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         requestId,
         sender,
         payload,
-        chain: Promise.resolve(),
+        queue: [],
+        driver: null,
         closed: false,
         hasEmittedAudio: false,
         remoteWarmup: Promise.resolve(),
         abortController,
+        // Marks start after warm-up so a cold local checkpoint is not charged
+        // to synthesis latency.
+        timing: createTtsTimingMarks(),
+        firstSegmentChars: null,
+        latencyReported: false,
       }
 
       // If the renderer tears down mid-stream, mark the session closed and
@@ -478,6 +606,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
       // PCM streams on the next boundary, releasing the socket.
       const onSenderDestroyed = () => {
         session.closed = true
+        session.queue.length = 0
         session.abortController?.abort()
         sessions.delete(requestId)
       }
@@ -502,24 +631,12 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
 
       const style = normalizeSegmentStyle(payload?.style)
 
-      session.chain = session.chain.then(async () => {
-        if (session.closed) {
-          return
-        }
-
-        try {
-          await synthesizeAndEmitRemote(session, text, style)
-        } catch (error) {
-          session.closed = true
-          detachSenderListener(session)
-          clearSession(session.requestId)
-          emit(session.sender, {
-            type: 'error',
-            requestId: session.requestId,
-            message: error instanceof Error ? error.message : '语音合成好像没接上。',
-          })
-        }
-      })
+      if (session.firstSegmentChars === null) {
+        session.firstSegmentChars = text.length
+      }
+      session.timing?.mark('firstSegmentQueued')
+      session.queue.push({ text, style })
+      scheduleQueue(session)
 
       return { ok: true }
     },
@@ -530,7 +647,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         return { ok: false }
       }
 
-      await session.chain.catch(() => undefined)
+      await waitForQueue(session)
       if (!session.closed) {
         session.closed = true
         emit(session.sender, {
@@ -550,6 +667,9 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
       }
 
       session.closed = true
+      // Drop anything not yet started; the abort signal tears down the
+      // in-flight synthesis and the one-ahead lookahead synthesis together.
+      session.queue.length = 0
       session.abortController?.abort()
       detachSenderListener(session)
       clearSession(session.requestId)

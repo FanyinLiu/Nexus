@@ -5,6 +5,38 @@ const ABSOLUTE_MIN_CHUNK_LENGTH = 2
 const SENTENCE_BOUNDARY_PATTERN = /[。！？!?；;：:\n]/u
 const SOFT_BOUNDARY_PATTERN = /[,，、]/u
 const FORCED_SPLIT_BOUNDARY_PATTERN = /[\s,，、]/u
+const ASCII_SENTENCE_END = '.'
+const WHITESPACE_AFTER_PATTERN = /\s/u
+
+// A first segment below this weight is not worth its own request: the model
+// would spend a full generation (and a full first-audio wait) on "嗯，" or
+// "Okay.". Measured in "CJK character equivalents" — see measureSegmentWeight.
+// 6 means roughly 6 Chinese characters or 12 latin ones.
+export const DEFAULT_MIN_FIRST_SEGMENT_WEIGHT = 6
+const CJK_CHAR_PATTERN = /[\u3005\u3006\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff]/u
+const WHITESPACE_PATTERN = /\s/u
+
+/**
+ * Weigh a fragment in CJK character equivalents: ideographs, kana, and hangul
+ * count 1, everything else (latin letters, digits, punctuation) counts 0.5.
+ * Punctuation is deliberately cheap so "嗯，" stays tiny while "今天天气挺好的。"
+ * is already worth speaking.
+ */
+export function measureSegmentWeight(text: string): number {
+  let weight = 0
+  for (const char of text) {
+    if (WHITESPACE_PATTERN.test(char)) continue
+    weight += CJK_CHAR_PATTERN.test(char) ? 1 : 0.5
+  }
+  return weight
+}
+
+export function meetsMinimumSegmentWeight(
+  text: string,
+  minimum = DEFAULT_MIN_FIRST_SEGMENT_WEIGHT,
+): boolean {
+  return measureSegmentWeight(text) >= minimum
+}
 
 export type StreamingTtsChunkerOptions = {
   maxChunkLength?: number
@@ -59,6 +91,23 @@ function normalizeOptions(options?: StreamingTtsChunkerOptions) {
 
 function normalizeChunk(text: string) {
   return text.replace(/^\s+|\s+$/g, '')
+}
+
+/**
+ * True when `buffer[index]` ends a sentence.
+ *
+ * CJK/exclamation/semicolon/newline boundaries are unambiguous. An ASCII
+ * period only counts when whitespace follows, so "3.14" and "example.com"
+ * stay in one piece while "Nice. Want tea?" splits mid-stream. A period at
+ * the very end of the buffer waits for the next delta; `flush()` still emits
+ * it at stream end.
+ */
+function isSentenceBoundaryAt(buffer: string, index: number) {
+  const char = buffer[index] ?? ''
+  if (SENTENCE_BOUNDARY_PATTERN.test(char)) return true
+  if (char !== ASCII_SENTENCE_END) return false
+  const next = buffer[index + 1]
+  return next !== undefined && WHITESPACE_AFTER_PATTERN.test(next)
 }
 
 function findBoundarySplitIndex(
@@ -139,12 +188,13 @@ function collectCompletedChunks(
       }
     }
 
-    // Sentence boundaries (。！？!?；;：:\n) are natural TTS pause points;
-    // emit them immediately during streaming so short sentences don't get
-    // stuck waiting for the length-based thresholds.  Only the absolute
-    // minimum length applies (avoids pathological 1-char chunks).
+    // Sentence boundaries (。！？!?；;：:\n, plus an ASCII period followed by
+    // whitespace) are natural TTS pause points; emit them immediately during
+    // streaming so short sentences don't get stuck waiting for the length-based
+    // thresholds. Only the absolute minimum length applies (avoids pathological
+    // 1-char chunks).
     for (let index = 0; index < remaining.length; index += 1) {
-      if (SENTENCE_BOUNDARY_PATTERN.test(remaining[index] ?? '')) {
+      if (isSentenceBoundaryAt(remaining, index)) {
         if (index + 1 >= options.absoluteMinChunkLength || forceFlush) {
           splitIndex = index + 1
           break

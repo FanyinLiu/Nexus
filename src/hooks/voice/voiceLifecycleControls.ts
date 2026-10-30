@@ -105,10 +105,10 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
   // ── beginStreamingSpeechReply ───────────────────────────────────────────
   /**
    * Creates a streaming TTS controller for use during AI streaming responses.
-   * Returns an object with pushDelta/finish/waitForCompletion methods.
-   * The caller feeds text deltas as they arrive from the AI, and audio starts
-   * playing as soon as the first sentence completes — no waiting for the full
-   * response.
+   * The caller feeds text deltas as they arrive; every sentence the stream
+   * completes is queued for synthesis immediately, so playback starts while
+   * the model is still generating the rest of the reply. `finish()` only
+   * closes the stream (and flushes a final short fragment).
    */
   function beginStreamingSpeechReply(
     shouldResumeContinuousVoice: boolean,

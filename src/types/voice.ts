@@ -283,7 +283,32 @@ export interface TtsStreamErrorEvent {
   message: string
 }
 
-export type TtsStreamEvent = TtsStreamChunkEvent | TtsStreamEndEvent | TtsStreamErrorEvent
+/**
+ * Developer-console latency marks reported by the main-process stream. Values
+ * are milliseconds (or null when a mark was never reached); no reply text is
+ * carried, only the first segment's character count.
+ */
+export interface TtsStreamLatencyStages {
+  streamStartToFirstSegmentQueuedMs: number | null
+  firstSegmentQueuedToSynthStartMs: number | null
+  synthStartToFirstPcmChunkMs: number | null
+  firstPcmChunkToFirstAudibleSampleMs: number | null
+  firstSegmentQueuedToFirstAudibleSampleMs: number | null
+  streamStartToFirstAudibleSampleMs: number | null
+}
+
+export interface TtsStreamLatencyEvent {
+  type: 'latency'
+  requestId: string
+  stages: TtsStreamLatencyStages
+  firstSegmentChars: number | null
+}
+
+export type TtsStreamEvent =
+  | TtsStreamChunkEvent
+  | TtsStreamEndEvent
+  | TtsStreamErrorEvent
+  | TtsStreamLatencyEvent
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking'
 
