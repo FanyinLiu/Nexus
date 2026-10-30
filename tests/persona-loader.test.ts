@@ -197,7 +197,7 @@ test('persona profile loader normalizes CRLF text so prompts match across platfo
   assert.equal(loaded.soul, 'line one\nline two')
   assert.equal(loaded.memory, 'm1\nm2')
   assert.equal(loaded.examplesRaw, '### ex\nUser: 早\nAssistant: 醒啦。')
-  assert.deepEqual(loaded.examples, [{ user: '早', assistant: '醒啦。' }])
+  assert.deepEqual(loaded.examples, [{ user: '早', assistant: '醒啦。', kind: 'reply' }])
 })
 
 test('persona soul save accepts text and refuses values that must not be written', () => {
