@@ -1,5 +1,6 @@
 /**
- * Python runtime detection for optional AI services (OmniVoice TTS, GLM-ASR).
+ * Python runtime detection for optional AI services (OmniVoice TTS,
+ * Qwen3-TTS, GLM-ASR).
  *
  * These services spawn long-running python processes. On a fresh install
  * users typically don't have Python + the heavy wheels (torch, transformers)
@@ -21,6 +22,7 @@ import { spawn } from 'node:child_process'
 const SERVICE_MODULES = Object.freeze({
   omniVoice: ['torch', 'torchaudio', 'transformers', 'fastapi', 'uvicorn', 'omnivoice'],
   glmAsr: ['torch', 'transformers', 'fastapi', 'uvicorn'],
+  qwen3Tts: ['torch', 'qwen_tts'],
 })
 
 function resolveCandidateBinaries() {
@@ -111,9 +113,9 @@ let _detectedPython = null
 let _detectedResolved = false
 let _inflightDetect = null
 let _noPythonLogged = false
-const _serviceStatuses = { omniVoice: null, glmAsr: null }
-const _serviceInflight = { omniVoice: null, glmAsr: null }
-const _serviceUnavailableLogged = { omniVoice: false, glmAsr: false }
+const _serviceStatuses = { omniVoice: null, glmAsr: null, qwen3Tts: null }
+const _serviceInflight = { omniVoice: null, glmAsr: null, qwen3Tts: null }
+const _serviceUnavailableLogged = { omniVoice: false, glmAsr: false, qwen3Tts: false }
 
 async function detectPython() {
   if (_detectedResolved) return _detectedPython
@@ -150,7 +152,11 @@ export function getDetectedPythonBinary() {
  * Probe only the Python imports a single sidecar needs. Results are cached
  * per service so repeated settings syncs do not re-run import checks.
  *
- * @param {'omniVoice' | 'glmAsr'} serviceId
+ * `options.binary` pins the interpreter (Qwen3-TTS ships its own virtualenv,
+ * which the system-wide detection above intentionally does not know about).
+ *
+ * @param {'omniVoice' | 'glmAsr' | 'qwen3Tts'} serviceId
+ * @param {{ binary?: string }} [options]
  * @returns {Promise<{
  *   pythonAvailable: boolean,
  *   binary: string | null,
@@ -159,10 +165,32 @@ export function getDetectedPythonBinary() {
  *   missingImports: string[],
  * }>}
  */
-export async function ensurePythonRuntimeStatusFor(serviceId) {
-  const key = serviceId === 'glmAsr' ? 'glmAsr' : serviceId === 'omniVoice' ? 'omniVoice' : null
+export async function ensurePythonRuntimeStatusFor(serviceId, options = {}) {
+  const key = serviceId === 'glmAsr' || serviceId === 'omniVoice' || serviceId === 'qwen3Tts'
+    ? serviceId
+    : null
   if (!key) {
     return { pythonAvailable: false, binary: null, version: null, ready: false, missingImports: ['unknown'] }
+  }
+  if (options.binary) {
+    // A pinned interpreter is probed fresh: it is cheap compared to spawning
+    // the sidecar with the wrong Python and reading ImportError tracebacks.
+    const detected = await probeBinary(options.binary)
+    if (!detected) {
+      return { pythonAvailable: false, binary: options.binary, version: null, ready: false, missingImports: ['python'] }
+    }
+    const probe = await probeImports(detected.binary, SERVICE_MODULES[key])
+    if (!probe.ok && !_serviceUnavailableLogged[key]) {
+      _serviceUnavailableLogged[key] = true
+      console.info(`[Python] ${key} disabled — missing modules: ${probe.missing.join(', ')}`)
+    }
+    return {
+      pythonAvailable: true,
+      binary: detected.binary,
+      version: detected.version,
+      ready: probe.ok,
+      missingImports: probe.missing,
+    }
   }
   if (_serviceStatuses[key]) return _serviceStatuses[key]
   if (_serviceInflight[key]) return _serviceInflight[key]
@@ -172,7 +200,7 @@ export async function ensurePythonRuntimeStatusFor(serviceId) {
     if (!detected) {
       if (!_noPythonLogged) {
         _noPythonLogged = true
-        console.info('[Python] No Python interpreter found — OmniVoice TTS and GLM-ASR will be disabled. Install Python 3.10+ and pip install -r requirements.txt to enable them.')
+        console.info('[Python] No Python interpreter found — OmniVoice TTS, Qwen3-TTS, and GLM-ASR will be disabled. Install Python 3.10+ and pip install -r requirements.txt to enable them.')
       }
       return {
         pythonAvailable: false,
@@ -186,7 +214,7 @@ export async function ensurePythonRuntimeStatusFor(serviceId) {
     const probe = await probeImports(detected.binary, SERVICE_MODULES[key])
     if (!probe.ok && !_serviceUnavailableLogged[key]) {
       _serviceUnavailableLogged[key] = true
-      const tag = key === 'omniVoice' ? 'OmniVoice TTS' : 'GLM-ASR'
+      const tag = key === 'omniVoice' ? 'OmniVoice TTS' : key === 'qwen3Tts' ? 'Qwen3-TTS' : 'GLM-ASR'
       console.info(`[Python] ${tag} disabled — missing modules: ${probe.missing.join(', ')}`)
     }
 

@@ -1,25 +1,28 @@
 /**
  * On-demand lifecycle for the optional Python speech sidecars.
  *
- * OmniVoice (TTS) and GLM-ASR (STT) are only useful when the matching engine
- * is selected and the matching voice switch is on, so the expensive Python
- * probe/spawn must not run at launch for everyone else. The renderer pushes a
- * compact voice-runtime snapshot here; this module reconciles that snapshot
- * with the live process tree and serialises transitions so rapid toggling
- * cannot leave two instances of the same server running.
+ * OmniVoice (TTS), Qwen3-TTS (TTS) and GLM-ASR (STT) are only useful when the
+ * matching engine is selected and the matching voice switch is on, so the
+ * expensive Python probe/spawn must not run at launch for everyone else. The
+ * renderer pushes a compact voice-runtime snapshot here; this module
+ * reconciles that snapshot with the live process tree and serialises
+ * transitions so rapid toggling cannot leave two instances of the same server
+ * running.
  *
  * The snapshot is untrusted input. A missing or unreadable snapshot resolves
- * to "keep both stopped" (fail closed).
+ * to "keep everything stopped" (fail closed).
  */
 
+import os from 'node:os'
 import path from 'node:path'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
 
-/** Protocol version both Python sidecars declare at module scope. */
+/** Protocol version every Python sidecar declares at module scope. */
 export const VOICE_SIDECAR_VERSION = '1'
 
 const OMNIVOICE_PROVIDER_ID = 'omnivoice-tts'
+const QWEN3_TTS_PROVIDER_ID = 'qwen3-tts-local'
 const GLM_ASR_PROVIDER_ID = 'glm-asr-local'
 
 const DEFAULT_DEBOUNCE_MS = 75
@@ -39,29 +42,76 @@ export const VOICE_SIDECAR_DEFINITIONS = Object.freeze({
     script: 'scripts/glm_asr_server.py',
     timeoutSec: 120,
   }),
+  qwen3Tts: Object.freeze({
+    tag: 'Qwen3-TTS',
+    port: 8002,
+    script: 'scripts/qwen3_tts_server.py',
+    timeoutSec: 180,
+  }),
 })
+
+/**
+ * Resolve the interpreter for the Qwen3-TTS sidecar.
+ *
+ * The model ships with its own virtualenv, and the system interpreter is
+ * usually too old for `qwen-tts`. An explicit env override wins, then that
+ * venv if present, and only then the interpreter used by the other sidecars.
+ *
+ * @param {{
+ *   env?: Record<string, string | undefined>,
+ *   homedir?: () => string,
+ *   existsSync?: (filePath: string) => boolean,
+ *   platform?: string,
+ *   fallback: () => string,
+ * }} deps
+ * @returns {string}
+ */
+export function resolveQwen3TtsPythonCommand(deps) {
+  const env = deps?.env ?? process.env
+  const fallback = deps?.fallback
+  const configured = String(env.NEXUS_QWEN3_TTS_PYTHON ?? '').trim()
+  if (configured) return configured
+
+  const homedir = deps?.homedir ?? os.homedir
+  const existsSync = deps?.existsSync
+  const platform = deps?.platform ?? process.platform
+  if (typeof existsSync === 'function') {
+    const root = path.join(homedir(), 'Models', 'qwen3-tts', '.venv')
+    const candidates = platform === 'win32'
+      ? [path.join(root, 'Scripts', 'python.exe'), path.join(root, 'Scripts', 'python')]
+      : [path.join(root, 'bin', 'python3'), path.join(root, 'bin', 'python')]
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return candidate
+    }
+  }
+
+  return typeof fallback === 'function' ? fallback() : ''
+}
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 /**
- * Map the renderer's voice-runtime snapshot to the two sidecar switches.
+ * Map the renderer's voice-runtime snapshot to the sidecar switches.
  * Only an explicit `true` toggle plus an exact provider id can request a
  * server, so malformed snapshots never accidentally start Python.
  *
  * @param {unknown} settings
- * @returns {{ readable: boolean, omniVoice: boolean, glmAsr: boolean }}
+ * @returns {{ readable: boolean, omniVoice: boolean, qwen3Tts: boolean, glmAsr: boolean }}
  */
 export function resolveVoiceSidecarPlan(settings) {
   if (!isRecord(settings)) {
-    return { readable: false, omniVoice: false, glmAsr: false }
+    return { readable: false, omniVoice: false, qwen3Tts: false, glmAsr: false }
   }
   return {
     readable: true,
     omniVoice:
       settings.speechOutputEnabled === true
       && settings.speechOutputProviderId === OMNIVOICE_PROVIDER_ID,
+    qwen3Tts:
+      settings.speechOutputEnabled === true
+      && settings.speechOutputProviderId === QWEN3_TTS_PROVIDER_ID,
     glmAsr:
       settings.speechInputEnabled === true
       && settings.speechInputProviderId === GLM_ASR_PROVIDER_ID,
@@ -136,14 +186,15 @@ function waitForChildExit(child, timeoutMs) {
  *   readFileSync: Function,
  *   resolveScriptPath: (script: string) => string | null,
  *   resolvePythonCommand: () => string,
+ *   resolvePythonCommandFor?: (serviceId: 'omniVoice' | 'qwen3Tts' | 'glmAsr') => string,
  *   isPortOpen: (host: string, port: number) => Promise<boolean>,
- *   ensureRuntimeReady: (serviceId: 'omniVoice' | 'glmAsr') => Promise<boolean | { ready?: boolean }>,
+ *   ensureRuntimeReady: (serviceId: 'omniVoice' | 'qwen3Tts' | 'glmAsr') => Promise<boolean | { ready?: boolean }>,
  *   terminateChild?: (child: object, signal: string) => void,
  *   logger?: { info: Function, warn: Function },
  *   debounceMs?: number,
  *   pollIntervalMs?: number,
  *   stopTimeoutMs?: number,
- *   startTimeoutMs?: Partial<Record<'omniVoice' | 'glmAsr', number>>,
+ *   startTimeoutMs?: Partial<Record<'omniVoice' | 'qwen3Tts' | 'glmAsr', number>>,
  * }} deps
  */
 export function createVoiceSidecarSupervisor(deps) {
@@ -152,6 +203,7 @@ export function createVoiceSidecarSupervisor(deps) {
     readFileSync,
     resolveScriptPath,
     resolvePythonCommand,
+    resolvePythonCommandFor,
     isPortOpen,
     ensureRuntimeReady,
     terminateChild = defaultTerminateChild,
@@ -161,6 +213,13 @@ export function createVoiceSidecarSupervisor(deps) {
     stopTimeoutMs = DEFAULT_STOP_TIMEOUT_MS,
     startTimeoutMs = {},
   } = deps ?? {}
+
+  function pythonCommandFor(serviceId) {
+    const resolved = resolvePythonCommandFor?.(serviceId)
+    return typeof resolved === 'string' && resolved.trim()
+      ? resolved
+      : resolvePythonCommand()
+  }
 
   const states = Object.fromEntries(
     Object.entries(VOICE_SIDECAR_DEFINITIONS).map(([id, definition]) => [id, {
@@ -291,7 +350,8 @@ export function createVoiceSidecarSupervisor(deps) {
 
       if (!isDesired(state.id)) return
 
-      const child = spawnProcess(resolvePythonCommand(), [scriptPath, '--port', String(state.port)], {
+      const pythonCommand = pythonCommandFor(state.id)
+      const child = spawnProcess(pythonCommand, [scriptPath, '--port', String(state.port)], {
         cwd: path.dirname(scriptPath),
         stdio: ['ignore', 'ignore', 'ignore'],
         detached: true,
@@ -315,7 +375,7 @@ export function createVoiceSidecarSupervisor(deps) {
         }
       })
 
-      logger.info(`[${state.tag}] Starting on port ${state.port} via ${resolvePythonCommand()}...`)
+      logger.info(`[${state.tag}] Starting on port ${state.port} via ${pythonCommand}...`)
       if (await waitForReady(state, child)) {
         state.phase = 'running'
         logger.info(`[${state.tag}] Ready`)
@@ -364,6 +424,7 @@ export function createVoiceSidecarSupervisor(deps) {
       // service still has exactly one transition in flight.
       await Promise.all([
         reconcileService('omniVoice', plan.omniVoice === true),
+        reconcileService('qwen3Tts', plan.qwen3Tts === true),
         reconcileService('glmAsr', plan.glmAsr === true),
       ])
     }
