@@ -10,6 +10,8 @@
  *   --json=out.json                                       also write raw results
  *   --split=all|tuning|heldout                            which fixture(s) to run
  *   --skip-pipeline                                       embedding-only metrics
+ *   --no-rerank                                           skip the second-stage rerank rows
+ *   --rerank-model=ollama:bge-m3:latest                   auxiliary model for rerank
  *
  * Datasets:
  *   tuning  tests/fixtures/memory-recall-zh/dataset.json  (thresholds were
@@ -25,6 +27,10 @@
  *   3. pipeline, main-process path: same, with window.desktopPet backed by
  *      the real electron/services/memoryVectorStore (BM25 + vector worker),
  *      every memory pre-indexed (steady state).
+ *   4. both pipeline paths again with the optional second-stage rerank
+ *      enabled (BGE-M3, only when Ollama is the primary backend). This is the
+ *      with/without comparison; thresholds and the RRF weight were chosen on
+ *      the tuning split only.
  * Pipeline lists are truncated at the recall limit, so MRR there is MRR@4.
  */
 
@@ -42,6 +48,8 @@ const args = new Map(process.argv.slice(2).map((arg) => {
 const models = (args.get("models") ?? "local-hash-v1,ollama:qwen3-embedding:0.6b").split(",").map((m) => m.trim()).filter(Boolean);
 const ollamaBase = args.get("ollama") ?? "http://127.0.0.1:11434";
 const skipPipeline = args.has("skip-pipeline");
+const runRerank = !args.has("no-rerank");
+const rerankModel = args.get("rerank-model") ?? "ollama:bge-m3:latest";
 const splitFilter = args.get("split") ?? "all";
 const PIPELINE_LIMIT = 4;
 const DATASETS = [
@@ -213,7 +221,7 @@ function installDesktopPet(enabled) {
     memoryHybridSearch: async (payload) => store.searchHybrid(payload.queryEmbedding, payload.queryText, payload)
   };
 }
-async function pipeline(model, mainProcess, dataset, rawScoresByQuery) {
+async function pipeline(model, mainProcess, dataset, rawScoresByQuery, rerankEnabled = false) {
   await store.clearAllEntries();
   installDesktopPet(mainProcess);
   const items = memoryItems(dataset);
@@ -236,7 +244,9 @@ async function pipeline(model, mainProcess, dataset, rawScoresByQuery) {
       longTermLimit: PIPELINE_LIMIT,
       dailyLimit: 4,
       semanticLimit: 4,
-      retentionDays: 7
+      retentionDays: 7,
+      rerankEnabled,
+      rerankModel
     });
     const top = context.semantic?.[0]?.score ?? 0;
     rows.push({
@@ -295,6 +305,14 @@ for (const model of models) {
       const main = await pipeline(model, true, dataset, rawScoresByQuery);
       splitEntry.pipelineMainProcess = main.metrics;
       splitEntry.pipelineMainProcessMisses = main.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.join(",")}`);
+      // The reranker is an Ollama-model feature; the hash backend has no
+      // auxiliary model to compare against.
+      if (runRerank && model.startsWith("ollama:")) {
+        splitEntry.pipelineRendererRerank = (await pipeline(model, false, dataset, rawScoresByQuery, true)).metrics;
+        const reranked = await pipeline(model, true, dataset, rawScoresByQuery, true);
+        splitEntry.pipelineMainProcessRerank = reranked.metrics;
+        splitEntry.pipelineMainProcessRerankMisses = reranked.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.join(",")}`);
+      }
     }
     splitEntry.embeddingOnlyMisses = emb.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.slice(0, 3).join(",")}`);
     entry.splits[split] = splitEntry;
@@ -306,7 +324,7 @@ const fmtGap = (value) => value === null ? "-" : value.toFixed(3);
 const lines = ["| split | model | measurement | R@1 | R@3 | MRR | state newest-first | top score answerable / none |", "|---|---|---|---|---|---|---|---|"];
 for (const [model, entry] of Object.entries(results)) {
   for (const [split, splitEntry] of Object.entries(entry.splits)) {
-    for (const key of ["embeddingOnly", "pipelineRenderer", "pipelineMainProcess"]) {
+    for (const key of ["embeddingOnly", "pipelineRenderer", "pipelineMainProcess", "pipelineRendererRerank", "pipelineMainProcessRerank"]) {
       const m = splitEntry[key];
       if (!m) continue;
       lines.push(`| ${split} | ${model} | ${key} | ${pct(m.recallAt1)} | ${pct(m.recallAt3)} | ${m.mrr.toFixed(3)} | ${m.stateNewestFirst} | ${m.meanTopScoreAnswerable.toFixed(3)} / ${m.meanTopScoreNone.toFixed(3)} |`);
@@ -317,7 +335,7 @@ console.log(lines.join("\n"));
 const rejectionLines = ["| split | model | path | miss suppressed | miss suppressed/flagged | confusable flagged | answerable suppressed | answerable flagged low |", "|---|---|---|---|---|---|---|---|"];
 for (const [model, entry] of Object.entries(results)) {
   for (const [split, splitEntry] of Object.entries(entry.splits)) {
-    for (const key of ["pipelineRenderer", "pipelineMainProcess"]) {
+    for (const key of ["pipelineRenderer", "pipelineMainProcess", "pipelineRendererRerank", "pipelineMainProcessRerank"]) {
       const m = splitEntry[key];
       if (!m?.rejection) continue;
       rejectionLines.push(`| ${split} | ${model} | ${key} | ${m.rejection.missSuppressed} | ${m.rejection.missSuppressedOrFlagged} | ${m.rejection.confusableMissSuppressedOrFlagged} | ${m.rejection.answerableSuppressed} | ${m.rejection.answerableFlaggedLow} |`);
@@ -328,7 +346,7 @@ console.log("\n" + rejectionLines.join("\n"));
 const diagnosticLines = [];
 for (const [model, entry] of Object.entries(results)) {
   for (const [split, splitEntry] of Object.entries(entry.splits)) {
-    const m = splitEntry.pipelineMainProcess ?? splitEntry.pipelineRenderer;
+    const m = splitEntry.pipelineMainProcessRerank ?? splitEntry.pipelineMainProcess ?? splitEntry.pipelineRenderer;
     if (!m) continue;
     for (const row of m.answerableLowConfidence ?? []) {
       diagnosticLines.push(`[${split}] ${model} ${row.id} ${row.text} -> ${row.confidence} top1=${row.top1.toFixed(3)} top2=${row.top2 === null ? "-" : row.top2.toFixed(3)} gap=${fmtGap(row.gap)} relevant=${row.relevant.join(",")}`);
@@ -340,7 +358,7 @@ console.log(diagnosticLines.length ? diagnosticLines.join("\n") : "(none)");
 const missLines = [];
 for (const [model, entry] of Object.entries(results)) {
   for (const [split, splitEntry] of Object.entries(entry.splits)) {
-    const m = splitEntry.pipelineMainProcess ?? splitEntry.pipelineRenderer;
+    const m = splitEntry.pipelineMainProcessRerank ?? splitEntry.pipelineMainProcess ?? splitEntry.pipelineRenderer;
     if (!m) continue;
     for (const row of m.missNotFlagged ?? []) {
       missLines.push(`[${split}] ${model} ${row.id} ${row.text}${row.confusable ? " (confusable)" : ""} -> high top1=${row.top1.toFixed(3)} top2=${row.top2 === null ? "-" : row.top2.toFixed(3)} gap=${fmtGap(row.gap)}`);

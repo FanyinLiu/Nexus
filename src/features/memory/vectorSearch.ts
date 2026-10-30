@@ -202,6 +202,7 @@ export async function embedMemorySearchTextWithModel(
   text: string,
   model: string,
   purpose: MemoryEmbeddingPurpose = 'document',
+  options: { reportStatus?: boolean } = {},
 ): Promise<MemoryEmbeddingResult> {
   const normalizedText = normalizeForEmbedding(text)
   const requestedModel = normalizeModelId(model)
@@ -217,7 +218,7 @@ export async function embedMemorySearchTextWithModel(
       try {
         const embedding = await cachedEmbedding(
           `${requestedModel}::${purpose}::${modelText}`,
-          async () => (await embedTextsWithOllama([modelText], requestedModel, purpose))[0] ?? [],
+          async () => (await embedTextsWithOllama([modelText], requestedModel, purpose, options))[0] ?? [],
         )
         if (embedding.length) {
           return { embedding, model: requestedModel }
@@ -257,6 +258,7 @@ export async function embedMemoryTextsWithModel(
   texts: string[],
   model: string,
   purpose: MemoryEmbeddingPurpose = 'document',
+  options: { reportStatus?: boolean } = {},
 ): Promise<{ embeddings: number[][]; model: string }> {
   const requestedModel = normalizeModelId(model)
   if (isOllamaMemoryModel(requestedModel) && !isOllamaMemoryModelCoolingDown(requestedModel)) {
@@ -265,7 +267,7 @@ export async function embedMemoryTextsWithModel(
     const pending = [...new Set(modelTexts.filter((text, index) => text && !embeddingCache.has(keys[index])))]
     try {
       if (pending.length) {
-        const vectors = await embedTextsWithOllama(pending, requestedModel, purpose)
+        const vectors = await embedTextsWithOllama(pending, requestedModel, purpose, options)
         pending.forEach((text, index) => {
           setEmbeddingCache(`${requestedModel}::${purpose}::${text}`, Promise.resolve(vectors[index] ?? []))
         })

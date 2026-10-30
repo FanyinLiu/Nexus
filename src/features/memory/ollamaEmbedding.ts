@@ -250,11 +250,17 @@ export function isOllamaMemoryModelCoolingDown(model: string, now = Date.now()) 
  * Embed texts with Ollama. Throws OllamaEmbeddingError on failure (after
  * recording the fallback status and a cooldown); the caller decides how to
  * fall back. Returned vectors are L2-normalized.
+ *
+ * `reportStatus: false` keeps an optional auxiliary pass (the recall
+ * re-ranker) from overwriting the settings panel's primary-model status.
+ * The failure cooldown is still recorded so a missing auxiliary model is not
+ * retried on every turn.
  */
 export async function embedTextsWithOllama(
   texts: string[],
   model: string,
   purpose: MemoryEmbeddingPurpose,
+  options: { reportStatus?: boolean } = {},
 ): Promise<number[][]> {
   const ollamaModel = getOllamaModelName(model)
   const key = `${configuredBaseUrl}::${model}`
@@ -291,7 +297,9 @@ export async function embedTextsWithOllama(
       // Diagnostic only: the UI renders `notice`, never the provider reply.
       console.warn('[memory] Ollama embedding failed:', getRedactedLogErrorMessage(result.message))
       unavailableUntil.set(key, Date.now() + FAILURE_COOLDOWN_MS)
-      setStatus({ state: 'fallback', model, code: result.code })
+      if (options.reportStatus !== false) {
+        setStatus({ state: 'fallback', model, code: result.code })
+      }
       throw new OllamaEmbeddingError(result.code, notice.key)
     }
 
@@ -302,8 +310,10 @@ export async function embedTextsWithOllama(
 
   unavailableUntil.delete(key)
   const dimensions = results[0]?.length ?? 0
-  if (status.state !== 'ready' || status.model !== model || status.dimensions !== dimensions) {
-    setStatus({ state: 'ready', model, dimensions })
+  if (options.reportStatus !== false) {
+    if (status.state !== 'ready' || status.model !== model || status.dimensions !== dimensions) {
+      setStatus({ state: 'ready', model, dimensions })
+    }
   }
   return results
 }

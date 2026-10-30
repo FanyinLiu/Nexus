@@ -182,6 +182,8 @@ export const koSettingsMemory = {
   'settings.memory.long_term.embedding_preset': '기억 모델 프리셋',
   'settings.memory.long_term.embedding_custom_hint': '아래에 사용자 모델 ID를 입력할 수도 있어요.',
   'settings.memory.long_term.embedding_custom_model': '사용자 모델 ID',
+  'settings.memory.long_term.rerank': '가까운 기억 다시 확인',
+  'settings.memory.long_term.rerank_hint': 'Ollama의 bge-m3 모델로 가장 잘 맞는 기억을 앞에 놓습니다. 모델이 없으면 기존 순서를 그대로 쓰고 어떤 기억도 숨기지 않아요.',
   'settings.memory.long_term.recall_long_term': '장기 기억 호출 수',
   'settings.memory.long_term.recall_diary': '일기 호출 수',
   'settings.memory.long_term.recall_semantic': '의미 일치 수',

@@ -15,6 +15,14 @@ import {
 import { scoreRecallKeywordOverlap } from './recallTokens.ts'
 import { classifyRecallConfidence, getRecallConfidenceThresholds } from './recallConfidence.ts'
 import {
+  MEMORY_RERANK_MODEL_ID,
+  MEMORY_RERANK_TIMEOUT_MS,
+  MEMORY_RERANK_TOP_K,
+  fuseRecallRerank,
+  scoreRerankCandidates,
+} from './recallRerank.ts'
+import { isOllamaMemoryModel, isOllamaMemoryModelCoolingDown } from './ollamaEmbedding.ts'
+import {
   cosineSimilarity,
   embedMemorySearchTextWithModel,
   embedMemoryTextsWithModel,
@@ -43,6 +51,14 @@ type BuildMemoryRecallContextParams = {
   retentionDays: number
   /** Current emotion state — enables mood-aware recall ranking. */
   currentEmotion?: EmotionState
+  /**
+   * Optional second-stage re-rank of the head of the long-term list. Off by
+   * default: it needs an auxiliary local model and adds one embedding pass.
+   * Any failure keeps the first-stage order.
+   */
+  rerankEnabled?: boolean
+  /** Auxiliary model id; defaults to the BGE-M3 catalog entry. */
+  rerankModel?: string
 }
 
 type ScoredItem<T extends { id: string; createdAt: string; content: string }> = {
@@ -477,6 +493,61 @@ async function buildScoreMapForEmbedding<T extends { id: string; content: string
   return new Map(pairs.map(([id, score]) => [id, { vectorScore: score, bm25Score: 0 }]))
 }
 
+function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs)
+  })
+  return Promise.race([task, timeout]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer)
+  })
+}
+
+/**
+ * Re-score the head of the long-term list with an auxiliary embedding model
+ * and fuse both orders. Returns the input unchanged whenever the model is
+ * unavailable, cooling down, slow, or returns unusable vectors: a re-rank
+ * must never cost the user a memory the first stage already found.
+ */
+async function rerankLongTermSemantics<T extends { id: string; createdAt: string; content: string }>(
+  items: Array<ScoredItem<T>>,
+  query: string,
+  model: string,
+): Promise<Array<ScoredItem<T>>> {
+  const head = items.slice(0, MEMORY_RERANK_TOP_K)
+  if (head.length < 2) return items
+  if (!isOllamaMemoryModel(model) || isOllamaMemoryModelCoolingDown(model)) return items
+
+  const task = (async () => {
+    const [queryResult, documentResult] = await Promise.all([
+      embedMemorySearchTextWithModel(query, model, 'query', { reportStatus: false }),
+      embedMemoryTextsWithModel(head.map(({ item }) => item.content), model, 'document', { reportStatus: false }),
+    ])
+    // A hash fallback means the auxiliary model is missing or Ollama is
+    // down. Never fuse vectors from two different spaces.
+    if (queryResult.model !== model || documentResult.model !== model) return null
+    const scores = scoreRerankCandidates(
+      queryResult.embedding,
+      head.map(({ item }, index) => ({ id: item.id, embedding: documentResult.embeddings[index] ?? [] })),
+    )
+    if (scores.size < 2) return null
+    const fusedIds = fuseRecallRerank(head.map(({ item }) => item), scores).map((item) => item.id)
+    const byId = new Map(items.map((entry) => [entry.item.id, entry]))
+    return [
+      ...fusedIds.flatMap((id) => {
+        const entry = byId.get(id)
+        return entry ? [entry] : []
+      }),
+      ...items.slice(head.length),
+    ]
+  })().catch((error) => {
+    console.warn('[Memory] Rerank failed, keeping the first-stage ranking:', getRedactedLogErrorMessage(error))
+    return null
+  })
+
+  return (await withTimeout(task, MEMORY_RERANK_TIMEOUT_MS)) ?? items
+}
+
 function buildSemanticMatches(
   longTerm: Array<ScoredItem<MemoryItem>>,
   daily: Array<ScoredItem<DailyMemoryEntry>>,
@@ -549,6 +620,8 @@ export async function buildMemoryRecallContext({
   semanticLimit,
   retentionDays,
   currentEmotion,
+  rerankEnabled = false,
+  rerankModel = MEMORY_RERANK_MODEL_ID,
 }: BuildMemoryRecallContextParams): Promise<MemoryRecallContext> {
   const activeLongTermMemories = longTermMemories.filter((memory) => (
     memory.enabled !== false
@@ -630,9 +703,13 @@ export async function buildMemoryRecallContext({
       : getRecallConfidenceThresholds(usedEmbeddingModel)
         ? 'none'
         : undefined
+    // Nothing relevant to order: skip the auxiliary pass entirely.
+    const rankedLongTerm = rerankEnabled && recallConfidence !== 'none'
+      ? await rerankLongTermSemantics(scoredLongTerm, query, rerankModel)
+      : scoredLongTerm
     const selectedLongTerm = recallConfidence === 'none'
       ? []
-      : scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)
+      : rankedLongTerm.slice(0, longTermLimit).map(({ item }) => item)
     updatePrimingFromSelection(selectedLongTerm)
     return {
       ...(recallConfidence ? { recallConfidence } : {}),
@@ -642,7 +719,7 @@ export async function buildMemoryRecallContext({
         ...recentDaily.slice(0, 2),
       ]).slice(0, dailyLimit),
       semantic: buildSemanticMatches(
-        recallConfidence === 'none' ? [] : scoredLongTerm,
+        recallConfidence === 'none' ? [] : rankedLongTerm,
         scoredDaily,
         semanticLimit,
         rawOf,

@@ -182,6 +182,8 @@ export const zhTWSettingsMemory = {
   'settings.memory.long_term.embedding_preset': '記憶模型預設',
   'settings.memory.long_term.embedding_custom_hint': '也可以直接在下面填寫自訂模型 ID。',
   'settings.memory.long_term.embedding_custom_model': '自訂模型 ID',
+  'settings.memory.long_term.rerank': '再核對最接近的記憶',
+  'settings.memory.long_term.rerank_hint': '用 Ollama 裡的 bge-m3 模型把最合適的記憶排到前面。沒裝這個模型時會保持原本的排序，不會藏起任何記憶。',
   'settings.memory.long_term.recall_long_term': '長期記憶召回數',
   'settings.memory.long_term.recall_diary': '日記召回數',
   'settings.memory.long_term.recall_semantic': '語意命中數',

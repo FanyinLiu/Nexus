@@ -264,6 +264,12 @@ interface MemorySettings {
   dreamDiaryEnabled: boolean
   memorySearchMode: MemorySearchMode
   memoryEmbeddingModel: string
+  /**
+   * Second-stage re-rank of the closest long-term memories with an auxiliary
+   * local model. Off by default because it needs that model and one extra
+   * embedding pass; when unavailable, recall keeps today's order.
+   */
+  memoryRerankEnabled: boolean
   memoryLongTermRecallCount: number
   memoryDailyRecallCount: number
   memorySemanticRecallCount: number

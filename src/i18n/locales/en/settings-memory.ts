@@ -182,6 +182,8 @@ export const enSettingsMemory = {
   'settings.memory.long_term.embedding_preset': 'Memory model preset',
   'settings.memory.long_term.embedding_custom_hint': 'You can also type a custom model id below.',
   'settings.memory.long_term.embedding_custom_model': 'Custom model id',
+  'settings.memory.long_term.rerank': 'Re-check the closest memories',
+  'settings.memory.long_term.rerank_hint': 'Uses the bge-m3 model in Ollama to put the best match first. If the model is missing, recall works as before and no memory is hidden.',
   'settings.memory.long_term.recall_long_term': 'Long-term recall count',
   'settings.memory.long_term.recall_diary': 'Diary recall count',
   'settings.memory.long_term.recall_semantic': 'Semantic hit count',
