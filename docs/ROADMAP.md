@@ -117,6 +117,8 @@ The larger product steps are:
     the model.
   - **Reach her from your phone.** A chat bridge (Telegram first) that shares
     the same memory, with its own privacy design before work starts.
+  Full plan with rules, acceptance checks and delivery order:
+  [v0.5 She Comes Alive](V0.5_SHE_COMES_ALIVE.md).
   Physical-device wake, nearest-speaker routing, and home-device control still
   need a separate discovery, authorization, and privacy design.
 
