@@ -9,6 +9,7 @@ import { startParaformerConversation } from './paraformerConversation.ts'
 import { startSenseVoiceConversation as startSenseVoiceConversationRuntime } from './sensevoiceConversation.ts'
 import { startTencentConversation } from './tencentConversation.ts'
 import { startVadConversation } from './vadConversation.ts'
+import { createBackchannelSession } from './backchannelRuntime.ts'
 import { expectHolderValue, type VoiceEngines, type VoiceRuntimeBag } from './voiceRuntimeBag.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
@@ -21,6 +22,24 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
     bindingsHolder,
     'createVoiceConversationStarters: bindings must be built first',
   )
+
+  // Every entrypoint below only runs after the user clicked the mic or said
+  // the wake word, so a voice-owned mic policy is the correct gate here.
+  // Typed turns never construct this controller, which is how the policy
+  // reuses the same microphone invariant as the interrupt monitor.
+  function createVoiceBackchannel() {
+    const phase = refs.wakewordRuntimeRef.current?.getState().phase
+    return createBackchannelSession({
+      getSettings: () => ctx.settingsRef.current,
+      getPlayer: () => bindings.getStreamAudioPlayer(),
+      voiceEchoCooldownUntilRef: refs.voiceEchoCooldownUntilRef,
+      micPolicy: {
+        source: 'voice',
+        continuousActive: refs.continuousVoiceActiveRef.current,
+        wakewordLive: phase === 'listening' || phase === 'paused',
+      },
+    })
+  }
 
   // ── VAD conversation ────────────────────────────────────────────────────
   async function startVadVoiceConversation(
@@ -61,6 +80,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       startFallbackConversation: startApiVoiceConversation,
       shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,
       busEmit: (event) => voiceBus.emit(event),
+      backchannel: createVoiceBackchannel(),
       ti: hookCallbacks.ti,
     })
   }
@@ -96,6 +116,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       handleRecognizedVoiceTranscript: bindings.handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,
       shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,
+      backchannel: createVoiceBackchannel(),
       ti: hookCallbacks.ti,
     })
   }
@@ -132,6 +153,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,
       shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,
       applyVoiceEmotion: ctx.applyVoiceEmotion,
+      backchannel: createVoiceBackchannel(),
       ti: hookCallbacks.ti,
     })
   }
@@ -167,6 +189,7 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       handleRecognizedVoiceTranscript: bindings.handleRecognizedVoiceTranscript,
       handleVoiceListeningFailure: bindings.handleVoiceListeningFailure,
       shouldAutoRestartVoice: bindings.shouldAutoRestartVoice,
+      backchannel: createVoiceBackchannel(),
       ti: hookCallbacks.ti,
     })
   }

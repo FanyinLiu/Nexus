@@ -14,6 +14,8 @@ export const zhCNOnboarding = {
   'model_setup.model.sensevoice.purpose': '听懂你说的话，中英日韩粤语都行。在你电脑上运行。',
   'model_setup.model.paraformer-zh-en.name': 'Paraformer 边说边出字',
   'model_setup.model.paraformer-zh-en.purpose': '你一边说，字一边出来，只支持中文和英文。不装也行，用 SenseVoice 就够了。',
+  'model_setup.model.smart-turn-v3.name': '听出你说完了',
+  'model_setup.model.smart-turn-v3.purpose': '听你这句话怎么收尾，你说完就接话，没有字幕也行。',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 中英声音',
   'model_setup.model.tts-melo-zh-en.purpose': '让我用声音回你，中英文都行。在你电脑上运行，免费，不联网也能用。在「她怎么开口」里选它才会用上。',
   'model_setup.dismiss': '稍后再说',

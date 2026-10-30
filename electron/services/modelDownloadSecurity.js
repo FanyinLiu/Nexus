@@ -12,6 +12,9 @@ const EXACT_ALLOWED_HOSTS = new Set([
 const ALLOWED_HOST_SUFFIXES = [
   '.hf.co',
   '.oss-cn-beijing.aliyuncs.com',
+  // ModelScope serves LFS blobs from cdn-lfs-cn-*.modelscope.cn. Smart Turn's
+  // on-demand download uses that mirror for mainland-China networks.
+  '.modelscope.cn',
 ]
 
 function isAllowedHost(hostname) {

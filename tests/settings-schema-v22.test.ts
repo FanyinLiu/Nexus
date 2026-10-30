@@ -18,8 +18,8 @@ test('schema 22 maps a saved sprite or portrait selection to Live2D Mao', () => 
     ],
   }, 21)
 
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 24)
-  assert.equal(next.settingsSchemaVersion, 24)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 25)
+  assert.equal(next.settingsSchemaVersion, 25)
   assert.equal(next.petModelId, 'mao')
   assert.equal(next.companionInitiative, 'quiet')
   assert.deepEqual(

@@ -468,6 +468,6 @@ test('migration hydration drops presence keys along with the memory keys', async
   }
 })
 
-test('CURRENT_SETTINGS_SCHEMA_VERSION stays 24', () => {
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 24)
+test('CURRENT_SETTINGS_SCHEMA_VERSION stays 25', () => {
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 25)
 })

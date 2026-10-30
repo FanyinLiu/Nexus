@@ -66,6 +66,12 @@ type StartSpeechInterruptMonitorOptions = {
   continuousVoiceActiveRef: MutableRefObject<boolean>
   settingsRef: RefObject<AppSettings>
   /**
+   * Epoch-ms window after a backchannel or barge-in where the mic may still
+   * carry her own voice. The monitor keeps its animation loop alive but
+   * ignores input until the window expires.
+   */
+  voiceEchoCooldownUntilRef?: MutableRefObject<number>
+  /**
    * Live TTS playback level (normalized 0-1, emitted by StreamAudioPlayer/
    * SpeechLevelController). Used as a reference signal so the interrupt
    * threshold scales up while TTS is loud — prevents residual echo (after
@@ -379,6 +385,18 @@ export async function startSpeechInterruptMonitor(
 
     const rms = readRms()
     const now = performance.now()
+
+    // A backchannel is her own voice through the speaker. The VAD and this
+    // monitor both honour the same cooldown so neither mistakes it for the
+    // user starting to speak.
+    if (
+      options.voiceEchoCooldownUntilRef
+      && Date.now() < options.voiceEchoCooldownUntilRef.current
+    ) {
+      session.speechStartedAt = null
+      session.animationFrameId = window.requestAnimationFrame(tick)
+      return
+    }
 
     // Dynamic threshold = static baseline + a multiple of the current TTS
     // playback level. When TTS is silent the threshold stays at the baseline

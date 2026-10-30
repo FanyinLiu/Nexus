@@ -13,6 +13,7 @@
 
 import { t } from '../../i18n/runtime.ts'
 import type { VadSensitivity } from '../../types'
+import { turnEndMaxSilenceMs } from './turnEnd.ts'
 
 type VoiceActivityCallbacks = {
   onSpeechStart?: () => void
@@ -41,18 +42,25 @@ type VadPreset = {
 // of compute — we bias aggressively toward sensitivity. Users complained
 // that default thresholds were cutting them off mid-sentence on short
 // pauses and missing quieter speech entirely.
+//
+// This main-process path feeds a one-shot transcribeAudio call, so it has
+// no partial transcript to reason about. The renderer still runs the Smart
+// Turn probe on this same buffered audio and flushes the segment when the
+// audio (or, without the model, the preset silence) says the turn is over.
+// Streaming providers (Paraformer, Tencent ASR) also apply their partial-text
+// rules in their own conversation runners.
 const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
   low: {
     threshold: 0.45,
     minSilenceDuration: 0.7,
     minSpeechDuration: 0.12,
-    maxSpeechDuration: 20,
+    maxSpeechDuration: 45,
   },
   medium: {
     threshold: 0.3,
     minSilenceDuration: 0.9,
     minSpeechDuration: 0.08,
-    maxSpeechDuration: 20,
+    maxSpeechDuration: 45,
   },
   high: {
     // Wake-word has already gated the session, so being aggressive here is
@@ -63,8 +71,18 @@ const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
     threshold: 0.18,
     minSilenceDuration: 1.1,
     minSpeechDuration: 0.06,
-    maxSpeechDuration: 20,
+    maxSpeechDuration: 45,
   },
+}
+
+/**
+ * The preset silence window in milliseconds. Turn-end decisions use this as
+ * the "ordinary text / no partial" fallback; the detector itself is opened
+ * with the wider `turnEndMaxSilenceMs` ceiling so a trailing connector or a
+ * Smart Turn "not finished" verdict has room to finish the thought.
+ */
+export function getMainProcessVadSilenceMs(sensitivity: VadSensitivity = 'medium') {
+  return Math.round(VAD_PRESETS[sensitivity].minSilenceDuration * 1_000)
 }
 
 export async function createMainProcessVadController(
@@ -79,7 +97,10 @@ export async function createMainProcessVadController(
   const preset = VAD_PRESETS[sensitivity]
   const startResult = await api.vadStart({
     threshold: preset.threshold,
-    minSilenceDuration: preset.minSilenceDuration,
+    // The renderer's turn-end controller flushes the segment as soon as the
+    // model or the text rules say the turn is over. This wider ceiling is only
+    // the backstop for a model that keeps saying "not finished".
+    minSilenceDuration: turnEndMaxSilenceMs(preset.minSilenceDuration * 1_000) / 1_000,
     minSpeechDuration: preset.minSpeechDuration,
     maxSpeechDuration: preset.maxSpeechDuration,
   })

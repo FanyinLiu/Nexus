@@ -3,6 +3,7 @@ import sherpaKwsService from '../sherpaKws.js'
 import sherpaVadService from '../sherpaVad.js'
 import sherpaSenseVoiceService from '../sherpaSenseVoice.js'
 import sherpaParaformerService from '../sherpaParaformer.js'
+import smartTurnService from '../smartTurn.js'
 import {
   getInventory as getModelInventory,
   downloadModel as downloadModelById,
@@ -80,6 +81,7 @@ export function register() {
       return { speechDetected: false, speechStarted: false, speechEnded: false, segments: [] }
     }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    smartTurnService.feed(float32)
     return sherpaVadService.feed(float32)
   })
 
@@ -123,6 +125,7 @@ export function register() {
     if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { ok: true }
     if (samples.length > 320000) return { ok: true }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    smartTurnService.feed(float32)
     sherpaSenseVoiceService.feedAudio(float32)
     return { ok: true }
   })
@@ -181,6 +184,7 @@ export function register() {
     if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { text: '', isEndpoint: false }
     if (samples.length > 320000) return { text: '', isEndpoint: false }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    smartTurnService.feed(float32)
     return sherpaParaformerService.feedAudio(float32)
   })
 
@@ -193,6 +197,28 @@ export function register() {
   ipcMain.handle('paraformer:abort', (event) => {
     requireTrustedSender(event)
     sherpaParaformerService.abortStream()
+    return { ok: true }
+  })
+
+  // ── Smart Turn v3 end-of-turn probe (main-process audio) ──
+  //
+  // Audio never crosses this boundary a second time: start/stop open and close
+  // the in-memory ring, while the existing feed handlers append to it.
+
+  ipcMain.handle('voice-turn:start', (event) => {
+    requireTrustedSender(event)
+    smartTurnService.startSession()
+    return { ok: true }
+  })
+
+  ipcMain.handle('voice-turn:probe', async (event) => {
+    requireTrustedSender(event)
+    return smartTurnService.probe()
+  })
+
+  ipcMain.handle('voice-turn:stop', (event) => {
+    requireTrustedSender(event)
+    smartTurnService.stopSession()
     return { ok: true }
   })
 

@@ -410,6 +410,14 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             onChange={(value) => setSetting('voiceInterruptionEnabled', value)}
           />
         </SettingsV3Row>
+        <SettingsV3Row label={ti('settings.voice.backchannel')} hint={ti('settings.voice.backchannel_hint')}>
+          <SettingsV3Switch
+            label={ti('settings.voice.backchannel')}
+            checked={draft.voiceBackchannelEnabled}
+            disabled={!inputAvailable || !outputAvailable}
+            onChange={(value) => setSetting('voiceBackchannelEnabled', value)}
+          />
+        </SettingsV3Row>
         <SettingsV3Row label={ti('settings.voice.enable_stt_failover')}>
           <SettingsV3Switch
             label={ti('settings.voice.enable_stt_failover')}

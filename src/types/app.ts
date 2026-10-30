@@ -237,6 +237,11 @@ interface VoiceControlSettings {
   voiceActivityDetectionEnabled: boolean
   vadSensitivity: VadSensitivity
   voiceInterruptionEnabled: boolean
+  /**
+   * Quiet "mm-hm" acknowledgements while the user is still talking. Off by
+   * default; only active inside a voice session the user opened.
+   */
+  voiceBackchannelEnabled: boolean
   voiceTriggerMode: VoiceTriggerMode
   wakeWordEnabled: boolean
   wakeWord: string

@@ -176,6 +176,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
   vadFlush: () => ipcRenderer.invoke('vad:flush'),
   vadStop: () => ipcRenderer.invoke('vad:stop'),
 
+  // Smart Turn v3 end-of-turn probe over the session's in-memory audio ring
+  turnEndStart: () => ipcRenderer.invoke('voice-turn:start'),
+  turnEndProbe: () => ipcRenderer.invoke('voice-turn:probe'),
+  turnEndStop: () => ipcRenderer.invoke('voice-turn:stop'),
+
   // Tencent Cloud Real-Time ASR
   tencentAsrConnect: (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),
   tencentAsrDisconnect: () => ipcRenderer.invoke('tencent-asr:disconnect'),

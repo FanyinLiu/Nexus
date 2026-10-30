@@ -1042,6 +1042,17 @@ declare global {
       vadFlush: () => Promise<{ segments: Float32Array[] }>
       vadStop: () => Promise<{ ok: boolean }>
 
+      // Smart Turn v3 end-of-turn probe. Audio stays in the main process.
+      turnEndStart: () => Promise<{ ok: boolean }>
+      turnEndProbe: () => Promise<{
+        available: boolean
+        probability: number | null
+        latencyMs?: number | null
+        timedOut?: boolean
+        reason?: 'loading' | 'missing' | 'error' | 'too-short' | 'inactive'
+      }>
+      turnEndStop: () => Promise<{ ok: boolean }>
+
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */
       getSystemIdleTime: () => Promise<number>

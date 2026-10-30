@@ -16,6 +16,8 @@ export const koOnboarding = {
   'model_setup.model.sensevoice.purpose': '말한 내용을 알아들어요. 중국어, 영어, 일본어, 한국어, 광둥어를 지원하고 이 컴퓨터에서 돌아가요.',
   'model_setup.model.paraformer-zh-en.name': 'Paraformer 말하면서 바로 글자로',
   'model_setup.model.paraformer-zh-en.purpose': '말하는 동안 바로 글자로 보여 줘요. 중국어와 영어만 돼요. SenseVoice가 있으면 안 깔아도 괜찮아요.',
+  'model_setup.model.smart-turn-v3.name': '말 끝 듣기',
+  'model_setup.model.smart-turn-v3.purpose': '문장이 어떻게 끝나는지 듣고, 말을 마치면 바로 대답해요. 자막이 없어도 괜찮아요.',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 중영 목소리',
   'model_setup.model.tts-melo-zh-en.purpose': '제가 목소리로 대답할 수 있어요. 중국어와 영어를 지원하고, 이 컴퓨터에서 무료로, 인터넷 없이도 돌아가요. ‘말하는 방법’에서 골라야 써요.',
   'model_setup.dismiss': '나중에',

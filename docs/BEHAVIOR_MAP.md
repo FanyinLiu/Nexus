@@ -35,8 +35,9 @@ Nexus 是 Electron 桌面伴侣应用（Live2D 宠物 + 聊天 + 语音 + 记忆
 
 ### 听觉 / STT / 唤醒词
 - 行为：麦克风监听、VAD、唤醒词、本地/云 ASR
-- 渲染：`src/features/hearing/`（`hearingRuntime.ts`、`wakewordRuntime.ts`、`wakewordListener.ts`、`browserVad.ts`、`tencentAsr.ts`）
+- 渲染：`src/features/hearing/`（`hearingRuntime.ts`、`wakewordRuntime.ts`、`wakewordListener.ts`、`browserVad.ts`、`tencentAsr.ts`、`turnEnd.ts`）
 - 主进程 sherpa 本地模型：`electron/sherpaKws.js`、`sherpaVad.js`、`sherpaParaformer.js`、`sherpaSenseVoice.js`、`electron/services/sttService.js`、`electron/ipc/sherpaIpc.js`
+- 主进程 Smart Turn v3 断句：`electron/smartTurn.js`、`smartTurnEngine.js`、`shared/smartTurnFeatures.js`；音频只在内存里保留 8 秒，`voice-turn:probe` 返回 p(complete)，模型缺失或推理超过 150 ms 时回退到 T7 文本规则
 
 ### 视觉 / 桌面感知
 - 行为：截屏、OCR、VLM 分析、桌面上下文采集

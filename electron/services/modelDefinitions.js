@@ -139,6 +139,30 @@ export const MODEL_CATALOG = [
     purpose: '边说边出字幕的流式 ASR；不装也能用默认的 SenseVoice',
   },
   {
+    id: 'smart-turn-v3',
+    label: '智能断句（Smart Turn v3）',
+    // Whisper-Tiny encoder + linear head, int8. Optional: voice falls back to
+    // the text rules and the provider silence window when this is absent.
+    sizeLabel: '~8 MB',
+    required: false,
+    kind: 'standalone',
+    checkFile: 'smart-turn-v3/smart-turn-v3.2-cpu.onnx',
+    standalone: {
+      dest: 'smart-turn-v3/smart-turn-v3.2-cpu.onnx',
+      urls: [
+        // ModelScope is the mainland-China path; the HF CDN is the fallback.
+        // Both serve the same pinned int8 file, checked by SHA-256 below.
+        'https://modelscope.cn/models/pipecat-ai/smart-turn-v3/resolve/master/smart-turn-v3.2-cpu.onnx',
+        'https://huggingface.co/pipecat-ai/smart-turn-v3/resolve/f766f81d3cfdf7737ac64aad813d91bbfd56bf93/smart-turn-v3.2-cpu.onnx',
+      ],
+      integrity: {
+        sizeBytes: 8679182,
+        sha256: '2bb026316b14a660486a75b1733cd3fbab8c2fd0314dc9af7be49f8eca967e4f',
+      },
+    },
+    purpose: '从声音判断你是否说完了，让回复接得更自然',
+  },
+  {
     id: 'tts-melo-zh-en',
     label: '本地语音合成 MeloTTS 中英（可选）',
     sizeLabel: '~165 MB',

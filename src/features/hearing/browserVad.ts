@@ -37,6 +37,12 @@ export type VoiceActivityDetector = {
 type VoiceActivityDetectorOptions = {
   sharedStream?: MediaStream
   vadModule?: VadModule
+  /**
+   * Override the silence window that ends a speech segment. Streaming
+   * providers raise this to the turn-end ceiling and finish earlier from
+   * their partial text; providers without partials leave it unset.
+   */
+  maxSilenceMs?: number
 }
 
 type VadPreset = {
@@ -69,6 +75,11 @@ const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
     preSpeechPadMs: 480,
     minSpeechMs: 180,
   },
+}
+
+/** The preset's normal silence window, used as the default in turn-end math. */
+export function getBrowserVadSilenceMs(sensitivity: VadSensitivity = 'medium') {
+  return VAD_PRESETS[sensitivity].redemptionMs
 }
 
 function resolvePublicAssetPath(relativePath: string) {
@@ -123,7 +134,7 @@ export async function createVoiceActivityDetector(
       processorType,
       positiveSpeechThreshold: preset.positiveSpeechThreshold,
       negativeSpeechThreshold: preset.negativeSpeechThreshold,
-      redemptionMs: preset.redemptionMs,
+      redemptionMs: options.maxSilenceMs ?? preset.redemptionMs,
       preSpeechPadMs: preset.preSpeechPadMs,
       minSpeechMs: preset.minSpeechMs,
       submitUserSpeechOnPause: true,
