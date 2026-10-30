@@ -7,6 +7,7 @@ import {
   getSpeechOutputStyleOptions,
   isEdgeTtsSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
+  isQwen3TtsSpeechOutputProvider,
   isSenseVoiceSpeechInputProvider,
   isSpeechInputLocal,
   isSpeechOutputKeyless,
@@ -113,6 +114,7 @@ export function resolveSpeechOutputSettingsView(settings: Pick<AppSettings, 'spe
   const provider = getSpeechOutputProviderPreset(settings.speechOutputProviderId)
   const isVolcengine = isVolcengineSpeechOutputProvider(settings.speechOutputProviderId)
   const isEdgeTts = isEdgeTtsSpeechOutputProvider(settings.speechOutputProviderId)
+  const isQwen3 = isQwen3TtsSpeechOutputProvider(settings.speechOutputProviderId)
 
   return {
     provider,
@@ -124,7 +126,7 @@ export function resolveSpeechOutputSettingsView(settings: Pick<AppSettings, 'spe
     isVolcengine,
     isEdgeTts,
     hideCredentials: isSpeechOutputKeyless(settings.speechOutputProviderId),
-    showEndpoint: !isEdgeTts,
+    showEndpoint: !isEdgeTts && !isQwen3,
     showCustomVoiceInput: supportsCustomSpeechOutputVoiceId(settings.speechOutputProviderId),
     modelLabelKey: isVolcengine
       ? 'settings.speech_output.cluster'

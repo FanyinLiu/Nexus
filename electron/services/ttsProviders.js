@@ -4,6 +4,7 @@ const SPEECH_PROVIDER_IDS = Object.freeze({
   minimax:        'minimax-tts',
   dashscope:      'dashscope-tts',
   omnivoice:      'omnivoice-tts',
+  qwen3Tts:       'qwen3-tts-local',
   edgeTts:        'edge-tts',
   openaiSTT:      'openai-stt',
   zhipuSTT:       'zhipu-stt',
@@ -21,6 +22,7 @@ export const isVolcengineSpeechOutputProvider = (id) => id === SPEECH_PROVIDER_I
 export const isMiniMaxSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.minimax
 export const isDashScopeSpeechOutputProvider  = (id) => id === SPEECH_PROVIDER_IDS.dashscope
 export const isOmniVoiceSpeechOutputProvider  = (id) => id === SPEECH_PROVIDER_IDS.omnivoice
+export const isQwen3TtsSpeechOutputProvider   = (id) => id === SPEECH_PROVIDER_IDS.qwen3Tts
 export const isEdgeTtsSpeechOutputProvider    = (id) => id === SPEECH_PROVIDER_IDS.edgeTts
 
 const OPENAI_COMPATIBLE_STT_IDS = new Set([
@@ -38,6 +40,7 @@ const OPENAI_COMPATIBLE_TTS_IDS = new Set([
   SPEECH_PROVIDER_IDS.openaiTTS,
   SPEECH_PROVIDER_IDS.customOpenaiTTS,
   SPEECH_PROVIDER_IDS.omnivoice,
+  SPEECH_PROVIDER_IDS.qwen3Tts,
 ])
 export const isOpenAiCompatibleSpeechOutputProvider = (id) => OPENAI_COMPATIBLE_TTS_IDS.has(id)
 
@@ -88,6 +91,7 @@ export function getSpeechOutputCredentialError(providerId, apiKey) {
   if (
     isEdgeTtsSpeechOutputProvider(providerId)
     || isOmniVoiceSpeechOutputProvider(providerId)
+    || isQwen3TtsSpeechOutputProvider(providerId)
     || providerId === SPEECH_PROVIDER_IDS.customOpenaiTTS
   ) {
     return ''

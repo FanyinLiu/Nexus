@@ -63,6 +63,7 @@ export const enVoice = {
   'voice.provider.api.permission_denied_mac': 'Nexus can\'t use the microphone yet. Allow it in System Settings → Privacy & Security → Microphone, then try again.',
   'voice.provider.api.permission_denied_windows': 'Nexus can\'t use the microphone yet. In Settings → Privacy & security → Microphone, turn on "Let desktop apps access your microphone", then try again.',
   'voice.provider.browser.fallback_to_sensevoice': 'Browser native speech recognition is unavailable — switched to SenseVoice.',
+  'voice.provider.qwen3-tts-local.fallback_notice': 'The local Qwen3 voice isn\'t ready, so this reply uses your usual voice.',
   'voice.provider.vad.no_mic_input': 'This environment doesn\'t seem to support microphone input — check the system recording permissions?',
   'voice.provider.vad.start_failed': 'VAD speech detection couldn\'t start — check microphone permissions or the local runtime?',
   'voice.provider.vad.silero_fallback': 'Silero VAD couldn\'t start — switched to compatibility recording mode.',

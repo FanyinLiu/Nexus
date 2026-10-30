@@ -33,7 +33,7 @@ function isLocalSpeechInputProvider(providerId: string) {
 }
 
 function isLocalSpeechOutputProvider(providerId: string) {
-  return providerId === 'omnivoice-tts'
+  return providerId === 'omnivoice-tts' || providerId === 'qwen3-tts-local'
 }
 
 const speechInputProfileResolveOptions: ResolveProviderProfileOptions<

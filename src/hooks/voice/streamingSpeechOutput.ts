@@ -53,8 +53,10 @@ export function createStreamingSpeechOutputController(
   // stream has been started. Catches providers whose socket is half-closed
   // after a long play — observed as the "text rendered but no audio on the
   // next turn" bug. Shorter than the chat-turn wait (12 s) so the upstream
-  // handler can fall back to direct-speech before the user gives up.
-  const FIRST_AUDIO_TIMEOUT_MS = 6_000
+  // handler can fall back to direct-speech before the user gives up. Local
+  // Qwen3-TTS gets a longer budget because a 1.7B checkpoint generates slower
+  // than real time even after warm-up.
+  const FIRST_AUDIO_TIMEOUT_MS = providerId === 'qwen3-tts-local' ? 20_000 : 6_000
   let firstAudioWatchdog: ReturnType<typeof setTimeout> | null = null
   let segmentCounter = 0
   let firstAudioEmitted = false

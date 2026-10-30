@@ -3,6 +3,8 @@ import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.t
 import { prepareTextForTts } from '../../features/voice/text.ts'
 import { shorten } from '../../lib/common.ts'
 import { executeWithFailover, type FailoverCandidate } from '../../features/failover/orchestrator.ts'
+import { isQwen3TtsSpeechOutputProvider } from '../../lib/audioProviders.ts'
+import { shouldFailoverSpeechOutput } from './providerFallbacks.ts'
 import type { AppSettings, TranslationKey, TranslationParams, VoiceTraceEntry } from '../../types/index.ts'
 import { createStreamingSpeechOutputController } from './streamingSpeechOutput.ts'
 import type { StreamingSpeechOutputController } from './types.ts'
@@ -34,6 +36,8 @@ export type StartSpeechOutputRuntimeOptions = {
   callbacks?: SpeechOutputCallbacks
   buildSpeechOutputFailoverCandidates: (settings: AppSettings) => AppSettings[]
   applySpeechOutputProviderFallback: (providerId: string, statusText?: string) => AppSettings
+  /** One-time "used your usual voice" notice when Qwen3 hands over a reply. */
+  notifyFallback?: () => void
   appendVoiceTrace: (
     title: string,
     detail: string,
@@ -106,6 +110,14 @@ export async function startSpeechOutputRuntime(
   options: StartSpeechOutputRuntimeOptions,
 ) {
   const candidateSettingsList = options.buildSpeechOutputFailoverCandidates(options.speechSettings)
+  const primaryIsQwen3 = isQwen3TtsSpeechOutputProvider(options.speechSettings.speechOutputProviderId)
+  // Qwen3's fallback is a local-availability safety net, so it runs even when
+  // the cloud failover toggle is off. Every other domain keeps the opt-in rule.
+  const failoverEnabled = shouldFailoverSpeechOutput(
+    options.speechSettings,
+    candidateSettingsList.length,
+  )
+  const lastCandidate = candidateSettingsList[candidateSettingsList.length - 1]
 
   const candidates: FailoverCandidate<AppSettings>[] = candidateSettingsList.map((s) => ({
     id: s.speechOutputProviderId,
@@ -121,13 +133,20 @@ export async function startSpeechOutputRuntime(
   const result = await executeWithFailover<AppSettings, void>({
     domain: 'speech-output',
     candidates,
-    failoverEnabled: options.speechSettings.speechOutputFailoverEnabled,
+    failoverEnabled,
     execute: async (candidate) => {
+      // A non-final attempt that fails may still be rescued by the next
+      // candidate. Swallow its error callback so the user only hears about
+      // failures that end the reply.
+      let callbacks = options.callbacks
+      if (callbacks && failoverEnabled && candidate.payload !== lastCandidate) {
+        callbacks = { onStart: callbacks.onStart, onEnd: callbacks.onEnd }
+      }
       await playSpeechOutputWithSettingsRuntime(
         options.text,
         candidate.payload,
         options.runtime,
-        options.callbacks,
+        callbacks,
         options.telemetry,
         options.ti,
       )
@@ -153,5 +172,8 @@ export async function startSpeechOutputRuntime(
       `${options.speechSettings.speechOutputProviderId} -> ${result.candidateId} (this turn only, settings unchanged)`,
       'success',
     )
+    if (primaryIsQwen3) {
+      options.notifyFallback?.()
+    }
   }
 }

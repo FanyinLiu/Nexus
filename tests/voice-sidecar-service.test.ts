@@ -6,6 +6,7 @@ import {
   VOICE_SIDECAR_VERSION,
   createVoiceSidecarSupervisor,
   parseSidecarVersion,
+  resolveQwen3TtsPythonCommand,
   resolveVoiceSidecarPlan,
 } from '../electron/services/voiceSidecarService.js'
 
@@ -33,6 +34,12 @@ const OMNIVOICE_SETTINGS: SidecarSettings = {
   ...BASE_SETTINGS,
   speechOutputEnabled: true,
   speechOutputProviderId: 'omnivoice-tts',
+}
+
+const QWEN3_SETTINGS: SidecarSettings = {
+  ...BASE_SETTINGS,
+  speechOutputEnabled: true,
+  speechOutputProviderId: 'qwen3-tts-local',
 }
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -66,7 +73,8 @@ function createFakeChild(pid: number, onSpawn: () => void, onExit: () => void) {
 function createHarness(options: {
   version?: string
   runtimeDelayMs?: number
-  runtimeReady?: Partial<Record<'omniVoice' | 'glmAsr', boolean>>
+  runtimeReady?: Partial<Record<'omniVoice' | 'glmAsr' | 'qwen3Tts', boolean>>
+  qwenPython?: string
 } = {}) {
   const spawned: Array<{
     command: string
@@ -107,8 +115,11 @@ function createHarness(options: {
     },
     resolveScriptPath: (script: string) => `/repo/${script}`,
     resolvePythonCommand: () => 'python3',
+    resolvePythonCommandFor: (serviceId: string) => (
+      serviceId === 'qwen3Tts' ? options.qwenPython ?? '/venv/qwen3/python' : 'python3'
+    ),
     isPortOpen: async (_host: string, port: number) => livePorts.has(port),
-    ensureRuntimeReady: async (serviceId: 'omniVoice' | 'glmAsr') => {
+    ensureRuntimeReady: async (serviceId: 'omniVoice' | 'glmAsr' | 'qwen3Tts') => {
       runtimeChecks.push(serviceId)
       if (options.runtimeDelayMs) await delay(options.runtimeDelayMs)
       return options.runtimeReady?.[serviceId] ?? true
@@ -123,7 +134,7 @@ function createHarness(options: {
     debounceMs: 0,
     pollIntervalMs: 1,
     stopTimeoutMs: 20,
-    startTimeoutMs: { omniVoice: 100, glmAsr: 100 },
+    startTimeoutMs: { omniVoice: 100, glmAsr: 100, qwen3Tts: 100 },
   })
 
   return {
@@ -141,11 +152,13 @@ test('voice sidecar plan requires both the engine id and its voice switch', () =
   assert.deepEqual(resolveVoiceSidecarPlan(null), {
     readable: false,
     omniVoice: false,
+    qwen3Tts: false,
     glmAsr: false,
   })
   assert.deepEqual(resolveVoiceSidecarPlan({}), {
     readable: true,
     omniVoice: false,
+    qwen3Tts: false,
     glmAsr: false,
   })
   assert.deepEqual(resolveVoiceSidecarPlan({
@@ -156,6 +169,7 @@ test('voice sidecar plan requires both the engine id and its voice switch', () =
   }), {
     readable: true,
     omniVoice: false,
+    qwen3Tts: false,
     glmAsr: false,
   })
   assert.deepEqual(resolveVoiceSidecarPlan({
@@ -166,7 +180,27 @@ test('voice sidecar plan requires both the engine id and its voice switch', () =
   }), {
     readable: true,
     omniVoice: true,
+    qwen3Tts: false,
     glmAsr: true,
+  })
+})
+
+test('Qwen3 sidecar only starts when it is selected and speech output is on', () => {
+  assert.deepEqual(resolveVoiceSidecarPlan({
+    ...BASE_SETTINGS,
+    speechOutputEnabled: false,
+    speechOutputProviderId: 'qwen3-tts-local',
+  }), {
+    readable: true,
+    omniVoice: false,
+    qwen3Tts: false,
+    glmAsr: false,
+  })
+  assert.deepEqual(resolveVoiceSidecarPlan(QWEN3_SETTINGS), {
+    readable: true,
+    omniVoice: false,
+    qwen3Tts: true,
+    glmAsr: false,
   })
 })
 
@@ -323,4 +357,52 @@ test('unreadable settings fail closed without probing or spawning', async () => 
     assert.deepEqual(harness.spawned, [], `spawned for ${String(value)}`)
     assert.deepEqual(harness.runtimeChecks, [], `probed for ${String(value)}`)
   }
+})
+
+test('Qwen3-TTS + speech output on starts exactly one sidecar with its own Python', async () => {
+  const harness = createHarness({ qwenPython: '/Users/me/Models/qwen3-tts/.venv/bin/python' })
+
+  harness.supervisor.applySettings(QWEN3_SETTINGS)
+  await harness.supervisor.whenIdle()
+
+  assert.equal(harness.spawned.length, 1)
+  assert.match(harness.spawned[0].args[0], /qwen3_tts_server\.py$/)
+  assert.equal(harness.spawned[0].port, 8002)
+  assert.equal(harness.spawned[0].command, '/Users/me/Models/qwen3-tts/.venv/bin/python')
+  assert.deepEqual(harness.runtimeChecks, ['qwen3Tts'])
+  assert.equal(harness.supervisor.getState().qwen3Tts.phase, 'running')
+  assert.equal(harness.supervisor.getState().omniVoice.phase, 'idle')
+  assert.equal(harness.supervisor.getState().glmAsr.phase, 'idle')
+  assert.equal(harness.active, 1)
+
+  await harness.supervisor.stopAll()
+  assert.equal(harness.active, 0)
+})
+
+test('Qwen3 Python resolution prefers env, then its venv, then the shared fallback', () => {
+  const home = '/home/nexus'
+  const venvPython = `${home}/Models/qwen3-tts/.venv/bin/python3`
+
+  assert.equal(resolveQwen3TtsPythonCommand({
+    env: { NEXUS_QWEN3_TTS_PYTHON: '/custom/python' },
+    homedir: () => home,
+    existsSync: () => true,
+    fallback: () => 'python3',
+  }), '/custom/python')
+
+  assert.equal(resolveQwen3TtsPythonCommand({
+    env: {},
+    homedir: () => home,
+    platform: 'darwin',
+    existsSync: (filePath: string) => filePath === venvPython,
+    fallback: () => 'python3',
+  }), venvPython)
+
+  assert.equal(resolveQwen3TtsPythonCommand({
+    env: {},
+    homedir: () => home,
+    platform: 'darwin',
+    existsSync: () => false,
+    fallback: () => 'python3',
+  }), 'python3')
 })

@@ -8,13 +8,17 @@
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import net from 'node:net'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { app } from 'electron'
 
 import { ensurePythonRuntimeStatusFor, getDetectedPythonBinary } from './pythonRuntime.js'
-import { createVoiceSidecarSupervisor } from './voiceSidecarService.js'
+import {
+  createVoiceSidecarSupervisor,
+  resolveQwen3TtsPythonCommand,
+} from './voiceSidecarService.js'
 
 function resolveAppRoot() {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -39,6 +43,18 @@ function resolvePythonCommand() {
   return process.platform === 'win32' ? 'python' : 'python3'
 }
 
+function resolvePythonCommandFor(serviceId) {
+  if (serviceId === 'qwen3Tts') {
+    return resolveQwen3TtsPythonCommand({
+      env: process.env,
+      homedir: os.homedir,
+      existsSync: fs.existsSync,
+      fallback: resolvePythonCommand,
+    })
+  }
+  return resolvePythonCommand()
+}
+
 function isPortOpen(host, port) {
   return new Promise((resolve) => {
     const socket = new net.Socket()
@@ -59,8 +75,13 @@ export function createDefaultVoiceSidecarHost() {
     readFileSync: fs.readFileSync,
     resolveScriptPath: resolveVoiceScriptPath,
     resolvePythonCommand,
+    resolvePythonCommandFor,
     isPortOpen,
-    ensureRuntimeReady: ensurePythonRuntimeStatusFor,
+    ensureRuntimeReady: (serviceId) => (
+      serviceId === 'qwen3Tts'
+        ? ensurePythonRuntimeStatusFor('qwen3Tts', { binary: resolvePythonCommandFor('qwen3Tts') })
+        : ensurePythonRuntimeStatusFor(serviceId)
+    ),
     logger: console,
   })
 }

@@ -61,6 +61,7 @@ export const zhCNVoice = {
   'voice.provider.api.permission_denied_mac': '没有拿到麦克风权限。去「系统设置 → 隐私与安全性 → 麦克风」里允许 Nexus，再点一次「开始语音」。',
   'voice.provider.api.permission_denied_windows': '没有拿到麦克风权限。去「设置 → 隐私和安全性 → 麦克风」里打开「允许桌面应用访问麦克风」，再点一次「开始语音」。',
   'voice.provider.browser.fallback_to_sensevoice': '当前环境不支持浏览器原生语音识别，已切换到 SenseVoice。',
+  'voice.provider.qwen3-tts-local.fallback_notice': '本地 Qwen3 语音暂时没准备好，这条回复先用原来的声音。',
   'voice.provider.vad.no_mic_input': '当前环境好像不支持麦克风输入，看看系统录音权限？',
   'voice.provider.vad.start_failed': 'VAD 语音检测没能启动，看看麦克风权限或本地运行环境？',
   'voice.provider.vad.silero_fallback': 'Silero VAD 没能启动，已自动切到兼容录音模式。',

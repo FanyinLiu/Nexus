@@ -2,10 +2,15 @@ import type { AppSettings, PetMood } from '../../types'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { voiceResumeStore } from '../../features/voice/voiceResumeStore.ts'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
+import { isQwen3TtsSpeechOutputProvider } from '../../lib/audioProviders.ts'
+import {
+  buildSpeechOutputFailoverCandidatesRuntime,
+} from './providerFallbacks.ts'
 import {
   createStreamingSpeechOutputController,
   type StreamingSpeechOutputRuntime,
 } from './streamingSpeechOutput.ts'
+import { createStreamingSpeechOutputWithFallback } from './streamingSpeechOutputFallback.ts'
 import type { StreamingSpeechOutputController } from './types.ts'
 
 type BaseSpeechReplyOptions = {
@@ -25,6 +30,8 @@ type BaseSpeechReplyOptions = {
   isSpeechInterrupted: (speechGeneration: number) => boolean
   clearSpeechInterruptedFlag: (speechGeneration: number) => void
   resetSpeechLevel: () => void
+  /** One-time "used your usual voice" notice when the local voice hands over. */
+  notifySpeechFallback?: () => void
 }
 
 export type SpeakAssistantReplyRuntimeOptions = BaseSpeechReplyOptions & {
@@ -188,6 +195,20 @@ export function beginStreamingSpeechReplyRuntime(
     // waitForCompletion without emitting audio, and the legacy controller
     // below has been reliable since v0.2.x. The pipeline code lives on in
     // git history if the architecture is ever revisited.
+    if (isQwen3TtsSpeechOutputProvider(options.currentSettings.speechOutputProviderId)) {
+      const fallbackSettings = buildSpeechOutputFailoverCandidatesRuntime(options.currentSettings)
+        .find((candidate) => candidate.speechOutputProviderId !== options.currentSettings.speechOutputProviderId)
+      if (fallbackSettings) {
+        return createStreamingSpeechOutputWithFallback({
+          primarySettings: options.currentSettings,
+          fallbackSettings,
+          runtime: options.streamingRuntime,
+          options: callbacks,
+          onFallback: options.notifySpeechFallback,
+        })
+      }
+    }
+
     return createStreamingSpeechOutputController(
       options.currentSettings,
       options.streamingRuntime,
