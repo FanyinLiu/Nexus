@@ -76,10 +76,13 @@ export function resolveQwen3TtsPythonCommand(deps) {
   const existsSync = deps?.existsSync
   const platform = deps?.platform ?? process.platform
   if (typeof existsSync === 'function') {
-    const root = path.join(homedir(), 'Models', 'qwen3-tts', '.venv')
+    // Join with the target platform's separator, not the host's, so the
+    // resolved path is correct (and testable) regardless of where it runs.
+    const pathApi = platform === 'win32' ? path.win32 : path.posix
+    const root = pathApi.join(homedir(), 'Models', 'qwen3-tts', '.venv')
     const candidates = platform === 'win32'
-      ? [path.join(root, 'Scripts', 'python.exe'), path.join(root, 'Scripts', 'python')]
-      : [path.join(root, 'bin', 'python3'), path.join(root, 'bin', 'python')]
+      ? [pathApi.join(root, 'Scripts', 'python.exe'), pathApi.join(root, 'Scripts', 'python')]
+      : [pathApi.join(root, 'bin', 'python3'), pathApi.join(root, 'bin', 'python')]
     for (const candidate of candidates) {
       if (existsSync(candidate)) return candidate
     }
