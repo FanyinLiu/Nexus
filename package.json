@@ -28,6 +28,7 @@
     "heavy:audit": "node scripts/heavy-module-audit.mjs",
     "memory:recall-benchmark": "node --experimental-strip-types --no-warnings scripts/memory-recall-benchmark.mjs",
     "voice:latency:bench": "node --experimental-strip-types --no-warnings scripts/voice-latency-bench.mjs",
+    "voice:emotion:bench": "node --experimental-strip-types --no-warnings scripts/voice-emotion-bench.mjs",
     "architecture:audit": "node scripts/architecture-boundary-audit.mjs",
     "source-size:audit": "node scripts/source-size-audit.mjs",
     "ui:references:audit": "node scripts/open-source-ui-reference-audit.mjs",

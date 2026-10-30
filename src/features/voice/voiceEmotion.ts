@@ -5,14 +5,19 @@
  * that instruction for the whole reply, so a happy opening made a sulky closing
  * line sound happy too. This module resolves the style of EACH sentence from:
  *
- *   1. an inline `[tts:…]` / `[mood:…]` cue (strongest — the model said so),
- *   2. the sentence's own shape (？/！/…, laughter, sulky wording),
- *   3. her live emotion snapshot (fallback).
+ *   1. an inline `[tts:…]` cue (strongest — the model said so),
+ *   2. a stage direction that opens the sentence (（生气）/(sighs)),
+ *   3. the sentence's own words (a small per-language keyword lexicon),
+ *   4. the sentence's shape (？/！/…, laughter, sulky wording),
+ *   5. a `[mood:…]` read of the USER, mapped only to a caring delivery,
+ *   6. her live emotion snapshot (fallback).
  *
- * Provider capability decides the output: natural-language instructions for
- * Qwen3 / OmniVoice / OpenAI-style providers, MiniMax's native emotion field,
- * and rate/pitch nudges for every provider that can carry them. A neutral /
- * idle sentence yields no instruction at all, so she sounds like herself.
+ * A `[mood:…]` tag is never her emotion: if the user is sad she answers
+ * gently, she does not answer sad. Provider capability decides the output:
+ * natural-language instructions for Qwen3 / OmniVoice / OpenAI-style
+ * providers, MiniMax's native emotion field, and rate/pitch nudges for every
+ * provider that can carry them. A neutral / idle sentence yields no
+ * instruction at all, so she sounds like herself.
  */
 
 import { normalizePersonaSpeechStyle } from '../../../shared/speechStyle.js'
@@ -25,7 +30,7 @@ import type { SegmentVoiceStyle, VoiceEmotionCue } from '../../types/voice.ts'
  * Pet moods plus the shades the sentence itself can signal (PetMood has no
  * sad/angry face slots, and sulky/hesitant/whisper are delivery-only).
  */
-export type SegmentEmotion = PetMood | 'sad' | 'angry' | 'sulky' | 'hesitant' | 'whisper'
+export type SegmentEmotion = PetMood | 'sad' | 'angry' | 'sulky' | 'hesitant' | 'calm' | 'whisper'
 
 export type SegmentVoiceStyleInput = {
   text: string
@@ -53,7 +58,7 @@ const NEUTRAL_INSTRUCTION = ''
 
 const ZH_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
   thinking: '语气认真，不紧不慢。',
-  happy: '语气轻快，带点笑意。',
+  happy: '音调高一点，语气轻快上扬。',
   sleepy: '语气困倦，慢慢地说。',
   surprised: '语气惊讶，短促一点。',
   confused: '语气困惑，像在琢磨。',
@@ -65,10 +70,11 @@ const ZH_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
   worried: '语气关切，带着一点担心。',
   playful: '语气俏皮，带点逗趣的坏笑。',
   sad: '语气低落，声音放轻放慢。',
-  angry: '语气有点冲，带着不满。',
-  sulky: '语气别扭，嘴硬但其实在意。',
+  angry: '语气冲一点，声音大一些，带着不满。',
+  sulky: '语气别扭，声音轻一点，嘴硬但其实在意。',
   hesitant: '语气迟疑，尾音轻轻收住。',
-  whisper: '压低声音，像悄悄话。',
+  calm: '语气平静，放缓一点，不急着反驳。',
+  whisper: '像说悄悄话一样，用气声，声音很轻很小。',
 }
 
 const EN_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
@@ -78,17 +84,18 @@ const EN_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
   surprised: 'Speak with a short, surprised brightness.',
   confused: 'Speak hesitantly, as if working it out.',
   embarrassed: 'Speak shyly and softly.',
-  excited: 'Speak brightly and with bouncy energy.',
+  excited: 'Sound thrilled and energized, a bit louder and brighter.',
   affectionate: 'Speak warmly and close, as if murmuring.',
   proud: 'Speak with quiet, restrained pride.',
   curious: 'Speak with a curious lift at the end.',
   worried: 'Speak gently, with a note of concern.',
   playful: 'Speak with a playful, teasing smile.',
   sad: 'Speak softly and a little downcast.',
-  angry: 'Speak with a sharp, annoyed edge.',
-  sulky: 'Sound sulky and stubborn, pretending not to care.',
+  angry: 'Speak with a raised, forceful, angry voice.',
+  sulky: 'Mumble sulkily, lower and quieter, pretending not to care.',
   hesitant: 'Speak hesitantly, letting the ending trail off.',
-  whisper: 'Speak in a lowered, confiding whisper.',
+  calm: 'Stay calm and steady, a little slower, without pushing back.',
+  whisper: 'Speak very quietly, almost inaudible, using breath instead of voice.',
 }
 
 /** Cue words the model may emit; unknown words fall through to the text/snapshot. */
@@ -138,7 +145,7 @@ const CUE_EMOTIONS: Record<string, SegmentEmotion | 'neutral'> = {
   confused: 'confused',
   thinking: 'thinking',
   serious: 'thinking',
-  calm: 'thinking',
+  calm: 'calm',
   whisper: 'whisper',
   neutral: 'neutral',
   idle: 'neutral',
@@ -150,10 +157,125 @@ const CUE_EMOTIONS: Record<string, SegmentEmotion | 'neutral'> = {
 // playful first), then sulky wording, then the punctuation itself.
 const LAUGH_PATTERN = /(?:哈{2,}|嘿{2,}|嘻{2,}|笑死|笑了|笑着|haha+|hehe+|lol|lmao|www|😄|😆|🤣|😊)/iu
 const SULKY_PATTERN = /(?:哼|才不是|才没有|不理你|讨厌|随便你|谁稀罕|少来|别想多|口是心非|hmph|whatever)/iu
-const WHISPER_PATTERN = /(?:小声|悄悄|低声|耳语|偷偷说|whisper)/iu
 const QUESTION_PATTERN = /[？?]/u
 const EXCITEMENT_PATTERN = /[！!]/u
 const ELLIPSIS_PATTERN = /(?:…|\.{3,})/u
+
+// Sentence words that name an emotion outright, per working language. This is
+// deliberately tiny: a word that clearly names a feeling beats guessing from
+// punctuation ("气死我了！" is angry, not excited). Order is precedence.
+const SENTENCE_LEXICON: Array<{ emotion: SegmentEmotion; pattern: RegExp }> = [
+  {
+    emotion: 'angry',
+    pattern: /(?:气死|生气|恼火|发火|火大|烦死|讨厌|不爽|气人|angry|annoyed|irritated|furious|ムカ|むか|怒|腹立|いらいら|화나|화가|짜증|열받)/iu,
+  },
+  {
+    emotion: 'sad',
+    pattern: /(?:难过|伤心|委屈|失落|低落|沮丧|想哭|唉|sad|upset|downcast|heartbroken|悲し|つらい|寂し|泣き|슬퍼|슬프|속상|울고|우울)/iu,
+  },
+  {
+    emotion: 'worried',
+    pattern: /(?:担心|忧虑|不安|揪心|紧张|worried|anxious|concerned|nervous|心配|不安|걱정|불안|초조)/iu,
+  },
+  {
+    emotion: 'affectionate',
+    pattern: /(?:温柔|轻声|柔声|宠溺|撒娇|心疼|gentle|softly|tender|lovingly|優し|甘え|다정|애교|살갑)/iu,
+  },
+  {
+    emotion: 'embarrassed',
+    pattern: /(?:害羞|脸红|不好意思|羞涩|难为情|shy|blush|bashful|embarrassed|恥ずかし|照れ|부끄|수줍|창피)/iu,
+  },
+  {
+    emotion: 'whisper',
+    pattern: /(?:小声|悄悄|低声|耳语|whisper|囁|속삭|소곤|귓속말)/iu,
+  },
+]
+
+// Existing stage directions already carry her intent ("（生气）", "(sighs)"),
+// so they colour the sentence that follows. Display and speech stripping stay
+// in `features/pet/performance.ts` and `features/voice/text.ts` — this table
+// only READS the aside, it never changes what the user sees or hears.
+const STAGE_DIRECTION_EMOTIONS: Array<{ emotion: SegmentEmotion; pattern: RegExp }> = [
+  {
+    emotion: 'whisper',
+    pattern: /(?:小声|悄悄|低声|耳语|气声|whisper|whispering|囁|小声で|속삭|소곤|귓속말)/iu,
+  },
+  {
+    emotion: 'affectionate',
+    pattern: /(?:温柔|轻声|柔声|宠溺|撒娇|抱|靠|gentle|softly|tender|warm|hug|lean|優し|甘え|抱き|다정|안아|기대|애교)/iu,
+  },
+  {
+    emotion: 'embarrassed',
+    pattern: /(?:害羞|脸红|红着脸|不好意思|羞涩|难为情|blush|shy|bashful|embarrassed|恥ずかし|照れ|부끄|수줍|얼굴이 빨개)/iu,
+  },
+  {
+    emotion: 'sad',
+    pattern: /(?:难过|伤心|委屈|失落|低落|沮丧|叹气|唉|sad|upset|sigh|downcast|悲し|つら|寂し|ため息|슬퍼|속상|한숨|울먹)/iu,
+  },
+  {
+    emotion: 'angry',
+    pattern: /(?:生气|恼火|发火|火大|不满|皱眉|angry|annoyed|irritated|mad|frown|怒|ムカ|腹立|화나|짜증|화가)/iu,
+  },
+  {
+    emotion: 'worried',
+    pattern: /(?:担心|忧虑|不安|紧张|揪心|worried|anxious|concerned|nervous|心配|不安|걱정|불안|초조)/iu,
+  },
+  {
+    emotion: 'sulky',
+    pattern: /(?:别扭|傲娇|嘴硬|嘟嘴|撇嘴|哼|sulky|pout|tsundere|ツン|すね|삐|새침|투덜)/iu,
+  },
+  {
+    emotion: 'playful',
+    pattern: /(?:调皮|坏笑|偷笑|玩笑|playful|teasing|mischievous|grin|いたずら|冗談|장난|짓궂)/iu,
+  },
+  {
+    emotion: 'sleepy',
+    pattern: /(?:困|打哈欠|昏昏欲睡|sleepy|yawn|drowsy|眠|あくび|졸|하품)/iu,
+  },
+  {
+    emotion: 'surprised',
+    pattern: /(?:吃惊|惊讶|震惊|愣住|surprised|startled|shock|驚|びっくり|놀라|깜짝)/iu,
+  },
+  {
+    emotion: 'confused',
+    pattern: /(?:疑惑|困惑|迷茫|不解|confused|puzzled|困惑|迷|의아|혼란)/iu,
+  },
+  {
+    emotion: 'thinking',
+    pattern: /(?:思考|沉吟|思索|认真想|thinking|pondering|thoughtful|考え|思案|생각|골똘)/iu,
+  },
+  {
+    emotion: 'proud',
+    pattern: /(?:得意|自豪|骄傲|proud|smug|得意|뿌듯|자랑)/iu,
+  },
+  {
+    emotion: 'happy',
+    pattern: /(?:开心|高兴|微笑|笑|雀跃|点头|happy|smile|grin|cheer|嬉し|笑顔|기뻐|웃|행복)/iu,
+  },
+  {
+    emotion: 'excited',
+    pattern: /(?:兴奋|激动|期待|excited|thrilled|eager|わくわく|興奮|신나|흥분|기대)/iu,
+  },
+]
+
+// Asides that open a sentence. Full-width brackets are the RP convention the
+// model actually uses; ASCII parentheses are accepted for the same phrases so
+// "(sighs)" works too.
+const LEADING_ASIDE_PATTERN = /(?:（([^（）\n]{1,24})）|【([^【】\n]{1,24})】|\(([^()\n]{1,24})\))/gu
+
+// Same asides, any position: the lexicon reads the words she actually says, so
+// a feeling word inside an aside is not a second cue for the sentence.
+const ANY_ASIDE_PATTERN = /(?:（[^（）\n]{1,24}）|【[^【】\n]{1,24}】|\([^()\n]{1,24}\))/gu
+
+// A read of the USER's state only ever softens HER delivery. It never becomes
+// her emotion (sad user ≠ sad voice) and sits below every sentence-level cue.
+const USER_MOOD_DELIVERY: Record<string, SegmentEmotion | undefined> = {
+  sad: 'worried',
+  anxious: 'worried',
+  tired: 'worried',
+  angry: 'calm',
+  frustrated: 'calm',
+}
 
 const WARM_OR_BRIGHT: ReadonlySet<SegmentEmotion> = new Set([
   'happy', 'excited', 'playful', 'affectionate', 'proud', 'embarrassed', 'curious', 'surprised',
@@ -179,6 +301,7 @@ const EMOTION_NUDGES: Record<Exclude<SegmentEmotion, 'idle'>, { rate: number; pi
   angry: { rate: 1.05, pitch: 0.99 },
   sulky: { rate: 0.97, pitch: 0.99 },
   hesitant: { rate: 0.95, pitch: 0.99 },
+  calm: { rate: 0.95, pitch: 1 },
   whisper: { rate: 0.9, pitch: 0.97 },
 }
 
@@ -200,6 +323,7 @@ const MINIMAX_EMOTION: Partial<Record<SegmentEmotion, string>> = {
   confused: 'neutral',
   thinking: 'neutral',
   embarrassed: 'neutral',
+  calm: 'neutral',
   whisper: 'neutral',
 }
 
@@ -262,31 +386,100 @@ function resolveCueEmotion(cue: VoiceEmotionCue): SegmentEmotion | null {
   return alias === 'neutral' ? 'idle' : alias
 }
 
+/**
+ * Map an aside's inner text to the emotion it names, or null when it is just a
+ * gesture ("（点头）" is handled by the avatar pipeline, not the voice).
+ * Single source for both the leading-aside read below and the streaming
+ * speech filter, which strips asides before the chunker ever sees them.
+ */
+function matchStageDirectionEmotion(inner: string): SegmentEmotion | null {
+  const text = inner.trim()
+  if (!text) return null
+  for (const entry of STAGE_DIRECTION_EMOTIONS) {
+    if (entry.pattern.test(text)) return entry.emotion
+  }
+  return null
+}
+
+/**
+ * Turn a stage direction (`生气`, `sighs`, `小声`) into a voice cue, so a call
+ * site that strips asides from speech can still colour the sentence they open.
+ * The returned cue is an inline-tone cue: it outranks the word lexicon.
+ */
+export function voiceEmotionCueFromStageDirection(stageDirection: string): VoiceEmotionCue | null {
+  const emotion = matchStageDirectionEmotion(String(stageDirection ?? ''))
+  return emotion ? { kind: 'tts', value: emotion } : null
+}
+
+/**
+ * Read stage directions that OPEN the sentence (before any spoken words).
+ * Only the last leading aside that matches the table wins, so
+ * "（小声）（生气）" reads as the nearest instruction. The aside is not
+ * removed here — display and speech stripping remain their own concerns.
+ */
+function resolveStageDirectionEmotion(text: string): SegmentEmotion | null {
+  let resolved: SegmentEmotion | null = null
+  let cursor = 0
+
+  for (const match of text.matchAll(LEADING_ASIDE_PATTERN)) {
+    const index = match.index ?? 0
+    // Stop at the first spoken word: an aside mid-sentence is a beat, not the
+    // cue for the sentence.
+    if (text.slice(cursor, index).replace(/\s/gu, '')) break
+    cursor = index + match[0].length
+    const emotion = matchStageDirectionEmotion(match[1] ?? match[2] ?? match[3] ?? '')
+    if (emotion) resolved = emotion
+  }
+
+  return resolved
+}
+
+function resolveLexiconEmotion(text: string): SegmentEmotion | null {
+  const spoken = text.replace(ANY_ASIDE_PATTERN, ' ')
+  for (const entry of SENTENCE_LEXICON) {
+    if (entry.pattern.test(spoken)) return entry.emotion
+  }
+  return null
+}
+
 function resolveHeuristicEmotion(text: string): SegmentEmotion | null {
   if (LAUGH_PATTERN.test(text)) return 'playful'
   if (SULKY_PATTERN.test(text)) return 'sulky'
-  if (WHISPER_PATTERN.test(text)) return 'whisper'
   if (QUESTION_PATTERN.test(text)) return 'curious'
   if (EXCITEMENT_PATTERN.test(text)) return 'excited'
   if (ELLIPSIS_PATTERN.test(text)) return 'hesitant'
   return null
 }
 
+function resolveUserMoodDelivery(cue: VoiceEmotionCue | null | undefined): SegmentEmotion | null {
+  if (!cue || cue.kind !== 'mood') return null
+  return USER_MOOD_DELIVERY[cue.value.toLowerCase().trim()] ?? null
+}
+
 function resolveEmotion(input: SegmentVoiceStyleInput): SegmentEmotion {
-  if (input.cue) {
+  if (input.cue && input.cue.kind === 'tts') {
     const fromCue = resolveCueEmotion(input.cue)
-    // A neutral cue intentionally silences the snapshot ("be flat here").
+    // A neutral cue intentionally silences everything else ("be flat here").
     if (fromCue) return fromCue
   }
+  const fromStageDirection = resolveStageDirectionEmotion(input.text)
+  if (fromStageDirection) return fromStageDirection
+  const fromWords = resolveLexiconEmotion(input.text)
+  if (fromWords) return fromWords
   const heuristic = resolveHeuristicEmotion(input.text)
   if (heuristic) return heuristic
+  // Her reply is about the user, so their state softens her delivery — but it
+  // never overrides what the sentence itself already says.
+  const fromMood = resolveUserMoodDelivery(input.cue)
+  if (fromMood) return fromMood
   if (input.emotion) return emotionToPetMood(input.emotion)
   return 'idle'
 }
 
 /**
  * Resolve one sentence's provider-native voice style. Precedence is
- * cue → sentence heuristic → live snapshot; idle/neutral returns an empty
+ * `[tts:]` cue → leading stage direction → keyword lexicon → sentence shape →
+ * user-mood caring fallback → live snapshot; idle/neutral returns an empty
  * instruction with no pace change.
  */
 export function resolveSegmentVoiceStyle(input: SegmentVoiceStyleInput): SegmentVoiceStyle {

@@ -77,6 +77,7 @@ const audioSynthesisSchema = {
     apiKey: { type: 'string', maxLength: SECRET_TEXT_MAX },
     model: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
     voice: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    characterId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
     text: { type: 'string', maxLength: BODY_TEXT_MAX },
     instructions: { type: 'string', optional: true, maxLength: 4_000 },
     language: { type: 'string', optional: true, maxLength: 64 },

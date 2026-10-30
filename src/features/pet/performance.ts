@@ -742,6 +742,16 @@ export type ExtractedPerformanceTags = {
 }
 
 /**
+ * Remove every inline performance marker from raw text. The chat pipeline
+ * consumes the cues first; this shared scrub is the backstop that keeps a
+ * marker from ever being displayed or spoken if one slips past a filter.
+ */
+export function stripPerformanceTags(content: string): string {
+  if (!content) return ''
+  return content.replace(PERFORMANCE_TAG_PATTERN, '')
+}
+
+/**
  * Pull every `[expr|motion|tts:name]` tag out of raw LLM text. Returns
  * the stripped text (tags removed entirely, whether the slot was valid
  * or not, so no leakage into chat bubbles) plus per-kind cue lists.
@@ -916,6 +926,16 @@ const MAX_SUFFIX_LOOKAHEAD = 40
  */
 export class StageDirectionStreamFilter {
   private buffer = ''
+  private readonly onStageDirection?: (inner: string) => void
+
+  /**
+   * `onStageDirection` reports each aside that is actually dropped, before it
+   * is removed, so the voice pipeline can still colour the sentence that the
+   * aside opens after this filter has taken it out of the speech text.
+   */
+  constructor(onStageDirection?: (inner: string) => void) {
+    this.onStageDirection = onStageDirection
+  }
 
   push(delta: string): string {
     if (!delta) return ''
@@ -935,8 +955,11 @@ export class StageDirectionStreamFilter {
         const inner = (roundInner ?? cornerInner ?? asciiInner ?? '').trim()
         if (!inner || isStructuredBracket(inner)) return full
         if (asciiInner !== undefined) {
-          return isKnownAsciiStageDirectionAlias(inner) && resolvePerformancePlan(inner) ? '' : full
+          if (!isKnownAsciiStageDirectionAlias(inner) || !resolvePerformancePlan(inner)) return full
+          this.onStageDirection?.(inner)
+          return ''
         }
+        this.onStageDirection?.(inner)
         return ''
       },
     )

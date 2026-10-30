@@ -6,11 +6,24 @@ import type { EmotionState } from '../src/features/autonomy/emotionModel.ts'
 import {
   isNeutralSegmentStyle,
   resolveSegmentVoiceStyle,
+  voiceEmotionCueFromStageDirection,
   voiceEmotionCueFromTag,
 } from '../src/features/voice/voiceEmotion.ts'
 import { createTtsStreamService } from '../electron/ttsStreamService.js'
 import { resolveOmniVoiceSeed } from '../electron/services/ttsSeed.js'
+import { buildQwen3TtsSpeechRequestPayload } from '../electron/services/qwen3TtsPayload.js'
 import { splitTextIntoSentences } from '../src/hooks/voice/speechTextSegmentation.ts'
+import {
+  PerformanceTagStreamFilter,
+  StageDirectionStreamFilter,
+  extractPerformanceTags,
+} from '../src/features/pet/performance.ts'
+import { prepareTextForTts } from '../src/features/voice/text.ts'
+import { zhCNChatPrompts } from '../src/features/chat/prompts/systemPrompt.zh-CN.ts'
+import { zhTWChatPrompts } from '../src/features/chat/prompts/systemPrompt.zh-TW.ts'
+import { enUSChatPrompts } from '../src/features/chat/prompts/systemPrompt.en-US.ts'
+import { jaChatPrompts } from '../src/features/chat/prompts/systemPrompt.ja.ts'
+import { koChatPrompts } from '../src/features/chat/prompts/systemPrompt.ko.ts'
 
 const IDLE: EmotionState = { energy: 0.5, warmth: 0.6, curiosity: 0.5, concern: 0.2 }
 const HAPPY: EmotionState = { energy: 0.7, warmth: 0.8, curiosity: 0.4, concern: 0.2 }
@@ -185,6 +198,7 @@ test('per-sentence style reaches the Qwen3 payload and keeps base instructions',
     requestId,
     providerId: 'qwen3-tts-local',
     voice: 'vivian',
+    characterId: 'char-a',
     baseUrl: 'http://127.0.0.1:8002/v1',
     instructions: '整体温柔一点。',
     rate: 1,
@@ -215,6 +229,9 @@ test('per-sentence style reaches the Qwen3 payload and keeps base instructions',
   assert.match(String(calls[1]!.payload.instructions), /别扭/)
   // The second payload does not inherit the first sentence's tone.
   assert.doesNotMatch(String(calls[1]!.payload.instructions), /兴奋/)
+  // The identity used to derive the stable seed survives the per-sentence copy.
+  assert.equal(calls[0]!.payload.characterId, 'char-a')
+  assert.equal(calls[1]!.payload.characterId, 'char-a')
 })
 
 test('OmniVoice seed is stable per character + voice across replies', () => {
@@ -227,4 +244,289 @@ test('OmniVoice seed is stable per character + voice across replies', () => {
   assert.ok(Number.isInteger(first))
   assert.ok(first > 0)
   assert.ok(first <= 0x7fffffff)
+})
+
+// ── Sentence wording beats punctuation ─────────────────────────────────────
+
+const ANGRY_REPLIES = [
+  '你怎么又忘了吃饭，真是气死我了！',
+  'I am so annoyed with you right now!',
+  'もう、ムカつく！',
+  '지금 정말 화나!',
+]
+const SAD_REPLIES = [
+  '唉，我有点难过，你都不怎么理我了……',
+  'I feel sad and a little lost today...',
+  '悲しくて泣きたい……',
+  '너무 슬퍼서 울고 싶어……',
+]
+
+test('angry words beat the exclamation mark in every working language', () => {
+  for (const text of ANGRY_REPLIES) {
+    const styled = resolveSegmentVoiceStyle({
+      text,
+      providerId: 'qwen3-tts-local',
+      emotion: IDLE,
+    })
+    // Angry instruction, not the punctuation-derived excited one.
+    assert.match(styled.instruction, /不满/u, text)
+    assert.doesNotMatch(styled.instruction, /兴奋/u, text)
+  }
+})
+
+test('sad words beat the ellipsis in every working language', () => {
+  for (const text of SAD_REPLIES) {
+    const styled = resolveSegmentVoiceStyle({
+      text,
+      providerId: 'qwen3-tts-local',
+      emotion: IDLE,
+    })
+    assert.match(styled.instruction, /低落/u, text)
+    assert.doesNotMatch(styled.instruction, /迟疑/u, text)
+  }
+})
+
+test('an ellipsis with no feeling word stays hesitant', () => {
+  const styled = resolveSegmentVoiceStyle({
+    text: '嗯……让我再想想。',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  assert.match(styled.instruction, /迟疑/u)
+})
+
+// ── Stage directions colour the sentence they open ─────────────────────────
+
+test('a leading stage direction becomes that sentence\'s cue', () => {
+  const angry = resolveSegmentVoiceStyle({
+    text: '（生气）你怎么又这样？',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  // Beats the question mark (curious) and the punctuation-driven excited.
+  assert.match(angry.instruction, /不满/u)
+  assert.doesNotMatch(angry.instruction, /好奇/u)
+
+  const sad = resolveSegmentVoiceStyle({
+    text: '（委屈）你都不理我……',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  assert.match(sad.instruction, /低落/u)
+
+  const whisper = resolveSegmentVoiceStyle({
+    text: '（小声）我跟你说个秘密。',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  assert.match(whisper.instruction, /气声|悄悄/u)
+
+  const english = resolveSegmentVoiceStyle({
+    text: '(sighs) I guess it is fine.',
+    providerId: 'openai-tts',
+    emotion: IDLE,
+  })
+  assert.match(english.instruction, /downcast|softly/u)
+
+  // Nearest leading aside wins when several stack up.
+  const stacked = resolveSegmentVoiceStyle({
+    text: '（小声）（生气）我告诉你。',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  assert.match(stacked.instruction, /不满/u)
+})
+
+test('a stage direction beats a feeling word, and an inline cue beats both', () => {
+  const fromStage = resolveSegmentVoiceStyle({
+    text: '（委屈）真是气死我了！',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  assert.match(fromStage.instruction, /低落/u)
+  assert.doesNotMatch(fromStage.instruction, /不满/u)
+
+  const cue = voiceEmotionCueFromTag('tts', 'sad')
+  assert.ok(cue)
+  const fromCue = resolveSegmentVoiceStyle({
+    text: '（生气）真是气死我了！',
+    providerId: 'qwen3-tts-local',
+    cue,
+    emotion: HAPPY,
+  })
+  assert.match(fromCue.instruction, /低落/u)
+  assert.doesNotMatch(fromCue.instruction, /不满|轻快/u)
+})
+
+test('a stage direction in the middle of a sentence is not a cue', () => {
+  const styled = resolveSegmentVoiceStyle({
+    text: '我今天真的没事（生气）。',
+    providerId: 'qwen3-tts-local',
+    emotion: IDLE,
+  })
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
+})
+
+test('the speech filter reports the aside it strips so the sentence keeps its tone', () => {
+  const seen: string[] = []
+  const filter = new StageDirectionStreamFilter((inner) => seen.push(inner))
+  const spoken = filter.push('（生气）你怎么又这样？') + filter.flush()
+
+  assert.equal(spoken, '你怎么又这样？')
+  assert.deepEqual(seen, ['生气'])
+
+  const cue = voiceEmotionCueFromStageDirection('生气')
+  assert.deepEqual(cue, { kind: 'tts', value: 'angry' })
+  const styled = resolveSegmentVoiceStyle({
+    text: '你怎么又这样？',
+    providerId: 'qwen3-tts-local',
+    cue,
+    emotion: IDLE,
+  })
+  assert.match(styled.instruction, /不满/u)
+  assert.doesNotMatch(styled.instruction, /好奇/u)
+})
+
+test('stage-direction words map across all five working languages', () => {
+  const cases: Array<[string, string]> = [
+    // Chinese
+    ['生气', 'angry'],
+    ['委屈', 'sad'],
+    ['小声', 'whisper'],
+    ['不好意思', 'embarrassed'],
+    ['担心', 'worried'],
+    // English
+    ['sighs', 'sad'],
+    ['whispering', 'whisper'],
+    ['blush', 'embarrassed'],
+    ['worried', 'worried'],
+    ['angry', 'angry'],
+    // Chinese-traditional shares the phrases; Japanese
+    ['怒', 'angry'],
+    ['悲し', 'sad'],
+    ['心配', 'worried'],
+    ['恥ずかし', 'embarrassed'],
+    ['囁', 'whisper'],
+    // Korean
+    ['화나', 'angry'],
+    ['슬퍼', 'sad'],
+    ['걱정', 'worried'],
+    ['부끄', 'embarrassed'],
+    ['속삭', 'whisper'],
+  ]
+
+  for (const [aside, expected] of cases) {
+    assert.equal(
+      voiceEmotionCueFromStageDirection(aside)?.value,
+      expected,
+      `${aside} should map to ${expected}`,
+    )
+  }
+
+  // A pure gesture is not a voice cue.
+  assert.equal(voiceEmotionCueFromStageDirection('歪头'), null)
+  assert.equal(voiceEmotionCueFromStageDirection(''), null)
+})
+
+// ── The user's [mood:] read is not her emotion ─────────────────────────────
+
+test('a sad user read becomes a caring delivery, never a sad one', () => {
+  const mood = voiceEmotionCueFromTag('mood', 'sad-7')
+  assert.ok(mood)
+
+  const styled = resolveSegmentVoiceStyle({
+    text: '今天天气不错。',
+    providerId: 'qwen3-tts-local',
+    cue: mood,
+    // Her own snapshot would say happy; the read of the user still softens it.
+    emotion: HAPPY,
+  })
+  assert.match(styled.instruction, /关切|担心/u)
+  assert.doesNotMatch(styled.instruction, /低落|轻快/u)
+})
+
+test('an angry user read becomes a calm delivery, never an angry one', () => {
+  const mood = voiceEmotionCueFromTag('mood', 'frustrated-8')
+  assert.ok(mood)
+
+  const styled = resolveSegmentVoiceStyle({
+    text: '今天天气不错。',
+    providerId: 'qwen3-tts-local',
+    cue: mood,
+    emotion: IDLE,
+  })
+  assert.match(styled.instruction, /平静/u)
+  assert.doesNotMatch(styled.instruction, /不满/u)
+})
+
+test('the sentence itself still outranks the user read', () => {
+  const mood = voiceEmotionCueFromTag('mood', 'sad-7')
+  assert.ok(mood)
+
+  const styled = resolveSegmentVoiceStyle({
+    text: '我有点难过……',
+    providerId: 'qwen3-tts-local',
+    cue: mood,
+    emotion: IDLE,
+  })
+  assert.match(styled.instruction, /低落/u)
+})
+
+// ── Invisible markers stay invisible ───────────────────────────────────────
+
+test('[tts:] markers are stripped from the bubble and from speech', () => {
+  const display = extractPerformanceTags('[tts:whisper]我只跟你说。')
+  assert.equal(display.content, '我只跟你说。')
+  assert.equal(display.ttsCues[0]?.mode, 'whisper')
+
+  const spoken = prepareTextForTts('[tts:whisper]我只跟你说。')
+  assert.equal(spoken, '我只跟你说。')
+
+  const seen: string[] = []
+  const filter = new PerformanceTagStreamFilter((kind, value) => {
+    seen.push(`${kind}:${value}`)
+  })
+  const visible = filter.push('好呀。[tts:sad]') + filter.flush()
+  assert.equal(visible, '好呀。')
+  assert.deepEqual(seen, ['tts:sad'])
+})
+
+test('every locale prompt teaches the [tts:] tone marker', () => {
+  const prompts: Array<[string, string]> = [
+    ['zh-CN', zhCNChatPrompts.expressionGuide],
+    ['zh-TW', zhTWChatPrompts.expressionGuide],
+    ['en-US', enUSChatPrompts.expressionGuide],
+    ['ja', jaChatPrompts.expressionGuide],
+    ['ko', koChatPrompts.expressionGuide],
+  ]
+
+  for (const [locale, guide] of prompts) {
+    assert.match(guide, /\[tts:/u, `${locale} must document the [tts:] marker`)
+    assert.match(guide, /affectionate/u, `${locale} must list the cue vocabulary`)
+    assert.match(guide, /calm/u, `${locale} must list the cue vocabulary`)
+  }
+})
+
+test('Qwen3 payload carries a seed that is stable per character + voice', () => {
+  const first = buildQwen3TtsSpeechRequestPayload(
+    { characterId: 'char-a', voice: 'vivian' },
+    '你好呀。',
+  )
+  const second = buildQwen3TtsSpeechRequestPayload(
+    { characterId: 'char-a', voice: 'vivian' },
+    '今天也好。',
+  )
+  const otherVoice = buildQwen3TtsSpeechRequestPayload(
+    { characterId: 'char-a', voice: 'serena' },
+    '你好呀。',
+  )
+
+  assert.equal(first.seed, second.seed)
+  assert.notEqual(first.seed, otherVoice.seed)
+  assert.ok(Number.isInteger(first.seed))
+  assert.ok(first.seed > 0)
+  assert.ok(first.seed <= 0x7fffffff)
+  // The seed never changes the speaker or the streamed format.
+  assert.equal(first.voice, 'vivian')
+  assert.equal(first.response_format, 'pcm')
 })

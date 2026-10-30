@@ -110,7 +110,12 @@ async function playSpeechOutputWithSettingsRuntime(
     },
   )
 
-  controller.pushDelta(content)
+  // The chunker gets the same text with the stage directions still attached:
+  // the per-sentence resolver reads the aside that opens a sentence, and each
+  // queued segment is cleaned again before synthesis. Everything else is
+  // already normalized so a code block cannot be split across segments and
+  // read aloud.
+  controller.pushDelta(prepareTextForTts(text, { keepStageDirections: true }))
   controller.finish()
   await controller.waitForCompletion()
 }

@@ -235,7 +235,46 @@ def encode_pcm16(wav):
     return (samples * 32767.0).round().astype("<i2").tobytes()
 
 
-def synthesize_sentence(text, speaker, language, instruct):
+def seed_everything(seed):
+    """Seed every generator the sampler can touch. Caller MUST hold the lock.
+
+    Qwen3-TTS re-rolls its sampling noise on every call, so the same sentence
+    came out at 212/218/242/257 Hz on four consecutive runs and neighbouring
+    sentences sounded like different people. Pinning the seed makes one request
+    reproducible while different sentences still vary naturally.
+
+    `torch.manual_seed` covers CPU (and CUDA when present); MPS keeps its own
+    generator, so seed it explicitly when the build has one.
+    """
+    import torch
+
+    value = int(seed) & 0x7FFFFFFF
+    torch.manual_seed(value)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(value)
+    mps = getattr(torch, "mps", None)
+    if mps is not None and hasattr(mps, "manual_seed"):
+        try:
+            mps.manual_seed(value)
+        except Exception:  # noqa: BLE001 - CPU-only builds have no MPS backend
+            pass
+
+
+def stable_fallback_seed(voice):
+    """FNV-1a of `qwen3||<voice>` — the same hash Nexus sends (ttsSeed.js).
+
+    Used only when a client omits `seed`, so an old caller still gets a stable
+    timbre instead of a fresh roll on every sentence.
+    """
+    identity = f"qwen3||{str(voice or '').strip()}"
+    value = 0x811C9DC5
+    for char in identity:
+        value ^= ord(char)
+        value = (value * 0x01000193) & 0xFFFFFFFF
+    return (value & 0x7FFFFFFF) or 1
+
+
+def synthesize_sentence(text, speaker, language, instruct, seed=None):
     """Generate one sentence. Caller MUST hold `_model_lock`."""
     model = load_model_locked()
     supported_languages = None
@@ -243,6 +282,10 @@ def synthesize_sentence(text, speaker, language, instruct):
         supported_languages = model.get_supported_languages()
     except Exception:  # noqa: BLE001 - optional capability
         supported_languages = None
+
+    # Seeding INSIDE the lock: two concurrent requests must not interleave
+    # their RNG state between the seed call and the generation call.
+    seed_everything(seed if seed is not None else stable_fallback_seed(speaker))
 
     wavs, sample_rate = model.generate_custom_voice(
         text=text,
@@ -369,6 +412,15 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
         speaker = str(body.get("voice", "") or "").strip().lower() or "vivian"
         instructions = str(body.get("instructions", "") or "").strip()
         language = str(body.get("language", "") or "").strip()
+        seed_raw = body.get("seed")
+        seed = None
+        if seed_raw is not None:
+            try:
+                seed = int(seed_raw) & 0x7FFFFFFF
+            except (TypeError, ValueError):
+                seed = None
+        if seed is None:
+            seed = stable_fallback_seed(speaker)
         sentences = split_sentences(text)
         if not sentences:
             self._send_json(400, {"error": {"message": "missing input text"}})
@@ -400,12 +452,13 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
             return
 
         logger.info(
-            "speech: speaker=%s language=%s sentences=%d chars=%d instruct=%s",
+            "speech: speaker=%s language=%s sentences=%d chars=%d instruct=%s seed=%s",
             speaker,
             language or "auto",
             len(sentences),
             len(text),
             instructions[:60],
+            seed,
         )
 
         self.send_response(200)
@@ -424,6 +477,7 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
                         speaker=speaker,
                         language=language,
                         instruct=instructions,
+                        seed=seed,
                     )
                 if not pcm:
                     continue
@@ -450,25 +504,52 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
 
 
 def run_selftest():
-    """Load the model, synthesize one short line, print timing."""
+    """Load the model, synthesize, and verify the seed makes output repeatable."""
     started = time.monotonic()
+    seed = 42
+    text = "你好，我是 Nexus 的本地语音。"
     with _model_lock:
         load_model_locked()
         load_seconds = time.monotonic() - started
         synth_started = time.monotonic()
         pcm, sample_rate = synthesize_sentence(
-            "你好，我是 Nexus 的本地语音。",
+            text,
             speaker="vivian",
             language="Chinese",
             instruct="带点傲娇，语气轻快",
+            seed=seed,
         )
         synth_seconds = time.monotonic() - synth_started
+        repeat_pcm, _ = synthesize_sentence(
+            text,
+            speaker="vivian",
+            language="Chinese",
+            instruct="带点傲娇，语气轻快",
+            seed=seed,
+        )
+        other_pcm, _ = synthesize_sentence(
+            text,
+            speaker="vivian",
+            language="Chinese",
+            instruct="带点傲娇，语气轻快",
+            seed=seed + 1,
+        )
 
     duration = len(pcm) / 2 / max(1, sample_rate)
     print(f"device={_model_device}")
     print(f"load={load_seconds:.2f}s synth={synth_seconds:.2f}s")
     print(f"audio={duration:.2f}s sample_rate={sample_rate} pcm_bytes={len(pcm)}")
     print(f"realtime_factor={synth_seconds / max(0.001, duration):.2f}x")
+    print(
+        "seed repeatability: "
+        f"same_seed_bytes_equal={pcm == repeat_pcm} "
+        f"same_seed_len={len(repeat_pcm)} other_seed_len={len(other_pcm)} "
+        f"other_seed_differs={pcm != other_pcm}"
+    )
+    if pcm != repeat_pcm:
+        print("SELFTEST FAILED: the same seed produced different audio")
+        raise SystemExit(1)
+    print("SELFTEST OK")
 
 
 def main():
