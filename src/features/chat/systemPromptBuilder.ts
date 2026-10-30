@@ -14,9 +14,22 @@ import type {
   DesktopContextSnapshot,
   LorebookEntry,
   MemoryRecallContext,
+  PetMood,
 } from '../../types'
 import { buildLorebookSection } from './lorebookInjection.ts'
-import { DEFAULT_PERSONA_PROFILE_ID, type LoadedPersona } from '../autonomy/v2/personaTypes.ts'
+import {
+  createEmptyLoadedPersona,
+  DEFAULT_PERSONA_PROFILE_ID,
+  type LoadedPersona,
+} from '../autonomy/v2/personaTypes.ts'
+import {
+  type ResolvedPersona,
+  resolveActivePersona,
+} from '../persona/resolveActivePersona.ts'
+import { buildPersonaReminder } from '../persona/personaReminder.ts'
+import { getLastAssistantToneFeedback } from '../persona/assistantToneFilter.ts'
+import { formatSpeechStyle } from '../persona/speechStyle.ts'
+import { formatPersonaExamplesForChat } from '../persona/exampleSelector.ts'
 import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext.ts'
 import { classifyActivity } from '../autonomy/v2/contextGatherer.ts'
@@ -101,6 +114,19 @@ export type AssistantReplyRequestOptions = {
    * 由 useAutonomyController 通过 useChat ctx 注入；空字符串会被自动过滤掉。
    */
   emotionPromptText?: string
+  /**
+   * Outward-expression line for the current mood, shaped by the persona dials
+   * (from personality/attitude). The same line is appended to the emotion
+   * section and carried by the post-history reminder.
+   */
+  emotionAttitudeText?: string
+  /**
+   * Current PetMood used to pick mood-matched voice samples from examples.md.
+   * Missing means "no mood known", so untagged samples are used.
+   */
+  emotionMood?: PetMood
+  /** True while she is sulking; sulky samples outrank the ordinary mood. */
+  emotionSulky?: boolean
   /**
    * 当前关系状态格式化后的 prompt 文本（来自 relationshipTracker.formatRelationshipForPrompt）。
    * 由 useAutonomyController 通过 useChat ctx 注入；空字符串会被自动过滤掉。
@@ -198,18 +224,19 @@ export type AssistantReplyRequestOptions = {
 }
 
 /**
- * When `profilePersonaInChatEnabled` is on, load the active character
- * profile's per-file persona (the same one the autonomy engine uses) so an
- * imported Character Card can actually drive chat. Mirrors the resolution in
- * useAutonomyV2Engine: active id → default fallback when the active profile
- * has no persona files. Returns null when the flag is off, the bridge is
- * unavailable, nothing is present, or loading fails — callers then keep the
- * existing global-SOUL.md behaviour.
+ * Load the active character profile's per-file persona (the same files the
+ * autonomy engine reads). Mirrors the resolver's profile step: active id →
+ * default fallback when the active profile has nothing on disk. Returns null
+ * when no profile is present or loading fails, so the SOUL card keeps
+ * targeting the global file unless a profile really drives the persona.
+ *
+ * The old `profilePersonaInChatEnabled` switch no longer gates this: chat,
+ * V2, and letters all resolve one persona. The settings flag stays readable
+ * for stored-data compatibility only.
  */
 export async function loadActiveProfilePersona(
-  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId'>,
+  settings: Pick<AppSettings, 'activeCharacterProfileId'>,
 ): Promise<LoadedPersona | null> {
-  if (!settings.profilePersonaInChatEnabled) return null
   const load = window.desktopPet?.personaLoadProfile
   if (!load) return null
   try {
@@ -226,35 +253,62 @@ export async function loadActiveProfilePersona(
   }
 }
 
+/**
+ * Resolve the persona for a chat turn. The resolver is designed not to throw;
+ * this guard keeps a chat reply possible if it ever does, falling back to the
+ * configured system prompt instead of sending an empty identity.
+ */
+async function resolvePersonaForChat(settings: AppSettings): Promise<ResolvedPersona> {
+  try {
+    return await resolveActivePersona(settings)
+  } catch (err) {
+    console.warn('[runtime] Persona file loading failed, using settings fallback:', getRedactedLogErrorMessage(err))
+    return {
+      ...createEmptyLoadedPersona(DEFAULT_PERSONA_PROFILE_ID, ''),
+      present: true,
+      soul: typeof settings.systemPrompt === 'string' ? settings.systemPrompt : '',
+      source: 'systemPrompt',
+      companionName: typeof settings.companionName === 'string' ? settings.companionName : '',
+      userName: typeof settings.userName === 'string' ? settings.userName : '',
+    }
+  }
+}
+
 async function buildSystemPrompt(
   settings: AppSettings,
   memoryContext: MemoryRecallContext,
   options: AssistantReplyRequestOptions,
-) {
-  // Load SOUL.md persona file; fall back to settings.systemPrompt
-  let soulContent = ''
+): Promise<{ systemPrompt: string; persona: ResolvedPersona }> {
+  // Persona-private memory lives in the global MEMORY.md only; the identity
+  // chain itself is owned by the shared resolver so chat, V2, and letters
+  // cannot drift apart.
   let personaMemoryContent = ''
   try {
-    const [soul, pMem] = await Promise.all([
-      window.desktopPet?.personaLoadSoul?.() ?? Promise.resolve(''),
-      window.desktopPet?.personaLoadMemory?.() ?? Promise.resolve(''),
-    ])
-    soulContent = soul
-    personaMemoryContent = pMem
+    personaMemoryContent = await (window.desktopPet?.personaLoadMemory?.() ?? Promise.resolve(''))
   } catch (err) {
-    console.warn('[runtime] Persona file loading failed, using settings fallback:', getRedactedLogErrorMessage(err))
+    console.warn('[runtime] Persona memory loading failed:', getRedactedLogErrorMessage(err))
   }
 
-  // Per-profile persona (imported card / switched profile) takes precedence
-  // over the global SOUL.md when the feature is enabled. soul.md carries the
-  // card's full identity (description/personality/scenario/system instructions).
-  const profilePersona = await loadActiveProfilePersona(settings)
+  const resolvedPersona = await resolvePersonaForChat(settings)
 
   const prompts = getChatPromptStrings(settings.uiLanguage)
 
-  const personaSection = profilePersona?.soul || soulContent || settings.systemPrompt
+  const personaSection = resolvedPersona.soul || settings.systemPrompt
+  // The structured dials are the persona's own voice, so they sit directly
+  // after the identity text and before any generic "how to talk" guidance.
+  const speechStyleSection = formatSpeechStyle(
+    resolvedPersona.style?.speechStyle,
+    settings.uiLanguage,
+  )
+  // Examples teach cadence in a way rules cannot. They sit right after the
+  // dials, as prompt-only text, so they never enter history or memory.
+  const personaExamplesSection = formatPersonaExamplesForChat(resolvedPersona.examples, {
+    header: prompts.personaExamplesHeader,
+    mood: options.emotionMood,
+    sulky: options.emotionSulky,
+  })
   const relationshipTypeSection = prompts.relationshipTypeBias(settings.companionRelationshipType)
-  const effectivePersonaMemory = profilePersona?.memory || personaMemoryContent
+  const effectivePersonaMemory = resolvedPersona.memory || personaMemoryContent
   const personaMemorySection = effectivePersonaMemory
     ? prompts.personaMemoryHeader(effectivePersonaMemory)
     : ''
@@ -313,7 +367,7 @@ async function buildSystemPrompt(
 
   const bridgedMessageSection = prompts.bridgedMessage({ userName: settings.userName })
 
-  // 当前关系状态：跟 narrative 同源（"我们关系到了什么程度"），放在 header 之前。
+  // 当前关系状态：跟 narrative 同源（"我们关系到了什么程度"），紧跟在人设与记忆之后。
   const relationshipSection = options.relationshipPromptText ?? ''
   // 升级里程碑：仅在刚跨越关系等级的那一轮注入，紧贴 relationship，让模型
   // 在读到"你们现在是什么关系"之后立刻看到"这一刻刚刚发生了什么变化"。
@@ -326,7 +380,7 @@ async function buildSystemPrompt(
   // 来信跟进：用户离开时收到的消息，下次对话温柔带一句"处理了吗"。
   // 一次性消费，与 onThisDay 同族（"值得被提起的时刻"）。
   const messageFollowUpSection = options.messageFollowUpPromptText ?? ''
-  // 当前情绪状态：紧贴 header 的 tone 指令，让模型先读到"她现在感觉如何"。
+  // 当前情绪状态：作为"用户此刻状态"的一部分，放在通用规则之前。
   const emotionSection = options.emotionPromptText ?? ''
   // 用户作息感知：紧贴 emotion，让模型自然对比 header 里的 currentDateTime
   // —— "现在是不是用户的活跃时段"是 rhythm 学习的核心价值。
@@ -363,52 +417,60 @@ async function buildSystemPrompt(
 
   const callbackSection = buildCallbackSection(options.pendingCallbacks)
 
-  return [
-    personaSection,
-    relationshipTypeSection,
-    personaMemorySection,
-    narrativeSection,
-    relationshipSection,
-    milestoneSection,
-    anniversarySection,
-    onThisDaySection,
-    messageFollowUpSection,
-    headerText,
-    COHERENCE_GUIDANCE,
-    REUNION_GUIDANCE,
-    prompts.timeAwarenessGuidance,
-    LOW_SIGNAL_GUIDANCE,
-    QUESTION_PACING_GUIDANCE,
-    TOPIC_EXHAUSTION_GUIDANCE,
-    SELF_DISCLOSURE_GUIDANCE,
-    emotionSection,
-    EMOTIONAL_TRANSITION_GUIDANCE,
-    rhythmSection,
-    activityToneSection,
-    affectGuidanceSection,
-    repairGuidanceSection,
-    crisisGuidanceSection,
-    responseStyleSection,
-    expressionGuideSection,
-    firstImpressionSection,
-    toolHonestySection,
-    screenDisplaySection,
-    bridgedMessageSection,
-    intentContextSection,
-    hotTier.longTermSection,
-    hotTier.dailySection,
-    buildLorebookSection(options.triggeredLorebookEntries ?? []),
-    buildSemanticMemorySection(memoryContext, prompts),
-    callbackSection,
-    mcpToolsSection,
-    skillGuideSection,
-    options.autoSkillContext ?? '',
-    toolContextSection,
-    desktopContextSection,
-    gameContextSection,
-  ]
-    .filter(Boolean)
-    .join('\n\n')
+  return {
+    systemPrompt: [
+      // The header states only who is speaking and that the persona owns the
+      // voice. It goes FIRST so the persona text that follows is the later,
+      // stronger identity signal — the reverse order let generic wording win.
+      headerText,
+      personaSection,
+      speechStyleSection,
+      personaExamplesSection,
+      relationshipTypeSection,
+      personaMemorySection,
+      narrativeSection,
+      relationshipSection,
+      milestoneSection,
+      anniversarySection,
+      onThisDaySection,
+      messageFollowUpSection,
+      COHERENCE_GUIDANCE,
+      REUNION_GUIDANCE,
+      prompts.timeAwarenessGuidance,
+      LOW_SIGNAL_GUIDANCE,
+      QUESTION_PACING_GUIDANCE,
+      TOPIC_EXHAUSTION_GUIDANCE,
+      SELF_DISCLOSURE_GUIDANCE,
+      emotionSection,
+      EMOTIONAL_TRANSITION_GUIDANCE,
+      rhythmSection,
+      activityToneSection,
+      affectGuidanceSection,
+      repairGuidanceSection,
+      crisisGuidanceSection,
+      responseStyleSection,
+      expressionGuideSection,
+      firstImpressionSection,
+      toolHonestySection,
+      screenDisplaySection,
+      bridgedMessageSection,
+      intentContextSection,
+      hotTier.longTermSection,
+      hotTier.dailySection,
+      buildLorebookSection(options.triggeredLorebookEntries ?? []),
+      buildSemanticMemorySection(memoryContext, prompts),
+      callbackSection,
+      mcpToolsSection,
+      skillGuideSection,
+      options.autoSkillContext ?? '',
+      toolContextSection,
+      desktopContextSection,
+      gameContextSection,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    persona: resolvedPersona,
+  }
 }
 
 /**
@@ -508,20 +570,29 @@ async function toRequestMessages(
   memoryContext: MemoryRecallContext,
   options: AssistantReplyRequestOptions,
 ) {
+  // Resolve the persona first: it owns the names that label the transcript, so
+  // a recap of the dropped turns is written as her instead of as a generic
+  // narrator. The prompt build is independent of the compaction split.
+  const { systemPrompt, persona } = await buildSystemPrompt(settings, memoryContext, options)
+  const speakers = {
+    userName: persona.userName || settings.userName,
+    companionName: persona.companionName || settings.companionName,
+  }
+
   const tokenBudget = getModelTokenBudget(settings.model)
   const maxMessages = getMaxMessagesForBudget(tokenBudget)
   const { messages: contextMessages, compacted, olderMessagesText } = compactMessagesForRequest(
     history,
     maxMessages,
     tokenBudget,
+    speakers,
   )
 
-  const systemPrompt = await buildSystemPrompt(settings, memoryContext, options)
   let systemContent = systemPrompt
 
   if (compacted && olderMessagesText) {
-    const summary = await summarizeOlderMessages(olderMessagesText, settings)
-    systemContent = `${systemPrompt}\n\n${formatCompactionContext(summary)}`
+    const summary = await summarizeOlderMessages(olderMessagesText, settings, speakers)
+    systemContent = `${systemPrompt}\n\n${formatCompactionContext(summary, settings.uiLanguage)}`
   }
 
   const correctionHint = detectUserCorrection(contextMessages, settings)
@@ -540,6 +611,21 @@ async function toRequestMessages(
     options.currentTime,
     previousUserMessageAt(history),
   )
+  // The persona only lives at the top of a long system prompt, so it is the
+  // first thing the model forgets. The character reminder rides on the same
+  // last user turn, right after the time block, making identity the freshest
+  // instruction the model reads. It escalates once the history is long or was
+  // just compacted.
+  const characterReminder = buildPersonaReminder({
+    persona,
+    companionName: persona.companionName || settings.companionName,
+    uiLanguage: settings.uiLanguage,
+    assistantTurns: contextMessages.filter((message) => message.role === 'assistant').length,
+    compacted,
+    attitude: options.emotionAttitudeText,
+    toneFeedback: getLastAssistantToneFeedback() ?? undefined,
+  })
+  const reminderPrefix = `${timeReminder}\n\n${characterReminder}\n\n`
   const augmentedMessages = contextMessages.slice()
   for (let i = augmentedMessages.length - 1; i >= 0; i -= 1) {
     if (augmentedMessages[i].role === 'user') {
@@ -550,8 +636,8 @@ async function toRequestMessages(
       // the images. Splice the reminder in as a leading text part instead so
       // the image parts survive intact.
       const nextContent: typeof original = Array.isArray(original)
-        ? [{ type: 'text', text: `${timeReminder}\n\n` }, ...original]
-        : `${timeReminder}\n\n${original}`
+        ? [{ type: 'text', text: reminderPrefix }, ...original]
+        : `${reminderPrefix}${original}`
       augmentedMessages[i] = {
         ...augmentedMessages[i],
         content: nextContent,

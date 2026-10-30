@@ -35,6 +35,8 @@ line commentary — will be discarded and treated as silent. So don't.`,
 
   identityFallback: '# Identity\n\n你是桌面陪伴體。保持人設，回答要簡潔。',
 
+  proactiveExampleUser: '（對方一直沒有開口）',
+
   signaturePhrasesHeader: '# 招牌用語\n\n你常說的話 —— 自然使用，不要硬塞：\n',
 
   forbiddenPhrasesHeader: '# 禁止表達\n\n以下表達會破壞人設，絕對不要使用：\n',

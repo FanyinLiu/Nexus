@@ -50,6 +50,7 @@ export type AssistantReplyRunnerDependencies = {
     | 'commitOnThisDayPromptText'
     | 'consumeMessageFollowUpPromptText'
     | 'getEmotionPromptText'
+    | 'getEmotionAttitudeText'
     | 'getEmotionSnapshot'
     | 'getRelationshipPromptText'
     | 'getRhythmPromptText'

@@ -37,6 +37,8 @@ line commentary — will be discarded and treated as silent. So don't.`,
 
   identityFallback: '# Identity\n\nYou are a desktop companion. Stay in character and be concise.',
 
+  proactiveExampleUser: '(The user has been quiet for a while.)',
+
   signaturePhrasesHeader: `# Signature phrases\n\nPhrases you're known to say — use naturally, don't force:\n`,
 
   forbiddenPhrasesHeader: `# Never say\n\nThe following phrasings break character. Do NOT use them:\n`,

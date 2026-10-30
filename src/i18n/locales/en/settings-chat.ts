@@ -12,8 +12,6 @@ export const enSettingsChat = {
   'settings.chat.relationship_type_hint': 'Sets the emotional distance and tone without changing core capabilities.',
   'settings.chat.system_prompt': 'Personality and speaking style',
   'settings.chat.system_prompt_hint': 'Shapes her tone, boundaries, and companion feeling.',
-  'settings.chat.profile_persona_in_chat': 'Imported character drives chat',
-  'settings.chat.profile_persona_in_chat_hint': 'Use the active profile\'s persona (soul & memory) in replies, not just the global personality above — so an imported character card actually shapes the conversation.',
   'settings.chat.live2d_model': 'Avatar',
   'settings.chat.character_voice': 'Character voice',
   'settings.chat.character_voice_hint': 'Speaking style stays here. Choose the voice under Voice.',

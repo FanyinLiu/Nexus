@@ -873,6 +873,21 @@ declare global {
       personaLoadMemory: () => Promise<string>
       personaSaveSoul: (payload: { content: string; profileId?: string }) => Promise<{ ok: boolean }>
       personaSaveMemory: (payload: { content: string }) => Promise<{ ok: boolean }>
+      personaSaveStyle: (payload: {
+        profileId: string
+        speechStyle: {
+          maxSentences?: number
+          clingy?: number
+          aloof?: number
+          tsundere?: boolean
+          playful?: number
+          selfRef?: string
+          callUser?: string
+          particles?: string[]
+          emojiOk?: boolean
+          markdownOk?: boolean
+        }
+      }) => Promise<{ ok: boolean }>
       personaPaths: () => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
       personaOpenDir: () => Promise<{ ok: boolean }>
       personaInit: (payload: { defaultSoul: string }) => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
@@ -888,11 +903,33 @@ declare global {
         soul: string
         memory: string
         examplesRaw: string
-        examples: Array<{ user: string; assistant: string }>
+        examples: Array<{
+          user: string
+          assistant: string
+          /** Optional `## mood: <word>` group from examples.md. */
+          mood?: string
+          /** `proactive` means she speaks first and `user` may be empty. */
+          kind: 'reply' | 'proactive'
+        }>
         style: {
           signaturePhrases?: string[]
           forbiddenPhrases?: string[]
           toneTags?: string[]
+          /** Card author's post-history instructions, injected after history. */
+          postHistory?: string
+          /** Optional dials describing how she talks. */
+          speechStyle?: {
+            maxSentences?: number
+            clingy?: number
+            aloof?: number
+            tsundere?: boolean
+            playful?: number
+            selfRef?: string
+            callUser?: string
+            particles?: string[]
+            emojiOk?: boolean
+            markdownOk?: boolean
+          }
         }
         voice: {
           providerId?: string
@@ -903,6 +940,8 @@ declare global {
         }
         tools: { allowlist?: string[]; blocklist?: string[] }
         present: boolean
+        /** mtime of soul.md; lets the renderer tell cached profiles apart. */
+        soulMtimeMs?: number
       }>
       personaProfileDir: (profileId: string) => Promise<{ dir: string }>
       personaImportCard: () => Promise<{

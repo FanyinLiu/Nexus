@@ -5,6 +5,8 @@ import { formatGameContext, loadGameContext } from '../../../features/context/ga
 import { buildMemoryRecallContext } from '../../../features/memory/recall.ts'
 import { loadRelevantSkills } from '../../../features/skills/autoSkillGenerator.ts'
 import { matchCoreSkills } from '../../../lib/coreRuntime.ts'
+import { emotionToPetMood } from '../../../features/autonomy/emotionModel.ts'
+import { resolveActivePersona, type ResolvedPersona } from '../../../features/persona/resolveActivePersona.ts'
 import { toChatToolResult, type BuiltInToolResult } from '../../../features/tools/toolTypes.ts'
 import { createId } from '../../../lib/index.ts'
 import type { AppSettings, MemoryRecallContext } from '../../../types/index.ts'
@@ -24,6 +26,8 @@ export type AssembledAssistantPrompt = {
   memoryContext: MemoryRecallContext
   mcpTools: Awaited<ReturnType<typeof loadAvailableTools>>
   requestOptions: AssistantReplyRequestOptions
+  /** Resolved once here so post-processing can read her style without a re-load. */
+  persona: ResolvedPersona
 }
 
 function createPausedMemoryRecallContext(searchModeUsed: AppSettings['memorySearchMode']): MemoryRecallContext {
@@ -83,8 +87,13 @@ export async function assembleAssistantPrompt(
     })
   }
 
+  // Snapshot once so memory recall, the emotion line, and the voice-sample
+  // picker all read the same moment.
+  const emotionSnapshot = dependencies.ctx.getEmotionSnapshot?.()
+
   // Run all independent context-loading tasks in parallel
-  const [desktopContext, mcpTools, gameContext, memoryContext, pluginSkillContext, triggeredLorebookEntries] = await Promise.all([
+  const [persona, desktopContext, mcpTools, gameContext, memoryContext, pluginSkillContext, triggeredLorebookEntries] = await Promise.all([
+    resolveActivePersona(currentSettings),
     dependencies.ctx.loadDesktopContextSnapshot(),
     loadAvailableTools(currentSettings),
     loadGameContext().then(formatGameContext).catch((err) => {
@@ -103,7 +112,7 @@ export async function assembleAssistantPrompt(
           dailyLimit: currentSettings.memoryDailyRecallCount,
           semanticLimit: currentSettings.memorySemanticRecallCount,
           retentionDays: currentSettings.memoryDiaryRetentionDays,
-          currentEmotion: dependencies.ctx.getEmotionSnapshot?.(),
+          currentEmotion: emotionSnapshot,
           rerankEnabled: currentSettings.memoryRerankEnabled,
         }),
     loadRelevantSkills(content).catch((err) => {
@@ -168,6 +177,7 @@ export async function assembleAssistantPrompt(
   const pendingCallbackHints = memoryPaused ? [] : buildPendingCallbackHints(nextMemories)
 
   return {
+    persona,
     memoryContext,
     mcpTools,
     requestOptions: {
@@ -193,6 +203,9 @@ export async function assembleAssistantPrompt(
       // are wired up in useAppController; when unset they return an empty
       // string which is filtered out by systemPromptBuilder's .filter(Boolean).
       emotionPromptText: dependencies.ctx.getEmotionPromptText?.(),
+      emotionAttitudeText: dependencies.ctx.getEmotionAttitudeText?.(),
+      emotionMood: emotionSnapshot ? emotionToPetMood(emotionSnapshot) : undefined,
+      emotionSulky: emotionSnapshot?.sulky === true,
       relationshipPromptText: dependencies.ctx.getRelationshipPromptText?.(),
       rhythmPromptText: dependencies.ctx.getRhythmPromptText?.(),
       affectGuidancePromptText: dependencies.ctx.getAffectGuidancePromptText?.(),

@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import React from 'react'
 
 import { useAutonomyV2Engine } from '../src/app/controllers/useAutonomyV2Engine.ts'
-import { PERSONA_SOUL_SAVED_CHANNEL } from '../src/features/settingsV3/soulCardPersona.ts'
+import { PERSONA_SOUL_SAVED_CHANNEL } from '../src/features/persona/personaEvents.ts'
 
 type ReactInternals = { H: unknown }
 const reactInternals = (React as unknown as {

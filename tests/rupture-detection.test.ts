@@ -123,6 +123,28 @@ test('build: prose forbids defending and naming the rupture', () => {
   assert.match(crit, /[Dd]o not name/)
 })
 
+test('build: criticism repair defers the reaction to the character instead of asking for softness', () => {
+  const crit = buildRepairGuidance({ uiLanguage: 'en-US', ruptureKind: 'criticism' })
+  assert.match(crit, /Respond the way your character would when stung, then let it go/)
+  assert.match(crit, /Do not escalate or lecture/)
+  assert.doesNotMatch(crit, /\bsoft\b/i)
+  assert.doesNotMatch(crit, /\bgentle\b/i)
+})
+
+test('build: repair prose in every locale stays tone-neutral', () => {
+  const kinds = ['criticism', 'contempt', 'defensiveness', 'stonewalling'] as const
+  for (const uiLanguage of ['en-US', 'zh-CN', 'zh-TW', 'ja', 'ko'] as const) {
+    for (const ruptureKind of kinds) {
+      const out = buildRepairGuidance({ uiLanguage, ruptureKind })
+      assert.doesNotMatch(
+        out,
+        /温柔|溫柔|warm|gentle|soft|やさし|優し|柔らか|부드럽|따뜻/i,
+        `${uiLanguage}/${ruptureKind} must not hard-code a soft tone`,
+      )
+    }
+  }
+})
+
 test('build: each of 5 locales produces non-empty distinct prose for criticism', () => {
   const locales = ['en-US', 'zh-CN', 'zh-TW', 'ja', 'ko'] as const
   const bodies = locales.map((l) =>

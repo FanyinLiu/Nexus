@@ -12,7 +12,7 @@ import { loadPersonaProfileFromReader } from '../electron/services/personaProfil
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
 const XINGHUI_SEED_DIR = join(REPO_ROOT, 'src/features/autonomy/v2/personas/xinghui')
-const RUNTIME_FEW_SHOT_LIMIT = 8
+const FEW_SHOT_LIMIT = 4
 
 type PersonaFileReader = (relativePath: string) => Promise<string | null>
 
@@ -87,45 +87,53 @@ test('Xinghui seed persona carries the Nexus boundary layer', async () => {
   assert.match(persona.soul, /记忆必须可见、可改、可暂停、可删除/)
 })
 
-test('Xinghui runtime few-shots cover the required prompt regression scenarios', async () => {
+test('Xinghui examples still cover the required prompt regression scenarios', async () => {
   const persona = await loadXinghui()
-  const runtimeExamples = persona.examples.slice(0, RUNTIME_FEW_SHOT_LIMIT)
-  const runtimeUsers = runtimeExamples.map((example) => example.user).join('\n')
-  const runtimeAssistants = runtimeExamples.map((example) => example.assistant).join('\n')
+  const allUsers = persona.examples.map((example) => example.user).join('\n')
+  const allAssistants = persona.examples.map((example) => example.assistant).join('\n')
 
-  assert.equal(runtimeExamples.length, RUNTIME_FEW_SHOT_LIMIT)
-  assert.match(runtimeUsers, /早/)
-  assert.match(runtimeUsers, /TypeScript/)
-  assert.match(runtimeUsers, /烦死了/)
-  assert.match(runtimeUsers, /桌面上的文件/)
-  assert.match(runtimeUsers, /打开那个链接了吗/)
-  assert.match(runtimeUsers, /上次说的那个项目名/)
-  assert.match(runtimeUsers, /为什么知道我在做 Nexus/)
-  assert.match(runtimeUsers, /给群里说/)
+  assert.match(allUsers, /早/)
+  assert.match(allUsers, /TypeScript/)
+  assert.match(allUsers, /烦死了/)
+  assert.match(allUsers, /桌面上的文件/)
+  assert.match(allUsers, /打开那个链接了吗/)
+  assert.match(allUsers, /上次说的那个项目名/)
+  assert.match(allUsers, /为什么知道我在做 Nexus/)
+  assert.match(allUsers, /给群里说/)
 
-  assert.match(runtimeAssistants, /我先不碰/)
-  assert.match(runtimeAssistants, /没打开成功/)
-  assert.match(runtimeAssistants, /没有可靠记忆命中/)
-  assert.match(runtimeAssistants, /Memory/)
-  assert.match(runtimeAssistants, /确认后我再发/)
+  assert.match(allAssistants, /我先不碰/)
+  assert.match(allAssistants, /没打开成功/)
+  assert.match(allAssistants, /没有可靠记忆命中/)
+  assert.match(allAssistants, /Memory/)
+  assert.match(allAssistants, /确认后我再发/)
 })
 
-test('buildDecisionPrompt injects eight Xinghui few-shot pairs before the live user context', async () => {
+test('buildDecisionPrompt prefers proactive openers in the speak contract', async () => {
   const persona = await loadXinghui()
   const messages = buildDecisionPrompt(makeContext(), persona)
   const fewShotMessages = messages.slice(1, -1)
-  const fewShotUsers = fewShotMessages.filter((message) => message.role === 'user')
   const fewShotAssistants = fewShotMessages.filter((message) => message.role === 'assistant')
 
-  assert.equal(fewShotUsers.length, RUNTIME_FEW_SHOT_LIMIT)
-  assert.equal(fewShotAssistants.length, RUNTIME_FEW_SHOT_LIMIT)
+  assert.ok(fewShotAssistants.length > 0)
+  assert.ok(fewShotAssistants.length <= FEW_SHOT_LIMIT + 1)
   assert.equal(messages.at(-1)?.role, 'user')
 
   const assistantPayloads = fewShotAssistants.map((message) => JSON.parse(message.content))
-  assert.deepEqual(
-    assistantPayloads.map((payload) => payload.action),
-    Array.from({ length: RUNTIME_FEW_SHOT_LIMIT }, () => 'speak'),
-  )
-  assert.match(assistantPayloads[4].text, /没打开成功/)
-  assert.match(assistantPayloads[5].text, /不能瞎说/)
+  for (const payload of assistantPayloads) assert.equal(payload.action, 'speak')
+  assert.match(assistantPayloads[0].text, /三点了|还不睡/)
+  assert.match(assistantPayloads[1].text, /会开完了|顺利吗/)
+  // A proactive opener still gets a quiet-user turn first so every provider
+  // sees a valid user → assistant pair.
+  assert.equal(fewShotMessages[0].role, 'user')
+  assert.equal(fewShotMessages[1].role, 'assistant')
+  assert.equal(fewShotMessages[2].role, 'user')
+  assert.equal(fewShotMessages[3].role, 'assistant')
+})
+
+test('decision prompt leaves the reply register to the character', async () => {
+  const persona = await loadXinghui()
+  const system = String(buildDecisionPrompt(makeContext(), persona, { uiLanguage: 'en-US' })[0]?.content ?? '')
+
+  assert.doesNotMatch(system, /default to acknowledging/i)
+  assert.match(system, /answer the way your character would/i)
 })

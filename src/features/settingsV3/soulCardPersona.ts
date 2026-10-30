@@ -9,14 +9,15 @@
  */
 
 import { PERSONA_SOUL_MAX_CHARS } from '../../../shared/personaSoul.js'
+import { normalizePersonaSpeechStyle } from '../../../shared/speechStyle.js'
 import { loadActiveProfilePersona } from '../chat/systemPromptBuilder.ts'
+import { invalidateResolvedPersonaCache } from '../persona/resolveActivePersona.ts'
+import { PERSONA_SOUL_SAVED_CHANNEL } from '../persona/personaEvents.ts'
+import { DEFAULT_PERSONA_PROFILE_ID, type PersonaSpeechStyle } from '../autonomy/v2/personaTypes.ts'
 import type { AppSettings } from '../../types/app.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
 import { clearCompanionSoul, loadCompanionSoul } from '../../lib/storage/companionSoul.ts'
-
-/** Cross-window notice that soul text was written. The body is not the text. */
-export const PERSONA_SOUL_SAVED_CHANNEL = 'nexus-persona-soul'
 
 export type SoulCardTarget =
   | { kind: 'profile'; profileId: string }
@@ -27,6 +28,8 @@ export interface SoulCardNote {
   text: string
   updatedAt: string | null
   target: SoulCardTarget
+  /** Structured dials that shape how she talks, when the profile has them. */
+  speechStyle?: PersonaSpeechStyle
 }
 
 type LoadedSoul = SoulCardNote & {
@@ -36,7 +39,7 @@ type LoadedSoul = SoulCardNote & {
 
 export type SoulCardSettings = Pick<
   AppSettings,
-  'profilePersonaInChatEnabled' | 'activeCharacterProfileId' | 'systemPrompt'
+  'activeCharacterProfileId' | 'systemPrompt'
 >
 
 export type SoulCardSaveResult =
@@ -94,14 +97,55 @@ export async function saveSoulCard(
   }
 }
 
-/** Same truthiness as `profileSoul || globalSoul || systemPrompt` in the prompt builder. */
-function effectivePersonaText(profileSoul: string, globalSoul: string, systemPrompt: string): string {
+export type SoulStyleSaveResult =
+  | { ok: true; speechStyle: PersonaSpeechStyle }
+  | { ok: false; reason: 'rejected' }
+
+/**
+ * Save the SOUL card's speech dials into the active profile's style.json.
+ *
+ * The card may be showing the global SOUL file while the dials still belong
+ * to a profile, so the write goes to the active profile id (or the bundled
+ * default) and the main process creates the directory when it is missing.
+ * Other style.json fields are preserved by the writer.
+ */
+export async function saveSoulSpeechStyle(
+  settings: SoulCardSettings,
+  style: PersonaSpeechStyle,
+): Promise<SoulStyleSaveResult> {
+  const normalized = normalizePersonaSpeechStyle(style)
+  if (!normalized) return { ok: false, reason: 'rejected' }
+  if (!(await canUsePanelOnlyBridge())) return { ok: false, reason: 'rejected' }
+  const save = window.desktopPet?.personaSaveStyle
+  if (!save) return { ok: false, reason: 'rejected' }
+  try {
+    const current = await readEffectiveSoul(settings)
+    const profileId = current.target.kind === 'profile'
+      ? current.target.profileId
+      : (settings.activeCharacterProfileId?.trim() || DEFAULT_PERSONA_PROFILE_ID)
+    const result = await save({ profileId, speechStyle: normalized })
+    if (!result?.ok) return { ok: false, reason: 'rejected' }
+    publishPersonaSoulSaved()
+    invalidateResolvedPersonaCache()
+    return { ok: true, speechStyle: normalized }
+  } catch (error) {
+    console.warn('[memory] speech style save failed:', getRedactedLogErrorMessage(error))
+    return { ok: false, reason: 'rejected' }
+  }
+}
+
+/** Same truthiness as `profileSoul || globalSoul || systemPrompt` in the prompt builder. */function effectivePersonaText(profileSoul: string, globalSoul: string, systemPrompt: string): string {
   const selected = profileSoul || globalSoul || systemPrompt
   return typeof selected === 'string' ? selected : ''
 }
 
 function visibleNote(note: LoadedSoul): SoulCardNote {
-  return { text: note.text, updatedAt: note.updatedAt, target: note.target }
+  return {
+    text: note.text,
+    updatedAt: note.updatedAt,
+    target: note.target,
+    ...(note.speechStyle ? { speechStyle: note.speechStyle } : {}),
+  }
 }
 
 async function readEffectiveSoul(settings: SoulCardSettings): Promise<LoadedSoul> {
@@ -110,11 +154,13 @@ async function readEffectiveSoul(settings: SoulCardSettings): Promise<LoadedSoul
   const profile = await loadActiveProfilePersona(settings)
   if (profile?.present && profile.id.trim()) {
     const overrideText = typeof profile.soul === 'string' ? profile.soul : ''
+    const speechStyle = normalizePersonaSpeechStyle(profile.style?.speechStyle)
     return {
       text: effectivePersonaText(overrideText, globalSoul, systemPrompt),
       overrideText,
       updatedAt: null,
       target: { kind: 'profile', profileId: profile.id },
+      ...(speechStyle ? { speechStyle } : {}),
     }
   }
   return {
@@ -170,6 +216,9 @@ async function writeSoul(target: SoulCardTarget, text: string): Promise<string |
     return null
   }
   publishPersonaSoulSaved()
+  // Same-window saves are not delivered to the writer's own BroadcastChannel,
+  // so drop the cached persona here as well.
+  invalidateResolvedPersonaCache()
   return content
 }
 

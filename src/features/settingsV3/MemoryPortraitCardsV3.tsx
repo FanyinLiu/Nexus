@@ -6,11 +6,12 @@
  * sentences with one undo each. Op codes stay in the log.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import type { AppSettings } from '../../types/app.ts'
 import type { TranslationKey } from '../../types/i18n.ts'
-import { loadSoulCard, saveSoulCard, type SoulCardNote } from './soulCardPersona.ts'
+import type { PersonaSpeechStyle } from '../autonomy/v2/personaTypes.ts'
+import { loadSoulCard, saveSoulCard, saveSoulSpeechStyle, type SoulCardNote } from './soulCardPersona.ts'
 import { holdSoulCardDraft, peekSoulCardDraft, releaseSoulCardDraft } from './soulCardDraftSession.ts'
 import { loadMemoryOpLog, appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { MEMORY_OP_LOG_CHANGED_EVENT } from '../../lib/storage/purgeMemoryStores.ts'
@@ -30,7 +31,7 @@ import type { MemoryItem, MemoryOpRecord } from '../../types/memory.ts'
 import './memory-portrait.css'
 
 type MemoryPortraitCardsV3Props = {
-  settings: Pick<AppSettings, 'profilePersonaInChatEnabled' | 'activeCharacterProfileId' | 'systemPrompt'>
+  settings: Pick<AppSettings, 'activeCharacterProfileId' | 'systemPrompt'>
   memories: MemoryItem[]
   diaryCount?: number
   onPatchMemory?: (id: string, patch: Partial<Pick<MemoryItem, 'content' | 'pinned' | 'userEdited' | 'importance'>>) => void
@@ -68,7 +69,10 @@ export function MemoryPortraitCardsV3({
   const [soulDraft, setSoulDraft] = useState(restoredDraft ?? '')
   const [keepDraft, setKeepDraft] = useState(restoredDraft != null)
   const [soulNotice, setSoulNotice] = useState<'restored' | 'too-long' | null>(restoredDraft != null ? 'too-long' : null)
-  const personaKey = `${settings.profilePersonaInChatEnabled ? '1' : '0'}:${settings.activeCharacterProfileId ?? ''}`
+  const [styleDraft, setStyleDraft] = useState<PersonaSpeechStyle>({})
+  const [styleNotice, setStyleNotice] = useState<'saved' | 'failed' | null>(null)
+  const styleDirty = useRef(false)
+  const personaKey = settings.activeCharacterProfileId ?? ''
   const [loadedPersonaKey, setLoadedPersonaKey] = useState<string | null>(null)
   const soulReady = loadedPersonaKey === personaKey
   const [sheet, setSheet] = useState<'soul' | 'memory' | null>(null)
@@ -99,19 +103,19 @@ export function MemoryPortraitCardsV3({
   useEffect(() => {
     let current = true
     void loadSoulCard({
-      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
       activeCharacterProfileId: settings.activeCharacterProfileId,
       systemPrompt: settings.systemPrompt,
     }).then((note) => {
       if (!current) return
       setSoul(note)
       if (!keepDraft) setSoulDraft(note.text)
+      if (!styleDirty.current) setStyleDraft(note.speechStyle ?? {})
       setLoadedPersonaKey(personaKey)
     })
     return () => {
       current = false
     }
-  }, [personaKey, settings.profilePersonaInChatEnabled, settings.activeCharacterProfileId, settings.systemPrompt, keepDraft])
+  }, [personaKey, settings.activeCharacterProfileId, settings.systemPrompt, keepDraft])
   // The sheet's own state dies with the Memory page. The session copy is what
   // comes back when Settings returns to this page.
   useEffect(() => {
@@ -129,7 +133,6 @@ export function MemoryPortraitCardsV3({
 
   const saveSoul = () => {
     void saveSoulCard({
-      profilePersonaInChatEnabled: settings.profilePersonaInChatEnabled,
       activeCharacterProfileId: settings.activeCharacterProfileId,
       systemPrompt: settings.systemPrompt,
     }, soulDraft).then((result) => {
@@ -145,6 +148,35 @@ export function MemoryPortraitCardsV3({
       setSoul(result.note)
       setSoulDraft(result.note.text)
       setSoulNotice(result.restoredDefault ? 'restored' : null)
+    })
+  }
+  const patchStyle = (patch: PersonaSpeechStyle) => {
+    styleDirty.current = true
+    setStyleNotice(null)
+    setStyleDraft((current) => ({ ...current, ...patch }))
+  }
+  const saveStyle = () => {
+    // Save the visible controls together, including untouched defaults, so a
+    // slider position on screen is the value the next reply actually reads.
+    void saveSoulSpeechStyle({
+      activeCharacterProfileId: settings.activeCharacterProfileId,
+      systemPrompt: settings.systemPrompt,
+    }, {
+      clingy: 0,
+      aloof: 0,
+      playful: 0,
+      maxSentences: 3,
+      tsundere: false,
+      emojiOk: false,
+      ...styleDraft,
+    }).then((result) => {
+      if (!result.ok) {
+        setStyleNotice('failed')
+        return
+      }
+      styleDirty.current = false
+      setStyleDraft(result.speechStyle)
+      setStyleNotice('saved')
     })
   }
   const undo = (entry: MemoryOpRecord) => {
@@ -270,6 +302,83 @@ export function MemoryPortraitCardsV3({
                   placeholder={t('memory.soul.placeholder')}
                   onChange={(event) => setSoulDraft(event.target.value)}
                 />
+                <div className="memory-portrait__voice">
+                  <p className="memory-portrait__label">{t('memory.soul.voice_title')}</p>
+                  <p className="memory-portrait__hint">{t('memory.soul.voice_hint')}</p>
+                  <label className="memory-portrait__dial">
+                    <span>{t('memory.soul.clingy')}</span>
+                    <output>{styleDraft.clingy ?? 0}</output>
+                    <input
+                      type="range"
+                      min={0}
+                      max={3}
+                      step={1}
+                      value={styleDraft.clingy ?? 0}
+                      aria-label={t('memory.soul.clingy')}
+                      onChange={(event) => patchStyle({ clingy: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label className="memory-portrait__dial">
+                    <span>{t('memory.soul.aloof')}</span>
+                    <output>{styleDraft.aloof ?? 0}</output>
+                    <input
+                      type="range"
+                      min={0}
+                      max={3}
+                      step={1}
+                      value={styleDraft.aloof ?? 0}
+                      aria-label={t('memory.soul.aloof')}
+                      onChange={(event) => patchStyle({ aloof: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label className="memory-portrait__dial">
+                    <span>{t('memory.soul.playful')}</span>
+                    <output>{styleDraft.playful ?? 0}</output>
+                    <input
+                      type="range"
+                      min={0}
+                      max={3}
+                      step={1}
+                      value={styleDraft.playful ?? 0}
+                      aria-label={t('memory.soul.playful')}
+                      onChange={(event) => patchStyle({ playful: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label className="memory-portrait__dial">
+                    <span>{t('memory.soul.max_sentences')}</span>
+                    <output>{t('memory.soul.sentences', { count: styleDraft.maxSentences ?? 3 })}</output>
+                    <input
+                      type="range"
+                      min={1}
+                      max={6}
+                      step={1}
+                      value={styleDraft.maxSentences ?? 3}
+                      aria-label={t('memory.soul.max_sentences')}
+                      onChange={(event) => patchStyle({ maxSentences: Number(event.target.value) })}
+                    />
+                  </label>
+                  <label className="memory-portrait__toggle">
+                    <input
+                      type="checkbox"
+                      checked={styleDraft.tsundere === true}
+                      onChange={(event) => patchStyle({ tsundere: event.target.checked })}
+                    />
+                    <span>{t('memory.soul.tsundere')}</span>
+                  </label>
+                  <label className="memory-portrait__toggle">
+                    <input
+                      type="checkbox"
+                      checked={styleDraft.emojiOk === true}
+                      onChange={(event) => patchStyle({ emojiOk: event.target.checked })}
+                    />
+                    <span>{t('memory.soul.emoji')}</span>
+                  </label>
+                  <button type="button" className="memory-portrait__voice-save" onClick={saveStyle}>
+                    {t('memory.soul.save_voice')}
+                  </button>
+                  {styleNotice === 'saved' ? <p className="memory-portrait__label">{t('memory.soul.voice_saved')}</p> : null}
+                  {styleNotice === 'failed' ? <p className="memory-portrait__label">{t('memory.soul.voice_failed')}</p> : null}
+                </div>
                 {soulNotice === 'restored' ? <p className="memory-portrait__label">{t('memory.soul.restored')}</p> : null}
                 {soulNotice === 'too-long' ? <p className="memory-portrait__label">{t('memory.soul.too_long')}</p> : null}
                 <button type="button" className="memory-portrait__save" onClick={saveSoul}>{t('memory.soul.save')}</button>

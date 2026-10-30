@@ -7,18 +7,82 @@
  * no few-shot examples, global voice defaults, etc.).
  */
 
-interface PersonaStyle {
+/**
+ * Structured speech dials a persona may carry in style.json.
+ *
+ * Every field is optional: hand-written style files predate the dials, and a
+ * persona that sets one dial should not be forced to set the rest. Values are
+ * clamped by the reader, not by the type.
+ */
+export interface PersonaSpeechStyle {
+  /** Preferred maximum sentences per reply. */
+  maxSentences?: number
+  /** 0 = never asks for company, 3 = openly asks to stay. */
+  clingy?: number
+  /** 0 = openly warm, 3 = keeps care unspoken. */
+  aloof?: number
+  /** Denies the feeling while acting on it, especially when praised. */
+  tsundere?: boolean
+  /** 0 = dry, 3 = quick jokes and teasing. */
+  playful?: number
+  /** How she refers to herself. */
+  selfRef?: string
+  /** How she addresses the user. */
+  callUser?: string
+  /** Sentence-final particles she actually uses. */
+  particles?: string[]
+  /** Whether emoji fit the voice. */
+  emojiOk?: boolean
+  /** Whether lists and headings fit the voice. */
+  markdownOk?: boolean
+}
+
+/**
+ * One compact rule derived from the speech dials, ready to be phrased by the
+ * active locale. Thresholds are decided once in the reminder builder so the
+ * five locale files only own wording, never dial semantics.
+ */
+export type PersonaSpeechRule =
+  | { kind: 'aloof' }
+  | { kind: 'clingy' }
+  | { kind: 'tsundere' }
+  | { kind: 'playful' }
+  | { kind: 'maxSentences'; count: number }
+  | { kind: 'selfRef'; name: string }
+  | { kind: 'callUser'; name: string }
+  | { kind: 'noEmoji' }
+  | { kind: 'noMarkdown' }
+
+export interface PersonaStyle {
   /** Phrases the character is known to say. Positive anchor for the guardrail. */
   signaturePhrases?: string[]
   /** Phrases the character is NOT allowed to say. Hard negative anchor. */
   forbiddenPhrases?: string[]
   /** Free-form tone tags (e.g. "warm", "playful", "sarcastic-lite"). Advisory. */
   toneTags?: string[]
+  /**
+   * Card author's post-history instructions. They are meant to apply after the
+   * conversation history, so they are stored here instead of being pasted at
+   * the top of soul.md, and the post-history reminder injects them there.
+   */
+  postHistory?: string
+  /** Optional dials that describe how she actually talks. */
+  speechStyle?: PersonaSpeechStyle
 }
 
-interface PersonaFewShotExample {
+/** Whether the example shows a reply or a line she opens the conversation with. */
+export type PersonaExampleKind = 'reply' | 'proactive'
+
+/**
+ * One voice sample from examples.md. `user` is empty for a proactive opener,
+ * where she speaks first and there is no previous turn to answer.
+ */
+export interface PersonaFewShotExample {
   user: string
   assistant: string
+  /** Optional `## mood: <word>` heading that groups examples by feeling. */
+  mood?: string
+  kind: PersonaExampleKind
 }
 
 /**
@@ -71,6 +135,12 @@ export interface LoadedPersona {
    * and the caller should treat the persona as "not configured".
    */
   present: boolean
+  /**
+   * mtime of soul.md, when the loader could stat it. The renderer cannot
+   * read files itself; the resolver records this with its cached persona so
+   * a stale entry can be recognised after a re-read.
+   */
+  soulMtimeMs?: number
 }
 
 /** The persona profile loaded by autonomy + proactive features when the

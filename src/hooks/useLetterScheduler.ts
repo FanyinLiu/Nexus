@@ -19,10 +19,8 @@ import {
   getMostRecentLetterDate,
   saveLetter,
 } from '../features/letter/letterStore.ts'
-import {
-  DEFAULT_PERSONA_PROFILE_ID,
-  type LoadedPersona,
-} from '../features/autonomy/v2/personaTypes.ts'
+import type { LoadedPersona } from '../features/autonomy/v2/personaTypes.ts'
+import { resolveActivePersona } from '../features/persona/resolveActivePersona.ts'
 import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
@@ -107,25 +105,6 @@ function recentDiaryEntriesIn(
     }
   }
   return out
-}
-
-async function loadActivePersona(settings: AppSettings): Promise<LoadedPersona | null> {
-  try {
-    const desktopPet = window.desktopPet
-    if (!desktopPet?.personaLoadProfile) return null
-    // Honour the user's active character profile (a Character-Card import sets
-    // activeCharacterProfileId to the card's persona id). Empty -> default;
-    // fall back to the default if the active profile has no persona files.
-    const activeId = settings.activeCharacterProfileId?.trim()
-    const profileId = activeId || DEFAULT_PERSONA_PROFILE_ID
-    const loaded = await desktopPet.personaLoadProfile(profileId)
-    if (!loaded?.present && profileId !== DEFAULT_PERSONA_PROFILE_ID) {
-      return await desktopPet.personaLoadProfile(DEFAULT_PERSONA_PROFILE_ID)
-    }
-    return loaded
-  } catch {
-    return null
-  }
 }
 
 async function callLetterLLM(
@@ -272,11 +251,11 @@ export function useLetterScheduler({
         }
         if (!isBackgroundChatLeaseAvailable()) return
 
-        const persona = await loadActivePersona(s)
-        if (!persona) {
+        const persona = await resolveActivePersona(s)
+        if (!persona.soul.trim()) {
           live.onEvent?.({
             title: '[letter] skipped',
-            detail: 'persona not loaded',
+            detail: 'persona resolved without soul text',
             tone: 'warn',
           })
           return

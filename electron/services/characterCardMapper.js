@@ -11,9 +11,10 @@ export function mapCardToPersona(card) {
   if (data.personality?.trim()) soulSections.push(`## Personality\n${data.personality.trim()}`)
   if (data.scenario?.trim()) soulSections.push(`## Scenario\n${data.scenario.trim()}`)
   if (data.system_prompt?.trim()) soulSections.push(`## System Instructions\n${data.system_prompt.trim()}`)
-  if (data.post_history_instructions?.trim()) {
-    soulSections.push(`## Post-History Instructions\n${data.post_history_instructions.trim()}`)
-  }
+  // post_history_instructions is deliberately NOT part of soul.md. Card
+  // authors write it to be applied after the conversation history, so it is
+  // stored on its own and the post-history reminder injects it there.
+  const postHistory = data.post_history_instructions?.trim() ?? ''
   const soulMarkdown = soulSections.join('\n\n')
 
   // ── memory.md ──
@@ -24,7 +25,9 @@ export function mapCardToPersona(card) {
 
   // ── style.json ──
   const tags = Array.isArray(data.tags) ? data.tags.map((t) => String(t).trim()).filter(Boolean) : []
-  const style = tags.length ? { toneTags: tags } : {}
+  const style = {}
+  if (tags.length) style.toneTags = tags
+  if (postHistory) style.postHistory = postHistory
 
   // ── lorebook entries ──
   const lorebookEntries = convertCharacterBook(data.character_book)

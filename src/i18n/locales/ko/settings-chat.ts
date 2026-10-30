@@ -12,8 +12,6 @@ export const koSettingsChat = {
   'settings.chat.relationship_type_hint': '거리감과 말투를 조정합니다. 기본 능력은 바뀌지 않습니다.',
   'settings.chat.system_prompt': '성격과 말투',
   'settings.chat.system_prompt_hint': '어조, 경계, 동반자 느낌에 영향을 줍니다.',
-  'settings.chat.profile_persona_in_chat': '가져온 캐릭터로 대화',
-  'settings.chat.profile_persona_in_chat_hint': '활성 프로필의 페르소나(소울과 기억)를 답장에 사용합니다. 위의 전역 성격뿐 아니라 가져온 캐릭터 카드가 대화에 실제로 반영됩니다.',
   'settings.chat.live2d_model': '아바타',
   'settings.chat.character_voice': '캐릭터 음성',
   'settings.chat.character_voice_hint': '말하기 스타일은 여기서 조정합니다. 음성은 음성 설정에서 고릅니다.',

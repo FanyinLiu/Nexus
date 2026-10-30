@@ -10,6 +10,7 @@ import type {
 import type { VoiceActivityDetector } from '../../features/hearing/browserVad.ts'
 import type { MainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
 import type { EmotionState } from '../../features/autonomy/emotionModel.ts'
+import type { PersonaSpeechStyle } from '../../features/autonomy/v2/personaTypes.ts'
 
 export type ApiRecordingSession = {
   mediaRecorder: MediaRecorder
@@ -135,6 +136,12 @@ export type UseVoiceContext = {
    * emotion state — is created after useVoice.
    */
   getEmotionSnapshot?: () => EmotionState | undefined
+  /**
+   * Returns the active persona's speech dials, or undefined when the persona
+   * has no structured style. Lets the TTS style stay in character (an aloof
+   * persona should not sound tender just because she is pleased).
+   */
+  getSpeechStyle?: () => PersonaSpeechStyle | undefined
 }
 
 export type VoiceStreamEvent = TtsStreamEvent

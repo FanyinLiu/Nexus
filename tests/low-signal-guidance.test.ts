@@ -14,6 +14,12 @@ test('low-signal guidance favors matching brevity over expanding', () => {
   assert.doesNotMatch(LOW_SIGNAL_GUIDANCE, /follow up/i)
 })
 
+test('low-signal guidance defers the tone to the persona', () => {
+  assert.match(LOW_SIGNAL_GUIDANCE, /in your own voice/)
+  assert.doesNotMatch(LOW_SIGNAL_GUIDANCE, /\bwarm\b/i)
+  assert.doesNotMatch(LOW_SIGNAL_GUIDANCE, /\bgentle\b/i)
+})
+
 test('low-signal guidance covers multilingual minimal tokens', () => {
   assert.match(LOW_SIGNAL_GUIDANCE, /嗯/)
   assert.match(LOW_SIGNAL_GUIDANCE, /うん/)

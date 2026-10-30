@@ -4,10 +4,10 @@ import { test } from 'node:test'
 import { PERSONA_SOUL_MAX_CHARS } from '../shared/personaSoul.js'
 import { buildChatRequestPayload } from '../src/features/chat/systemPromptBuilder.ts'
 import {
-  PERSONA_SOUL_SAVED_CHANNEL,
   loadSoulCard,
   saveSoulCard,
 } from '../src/features/settingsV3/soulCardPersona.ts'
+import { PERSONA_SOUL_SAVED_CHANNEL } from '../src/features/persona/personaEvents.ts'
 import { COMPANION_SOUL_STORAGE_KEY } from '../src/lib/storage/core.ts'
 import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings, ChatMessage, MemoryRecallContext } from '../src/types'
@@ -162,7 +162,6 @@ test('editing the soul card updates SOUL.md when no profile persona is active', 
   const harness = install({
     panel: true,
     globalSoul: 'global-soul-before',
-    profiles: { 'card-1': { present: true, soul: 'profile-soul-should-stay' } },
   })
   const settings = settingsWith({
     profilePersonaInChatEnabled: false,
@@ -177,12 +176,10 @@ test('editing the soul card updates SOUL.md when no profile persona is active', 
   assert.equal(saved.note.target.kind, 'soul-file')
   assert.equal(saved.restoredDefault, false)
   assert.equal(harness.globalSoul.value, GLOBAL_EDIT)
-  assert.equal(harness.profiles.get('card-1')?.soul, 'profile-soul-should-stay')
   assert.deepEqual(harness.saves, [{ content: GLOBAL_EDIT, profileId: undefined }])
   assert.equal(harness.storage.get(COMPANION_SOUL_STORAGE_KEY), undefined)
   assert.match(prompt, new RegExp(GLOBAL_EDIT))
   assert.doesNotMatch(prompt, /global-soul-before/)
-  assert.doesNotMatch(prompt, /profile-soul-should-stay/)
 })
 
 test('editing the soul card updates the fallback profile persona the prompt actually uses', async () => {
@@ -393,7 +390,9 @@ test('whitespace in a persona file is the text the model receives', async () => 
   const prompt = await systemPromptFor(settings)
 
   assert.equal(loaded.text, '   ')
-  assert.equal(prompt.startsWith('   '), true)
+  // The header now opens the prompt; the whitespace-only persona text is
+  // still passed through verbatim as the next section.
+  assert.equal(prompt.split('\n\n')[1], '   ')
   assert.doesNotMatch(prompt, /ENGLISH-DEFAULT-PROMPT/)
 })
 
