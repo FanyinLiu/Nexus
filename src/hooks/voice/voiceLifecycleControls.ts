@@ -54,7 +54,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     const base = ctx.settingsRef.current
     const snapshot = ctx.getEmotionSnapshot?.()
     if (!snapshot) return base
-    const emotionStyle = emotionToVoiceStyle(snapshot)
+    const emotionStyle = emotionToVoiceStyle(snapshot, ctx.getSpeechStyle?.())
     const emotionRate = emotionToVoiceRate(snapshot, base.speechRate)
     if (!emotionStyle && emotionRate === base.speechRate) return base
     return {

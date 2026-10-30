@@ -164,7 +164,8 @@
 
 .memory-portrait__actions button,
 .memory-portrait__sheet-head button,
-.memory-portrait__save {
+.memory-portrait__save,
+.memory-portrait__voice-save {
   min-height: 32px;
   padding: 4px 10px;
   border: 1px solid var(--sv3-line, var(--settings-v2-line));
@@ -379,4 +380,52 @@
   line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.memory-portrait__voice {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--sv3-line, var(--settings-v2-line)) 70%, transparent);
+}
+
+.memory-portrait__hint {
+  margin: 0;
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.memory-portrait__dial {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  align-items: center;
+  color: var(--sv3-ink, var(--settings-v2-ink));
+  font-size: 13px;
+}
+
+.memory-portrait__dial input[type='range'] {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+
+.memory-portrait__dial output {
+  color: var(--sv3-muted, var(--settings-v2-muted));
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.memory-portrait__toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--sv3-ink, var(--settings-v2-ink));
+  font-size: 13px;
+}
+
+.memory-portrait__toggle input {
+  accent-color: var(--color-accent);
 }

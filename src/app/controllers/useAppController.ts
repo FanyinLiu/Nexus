@@ -16,6 +16,7 @@ import type {
   VoiceState,
   WindowView,
 } from '../../types'
+import type { PersonaSpeechStyle } from '../../features/autonomy/v2/personaTypes.ts'
 import { showCompanionNoticeBubble } from '../../features/uiV2/caption.ts'
 import { useChat } from '../../hooks/useChat.ts'
 import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
@@ -213,6 +214,7 @@ export function useAppController() {
 
   const voiceEmotionApplyRef = useRef<(label: VoiceEmotionLabel) => void>(() => {})
   const emotionVoiceSnapshotRef = useRef<() => AppEmotionState | undefined>(() => undefined)
+  const personaSpeechStyleGetterRef = useRef<() => PersonaSpeechStyle | undefined>(() => undefined)
 
   const voice = useVoice({
     settings,
@@ -243,6 +245,7 @@ export function useAppController() {
     // ctx referentially stable.
     applyVoiceEmotion: (label: VoiceEmotionLabel) => voiceEmotionApplyRef.current(label),
     getEmotionSnapshot: () => emotionVoiceSnapshotRef.current(),
+    getSpeechStyle: () => personaSpeechStyleGetterRef.current(),
   })
 
   // Ref bridge for emotion/relationship/rhythm prompt getters:
@@ -252,6 +255,7 @@ export function useAppController() {
   // after autonomy is created, a useEffect installs the real getters. The wrapper
   // function references seen by useChat ctx are stable, so ctx won't rebuild.
   const emotionPromptGetterRef = useRef<() => string>(() => '')
+  const emotionAttitudeGetterRef = useRef<() => string>(() => '')
   const relationshipPromptGetterRef = useRef<() => string>(() => '')
   const rhythmPromptGetterRef = useRef<() => string>(() => '')
   const emotionSnapshotGetterRef = useRef<() => { energy: number; warmth: number; curiosity: number; concern: number } | undefined>(() => undefined)
@@ -306,6 +310,7 @@ export function useAppController() {
     canInterruptSpeech: () => settingsRef.current.voiceInterruptionEnabled,
     loadDesktopContextSnapshot: desktopContext.loadDesktopContextSnapshot,
     getEmotionPromptText: () => emotionPromptGetterRef.current(),
+    getEmotionAttitudeText: () => emotionAttitudeGetterRef.current(),
     getRelationshipPromptText: () => relationshipPromptGetterRef.current(),
     getRhythmPromptText: () => rhythmPromptGetterRef.current(),
     // Affect guidance has no hook-ordering dependency on autonomy — the data
@@ -519,6 +524,7 @@ export function useAppController() {
   // effect only runs once after mount.
   useEffect(() => {
     emotionPromptGetterRef.current = autonomy.getEmotionPrompt
+    emotionAttitudeGetterRef.current = autonomy.getEmotionAttitudeText
     relationshipPromptGetterRef.current = autonomy.getRelationshipPrompt
     rhythmPromptGetterRef.current = autonomy.getRhythmPrompt
     emotionSnapshotGetterRef.current = () => autonomy.emotionStateRef.current
@@ -535,12 +541,13 @@ export function useAppController() {
     }
     // Her live emotion → her voice (style + pace, derived at the speak entry).
     emotionVoiceSnapshotRef.current = () => autonomy.emotionStateRef.current
+    personaSpeechStyleGetterRef.current = () => autonomy.personaSpeechStyleRef.current
     // The deps list pulls each consumed property of `autonomy` rather than
     // the object itself — autonomy is rebuilt every render in
     // useAutonomyController, so depending on the parent re-runs this effect
     // unnecessarily.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.commitOnThisDayPromptText, autonomy.consumeMessageFollowUpPromptText, autonomy.emotionStateRef, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt])
+  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.commitOnThisDayPromptText, autonomy.consumeMessageFollowUpPromptText, autonomy.emotionStateRef, autonomy.getEmotionAttitudeText, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt, autonomy.personaSpeechStyleRef])
 
   // Wake autonomy when user sends a chat message.
   //

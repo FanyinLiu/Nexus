@@ -12,13 +12,22 @@
  */
 
 import { clamp, classifyByPatterns, driftToward } from '../../lib/common.ts'
-import type { PetMood } from '../../types'
+import type { PetMood, UiLanguage } from '../../types'
+import { normalizePersonaSpeechStyle } from '../../../shared/speechStyle.js'
+import type { PersonaSpeechStyle } from './v2/personaTypes.ts'
+import { attitudeFor, attitudePromptLead } from '../persona/attitude.ts'
 
 export interface EmotionState {
   energy: number
   warmth: number
   curiosity: number
   concern: number
+  /**
+   * Transient sulk flag, not a fifth axis: she was left on read or brushed
+   * off. It survives ticks (so the next reply can show it) and clears on one
+   * genuinely warm exchange from the user.
+   */
+  sulky?: boolean
 }
 
 export function createDefaultEmotionState(): EmotionState {
@@ -29,12 +38,14 @@ export function normalizeEmotionState(value: unknown): EmotionState {
   const fallback = createDefaultEmotionState()
   if (!value || typeof value !== 'object') return fallback
   const obj = value as Partial<Record<keyof EmotionState, unknown>>
-  return {
+  const normalized: EmotionState = {
     energy: normalizeEmotionAxis(obj.energy, fallback.energy),
     warmth: normalizeEmotionAxis(obj.warmth, fallback.warmth),
     curiosity: normalizeEmotionAxis(obj.curiosity, fallback.curiosity),
     concern: normalizeEmotionAxis(obj.concern, fallback.concern),
   }
+  if (obj.sulky === true) normalized.sulky = true
+  return normalized
 }
 
 function normalizeEmotionAxis(value: unknown, fallback: number): number {
@@ -74,6 +85,10 @@ export type EmotionSignal =
   // observation was derived from that very timeline).
   | 'user_low_mood_observed'
   | 'missed_message_noticed'
+  // He was left on read: the thread went quiet mid-conversation, or a
+  // proactive line went unanswered twice. Warmth drops, concern rises, and
+  // the transient `sulky` flag makes the next reply show it.
+  | 'user_neglect'
   // Idle-arc signals (resolved by resolveIdleArcSignals below): winding
   // down, starting to miss the user, and the warm spike of reunion.
   | 'long_absence'
@@ -97,6 +112,9 @@ const SIGNAL_DELTAS: Record<EmotionSignal, Partial<EmotionState>> = {
   // Someone tried to reach the user while they were away. A small flicker
   // of attentiveness — enough to color tone, not enough to dominate.
   missed_message_noticed: { concern: 0.05, curiosity: 0.05 },
+  // Left mid-thread / ignored twice: the warmth recedes and she starts
+  // worrying at it instead of letting it go.
+  user_neglect:      { warmth: -0.15, concern: 0.12, energy: -0.05 },
   // 4+ hours away: she starts to wonder where you are. Once per absence.
   long_absence:      { concern: 0.12, energy: -0.1 },
   // You're back after a long absence — a genuine warm spike, the emotional
@@ -175,16 +193,28 @@ export function userMoodReadToEmotionSignal(mood: UserMoodWord, intensity: numbe
 
 const LONG_IDLE_THRESHOLD_SECONDS = 600
 export const LONG_ABSENCE_THRESHOLD_SECONDS = 4 * 60 * 60
+/**
+ * Six hours of quiet after a conversation is long enough to feel personal
+ * rather than incidental. Distinct from long_absence: absence is "I wonder
+ * where you are", neglect is "you left me hanging".
+ */
+export const USER_NEGLECT_THRESHOLD_SECONDS = 6 * 60 * 60
 
 export type IdleArcTracker = {
   longIdleFired: boolean
   longAbsenceFired: boolean
+  neglectFired: boolean
   /** Peak idle seconds seen in the current episode (for reunion detection). */
   peakIdleSeconds: number
 }
 
 export function createIdleArcTracker(): IdleArcTracker {
-  return { longIdleFired: false, longAbsenceFired: false, peakIdleSeconds: 0 }
+  return {
+    longIdleFired: false,
+    longAbsenceFired: false,
+    neglectFired: false,
+    peakIdleSeconds: 0,
+  }
 }
 
 /**
@@ -195,6 +225,7 @@ export function createIdleArcTracker(): IdleArcTracker {
  * Each phase of the arc now fires exactly once per idle episode:
  *   10 min  → long_idle      (winding down)
  *    4 h    → long_absence   (starting to miss you)
+ *    6 h    → user_neglect   (left mid-thread, starts to sulk)
  *   return  → reunion        (only after a long absence)
  */
 export function resolveIdleArcSignals(
@@ -214,6 +245,10 @@ export function resolveIdleArcSignals(
       next.longAbsenceFired = true
       signals.push('long_absence')
     }
+    if (!next.neglectFired && idleSeconds >= USER_NEGLECT_THRESHOLD_SECONDS) {
+      next.neglectFired = true
+      signals.push('user_neglect')
+    }
     return { signals, tracker: next }
   }
 
@@ -228,19 +263,51 @@ export function resolveIdleArcSignals(
   }
 }
 
+/**
+ * Signals that count as "one warm exchange": a hello, a thank-you, or the
+ * user clearly cheering up. `user_returned` / `reunion` deliberately do NOT
+ * clear the sulk — coming back is not the same as making it up to her.
+ */
+const SULKY_CLEAR_SIGNALS: ReadonlySet<EmotionSignal> = new Set([
+  'user_greeting',
+  'user_praise',
+  'user_mood_uplift_observed',
+  'voice_emotion_happy',
+])
+
+function nextSulky(state: EmotionState, signal: EmotionSignal): boolean {
+  if (signal === 'user_neglect') return true
+  if (state.sulky !== true) return false
+  return !SULKY_CLEAR_SIGNALS.has(signal)
+}
+
 export function applyEmotionSignal(state: EmotionState, signal: EmotionSignal): EmotionState {
   const deltas = SIGNAL_DELTAS[signal]
-  return {
+  const next: EmotionState = {
     energy: clamp(state.energy + (deltas.energy ?? 0), 0, 1),
     warmth: clamp(state.warmth + (deltas.warmth ?? 0), 0, 1),
     curiosity: clamp(state.curiosity + (deltas.curiosity ?? 0), 0, 1),
     concern: clamp(state.concern + (deltas.concern ?? 0), 0, 1),
   }
+  if (nextSulky(state, signal)) next.sulky = true
+  return next
 }
 
 /** Decay emotion state toward baseline (call once per tick). */
 export function decayEmotion(state: EmotionState): EmotionState {
-  return driftToward(state, BASELINE, DECAY_RATE)
+  // Drift only the continuous axes; the sulk flag is not a number and is
+  // cleared by a warm exchange, not by the clock.
+  const axes = driftToward(
+    {
+      energy: state.energy,
+      warmth: state.warmth,
+      curiosity: state.curiosity,
+      concern: state.concern,
+    },
+    BASELINE,
+    DECAY_RATE,
+  )
+  return state.sulky === true ? { ...axes, sulky: true } : axes
 }
 
 // ── Mood mapping ────────────────────────────────────────────────────────────
@@ -255,18 +322,24 @@ export function decayEmotion(state: EmotionState): EmotionState {
  *
  * Ordering layers, strongest → weakest:
  *   1. Severe/overriding singles: worried (high concern), sleepy (low energy)
- *   2. Multi-axis distinctive peaks: excited, playful, affectionate, proud
- *   3. Warmth + concern pairs: embarrassed
- *   4. Curiosity bursts vs sustained: surprised (burst) / curious (sustained)
- *   5. Classic happy / thinking
- *   6. Residual concern → confused
- *   7. Default: idle
+ *   2. Transient sulk: embarrassed / confused (no new Live2D motion)
+ *   3. Multi-axis distinctive peaks: excited, playful, affectionate, proud
+ *   4. Warmth + concern pairs: embarrassed
+ *   5. Curiosity bursts vs sustained: surprised (burst) / curious (sustained)
+ *   6. Classic happy / thinking
+ *   7. Residual concern → confused
+ *   8. Default: idle
  */
 export function emotionToPetMood(state: EmotionState): PetMood {
   // Severe states first.
   if (state.concern > 0.8) return 'worried'
   if (state.concern > 0.6 && state.energy < 0.55) return 'worried'
   if (state.energy < 0.2) return 'sleepy'
+
+  // Sulking is a stance, not a new expression: reuse an existing face.
+  if (state.sulky === true) {
+    return state.warmth >= 0.45 ? 'embarrassed' : 'confused'
+  }
 
   // Excited = full energy + strong curiosity. Most distinctive upward state.
   if (state.energy > 0.8 && state.curiosity > 0.65) return 'excited'
@@ -403,9 +476,22 @@ export function voiceEmotionToSignal(label: VoiceEmotionLabel): EmotionSignal {
  */
 export type RelationshipCloseness = 'early' | 'established' | 'close'
 
+export interface EmotionPromptOptions {
+  /**
+   * The active persona's dials. When present, the felt state is expressed the
+   * way THIS character would show it instead of the generic "let it show
+   * openly" stage clause.
+   */
+  speechStyle?: PersonaSpeechStyle | null
+  uiLanguage?: UiLanguage
+  /** Pre-computed attitude line; wins over `speechStyle` when non-empty. */
+  attitude?: string
+}
+
 export function formatEmotionForPrompt(
   state: EmotionState,
   closeness: RelationshipCloseness = 'established',
+  options: EmotionPromptOptions = {},
 ): string {
   const toneWords: string[] = []
 
@@ -433,9 +519,31 @@ export function formatEmotionForPrompt(
     toneWords.push('quietly proud of how things are going')
   }
 
-  if (toneWords.length === 0) return ''
-  // The felt state is the same; the relationship stage shapes how openly it
-  // shows. 'established' (friend) is the natural default — no extra clause.
+  // The felt state stays the same; the persona decides how much of it shows.
+  // An aloof character feeling affectionate is still "especially
+  // affectionate" inside — she just will not say it openly.
+  const explicitAttitude = typeof options.attitude === 'string'
+    ? options.attitude.trim()
+    : ''
+  // Without persona dials the old relationship-stage clause still applies;
+  // a generic "attitude" here would just be another warming instruction.
+  const attitude = explicitAttitude || (options.speechStyle != null
+    ? attitudeFor(emotionToPetMood(state), options.speechStyle, {
+        uiLanguage: options.uiLanguage,
+        sulky: state.sulky === true,
+      })
+    : '')
+
+  if (toneWords.length === 0 && !attitude) return ''
+
+  const felt = toneWords.length
+    ? `Current emotional state: ${toneWords.join(', ')}.`
+    : ''
+  if (attitude) {
+    return `${felt} ${attitudePromptLead(options.uiLanguage)}${attitude}`.trim()
+  }
+
+  // No persona dials: keep the old relationship-stage shape.
   const stageClause = closeness === 'early'
     ? ' Since you are still early in getting to know each other, keep how it shows light and unimposing.'
     : closeness === 'close'
@@ -481,11 +589,47 @@ const VOICE_STYLE_BY_MOOD: Record<PetMood, string> = {
 
 /**
  * A TTS style instruction for how she should sound right now, derived from her
- * current emotion. Empty string when neutral (no override). Same mood source
- * as the avatar, so voice and expression stay in sync.
+ * current emotion and shaped by the persona's dials. Empty string when neutral
+ * (no override). Same mood source as the avatar, so voice and expression stay
+ * in sync.
+ *
+ * The dials matter here too: an aloof persona must not suddenly sound tender
+ * just because she is pleased. Warm moods are overridden rather than layered,
+ * because "Speak warmly and tenderly" next to "keep it cool" is a contest the
+ * model resolves unpredictably.
  */
-export function emotionToVoiceStyle(state: EmotionState): string {
-  return VOICE_STYLE_BY_MOOD[emotionToPetMood(state)]
+const ALOOF_OVERRIDE_MOODS: ReadonlySet<PetMood> = new Set([
+  'affectionate',
+  'happy',
+  'proud',
+  'playful',
+  'excited',
+  'embarrassed',
+])
+const ALOOF_VOICE_STYLE = 'Speak coolly and understated, even when pleased.'
+
+export function emotionToVoiceStyle(
+  state: EmotionState,
+  speechStyle?: PersonaSpeechStyle | null,
+): string {
+  const mood = emotionToPetMood(state)
+  const base = VOICE_STYLE_BY_MOOD[mood]
+  const style = normalizePersonaSpeechStyle(speechStyle)
+  if (!style || !base) return base
+
+  if ((style.aloof ?? 0) >= 2) {
+    return ALOOF_OVERRIDE_MOODS.has(mood)
+      ? ALOOF_VOICE_STYLE
+      : `${base} Keep it cool and understated.`
+  }
+
+  if (style.tsundere === true) {
+    return `${base} Sound a little flustered, as if denying the feeling.`
+  }
+  if ((style.clingy ?? 0) >= 2) {
+    return `${base} Let a soft, coaxing warmth through.`
+  }
+  return base
 }
 
 /**

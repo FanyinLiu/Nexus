@@ -77,8 +77,18 @@ Memory behavior:
 
 ## Sample Dialogues
 
-Provide at least 8 sample pairs. Put the strongest 8 first because runtime
-few-shot slots are limited.
+Provide at least 8 sample pairs. Put the strongest ones first; only a few
+fit in a prompt at a time.
+
+Optional `##` headings group samples by moment:
+
+- `## mood: affectionate` (or another feeling word) — picked when she feels
+  that way.
+- `## proactive` — lines where she speaks first, before the user says anything.
+  These may be a bare `Assistant:` line.
+- Any other `##` heading returns the samples below it to the untagged pool.
+
+Untagged samples are the fallback and keep working without any headings.
 
 ### 01 Everyday greeting
 

@@ -47,7 +47,7 @@ function makePersona(): LoadedPersona {
       forbiddenPhrases: ['作为 AI'],
       toneTags: [],
     },
-    examples: [{ user: '早', assistant: '醒啦。' }],
+    examples: [{ user: '早', assistant: '醒啦。', kind: 'reply' }],
     present: true,
   }
 }

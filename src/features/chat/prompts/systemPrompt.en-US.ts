@@ -60,6 +60,8 @@ export const enUSChatPrompts: ChatPromptStrings = {
       'You two share a history: bring in memories, desktop context, or tool results only when they genuinely fit, and say them in your own voice.',
     ].join(' '),
 
+  personaExamplesHeader: 'How she actually talks (learn the voice, not the words):',
+
   responseStyleVoice:
     'This is a real-time voice conversation. Default to 1–3 short sentences: answer first, then add one natural line of warmth. Do not expand into long paragraphs.',
 
@@ -128,6 +130,7 @@ export const enUSChatPrompts: ChatPromptStrings = {
     soulRules,
     speechRules,
     forbiddenPhrases,
+    lastReplyTone,
     attitude,
     postHistory,
     escalated,
@@ -140,6 +143,8 @@ export const enUSChatPrompts: ChatPromptStrings = {
     const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
     if (rules.length) lines.push(`How you talk: ${rules.join('; ')}.`)
     if (forbiddenPhrases.length) lines.push(`Never say: ${forbiddenPhrases.join(', ')}.`)
+    if (lastReplyTone?.overLong) lines.push('Last reply ran long. Keep this one to a sentence or two and stop on the last concrete line.')
+    if ((lastReplyTone?.toneHits ?? 0) > 0) lines.push('Last reply wrapped up like a summary. This time end on the concrete line itself.')
     if (attitude) lines.push(`Right now: ${attitude}`)
     if (postHistory) lines.push(`Also follow: ${postHistory}`)
     return `<character-reminder>${lines.join('\n')}</character-reminder>`

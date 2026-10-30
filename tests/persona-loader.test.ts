@@ -174,10 +174,11 @@ test('persona profile loader loads the bundled Xinghui seed profile end-to-end',
   assert.ok(Array.isArray(loaded.tools.allowlist))
   assert.ok(loaded.tools.allowlist!.includes('web_search'))
 
-  // few-shot parsing — the seed file has > 3 pairs
+  // few-shot parsing — the seed file has > 3 samples
   assert.ok(loaded.examples.length >= 3, `expected ≥3 examples, got ${loaded.examples.length}`)
   for (const ex of loaded.examples) {
-    assert.ok(ex.user.length > 0)
+    // Proactive openers have nobody speaking before her, so no user turn.
+    if (ex.kind !== 'proactive') assert.ok(ex.user.length > 0)
     assert.ok(ex.assistant.length > 0)
   }
 })
@@ -196,7 +197,7 @@ test('persona profile loader normalizes CRLF text so prompts match across platfo
   assert.equal(loaded.soul, 'line one\nline two')
   assert.equal(loaded.memory, 'm1\nm2')
   assert.equal(loaded.examplesRaw, '### ex\nUser: 早\nAssistant: 醒啦。')
-  assert.deepEqual(loaded.examples, [{ user: '早', assistant: '醒啦。' }])
+  assert.deepEqual(loaded.examples, [{ user: '早', assistant: '醒啦。', kind: 'reply' }])
 })
 
 test('persona soul save accepts text and refuses values that must not be written', () => {

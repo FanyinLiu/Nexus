@@ -14,15 +14,14 @@
  */
 
 import type { UiLanguage } from '../../types'
-import { clamp, shorten } from '../../lib/common.ts'
+import { shorten } from '../../lib/common.ts'
 import { estimateTokensFromText } from '../chat/tokenEstimate.ts'
 import { getChatPromptStrings } from '../chat/prompts/index.ts'
 import type {
   LoadedPersona,
-  PersonaSpeechRule,
-  PersonaSpeechStyle,
   PersonaStyle,
 } from '../autonomy/v2/personaTypes.ts'
+import { speechStyleRules } from './speechStyle.ts'
 
 /** Assistant turns after which the reminder grows a "don't drift" warning. */
 export const PERSONA_REMINDER_ESCALATE_AFTER_TURNS = 12
@@ -47,6 +46,14 @@ export interface PersonaReminderInput {
   compacted?: boolean
   /** Outward expression of the current mood, once the emotion layer has one. */
   attitude?: string
+  /**
+   * Shape of the previous reply, from the assistant-tone check. The reminder
+   * turns this into one positive, behavioral line instead of a ban list.
+   */
+  toneFeedback?: {
+    hitCount: number
+    overLong: boolean
+  }
 }
 
 /**
@@ -109,43 +116,6 @@ export function extractSoulStyleRules(
   return [...styleLines, ...otherLines].slice(0, Math.max(0, limit))
 }
 
-function dial(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? clamp(value, 0, 3) : 0
-}
-
-function cleanName(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
-/**
- * Turn the optional speech dials into semantic rules. Only dials that are
- * actually set produce a rule — a persona with no dials gets none and falls
- * back to soul.md.
- */
-function speechStyleRules(style: PersonaStyle): PersonaSpeechRule[] {
-  const speech: PersonaSpeechStyle | undefined = style.speechStyle
-  if (!speech || typeof speech !== 'object') return []
-
-  const rules: PersonaSpeechRule[] = []
-  if (dial(speech.aloof) >= 2) rules.push({ kind: 'aloof' })
-  if (dial(speech.clingy) >= 2) rules.push({ kind: 'clingy' })
-  if (speech.tsundere === true) rules.push({ kind: 'tsundere' })
-  if (dial(speech.playful) >= 2) rules.push({ kind: 'playful' })
-
-  // maxSentences is 1–6, unlike the 0–3 dials above.
-  const maxSentences = speech.maxSentences
-  if (typeof maxSentences === 'number' && Number.isFinite(maxSentences) && maxSentences > 0) {
-    rules.push({ kind: 'maxSentences', count: Math.round(clamp(maxSentences, 1, 6)) })
-  }
-  const selfRef = cleanName(speech.selfRef)
-  if (selfRef) rules.push({ kind: 'selfRef', name: selfRef })
-  const callUser = cleanName(speech.callUser)
-  if (callUser) rules.push({ kind: 'callUser', name: callUser })
-  if (speech.emojiOk === false) rules.push({ kind: 'noEmoji' })
-  if (speech.markdownOk === false) rules.push({ kind: 'noMarkdown' })
-  return rules
-}
-
 function forbiddenPhrases(style: PersonaStyle): string[] {
   const raw: string[] = Array.isArray(style.forbiddenPhrases) ? style.forbiddenPhrases : []
   return raw
@@ -177,25 +147,36 @@ export function buildPersonaReminder(input: PersonaReminderInput): string {
     : PERSONA_REMINDER_TOKEN_CAP
 
   const style = input.persona.style ?? {}
-  const speechRules = speechStyleRules(style)
+  // The reminder and the chat section share one dial parser, so "aloof = 3"
+  // cannot mean two things in two prompts.
+  const speechRules = speechStyleRules(style.speechStyle)
   const soulRules = speechRules.length
     ? []
     : extractSoulStyleRules(input.persona.soul ?? '')
   const forbidden = forbiddenPhrases(style)
   const postHistory = postHistoryNote(style)
   let attitude = typeof input.attitude === 'string' ? input.attitude.trim() : ''
+  let lastReplyTone = input.toneFeedback
+    && (input.toneFeedback.hitCount > 0 || input.toneFeedback.overLong)
+    ? {
+        toneHits: Math.max(0, input.toneFeedback.hitCount),
+        overLong: input.toneFeedback.overLong === true,
+      }
+    : undefined
 
   const render = (): string => strings.characterReminder({
     companionName: input.companionName,
     soulRules,
     speechRules,
     forbiddenPhrases: forbidden,
+    ...(lastReplyTone ? { lastReplyTone } : {}),
     ...(attitude ? { attitude } : {}),
     escalated,
   })
 
   // Drop the least important material first: extra rules, then the tail of
-  // the forbidden list, then the mood line. The name always survives.
+  // the forbidden list, then the mood line, then the tone feedback. The name
+  // always survives.
   for (;;) {
     const block = render()
     if (estimateTokensFromText(block) <= cap) {
@@ -205,6 +186,7 @@ export function buildPersonaReminder(input: PersonaReminderInput): string {
             soulRules,
             speechRules,
             forbiddenPhrases: forbidden,
+            ...(lastReplyTone ? { lastReplyTone } : {}),
             ...(attitude ? { attitude } : {}),
             postHistory,
             escalated,
@@ -225,6 +207,10 @@ export function buildPersonaReminder(input: PersonaReminderInput): string {
     }
     if (attitude) {
       attitude = ''
+      continue
+    }
+    if (lastReplyTone) {
+      lastReplyTone = undefined
       continue
     }
     return block

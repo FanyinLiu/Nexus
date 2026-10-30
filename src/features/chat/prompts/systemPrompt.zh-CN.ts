@@ -61,6 +61,8 @@ export const zhCNChatPrompts: ChatPromptStrings = {
       '你们之间有共同的经历：记忆、桌面上下文和工具结果只在真的合适时自然带出，并且用你自己的说法。',
     ].join(' '),
 
+  personaExamplesHeader: '她平时这样说话（只学语气，不照抄内容）：',
+
   responseStyleVoice:
     '当前是实时语音对话。请默认使用 1 到 3 句话，先直接回答，再补一句自然的陪伴语气，不要展开成长段。',
 
@@ -129,6 +131,7 @@ export const zhCNChatPrompts: ChatPromptStrings = {
     soulRules,
     speechRules,
     forbiddenPhrases,
+    lastReplyTone,
     attitude,
     postHistory,
     escalated,
@@ -141,6 +144,8 @@ export const zhCNChatPrompts: ChatPromptStrings = {
     const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
     if (rules.length) lines.push(`说话方式：${rules.join('；')}。`)
     if (forbiddenPhrases.length) lines.push(`不要说：${forbiddenPhrases.join('、')}。`)
+    if (lastReplyTone?.overLong) lines.push('上一句有点长。这次一两句就够，说完就停，留点空。')
+    if ((lastReplyTone?.toneHits ?? 0) > 0) lines.push('上一句收尾在做总结。这次结尾停在具体的那句话上，说完就停。')
     if (attitude) lines.push(`此刻：${attitude}`)
     if (postHistory) lines.push(`还要遵守：${postHistory}`)
     return `<character-reminder>${lines.join('\n')}</character-reminder>`

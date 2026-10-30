@@ -25,8 +25,8 @@ function makePersona(overrides: Partial<LoadedPersona> = {}): LoadedPersona {
       toneTags: ['calm'],
     },
     examples: [
-      { user: '早', assistant: '醒啦。' },
-      { user: '累', assistant: '嗯，先坐会儿。' },
+      { user: '早', assistant: '醒啦。', kind: 'reply' },
+      { user: '累', assistant: '嗯，先坐会儿。', kind: 'reply' },
     ],
     present: true,
     ...overrides,

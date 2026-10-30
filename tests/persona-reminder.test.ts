@@ -14,6 +14,11 @@ import {
   shouldEscalatePersonaReminder,
 } from '../src/features/persona/personaReminder.ts'
 import { invalidateResolvedPersonaCache } from '../src/features/persona/resolveActivePersona.ts'
+import {
+  analyzeAssistantTone,
+  recordAssistantToneReport,
+  resetAssistantToneSignal,
+} from '../src/features/persona/assistantToneFilter.ts'
 import { mapCardToPersona } from '../electron/services/characterCardMapper.js'
 import { loadPersonaProfileFromReader } from '../electron/services/personaProfileLoader.js'
 import { loadSettings } from '../src/lib/storage.ts'
@@ -88,6 +93,7 @@ function installPersonaBridge(persona: LoadedPersona): void {
 }
 
 beforeEach(() => {
+  resetAssistantToneSignal()
   invalidateResolvedPersonaCache()
   installPersonaBridge(makePersona())
 })
@@ -302,4 +308,29 @@ test('locale copy for the reminder avoids developer jargon', () => {
     )
     assert.ok(getChatPromptStrings(uiLanguage).characterReminder)
   }
+})
+
+test('the previous reply shape reaches the next turn as a positive nudge', async () => {
+  recordAssistantToneReport(analyzeAssistantTone('In conclusion, I hope this helps.', {
+    uiLanguage: 'en-US',
+  }))
+  const settings = {
+    ...loadSettings(),
+    uiLanguage: 'en-US' as const,
+    companionName: 'Aster',
+    userName: 'Klein',
+  }
+  const history: ChatMessage[] = [userMessage('u1', 'what now?')]
+
+  const payload = await buildChatRequestPayload(settings, history, memoryContext, {})
+  const latest = String(payload.messages.filter((message) => message.role === 'user').at(-1)?.content ?? '')
+
+  assert.match(latest, /end on the concrete line itself/)
+  assert.doesNotMatch(latest, /customer service|don't sound|不要像/i)
+
+  // The signal is one-shot in effect: a clean reply clears it for the turn after.
+  recordAssistantToneReport(analyzeAssistantTone('mm. okay.', { uiLanguage: 'en-US' }))
+  const nextPayload = await buildChatRequestPayload(settings, history, memoryContext, {})
+  const nextLatest = String(nextPayload.messages.filter((message) => message.role === 'user').at(-1)?.content ?? '')
+  assert.doesNotMatch(nextLatest, /end on the concrete line itself/)
 })

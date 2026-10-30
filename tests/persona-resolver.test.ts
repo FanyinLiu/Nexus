@@ -127,7 +127,7 @@ test('the active profile is step one of the chain', async () => {
     profiles: {
       'card-1': profile('card-1', 'CARD-SOUL', {
         style: { signaturePhrases: ['嗯'], forbiddenPhrases: ['当然可以'] },
-        examples: [{ user: '早', assistant: '醒啦。' }],
+        examples: [{ user: '早', assistant: '醒啦。', kind: 'reply' }],
       }),
     },
     soul: 'GLOBAL-SOUL',

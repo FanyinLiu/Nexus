@@ -57,6 +57,8 @@ export const koChatPrompts: ChatPromptStrings = {
       '두 사람에게는 쌓아온 시간이 있습니다. 기억, 데스크톱 상황, 도구 결과는 정말 자연스러울 때만 당신의 말로 꺼내세요.',
     ].join(' '),
 
+  personaExamplesHeader: '그녀가 평소 말하는 방식(말투만 배우고 내용은 그대로 쓰지 않기):',
+
   responseStyleVoice:
     '지금은 실시간 음성 대화입니다. 기본적으로 1~3 문장으로, 먼저 바로 답한 뒤 자연스러운 동반자 톤의 한마디를 덧붙이세요. 긴 문단으로 늘리지 마세요.',
 
@@ -125,6 +127,7 @@ export const koChatPrompts: ChatPromptStrings = {
     soulRules,
     speechRules,
     forbiddenPhrases,
+    lastReplyTone,
     attitude,
     postHistory,
     escalated,
@@ -137,6 +140,8 @@ export const koChatPrompts: ChatPromptStrings = {
     const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
     if (rules.length) lines.push(`말투: ${rules.join('; ')}.`)
     if (forbiddenPhrases.length) lines.push(`쓰지 않는 말: ${forbiddenPhrases.join(', ')}.`)
+    if (lastReplyTone?.overLong) lines.push('지난 답변이 조금 길었어. 이번엔 한두 문장으로 끝내고 여백을 남겨.')
+    if ((lastReplyTone?.toneHits ?? 0) > 0) lines.push('지난 답변은 요약으로 끝났어. 이번엔 구체적인 한마디로 끝내.')
     if (attitude) lines.push(`지금 기분의 표현: ${attitude}`)
     if (postHistory) lines.push(`함께 지킬 것: ${postHistory}`)
     return `<character-reminder>${lines.join('\n')}</character-reminder>`

@@ -17,6 +17,10 @@ import {
 import {
   consumeCallback,
 } from '../../../features/memory/callbackStore.ts'
+import {
+  applyAssistantToneFilter,
+  recordAssistantToneReport,
+} from '../../../features/persona/assistantToneFilter.ts'
 import { logVoiceEvent } from '../../../features/voice/shared.ts'
 import { shorten } from '../../../lib/common.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
@@ -132,6 +136,29 @@ export async function postProcessAssistantReply(
     recallCues: inlineRecallCues,
     moodCues: inlineMoodCues,
   } = extractPerformanceTags(transformedAssistantText)
+  // Assistant-tone check (T8) runs on ordinary chat turns only. Tool rounds
+  // speak about real results, so their wording must stay untouched. The check
+  // never rewrites words: it may flatten markdown when the persona says
+  // Markdown does not fit, and it flags an over-long reply for the next turn's
+  // length guidance. Everything else is counted for local telemetry only.
+  const usedToolThisTurn = turnState.builtInToolCallNames.length > 0
+    || Boolean(turnState.chatToolResult)
+    || (response.response.tool_calls?.length ?? 0) > 0
+  let toneCheck: ReturnType<typeof applyAssistantToneFilter> | null = null
+  if (!usedToolThisTurn) {
+    try {
+      toneCheck = applyAssistantToneFilter(rawAssistantText, {
+        uiLanguage: currentSettings.uiLanguage,
+        personaForbiddenPhrases: assembled.persona.style?.forbiddenPhrases,
+        markdownOk: assembled.persona.style?.speechStyle?.markdownOk,
+        strictness: currentSettings.autonomyPersonaStrictnessV2,
+      })
+    } catch (toneError) {
+      // A soft voice check must never cost the user a reply.
+      console.warn('[chat] assistant tone check failed:', toneError)
+    }
+  }
+  const filteredAssistantText = toneCheck?.text ?? rawAssistantText
   const GESTURE_CUE_DURATION_MS = 1_600
   const PUBLIC_GESTURE_SET = new Set<string>(PUBLIC_GESTURE_NAMES)
   const inlineGestureCues = inlineMotionCues
@@ -173,7 +200,7 @@ export async function postProcessAssistantReply(
       console.warn('[chat] mood-read bookkeeping failed:', moodError)
     }
   }
-  const assistantPerformance = parseAssistantPerformanceContent(rawAssistantText)
+  const assistantPerformance = parseAssistantPerformanceContent(filteredAssistantText)
   const assistantMessageContent = assistantPerformance.displayContent
     || (assistantPerformance.stageDirections.length ? t('chat.assistant.stage_direction_fallback') : t('chat.assistant.empty_speech_fallback'))
   const assistantReplyForStatus = assistantPerformance.spokenContent
@@ -215,6 +242,20 @@ export async function postProcessAssistantReply(
   }
 
   dependencies.appendChatMessage(assistantMessage)
+  // Local telemetry only: counts and shape, never the reply text. The signal
+  // is read by the next turn's post-history reminder, which phrases the nudge
+  // as a positive behavior ("end on the concrete line"), not as a ban list.
+  if (toneCheck) {
+    recordAssistantToneReport(toneCheck)
+    if (toneCheck.worthReporting) {
+      dependencies.ctx.appendDebugConsoleEvent({
+        source: 'system',
+        title: 'Assistant tone check',
+        detail: `hits=${toneCheck.hitCount} aiPer1k=${toneCheck.densityPer1k.toFixed(1)} overLong=${toneCheck.overLong} markdownFlattened=${toneCheck.changed}`,
+        tone: toneCheck.hitCount > 0 || toneCheck.overLong ? 'warning' : 'info',
+      })
+    }
+  }
   // The reply actually landed, so the surfaced anniversary is now burned in
   // the lifetime ledger. Doing this at prompt-build time would lose it when
   // the request fails before a reply is committed.

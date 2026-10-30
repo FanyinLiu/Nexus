@@ -36,6 +36,8 @@ line commentary — will be discarded and treated as silent. So don't.`,
   identityFallback:
     '# Identity\n\n당신은 데스크톱 동반자입니다. 캐릭터를 유지하고 간결하게 답하세요.',
 
+  proactiveExampleUser: '(상대가 한동안 말이 없다)',
+
   signaturePhrasesHeader:
     '# 단골 표현\n\n당신이 자주 쓰는 말 — 자연스럽게 사용하고, 억지로 끼워 넣지 마세요:\n',
 

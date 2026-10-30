@@ -7,6 +7,7 @@ import {
   decayEmotion,
   emotionToPetMood,
   formatEmotionForPrompt,
+  type EmotionPromptOptions,
   normalizeEmotionState,
   createIdleArcTracker,
   resolveIdleArcSignals,
@@ -130,9 +131,12 @@ export function useEmotionState() {
 
   const getEmotionMood = useCallback(() => emotionToPetMood(emotionStateRef.current), [])
   // closeness is injected by useAutonomyController (which holds the live
-  // relationship level); defaults to 'established' when called bare.
+  // relationship level); the persona dials are injected the same way so the
+  // felt state can be expressed in this character's own way. Defaults are
+  // 'established' and no dials when called bare.
   const getEmotionPrompt = useCallback(
-    (closeness?: RelationshipCloseness) => formatEmotionForPrompt(emotionStateRef.current, closeness),
+    (closeness?: RelationshipCloseness, options?: EmotionPromptOptions) =>
+      formatEmotionForPrompt(emotionStateRef.current, closeness, options),
     [],
   )
 
