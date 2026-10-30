@@ -123,6 +123,7 @@ const defaultSettings: AppSettings = {
   memoryPaused: false,
   dreamDiaryEnabled: true,
   memoryEmbeddingModel: DEFAULT_MEMORY_EMBEDDING_MODEL,
+  memoryRerankEnabled: false,
   memoryLongTermRecallCount: 4,
   memoryDailyRecallCount: 4,
   memorySemanticRecallCount: 4,
@@ -535,6 +536,9 @@ export function loadSettings(): AppSettings {
       : defaultSettings.dreamDiaryEnabled,
     memoryEmbeddingModel: String(stored.memoryEmbeddingModel ?? defaultSettings.memoryEmbeddingModel).trim()
       || defaultSettings.memoryEmbeddingModel,
+    memoryRerankEnabled: typeof stored.memoryRerankEnabled === 'boolean'
+      ? stored.memoryRerankEnabled
+      : defaultSettings.memoryRerankEnabled,
     memoryLongTermRecallCount: clampInteger(
       stored.memoryLongTermRecallCount ?? defaultSettings.memoryLongTermRecallCount,
       defaultSettings.memoryLongTermRecallCount,

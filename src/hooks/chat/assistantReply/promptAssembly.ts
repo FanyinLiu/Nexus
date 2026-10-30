@@ -113,6 +113,7 @@ export async function assembleAssistantPrompt(
           semanticLimit: currentSettings.memorySemanticRecallCount,
           retentionDays: currentSettings.memoryDiaryRetentionDays,
           currentEmotion: emotionSnapshot,
+          rerankEnabled: currentSettings.memoryRerankEnabled,
         }),
     loadRelevantSkills(content).catch((err) => {
       console.warn('[assistantReply] loadRelevantSkills failed; continuing without skill context.', err)

@@ -783,6 +783,8 @@ declare global {
         content: string
         layer: string
         vectorScore: number
+        /** Plain cosine before the max-normalization of vectorScore. */
+        rawVectorScore?: number
         keywordScore: number
         score: number
         /** Keyword hit whose stored vector is from another model/dimension. */

@@ -8,17 +8,29 @@
  *   --models=local-hash-v1,ollama:qwen3-embedding:0.6b   models to compare
  *   --ollama=http://127.0.0.1:11434                       Ollama root
  *   --json=out.json                                       also write raw results
+ *   --split=all|tuning|heldout                            which fixture(s) to run
  *   --skip-pipeline                                       embedding-only metrics
+ *   --no-rerank                                           skip the second-stage rerank rows
+ *   --rerank-model=ollama:bge-m3:latest                   auxiliary model for rerank
  *
- * Dataset: tests/fixtures/memory-recall-zh/dataset.json (fictional user,
- * 40 memories, 45 queries: paraphrase / state change / English / mixed /
- * no-answer). Three measurements per model:
- *   1. embedding-only: cosine over all 40 memories (Recall@1/@3, MRR);
+ * Datasets:
+ *   tuning  tests/fixtures/memory-recall-zh/dataset.json  (thresholds were
+ *           picked on this split: 40 memories, 41 answerable, 20 no-answer)
+ *   heldout tests/fixtures/memory-recall-zh/heldout.json  (never used for
+ *           threshold selection: 32 memories, 32 answerable, 40 no-answer,
+ *           20 of them confusable)
+ *
+ * Three measurements per model and split:
+ *   1. embedding-only: cosine over all memories (Recall@1/@3, MRR);
  *   2. pipeline, renderer path: buildMemoryRecallContext() with the default
  *      settings (hybrid, 4 long-term results) and no main-process store;
  *   3. pipeline, main-process path: same, with window.desktopPet backed by
  *      the real electron/services/memoryVectorStore (BM25 + vector worker),
  *      every memory pre-indexed (steady state).
+ *   4. both pipeline paths again with the optional second-stage rerank
+ *      enabled (BGE-M3, only when Ollama is the primary backend). This is the
+ *      with/without comparison; thresholds and the RRF weight were chosen on
+ *      the tuning split only.
  * Pipeline lists are truncated at the recall limit, so MRR there is MRR@4.
  */
 
@@ -36,8 +48,18 @@ const args = new Map(process.argv.slice(2).map((arg) => {
 const models = (args.get("models") ?? "local-hash-v1,ollama:qwen3-embedding:0.6b").split(",").map((m) => m.trim()).filter(Boolean);
 const ollamaBase = args.get("ollama") ?? "http://127.0.0.1:11434";
 const skipPipeline = args.has("skip-pipeline");
+const runRerank = !args.has("no-rerank");
+const rerankModel = args.get("rerank-model") ?? "ollama:bge-m3:latest";
+const splitFilter = args.get("split") ?? "all";
 const PIPELINE_LIMIT = 4;
-const dataset = JSON.parse(await readFile(path.join(root, "tests/fixtures/memory-recall-zh/dataset.json"), "utf8"));
+const DATASETS = [
+  { split: "tuning", file: "tests/fixtures/memory-recall-zh/dataset.json" },
+  { split: "heldout", file: "tests/fixtures/memory-recall-zh/heldout.json" },
+].filter((entry) => splitFilter === "all" || splitFilter === entry.split);
+const datasets = [];
+for (const entry of DATASETS) {
+  datasets.push({ split: entry.split, data: JSON.parse(await readFile(path.join(root, entry.file), "utf8")) });
+}
 const userData = await mkdtemp(path.join(tmpdir(), "nexus-recall-bench-"));
 globalThis.__nexusMemoryVectorUserData = userData;
 // Storage modules open a BroadcastChannel when `window` exists; it would keep
@@ -67,16 +89,28 @@ try {
 const store = await import("../electron/services/memoryVectorStore.js");
 globalThis.BroadcastChannel = realBroadcastChannel;
 const now = Date.now();
-const memoryItems = dataset.memories.map((memory) => ({
-  id: memory.id,
-  content: memory.content,
-  category: memory.category,
-  source: "benchmark",
-  enabled: true,
-  status: "active",
-  importance: "normal",
-  createdAt: new Date(now - memory.daysAgo * 864e5).toISOString()
-}));
+function memoryItems(dataset) {
+  return dataset.memories.map((memory) => ({
+    id: memory.id,
+    content: memory.content,
+    category: memory.category,
+    source: "benchmark",
+    enabled: true,
+    status: "active",
+    importance: "normal",
+    createdAt: new Date(now - memory.daysAgo * 864e5).toISOString()
+  }));
+}
+function scoreSummary(row) {
+  const scores = (row.rawScores ?? []).filter((value) => Number.isFinite(value));
+  const top1 = scores[0] ?? row.topScore ?? 0;
+  const top2 = scores.length > 1 ? scores[1] : null;
+  return {
+    top1,
+    top2,
+    gap: top2 === null ? null : top1 - top2
+  };
+}
 function metrics(rows) {
   const answerable = rows.filter((row) => row.query.relevant.length);
   let r1 = 0;
@@ -110,7 +144,33 @@ function metrics(rows) {
   const none = rows.filter((row) => !row.query.relevant.length);
   const maxNoneScore = Math.max(...none.map((row) => row.topScore), -Infinity);
   const separable = answerable.filter((row) => row.topScore > maxNoneScore).length;
+  // Low-confidence rule (pipeline rows only carry `confidence`). Miss queries
+  // should come back empty ('none') or at least flagged ('low'); answerable
+  // ones should never be suppressed.
+  const withConfidence = rows.some((row) => row.confidence !== void 0);
+  const count = (list, ...levels) => list.filter((row) => levels.includes(row.confidence)).length;
+  const rejection = withConfidence ? {
+    missSuppressed: `${count(none, "none")}/${none.length}`,
+    missSuppressedOrFlagged: `${count(none, "none", "low")}/${none.length}`,
+    confusableMissSuppressedOrFlagged: `${count(none.filter((row) => row.query.confusable), "none", "low")}/${none.filter((row) => row.query.confusable).length}`,
+    answerableSuppressed: `${count(answerable, "none")}/${answerable.length}`,
+    answerableFlaggedLow: `${count(answerable, "low")}/${answerable.length}`
+  } : void 0;
+  // Diagnostics: answerable queries the rule kept but flagged, with the raw
+  // cosine gap the rule looked at. Printed so a regression is easy to read.
+  const answerableLowConfidence = withConfidence
+    ? answerable
+      .filter((row) => row.confidence === "low" || row.confidence === "none")
+      .map((row) => ({ id: row.query.id, text: row.query.text, confidence: row.confidence, relevant: row.query.relevant, ...scoreSummary(row) }))
+    : [];
+  const missNotFlagged = withConfidence
+    ? none
+      .filter((row) => row.confidence === "high")
+      .map((row) => ({ id: row.query.id, text: row.query.text, confusable: !!row.query.confusable, ...scoreSummary(row) }))
+    : [];
   return {
+    ...rejection ? { rejection } : {},
+    ...withConfidence ? { answerableLowConfidence, missNotFlagged } : {},
     n: answerable.length,
     recallAt1: r1 / answerable.length,
     recallAt3: r3 / answerable.length,
@@ -127,7 +187,7 @@ function metrics(rows) {
     }]))
   };
 }
-async function embeddingOnly(model) {
+async function embeddingOnly(model, dataset) {
   const docVectors = /* @__PURE__ */ new Map();
   const docStart = performance.now();
   for (const memory of dataset.memories) {
@@ -141,7 +201,7 @@ async function embeddingOnly(model) {
   for (const query of dataset.queries) {
     const queryVector = await vectorSearch.embedMemorySearchText(query.text, model, "query");
     const scored = dataset.memories.map((memory) => ({ id: memory.id, score: vectorSearch.cosineSimilarity(queryVector, docVectors.get(memory.id) ?? []) })).sort((a, b) => b.score - a.score);
-    rows.push({ query, ranking: scored.map((s) => s.id), topScore: scored[0]?.score ?? 0 });
+    rows.push({ query, ranking: scored.map((s) => s.id), topScore: scored[0]?.score ?? 0, rawScores: scored.map((s) => s.score) });
   }
   const queryMs = (performance.now() - queryStart) / dataset.queries.length;
   return { metrics: metrics(rows), docMsPerText: docMs, queryMsPerText: queryMs, rows };
@@ -161,9 +221,10 @@ function installDesktopPet(enabled) {
     memoryHybridSearch: async (payload) => store.searchHybrid(payload.queryEmbedding, payload.queryText, payload)
   };
 }
-async function pipeline(model, mainProcess) {
+async function pipeline(model, mainProcess, dataset, rawScoresByQuery, rerankEnabled = false) {
   await store.clearAllEntries();
   installDesktopPet(mainProcess);
+  const items = memoryItems(dataset);
   if (mainProcess) {
     const batch = [];
     for (const memory of dataset.memories) {
@@ -176,22 +237,30 @@ async function pipeline(model, mainProcess) {
   for (const query of dataset.queries) {
     const context = await recall.buildMemoryRecallContext({
       query: query.text,
-      longTermMemories: memoryItems,
+      longTermMemories: items,
       dailyMemories: {},
       searchMode: "hybrid",
       embeddingModel: model,
       longTermLimit: PIPELINE_LIMIT,
       dailyLimit: 4,
       semanticLimit: 4,
-      retentionDays: 7
+      retentionDays: 7,
+      rerankEnabled,
+      rerankModel
     });
     const top = context.semantic?.[0]?.score ?? 0;
-    rows.push({ query, ranking: context.longTerm.map((item) => item.id), topScore: top });
+    rows.push({
+      query,
+      ranking: context.longTerm.map((item) => item.id),
+      topScore: top,
+      confidence: context.recallConfidence ?? null,
+      rawScores: rawScoresByQuery.get(query.id) ?? []
+    });
   }
   installDesktopPet(false);
   return { metrics: metrics(rows), rows };
 }
-async function ollamaLatency(model) {
+async function ollamaLatency(model, dataset) {
   const name = model.replace(/^ollama:/, "");
   const texts = dataset.memories.map((m) => m.content);
   const single = [];
@@ -218,30 +287,87 @@ for (const model of models) {
     console.warn(`skip ${model}: this checkout has no Ollama backend`);
     continue;
   }
-  const entry = {};
-  const emb = await embeddingOnly(model);
-  entry.embeddingOnly = emb.metrics;
-  entry.latency = model.startsWith("ollama:") ? { ...await ollamaLatency(model), docMsPerTextViaBackend: emb.docMsPerText, queryMsPerTextViaBackend: emb.queryMsPerText } : { docMsPerTextViaBackend: emb.docMsPerText, queryMsPerTextViaBackend: emb.queryMsPerText };
-  if (!skipPipeline) {
-    entry.pipelineRenderer = (await pipeline(model, false)).metrics;
-    const main = await pipeline(model, true);
-    entry.pipelineMainProcess = main.metrics;
-    entry.pipelineMainProcessMisses = main.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.join(",")}`);
+  const entry = { latency: null, splits: {} };
+  for (const { split, data: dataset } of datasets) {
+    const splitEntry = {};
+    const emb = await embeddingOnly(model, dataset);
+    splitEntry.embeddingOnly = emb.metrics;
+    if (model.startsWith("ollama:")) {
+      const latency = { ...await ollamaLatency(model, dataset), docMsPerTextViaBackend: emb.docMsPerText, queryMsPerTextViaBackend: emb.queryMsPerText };
+      entry.latency = entry.latency ?? latency;
+      splitEntry.latency = latency;
+    } else {
+      splitEntry.latency = { docMsPerTextViaBackend: emb.docMsPerText, queryMsPerTextViaBackend: emb.queryMsPerText };
+    }
+    if (!skipPipeline) {
+      const rawScoresByQuery = new Map(emb.rows.map((row) => [row.query.id, row.rawScores]));
+      splitEntry.pipelineRenderer = (await pipeline(model, false, dataset, rawScoresByQuery)).metrics;
+      const main = await pipeline(model, true, dataset, rawScoresByQuery);
+      splitEntry.pipelineMainProcess = main.metrics;
+      splitEntry.pipelineMainProcessMisses = main.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.join(",")}`);
+      // The reranker is an Ollama-model feature; the hash backend has no
+      // auxiliary model to compare against.
+      if (runRerank && model.startsWith("ollama:")) {
+        splitEntry.pipelineRendererRerank = (await pipeline(model, false, dataset, rawScoresByQuery, true)).metrics;
+        const reranked = await pipeline(model, true, dataset, rawScoresByQuery, true);
+        splitEntry.pipelineMainProcessRerank = reranked.metrics;
+        splitEntry.pipelineMainProcessRerankMisses = reranked.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.join(",")}`);
+      }
+    }
+    splitEntry.embeddingOnlyMisses = emb.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.slice(0, 3).join(",")}`);
+    entry.splits[split] = splitEntry;
   }
-  entry.embeddingOnlyMisses = emb.rows.filter((row) => row.query.relevant.length && !row.query.relevant.includes(row.ranking[0])).map((row) => `${row.query.id} ${row.query.text} -> ${row.ranking.slice(0, 3).join(",")}`);
   results[model] = entry;
 }
 const pct = (value) => `${(value * 100).toFixed(1)}%`;
-const lines = ["| model | measurement | R@1 | R@3 | MRR | state newest-first | top score answerable / none |", "|---|---|---|---|---|---|---|"];
+const fmtGap = (value) => value === null ? "-" : value.toFixed(3);
+const lines = ["| split | model | measurement | R@1 | R@3 | MRR | state newest-first | top score answerable / none |", "|---|---|---|---|---|---|---|---|"];
 for (const [model, entry] of Object.entries(results)) {
-  for (const key of ["embeddingOnly", "pipelineRenderer", "pipelineMainProcess"]) {
-    const m = entry[key];
-    if (!m) continue;
-    lines.push(`| ${model} | ${key} | ${pct(m.recallAt1)} | ${pct(m.recallAt3)} | ${m.mrr.toFixed(3)} | ${m.stateNewestFirst} | ${m.meanTopScoreAnswerable.toFixed(3)} / ${m.meanTopScoreNone.toFixed(3)} |`);
+  for (const [split, splitEntry] of Object.entries(entry.splits)) {
+    for (const key of ["embeddingOnly", "pipelineRenderer", "pipelineMainProcess", "pipelineRendererRerank", "pipelineMainProcessRerank"]) {
+      const m = splitEntry[key];
+      if (!m) continue;
+      lines.push(`| ${split} | ${model} | ${key} | ${pct(m.recallAt1)} | ${pct(m.recallAt3)} | ${m.mrr.toFixed(3)} | ${m.stateNewestFirst} | ${m.meanTopScoreAnswerable.toFixed(3)} / ${m.meanTopScoreNone.toFixed(3)} |`);
+    }
   }
 }
 console.log(lines.join("\n"));
-console.log(JSON.stringify(results, null, 2));
+const rejectionLines = ["| split | model | path | miss suppressed | miss suppressed/flagged | confusable flagged | answerable suppressed | answerable flagged low |", "|---|---|---|---|---|---|---|---|"];
+for (const [model, entry] of Object.entries(results)) {
+  for (const [split, splitEntry] of Object.entries(entry.splits)) {
+    for (const key of ["pipelineRenderer", "pipelineMainProcess", "pipelineRendererRerank", "pipelineMainProcessRerank"]) {
+      const m = splitEntry[key];
+      if (!m?.rejection) continue;
+      rejectionLines.push(`| ${split} | ${model} | ${key} | ${m.rejection.missSuppressed} | ${m.rejection.missSuppressedOrFlagged} | ${m.rejection.confusableMissSuppressedOrFlagged} | ${m.rejection.answerableSuppressed} | ${m.rejection.answerableFlaggedLow} |`);
+    }
+  }
+}
+console.log("\n" + rejectionLines.join("\n"));
+const diagnosticLines = [];
+for (const [model, entry] of Object.entries(results)) {
+  for (const [split, splitEntry] of Object.entries(entry.splits)) {
+    const m = splitEntry.pipelineMainProcessRerank ?? splitEntry.pipelineMainProcess ?? splitEntry.pipelineRenderer;
+    if (!m) continue;
+    for (const row of m.answerableLowConfidence ?? []) {
+      diagnosticLines.push(`[${split}] ${model} ${row.id} ${row.text} -> ${row.confidence} top1=${row.top1.toFixed(3)} top2=${row.top2 === null ? "-" : row.top2.toFixed(3)} gap=${fmtGap(row.gap)} relevant=${row.relevant.join(",")}`);
+    }
+  }
+}
+console.log("\nAnswerable queries kept but flagged low/none:");
+console.log(diagnosticLines.length ? diagnosticLines.join("\n") : "(none)");
+const missLines = [];
+for (const [model, entry] of Object.entries(results)) {
+  for (const [split, splitEntry] of Object.entries(entry.splits)) {
+    const m = splitEntry.pipelineMainProcessRerank ?? splitEntry.pipelineMainProcess ?? splitEntry.pipelineRenderer;
+    if (!m) continue;
+    for (const row of m.missNotFlagged ?? []) {
+      missLines.push(`[${split}] ${model} ${row.id} ${row.text}${row.confusable ? " (confusable)" : ""} -> high top1=${row.top1.toFixed(3)} top2=${row.top2 === null ? "-" : row.top2.toFixed(3)} gap=${fmtGap(row.gap)}`);
+    }
+  }
+}
+console.log("\nNo-answer queries still classified high:");
+console.log(missLines.length ? missLines.join("\n") : "(none)");
+console.log("\n" + JSON.stringify(results, null, 2));
 if (args.get("json")) {
   const { writeFile } = await import("node:fs/promises");
   await writeFile(args.get("json"), JSON.stringify(results, null, 2));

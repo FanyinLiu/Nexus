@@ -182,6 +182,8 @@ export const jaSettingsMemory = {
   'settings.memory.long_term.embedding_preset': '記憶モデルのプリセット',
   'settings.memory.long_term.embedding_custom_hint': '下に独自のモデル ID を入力することもできます。',
   'settings.memory.long_term.embedding_custom_model': 'カスタムモデル ID',
+  'settings.memory.long_term.rerank': '近い記憶を再確認',
+  'settings.memory.long_term.rerank_hint': 'Ollama の bge-m3 モデルで、いちばん合う記憶を先頭に並べ直します。モデルがないときはこれまでどおりの順番で、記憶が隠れることはありません。',
   'settings.memory.long_term.recall_long_term': '長期記憶の呼び出し数',
   'settings.memory.long_term.recall_diary': '日記の呼び出し数',
   'settings.memory.long_term.recall_semantic': 'セマンティックヒット数',

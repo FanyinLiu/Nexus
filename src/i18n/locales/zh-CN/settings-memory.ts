@@ -180,6 +180,8 @@ export const zhCNSettingsMemory = {
   'settings.memory.long_term.embedding_preset': '记忆模型预设',
   'settings.memory.long_term.embedding_custom_hint': '也可以直接在下面填写自定义模型 ID。',
   'settings.memory.long_term.embedding_custom_model': '自定义模型 ID',
+  'settings.memory.long_term.rerank': '再核对最接近的记忆',
+  'settings.memory.long_term.rerank_hint': '用 Ollama 里的 bge-m3 模型把最合适的记忆排到前面。没装这个模型时会保持原来的排序，不会藏起任何记忆。',
   'settings.memory.long_term.recall_long_term': '长期记忆召回数',
   'settings.memory.long_term.recall_diary': '日记召回数',
   'settings.memory.long_term.recall_semantic': '语义命中数',

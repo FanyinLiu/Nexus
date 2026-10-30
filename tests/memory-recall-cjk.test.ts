@@ -24,7 +24,7 @@ const userData = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-recall-cjk-'))
 const { tokenizeForRecall, scoreRecallKeywordOverlap } = await import('../src/features/memory/recallTokens.ts')
 const { rankMemories, scoreLexicalSimilarity } = await import('../src/features/memory/memory.ts')
 const { buildMemoryRecallContext } = await import('../src/features/memory/recall.ts')
-const { embedLocalHashMemoryText } = await import('../src/features/memory/vectorSearch.ts')
+const { embedLocalHashMemoryText, clearMemoryEmbeddingCache } = await import('../src/features/memory/vectorSearch.ts')
 const { resetOllamaEmbeddingState, setOllamaEmbedTransport, QWEN3_MEMORY_EMBEDDING_MODEL_ID } = await import(
   '../src/features/memory/ollamaEmbedding.ts'
 )
@@ -108,6 +108,75 @@ test('hybrid recall scores every memory: a paraphrase with no word overlap is no
     longTermLimit: 4,
     dailyLimit: 4,
     semanticLimit: 4,
+    retentionDays: 7,
+  })
+  assert.equal(context.longTerm[0]!.id, 'target')
+  setOllamaEmbedTransport(null)
+})
+
+test('recency is a tie-break, not a reason to outrank the semantic answer', async () => {
+  // "What did I say before" has no lexical overlap with either Chinese
+  // memory, so only the fake cosine decides. The newer memory is a weaker
+  // match; a large recency bonus let it win before these weights.
+  clearMemoryEmbeddingCache()
+  resetOllamaEmbeddingState()
+  const older = Math.sqrt(1 - 0.6 * 0.6)
+  const newer = Math.sqrt(1 - 0.48 * 0.48)
+  setOllamaEmbedTransport(async (request) => ({
+    ok: true,
+    embeddings: request.input.map((text) => {
+      if (text.includes('Instruct:')) return [1, 0]
+      if (text.includes('旧')) return [0.6, older]
+      if (text.includes('新')) return [0.48, newer]
+      return [0, 1]
+    }),
+  }))
+  const context = await buildMemoryRecallContext({
+    query: 'what did I say before',
+    longTermMemories: [
+      memory('old', '旧事实甲', { createdAt: '2020-01-01T00:00:00.000Z' }),
+      memory('fresh', '新事实乙', { createdAt: new Date().toISOString() }),
+      memory('noise', '无关记录', { createdAt: new Date().toISOString() }),
+    ],
+    dailyMemories: {},
+    searchMode: 'hybrid',
+    embeddingModel: QWEN3_MEMORY_EMBEDDING_MODEL_ID,
+    longTermLimit: 3,
+    dailyLimit: 2,
+    semanticLimit: 3,
+    retentionDays: 7,
+  })
+  assert.equal(context.longTerm[0]!.id, 'old')
+  setOllamaEmbedTransport(null)
+})
+
+test('lexical overlap breaks a near-tie that the embedding alone cannot', async () => {
+  clearMemoryEmbeddingCache()
+  resetOllamaEmbeddingState()
+  const target = Math.sqrt(1 - 0.58 * 0.58)
+  const distract = Math.sqrt(1 - 0.6 * 0.6)
+  setOllamaEmbedTransport(async (request) => ({
+    ok: true,
+    embeddings: request.input.map((text) => {
+      if (text.includes('Instruct:')) return [1, 0]
+      if (text.includes('coffee')) return [0.58, target]
+      if (text.includes('green')) return [0.6, distract]
+      return [0, 1]
+    }),
+  }))
+  const context = await buildMemoryRecallContext({
+    query: 'coffee roast',
+    longTermMemories: [
+      memory('target', 'coffee roast notes'),
+      memory('distract', 'green tea notes'),
+      memory('noise', 'unrelated diary'),
+    ],
+    dailyMemories: {},
+    searchMode: 'hybrid',
+    embeddingModel: QWEN3_MEMORY_EMBEDDING_MODEL_ID,
+    longTermLimit: 3,
+    dailyLimit: 2,
+    semanticLimit: 3,
     retentionDays: 7,
   })
   assert.equal(context.longTerm[0]!.id, 'target')

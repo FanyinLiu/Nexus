@@ -4,6 +4,8 @@
 // character budgets the caller specifies.
 
 import type { MemoryRecallContext } from '../../types'
+import { enUSChatPrompts } from './prompts/systemPrompt.en-US.ts'
+import type { ChatPromptStrings } from './prompts/types.ts'
 
 /**
  * Build hot-tier memory sections (longTerm + daily) within a character budget.
@@ -13,6 +15,7 @@ import type { MemoryRecallContext } from '../../types'
 export function buildHotTierMemorySections(
   memoryContext: MemoryRecallContext,
   maxChars: number,
+  prompts: ChatPromptStrings = enUSChatPrompts,
 ) {
   let budget = maxChars
   const longTermLines: string[] = []
@@ -35,9 +38,14 @@ export function buildHotTierMemorySections(
     budget -= line.length
   }
 
-  const longTermSection = longTermLines.length
-    ? `Things you know about this person from your time together. When one naturally fits the moment, let it shape what you say — the way a memory surfaces on its own, not cited or announced. If nothing connects, they stay quiet:\n${longTermLines.join('\n')}`
+  const lowConfidenceNote = memoryContext.recallConfidence === 'low'
+    ? ` ${prompts.memoryLongTermLowNote}`
     : ''
+  const longTermSection = longTermLines.length
+    ? `${prompts.memoryLongTermHeader}${lowConfidenceNote}\n${longTermLines.join('\n')}`
+    : memoryContext.recallConfidence === 'none'
+      ? prompts.memoryLongTermEmptyNote
+      : ''
 
   const dailySection = dailyLines.length
     ? `Recent days together — still fresh. You can pick a thread back up if it naturally connects to now, the way you would with someone you see every day. If they have moved on, so have you:\n${dailyLines.join('\n')}`
@@ -53,7 +61,10 @@ function formatConfidence(score: number): string {
   return clamped.toFixed(2)
 }
 
-export function buildSemanticMemorySection(memoryContext: MemoryRecallContext) {
+export function buildSemanticMemorySection(
+  memoryContext: MemoryRecallContext,
+  prompts: ChatPromptStrings = enUSChatPrompts,
+) {
   if (!memoryContext.semantic.length) {
     return ''
   }
@@ -66,5 +77,5 @@ export function buildSemanticMemorySection(memoryContext: MemoryRecallContext) {
     })
     .join('\n')
 
-  return `Associations this conversation stirred up. The confidence score (0.00–1.00) reflects how clearly each one connects: high means vivid and specific, low means a faint echo — mention it gently if at all. Let the clear ones inform you; let the faint ones stay at the edge:\n${lines}`
+  return prompts.memorySemanticSection(lines)
 }

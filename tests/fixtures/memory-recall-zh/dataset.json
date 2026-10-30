@@ -1,5 +1,5 @@
 {
-  "description": "Fictional user 林夏 (Lin Xia). 40 long-term memories in natural Chinese and ~45 queries that paraphrase rather than repeat the wording. relevant = ids that should be recalled; empty = no relevant memory exists. state pairs: newer memory listed first in relevant.",
+  "description": "Fictional user 林夏 (Lin Xia). 40 long-term memories in natural Chinese and 61 queries (20 with no answer; confusable = shares a topic or words with a stored memory) that paraphrase rather than repeat the wording. relevant = ids that should be recalled; empty = no relevant memory exists. state pairs: newer memory listed first in relevant.",
   "memories": [
     {"id": "m01", "category": "profile", "daysAgo": 120, "content": "我叫林夏，在杭州一家做跨境电商的公司当产品经理"},
     {"id": "m02", "category": "preference", "daysAgo": 100, "content": "我对花生严重过敏，吃一点就会起疹子"},
@@ -87,6 +87,22 @@
     {"id": "q42", "type": "none", "text": "我的车是什么牌子的", "relevant": []},
     {"id": "q43", "type": "none", "text": "我会弹钢琴吗", "relevant": []},
     {"id": "q44", "type": "none", "text": "Do I have any kids?", "relevant": []},
-    {"id": "q45", "type": "none", "text": "我的股票投资收益怎么样", "relevant": []}
+    {"id": "q45", "type": "none", "text": "我的股票投资收益怎么样", "relevant": []},
+    {"id": "q46", "type": "none", "text": "我爸爸是做什么工作的", "relevant": [], "confusable": true},
+    {"id": "q47", "type": "none", "text": "我妹妹在哪个城市上班", "relevant": [], "confusable": true},
+    {"id": "q48", "type": "none", "text": "我老板叫什么名字", "relevant": [], "confusable": true},
+    {"id": "q49", "type": "none", "text": "我中学是在哪里读的", "relevant": [], "confusable": true},
+    {"id": "q50", "type": "none", "text": "我上次去日本旅游是什么时候", "relevant": [], "confusable": true},
+    {"id": "q51", "type": "none", "text": "我最喜欢的足球队是哪个", "relevant": [], "confusable": true},
+    {"id": "q52", "type": "none", "text": "我平时用什么牌子的护肤品", "relevant": [], "confusable": true},
+    {"id": "q53", "type": "none", "text": "我有没有养过鱼", "relevant": [], "confusable": true},
+    {"id": "q54", "type": "none", "text": "我的血型是什么", "relevant": []},
+    {"id": "q55", "type": "none", "text": "我家WiFi密码是多少", "relevant": []},
+    {"id": "q56", "type": "none", "text": "我喜欢什么颜色", "relevant": []},
+    {"id": "q57", "type": "none", "text": "我身高多少", "relevant": []},
+    {"id": "q58", "type": "none", "text": "我驾照考到第几科了", "relevant": []},
+    {"id": "q59", "type": "none", "text": "What's my favorite basketball team?", "relevant": []},
+    {"id": "q60", "type": "none", "text": "我公司年会定在哪天", "relevant": [], "confusable": true},
+    {"id": "q61", "type": "none", "text": "我会不会游泳以外的水上运动，比如冲浪", "relevant": [], "confusable": true}
   ]
 }

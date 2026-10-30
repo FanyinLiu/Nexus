@@ -413,7 +413,7 @@ async function buildSystemPrompt(
     ? prompts.toolContextHeader(options.toolContext)
     : ''
 
-  const hotTier = buildHotTierMemorySections(memoryContext, settings.memoryHotTierMaxChars)
+  const hotTier = buildHotTierMemorySections(memoryContext, settings.memoryHotTierMaxChars, prompts)
 
   const callbackSection = buildCallbackSection(options.pendingCallbacks)
 
@@ -458,7 +458,7 @@ async function buildSystemPrompt(
       hotTier.longTermSection,
       hotTier.dailySection,
       buildLorebookSection(options.triggeredLorebookEntries ?? []),
-      buildSemanticMemorySection(memoryContext),
+      buildSemanticMemorySection(memoryContext, prompts),
       callbackSection,
       mcpToolsSection,
       skillGuideSection,

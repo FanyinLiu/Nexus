@@ -13,6 +13,15 @@ import {
   rankMemories,
 } from './memory.ts'
 import { scoreRecallKeywordOverlap } from './recallTokens.ts'
+import { classifyRecallConfidence, getRecallConfidenceThresholds } from './recallConfidence.ts'
+import {
+  MEMORY_RERANK_MODEL_ID,
+  MEMORY_RERANK_TIMEOUT_MS,
+  MEMORY_RERANK_TOP_K,
+  fuseRecallRerank,
+  scoreRerankCandidates,
+} from './recallRerank.ts'
+import { isOllamaMemoryModel, isOllamaMemoryModelCoolingDown } from './ollamaEmbedding.ts'
 import {
   cosineSimilarity,
   embedMemorySearchTextWithModel,
@@ -42,6 +51,14 @@ type BuildMemoryRecallContextParams = {
   retentionDays: number
   /** Current emotion state — enables mood-aware recall ranking. */
   currentEmotion?: EmotionState
+  /**
+   * Optional second-stage re-rank of the head of the long-term list. Off by
+   * default: it needs an auxiliary local model and adds one embedding pass.
+   * Any failure keeps the first-stage order.
+   */
+  rerankEnabled?: boolean
+  /** Auxiliary model id; defaults to the BGE-M3 catalog entry. */
+  rerankModel?: string
 }
 
 type ScoredItem<T extends { id: string; createdAt: string; content: string }> = {
@@ -63,24 +80,44 @@ function uniqueById<T extends { id: string }>(items: T[]) {
   })
 }
 
+/**
+ * Recency is a tie-break, not a ranking signal. At 0.18 a four-day-old
+ * unrelated memory could outrank an older exact answer ("What's my cat
+ * called?" lost to a recent movie note); semantic rank already carries the
+ * question, so a few hundredths only nudges otherwise-equal candidates.
+ */
+const RECENCY_BOOST_MAX = 0.05
+
 function getRecencyBoost(createdAt: string) {
   const parsed = Date.parse(createdAt)
   if (!Number.isFinite(parsed)) return 0
   const ageMs = Math.max(0, Date.now() - parsed)
   const ageHours = ageMs / (60 * 60 * 1000)
-  return Math.max(0, 1 - Math.min(ageHours, 96) / 96) * 0.18
+  return Math.max(0, 1 - Math.min(ageHours, 96) / 96) * RECENCY_BOOST_MAX
 }
 
+// Half of the previous weights: a category is a weak prior about where a kind
+// of fact lives, not evidence that it answers this question. A project boost
+// of 0.10 used to lift an unrelated work project over the asked-about hobby.
 const CATEGORY_WEIGHT: Record<string, number> = {
-  feedback: 0.15,
-  project: 0.10,
-  preference: 0.05,
-  goal: 0.05,
-  reference: 0.03,
-  manual: 0.08,
-  habit: 0.02,
+  feedback: 0.075,
+  project: 0.05,
+  preference: 0.025,
+  goal: 0.025,
+  reference: 0.015,
+  manual: 0.04,
+  habit: 0.01,
   profile: 0,
 }
+
+/**
+ * Hybrid rank weights. The lexical share only breaks near-ties: BM25 and the
+ * CJK bigram overlap are strong on exact wording but match generic particles
+ * ("最近", "什么") in many memories, so a larger share let those memories
+ * outrank the semantic answer. Vector semantics stays the primary signal.
+ */
+const HYBRID_VECTOR_WEIGHT = 0.8
+const HYBRID_KEYWORD_WEIGHT = 0.1
 
 type EmotionContext = {
   currentEmotion: EmotionState
@@ -151,14 +188,19 @@ function scoreItem<T extends {
     keywordScore,
     vectorScore,
     finalScore:
-      (keywordScore * 0.3 + rankVectorScore * 0.7 + recencyBoost + categoryBoost + decayBoost + emotionBoost)
+      (keywordScore * HYBRID_KEYWORD_WEIGHT
+        + rankVectorScore * HYBRID_VECTOR_WEIGHT
+        + recencyBoost
+        + categoryBoost
+        + decayBoost
+        + emotionBoost)
       * supersededPenalty,
   }
 }
 
 /**
  * Spread vector scores over [0, 1] within this candidate set before they
- * are mixed with the fixed boosts (recency ≤0.18, category ≤0.15, decay,
+ * are mixed with the fixed boosts (recency ≤0.05, category ≤0.075, decay,
  * emotion). Neural embeddings put every memory at cosine 0.3–0.6 with the
  * right one often only ~0.05 ahead, so raw cosine let a category bonus
  * outrank the actual semantic match. Raw scores are still reported for the
@@ -323,7 +365,12 @@ export function reindexMemoriesForEmbeddingModel<T extends { id: string; content
   return indexMemoriesToVectorStore(items, active, layer)
 }
 
-type ScoreMapEntry = { vectorScore: number; bm25Score: number }
+/**
+ * vectorScore feeds ranking (the main-process hybrid search normalizes it
+ * by the best hit); rawVectorScore is always the plain cosine, which is what
+ * the low-confidence rule and the prompt's confidence read.
+ */
+type ScoreMapEntry = { vectorScore: number; bm25Score: number; rawVectorScore?: number }
 
 async function scoreLocally<T extends { id: string; content: string }>(
   items: T[],
@@ -386,7 +433,11 @@ async function buildScoreMapForEmbedding<T extends { id: string; content: string
           staleKeyword.set(r.id, r.keywordScore)
           continue
         }
-        scoreMap.set(r.id, { vectorScore: r.vectorScore, bm25Score: r.keywordScore })
+        scoreMap.set(r.id, {
+          vectorScore: r.vectorScore,
+          bm25Score: r.keywordScore,
+          rawVectorScore: typeof r.rawVectorScore === 'number' ? r.rawVectorScore : r.vectorScore,
+        })
       }
 
       // Fill missing items with local embeddings (not yet indexed in main
@@ -442,23 +493,85 @@ async function buildScoreMapForEmbedding<T extends { id: string; content: string
   return new Map(pairs.map(([id, score]) => [id, { vectorScore: score, bm25Score: 0 }]))
 }
 
+function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs)
+  })
+  return Promise.race([task, timeout]).finally(() => {
+    if (timer !== undefined) clearTimeout(timer)
+  })
+}
+
+/**
+ * Re-score the head of the long-term list with an auxiliary embedding model
+ * and fuse both orders. Returns the input unchanged whenever the model is
+ * unavailable, cooling down, slow, or returns unusable vectors: a re-rank
+ * must never cost the user a memory the first stage already found.
+ */
+async function rerankLongTermSemantics<T extends { id: string; createdAt: string; content: string }>(
+  items: Array<ScoredItem<T>>,
+  query: string,
+  model: string,
+): Promise<Array<ScoredItem<T>>> {
+  const head = items.slice(0, MEMORY_RERANK_TOP_K)
+  if (head.length < 2) return items
+  if (!isOllamaMemoryModel(model) || isOllamaMemoryModelCoolingDown(model)) return items
+
+  const task = (async () => {
+    const [queryResult, documentResult] = await Promise.all([
+      embedMemorySearchTextWithModel(query, model, 'query', { reportStatus: false }),
+      embedMemoryTextsWithModel(head.map(({ item }) => item.content), model, 'document', { reportStatus: false }),
+    ])
+    // A hash fallback means the auxiliary model is missing or Ollama is
+    // down. Never fuse vectors from two different spaces.
+    if (queryResult.model !== model || documentResult.model !== model) return null
+    const scores = scoreRerankCandidates(
+      queryResult.embedding,
+      head.map(({ item }, index) => ({ id: item.id, embedding: documentResult.embeddings[index] ?? [] })),
+    )
+    if (scores.size < 2) return null
+    const fusedIds = fuseRecallRerank(head.map(({ item }) => item), scores).map((item) => item.id)
+    const byId = new Map(items.map((entry) => [entry.item.id, entry]))
+    return [
+      ...fusedIds.flatMap((id) => {
+        const entry = byId.get(id)
+        return entry ? [entry] : []
+      }),
+      ...items.slice(head.length),
+    ]
+  })().catch((error) => {
+    console.warn('[Memory] Rerank failed, keeping the first-stage ranking:', getRedactedLogErrorMessage(error))
+    return null
+  })
+
+  return (await withTimeout(task, MEMORY_RERANK_TIMEOUT_MS)) ?? items
+}
+
 function buildSemanticMatches(
   longTerm: Array<ScoredItem<MemoryItem>>,
   daily: Array<ScoredItem<DailyMemoryEntry>>,
   limit: number,
+  rawOf: (id: string) => number = () => Number.NaN,
 ) {
+  // The confidence the prompt shows is the raw cosine: the hybrid search's
+  // vectorScore is normalized by the best hit, so it always read 1.00.
+  const confidence = (id: string, vectorScore: number) => {
+    const raw = rawOf(id)
+    return Number.isFinite(raw) ? raw : vectorScore
+  }
   const combined: MemorySemanticMatch[] = [
     ...longTerm.map(({ item, vectorScore }) => ({
       id: item.id,
       layer: 'long_term' as const,
       content: item.content,
-      score: vectorScore,
+      score: confidence(item.id, vectorScore),
     })),
     ...daily.map(({ item, vectorScore }) => ({
       id: item.id,
       layer: 'daily' as const,
       content: item.content,
-      score: vectorScore,
+      score: confidence(item.id, vectorScore),
     })),
   ]
 
@@ -507,6 +620,8 @@ export async function buildMemoryRecallContext({
   semanticLimit,
   retentionDays,
   currentEmotion,
+  rerankEnabled = false,
+  rerankModel = MEMORY_RERANK_MODEL_ID,
 }: BuildMemoryRecallContextParams): Promise<MemoryRecallContext> {
   const activeLongTermMemories = longTermMemories.filter((memory) => (
     memory.enabled !== false
@@ -564,15 +679,51 @@ export async function buildMemoryRecallContext({
     void indexMemoriesToVectorStore(longTermCandidates, usedEmbeddingModel, 'long_term')
     void indexMemoriesToVectorStore(dailyCandidates, usedEmbeddingModel, 'daily')
 
-    const selectedLongTerm = scoredLongTerm.slice(0, longTermLimit).map(({ item }) => item)
+    const rawOf = (id: string) => {
+      const entry = scoreMap.get(id)
+      // A missing score is unknown, not zero: zero would look like a real
+      // (bad) neighbour and could push an answerable memory into rejection.
+      return entry?.rawVectorScore ?? entry?.vectorScore ?? Number.NaN
+    }
+    // Duplicate copies of one memory would flatten the top-two margin and
+    // make a real fact look like a field of unrelated neighbours. Confidence
+    // reads distinct contents; the selection below still keeps every copy.
+    const contentScores = new Map<string, number>()
+    for (const item of longTermCandidates) {
+      const content = item.content.trim()
+      const score = rawOf(item.id)
+      const previous = contentScores.get(content)
+      if (previous === undefined || (!Number.isFinite(previous) && Number.isFinite(score))) {
+        contentScores.set(content, score)
+      }
+    }
+    const confidenceScores = [...contentScores.values()]
+    const recallConfidence = confidenceScores.length
+      ? classifyRecallConfidence(confidenceScores, usedEmbeddingModel)
+      : getRecallConfidenceThresholds(usedEmbeddingModel)
+        ? 'none'
+        : undefined
+    // Nothing relevant to order: skip the auxiliary pass entirely.
+    const rankedLongTerm = rerankEnabled && recallConfidence !== 'none'
+      ? await rerankLongTermSemantics(scoredLongTerm, query, rerankModel)
+      : scoredLongTerm
+    const selectedLongTerm = recallConfidence === 'none'
+      ? []
+      : rankedLongTerm.slice(0, longTermLimit).map(({ item }) => item)
     updatePrimingFromSelection(selectedLongTerm)
     return {
+      ...(recallConfidence ? { recallConfidence } : {}),
       longTerm: selectedLongTerm,
       daily: uniqueById([
         ...scoredDaily.slice(0, dailyLimit).map(({ item }) => item),
         ...recentDaily.slice(0, 2),
       ]).slice(0, dailyLimit),
-      semantic: buildSemanticMatches(scoredLongTerm, scoredDaily, semanticLimit),
+      semantic: buildSemanticMatches(
+        recallConfidence === 'none' ? [] : rankedLongTerm,
+        scoredDaily,
+        semanticLimit,
+        rawOf,
+      ),
       searchModeUsed: searchMode,
       vectorSearchAvailable: true,
       recalledLongTermIds: selectedLongTerm.map((m) => m.id),

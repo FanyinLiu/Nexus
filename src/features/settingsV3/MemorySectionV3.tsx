@@ -703,6 +703,16 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
         <SettingsV3Field label={ti('settings.memory.long_term.embedding_custom_model')}>
           <input value={draft.memoryEmbeddingModel} onChange={(event) => setDraft((previous) => ({ ...previous, memoryEmbeddingModel: event.target.value }))} />
         </SettingsV3Field>
+        <SettingsV3Row
+          label={ti('settings.memory.long_term.rerank')}
+          hint={ti('settings.memory.long_term.rerank_hint')}
+        >
+          <SettingsV3Switch
+            label={ti('settings.memory.long_term.rerank')}
+            checked={draft.memoryRerankEnabled}
+            onChange={(value) => setDraft((previous) => ({ ...previous, memoryRerankEnabled: value }))}
+          />
+        </SettingsV3Row>
         {([
           ['memoryLongTermRecallCount', 'settings.memory.long_term.recall_long_term', 8],
           ['memoryDailyRecallCount', 'settings.memory.long_term.recall_diary', 8],

@@ -756,6 +756,9 @@ than presenting Nexus as a Codex-style work agent.
 - `features/memory/memorySettingsView.ts` owns the user-facing memory
   transparency summary used by Settings, including the current storage-authority
   statement that memory is not SQLite-authoritative yet.
+- `features/memory/recallRerank.ts` owns the optional second-stage re-rank of
+  the long-term recall head: reciprocal-rank fusion with an auxiliary local
+  embedding model, off by default, first-stage order preserved on any failure.
 - `features/memory/recallTrace.ts` owns the content-minimized assistant-message
   memory provenance metadata derived from `MemoryRecallContext`.
 - `features/memory/traceDetails.ts` owns runtime-only resolution of memory
