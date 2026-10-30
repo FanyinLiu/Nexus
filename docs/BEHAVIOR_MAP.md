@@ -18,6 +18,7 @@ Nexus 是 Electron 桌面伴侣应用（Live2D 宠物 + 聊天 + 语音 + 记忆
 ### 聊天 / LLM 对话
 - 行为：发送消息、流式回复、工具调用循环、系统提示词组装、记忆/上下文注入、failover
 - 渲染：`src/features/chat/`（`runtime.ts` 主循环、`toolCallLoop.ts`、`systemPromptBuilder.ts`、`contextCompaction.ts`、`memoryInjection.ts`、`failoverChain.ts`、`prompts/`）
+- 人设与语气：`src/features/persona/`（`resolveActivePersona.ts`、`speechStyle.ts`、`personaReminder.ts`、`exampleSelector.ts`、`assistantToneFilter.ts` — 客服腔只做检测计数，不改写原句）
 - 钩子：`src/hooks/chat/`
 - 主进程：`electron/chatRuntime.js`、`electron/ipc/chatIpc.js`
 

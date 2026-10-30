@@ -36,6 +36,8 @@ line commentary — will be discarded and treated as silent. So don't.`,
   identityFallback:
     '# Identity\n\nあなたはデスクトップのコンパニオンです。キャラを崩さず、簡潔に応答してください。',
 
+  proactiveExampleUser: '（相手はしばらく黙っている）',
+
   signaturePhrasesHeader:
     '# 決まり文句\n\nあなたがよく使うフレーズ —— 自然に使い、無理に押し込まないでください：\n',
 

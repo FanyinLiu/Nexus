@@ -93,6 +93,12 @@ export type UseChatContext = {
    */
   getEmotionPromptText?: () => string
   /**
+   * The outward-expression line for the current mood, shaped by the persona's
+   * speech dials (from useAutonomyController.getEmotionAttitudeText). The
+   * post-history reminder carries it so the mood survives long contexts too.
+   */
+  getEmotionAttitudeText?: () => string
+  /**
    * Get the current relationship state formatted as prompt text (from
    * useAutonomyController.getRelationshipPrompt). Same pattern as above —
    * injected via ref wrapper, tolerant of being unset.
@@ -112,7 +118,13 @@ export type UseChatContext = {
    * wrapper pattern as the other getters; callers tolerate it being unset.
    */
   getAffectGuidancePromptText?: () => string
-  getEmotionSnapshot?: () => { energy: number; warmth: number; curiosity: number; concern: number } | undefined
+  getEmotionSnapshot?: () => {
+    energy: number
+    warmth: number
+    curiosity: number
+    concern: number
+    sulky?: boolean
+  } | undefined
   /**
    * Consume a one-shot milestone instruction (fires only on the turn a
    * relationship level-up just happened). Returns an empty string when nothing

@@ -13,6 +13,8 @@ export interface DecisionPromptStrings {
   responseContractTail: string
 
   identityFallback: string
+  /** Synthetic context turn for a proactive sample that has no user line. */
+  proactiveExampleUser: string
   signaturePhrasesHeader: string
   forbiddenPhrasesHeader: string
   toneHeader: string

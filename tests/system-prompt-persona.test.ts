@@ -3,6 +3,7 @@ import { beforeEach, test } from 'node:test'
 
 import { loadActiveProfilePersona, buildChatRequestPayload } from '../src/features/chat/systemPromptBuilder.ts'
 import { getChatPromptStrings } from '../src/features/chat/prompts/index.ts'
+import { invalidateResolvedPersonaCache } from '../src/features/persona/resolveActivePersona.ts'
 import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings, ChatMessage, MemoryRecallContext } from '../src/types'
 
@@ -181,6 +182,50 @@ test('persona text comes after the header in every locale', async () => {
     assert.ok(personaAt >= 0, `${uiLanguage} prompt must contain the persona`)
     assert.ok(headerAt < personaAt, `${uiLanguage} persona must be the later, stronger signal`)
   }
+})
+
+test('mood-matched voice samples follow the speech style in chat', async () => {
+  invalidateResolvedPersonaCache()
+  window.desktopPet = {
+    personaLoadProfile: async (id: string) => ({
+      id,
+      rootDir: '/fake',
+      present: true,
+      soul: 'PERSONA-SENTINEL',
+      examples: [
+        { user: '在吗', assistant: '例句-撒娇', mood: 'affectionate', kind: 'reply' },
+        { user: '我帅吗', assistant: '例句-玩笑', mood: 'playful', kind: 'reply' },
+      ],
+      style: { speechStyle: { maxSentences: 2 } },
+    }),
+  } as unknown as typeof window.desktopPet
+
+  const settings = {
+    ...loadSettings(),
+    activeCharacterProfileId: 'examples-chat',
+    uiLanguage: 'zh-CN' as const,
+    companionName: '星绘',
+    userName: '主人',
+  }
+  const history: ChatMessage[] = [{
+    id: 'examples-chat-turn',
+    role: 'user',
+    content: '在吗',
+    createdAt: '2026-10-29T08:00:00.000Z',
+  }]
+
+  const payload = await buildChatRequestPayload(settings, history, memoryContext, {
+    emotionMood: 'affectionate',
+  })
+  const system = String(payload.messages[0]?.content ?? '')
+  const header = getChatPromptStrings('zh-CN').personaExamplesHeader
+
+  assert.ok(system.includes(header), 'the voice-sample block must be in the prompt')
+  assert.ok(system.includes('例句-撒娇'), 'the mood-matched sample must be picked')
+  assert.ok(
+    system.indexOf('【说话方式】') < system.indexOf(header),
+    'voice samples must come after the speech-style section',
+  )
 })
 
 test('tool and screen copy speak in her voice instead of assistant filler', () => {

@@ -24,6 +24,16 @@ export interface CharacterReminderContext {
   attitude?: string
   /** Card author's post-history instructions, verbatim. */
   postHistory?: string
+  /**
+   * Shape feedback from the previous reply. Wording must stay positive and
+   * behavioral ("end on the concrete line") rather than a fresh ban list.
+   */
+  lastReplyTone?: {
+    /** Assistant-tone hits in the previous reply, from the post-chat check. */
+    toneHits: number
+    /** Previous reply crossed the casual-chat length line. */
+    overLong: boolean
+  }
   /** True once the conversation is long or was just compacted. */
   escalated: boolean
 }
@@ -42,6 +52,11 @@ export interface ChatPromptStrings {
   personaMemoryHeader: (memoryContent: string) => string
   /** Five-line persona header composed into a single string joined by spaces. */
   headerLines: (params: { companionName: string; userName: string }) => string
+  /**
+   * Introduces the mood-matched voice samples. The samples teach cadence and
+   * attitude; the model must not copy their content or treat them as history.
+   */
+  personaExamplesHeader: string
   /** Voice-profile style nudge (1-3 sentences). */
   responseStyleVoice: string
   /** Avatar stage-direction guide. */

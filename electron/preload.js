@@ -336,6 +336,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   personaLoadMemory: () => ipcRenderer.invoke('persona:load-memory'),
   personaSaveSoul: (payload) => ipcRenderer.invoke('persona:save-soul', payload),
   personaSaveMemory: (payload) => ipcRenderer.invoke('persona:save-memory', payload),
+  personaSaveStyle: (payload) => ipcRenderer.invoke('persona:save-style', payload),
   personaPaths: () => ipcRenderer.invoke('persona:paths'),
   personaOpenDir: () => ipcRenderer.invoke('persona:open-dir'),
   personaInit: (payload) => ipcRenderer.invoke('persona:init', payload),

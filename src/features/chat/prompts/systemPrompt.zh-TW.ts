@@ -57,6 +57,8 @@ export const zhTWChatPrompts: ChatPromptStrings = {
       '你們之間有共同的經歷：記憶、桌面脈絡和工具結果只在真的合適時自然帶出，並且用你自己的說法。',
     ].join(' '),
 
+  personaExamplesHeader: '她平常這樣說話（只學語氣，不照抄內容）：',
+
   responseStyleVoice:
     '當前是即時語音對話。請預設使用 1 到 3 句話，先直接回答，再補一句自然的陪伴語氣，不要展開成長段。',
 
@@ -125,6 +127,7 @@ export const zhTWChatPrompts: ChatPromptStrings = {
     soulRules,
     speechRules,
     forbiddenPhrases,
+    lastReplyTone,
     attitude,
     postHistory,
     escalated,
@@ -137,6 +140,8 @@ export const zhTWChatPrompts: ChatPromptStrings = {
     const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
     if (rules.length) lines.push(`說話方式：${rules.join('；')}。`)
     if (forbiddenPhrases.length) lines.push(`不要說：${forbiddenPhrases.join('、')}。`)
+    if (lastReplyTone?.overLong) lines.push('上一句有點長。這次一兩句就夠，說完就停，留點空。')
+    if ((lastReplyTone?.toneHits ?? 0) > 0) lines.push('上一句收尾在做總結。這次結尾停在具體的那句話上，說完就停。')
     if (attitude) lines.push(`此刻：${attitude}`)
     if (postHistory) lines.push(`還要遵守：${postHistory}`)
     return `<character-reminder>${lines.join('\n')}</character-reminder>`

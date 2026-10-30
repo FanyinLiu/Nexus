@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { register } from 'node:module'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -15,7 +15,7 @@ type SaveHandler = (event: unknown, payload: unknown) => Promise<{ ok: boolean }
 const handlers = new Map<string, SaveHandler>()
 let registered = false
 
-async function handler(): Promise<SaveHandler> {
+async function handler(channel = 'persona:save-soul'): Promise<SaveHandler> {
   if (!registered) {
     const personaIpc = await import('../electron/ipc/personaIpc.js')
     personaIpc.register()
@@ -23,10 +23,13 @@ async function handler(): Promise<SaveHandler> {
     const save = stored?.get('persona:save-soul')
     assert.equal(typeof save, 'function')
     handlers.set('persona:save-soul', save as SaveHandler)
+    const saveStyle = stored?.get('persona:save-style')
+    assert.equal(typeof saveStyle, 'function')
+    handlers.set('persona:save-style', saveStyle as SaveHandler)
     registered = true
   }
-  const save = handlers.get('persona:save-soul')
-  if (!save) throw new Error('persona:save-soul handler was not registered')
+  const save = handlers.get(channel)
+  if (!save) throw new Error(`${channel} handler was not registered`)
   return save
 }
 
@@ -132,6 +135,41 @@ test('an empty soul save does not create MEMORY.md or any other new empty file',
     assert.deepEqual(await filesUnder(dir), ['personas/card-a/soul.md'])
     assert.deepEqual(await save({}, { content: '', profileId: 'card-a' }), { ok: true })
     assert.deepEqual(await filesUnder(dir), [])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('persona:save-style fails closed and clamps the dials it writes', async () => {
+  const dir = useUserData()
+  const save = await handler('persona:save-style')
+  try {
+    assert.deepEqual(await save({}, { profileId: '../etc', speechStyle: { aloof: 3 } }), { ok: false })
+    assert.deepEqual(await save({}, { profileId: 4, speechStyle: { aloof: 3 } }), { ok: false })
+    assert.deepEqual(await save({}, { profileId: 'card-a', speechStyle: 'cold' }), { ok: false })
+    assert.deepEqual(await save({}, { profileId: '', speechStyle: { aloof: 3 } }), { ok: false })
+    assert.deepEqual(await entries(dir), [])
+
+    await mkdir(path.join(dir, 'personas', 'card-a'), { recursive: true })
+    await writeFile(
+      path.join(dir, 'personas', 'card-a', 'style.json'),
+      JSON.stringify({ forbiddenPhrases: ['as an AI'], speechStyle: { clingy: 1 } }),
+      'utf8',
+    )
+
+    assert.deepEqual(await save({}, {
+      profileId: 'card-a',
+      speechStyle: { aloof: 9, clingy: -2, tsundere: true, maxSentences: 99 },
+    }), { ok: true })
+
+    const written = JSON.parse(await readFile(path.join(dir, 'personas', 'card-a', 'style.json'), 'utf8'))
+    assert.deepEqual(written.forbiddenPhrases, ['as an AI'])
+    assert.deepEqual(written.speechStyle, {
+      maxSentences: 6,
+      clingy: 0,
+      aloof: 3,
+      tsundere: true,
+    })
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

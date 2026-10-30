@@ -14,6 +14,7 @@ import type {
   DesktopContextSnapshot,
   LorebookEntry,
   MemoryRecallContext,
+  PetMood,
 } from '../../types'
 import { buildLorebookSection } from './lorebookInjection.ts'
 import {
@@ -26,6 +27,9 @@ import {
   resolveActivePersona,
 } from '../persona/resolveActivePersona.ts'
 import { buildPersonaReminder } from '../persona/personaReminder.ts'
+import { getLastAssistantToneFeedback } from '../persona/assistantToneFilter.ts'
+import { formatSpeechStyle } from '../persona/speechStyle.ts'
+import { formatPersonaExamplesForChat } from '../persona/exampleSelector.ts'
 import { getApiProviderPreset } from '../models/index.ts'
 import { formatDesktopContext } from '../context/desktopContext.ts'
 import { classifyActivity } from '../autonomy/v2/contextGatherer.ts'
@@ -110,6 +114,19 @@ export type AssistantReplyRequestOptions = {
    * 由 useAutonomyController 通过 useChat ctx 注入；空字符串会被自动过滤掉。
    */
   emotionPromptText?: string
+  /**
+   * Outward-expression line for the current mood, shaped by the persona dials
+   * (from personality/attitude). The same line is appended to the emotion
+   * section and carried by the post-history reminder.
+   */
+  emotionAttitudeText?: string
+  /**
+   * Current PetMood used to pick mood-matched voice samples from examples.md.
+   * Missing means "no mood known", so untagged samples are used.
+   */
+  emotionMood?: PetMood
+  /** True while she is sulking; sulky samples outrank the ordinary mood. */
+  emotionSulky?: boolean
   /**
    * 当前关系状态格式化后的 prompt 文本（来自 relationshipTracker.formatRelationshipForPrompt）。
    * 由 useAutonomyController 通过 useChat ctx 注入；空字符串会被自动过滤掉。
@@ -277,6 +294,19 @@ async function buildSystemPrompt(
   const prompts = getChatPromptStrings(settings.uiLanguage)
 
   const personaSection = resolvedPersona.soul || settings.systemPrompt
+  // The structured dials are the persona's own voice, so they sit directly
+  // after the identity text and before any generic "how to talk" guidance.
+  const speechStyleSection = formatSpeechStyle(
+    resolvedPersona.style?.speechStyle,
+    settings.uiLanguage,
+  )
+  // Examples teach cadence in a way rules cannot. They sit right after the
+  // dials, as prompt-only text, so they never enter history or memory.
+  const personaExamplesSection = formatPersonaExamplesForChat(resolvedPersona.examples, {
+    header: prompts.personaExamplesHeader,
+    mood: options.emotionMood,
+    sulky: options.emotionSulky,
+  })
   const relationshipTypeSection = prompts.relationshipTypeBias(settings.companionRelationshipType)
   const effectivePersonaMemory = resolvedPersona.memory || personaMemoryContent
   const personaMemorySection = effectivePersonaMemory
@@ -394,6 +424,8 @@ async function buildSystemPrompt(
       // stronger identity signal — the reverse order let generic wording win.
       headerText,
       personaSection,
+      speechStyleSection,
+      personaExamplesSection,
       relationshipTypeSection,
       personaMemorySection,
       narrativeSection,
@@ -590,6 +622,8 @@ async function toRequestMessages(
     uiLanguage: settings.uiLanguage,
     assistantTurns: contextMessages.filter((message) => message.role === 'assistant').length,
     compacted,
+    attitude: options.emotionAttitudeText,
+    toneFeedback: getLastAssistantToneFeedback() ?? undefined,
   })
   const reminderPrefix = `${timeReminder}\n\n${characterReminder}\n\n`
   const augmentedMessages = contextMessages.slice()

@@ -70,9 +70,19 @@ export interface PersonaStyle {
   speechStyle?: PersonaSpeechStyle
 }
 
-interface PersonaFewShotExample {
+/** Whether the example shows a reply or a line she opens the conversation with. */
+export type PersonaExampleKind = 'reply' | 'proactive'
+
+/**
+ * One voice sample from examples.md. `user` is empty for a proactive opener,
+ * where she speaks first and there is no previous turn to answer.
+ */
+export interface PersonaFewShotExample {
   user: string
   assistant: string
+  /** Optional `## mood: <word>` heading that groups examples by feeling. */
+  mood?: string
+  kind: PersonaExampleKind
 }
 
 /**

@@ -41,6 +41,18 @@ export function register() {
     return { ok: true }
   })
 
+  ipcMain.handle('persona:save-style', async (event, payload) => {
+    requireTrustedSender(event)
+    const profileId = payload?.profileId
+    const speechStyle = payload?.speechStyle
+    if (typeof profileId !== 'string' || !profileId.trim()) return { ok: false }
+    if (!speechStyle || typeof speechStyle !== 'object' || Array.isArray(speechStyle)) {
+      return { ok: false }
+    }
+    const saved = await personaLoader.savePersonaProfileStyle(profileId, speechStyle)
+    return { ok: saved }
+  })
+
   ipcMain.handle('persona:paths', async (event) => {
     requireTrustedSender(event)
     return personaLoader.getPersonaPaths()

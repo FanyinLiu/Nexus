@@ -69,6 +69,7 @@ test('window capability matrix keeps high-impact channels on the panel', () => {
   assert.equal(isWindowChannelAllowed('chat:complete', 'pet'), true)
   assert.equal(isWindowChannelAllowed('persona:load-profile', 'pet'), true)
   assert.equal(isWindowChannelAllowed('persona:save-soul', 'pet'), false)
+  assert.equal(isWindowChannelAllowed('persona:save-style', 'pet'), false)
   assert.equal(WINDOW_CAPABILITY_MATRIX.unknown.panel, false)
 })
 

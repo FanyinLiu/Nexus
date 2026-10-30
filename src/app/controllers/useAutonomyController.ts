@@ -26,7 +26,9 @@ import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { type BridgeForwardQueue, createBridgeForwardQueue } from './bridgeUtils.ts'
 import { consumeMessageFollowUpPromptText, recordMessageFollowUp } from '../../lib/storage/messageFollowUps.ts'
 import { useProactiveAgenda } from '../../hooks/useProactiveAgenda.ts'
-import { relationshipLevelToCloseness } from '../../features/autonomy/emotionModel.ts'
+import { usePersonaSpeechStyle } from '../../hooks/usePersonaSpeechStyle.ts'
+import { emotionToPetMood, relationshipLevelToCloseness } from '../../features/autonomy/emotionModel.ts'
+import { attitudeFor } from '../../features/persona/attitude.ts'
 import { getRelationshipLevel } from '../../features/autonomy/relationshipTracker.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { isDesktopContextActiveWindowAvailable } from '../../lib/platformProfile.ts'
@@ -130,6 +132,9 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
   const emotionState = useEmotionState()
   const relationshipState = useRelationshipState()
   const rhythmState = useRhythmState()
+  // The persona's dials are read from disk once per profile change and served
+  // synchronously to the emotion prompt + TTS style.
+  const personaSpeechStyleRef = usePersonaSpeechStyle(settings)
 
   const runDreamRef = useRef<() => Promise<void>>(() => Promise.resolve())
   const runDreamDiaryRef = useRef<() => Promise<void>>(() => Promise.resolve())
@@ -446,13 +451,29 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
 
   // The same felt emotion expresses differently by relationship stage:
   // reserved while still getting to know each other, open once close. Inject
-  // the live closeness so the emotion prompt is stage-aware.
+  // the live closeness AND the persona dials so the emotion prompt keeps her
+  // character instead of defaulting to a generic "let it show openly".
   const getEmotionPrompt = useCallback(
     () => emotionState.getEmotionPrompt(
       relationshipLevelToCloseness(getRelationshipLevel(relationshipState.relationshipRef.current)),
+      {
+        speechStyle: personaSpeechStyleRef.current,
+        uiLanguage: settingsRef.current.uiLanguage,
+      },
     ),
-    [emotionState, relationshipState],
+    [emotionState, personaSpeechStyleRef, relationshipState, settingsRef],
   )
+
+  // The post-history reminder wants the same line without the felt-state
+  // sentence around it, so the mood rides along after the history too.
+  const getEmotionAttitudeText = useCallback(() => attitudeFor(
+    emotionToPetMood(emotionState.emotionStateRef.current),
+    personaSpeechStyleRef.current,
+    {
+      uiLanguage: settingsRef.current.uiLanguage,
+      sulky: emotionState.emotionStateRef.current.sulky === true,
+    },
+  ), [emotionState, personaSpeechStyleRef, settingsRef])
 
   const proactiveAgenda = useProactiveAgenda({
     enabled: backgroundRuntimeEnabled,
@@ -498,8 +519,10 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     replyToDiscord,
     applyEmotionSignal: emotionState.applyEmotionSignal,
     emotionStateRef: emotionState.emotionStateRef,
+    personaSpeechStyleRef,
     getEmotionMood: emotionState.getEmotionMood,
     getEmotionPrompt,
+    getEmotionAttitudeText,
     markInteraction,
     relationshipRef: relationshipState.relationshipRef,
     getRelationshipPrompt: relationshipState.getRelationshipPrompt,
@@ -525,8 +548,10 @@ export function useAutonomyController(opts: UseAutonomyControllerOptions) {
     replyToDiscord,
     emotionState.applyEmotionSignal,
     emotionState.emotionStateRef,
+    personaSpeechStyleRef,
     emotionState.getEmotionMood,
     getEmotionPrompt,
+    getEmotionAttitudeText,
     markInteraction,
     relationshipState.relationshipRef,
     relationshipState.getRelationshipPrompt,

@@ -8,7 +8,10 @@
 import { readFile, writeFile, mkdir, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
-import { loadPersonaProfileFromReader, resolvePersonaProfileSoulPath } from './personaProfileLoader.js'
+import { loadPersonaProfileFromReader, resolvePersonaProfileSoulPath, resolvePersonaProfileStylePath } from './personaProfileLoader.js'
+import { createAsyncJsonFileStore } from './jsonFileStore.js'
+import { getRedactedErrorMessage } from './errorRedaction.js'
+import { normalizePersonaSpeechStyle } from '../../shared/speechStyle.js'
 
 const PERSONA_DIR = 'persona'
 const SOUL_FILE = 'SOUL.md'
@@ -145,6 +148,40 @@ export async function savePersonaProfileSoul(profileId, content) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await writeFile(filePath, content, 'utf8')
   return true
+}
+
+/**
+ * Write the structured speech dials into one profile's style.json.
+ *
+ * The rest of the style object (forbidden phrases, tone tags, the card's
+ * post-history note) is preserved: the settings card owns only `speechStyle`.
+ * A missing profile directory is created here — the card does not need to
+ * know the profile layout. Returns false for an unsafe id or a failed write;
+ * a malformed existing file falls back to an empty object through the store.
+ * @param {unknown} profileId
+ * @param {unknown} speechStyle
+ * @returns {Promise<boolean>}
+ */
+export async function savePersonaProfileStyle(profileId, speechStyle) {
+  const filePath = resolvePersonaProfileStylePath(app.getPath('userData'), profileId)
+  if (!filePath) return false
+  const normalized = normalizePersonaSpeechStyle(speechStyle)
+  try {
+    const store = createAsyncJsonFileStore({ getStorePath: () => filePath })
+    const style = await store.ensureLoaded()
+    if (normalized) style.speechStyle = normalized
+    else delete style.speechStyle
+    if (Object.keys(style).length === 0) {
+      await removeFileIfPresent(filePath)
+      return true
+    }
+    await mkdir(path.dirname(filePath), { recursive: true })
+    await store.save()
+    return true
+  } catch (error) {
+    console.warn('[persona] style save failed:', getRedactedErrorMessage(error))
+    return false
+  }
 }
 
 /**

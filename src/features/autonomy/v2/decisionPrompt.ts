@@ -27,6 +27,10 @@ import {
 import { formatSubDimensionsForPrompt } from '../relationshipDimensions.ts'
 import { analyzeRecentReplies } from './repetitionGuard.ts'
 import { resolveProactiveLean } from '../emotionModel.ts'
+import {
+  PERSONA_EXAMPLE_MOOD_LIMIT,
+  selectPersonaExamples,
+} from '../../persona/exampleSelector.ts'
 
 export interface DecisionPromptHints {
   /**
@@ -361,13 +365,28 @@ function formatContextSections(
 
 // ── Few-shot ───────────────────────────────────────────────────────────────
 
-function buildFewShotMessages(persona: LoadedPersona, limit = 8): ChatMessage[] {
+function buildFewShotMessages(
+  persona: LoadedPersona,
+  strings: DecisionPromptStrings,
+  limit = PERSONA_EXAMPLE_MOOD_LIMIT,
+): ChatMessage[] {
   if (!persona.examples.length) return []
 
-  const picked = persona.examples.slice(0, limit)
+  // Proactive examples show her opening a conversation; reply examples are
+  // only a fallback for personas (and old files) that have no openers yet.
+  const picked = selectPersonaExamples(persona.examples, {
+    kind: 'proactive',
+    limit,
+  })
   const out: ChatMessage[] = []
   for (const ex of picked) {
-    out.push({ role: 'user', content: ex.user })
+    // A proactive sample may have nobody speaking before her. Every provider
+    // expects a user turn first, so a short silence line fills that slot while
+    // the assistant turn still shows her opening.
+    out.push({
+      role: 'user',
+      content: ex.user.trim() || strings.proactiveExampleUser,
+    })
     // Wrap the assistant few-shot in the JSON contract so the model learns
     // the expected response shape from the examples, not just from the
     // system prompt.
@@ -404,7 +423,7 @@ export function buildDecisionPrompt(
   // Few-shot (only when not forcing silent — the examples all speak,
   // which would confuse the model if we simultaneously demand silence).
   if (!hints.forceSilent) {
-    messages.push(...buildFewShotMessages(persona))
+    messages.push(...buildFewShotMessages(persona, strings))
   }
 
   // The actual decision turn.

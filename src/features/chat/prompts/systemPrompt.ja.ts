@@ -57,6 +57,8 @@ export const jaChatPrompts: ChatPromptStrings = {
       '二人には積み重ねた時間があります。記憶・デスクトップの状況・ツールの結果は、本当に自然に合うときだけ、自分の言葉で触れてください。',
     ].join(' '),
 
+  personaExamplesHeader: '彼女が普段話す調子（口調だけを学び、内容はそのまま使わない）：',
+
   responseStyleVoice:
     '今はリアルタイム音声会話です。デフォルトは 1〜3 文で、まず直接答え、その後に自然な一言の寄り添いを添えてください。長文に膨らませないでください。',
 
@@ -125,6 +127,7 @@ export const jaChatPrompts: ChatPromptStrings = {
     soulRules,
     speechRules,
     forbiddenPhrases,
+    lastReplyTone,
     attitude,
     postHistory,
     escalated,
@@ -137,6 +140,8 @@ export const jaChatPrompts: ChatPromptStrings = {
     const rules = [...soulRules, ...speechRules.map(speechRuleLine)]
     if (rules.length) lines.push(`話し方：${rules.join('。')}。`)
     if (forbiddenPhrases.length) lines.push(`言わない言葉：${forbiddenPhrases.join('、')}。`)
+    if (lastReplyTone?.overLong) lines.push('前の返事は少し長かった。今回は一、二文で終えて、余白を残して。')
+    if ((lastReplyTone?.toneHits ?? 0) > 0) lines.push('前の返事はまとめに入ってた。今回は具体的な一言で終えて。')
     if (attitude) lines.push(`今の気持ちの出し方：${attitude}`)
     if (postHistory) lines.push(`あわせて守ること：${postHistory}`)
     return `<character-reminder>${lines.join('\n')}</character-reminder>`

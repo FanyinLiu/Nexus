@@ -174,10 +174,11 @@ test('persona profile loader loads the bundled Xinghui seed profile end-to-end',
   assert.ok(Array.isArray(loaded.tools.allowlist))
   assert.ok(loaded.tools.allowlist!.includes('web_search'))
 
-  // few-shot parsing — the seed file has > 3 pairs
+  // few-shot parsing — the seed file has > 3 samples
   assert.ok(loaded.examples.length >= 3, `expected ≥3 examples, got ${loaded.examples.length}`)
   for (const ex of loaded.examples) {
-    assert.ok(ex.user.length > 0)
+    // Proactive openers have nobody speaking before her, so no user turn.
+    if (ex.kind !== 'proactive') assert.ok(ex.user.length > 0)
     assert.ok(ex.assistant.length > 0)
   }
 })

@@ -6,6 +6,7 @@ import {
   userMoodReadToEmotionSignal,
   userMoodReadToVAD,
   LONG_ABSENCE_THRESHOLD_SECONDS,
+  USER_NEGLECT_THRESHOLD_SECONDS,
   resolveIdleArcSignals,
   createIdleArcTracker,
   classifyMessageSignals,
@@ -228,6 +229,41 @@ test('missed_message_noticed is a small attentiveness flicker, not a mood swing'
   assert.equal(next.energy, base.energy)
 })
 
+test('user_neglect cools her and raises concern, and turns on the sulk flag', () => {
+  const base = createDefaultEmotionState()
+  const next = applyEmotionSignal(base, 'user_neglect')
+  assert.ok(next.warmth < base.warmth, 'warmth should drop when left hanging')
+  assert.ok(next.concern > base.concern, 'concern should rise when left hanging')
+  assert.equal(next.sulky, true)
+})
+
+test('the sulk clears after one warm exchange, not from merely coming back', () => {
+  const sulky = applyEmotionSignal(createDefaultEmotionState(), 'user_neglect')
+  // A return / reunion is not an apology: the sulk survives.
+  assert.equal(applyEmotionSignal(sulky, 'user_returned').sulky, true)
+  assert.equal(applyEmotionSignal(sulky, 'reunion').sulky, true)
+  // Praise or a warm hello counts as making up.
+  assert.equal(applyEmotionSignal(sulky, 'user_praise').sulky, undefined)
+  assert.equal(applyEmotionSignal(sulky, 'user_greeting').sulky, undefined)
+})
+
+test('a neutral signal does not erase an existing sulk', () => {
+  const sulky = applyEmotionSignal(createDefaultEmotionState(), 'user_neglect')
+  assert.equal(applyEmotionSignal(sulky, 'user_question').sulky, true)
+})
+
+test('sulky maps to an existing expression, never a new motion', () => {
+  const sulky = applyEmotionSignal(createDefaultEmotionState(), 'user_neglect')
+  const mood = emotionToPetMood(sulky)
+  assert.ok(mood === 'embarrassed' || mood === 'confused', mood)
+})
+
+test('a warm exchange also restores the ordinary mood mapping', () => {
+  const sulky = applyEmotionSignal(createDefaultEmotionState(), 'user_neglect')
+  const warm = applyEmotionSignal(sulky, 'user_praise')
+  assert.notEqual(emotionToPetMood(warm), 'embarrassed')
+})
+
 test('error_occurred leaves her a little concerned (the long-orphaned signal)', () => {
   const base = createDefaultEmotionState()
   const next = applyEmotionSignal(base, 'error_occurred')
@@ -277,6 +313,19 @@ test('reunion is a genuine warm spike', () => {
   const next = applyEmotionSignal(base, 'reunion')
   assert.ok(next.warmth >= base.warmth + 0.2)
   assert.ok(next.energy >= base.energy + 0.15)
+})
+
+test('six quiet hours add user_neglect exactly once per absence', () => {
+  let tracker = createIdleArcTracker()
+  tracker = resolveIdleArcSignals(tracker, LONG_ABSENCE_THRESHOLD_SECONDS + 5).tracker
+  const neglect = resolveIdleArcSignals(tracker, USER_NEGLECT_THRESHOLD_SECONDS + 30)
+  tracker = neglect.tracker
+  assert.deepEqual(neglect.signals, ['user_neglect'])
+  // Still the same episode — the sulk is not re-applied every tick.
+  assert.deepEqual(
+    resolveIdleArcSignals(tracker, USER_NEGLECT_THRESHOLD_SECONDS + 600).signals,
+    [],
+  )
 })
 
 // ── LLM mood reads → VAD + empathy signal ────────────────────────────────────
@@ -352,6 +401,60 @@ test('formatEmotionForPrompt defaults to established when closeness omitted', ()
   assert.doesNotMatch(out, /unimposing|openly and directly/)
 })
 
+test('aloof + affectionate keeps the feeling but never says to show it openly', () => {
+  const out = formatEmotionForPrompt(withState({ warmth: 0.85, energy: 0.5 }), 'close', {
+    speechStyle: { aloof: 3 },
+    uiLanguage: 'en-US',
+  })
+  assert.match(out, /especially affectionate/)
+  assert.doesNotMatch(out, /openly/)
+  assert.match(out, /cool on the surface/i)
+})
+
+test('clingy + affectionate asks her to lean in instead of staying composed', () => {
+  const out = formatEmotionForPrompt(withState({ warmth: 0.85, energy: 0.5 }), 'close', {
+    speechStyle: { clingy: 3 },
+    uiLanguage: 'en-US',
+  })
+  assert.match(out, /especially affectionate/)
+  assert.match(out, /lean in/i)
+  assert.doesNotMatch(out, /openly/)
+})
+
+test('tsundere + worried denies the feeling while acting on it', () => {
+  const out = formatEmotionForPrompt(withState({ concern: 0.8, energy: 0.4 }), 'close', {
+    speechStyle: { tsundere: true },
+    uiLanguage: 'en-US',
+  })
+  assert.match(out, /genuinely worried/)
+  assert.match(out, /deny it/i)
+})
+
+test('a sulking state overrides the cheerful mood line', () => {
+  const sulky = applyEmotionSignal(withState({ warmth: 0.6 }), 'user_neglect')
+  const out = formatEmotionForPrompt(sulky, 'close', {
+    speechStyle: { aloof: 2 },
+    uiLanguage: 'en-US',
+  })
+  assert.match(out, /cooler than usual/i)
+  assert.doesNotMatch(out, /openly/)
+})
+
+test('localized attitude lines follow the UI language', () => {
+  const warm = withState({ warmth: 0.85, energy: 0.5 })
+  const zh = formatEmotionForPrompt(warm, 'close', {
+    speechStyle: { aloof: 3 },
+    uiLanguage: 'zh-CN',
+  })
+  const ja = formatEmotionForPrompt(warm, 'close', {
+    speechStyle: { clingy: 3 },
+    uiLanguage: 'ja',
+  })
+  assert.match(zh, /嘴上淡淡的/)
+  assert.match(ja, /甘えて/)
+  assert.doesNotMatch(zh + ja, /openly/)
+})
+
 test('a flat state still produces no emotion section regardless of stage', () => {
   assert.equal(formatEmotionForPrompt(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), 'close'), '')
 })
@@ -367,6 +470,21 @@ test('emotionToVoiceStyle: voice matches the avatar mood, neutral is silent', ()
   assert.match(formatVoiceStyle({ energy: 0.12 }), /slow|soft|drowsy/i)
   // neutral middling → no override (her natural voice)
   assert.equal(formatVoiceStyle({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), '')
+})
+
+test('emotionToVoiceStyle: an aloof persona stays cool even when pleased', () => {
+  const warm = withState({ warmth: 0.85, energy: 0.5 })
+  const out = emotionToVoiceStyle(warm, { aloof: 3 })
+  assert.doesNotMatch(out, /warm|tender/i)
+  assert.match(out, /cool|understated/i)
+})
+
+test('emotionToVoiceStyle: clingy and tsundere colour the base style', () => {
+  const warm = withState({ warmth: 0.85, energy: 0.5 })
+  assert.match(emotionToVoiceStyle(warm, { clingy: 3 }), /coaxing/i)
+  assert.match(emotionToVoiceStyle(warm, { tsundere: true }), /flustered/i)
+  // Neutral mood stays silent even with dials — no override to perform.
+  assert.equal(emotionToVoiceStyle(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), { aloof: 3 }), '')
 })
 
 test('every PetMood the emotion model can produce has a voice style entry', () => {
