@@ -1,4 +1,5 @@
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
+import { Readable } from 'node:stream'
 import {
   performNetworkRequestWithRetry,
   readJsonSafe,
@@ -15,6 +16,7 @@ import {
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
   isOmniVoiceSpeechOutputProvider,
+  isQwen3TtsSpeechOutputProvider,
   isEdgeTtsSpeechOutputProvider,
   isOpenAiCompatibleSpeechInputProvider,
   isZhipuSpeechInputProvider,
@@ -36,12 +38,14 @@ import {
   resolveSpeechOutputTimeoutMessage,
   resolveSpeechOutputTimeoutMs,
   toSpeechVoiceOption,
+  QWEN3_TTS_WARMUP_TIMEOUT_MS,
 } from './ttsHelpers.js'
 import {
   formatVolcengineSpeechOutputCombo,
   synthesizeVolcengineSpeechOutputWithFallback,
 } from './ttsVolcengine.js'
 import { synthesizeLocalTts } from './localTts.js'
+import { buildQwen3TtsSpeechRequestPayload } from './qwen3TtsPayload.js'
 import {
   buildXaiSttMultipartParts,
   buildXaiTtsRequestBody,
@@ -75,6 +79,77 @@ function formatSpeechTextLogMeta(text) {
   return `chars=${String(text ?? '').length}`
 }
 
+/** Per-base-URL warm-up cache so each sentence does not re-probe the sidecar. */
+const qwen3TtsReadyPromises = new Map()
+
+/**
+ * Make sure the local Qwen3-TTS sidecar is up and its model is loaded.
+ *
+ * `/health` is cheap; when the model is still cold the first sentence pays the
+ * checkpoint load, which is far longer than the 20 s first-audio budget. So
+ * warm up explicitly (180 s ceiling) before the streaming request starts.
+ */
+export async function warmupQwen3Tts(baseUrl, signal) {
+  const existing = qwen3TtsReadyPromises.get(baseUrl)
+  if (existing) return existing
+
+  const promise = (async () => {
+    const health = await performNetworkRequestWithRetry(`${baseUrl}/health`, {
+      allowPrivateNetwork: true,
+      method: 'GET',
+      timeoutMs: 5_000,
+      timeoutMessage: SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT,
+      signal,
+      // The supervisor starts Python on selection; give the port a few
+      // seconds to appear instead of treating a still-starting sidecar as a
+      // hard failure on the very first reply.
+      maxAttempts: 4,
+    })
+    if (!health.ok) {
+      throw new Error(`本地 Qwen3 语音服务还没准备好（${health.status}）。`)
+    }
+    const status = await readJsonSafe(health)
+    if (status?.loaded === true) return status
+
+    const warm = await performNetworkRequestWithRetry(`${baseUrl}/v1/warmup`, {
+      allowPrivateNetwork: true,
+      method: 'POST',
+      timeoutMs: QWEN3_TTS_WARMUP_TIMEOUT_MS,
+      timeoutMessage: SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT,
+      signal,
+      maxAttempts: 1,
+    })
+    if (!warm.ok) {
+      throw new Error(`本地 Qwen3 语音模型没能加载（${warm.status}）。`)
+    }
+    return readJsonSafe(warm)
+  })().catch((error) => {
+    // A failed warm-up must not poison every later reply — let the next turn
+    // retry once the user has fixed the Python env or freed memory.
+    qwen3TtsReadyPromises.delete(baseUrl)
+    throw error
+  })
+
+  qwen3TtsReadyPromises.set(baseUrl, promise)
+  return promise
+}
+
+/**
+ * Warm the local sidecar before the renderer arms its first-audio watchdog.
+ * Non-Qwen providers resolve immediately.
+ *
+ * @param {Record<string, unknown>} sessionPayload
+ * @param {AbortSignal} [signal]
+ */
+export async function warmupRemoteTtsSession(sessionPayload, signal) {
+  if (!isQwen3TtsSpeechOutputProvider(sessionPayload?.providerId)) return
+  const baseUrl = resolveSpeechOutputBaseUrl(
+    sessionPayload.providerId,
+    sessionPayload.baseUrl,
+  )
+  await warmupQwen3Tts(baseUrl, signal)
+}
+
 /**
  * Synthesize text via a remote TTS API provider, returning PCM-decodable audio.
  * Used by the streaming TTS service to convert each text chunk into audio.
@@ -103,6 +178,41 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
 
   if (!baseUrl) throw new Error('请先填写语音输出 API Base URL。')
   assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
+
+  // Local Qwen3-TTS: the sidecar streams 16-bit PCM sentence by sentence, so
+  // return the response body as a Node stream and let playback start on the
+  // first sentence instead of waiting for the whole reply.
+  if (isQwen3TtsSpeechOutputProvider(payload.providerId)) {
+    await warmupQwen3Tts(baseUrl, signal)
+    const endpoint = `${baseUrl}/audio/speech`
+    const requestBody = JSON.stringify(buildQwen3TtsSpeechRequestPayload(payload, content))
+    const response = await performNetworkRequestWithRetry(endpoint, {
+      allowPrivateNetwork: true,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: requestBody,
+      timeoutMs: synthTimeoutMs,
+      timeoutMessage: synthTimeoutMessage,
+      signal,
+      // Retrying a speech POST would synthesize the sentence twice; playback
+      // would then repeat the first clause. Reconnect happens one level up.
+      maxAttempts: 1,
+    })
+
+    if (!response.ok) {
+      throw new Error(await extractResponseErrorMessage(
+        response,
+        '本地 Qwen3 语音服务返回了状态码 ' + response.status + '。',
+      ))
+    }
+    if (!response.body) {
+      throw new Error('本地 Qwen3 语音服务没有返回音频流。')
+    }
+    return {
+      pcmStream: Readable.fromWeb(response.body),
+      pcmSampleRate: 24000,
+    }
+  }
 
   // OpenAI-compatible: request raw PCM for streaming
   if (isOpenAiCompatibleSpeechOutputProvider(payload.providerId)) {
@@ -370,9 +480,11 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
 
 export {
   synthesizeRemoteTts,
+  buildQwen3TtsSpeechRequestPayload,
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
   isOpenAiCompatibleSpeechOutputProvider,
+  isQwen3TtsSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,

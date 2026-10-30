@@ -4,17 +4,24 @@ import {
   isEdgeTtsSpeechOutputProvider,
   isElevenLabsProvider,
   isOmniVoiceSpeechOutputProvider,
+  isQwen3TtsSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
   parseVolcengineSpeechCredentials,
 } from './ttsProviders.js'
 
 export const AUDIO_SYNTH_TIMEOUT_MS = 25_000
+/** First load of the 1.7B checkpoint can take a couple of minutes cold. */
+export const QWEN3_TTS_WARMUP_TIMEOUT_MS = 180_000
 
 export function resolveSpeechOutputBaseUrl(providerId, baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl)
 
   if (isOmniVoiceSpeechOutputProvider(providerId)) {
     return normalized || 'http://127.0.0.1:8000/v1'
+  }
+
+  if (isQwen3TtsSpeechOutputProvider(providerId)) {
+    return normalized || 'http://127.0.0.1:8002/v1'
   }
 
   // Edge TTS talks to a fixed Microsoft WebSocket endpoint and doesn't

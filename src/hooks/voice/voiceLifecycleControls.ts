@@ -11,6 +11,7 @@ import {
 } from './conversationEntrypoints.ts'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
 import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
+import { announceQwen3TtsFallback } from './providerFallbacks.ts'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { requestModelSetupForVoiceUse } from '../../lib/modelSetupBridge.ts'
@@ -128,6 +129,9 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       isSpeechInterrupted: bindings.isSpeechInterrupted,
       clearSpeechInterruptedFlag: bindings.clearSpeechInterruptedFlag,
       resetSpeechLevel: bindings.resetSpeechLevel,
+      notifySpeechFallback: () => {
+        announceQwen3TtsFallback(hookCallbacks.showPetStatus, ti)
+      },
       streamingRuntime: {
         getPlayer: bindings.getStreamAudioPlayer,
         setActiveController: (nextController: StreamingSpeechOutputController | null) => {

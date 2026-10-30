@@ -63,6 +63,7 @@ export const koVoice = {
   'voice.provider.api.permission_denied_mac': '마이크 권한이 없어요. 「시스템 설정 → 개인정보 보호 및 보안 → 마이크」에서 Nexus를 허용한 다음 다시 눌러 주세요.',
   'voice.provider.api.permission_denied_windows': '마이크 권한이 없어요. 「설정 → 개인 정보 보호 및 보안 → 마이크」에서 「데스크톱 앱에서 마이크에 액세스하도록 허용」을 켠 다음 다시 눌러 주세요.',
   'voice.provider.browser.fallback_to_sensevoice': '현재 환경은 브라우저 네이티브 음성 인식을 지원하지 않아 SenseVoice 로 전환했습니다.',
+  'voice.provider.qwen3-tts-local.fallback_notice': '로컬 Qwen3 음성을 준비하지 못해 이 답변은 평소 음성으로 읽습니다.',
   'voice.provider.vad.no_mic_input': '지금 환경에서 마이크 입력이 안 되는 것 같아요 — 시스템 녹음 권한을 한번 봐주세요.',
   'voice.provider.vad.start_failed': 'VAD 음성 감지가 시작이 안 됐어요 — 마이크 권한이나 로컬 환경을 한번 봐주세요.',
   'voice.provider.vad.silero_fallback': 'Silero VAD가 시작이 안 돼서 호환 녹음 모드로 자동 전환했어요.',

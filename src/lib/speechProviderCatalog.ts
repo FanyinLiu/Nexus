@@ -231,6 +231,7 @@ type SpeechOutputProtocol =
   | 'elevenlabs'
   | 'edge-tts'
   | 'local-vits'
+  | 'qwen3-tts'
   | 'xai'
 
 export type SpeechOutputProviderEntry = {
@@ -294,6 +295,18 @@ const ELEVENLABS_PRESET_VOICE_OPTIONS: SpeechVoiceOption[] = [
 
 const DASHSCOPE_VOICE_OPTIONS: SpeechVoiceOption[] = [
   { id: 'Cherry', label: 'provider.tts.voice.dashscope.Cherry.label', description: 'provider.tts.voice.dashscope.Cherry.description' },
+]
+
+const QWEN3_TTS_VOICE_OPTIONS: SpeechVoiceOption[] = [
+  { id: 'vivian', label: 'provider.tts.qwen3-tts-local.voice.vivian.label' },
+  { id: 'serena', label: 'provider.tts.qwen3-tts-local.voice.serena.label' },
+  { id: 'ono_anna', label: 'provider.tts.qwen3-tts-local.voice.ono_anna.label' },
+  { id: 'sohee', label: 'provider.tts.qwen3-tts-local.voice.sohee.label' },
+  { id: 'aiden', label: 'provider.tts.qwen3-tts-local.voice.aiden.label' },
+  { id: 'dylan', label: 'provider.tts.qwen3-tts-local.voice.dylan.label' },
+  { id: 'eric', label: 'provider.tts.qwen3-tts-local.voice.eric.label' },
+  { id: 'ryan', label: 'provider.tts.qwen3-tts-local.voice.ryan.label' },
+  { id: 'uncle_fu', label: 'provider.tts.qwen3-tts-local.voice.uncle_fu.label' },
 ]
 
 const VOLCENGINE_DIRECTLY_AVAILABLE_VOICE_IDS = new Set([
@@ -547,6 +560,23 @@ export const SPEECH_OUTPUT_PROVIDERS: SpeechOutputProviderEntry[] = [
       { id: 'male, low pitch', label: 'provider.tts.omnivoice-tts.voice.male-low-pitch.label', description: 'provider.tts.omnivoice-tts.voice.male-low-pitch.description' },
     ],
     adjustmentSupport: { rate: true, pitch: false, volume: false, note: 'provider.tts.omnivoice-tts.adjustment.note' },
+  },
+  {
+    id: 'qwen3-tts-local',
+    label: 'provider.tts.qwen3-tts-local.label',
+    baseUrl: 'http://127.0.0.1:8002/v1',
+    defaultModel: '',
+    defaultVoice: 'vivian',
+    notes: 'provider.tts.qwen3-tts-local.notes',
+    protocol: 'qwen3-tts',
+    kind: 'local',
+    hidden: false,
+    supportsStreaming: true,
+    supportsCustomVoiceId: false,
+    modelOptions: [],
+    fallbackVoiceOptions: QWEN3_TTS_VOICE_OPTIONS,
+    styleOptions: [],
+    adjustmentSupport: { rate: true, pitch: false, volume: false, note: 'provider.tts.qwen3-tts-local.adjustment.note' },
   },
   {
     id: 'custom-openai-tts',

@@ -16,6 +16,7 @@ import {
   getSpeechOutputStyleOptions,
   isEdgeTtsSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
+  isQwen3TtsSpeechOutputProvider,
   isSpeechOutputKeyless,
   isVolcengineSpeechOutputProvider,
   supportsCustomSpeechOutputVoiceId,
@@ -147,6 +148,7 @@ export const SpeechOutputProviderV3 = memo(function SpeechOutputProviderV3({
   const isMiniMax = isMiniMaxSpeechOutputProvider(draft.speechOutputProviderId)
   const isVolcengine = isVolcengineSpeechOutputProvider(draft.speechOutputProviderId)
   const isEdgeTts = isEdgeTtsSpeechOutputProvider(draft.speechOutputProviderId)
+  const isQwen3 = isQwen3TtsSpeechOutputProvider(draft.speechOutputProviderId)
   const hideCredentials = isSpeechOutputKeyless(draft.speechOutputProviderId)
   const showCustomVoice = supportsCustomSpeechOutputVoiceId(draft.speechOutputProviderId)
   const secretIsVaultRef = isVaultRefString(draft.speechOutputApiKey)
@@ -202,7 +204,7 @@ export const SpeechOutputProviderV3 = memo(function SpeechOutputProviderV3({
           {`${provider.baseUrl ? `${ti('settings.speech_output.default_endpoint')}${provider.baseUrl} ` : ''}${provider.defaultModel ? `${ti('settings.speech_output.default_model')}${provider.defaultModel}` : ''}`.trim() || undefined}
         </SettingsV3Notice>
 
-        {!isEdgeTts ? (
+        {!isEdgeTts && !isQwen3 ? (
           <SettingsV3Field label={ti('settings.speech_output.endpoint_url')}>
             <UrlInput
               uiLanguage={draft.uiLanguage}

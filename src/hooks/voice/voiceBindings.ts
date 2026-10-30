@@ -28,6 +28,7 @@ import {
 } from './continuousVoice.ts'
 import { testSpeechInputReadinessRuntime } from './diagnostics.ts'
 import {
+  announceQwen3TtsFallback,
   applySpeechOutputProviderFallbackRuntime,
   buildSpeechOutputFailoverCandidatesRuntime,
 } from './providerFallbacks.ts'
@@ -251,6 +252,9 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       callbacks: options,
       buildSpeechOutputFailoverCandidates,
       applySpeechOutputProviderFallback,
+      notifyFallback: () => {
+        announceQwen3TtsFallback(showPetStatus, ti)
+      },
       appendVoiceTrace,
       telemetry: {
         busEmit: (event) => voiceBus.emit(event),

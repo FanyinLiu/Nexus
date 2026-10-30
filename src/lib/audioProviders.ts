@@ -141,6 +141,10 @@ export function isEdgeTtsSpeechOutputProvider(providerId: string) {
   return getSpeechOutputProvider(providerId).protocol === 'edge-tts'
 }
 
+export function isQwen3TtsSpeechOutputProvider(providerId: string) {
+  return getSpeechOutputProvider(providerId).protocol === 'qwen3-tts'
+}
+
 // ── Capability queries (delegated to catalog) ──
 
 export function getSpeechOutputAdjustmentSupport(providerId: string): SpeechOutputAdjustmentSupport {

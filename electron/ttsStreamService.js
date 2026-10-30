@@ -136,7 +136,7 @@ function buildLeadInOptions(session, options = {}) {
   }
 }
 
-export function createTtsStreamService({ synthesizeRemote }) {
+export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
   const sessions = new Map()
 
   function emit(sender, event) {
@@ -280,6 +280,13 @@ export function createTtsStreamService({ synthesizeRemote }) {
       })
 
       stream.on('error', (err) => {
+        // A user barge-in / teardown destroys the stream through the abort
+        // signal. That is a clean stop, not a synthesis failure — surfacing
+        // it would paint an error after the user already moved on.
+        if (session.closed) {
+          resolve()
+          return
+        }
         const message = getRedactedErrorMessage(err) || '流式音频传输中断。'
         console.error('[TTS-Stream] PCM stream error:', message)
         emit(session.sender, {
@@ -378,7 +385,7 @@ export function createTtsStreamService({ synthesizeRemote }) {
   }
 
   return {
-    start(sender, payload) {
+    async start(sender, payload) {
       const requestId = String(payload?.requestId ?? '').trim()
       if (!requestId) {
         throw new Error('缺少流式 TTS requestId。')
@@ -392,6 +399,26 @@ export function createTtsStreamService({ synthesizeRemote }) {
         throw new Error('远程流式 TTS 未配置。')
       }
 
+      const abortController = new AbortController()
+      // A cold local model can take over a minute to load. Resolve the start
+      // call only after that warm-up, so the renderer's first-audio watchdog
+      // measures synthesis latency instead of checkpoint loading.
+      if (warmupRemote) {
+        const onDestroyedDuringWarmup = () => abortController.abort()
+        sender.once('destroyed', onDestroyedDuringWarmup)
+        try {
+          await warmupRemote(payload, abortController.signal)
+        } finally {
+          if (!sender.isDestroyed()) {
+            sender.removeListener('destroyed', onDestroyedDuringWarmup)
+          }
+        }
+      }
+
+      if (sender.isDestroyed()) {
+        return { ok: false }
+      }
+
       const session = {
         requestId,
         sender,
@@ -400,7 +427,7 @@ export function createTtsStreamService({ synthesizeRemote }) {
         closed: false,
         hasEmittedAudio: false,
         remoteWarmup: Promise.resolve(),
-        abortController: new AbortController(),
+        abortController,
       }
 
       // If the renderer tears down mid-stream, mark the session closed and

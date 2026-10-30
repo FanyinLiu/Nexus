@@ -63,6 +63,7 @@ export const zhTWVoice = {
   'voice.provider.api.permission_denied_mac': '沒有拿到麥克風權限。到「系統設定 → 隱私權與安全性 → 麥克風」裡允許 Nexus，再點一次「開始語音」。',
   'voice.provider.api.permission_denied_windows': '沒有拿到麥克風權限。到「設定 → 隱私權與安全性 → 麥克風」裡開啟「允許桌面應用程式存取您的麥克風」，再點一次「開始語音」。',
   'voice.provider.browser.fallback_to_sensevoice': '目前環境不支援瀏覽器原生語音辨識，已切換到 SenseVoice。',
+  'voice.provider.qwen3-tts-local.fallback_notice': '本機 Qwen3 語音暫時還沒準備好，這則回覆先用原本的聲音。',
   'voice.provider.vad.no_mic_input': '目前環境好像不支援麥克風輸入，看看系統錄音權限？',
   'voice.provider.vad.start_failed': 'VAD 語音偵測沒能啟動，看看麥克風權限或本機執行環境？',
   'voice.provider.vad.silero_fallback': 'Silero VAD 沒能啟動，已自動切換到相容錄音模式。',

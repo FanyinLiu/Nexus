@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
-import { synthesizeRemoteTts } from './services/ttsService.js'
+import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
 import { createCompanionPresenceTracker } from './companionPresenceTracker.js'
 import { buildRuntimeStateSnapshot, updateRuntimeState } from './windowRuntimeState.js'
@@ -60,6 +60,7 @@ function loadDeferredModules() {
     ]).then(async ([pluginIpc, memoryIpc, skillIpc]) => {
       const ttsStreamService = createTtsStreamService({
         synthesizeRemote: synthesizeRemoteTts,
+        warmupRemote: warmupRemoteTtsSession,
       })
 
       ttsStreamIpc.register({ ttsStreamService })

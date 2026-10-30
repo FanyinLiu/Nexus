@@ -63,6 +63,7 @@ export const jaVoice = {
   'voice.provider.api.permission_denied_mac': 'マイクを使う許可がありません。「システム設定 → プライバシーとセキュリティ → マイク」で Nexus を許可してから、もう一度お試しください。',
   'voice.provider.api.permission_denied_windows': 'マイクを使う許可がありません。「設定 → プライバシーとセキュリティ → マイク」で「デスクトップ アプリがマイクにアクセスできるようにする」をオンにしてから、もう一度お試しください。',
   'voice.provider.browser.fallback_to_sensevoice': '現在の環境はブラウザネイティブ音声認識に対応していないため、SenseVoice に切り替えました。',
+  'voice.provider.qwen3-tts-local.fallback_notice': 'ローカルの Qwen3 ボイスを準備できなかったため、この返信は通常の音声で読み上げます。',
   'voice.provider.vad.no_mic_input': 'この環境はマイク入力に対応していないようです。システムの録音権限をご確認ください。',
   'voice.provider.vad.start_failed': 'VAD 音声検出を起動できませんでした。マイクの権限やローカル実行環境をご確認ください。',
   'voice.provider.vad.silero_fallback': 'Silero VAD を起動できませんでした。互換録音モードに自動的に切り替えました。',
