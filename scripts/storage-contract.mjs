@@ -88,7 +88,6 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'PENDING_GREETING_KEY', key: 'nexus:pending-companion-greeting', domain: 'presence', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'STARTUP_GREETING_SESSION_KEY', key: 'nexus:startup-greeting-shown', domain: 'presence', classification: 'session', authority: 'renderer-sessionStorage', migration: 'do-not-migrate' },
   { constant: 'VOICE_TRIGGER_DIRECT_SEND_MIGRATION_KEY', key: 'nexus:voice-trigger-direct-send-migration-v1', domain: 'voice', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
-  { constant: 'ANALYTICS_CONSENT_STORAGE_KEY', key: 'nexus:analytics:consent', domain: 'analytics', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
   { constant: 'FAILOVER_STATE_STORAGE_KEY', key: 'nexus:provider-failover-state', domain: 'models', classification: 'ephemeral', authority: 'renderer-localStorage', migration: 'do-not-migrate' },
   { constant: 'METER_STORAGE_KEY_LEGACY', key: 'nexus:metering:daily', domain: 'metering', classification: 'legacy-compat', authority: 'renderer-localStorage', migration: 'read-only-migration-source' },
   { constant: 'METER_STORAGE_PREFIX', key: 'nexus:metering:day:', kind: 'prefix', domain: 'metering', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },

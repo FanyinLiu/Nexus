@@ -38,22 +38,6 @@ beforeEach(() => {
   })
 })
 
-test('loadActiveProfilePersona no longer depends on the legacy chat flag', async () => {
-  let called = 0
-  window.desktopPet = {
-    personaLoadProfile: async (id: string) => {
-      called += 1
-      return { id, present: true, soul: 'x' }
-    },
-  } as unknown as typeof window.desktopPet
-
-  const result = await loadActiveProfilePersona(
-    settingsWith({ profilePersonaInChatEnabled: false, activeCharacterProfileId: 'card-1' }),
-  )
-  assert.equal(result?.soul, 'x')
-  assert.equal(called, 1)
-})
-
 test('loadActiveProfilePersona returns the active profile persona when present', async () => {
   const ids: string[] = []
   window.desktopPet = {
@@ -64,7 +48,7 @@ test('loadActiveProfilePersona returns the active profile persona when present',
   } as unknown as typeof window.desktopPet
 
   const result = await loadActiveProfilePersona(
-    settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-1' }),
+    settingsWith({ activeCharacterProfileId: 'card-1' }),
   )
   assert.equal(result?.soul, 'card soul')
   assert.deepEqual(ids, ['card-1'])
@@ -82,7 +66,7 @@ test('loadActiveProfilePersona falls back to the default profile when the active
   } as unknown as typeof window.desktopPet
 
   const result = await loadActiveProfilePersona(
-    settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-empty' }),
+    settingsWith({ activeCharacterProfileId: 'card-empty' }),
   )
   assert.equal(result?.soul, 'default soul')
   assert.deepEqual(ids, ['card-empty', 'xinghui'])
@@ -94,7 +78,7 @@ test('loadActiveProfilePersona returns null when nothing is present after fallba
   } as unknown as typeof window.desktopPet
 
   const result = await loadActiveProfilePersona(
-    settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-empty' }),
+    settingsWith({ activeCharacterProfileId: 'card-empty' }),
   )
   assert.equal(result, null)
 })
@@ -102,7 +86,7 @@ test('loadActiveProfilePersona returns null when nothing is present after fallba
 test('loadActiveProfilePersona returns null when the bridge is unavailable', async () => {
   window.desktopPet = {} as typeof window.desktopPet
   const result = await loadActiveProfilePersona(
-    settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-1' }),
+    settingsWith({ activeCharacterProfileId: 'card-1' }),
   )
   assert.equal(result, null)
 })
@@ -119,7 +103,7 @@ test('loadActiveProfilePersona returns null and does not throw when loading fail
 
   try {
     const result = await loadActiveProfilePersona(
-      settingsWith({ profilePersonaInChatEnabled: true, activeCharacterProfileId: 'card-1' }),
+      settingsWith({ activeCharacterProfileId: 'card-1' }),
     )
     assert.equal(result, null)
   } finally {

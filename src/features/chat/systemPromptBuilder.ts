@@ -230,9 +230,8 @@ export type AssistantReplyRequestOptions = {
  * when no profile is present or loading fails, so the SOUL card keeps
  * targeting the global file unless a profile really drives the persona.
  *
- * The old `profilePersonaInChatEnabled` switch no longer gates this: chat,
- * V2, and letters all resolve one persona. The settings flag stays readable
- * for stored-data compatibility only.
+ * Chat, V2, and letters all resolve one persona, so persona loading is not
+ * gated by a chat-only settings switch.
  */
 export async function loadActiveProfilePersona(
   settings: Pick<AppSettings, 'activeCharacterProfileId'>,

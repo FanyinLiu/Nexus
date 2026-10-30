@@ -13,7 +13,8 @@
  * migration is 20. Version 21 only records which companionship pace
  * already matches the stored switches. Version 22 points a saved sprite
  * or portrait selection at Live2D Mao. Version 23 moves the memory
- * embedding model from the old local-hash default to `auto`.
+ * embedding model from the old local-hash default to `auto`. Version 24
+ * drops the unused agent iteration cap and the legacy persona chat flag.
  */
 
 import type { UiLanguage } from '../types'
@@ -444,7 +445,7 @@ function migrateRetiredNonLive2dPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 23
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 24
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -671,6 +672,16 @@ const migrations: SettingsMigration[] = [
     toVersion: 23,
     description: 'Move the memory embedding model from the old local-hash default to auto',
     migrate: migrateMemoryEmbeddingModelToAuto,
+  },
+  {
+    toVersion: 24,
+    description: 'Drop the unused agent iteration cap and the legacy profile persona chat flag',
+    migrate: (raw) => {
+      const next = { ...raw }
+      delete next.agentMaxIterations
+      delete next.profilePersonaInChatEnabled
+      return next
+    },
   },
 ]
 

@@ -157,7 +157,7 @@ function normalizeSegmentStyle(raw) {
  * Fold one sentence's emotion into a COPY of the pinned session payload.
  * The speaker/model stay exactly as started (so timbre cannot drift); only
  * tone/pace fields change. The user's base instructions lead, the sentence
- * clause follows, matching `combineVoiceInstructions`.
+ * clause follows.
  */
 function applySegmentStyle(payload, style) {
   if (!style) return payload

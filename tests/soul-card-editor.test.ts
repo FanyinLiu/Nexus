@@ -184,7 +184,6 @@ async function settle() {
 
 const cardProps = {
   settings: {
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: PROMPT,
   },

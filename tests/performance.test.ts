@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
-  ExpressionOverrideStreamFilter,
   PerformanceTagStreamFilter,
   StageDirectionStreamFilter,
   extractExpressionOverrides,
@@ -218,14 +217,14 @@ test('extractExpressionOverrides is a no-op when no tags are present', () => {
   assert.equal(result.cues.length, 0)
 })
 
-test('ExpressionOverrideStreamFilter strips a tag delivered in one chunk', () => {
-  const filter = new ExpressionOverrideStreamFilter()
+test('PerformanceTagStreamFilter strips a tag delivered in one chunk', () => {
+  const filter = new PerformanceTagStreamFilter()
   const out = filter.push('你好[expr:happy]啊') + filter.flush()
   assert.equal(out, '你好啊')
 })
 
-test('ExpressionOverrideStreamFilter holds back a partial tag across deltas', () => {
-  const filter = new ExpressionOverrideStreamFilter()
+test('PerformanceTagStreamFilter holds back a partial tag across deltas', () => {
+  const filter = new PerformanceTagStreamFilter()
   // Simulate the LLM streaming the tag one small slice at a time — the
   // filter must not emit `[`, `[e`, `[ex` ... until the tag completes.
   const pieces = ['你好', '[', 'expr', ':hap', 'py]', '啊']
@@ -237,14 +236,14 @@ test('ExpressionOverrideStreamFilter holds back a partial tag across deltas', ()
   assert.equal(streamed, '你好啊')
 })
 
-test('ExpressionOverrideStreamFilter releases text around a non-tag bracket', () => {
-  const filter = new ExpressionOverrideStreamFilter()
+test('PerformanceTagStreamFilter releases text around a non-tag bracket', () => {
+  const filter = new PerformanceTagStreamFilter()
   const out = filter.push('请看[TODO] 说明') + filter.flush()
   assert.equal(out, '请看[TODO] 说明')
 })
 
-test('ExpressionOverrideStreamFilter releases long-lived unmatched brackets', () => {
-  const filter = new ExpressionOverrideStreamFilter()
+test('PerformanceTagStreamFilter releases long-lived unmatched brackets', () => {
+  const filter = new PerformanceTagStreamFilter()
   // Buffer starts with `[` but never closes. Filter must give up after
   // the lookahead cap so the bubble doesn't hang.
   const longTail = 'x'.repeat(80)
@@ -252,8 +251,8 @@ test('ExpressionOverrideStreamFilter releases long-lived unmatched brackets', ()
   assert.equal(out, `开头[${longTail}`)
 })
 
-test('ExpressionOverrideStreamFilter handles multiple tags in one stream', () => {
-  const filter = new ExpressionOverrideStreamFilter()
+test('PerformanceTagStreamFilter handles multiple tags in one stream', () => {
+  const filter = new PerformanceTagStreamFilter()
   const out = filter.push('A[expr:happy]B') + filter.push('[expr:surprised]C') + filter.flush()
   assert.equal(out, 'ABC')
 })

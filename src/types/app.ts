@@ -71,13 +71,6 @@ interface IdentitySettings {
   characterProfiles: CharacterProfile[]
   activeCharacterProfileId: string
   /**
-   * Legacy compatibility flag: an active character profile used to drive chat
-   * replies only when this was on. Every generation path now resolves one
-   * persona, so the flag no longer gates anything; it stays readable so old
-   * stores migrate cleanly. New installs default it to true.
-   */
-  profilePersonaInChatEnabled: boolean
-  /**
    * Soft framing for how the companion should hold the relationship — biases
    * the system prompt with a 1-line nudge. 'open_ended' (default) injects
    * nothing, preserving existing behavior for upgraded installs.
@@ -181,8 +174,6 @@ interface TextProviderSettings {
   budgetMonthlyCapUsd: number
   budgetHardStopEnabled: boolean
   budgetDowngradeRatio: number
-  /** Maximum agent loop iterations before forced abort. */
-  agentMaxIterations: number
   /**
    * Regex-based post-processing rules applied to each LLM reply before it
    * reaches the chat view / memory layer. Inspired by SillyTavern's regex
@@ -429,7 +420,7 @@ export type CompanionInitiative = 'quiet' | 'sometimes' | 'often' | 'custom'
 
 interface SettingsSchema {
   settingsSchemaVersion: number
-  /** Pace chosen on the appearance page. Behavior still comes from the older switches. */
+  /** Pace chosen on the appearance page; AppearanceSimplePage.choosePace maps it onto the legacy switches. */
   companionInitiative: CompanionInitiative
 }
 

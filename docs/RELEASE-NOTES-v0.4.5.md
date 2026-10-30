@@ -89,6 +89,8 @@ accumulated on `main` since v0.4.4.
 
 - **Errand recovery** — background errands interrupted by a process exit are
   re-queued on the next boot instead of being stuck in `running` forever.
+  > **Later note:** the errand-creation UI was removed in a later change; errand
+  > creation and this recovery path are dormant.
 - **Voice / VAD** — VAD frame subscriptions survive wake-word listener
   rebuilds (the shared-mic path no longer starves after a listener error),
   stale `onstop` events from a superseded recorder are ignored, and the

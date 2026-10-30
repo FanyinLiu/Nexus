@@ -76,7 +76,6 @@ const defaultSettings: AppSettings = {
   userName: '主人',
   characterProfiles: [],
   activeCharacterProfileId: '',
-  profilePersonaInChatEnabled: true,
   companionRelationshipType: 'open_ended',
   apiBaseUrl: 'http://127.0.0.1:11434/v1',
   apiKey: '',
@@ -220,7 +219,6 @@ const defaultSettings: AppSettings = {
   budgetMonthlyCapUsd: 0,
   budgetHardStopEnabled: false,
   budgetDowngradeRatio: 0.8,
-  agentMaxIterations: 8,
   chatOutputTransforms: [],
   // Autonomy defaults — all off so existing users see no behavior change
   autonomyEnabled: false,
@@ -619,12 +617,6 @@ export function loadSettings(): AppSettings {
     discordVoiceReplyEnabled: Boolean(stored.discordVoiceReplyEnabled ?? defaultSettings.discordVoiceReplyEnabled),
     discordPermissionMode: readPermissionMode(stored.discordPermissionMode, defaultSettings.discordPermissionMode),
     mcpPermissionMode: readPermissionMode(stored.mcpPermissionMode, defaultSettings.mcpPermissionMode),
-    agentMaxIterations: clampInteger(
-      stored.agentMaxIterations ?? defaultSettings.agentMaxIterations,
-      defaultSettings.agentMaxIterations,
-      1,
-      32,
-    ),
     // Autonomy numerics drive background timers/budgets — a corrupt or
     // cross-version stored value (0, negative, NaN, string) must not survive:
     // a 0 interval becomes a 0ms busy-loop, a negative cap silently kills
