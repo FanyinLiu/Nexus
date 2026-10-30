@@ -1,9 +1,11 @@
 import type { MutableRefObject } from 'react'
 import {
   createVoiceActivityDetector,
+  getBrowserVadSilenceMs,
   type VoiceActivityDetector,
 } from '../../features/hearing/browserVad.ts'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
+import { decideTurnEnd, turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
 import {
   startParaformerStream,
   type ParaformerStreamSession,
@@ -29,7 +31,10 @@ import type {
 } from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
+  SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
 } from './constants.ts'
+import type { BackchannelSession } from './backchannelRuntime.ts'
+import { createAdaptiveRmsGate } from './support.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
@@ -84,6 +89,8 @@ export type StartParaformerConversationOptions = {
     errorCode?: string,
   ) => void
   shouldAutoRestartVoice: () => boolean
+  /** Optional short acknowledgements during the user's turn. */
+  backchannel?: BackchannelSession
   ti: Translator
 }
 
@@ -136,6 +143,14 @@ export async function startParaformerConversation(
     let session: ParaformerStreamSession | null = null
     let speechDetected = false
     let finalizing = false
+    let latestPartial = ''
+    let speechStartedAt: number | null = null
+    let lastSpeechAt = 0
+    const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
+    // The VAD's usual redemption window is the ordinary-text default.
+    // turnEnd may shorten it for finished text or extend it for a trailing
+    // connector; the detector itself is configured with that wider ceiling.
+    const baseSilenceMs = getBrowserVadSilenceMs(params.currentSettings.vadSensitivity)
 
     const armNoSpeechTimer = () => {
       const state = params.paraformerConversationRef.current
@@ -150,6 +165,7 @@ export async function startParaformerConversation(
 
         if (!speechDetected) {
           finalizing = true
+          params.backchannel?.stop()
           params.clearParaformerConversationState()
           session.abort()
           params.paraformerSessionRef.current = null
@@ -167,6 +183,7 @@ export async function startParaformerConversation(
       if (!session || finalizing) return
 
       finalizing = true
+      params.backchannel?.stop()
       params.clearParaformerConversationState()
 
       try {
@@ -196,11 +213,50 @@ export async function startParaformerConversation(
       }
     }
 
+    const markSpeechDetected = (now: number) => {
+      lastSpeechAt = now
+      if (speechStartedAt === null) {
+        speechStartedAt = now
+      }
+      if (speechDetected) return
+
+      speechDetected = true
+      params.dispatchVoiceSession({ type: 'speech_detected' })
+      params.resetNoSpeechRestartCount()
+      params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_detected'))
+    }
+
+    const evaluatePause = (now: number) => {
+      if (finalizing || !session || params.paraformerSessionRef.current !== session) return
+      if (!speechDetected || speechStartedAt === null) return
+
+      const silenceMs = Math.max(0, now - lastSpeechAt)
+      const decision = decideTurnEnd({
+        partialTranscript: latestPartial,
+        silenceMs,
+        locale: params.currentSettings.speechRecognitionLang,
+        presetSilenceMs: baseSilenceMs,
+      })
+
+      if (decision.action === 'end') {
+        void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_silence_finalize'))
+        return
+      }
+
+      params.backchannel?.maybeFire({
+        partialTranscript: latestPartial,
+        silenceMs,
+        spokenMs: Math.max(0, lastSpeechAt - speechStartedAt),
+        turnEndAction: decision.action,
+      })
+    }
+
     params.beginVoiceListeningSession('local_paraformer')
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
     params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_started'))
+    params.backchannel?.start()
 
     if (!passive) {
       params.showPetStatus(
@@ -219,29 +275,30 @@ export async function startParaformerConversation(
       vadDetector = await createVoiceActivityDetector({
         onSpeechStart: () => {
           if (finalizing || !session || params.paraformerSessionRef.current !== session) return
-
-          if (!speechDetected) {
-            speechDetected = true
-            params.dispatchVoiceSession({ type: 'speech_detected' })
-            params.resetNoSpeechRestartCount()
-            params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_detected'))
-          }
-
+          markSpeechDetected(performance.now())
           armNoSpeechTimer()
         },
         onSpeechEnd: async () => {
-          // VAD detected speech end — finalize the Paraformer transcript
+          // The detector's ceiling was reached. turnEnd may already have
+          // finalized earlier from the partial text; finalize is idempotent.
           if (finalizing || !session || params.paraformerSessionRef.current !== session) return
           void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_silence_finalize'))
         },
         onFrameProcessed: (speechProbability) => {
           if (!session || params.paraformerSessionRef.current !== session || finalizing) return
           params.setSpeechLevelValue(speechProbability)
+          if (speechProbability >= 0.3) {
+            markSpeechDetected(performance.now())
+          }
         },
         onMisfire: () => {
           // Very short noise burst, not real speech — ignore
         },
-      }, params.currentSettings.vadSensitivity)
+      }, params.currentSettings.vadSensitivity, {
+        // Streaming partials let turnEnd finish before this ceiling; without
+        // this override a trailing "然后..." would still cut at the preset.
+        maxSilenceMs: turnEndMaxSilenceMs(baseSilenceMs),
+      })
       await vadDetector.start()
     } catch (vadError) {
       console.warn('[Paraformer] Silero VAD unavailable, speech end detection will rely on Paraformer endpoints only', vadError)
@@ -252,6 +309,7 @@ export async function startParaformerConversation(
     session = await startParaformerStream({
       onPartial: (text) => {
         if (finalizing || !session || params.paraformerSessionRef.current !== session) return
+        latestPartial = text
         params.setLiveTranscript(text)
         params.dispatchVoiceSession({ type: 'stt_partial', text })
       },
@@ -266,11 +324,19 @@ export async function startParaformerConversation(
         if (!vadDetector) {
           params.setSpeechLevelValue(clamp(rms * 6, 0, 1))
         }
+
+        const now = performance.now()
+        if (activityGate.isSpeech(rms)) {
+          markSpeechDetected(now)
+          return
+        }
+        evaluatePause(now)
       },
       onError: (message) => {
         if (finalizing) return
 
         finalizing = true
+        params.backchannel?.stop()
         params.clearParaformerConversationState()
         params.paraformerSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -290,6 +356,7 @@ export async function startParaformerConversation(
 
       if (!speechDetected) {
         finalizing = true
+        params.backchannel?.stop()
         params.clearParaformerConversationState()
         session.abort()
         params.paraformerSessionRef.current = null
@@ -300,6 +367,7 @@ export async function startParaformerConversation(
       void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_max_duration'))
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
+    params.backchannel?.stop()
     params.clearParaformerConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

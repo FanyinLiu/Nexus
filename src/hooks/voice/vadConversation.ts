@@ -6,6 +6,7 @@ import {
 import { createMainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
+import type { BackchannelSession } from './backchannelRuntime.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
@@ -95,6 +96,8 @@ export type StartVadConversationOptions = {
   ) => Promise<void>
   shouldAutoRestartVoice: () => boolean
   busEmit?: (event: VoiceBusEvent) => void
+  /** Optional short acknowledgements during the user's turn. */
+  backchannel?: BackchannelSession
   ti: Translator
 }
 
@@ -163,12 +166,20 @@ export async function startVadConversation(
   // assignment inside the handlers passed into the detector/frame driver.
   let session!: VadConversationSession
 
+  // Backchannel pacing: this path has no partial transcript, so the policy
+  // only ever sees an empty string and picks the neutral listening token.
+  let speechStartedAt: number | null = null
+  let lastSpeechAt = 0
+
   const handleSpeechStart = () => {
     if (params.vadSessionRef.current !== session) return
     // Echo cooldown: suppress speech_start during the short window after a
     // user barge-in, so the tail end of the aborted TTS doesn't bounce
     // back through the mic and look like user speech.
     if (Date.now() < params.voiceEchoCooldownUntilRef.current) return
+    const now = performance.now()
+    speechStartedAt ??= now
+    lastSpeechAt = now
     session.speechDetected = true
     params.dispatchVoiceSession({ type: 'speech_detected' })
     params.busEmit?.({
@@ -186,6 +197,22 @@ export async function startVadConversation(
   const handleFrameProcessed = (speechProbability: number) => {
     if (params.vadSessionRef.current !== session) return
     params.setSpeechLevelValue(speechProbability)
+
+    const now = performance.now()
+    if (speechProbability >= 0.3) {
+      speechStartedAt ??= now
+      lastSpeechAt = now
+      return
+    }
+
+    if (!session.speechDetected || speechStartedAt === null) return
+    const silenceMs = Math.max(0, now - lastSpeechAt)
+    params.backchannel?.maybeFire({
+      partialTranscript: '',
+      silenceMs,
+      spokenMs: Math.max(0, lastSpeechAt - speechStartedAt),
+      turnEndAction: 'wait',
+    })
   }
 
   const handleMisfire = () => {
@@ -205,6 +232,7 @@ export async function startVadConversation(
     if (params.vadSessionRef.current !== session || session.cancelled) return
 
     params.vadSessionRef.current = null
+    params.backchannel?.stop()
     if (session.noSpeechTimer) {
       window.clearTimeout(session.noSpeechTimer)
     }
@@ -363,6 +391,7 @@ export async function startVadConversation(
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
+    params.backchannel?.start()
     params.updateVoicePipeline(
       'listening',
       params.transcribeMode === 'local'
@@ -443,6 +472,7 @@ export async function startVadConversation(
       await session.detector.start()
     }
   } catch (error) {
+    params.backchannel?.stop()
     // Partial-init cleanup: anything we wired up before throwing must
     // be torn down here, otherwise mainVad / detector / timers / the
     // session ref leak. Iterate every possible state.

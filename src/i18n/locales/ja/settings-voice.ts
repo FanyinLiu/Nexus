@@ -29,6 +29,8 @@ export const jaSettingsVoice = {
   'settings.voice.vad.high': '高（より敏感）',
   'settings.voice.allow_interruption': '発話による割り込みを許可',
   'settings.voice.interrupt_hint': '彼女が話しているとき、普通の声で話すと止まります。',
+  'settings.voice.backchannel': '話していると小さく相づちを打ちます',
+  'settings.voice.backchannel_hint': 'あなたが話している間の短い間で、小さく「うん」と相づちを打ちます。話をさえぎることはなく、ご自分で音声を始めたときだけ動きます。',
   'settings.voice.enable_stt_failover': '聞き取れないとき別の聞き方にする',
   'settings.voice.enable_tts_failover': '話せないとき別の話し方にする',
   'settings.voice.trigger_mode': '話した言葉の送り方',

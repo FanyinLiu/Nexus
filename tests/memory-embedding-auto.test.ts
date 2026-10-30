@@ -326,10 +326,10 @@ test('detect payload schema requires a model name', () => {
 // ── Settings migration ──
 
 test('schema 23 moves the old local-hash default to auto', () => {
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 24)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 25)
   const next = migrateSettings({ settingsSchemaVersion: 22, memoryEmbeddingModel: 'local-hash-v1' }, 22)
   assert.equal(next.memoryEmbeddingModel, 'auto')
-  assert.equal(next.settingsSchemaVersion, 24)
+  assert.equal(next.settingsSchemaVersion, 25)
 
   const missing = migrateSettings({ settingsSchemaVersion: 22 }, 22)
   assert.equal(missing.memoryEmbeddingModel, 'auto')

@@ -29,6 +29,8 @@ export const zhTWSettingsVoice = {
   'settings.voice.vad.high': '高（更靈敏）',
   'settings.voice.allow_interruption': '允許語音打斷播報',
   'settings.voice.interrupt_hint': '她正在說的時候，你正常說話就能打斷她。',
+  'settings.voice.backchannel': '你說話時她會輕聲附和',
+  'settings.voice.backchannel_hint': '你說話時，她會在停頓處輕輕應一聲，不會打斷你。只在你主動開啟語音時有效。',
   'settings.voice.enable_stt_failover': '聽不清時換一種聽法',
   'settings.voice.enable_tts_failover': '說不出時換一種說法',
   'settings.voice.trigger_mode': '說完怎麼傳出去',

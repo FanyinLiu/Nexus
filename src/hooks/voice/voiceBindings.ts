@@ -334,6 +334,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       voiceStateRef: refs.voiceStateRef,
       continuousVoiceActiveRef: refs.continuousVoiceActiveRef,
       settingsRef: ctx.settingsRef,
+      voiceEchoCooldownUntilRef: refs.voiceEchoCooldownUntilRef,
       speechLevelSource: refs.speechLevelSource,
       // When KWS is listening, the monitor subscribes to its existing mic
       // frames instead of opening a second getUserMedia. See

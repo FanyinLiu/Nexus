@@ -15,6 +15,7 @@
  * or portrait selection at Live2D Mao. Version 23 moves the memory
  * embedding model from the old local-hash default to `auto`. Version 24
  * drops the unused agent iteration cap and the legacy persona chat flag.
+ * Version 25 adds the default-off backchannel acknowledgement switch.
  */
 
 import type { UiLanguage } from '../types'
@@ -445,7 +446,7 @@ function migrateRetiredNonLive2dPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 24
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 25
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -680,6 +681,17 @@ const migrations: SettingsMigration[] = [
       const next = { ...raw }
       delete next.agentMaxIterations
       delete next.profilePersonaInChatEnabled
+      return next
+    },
+  },
+  {
+    toVersion: 25,
+    description: 'Default the backchannel acknowledgement switch off for older stores',
+    migrate: (raw) => {
+      const next = { ...raw }
+      if (typeof next.voiceBackchannelEnabled !== 'boolean') {
+        next.voiceBackchannelEnabled = false
+      }
       return next
     },
   },

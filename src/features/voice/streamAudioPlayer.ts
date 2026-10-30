@@ -22,6 +22,9 @@ const SCHEDULE_LOOKAHEAD_SECONDS = 0.02
 const CHUNK_TRANSITION_SMOOTH_MS = 2
 const STREAM_START_PREROLL_MS = 12
 const STREAM_START_RAMP_MS = 1
+// Backchannels ("mm-hm") sit under the user's voice instead of replacing it.
+// A separate gain node keeps them out of the reply's scheduling state.
+const BACKCHANNEL_GAIN = 0.32
 
 function performanceNowMs() {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
@@ -116,6 +119,8 @@ export class StreamAudioPlayer {
   private levelFrameId: number | null = null
   private playbackEndedNotified = false
   private readonly activeSources = new Set<AudioBufferSourceNode>()
+  private readonly backchannelSources = new Set<AudioBufferSourceNode>()
+  private backchannelGain: GainNode | null = null
   private keepaliveOsc: OscillatorNode | null = null
   private lastQueuedSample: number | null = null
   private lastQueuedSampleRate: number | null = null
@@ -217,6 +222,48 @@ export class StreamAudioPlayer {
     }
   }
 
+  /**
+   * Play a backchannel clip immediately on a separate low-gain path.
+   *
+   * This never touches `nextStartTime` or the reply's chunk history, so a
+   * "mm-hm" during the user's turn cannot delay or truncate the next reply
+   * sentence. Returns the clip duration in milliseconds for echo cooldown.
+   */
+  appendBackchannelPcmChunk(
+    samples: Float32Array | number[],
+    sampleRate: number,
+    channels = 1,
+  ): number {
+    if (this.stopped || !sampleRate || sampleRate <= 0 || channels !== 1) {
+      return 0
+    }
+
+    try {
+      const context = this.ensureAudioContext()
+      const chunk = samples instanceof Float32Array ? samples : new Float32Array(samples)
+      if (!chunk.length) return 0
+
+      const buffer = context.createBuffer(1, chunk.length, sampleRate)
+      buffer.getChannelData(0).set(chunk)
+
+      const source = context.createBufferSource()
+      source.buffer = buffer
+      source.connect(this.ensureBackchannelGain())
+
+      this.backchannelSources.add(source)
+      source.onended = () => {
+        this.backchannelSources.delete(source)
+      }
+      source.start(context.currentTime + 0.005)
+      void context.resume().catch(() => undefined)
+      return buffer.duration * 1000
+    } catch {
+      // A backchannel is best-effort; a failed acknowledgement must never
+      // surface as a playback error or stop the user's turn.
+      return 0
+    }
+  }
+
   waitForDrain() {
     if (this.stopped) {
       return Promise.resolve()
@@ -273,6 +320,17 @@ export class StreamAudioPlayer {
       }
     })
 
+    const backchannels = Array.from(this.backchannelSources)
+    this.backchannelSources.clear()
+    backchannels.forEach((source) => {
+      try {
+        source.onended = null
+        source.stop()
+      } catch {
+        // no-op
+      }
+    })
+
     try { this.keepaliveOsc?.stop() } catch { /* no-op */ }
     this.keepaliveOsc = null
 
@@ -288,6 +346,7 @@ export class StreamAudioPlayer {
     this.audioContext = null
     this.analyser = null
     this.masterGain = null
+    this.backchannelGain = null
   }
 
   private ensureAudioContext() {
@@ -320,6 +379,17 @@ export class StreamAudioPlayer {
     this.masterGain = masterGain
     this.nextStartTime = 0
     return context
+  }
+
+  private ensureBackchannelGain() {
+    if (this.backchannelGain) return this.backchannelGain
+
+    const context = this.ensureAudioContext()
+    const gain = context.createGain()
+    gain.gain.value = BACKCHANNEL_GAIN
+    gain.connect(this.analyser!)
+    this.backchannelGain = gain
+    return gain
   }
 
   private scheduleDrainResolution() {

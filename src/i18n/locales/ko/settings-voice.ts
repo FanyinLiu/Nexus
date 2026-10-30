@@ -29,6 +29,8 @@ export const koSettingsVoice = {
   'settings.voice.vad.high': '높음 (더 민감)',
   'settings.voice.allow_interruption': '발화로 끊기 허용',
   'settings.voice.interrupt_hint': '그녀가 말하는 동안 보통 목소리로 말하면 멈춥니다.',
+  'settings.voice.backchannel': '말하는 동안 작게 맞장구쳐요',
+  'settings.voice.backchannel_hint': '말하는 중 잠깐 쉬는 순간에 작게 「응」 하고 맞장구쳐요. 말을 끊지 않고, 직접 음성을 시작했을 때만 동작해요.',
   'settings.voice.enable_stt_failover': '잘 안 들리면 다른 듣기로',
   'settings.voice.enable_tts_failover': '잘 안 되면 다른 말하기로',
   'settings.voice.trigger_mode': '말한 내용을 보내는 방식',

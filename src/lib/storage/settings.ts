@@ -113,6 +113,7 @@ const defaultSettings: AppSettings = {
   // than the speech actually had.
   vadSensitivity: 'high',
   voiceInterruptionEnabled: false,
+  voiceBackchannelEnabled: false,
   voiceTriggerMode: 'direct_send',
   wakeWordEnabled: false,
   wakeWord: '星绘',
@@ -520,6 +521,7 @@ export function loadSettings(): AppSettings {
     toolWeatherDefaultLocation: String(
       stored.toolWeatherDefaultLocation ?? defaultSettings.toolWeatherDefaultLocation,
     ).trim(),
+    voiceBackchannelEnabled: stored.voiceBackchannelEnabled === true,
     voiceTriggerMode,
     wakeWordEnabled: voiceTriggerMode === 'wake_word',
     memorySearchMode:

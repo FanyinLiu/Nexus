@@ -41,18 +41,24 @@ type VadPreset = {
 // of compute — we bias aggressively toward sensitivity. Users complained
 // that default thresholds were cutting them off mid-sentence on short
 // pauses and missing quieter speech entirely.
+//
+// This main-process path feeds a one-shot transcribeAudio call, so it has
+// no partial transcript to reason about. turnEnd.ts therefore stays out of
+// this controller and the preset silence below remains the only end-of-turn
+// signal. Streaming providers (Paraformer, Tencent ASR) apply turnEnd in
+// their own conversation runners, where partials exist.
 const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
   low: {
     threshold: 0.45,
     minSilenceDuration: 0.7,
     minSpeechDuration: 0.12,
-    maxSpeechDuration: 20,
+    maxSpeechDuration: 45,
   },
   medium: {
     threshold: 0.3,
     minSilenceDuration: 0.9,
     minSpeechDuration: 0.08,
-    maxSpeechDuration: 20,
+    maxSpeechDuration: 45,
   },
   high: {
     // Wake-word has already gated the session, so being aggressive here is
@@ -63,7 +69,7 @@ const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
     threshold: 0.18,
     minSilenceDuration: 1.1,
     minSpeechDuration: 0.06,
-    maxSpeechDuration: 20,
+    maxSpeechDuration: 45,
   },
 }
 

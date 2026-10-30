@@ -3,7 +3,7 @@ import test from 'node:test'
 import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
 
 test('schema 24 drops the unused agent iteration cap and persona chat flag', () => {
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 24)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 25)
   const next = migrateSettings({
     settingsSchemaVersion: 23,
     agentMaxIterations: 12,
@@ -12,7 +12,7 @@ test('schema 24 drops the unused agent iteration cap and persona chat flag', () 
     model: 'qwen3:8b',
   }, 23)
 
-  assert.equal(next.settingsSchemaVersion, 24)
+  assert.equal(next.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
   assert.equal('agentMaxIterations' in next, false)
   assert.equal('profilePersonaInChatEnabled' in next, false)
   assert.equal(next.companionInitiative, 'often')
@@ -27,7 +27,7 @@ test('schema 24 keeps unrelated settings when earlier migrations also run', () =
     memoryEmbeddingModel: 'local-hash-v1',
   }, 22)
 
-  assert.equal(next.settingsSchemaVersion, 24)
+  assert.equal(next.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
   assert.equal(next.memoryEmbeddingModel, 'auto')
   assert.equal('agentMaxIterations' in next, false)
   assert.equal('profilePersonaInChatEnabled' in next, false)

@@ -29,6 +29,8 @@ export const enSettingsVoice = {
   'settings.voice.vad.high': 'High (more sensitive)',
   'settings.voice.allow_interruption': 'Allow speech interruption',
   'settings.voice.interrupt_hint': 'While she is talking, speaking at a normal volume stops her.',
+  'settings.voice.backchannel': 'She softly responds while you talk',
+  'settings.voice.backchannel_hint': 'A quiet "mm-hm" during your pauses. She never talks over you, and it only happens after you start a voice session.',
   'settings.voice.enable_stt_failover': 'Try another way of listening',
   'settings.voice.enable_tts_failover': 'Try another way of speaking',
   'settings.voice.trigger_mode': 'When to send what you say',
