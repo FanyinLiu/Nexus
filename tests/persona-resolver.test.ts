@@ -394,9 +394,22 @@ test('chat, V2, and letters receive the same soul for the same settings', async 
 
 // ── bundled seed parity ─────────────────────────────────────────────────
 
-test('the bundled default stays byte-equal to the shipped Xinghui seed', async () => {
-  const soul = (await readFile(join(XINGHUI_SEED_DIR, 'soul.md'), 'utf8')).trim()
-  const examplesRaw = (await readFile(join(XINGHUI_SEED_DIR, 'examples.md'), 'utf8')).trim()
+/**
+ * Line endings follow the checkout (Windows core.autocrlf), while the bundled
+ * copy joins its lines with \n. Normalize before comparing so the guard is
+ * about persona content rather than git settings; any real drift still fails.
+ */
+function normalizeLineEndings(text: string): string {
+  return text.replace(/\r\n?/g, '\n')
+}
+
+test('the bundled default stays content-identical to the shipped Xinghui seed', async () => {
+  const soul = normalizeLineEndings(
+    await readFile(join(XINGHUI_SEED_DIR, 'soul.md'), 'utf8'),
+  ).trim()
+  const examplesRaw = normalizeLineEndings(
+    await readFile(join(XINGHUI_SEED_DIR, 'examples.md'), 'utf8'),
+  ).trim()
 
   assert.equal(BUNDLED_DEFAULT_PERSONA.soul, soul)
   assert.equal(BUNDLED_DEFAULT_PERSONA.examplesRaw, examplesRaw)

@@ -182,6 +182,23 @@ test('persona profile loader loads the bundled Xinghui seed profile end-to-end',
   }
 })
 
+test('persona profile loader normalizes CRLF text so prompts match across platforms', async () => {
+  const loaded = await loadPersonaProfileFromReader({
+    id: 'crlf',
+    rootDir: '/crlf',
+    read: makeMapReader({
+      'soul.md': 'line one\r\nline two\r\n',
+      'memory.md': 'm1\r\nm2\r\n',
+      'examples.md': '### ex\r\nUser: 早\r\nAssistant: 醒啦。\r\n',
+    }),
+  })
+
+  assert.equal(loaded.soul, 'line one\nline two')
+  assert.equal(loaded.memory, 'm1\nm2')
+  assert.equal(loaded.examplesRaw, '### ex\nUser: 早\nAssistant: 醒啦。')
+  assert.deepEqual(loaded.examples, [{ user: '早', assistant: '醒啦。' }])
+})
+
 test('persona soul save accepts text and refuses values that must not be written', () => {
   assert.equal(acceptPersonaSoulContent(undefined), '')
   assert.equal(acceptPersonaSoulContent(null), '')

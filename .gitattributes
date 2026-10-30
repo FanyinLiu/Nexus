@@ -1,0 +1,5 @@
+# The Xinghui seed is inlined verbatim into src/features/persona/bundledPersona.ts
+# and tests/persona-resolver.test.ts compares the two for drift. A CRLF checkout
+# (Windows core.autocrlf=true) would make the seed disagree with the bundled
+# copy, so pin the seed text to LF on every platform.
+src/features/autonomy/v2/personas/** text eol=lf

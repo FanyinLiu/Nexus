@@ -12,6 +12,17 @@ const PERSONA_PROFILE_FILES = {
   tools: 'tools.json',
 }
 
+/**
+ * Persona text may arrive with CRLF endings (a Windows checkout of the seed,
+ * or an editor that saved CRLF). Normalize so one profile yields the same
+ * prompt text on every platform.
+ * @param {string} text
+ * @returns {string}
+ */
+function normalizeLineEndings(text) {
+  return text.replace(/\r\n?/g, '\n')
+}
+
 function safeParseObject(raw, fallback = {}) {
   if (!raw || !raw.trim()) return fallback
   try {
@@ -99,16 +110,17 @@ export async function loadPersonaProfileFromReader(options) {
   ])
 
   if (soul != null) {
-    result.soul = soul.trim()
+    result.soul = normalizeLineEndings(soul).trim()
     result.present = true
   }
   if (memory != null) {
-    result.memory = memory.trim()
+    result.memory = normalizeLineEndings(memory).trim()
     result.present = true
   }
   if (examplesRaw != null) {
-    result.examplesRaw = examplesRaw.trim()
-    result.examples = parsePersonaExamplesMarkdown(examplesRaw)
+    const normalizedExamples = normalizeLineEndings(examplesRaw)
+    result.examplesRaw = normalizedExamples.trim()
+    result.examples = parsePersonaExamplesMarkdown(normalizedExamples)
     result.present = true
   }
   if (styleRaw != null) {
