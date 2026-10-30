@@ -33,6 +33,39 @@ export function getMaxRequestCharsForProvider(providerId: string): number {
   return PROVIDER_MAX_REQUEST_CHARS[providerId] ?? DEFAULT_MAX_REQUEST_CHARS
 }
 
+// Streaming chunk ceiling per provider. A sentence boundary always wins; this
+// only decides how long a run-on sentence may grow before we split it. Cloud
+// providers buffer the whole response, so they can take a full sentence up to
+// 120 chars; local Qwen3 streams PCM and prefers shorter first chunks so the
+// voice starts sooner. OmniVoice's 80-char request cap is the effective limit.
+const DEFAULT_MAX_SEGMENT_CHARS = 72
+const PROVIDER_MAX_SEGMENT_CHARS: Record<string, number> = {
+  'omnivoice-tts': 80,
+  'volcengine-tts': 120,
+  'minimax-tts': 120,
+}
+
+/**
+ * Length ceiling for one streamed sentence chunk. Never exceeds the provider's
+ * per-request cap: `getMaxRequestCharsForProvider` stays the hard maximum and
+ * every chunk still goes through `splitLongTextAtSentences` afterwards.
+ */
+export function getMaxSegmentCharsForProvider(providerId: string): number {
+  const providerCap = getMaxRequestCharsForProvider(providerId)
+  const segmentCap = PROVIDER_MAX_SEGMENT_CHARS[providerId] ?? DEFAULT_MAX_SEGMENT_CHARS
+  return Math.min(providerCap, segmentCap)
+}
+
+/**
+ * Providers that buffer a whole response should not be cut at a comma while a
+ * sentence terminator is still on its way; they get one full sentence (up to
+ * their ceiling) per request. Streaming providers keep the early comma split
+ * so the first audio can start inside a long sentence.
+ */
+export function prefersWholeSentenceSegments(providerId: string): boolean {
+  return providerId === 'volcengine-tts' || providerId === 'minimax-tts' || providerId === 'omnivoice-tts'
+}
+
 const SENTENCE_BOUNDARY_RE = /[。！？!?；;\n]/u
 
 // Sentence terminals used to give every sentence its OWN TTS style. Unlike the

@@ -413,11 +413,11 @@ export function getStreamAudioPlayerRuntime(
 
   const player = new StreamAudioPlayer({
     onLevel: options.onLevel,
-    // Small "thinking beat" before the companion starts speaking — first
-    // chunk of each fresh session is scheduled 0.5s out instead of 0.03s.
-    // Subsequent chunks stay back-to-back because `nextStartTime` takes
-    // over once the first chunk is queued.
-    initialBufferSeconds: 0.5,
+    // Small "thinking beat" before the companion starts speaking. It applies
+    // to the first chunk of the session only (the player ignores it for later
+    // chunks), so sentences inside one reply stay back-to-back instead of
+    // gaining a buffer-sized pause at every boundary.
+    initialBufferSeconds: 0.12,
   })
 
   options.streamAudioPlayerRef.current = player

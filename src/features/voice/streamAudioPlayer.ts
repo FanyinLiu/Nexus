@@ -108,6 +108,10 @@ export class StreamAudioPlayer {
   private keepaliveOsc: OscillatorNode | null = null
   private lastQueuedSample: number | null = null
   private lastQueuedSampleRate: number | null = null
+  // Initial buffer applies to the first chunk of a playback session only.
+  // Adding it to every chunk that arrived after a scheduling gap produced the
+  // ~0.5 s of silence between sentences users heard as "she keeps pausing".
+  private hasQueuedChunkInSession = false
 
   constructor(options: StreamAudioPlayerOptions = {}) {
     this.options = options
@@ -153,9 +157,14 @@ export class StreamAudioPlayer {
 
       const now = context.currentTime
       const initialBuffer = this.options.initialBufferSeconds ?? DEFAULT_INITIAL_BUFFER_SECONDS
+      // Only the session's first chunk gets the "thinking beat". Later chunks
+      // that arrive after a scheduling gap start immediately, so consecutive
+      // sentences flow without a buffer-sized hole between them.
+      const lateChunkDelay = this.hasQueuedChunkInSession ? 0 : initialBuffer
       const startAt = this.nextStartTime > now + SCHEDULE_LOOKAHEAD_SECONDS
         ? this.nextStartTime
-        : now + initialBuffer
+        : now + lateChunkDelay
+      this.hasQueuedChunkInSession = true
 
       this.nextStartTime = startAt + buffer.duration
       this.pendingSources += 1
@@ -222,6 +231,7 @@ export class StreamAudioPlayer {
     this.pendingSources = 0
     this.lastQueuedSample = null
     this.lastQueuedSampleRate = null
+    this.hasQueuedChunkInSession = false
     this.clearEndTimer()
     this.stopLevelLoop()
     this.options.onLevel?.(0)
@@ -309,6 +319,9 @@ export class StreamAudioPlayer {
   private finishPlayback() {
     this.lastQueuedSample = null
     this.lastQueuedSampleRate = null
+    // The drain completed: the next chunk starts a new playback session and
+    // earns the initial "thinking beat" again.
+    this.hasQueuedChunkInSession = false
     this.resolveDrainResolvers()
     if (this.started && !this.playbackEndedNotified) {
       this.playbackEndedNotified = true
