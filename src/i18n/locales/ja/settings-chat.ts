@@ -12,8 +12,6 @@ export const jaSettingsChat = {
   'settings.chat.relationship_type_hint': '距離感と口調を整えます。基本機能は変わりません。',
   'settings.chat.system_prompt': '性格と話し方',
   'settings.chat.system_prompt_hint': '口調、境界線、寄り添い方に影響します。',
-  'settings.chat.profile_persona_in_chat': 'インポートしたキャラで会話',
-  'settings.chat.profile_persona_in_chat_hint': 'アクティブなプロフィールの人格（魂と記憶）を返信に使います。上のグローバル性格だけでなく、インポートしたキャラクターカードが会話に反映されます。',
   'settings.chat.live2d_model': 'アバター',
   'settings.chat.character_voice': 'キャラクターボイス',
   'settings.chat.character_voice_hint': '話し方はここで調整します。声は「音声」で選びます。',

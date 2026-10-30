@@ -10,8 +10,6 @@ export const zhCNSettingsChat = {
   'settings.chat.relationship_type_hint': '决定她和你保持怎样的距离，不改变基础能力。',
   'settings.chat.system_prompt': '性格与说话方式',
   'settings.chat.system_prompt_hint': '影响她的回复语气、边界和陪伴感。',
-  'settings.chat.profile_persona_in_chat': '导入的角色驱动聊天',
-  'settings.chat.profile_persona_in_chat_hint': '让当前档案的人设（灵魂与记忆）参与回复，而不只是上面的全局性格——导入的角色卡才能真正影响对话。',
   'settings.chat.live2d_model': '伙伴形象',
   'settings.chat.character_voice': '专属语音',
   'settings.chat.character_voice_hint': '朗读风格写在这里。音色在「语音」里选择。',

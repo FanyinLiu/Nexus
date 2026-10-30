@@ -129,3 +129,11 @@ test('buildDecisionPrompt injects eight Xinghui few-shot pairs before the live u
   assert.match(assistantPayloads[4].text, /没打开成功/)
   assert.match(assistantPayloads[5].text, /不能瞎说/)
 })
+
+test('decision prompt leaves the reply register to the character', async () => {
+  const persona = await loadXinghui()
+  const system = String(buildDecisionPrompt(makeContext(), persona, { uiLanguage: 'en-US' })[0]?.content ?? '')
+
+  assert.doesNotMatch(system, /default to acknowledging/i)
+  assert.match(system, /answer the way your character would/i)
+})

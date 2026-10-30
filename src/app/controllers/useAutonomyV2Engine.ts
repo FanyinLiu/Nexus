@@ -41,10 +41,7 @@ import {
 } from '../../features/autonomy/v2/contextGatherer.ts'
 import type { ChatCaller } from '../../features/autonomy/v2/decisionEngine.ts'
 import { runAutonomyDecision } from '../../features/autonomy/v2/orchestrator.ts'
-import {
-  DEFAULT_PERSONA_PROFILE_ID,
-  type LoadedPersona,
-} from '../../features/autonomy/v2/personaTypes.ts'
+import type { LoadedPersona } from '../../features/autonomy/v2/personaTypes.ts'
 import {
   computeConsiderationCadence,
   resolveAutonomyV2Config,
@@ -57,7 +54,11 @@ import {
   recordBackgroundChatSuccess,
   runLockedBackgroundChat,
 } from '../../features/autonomy/backgroundChatPolicy.ts'
-import { PERSONA_SOUL_SAVED_CHANNEL } from '../../features/settingsV3/soulCardPersona.ts'
+import { PERSONA_SOUL_SAVED_CHANNEL } from '../../features/persona/personaEvents.ts'
+import {
+  invalidateResolvedPersonaCache,
+  resolveActivePersona,
+} from '../../features/persona/resolveActivePersona.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { admitProactiveMessage } from '../../features/autonomy/proactiveEtiquette.ts'
@@ -66,8 +67,6 @@ import {
   isLikelyMeetingSurface,
 } from '../../features/autonomy/proactiveBudget.ts'
 import { isUserTypingAnywhere } from '../../features/autonomy/userTyping.ts'
-
-const DEFAULT_PROFILE_ID = DEFAULT_PERSONA_PROFILE_ID
 
 export type UseAutonomyV2EngineOptions = {
   settingsRef: React.RefObject<AppSettings>
@@ -106,43 +105,19 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
   const considerCounterRef = useRef(0)
   const lastUtteranceRef = useRef<{ text: string; at: string } | null>(null)
   const inflightRef = useRef(false)
-  const loadedPersonaProfileIdRef = useRef<string | null>(null)
 
-  // Skip repeat disk reads while the active profile is unchanged. A soul
-  // save clears loadedPersonaProfileIdRef so the next call reads the edit.
+  // The shared resolver owns the source chain and caches profile hits, so a
+  // tick with an unchanged profile costs no IPC. A soul save clears that
+  // cache and this effect resolves again.
   const reloadPersona = useCallback(async () => {
     if (opts.enabled === false) return
     try {
-      const desktopPet = window.desktopPet
-      if (!desktopPet?.personaLoadProfile) return
-      // Load the persona for the user's active character profile (set when a
-      // Character Card is imported or a profile is switched). Empty id falls
-      // back to the default. If the active profile has no persona files on
-      // disk (e.g. a chat-only profile), fall back to the default so the
-      // engine keeps real soul/examples content instead of an empty persona.
-      const activeId = opts.settingsRef.current?.activeCharacterProfileId?.trim()
-      const profileId = activeId || DEFAULT_PROFILE_ID
-      // Skip the disk re-read when the active profile is unchanged and already
-      // loaded: the controller re-renders (and re-runs this effect) every tick,
-      // and reloading the 6 persona files via IPC each tick is wasteful. A
-      // failed/empty load leaves loadedPersonaProfileIdRef null so the next tick
-      // retries (preserving the implicit self-heal on a transient IPC failure).
-      if (profileId === loadedPersonaProfileIdRef.current && personaRef.current?.present) {
-        return
-      }
-      let loaded = await desktopPet.personaLoadProfile(profileId)
-      if (!loaded?.present && profileId !== DEFAULT_PROFILE_ID) {
-        loaded = await desktopPet.personaLoadProfile(DEFAULT_PROFILE_ID)
-      }
-      personaRef.current = loaded
-      loadedPersonaProfileIdRef.current = loaded?.present ? profileId : null
+      personaRef.current = await resolveActivePersona(opts.settingsRef.current)
     } catch (error) {
-      personaRef.current = null
-      loadedPersonaProfileIdRef.current = null
       opts.onDebugEvent?.({
         source: 'autonomy',
-        title: '[V2] persona load failed',
-        detail: error instanceof Error ? error.message : String(error),
+        title: '[V2] persona resolve failed',
+        detail: getRedactedLogErrorMessage(error),
       })
     }
   }, [opts])
@@ -159,7 +134,7 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
     if (typeof BroadcastChannel === 'undefined') return undefined
     const channel = new BroadcastChannel(PERSONA_SOUL_SAVED_CHANNEL)
     const refresh = () => {
-      loadedPersonaProfileIdRef.current = null
+      invalidateResolvedPersonaCache()
       void reloadPersonaRef.current()
     }
     channel.addEventListener('message', refresh)
@@ -225,16 +200,9 @@ export function useAutonomyV2Engine(opts: UseAutonomyV2EngineOptions) {
       return
     }
 
-    // Persona must be loaded before we can run the guardrail meaningfully.
-    const persona = personaRef.current
-    if (!persona || !persona.present) {
-      opts.onDebugEvent?.({
-        source: 'autonomy',
-        title: '[V2] skip — persona not loaded',
-        detail: persona ? 'present=false' : 'null',
-      })
-      return
-    }
+    // The resolver always yields a usable persona (the bundled seed is the
+    // last step), so a missing profile directory no longer skips the tick.
+    const persona = personaRef.current ?? await resolveActivePersona(settings)
 
     const emotion = opts.emotionStateRef.current
     const relationship = opts.relationshipRef.current

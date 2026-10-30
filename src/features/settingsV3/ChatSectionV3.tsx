@@ -151,16 +151,6 @@ export const ChatSectionV3 = memo(function ChatSectionV3(props: ChatSectionV3Pro
             />
           </SettingsV3Field>
         </div>
-        <SettingsV3Row
-          label={ti('settings.chat.profile_persona_in_chat')}
-          hint={ti('settings.chat.profile_persona_in_chat_hint')}
-        >
-          <SettingsV3Switch
-            checked={draft.profilePersonaInChatEnabled}
-            label={ti('settings.chat.profile_persona_in_chat')}
-            onChange={(checked) => setDraft((prev) => ({ ...prev, profilePersonaInChatEnabled: checked }))}
-          />
-        </SettingsV3Row>
       </SettingsV3Disclosure>
 
       {importStatus ? (

@@ -211,5 +211,21 @@ export async function loadPersonaProfile(profileId) {
     id: profileId,
     rootDir: getPersonaProfileDisplayDir(profileId),
     read: (relativePath) => readPersonaFile(profileId, relativePath),
+    soulMtime: () => readPersonaSoulMtime(profileId),
   })
+}
+
+/**
+ * mtime of one profile's soul.md, or null when the file is absent. The
+ * renderer uses it to attribute a cached persona; it cannot stat itself.
+ * @param {unknown} profileId
+ * @returns {Promise<number | null>}
+ */
+async function readPersonaSoulMtime(profileId) {
+  try {
+    const { mtimeMs } = await stat(path.join(getPersonaProfileDir(profileId), 'soul.md'))
+    return mtimeMs
+  } catch {
+    return null
+  }
 }

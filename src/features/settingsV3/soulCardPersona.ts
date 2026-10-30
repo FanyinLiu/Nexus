@@ -10,13 +10,12 @@
 
 import { PERSONA_SOUL_MAX_CHARS } from '../../../shared/personaSoul.js'
 import { loadActiveProfilePersona } from '../chat/systemPromptBuilder.ts'
+import { invalidateResolvedPersonaCache } from '../persona/resolveActivePersona.ts'
+import { PERSONA_SOUL_SAVED_CHANNEL } from '../persona/personaEvents.ts'
 import type { AppSettings } from '../../types/app.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
 import { clearCompanionSoul, loadCompanionSoul } from '../../lib/storage/companionSoul.ts'
-
-/** Cross-window notice that soul text was written. The body is not the text. */
-export const PERSONA_SOUL_SAVED_CHANNEL = 'nexus-persona-soul'
 
 export type SoulCardTarget =
   | { kind: 'profile'; profileId: string }
@@ -36,7 +35,7 @@ type LoadedSoul = SoulCardNote & {
 
 export type SoulCardSettings = Pick<
   AppSettings,
-  'profilePersonaInChatEnabled' | 'activeCharacterProfileId' | 'systemPrompt'
+  'activeCharacterProfileId' | 'systemPrompt'
 >
 
 export type SoulCardSaveResult =
@@ -170,6 +169,9 @@ async function writeSoul(target: SoulCardTarget, text: string): Promise<string |
     return null
   }
   publishPersonaSoulSaved()
+  // Same-window saves are not delivered to the writer's own BroadcastChannel,
+  // so drop the cached persona here as well.
+  invalidateResolvedPersonaCache()
   return content
 }
 

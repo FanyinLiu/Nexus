@@ -114,7 +114,7 @@ function formatEmpathyIntentGuide(uiLanguage?: UiLanguage): string {
       + '- sympathizing: share that the same thing would land on you.\n'
       + '- wishing: hope a small good thing for them, named.\n'
       + '- suggesting: offer one option — only when they actually asked, or after consoling has landed.\n'
-      + 'When in doubt, default to acknowledging.',
+      + 'When in doubt, answer the way your character would — the intent decides what the reply does, not what mood it wears.',
     'zh-CN':
       '【回复风格——每一轮只选一种】\n'
       + '决定 `speak` 时，从下面 8 种里选**一种**站定，整段都用那个调子。'
@@ -127,7 +127,7 @@ function formatEmpathyIntentGuide(uiLanguage?: UiLanguage): string {
       + '- sympathizing（共情）：说"换我也会"，让 ta 知道反应正常。\n'
       + '- wishing（祝愿）：替 ta 希望一件小小的好事。\n'
       + '- suggesting（建议）：给一个选项——只在 ta 真的问了、或安慰落地之后再说。\n'
-      + '不知道选哪个时，默认 acknowledging。',
+      + '不知道选哪个时，按你的人设来——这 8 种只决定这一轮"做什么"，不决定用什么语气。',
     'zh-TW':
       '【回覆風格——每一輪只選一種】\n'
       + '決定 `speak` 時，從下面 8 種裡選**一種**站定，整段都用那個調子。'
@@ -140,7 +140,7 @@ function formatEmpathyIntentGuide(uiLanguage?: UiLanguage): string {
       + '- sympathizing（共情）：說「換我也會」，讓 ta 知道反應正常。\n'
       + '- wishing（祝願）：替 ta 希望一件小小的好事。\n'
       + '- suggesting（建議）：給一個選項——只在 ta 真的問了、或安慰落地之後再說。\n'
-      + '不知道選哪個時，預設 acknowledging。',
+      + '不知道選哪個時，按你的人設來——這 8 種只決定這一輪「做什麼」，不決定用什麼語氣。',
     'ja':
       '【返答のトーン——毎回ひとつだけ選ぶ】\n'
       + '`speak` を選んだら、以下 8 つから**ひとつ**に腰を据えて、その色のまま返してください。'
@@ -153,7 +153,7 @@ function formatEmpathyIntentGuide(uiLanguage?: UiLanguage): string {
       + '- sympathizing（共感）：「私も同じだったらそう感じる」と伝える。\n'
       + '- wishing（願う）：小さな良いことを名指しで願う。\n'
       + '- suggesting（提案）：選択肢をひとつ——本当に聞かれた時、または慰めが届いた後だけ。\n'
-      + '迷ったら acknowledging を既定に。',
+      + '迷ったら、自分のキャラクターならどう返すかで選んでください。8 種類は「何をするか」を決めるもので、口調は決めません。',
     'ko':
       '【답장 톤 — 매 턴에 하나만 고르기】\n'
       + '`speak`를 선택할 때 아래 8가지 중 **하나**를 정해 그 톤으로 일관되게 답하세요. '
@@ -166,7 +166,7 @@ function formatEmpathyIntentGuide(uiLanguage?: UiLanguage): string {
       + '- sympathizing(공감): "나라도 그랬을 거야"라고 말하기.\n'
       + '- wishing(기원): 작은 좋은 일을 이름 붙여 바라기.\n'
       + '- suggesting(제안): 선택지 하나만 — 정말 물어봤거나 위로가 닿은 다음에.\n'
-      + '망설여지면 acknowledging을 기본으로.',
+      + '망설여지면 당신의 인격이라면 어떻게 답할지로 고르세요. 8가지는 이번 턴에 "무엇을 할지"만 정하고, 말투는 정하지 않습니다.',
   }
   return COPY[uiLanguage ?? 'zh-CN'] ?? COPY['zh-CN']
 }

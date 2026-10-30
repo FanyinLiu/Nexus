@@ -9,9 +9,15 @@ test('emotional transition guidance discourages announcing mood shifts', () => {
 })
 
 test('emotional transition guidance favors presence over interrogation', () => {
-  assert.match(EMOTIONAL_TRANSITION_GUIDANCE, /present and warm without pressing/)
+  assert.match(EMOTIONAL_TRANSITION_GUIDANCE, /in your own voice, without pressing/)
   assert.match(EMOTIONAL_TRANSITION_GUIDANCE, /short, grounded reply/)
   assert.match(EMOTIONAL_TRANSITION_GUIDANCE, /Let them lead/)
+})
+
+test('emotional transition guidance leaves the tone to the persona', () => {
+  assert.doesNotMatch(EMOTIONAL_TRANSITION_GUIDANCE, /\bwarm\b/i)
+  assert.doesNotMatch(EMOTIONAL_TRANSITION_GUIDANCE, /\bgentle\b/i)
+  assert.doesNotMatch(EMOTIONAL_TRANSITION_GUIDANCE, /\bsoft\b/i)
 })
 
 test('emotional transition guidance handles upward shifts too', () => {
