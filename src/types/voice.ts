@@ -194,6 +194,33 @@ export interface AudioSynthesisResponse {
   mimeType: string
 }
 
+/**
+ * Inline performance tag the model can use to steer a single sentence's
+ * delivery: `[tts:<mode>]` or `[mood:<word>[-<0-9>]]`.
+ */
+export interface VoiceEmotionCue {
+  kind: 'tts' | 'mood'
+  value: string
+  /** Mood-read confidence 0–9, only present on `[mood:…-<n>]` cues. */
+  intensity?: number
+}
+
+/**
+ * One sentence's voice styling. Resolved per segment in the renderer so the
+ * tone can follow that sentence's own emotion instead of a stream-start
+ * snapshot. `rate` and `pitch` are multipliers over the user's base settings;
+ * `instruction` is the provider-native tone clause (already localized for the
+ * provider) and excludes the user's base instructions — the main process
+ * joins the two so every provider keeps its configured wording.
+ */
+export interface SegmentVoiceStyle {
+  instruction: string
+  rate: number
+  pitch: number
+  /** MiniMax's native emotion enum; ignored by other providers. */
+  emotion?: string
+}
+
 export interface TtsStreamStartRequest {
   requestId: string
   providerId: string
@@ -201,6 +228,8 @@ export interface TtsStreamStartRequest {
   apiKey: string
   model: string
   voice: string
+  /** Stable character identity; pins OmniVoice's speaker latent across replies. */
+  characterId?: string
   instructions?: string
   language?: string
   rate?: number
@@ -211,6 +240,8 @@ export interface TtsStreamStartRequest {
 export interface TtsStreamPushTextRequest {
   requestId: string
   text: string
+  /** Per-sentence emotion styling; absent means the provider defaults. */
+  style?: SegmentVoiceStyle
 }
 
 export interface TtsStreamFinishRequest {

@@ -13,7 +13,8 @@ import {
 } from '../../features/voice'
 import { hearingConfigFromSettings } from '../../features/hearing'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
-import type { AppSettings } from '../../types'
+import type { SegmentStyleResolver } from '../../features/voice/voiceEmotion.ts'
+import type { AppSettings, VoiceEmotionCue } from '../../types'
 import {
   canInterruptSpeech as canInterruptSpeechForSettings,
   clearSpeechInterruptedFlag as clearSpeechInterruptedFlagForGeneration,
@@ -234,6 +235,8 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       onStart?: () => void
       onEnd?: () => void
       onError?: (message: string) => void
+      resolveSegmentVoiceStyle?: SegmentStyleResolver
+      initialCue?: VoiceEmotionCue | null
     },
   ) {
     await startSpeechOutputRuntime({

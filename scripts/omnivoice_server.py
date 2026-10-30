@@ -66,8 +66,13 @@ VALID_INSTRUCT_ITEMS = {
 }
 
 
-def parse_instruct(raw: str) -> str | None:
-    """Parse and validate instruct string. Returns None if empty or invalid."""
+def parse_speaker_attributes(raw: str) -> str | None:
+    """Parse speaker-identity attributes only (accent/gender/age/pitch).
+
+    This comes from the pinned `voice` field. It must never absorb the emotion
+    prose from `instructions`, or a per-sentence tone would silently replace
+    the speaker and change the timbre mid-reply.
+    """
     if not raw:
         return None
     # Check if all comma-separated items are valid English instructs
@@ -78,10 +83,23 @@ def parse_instruct(raw: str) -> str | None:
     valid = [item for item in items if item in VALID_INSTRUCT_ITEMS]
     if valid:
         return ", ".join(valid)
-    # Could be Chinese instructs — pass through if it contains CJK characters
+    # Could be Chinese speaker words — pass through if it contains CJK characters
     if any("\u4e00" <= ch <= "\u9fff" for ch in raw):
         return raw
     return None
+
+
+def normalize_emotion_instruction(raw: str) -> str | None:
+    """Keep the renderer's per-sentence tone prose instead of dropping it.
+
+    Nexus sends natural-language Chinese (e.g. "带点傲娇，语气轻快") rather than
+    keyword instructions. OmniVoice accepts free-form instruct text, so it is
+    passed through (whitespace-normalized and bounded) as a separate clause.
+    """
+    if not raw:
+        return None
+    text = " ".join(raw.split())
+    return text[:240] or None
 
 
 @app.post("/v1/audio/speech")
@@ -115,11 +133,19 @@ async def audio_speech(request: Request):
         except (TypeError, ValueError):
             seed = None
 
-    instruct = parse_instruct(instructions) or parse_instruct(voice)
+    # Speaker attributes (pinned voice) and emotion prose (per sentence) are
+    # separate inputs. Joining them keeps the timbre fixed while letting the
+    # tone change: one never replaces the other.
+    speaker_instruct = parse_speaker_attributes(voice)
+    emotion_instruct = normalize_emotion_instruction(instructions)
+    instruct = ", ".join(
+        part for part in (speaker_instruct, emotion_instruct) if part
+    ) or None
 
     logger.info(
         f"TTS request: text={text[:60]}... speed={speed} voice={voice} "
-        f"instruct={instruct} seed={seed}"
+        f"speaker_instruct={speaker_instruct} emotion_instruct={emotion_instruct} "
+        f"seed={seed}"
     )
 
     with model_lock:

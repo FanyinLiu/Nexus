@@ -21,12 +21,14 @@ import type {
   PetDialogNoticeOptions,
   TranslationKey,
   TranslationParams,
+  VoiceEmotionCue,
   VoicePipelineState,
   SpeechLevelSource,
   VoiceState,
   VoiceTraceEntry,
   WakewordRuntimeState,
 } from '../../types'
+import type { SegmentStyleResolver } from '../../features/voice/voiceEmotion.ts'
 import type { VoiceDiagnosticResult } from './diagnostics.ts'
 import type { HearingRuntime } from '../../features/hearing'
 import type { ParaformerStreamSession } from '../../features/hearing/localParaformer.ts'
@@ -174,6 +176,8 @@ export type VoiceBindings = {
       onStart?: () => void
       onEnd?: () => void
       onError?: (message: string) => void
+      resolveSegmentVoiceStyle?: SegmentStyleResolver
+      initialCue?: VoiceEmotionCue | null
     },
   ) => Promise<void>
   // No-speech restart counter
@@ -223,6 +227,7 @@ export type VoiceLifecycle = {
     text: string,
     shouldResumeContinuousVoice: boolean,
     source?: InterruptMicTurnSource,
+    cue?: VoiceEmotionCue,
   ) => Promise<void>
   beginStreamingSpeechReply: (
     shouldResumeContinuousVoice: boolean,

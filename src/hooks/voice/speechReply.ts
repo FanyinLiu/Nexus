@@ -1,4 +1,5 @@
-import type { AppSettings, PetMood } from '../../types'
+import type { AppSettings, PetMood, VoiceEmotionCue } from '../../types'
+import type { SegmentStyleResolver } from '../../features/voice/voiceEmotion.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { voiceResumeStore } from '../../features/voice/voiceResumeStore.ts'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
@@ -32,6 +33,10 @@ type BaseSpeechReplyOptions = {
   resetSpeechLevel: () => void
   /** One-time "used your usual voice" notice when the local voice hands over. */
   notifySpeechFallback?: () => void
+  /** Resolve each sentence's emotion style from the live snapshot. */
+  resolveSegmentVoiceStyle?: SegmentStyleResolver
+  /** Reply-level `[tts:…]` cue for direct-speech playback. */
+  initialCue?: VoiceEmotionCue | null
 }
 
 export type SpeakAssistantReplyRuntimeOptions = BaseSpeechReplyOptions & {
@@ -43,6 +48,8 @@ export type SpeakAssistantReplyRuntimeOptions = BaseSpeechReplyOptions & {
       onStart?: () => void
       onEnd?: () => void
       onError?: (message: string) => void
+      resolveSegmentVoiceStyle?: SegmentStyleResolver
+      initialCue?: VoiceEmotionCue | null
     },
   ) => Promise<void>
 }
@@ -151,10 +158,14 @@ export async function speakAssistantReplyRuntime(
     await options.startSpeechOutput(
       options.text,
       options.currentSettings,
-      createSpeechReplyCallbacks({
-        ...options,
-        text: options.text,
-      }),
+      {
+        ...createSpeechReplyCallbacks({
+          ...options,
+          text: options.text,
+        }),
+        resolveSegmentVoiceStyle: options.resolveSegmentVoiceStyle,
+        initialCue: options.initialCue,
+      },
     )
   } catch (error) {
     options.resetSpeechLevel()
@@ -187,6 +198,7 @@ export function beginStreamingSpeechReplyRuntime(
       }),
       busEmit: options.busEmit,
       speechGeneration: options.speechGeneration,
+      resolveSegmentVoiceStyle: options.resolveSegmentVoiceStyle,
     }
 
     // The pipecat-style pipeline (SentenceAggregator → TTSStreamService →

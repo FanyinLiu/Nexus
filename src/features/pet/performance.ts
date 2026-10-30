@@ -692,8 +692,8 @@ export function parseAssistantPerformanceContent(content: string): ParsedAssista
 //
 // `expr` accepts the seven "speakable" PetMood slots. `motion` accepts
 // gesture names declared on the active pet model (validated at apply
-// time, not here). `tts` is parsed here but currently collected-and-
-// dropped — wiring will land when an emotion-aware TTS adapter does.
+// time, not here). `tts` and `mood` also steer the per-sentence voice style
+// (see src/features/voice/voiceEmotion.ts).
 // `recall` value is a memory id (alphanumeric + hyphen).
 const PERFORMANCE_TAG_PATTERN = /\[(expr|motion|tts|recall|mood)\s*:\s*([a-zA-Z0-9_-]+)\s*\]/giu
 const EXPRESSION_OVERRIDE_DURATION_MS = 2_400
@@ -840,6 +840,16 @@ function isPerformanceTagPrefix(buffer: string): boolean {
  */
 export class PerformanceTagStreamFilter {
   private buffer = ''
+  private readonly onTag?: (kind: string, value: string) => void
+
+  /**
+   * `onTag` reports each completed tag before it is stripped, so the voice
+   * pipeline can turn `[tts:…]` / `[mood:…]` into a per-sentence style cue
+   * while the bubble still never sees the raw marker.
+   */
+  constructor(onTag?: (kind: string, value: string) => void) {
+    this.onTag = onTag
+  }
 
   push(delta: string): string {
     if (!delta) return ''
@@ -852,7 +862,13 @@ export class PerformanceTagStreamFilter {
   }
 
   private drain(forceFlush: boolean): string {
-    this.buffer = this.buffer.replace(PERFORMANCE_TAG_PATTERN, '')
+    this.buffer = this.buffer.replace(
+      PERFORMANCE_TAG_PATTERN,
+      (_match, rawKind: string, rawValue: string) => {
+        this.onTag?.(String(rawKind ?? '').trim(), String(rawValue ?? '').trim())
+        return ''
+      },
+    )
 
     if (forceFlush) {
       const out = this.buffer
