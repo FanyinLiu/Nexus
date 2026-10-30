@@ -12,9 +12,6 @@ import {
   classifyMessageSignals,
   createDefaultEmotionState,
   resolveProactiveLean,
-  combineVoiceInstructions,
-  emotionToVoiceRate,
-  emotionToVoiceStyle,
   relationshipLevelToCloseness,
   decayEmotion,
   emotionToPetMood,
@@ -27,10 +24,6 @@ import {
 // baseline so each test reads as a delta rather than a wall of numbers.
 function withState(overrides: Partial<EmotionState>): EmotionState {
   return { ...createDefaultEmotionState(), ...overrides }
-}
-
-function formatVoiceStyle(overrides: Partial<EmotionState>): string {
-  return emotionToVoiceStyle(withState(overrides))
 }
 
 test('normalizeEmotionState clamps persisted values and falls back per-axis', () => {
@@ -457,74 +450,4 @@ test('localized attitude lines follow the UI language', () => {
 
 test('a flat state still produces no emotion section regardless of stage', () => {
   assert.equal(formatEmotionForPrompt(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), 'close'), '')
-})
-
-// ── Emotion → voice (movement 1) ─────────────────────────────────────────────
-
-test('emotionToVoiceStyle: voice matches the avatar mood, neutral is silent', () => {
-  // affectionate (sustained high warmth, moderate energy) → tender voice
-  assert.match(formatVoiceStyle({ warmth: 0.85, energy: 0.5 }), /warm|tender/i)
-  // worried (high concern) → gentle/concerned voice
-  assert.match(formatVoiceStyle({ concern: 0.85, energy: 0.4 }), /gentle|concern/i)
-  // sleepy (very low energy) → slow/soft
-  assert.match(formatVoiceStyle({ energy: 0.12 }), /slow|soft|drowsy/i)
-  // neutral middling → no override (her natural voice)
-  assert.equal(formatVoiceStyle({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), '')
-})
-
-test('emotionToVoiceStyle: an aloof persona stays cool even when pleased', () => {
-  const warm = withState({ warmth: 0.85, energy: 0.5 })
-  const out = emotionToVoiceStyle(warm, { aloof: 3 })
-  assert.doesNotMatch(out, /warm|tender/i)
-  assert.match(out, /cool|understated/i)
-})
-
-test('emotionToVoiceStyle: clingy and tsundere colour the base style', () => {
-  const warm = withState({ warmth: 0.85, energy: 0.5 })
-  assert.match(emotionToVoiceStyle(warm, { clingy: 3 }), /coaxing/i)
-  assert.match(emotionToVoiceStyle(warm, { tsundere: true }), /flustered/i)
-  // Neutral mood stays silent even with dials — no override to perform.
-  assert.equal(emotionToVoiceStyle(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), { aloof: 3 }), '')
-})
-
-test('every PetMood the emotion model can produce has a voice style entry', () => {
-  // Sweep a spread of states; none should throw or return undefined.
-  const states = [
-    { energy: 0.9, curiosity: 0.8 }, { energy: 0.7, warmth: 0.75, concern: 0.1 },
-    { warmth: 0.85, energy: 0.5 }, { energy: 0.7, warmth: 0.65, concern: 0.1 },
-    { curiosity: 0.85, energy: 0.7 }, { curiosity: 0.75, energy: 0.4 },
-    { warmth: 0.75, concern: 0.6 }, { concern: 0.85, energy: 0.4 },
-    { energy: 0.12 }, { energy: 0.5 },
-  ]
-  for (const s of states) {
-    assert.equal(typeof emotionToVoiceStyle(withState(s)), 'string')
-  }
-})
-
-test('combineVoiceInstructions: base leads, emotion colours, blanks drop', () => {
-  assert.equal(combineVoiceInstructions('Always speak slowly.', 'Speak warmly.'), 'Always speak slowly. Speak warmly.')
-  assert.equal(combineVoiceInstructions('', 'Speak warmly.'), 'Speak warmly.')
-  assert.equal(combineVoiceInstructions('Base only.', ''), 'Base only.')
-  assert.equal(combineVoiceInstructions(undefined, ''), '')
-})
-
-// ── Emotion → voice pace (movement 2, universal across providers) ────────────
-
-test('emotionToVoiceRate: excited speaks quicker, sleepy slower, neutral unchanged', () => {
-  const base = 1.0
-  assert.ok(emotionToVoiceRate(withState({ energy: 0.9, curiosity: 0.8 }), base) > base) // excited → faster
-  assert.ok(emotionToVoiceRate(withState({ energy: 0.12 }), base) < base) // sleepy → slower
-  assert.equal(emotionToVoiceRate(withState({ energy: 0.5, warmth: 0.5, curiosity: 0.4, concern: 0.2 }), base), base) // idle → unchanged
-})
-
-test('emotionToVoiceRate scales the user base rate and clamps to 0.5–2.0', () => {
-  // A user who set a slow base stays proportionally slow.
-  assert.ok(emotionToVoiceRate(withState({ energy: 0.12 }), 0.92) < 0.92)
-  // Extreme base stays inside provider-safe band.
-  assert.ok(emotionToVoiceRate(withState({ energy: 0.9, curiosity: 0.8 }), 2.0) <= 2.0)
-  assert.ok(emotionToVoiceRate(withState({ energy: 0.12 }), 0.5) >= 0.5)
-})
-
-test('emotionToVoiceRate tolerates a non-finite base rate', () => {
-  assert.equal(typeof emotionToVoiceRate(withState({ energy: 0.5 }), Number.NaN), 'number')
 })

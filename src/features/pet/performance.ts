@@ -909,11 +909,6 @@ export class PerformanceTagStreamFilter {
   }
 }
 
-/**
- * Backwards-compatible alias for the older class name.
- */
-export { PerformanceTagStreamFilter as ExpressionOverrideStreamFilter }
-
 const STAGE_DIRECTION_OPEN_CHARS = '（【'
 const MAX_SUFFIX_LOOKAHEAD = 40
 

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getAnalyticsConsent, track } from '../../features/analytics'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   applyCompanionVariables,
   applyThemeVariables,
@@ -29,7 +28,6 @@ function normalizeColorScheme(value: string | undefined): ThemeColorScheme {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const themeHydratedRef = useRef(false)
   const [themeId, setThemeId] = useState<ThemeId>(() => normalizeThemeId(getSettingsSnapshot().themeId))
   const [colorScheme, setColorScheme] = useState<ThemeColorScheme>(() => (
     normalizeColorScheme(getSettingsSnapshot().themeColorScheme)
@@ -61,22 +59,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       console.error('[ThemeProvider] Failed to update vibrancy:', getRedactedLogErrorMessage(error))
     })
   }, [themeId])
-
-  useEffect(() => {
-    if (!themeHydratedRef.current) {
-      themeHydratedRef.current = true
-      return
-    }
-
-    if (!getAnalyticsConsent()) {
-      return
-    }
-
-    void track('settings.theme_changed', {
-      themeId,
-      colorScheme,
-    })
-  }, [colorScheme, themeId])
 
   useEffect(() => {
     return subscribeToSettings((settings) => {

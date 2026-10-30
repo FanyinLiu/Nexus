@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { getAnalyticsConsent, track } from '../../features/analytics'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   AVAILABLE_LOCALES,
   I18nContext,
@@ -18,7 +17,6 @@ type I18nProviderProps = {
 }
 
 export function I18nProvider({ children }: I18nProviderProps) {
-  const localeHydratedRef = useRef(false)
   const [locale, setLocaleState] = useState<AppLocale>(() => {
     const normalizedLocale = normalizeLocale(getSettingsSnapshot().uiLanguage)
     if (isLocaleLoaded(normalizedLocale)) {
@@ -50,21 +48,6 @@ export function I18nProvider({ children }: I18nProviderProps) {
     if (typeof document !== 'undefined') {
       document.documentElement.lang = locale
     }
-  }, [locale])
-
-  useEffect(() => {
-    if (!localeHydratedRef.current) {
-      localeHydratedRef.current = true
-      return
-    }
-
-    if (!getAnalyticsConsent()) {
-      return
-    }
-
-    void track('settings.locale_changed', {
-      locale,
-    })
   }, [locale])
 
   useEffect(() => {

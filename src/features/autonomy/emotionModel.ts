@@ -13,7 +13,6 @@
 
 import { clamp, classifyByPatterns, driftToward } from '../../lib/common.ts'
 import type { PetMood, UiLanguage } from '../../types'
-import { normalizePersonaSpeechStyle } from '../../../shared/speechStyle.js'
 import type { PersonaSpeechStyle } from './v2/personaTypes.ts'
 import { attitudeFor, attitudePromptLead } from '../persona/attitude.ts'
 
@@ -559,121 +558,6 @@ export function relationshipLevelToCloseness(
   if (level === 'stranger' || level === 'acquaintance') return 'early'
   if (level === 'close_friend' || level === 'intimate') return 'close'
   return 'established'
-}
-
-// ── Emotion → voice ──────────────────────────────────────────────────────────
-//
-// The felt emotion already drives her text and behaviour; this is the channel
-// it never reached — her actual voice. It reuses emotionToPetMood so the voice
-// and the face express the SAME mood (she sounds the way she looks), and turns
-// each mood into a TTS style instruction. Lands on instruction-aware providers
-// (OpenAI gpt-4o-mini-tts and compatibles via speechOutputInstructions); a
-// harmless no-op on providers that ignore instructions. 'idle' returns '' —
-// her natural voice, no override.
-
-const VOICE_STYLE_BY_MOOD: Record<PetMood, string> = {
-  idle: '',
-  thinking: 'Speak thoughtfully and unhurried, as if turning it over.',
-  happy: 'Speak with a light, happy lilt.',
-  sleepy: 'Speak slowly and softly, a little drowsy.',
-  surprised: 'Speak with a small, surprised brightness.',
-  confused: 'Speak a little hesitantly, thinking it through.',
-  embarrassed: 'Speak a touch shyly, softer than usual.',
-  excited: 'Speak brightly and with bouncy energy, a little quicker.',
-  affectionate: 'Speak warmly and tenderly — close, soft, unhurried.',
-  proud: 'Speak with a quiet, pleased warmth.',
-  curious: 'Speak with a curious, interested lift.',
-  worried: 'Speak gently and with care, a little concerned.',
-  playful: 'Speak with a playful, teasing lightness.',
-}
-
-/**
- * A TTS style instruction for how she should sound right now, derived from her
- * current emotion and shaped by the persona's dials. Empty string when neutral
- * (no override). Same mood source as the avatar, so voice and expression stay
- * in sync.
- *
- * The dials matter here too: an aloof persona must not suddenly sound tender
- * just because she is pleased. Warm moods are overridden rather than layered,
- * because "Speak warmly and tenderly" next to "keep it cool" is a contest the
- * model resolves unpredictably.
- */
-const ALOOF_OVERRIDE_MOODS: ReadonlySet<PetMood> = new Set([
-  'affectionate',
-  'happy',
-  'proud',
-  'playful',
-  'excited',
-  'embarrassed',
-])
-const ALOOF_VOICE_STYLE = 'Speak coolly and understated, even when pleased.'
-
-export function emotionToVoiceStyle(
-  state: EmotionState,
-  speechStyle?: PersonaSpeechStyle | null,
-): string {
-  const mood = emotionToPetMood(state)
-  const base = VOICE_STYLE_BY_MOOD[mood]
-  const style = normalizePersonaSpeechStyle(speechStyle)
-  if (!style || !base) return base
-
-  if ((style.aloof ?? 0) >= 2) {
-    return ALOOF_OVERRIDE_MOODS.has(mood)
-      ? ALOOF_VOICE_STYLE
-      : `${base} Keep it cool and understated.`
-  }
-
-  if (style.tsundere === true) {
-    return `${base} Sound a little flustered, as if denying the feeling.`
-  }
-  if ((style.clingy ?? 0) >= 2) {
-    return `${base} Let a soft, coaxing warmth through.`
-  }
-  return base
-}
-
-/**
- * Combine the user's configured TTS instructions with the live emotion style.
- * Base instructions lead (a user who wrote "always speak slowly" keeps that);
- * the emotion clause follows so it colours, not overrides.
- */
-export function combineVoiceInstructions(base: string | undefined, emotionStyle: string): string {
-  return [base?.trim(), emotionStyle.trim()].filter(Boolean).join(' ')
-}
-
-// Pace multiplier per mood. Unlike the style instruction (instruction-aware
-// providers only), rate/speed is universal — every provider, including the
-// free local sherpa TTS, honours it. So this is the emotion channel that
-// reaches her voice EVERYWHERE: she actually speaks quicker when excited,
-// slower when drowsy. Same mood source as the style and the avatar, so pace,
-// tone and expression all agree. Multipliers stay gentle (±15%) — a nudge,
-// not a caricature.
-const VOICE_RATE_BY_MOOD: Record<PetMood, number> = {
-  idle: 1,
-  thinking: 0.95,
-  happy: 1.04,
-  sleepy: 0.85,
-  surprised: 1.05,
-  confused: 0.95,
-  embarrassed: 0.97,
-  excited: 1.12,
-  affectionate: 0.95,
-  proud: 1,
-  curious: 1.03,
-  worried: 0.95,
-  playful: 1.08,
-}
-
-/**
- * The effective speech rate for how she should sound right now: her configured
- * base rate nudged by her current mood. Clamped to the provider-safe 0.5–2.0
- * band. Universal — lands on every TTS provider, not just instruction-aware
- * ones.
- */
-export function emotionToVoiceRate(state: EmotionState, baseRate: number): number {
-  const base = Number.isFinite(baseRate) ? baseRate : 1
-  const scaled = base * VOICE_RATE_BY_MOOD[emotionToPetMood(state)]
-  return Math.max(0.5, Math.min(2, Number(scaled.toFixed(3))))
 }
 
 // ── Emotion-driven proactivity ───────────────────────────────────────────────

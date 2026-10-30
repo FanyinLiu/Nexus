@@ -43,7 +43,7 @@ test('schema 15 migrates to the current schema and records quiet without rewriti
   }
   const next = migrateSettings(stored, 15)
   assert.equal(next.settingsSchemaVersion, CURRENT_SETTINGS_SCHEMA_VERSION)
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 23)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 24)
   assert.equal(next.companionInitiative, 'quiet')
   assert.equal(next.themeId, 'warm')
   assert.equal(next.autonomyQuietHoursEnd, 6)

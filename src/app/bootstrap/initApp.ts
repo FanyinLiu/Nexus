@@ -1,4 +1,3 @@
-import { trackWithConsent } from '../../features/analytics/index.ts'
 import { ensureLocaleLoaded, normalizeLocale, setLocale } from '../../i18n/runtime.ts'
 import { getCoreRuntime } from '../../lib/coreRuntime.ts'
 import { hydrateLongTermMemoryStore } from '../../lib/storage/memory.ts'
@@ -19,10 +18,6 @@ export async function initApp() {
       const startupLocale = normalizeLocale(getSettingsSnapshot().uiLanguage)
       await ensureLocaleLoaded(startupLocale)
       setLocale(startupLocale)
-
-      await trackWithConsent('app.bootstrap', {
-        source: 'initApp',
-      })
     })
   }
 

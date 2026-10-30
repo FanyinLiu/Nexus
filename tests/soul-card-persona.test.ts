@@ -136,7 +136,6 @@ test('editing the soul card updates the active profile persona in the next syste
     profiles: { 'card-1': { present: true, soul: 'profile-soul-before' } },
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: true,
     activeCharacterProfileId: 'card-1',
   })
 
@@ -164,7 +163,6 @@ test('editing the soul card updates SOUL.md when no profile persona is active', 
     globalSoul: 'global-soul-before',
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: 'card-1',
   })
 
@@ -192,7 +190,6 @@ test('editing the soul card updates the fallback profile persona the prompt actu
     },
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: true,
     activeCharacterProfileId: 'card-missing',
   })
 
@@ -213,7 +210,6 @@ test('a legacy soul note is copied once into an empty SOUL file and then dropped
     legacy: LEGACY,
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
   })
 
@@ -236,7 +232,6 @@ test('a legacy soul note is copied into an empty profile persona and not into SO
     legacy: LEGACY,
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: true,
     activeCharacterProfileId: 'card-1',
   })
 
@@ -259,7 +254,6 @@ test('a legacy soul note is not copied over an existing persona, and is not appl
     legacy: LEGACY,
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
@@ -288,7 +282,6 @@ test('a window that cannot save persona files does not write the soul card or th
     legacy: LEGACY,
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
   })
 
@@ -313,7 +306,6 @@ test('a window that cannot save persona files keeps a legacy note when the targe
     legacy: LEGACY,
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
@@ -336,7 +328,6 @@ test('a soul save tells other windows the text changed without sending the text'
     globalSoul: 'global-soul-before',
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
   })
   const received: unknown[] = []
@@ -361,7 +352,6 @@ test('an empty persona file shows the system prompt the model receives, not a tr
     globalSoul: '',
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
@@ -381,7 +371,6 @@ test('whitespace in a persona file is the text the model receives', async () => 
     globalSoul: '   ',
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
@@ -403,7 +392,6 @@ test('an empty profile soul falls through to SOUL.md, then the system prompt', a
     profiles: { 'card-1': { present: true, soul: '' } },
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: true,
     activeCharacterProfileId: 'card-1',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
@@ -429,7 +417,6 @@ test('clearing the soul card removes the override and the model receives the sys
     globalSoul: 'old-soul-override',
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })
@@ -454,7 +441,6 @@ test('a soul card over the size limit is refused and the previous persona stays'
     globalSoul: 'old-soul-override',
   })
   const settings = settingsWith({
-    profilePersonaInChatEnabled: false,
     activeCharacterProfileId: '',
     systemPrompt: 'ENGLISH-DEFAULT-PROMPT',
   })

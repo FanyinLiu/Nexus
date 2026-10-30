@@ -3,7 +3,6 @@ import { test } from 'node:test'
 
 import {
   applyEmotionSignal,
-  emotionToVoiceStyle,
   voiceEmotionToSignal,
   createDefaultEmotionState,
 } from '../src/features/autonomy/emotionModel.ts'
@@ -73,11 +72,4 @@ test('applyEmotionSignal: voice deltas are gentler than text-classified counterp
     textHit.concern - initial.concern > voiceHit.concern - initial.concern,
     'text frustration should raise concern more than voice anger',
   )
-})
-
-test('an aloof persona never sounds tender just because she is pleased', () => {
-  const pleased = { ...createDefaultEmotionState(), warmth: 0.85, energy: 0.5 }
-  const out = emotionToVoiceStyle(pleased, { aloof: 3 })
-  assert.doesNotMatch(out, /warm|tender/i)
-  assert.match(out, /cool|understated/i)
 })

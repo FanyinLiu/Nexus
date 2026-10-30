@@ -213,6 +213,8 @@ detail in
   when the current key is genuinely absent.
 - **Errand recovery** — background errands interrupted by a process exit are
   re-queued on the next boot instead of staying stuck in `running`.
+  > **Later note:** the errand-creation UI was removed in a later change; errand
+  > creation and this recovery path are dormant.
 - **Voice / VAD** — VAD frame subscriptions survive wake-word listener
   rebuilds; stale `onstop` events from a superseded recorder are ignored;
   the wake-word runtime's unreachable cooldown state was removed.
