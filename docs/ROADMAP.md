@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-10-29. Stewardship follows Klein's product direction.
+> Last updated 2026-10-30. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -73,14 +73,54 @@ The larger product steps are:
   removed, and a saved choice of either becomes Mao. Minecraft
   and Factorio stay hidden. Inputs stay derived and content-free, with
   explicit pause/permission controls.
-- **v0.5.0 — future major.** Reserved for headline features, not this
-  batch. Planned scope is local Kokoro TTS for Chinese and English, downloaded
-  on demand; a voice companion while gaming, with Minecraft first through a
-  Mineflayer adapter (MIT) that shares the pet's voice and memory; and other
-  headline features still to be decided. The current Minecraft and Factorio
-  gateways stay hidden until that companion ships. Physical-device wake,
-  nearest-speaker routing, and home-device control still need a separate
-  discovery, authorization, and privacy design.
+- **v0.5.0 — "she comes alive".** One major release, decided 2026-10-30,
+  whose single theme is making the companion feel more and more like a person.
+  It replaces the earlier Kokoro TTS + Minecraft companion plan; the gaming
+  companion stays off the roadmap until a separate decision. Headline scope:
+  - **Call mode.** Hands-free talking like a phone call on the local Qwen3-TTS
+    voice (merged in #194): per-sentence emotion in the voice, first audio
+    after the first sentence, backchannel ("mm", "right") while the user
+    talks, barge-in that stops at once and remembers only what was actually
+    said, and smarter end-of-turn detection. A visible in-call indicator and
+    one-click hang-up are required; raw audio is never written to disk and the
+    mic is released on hang-up. Ships as a headline only if measured latency
+    and false-interrupt rate on an M4 16 GB Mac meet the agreed bar.
+  - **The relationship grows.** Stages from stranger to close, driven by days
+    together and conversation. Each stage changes how she addresses the user,
+    how much she teases or acts cute, and how proactive she is. Sulking after
+    a long absence is tone only: no guilt-tripping, no locked features, no
+    stage regression, and it can be turned off. Clearing memory resets the
+    stage.
+  - **Inside jokes.** Nicknames, catchphrases and shared gripes she remembers
+    and brings back, more often as the relationship grows; rate-limited and
+    the user can say "don't bring that up again".
+  - **Her own day.** Sleepy and quieter late at night, a little grumpy in the
+    morning; when idle she reads, naps or hums instead of waiting in place.
+  - **Through the day with you.** Learns roughly when the user is around or
+    busy, stays quiet during focus, nudges for water, rest and sleep, and
+    mentions the late night the next day. Quiet hours and a one-click
+    "leave me alone today" are required. Uses existing presence signals only.
+  - **Anniversaries and a small album.** Milestones such as day 100 or the
+    first late-night talk, brought up on the day, browsable and deletable in
+    an "our memories" page.
+  - **Memory book completion.** "Don't remember this" that cannot be
+    re-learned from later chats, and showing which conversation each memory
+    came from.
+  - **She lives on the desktop.** Sits on the top edge of the active window,
+    sways when it is dragged, drops or peeks from the Dock when it closes.
+    Reads window position and size only, never contents. macOS first.
+  - **The moment together.** With consent, the title of the song playing and
+    the focus timer state, so she can react to the third replay or stay quiet
+    while the user focuses. Coarse signals only.
+  - **She can see you.** Opt-in camera, off by default; expressions (smile,
+    frown, sleepy) are recognised on device and no image is stored or sent to
+    the model.
+  - **Reach her from your phone.** A chat bridge (Telegram first) that shares
+    the same memory, with its own privacy design before work starts.
+  Full plan with rules, acceptance checks and delivery order:
+  [v0.5 She Comes Alive](V0.5_SHE_COMES_ALIVE.md).
+  Physical-device wake, nearest-speaker routing, and home-device control still
+  need a separate discovery, authorization, and privacy design.
 
 Both steps must preserve the v0.3 privacy posture: sanitized summaries for the
 model, no raw screenshot chat context, no precise timer language, and no
