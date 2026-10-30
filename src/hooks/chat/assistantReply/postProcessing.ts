@@ -22,6 +22,7 @@ import {
   recordAssistantToneReport,
 } from '../../../features/persona/assistantToneFilter.ts'
 import { logVoiceEvent } from '../../../features/voice/shared.ts'
+import { voiceEmotionCueFromTag } from '../../../features/voice/voiceEmotion.ts'
 import { shorten } from '../../../lib/common.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
 import { createId } from '../../../lib/index.ts'
@@ -133,9 +134,16 @@ export async function postProcessAssistantReply(
     content: rawAssistantText,
     exprCues: inlineExpressionOverrideCues,
     motionCues: inlineMotionCues,
+    ttsCues: inlineTtsCues,
     recallCues: inlineRecallCues,
     moodCues: inlineMoodCues,
   } = extractPerformanceTags(transformedAssistantText)
+  // The first `[tts:…]` cue colours direct-speech playback (the streaming path
+  // already captured cues inline before the tags were scrubbed). Without this
+  // the cue would be parsed and thrown away again.
+  const directSpeechCue = inlineTtsCues[0]
+    ? voiceEmotionCueFromTag('tts', inlineTtsCues[0].mode)
+    : null
   // Assistant-tone check (T8) runs on ordinary chat turns only. Tool rounds
   // speak about real results, so their wording must stay untouched. The check
   // never rewrites words: it may flatten markdown when the persona says
@@ -409,7 +417,12 @@ export async function postProcessAssistantReply(
     && !(fromVoice && dependencies.ctx.suppressVoiceReplyRef.current)
   ) {
     try {
-      await dependencies.ctx.speakAssistantReply(assistantSpeechOutput, shouldResumeContinuousVoice, source)
+      await dependencies.ctx.speakAssistantReply(
+        assistantSpeechOutput,
+        shouldResumeContinuousVoice,
+        source,
+        directSpeechCue ?? undefined,
+      )
     } catch (speechError) {
       dependencies.handleSpeechPlaybackFailure(speechError, {
         traceId,
@@ -429,7 +442,12 @@ export async function postProcessAssistantReply(
     && !(fromVoice && dependencies.ctx.suppressVoiceReplyRef.current)
   ) {
     try {
-      await dependencies.ctx.speakAssistantReply(assistantSpeechOutput, shouldResumeContinuousVoice, source)
+      await dependencies.ctx.speakAssistantReply(
+        assistantSpeechOutput,
+        shouldResumeContinuousVoice,
+        source,
+        directSpeechCue ?? undefined,
+      )
     } catch (speechError) {
       dependencies.handleSpeechPlaybackFailure(speechError, {
         traceId,

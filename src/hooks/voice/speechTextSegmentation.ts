@@ -35,6 +35,43 @@ export function getMaxRequestCharsForProvider(providerId: string): number {
 
 const SENTENCE_BOUNDARY_RE = /[。！？!?；;\n]/u
 
+// Sentence terminals used to give every sentence its OWN TTS style. Unlike the
+// long-text splitter this keeps the punctuation attached, because the
+// per-sentence emotion heuristic reads ？/！/… from the segment itself.
+const SENTENCE_END_CHARS = new Set(['。', '！', '？', '!', '?', '；', ';', '\n'])
+const TRAILING_QUOTE_CHARS = new Set(['”', '’', '」', '』', '）', ')', '】', ']'])
+
+/**
+ * Split text into whole sentences, keeping terminal punctuation (and any
+ * closing quote) on the sentence it belongs to. Empty / whitespace-only
+ * sentences are dropped.
+ */
+export function splitTextIntoSentences(text: string): string[] {
+  const parts: string[] = []
+  let start = 0
+  let index = 0
+
+  while (index < text.length) {
+    if (!SENTENCE_END_CHARS.has(text[index] ?? '')) {
+      index += 1
+      continue
+    }
+
+    let end = index + 1
+    while (end < text.length && SENTENCE_END_CHARS.has(text[end] ?? '')) end += 1
+    while (end < text.length && TRAILING_QUOTE_CHARS.has(text[end] ?? '')) end += 1
+
+    const sentence = text.slice(start, end).trim()
+    if (sentence) parts.push(sentence)
+    start = end
+    index = end
+  }
+
+  const tail = text.slice(start).trim()
+  if (tail) parts.push(tail)
+  return parts
+}
+
 export function splitLongTextAtSentences(text: string, maxLen: number): string[] {
   if (text.length <= maxLen) {
     return [text]

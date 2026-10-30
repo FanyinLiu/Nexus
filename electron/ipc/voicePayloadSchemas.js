@@ -102,6 +102,7 @@ const ttsStreamStartSchema = {
     apiKey: { type: 'string', maxLength: SECRET_TEXT_MAX },
     model: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
     voice: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
+    characterId: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX },
     instructions: { type: 'string', optional: true, maxLength: 4_000 },
     language: { type: 'string', optional: true, maxLength: 64 },
     rate: { type: 'number', optional: true, min: 0.25, max: 4 },
@@ -110,11 +111,26 @@ const ttsStreamStartSchema = {
   },
 }
 
+// Per-sentence emotion style. Bounded tightly so a malformed / hostile
+// renderer cannot smuggle a long instruction or an out-of-range pace through
+// the stream push channel.
+const ttsSegmentStyleSchema = {
+  type: 'object',
+  optional: true,
+  fields: {
+    instruction: { type: 'string', optional: true, maxLength: 400, trim: true },
+    rate: { type: 'number', optional: true, min: 0.5, max: 2 },
+    pitch: { type: 'number', optional: true, min: 0.5, max: 2 },
+    emotion: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true },
+  },
+}
+
 const ttsStreamPushTextSchema = {
   type: 'object',
   fields: {
     requestId: { type: 'string', maxLength: SHORT_TEXT_MAX, trim: true, allowEmpty: false },
     text: { type: 'string', maxLength: BODY_TEXT_MAX, trim: true, allowEmpty: false },
+    style: ttsSegmentStyleSchema,
   },
 }
 

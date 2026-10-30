@@ -5,7 +5,14 @@ import { shorten } from '../../lib/common.ts'
 import { executeWithFailover, type FailoverCandidate } from '../../features/failover/orchestrator.ts'
 import { isQwen3TtsSpeechOutputProvider } from '../../lib/audioProviders.ts'
 import { shouldFailoverSpeechOutput } from './providerFallbacks.ts'
-import type { AppSettings, TranslationKey, TranslationParams, VoiceTraceEntry } from '../../types/index.ts'
+import type { SegmentStyleResolver } from '../../features/voice/voiceEmotion.ts'
+import type {
+  AppSettings,
+  TranslationKey,
+  TranslationParams,
+  VoiceEmotionCue,
+  VoiceTraceEntry,
+} from '../../types/index.ts'
 import { createStreamingSpeechOutputController } from './streamingSpeechOutput.ts'
 import type { StreamingSpeechOutputController } from './types.ts'
 
@@ -15,6 +22,8 @@ type SpeechOutputCallbacks = {
   onStart?: () => void
   onEnd?: () => void
   onError?: (message: string) => void
+  resolveSegmentVoiceStyle?: SegmentStyleResolver
+  initialCue?: VoiceEmotionCue | null
 }
 
 type TelemetryHooks = {

@@ -4,6 +4,7 @@ import type {
   PetDialogNoticeOptions,
   PetMood,
   TtsStreamEvent,
+  VoiceEmotionCue,
   VoiceEmotionLabel,
   WindowView,
 } from '../../types'
@@ -78,7 +79,12 @@ export type SpeechSegmentMeta = {
 }
 
 export type StreamingSpeechOutputController = {
-  pushDelta: (delta: string) => void
+  /**
+   * Feed spoken text (plus an optional inline emotion cue) into the stream.
+   * Each sentence is queued with its own style, so the voice can change tone
+   * mid-reply while the speaker stays pinned.
+   */
+  pushDelta: (delta: string, cue?: VoiceEmotionCue | null) => void
   /**
    * Queue whatever text has accumulated so far into segments and start
    * synthesizing them, but keep the controller open for more `pushDelta`

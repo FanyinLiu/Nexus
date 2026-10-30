@@ -10,7 +10,7 @@
  * heard part of the reply, and restarting it from the top sounds broken.
  */
 
-import type { AppSettings } from '../../types'
+import type { AppSettings, VoiceEmotionCue } from '../../types'
 import {
   createStreamingSpeechOutputController,
   type StreamingSpeechOutputOptions,
@@ -117,13 +117,13 @@ export function createStreamingSpeechOutputWithFallback(
   void primaryController.waitForCompletion().catch(() => undefined)
 
   return {
-    pushDelta(delta) {
+    pushDelta(delta, cue?: VoiceEmotionCue | null) {
       if (!delta || aborted || settled) return
       accumulatedText += delta
       if (fallbackController) {
-        fallbackController.pushDelta(delta)
+        fallbackController.pushDelta(delta, cue)
       } else {
-        primaryController.pushDelta(delta)
+        primaryController.pushDelta(delta, cue)
       }
     },
     flushPending() {

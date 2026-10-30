@@ -10,13 +10,13 @@ import {
   stopVoiceConversationEntrypoint,
 } from './conversationEntrypoints.ts'
 import { speakAssistantReplyRuntime, beginStreamingSpeechReplyRuntime } from './speechReply.ts'
-import { combineVoiceInstructions, emotionToVoiceRate, emotionToVoiceStyle } from '../../features/autonomy/emotionModel.ts'
+import { createSegmentStyleResolver, type SegmentStyleResolver } from '../../features/voice/voiceEmotion.ts'
 import { announceQwen3TtsFallback } from './providerFallbacks.ts'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { requestModelSetupForVoiceUse } from '../../lib/modelSetupBridge.ts'
 import { voiceDownloadGuidance } from '../../features/setup/voiceDownloadGuidance.ts'
-import type { AppSettings } from '../../types'
+import type { VoiceEmotionCue } from '../../types'
 import type { StreamingSpeechOutputController } from './types.ts'
 import type { VoiceConversationOptions } from './types.ts'
 import { expectHolderValue, type VoiceLifecycle, type VoiceRuntimeBag } from './voiceRuntimeBag.ts'
@@ -47,22 +47,17 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     'createVoiceLifecycleControls: engines must be built first',
   )
 
-  // Her live emotion → her voice, folded into the settings the speak runtimes
-  // consume: a style instruction (instruction-aware providers) AND a pace
-  // nudge (universal — every provider honours rate). Same mood source as the
-  // avatar, so voice and expression agree.
-  function settingsWithEmotionVoice(): AppSettings {
-    const base = ctx.settingsRef.current
-    const snapshot = ctx.getEmotionSnapshot?.()
-    if (!snapshot) return base
-    const emotionStyle = emotionToVoiceStyle(snapshot, ctx.getSpeechStyle?.())
-    const emotionRate = emotionToVoiceRate(snapshot, base.speechRate)
-    if (!emotionStyle && emotionRate === base.speechRate) return base
-    return {
-      ...base,
-      speechOutputInstructions: combineVoiceInstructions(base.speechOutputInstructions, emotionStyle),
-      speechRate: emotionRate,
-    }
+  // Her live emotion → each sentence's voice. The resolver is called once per
+  // queued sentence, so the tone follows that sentence's own cues/heuristics
+  // and the snapshot AT THAT MOMENT instead of a value sampled at stream start.
+  // The user's base instructions stay in settings untouched; the main process
+  // joins them with the per-sentence clause.
+  function createVoiceStyleResolver(): SegmentStyleResolver {
+    return createSegmentStyleResolver({
+      providerId: ctx.settingsRef.current.speechOutputProviderId,
+      getEmotion: () => ctx.getEmotionSnapshot?.(),
+      getSpeechStyle: () => ctx.getSpeechStyle?.(),
+    })
   }
 
   // ── scheduleVoiceRestart (VoiceBus request facade) ─────────────────────
@@ -85,13 +80,16 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     text: string,
     shouldResumeContinuousVoice: boolean,
     source?: InterruptMicTurnSource,
+    cue?: VoiceEmotionCue,
   ) {
     await speakAssistantReplyRuntime({
       text,
       speechGeneration: ++refs.assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
       source,
-      currentSettings: settingsWithEmotionVoice(),
+      currentSettings: ctx.settingsRef.current,
+      resolveSegmentVoiceStyle: createVoiceStyleResolver(),
+      initialCue: cue ?? null,
       startSpeechOutput: bindings.startSpeechOutput,
       setMood: ctx.setMood,
       setError: ctx.setError,
@@ -120,7 +118,8 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       speechGeneration: ++refs.assistantSpeechGenerationRef.current,
       shouldResumeContinuousVoice,
       source,
-      currentSettings: settingsWithEmotionVoice(),
+      currentSettings: ctx.settingsRef.current,
+      resolveSegmentVoiceStyle: createVoiceStyleResolver(),
       setMood: ctx.setMood,
       setError: ctx.setError,
       busEmit: hookCallbacks.busEmit,

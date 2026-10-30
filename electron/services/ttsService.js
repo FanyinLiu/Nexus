@@ -46,24 +46,13 @@ import {
 } from './ttsVolcengine.js'
 import { synthesizeLocalTts } from './localTts.js'
 import { buildQwen3TtsSpeechRequestPayload } from './qwen3TtsPayload.js'
+import { resolveOmniVoiceSeed } from './ttsSeed.js'
 import {
   buildXaiSttMultipartParts,
   buildXaiTtsRequestBody,
   mapLanguageToXaiStt,
 } from './xaiSpeech.js'
 import { float32ToInt16PcmBuffer } from './audioEncoding.js'
-
-// FNV-1a 32-bit hash of the requestId, clamped to non-zero positive int32 so
-// it's safe to pass straight into torch.manual_seed on the Python server.
-function stableSeedFromRequestId(requestId) {
-  let hash = 0x811c9dc5
-  for (let i = 0; i < requestId.length; i += 1) {
-    hash ^= requestId.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193) >>> 0
-  }
-  const positive = hash & 0x7fffffff
-  return positive === 0 ? 1 : positive
-}
 
 function logTtsRetry({ attempt, reason, url, error }) {
   const host = (() => {
@@ -223,14 +212,13 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
       { responseFormat: 'pcm' },
     )
     // OmniVoice's diffusion sampler has no speaker reference — the initial
-    // random noise IS the speaker identity latent. Without a pinned seed,
-    // every segment in a multi-sentence reply draws a fresh timbre, which
-    // users hear as "第一句对，第二句换人了". Derive a stable seed from the
-    // streaming session's requestId so all segments in the same reply reuse
-    // the same latent and the voice stays consistent. Non-OmniVoice
-    // OpenAI-compat providers ignore the extra field.
-    if (isOmniVoiceSpeechOutputProvider(payload.providerId) && payload.requestId) {
-      openAiPayload.seed = stableSeedFromRequestId(String(payload.requestId))
+    // random noise IS the speaker identity latent. A per-reply seed fixes the
+    // timbre inside one reply but still re-rolls it on the next one. Key the
+    // seed on the character + voice instead, so the same persona keeps the
+    // same speaker across replies. Non-OmniVoice OpenAI-compat providers
+    // ignore the extra field.
+    if (isOmniVoiceSpeechOutputProvider(payload.providerId)) {
+      openAiPayload.seed = resolveOmniVoiceSeed(payload.characterId, openAiPayload.voice)
     }
     const requestBody = JSON.stringify(openAiPayload)
     const headers = {
@@ -366,6 +354,9 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
         speed: Number(Math.min(Math.max(rate, 0.5), 2).toFixed(1)),
         vol: Math.round(Math.min(Math.max(volume * 10, 1), 10)),
         pitch: Math.round(Math.min(Math.max((pitch - 1) * 12, -12), 12)),
+        ...(typeof payload.emotion === 'string' && payload.emotion.trim()
+          ? { emotion: payload.emotion.trim() }
+          : {}),
       },
       audio_setting: {
         format: 'wav',

@@ -6,12 +6,22 @@ import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { createId } from '../../lib'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { recordTtsUsage } from '../../features/metering/speechCost.ts'
-import type { AppSettings, TranslationKey, TranslationParams } from '../../types'
+import {
+  isNeutralSegmentStyle,
+  type SegmentStyleResolver,
+} from '../../features/voice/voiceEmotion.ts'
+import type {
+  AppSettings,
+  TranslationKey,
+  TranslationParams,
+  VoiceEmotionCue,
+} from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
 import {
   getMaxRequestCharsForProvider,
   splitLongTextAtSentences,
+  splitTextIntoSentences,
 } from './speechTextSegmentation.ts'
 import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.ts'
 
@@ -24,6 +34,10 @@ export type StreamingSpeechOutputOptions = {
   /** speechGeneration from the caller so events can correlate with tts:started/completed. */
   speechGeneration?: number
   ti?: Translator
+  /** Per-sentence emotion resolver; called for every queued segment. */
+  resolveSegmentVoiceStyle?: SegmentStyleResolver
+  /** Reply-level cue for direct-speech playback (streaming carries cues inline). */
+  initialCue?: VoiceEmotionCue | null
 }
 
 export type StreamingSpeechOutputRuntime = {
@@ -66,6 +80,10 @@ export function createStreamingSpeechOutputController(
   let aborted = false
   let finishRequested = false
   let streamStarted = false
+  // A cue applies to every sentence after it until another cue arrives. The
+  // reply-level cue seeds it for direct-speech playback, which has no stream
+  // to carry inline tags.
+  let activeCue: VoiceEmotionCue | null = options?.initialCue ?? null
   let startPromise: Promise<void> | null = null
   let pendingSegments = 0
   let pendingAudioAppends = 0
@@ -232,6 +250,7 @@ export function createStreamingSpeechOutputController(
       apiKey: speechSettings.speechOutputApiKey,
       model: speechSettings.speechOutputModel,
       voice: effectiveVoice,
+      characterId: speechSettings.activeCharacterProfileId,
       instructions: speechSettings.speechOutputInstructions,
       language: speechSettings.speechSynthesisLang,
       rate: speechSettings.speechRate,
@@ -285,6 +304,15 @@ export function createStreamingSpeechOutputController(
       return
     }
 
+    // Resolve from the RAW sentence: prepareTextForTts strips terminal
+    // punctuation, which is exactly what the ？/！/… heuristic reads. The live
+    // getters are called per sentence — not once at stream start. Neutral
+    // styles stay local instead of crossing IPC.
+    const resolvedStyle = options?.resolveSegmentVoiceStyle?.(segment.trim(), activeCue)
+    const style = resolvedStyle && !isNeutralSegmentStyle(resolvedStyle)
+      ? resolvedStyle
+      : undefined
+
     const segmentIndex = segmentCounter++
     pendingSegments += 1
     busEmit?.({
@@ -296,7 +324,7 @@ export function createStreamingSpeechOutputController(
       meta: { requestId, length: cleaned.length },
     })
     ensureStarted()
-      .then(() => window.desktopPet!.ttsStreamPushText({ requestId, text: cleaned }))
+      .then(() => window.desktopPet!.ttsStreamPushText({ requestId, text: cleaned, style }))
       .then(() => {
         // push_text IPC resolved — main has accepted this segment into its
         // synthesis chain. Not the same as "audio started flowing"
@@ -353,22 +381,30 @@ export function createStreamingSpeechOutputController(
     accumulatedText = ''
     if (!fullText) return
     const maxChars = getMaxRequestCharsForProvider(providerId)
-    const segments = splitLongTextAtSentences(fullText, maxChars)
-    for (const segment of segments) {
-      queueSegment(segment)
+    // One push_text per sentence: Qwen3 applies a single `instructions` to the
+    // whole request, so batching sentences would flatten them onto one tone.
+    // Long single sentences still split by length afterwards.
+    const sentences = splitTextIntoSentences(fullText)
+    for (const sentence of sentences) {
+      for (const segment of splitLongTextAtSentences(sentence, maxChars)) {
+        queueSegment(segment)
+      }
     }
   }
 
   const controller: StreamingSpeechOutputController = {
-    pushDelta(delta: string) {
+    pushDelta(delta: string, cue?: VoiceEmotionCue | null) {
       if (!delta || settled || aborted) {
         return
       }
 
-      // Accumulate silently until the next flush. One round of a tool-using
-      // agent turn bundles into one or two TTS requests so timbre stays
-      // consistent across sentences (Volcengine / MiniMax can otherwise
-      // stitch chunks together with different voices).
+      if (cue) {
+        activeCue = cue
+      }
+
+      // Accumulate silently until the next flush. Sentences are split at
+      // flush time, each with its own style, while the TTS session keeps the
+      // voice/speaker pinned.
       accumulatedText += delta
     },
     flushPending() {

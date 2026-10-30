@@ -6,6 +6,8 @@ import {
   StageDirectionStreamFilter,
   parseAssistantPerformanceContent,
 } from '../../../features/pet/performance.ts'
+import { voiceEmotionCueFromTag } from '../../../features/voice/voiceEmotion.ts'
+import type { VoiceEmotionCue } from '../../../types/index.ts'
 import { bindStreamingAbort } from '../streamAbort.ts'
 import type { AssembledAssistantPrompt } from './promptAssembly.ts'
 import type {
@@ -54,11 +56,18 @@ export async function consumeAssistantStream(
   const promptModeStreamFilter = selectToolDeliveryMode(currentSettings) === 'prompt'
     ? new PromptModeStreamFilter()
     : null
+  // A `[tts:…]` / `[mood:…]` tag becomes the active voice cue for the
+  // sentences that follow it. Tags are still stripped from bubble and TTS
+  // text; this callback only forwards the intent.
+  let pendingVoiceCue: VoiceEmotionCue | null = null
   // Inline `[expr|motion|tts:name]` performance tags also get scrubbed
   // from the final reply, but without this streaming twin they'd flash
   // in the bubble and get pronounced character-by-character over the
   // TTS channel.
-  const expressionOverrideStreamFilter = new PerformanceTagStreamFilter()
+  const expressionOverrideStreamFilter = new PerformanceTagStreamFilter((kind, value) => {
+    const cue = voiceEmotionCueFromTag(kind, value)
+    if (cue) pendingVoiceCue = cue
+  })
   // The bubble keeps her parenthetical asides (（眼睛亮了）) so they read as
   // intentional stage directions, but she should never SPEAK them. This twin
   // strips them from the TTS stream only, mid-stream, so voice and display
@@ -96,7 +105,8 @@ export async function consumeAssistantStream(
           if (streamingTtsController) {
             const spokenDelta = stageDirectionSpeechFilter.push(visibleDelta)
             if (spokenDelta) {
-              streamingTtsController.pushDelta(spokenDelta)
+              streamingTtsController.pushDelta(spokenDelta, pendingVoiceCue)
+              pendingVoiceCue = null
             }
           }
         }
@@ -106,7 +116,8 @@ export async function consumeAssistantStream(
           // this final delta filtered to empty, so held text isn't lost from TTS.
           const spokenTail = stageDirectionSpeechFilter.flush()
           if (spokenTail) {
-            streamingTtsController.pushDelta(spokenTail)
+            streamingTtsController.pushDelta(spokenTail, pendingVoiceCue)
+            pendingVoiceCue = null
           }
           // Per-LLM-round flush, not finalize: runToolCallLoop may fire
           // another stream after a tool result, and its deltas also need

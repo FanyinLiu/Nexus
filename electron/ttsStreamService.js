@@ -119,6 +119,45 @@ function decodeWav(buffer) {
   }
 }
 
+/**
+ * Normalize the renderer's per-sentence style. Returns null for "nothing to
+ * change" so the provider receives its original payload untouched.
+ */
+function normalizeSegmentStyle(raw) {
+  if (!raw || typeof raw !== 'object') return null
+
+  const instruction = typeof raw.instruction === 'string' ? raw.instruction.trim() : ''
+  const rate = Number.isFinite(raw.rate) ? Math.min(Math.max(raw.rate, 0.5), 2) : 1
+  const pitch = Number.isFinite(raw.pitch) ? Math.min(Math.max(raw.pitch, 0.5), 2) : 1
+  const emotion = typeof raw.emotion === 'string' ? raw.emotion.trim() : ''
+
+  if (!instruction && rate === 1 && pitch === 1 && !emotion) return null
+  return { instruction, rate, pitch, emotion }
+}
+
+/**
+ * Fold one sentence's emotion into a COPY of the pinned session payload.
+ * The speaker/model stay exactly as started (so timbre cannot drift); only
+ * tone/pace fields change. The user's base instructions lead, the sentence
+ * clause follows, matching `combineVoiceInstructions`.
+ */
+function applySegmentStyle(payload, style) {
+  if (!style) return payload
+
+  const baseInstructions = String(payload.instructions ?? '').trim()
+  const instructions = [baseInstructions, style.instruction].filter(Boolean).join(' ')
+  const baseRate = Number.isFinite(payload.rate) ? payload.rate : 1
+  const basePitch = Number.isFinite(payload.pitch) ? payload.pitch : 1
+
+  return {
+    ...payload,
+    ...(instructions ? { instructions } : {}),
+    rate: Math.min(Math.max(baseRate * style.rate, 0.5), 2),
+    pitch: Math.min(Math.max(basePitch * style.pitch, 0.5), 2),
+    ...(style.emotion ? { emotion: style.emotion } : {}),
+  }
+}
+
 function buildLeadInOptions(session, options = {}) {
   // Only the very first segment gets prepended silence + fade-in to avoid a
   // click at playback start. Subsequent segments pass through raw so the
@@ -352,10 +391,13 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     await session.remoteWarmup?.catch(() => undefined)
   }
 
-  async function synthesizeAndEmitRemote(session, text) {
+  async function synthesizeAndEmitRemote(session, text, style) {
     await warmupRemoteSession(session)
     if (session.closed) return
-    const result = await synthesizeRemote(session.payload, text, session.abortController?.signal)
+    // `session.payload` stays the pinned voice/speaker. Only this sentence's
+    // copy carries its own tone instruction and pace nudge.
+    const styledPayload = applySegmentStyle(session.payload, style)
+    const result = await synthesizeRemote(styledPayload, text, session.abortController?.signal)
     if (session.closed) return
     // Pin the resolved voice/cluster after the first chunk so subsequent
     // chunks reuse the exact same combo instead of re-walking the fallback
@@ -458,13 +500,15 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         return { ok: true }
       }
 
+      const style = normalizeSegmentStyle(payload?.style)
+
       session.chain = session.chain.then(async () => {
         if (session.closed) {
           return
         }
 
         try {
-          await synthesizeAndEmitRemote(session, text)
+          await synthesizeAndEmitRemote(session, text, style)
         } catch (error) {
           session.closed = true
           detachSenderListener(session)

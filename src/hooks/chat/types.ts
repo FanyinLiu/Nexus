@@ -13,6 +13,7 @@ import type {
   MemoryItem,
   PetMood,
   ReminderTask,
+  VoiceEmotionCue,
   VoicePipelineState,
   VoiceState,
 } from '../../types/index.ts'
@@ -70,6 +71,7 @@ export type UseChatContext = {
     text: string,
     shouldRestart: boolean,
     source?: InterruptMicTurnSource,
+    cue?: VoiceEmotionCue,
   ) => Promise<void>
   beginStreamingSpeechReply: (
     shouldRestart: boolean,
