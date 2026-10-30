@@ -2,6 +2,7 @@ import type { AppSettings, PetMood, VoiceEmotionCue } from '../../types'
 import type { SegmentStyleResolver } from '../../features/voice/voiceEmotion.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { voiceResumeStore } from '../../features/voice/voiceResumeStore.ts'
+import { isInterruptedError } from '../../features/voice/interruptedError.ts'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import { isQwen3TtsSpeechOutputProvider } from '../../lib/audioProviders.ts'
 import {
@@ -68,19 +69,20 @@ function shouldIgnoreInterruptedSpeech(
 function createSpeechReplyCallbacks(
   options: BaseSpeechReplyOptions & {
     text: string
+    /** Streaming variant resolves the text accumulated so far at onStart. */
+    getText?: () => string
   },
 ) {
   return {
     onStart: () => {
       voiceDebug('SpeechReply', 'onStart — tts:started')
-      // Track full text so an interrupt can compute the unplayed remainder.
-      // Streaming case passes the placeholder '(streaming)' — that's fine,
-      // the remainder simply won't be useful for streaming, but interrupts
-      // on completed-text speech (the common case) get a usable resume payload.
-      voiceResumeStore.setActiveText(options.text)
+      // Track the real spoken text so an interrupt can compute the unplayed
+      // remainder (and so streaming no longer records a placeholder).
+      const activeText = options.getText ? options.getText() : options.text
+      voiceResumeStore.setActiveText(activeText)
       options.busEmit({
         type: 'tts:started',
-        text: options.text,
+        text: activeText,
         speechGeneration: options.speechGeneration,
       })
       // Bus effect handles setMood('happy') and voiceState → 'speaking'.
@@ -178,6 +180,14 @@ export async function speakAssistantReplyRuntime(
       return
     }
 
+    if (isInterruptedError(error)) {
+      // A typed-turn barge-in stops playback without the monitor's generation
+      // flag. It is still a clean stop, never a playback failure.
+      voiceResumeStore.markInterrupted()
+      options.busEmit({ type: 'tts:interrupted', speechGeneration: options.speechGeneration })
+      return
+    }
+
     throw error
   }
 }
@@ -191,11 +201,30 @@ export function beginStreamingSpeechReplyRuntime(
   }
 
   try {
+    let controller: StreamingSpeechOutputController | null = null
+    let resumeStarted = false
+    const baseCallbacks = createSpeechReplyCallbacks({
+      ...options,
+      text: '',
+      // The controller is created below; by the time the first chunk calls
+      // onStart it holds every sentence queued so far.
+      getText: () => controller?.getSpokenText?.() ?? '',
+    })
     const callbacks = {
-      ...createSpeechReplyCallbacks({
-        ...options,
-        text: '(streaming)',
-      }),
+      ...baseCallbacks,
+      onStart: () => {
+        baseCallbacks.onStart()
+        resumeStarted = true
+      },
+      // A sentence queued after playback began extends the resumable text.
+      onSegmentQueued: (segment: { segmentIndex: number; text: string }) => {
+        if (resumeStarted) voiceResumeStore.appendActiveText(segment.text)
+      },
+      // This is the event that actually feeds resume accounting: only text
+      // that reached the speaker counts as heard.
+      onSegmentPlayed: (segment: { segmentIndex: number; text: string }) => {
+        voiceResumeStore.recordChunkPlayed(segment.text)
+      },
       busEmit: options.busEmit,
       speechGeneration: options.speechGeneration,
       resolveSegmentVoiceStyle: options.resolveSegmentVoiceStyle,
@@ -211,21 +240,23 @@ export function beginStreamingSpeechReplyRuntime(
       const fallbackSettings = buildSpeechOutputFailoverCandidatesRuntime(options.currentSettings)
         .find((candidate) => candidate.speechOutputProviderId !== options.currentSettings.speechOutputProviderId)
       if (fallbackSettings) {
-        return createStreamingSpeechOutputWithFallback({
+        controller = createStreamingSpeechOutputWithFallback({
           primarySettings: options.currentSettings,
           fallbackSettings,
           runtime: options.streamingRuntime,
           options: callbacks,
           onFallback: options.notifySpeechFallback,
         })
+        return controller
       }
     }
 
-    return createStreamingSpeechOutputController(
+    controller = createStreamingSpeechOutputController(
       options.currentSettings,
       options.streamingRuntime,
       callbacks,
     )
+    return controller
   } catch (error) {
     options.resetSpeechLevel()
     throw error instanceof Error ? error : new Error('Streaming speech playback failed.')

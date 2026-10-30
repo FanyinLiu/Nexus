@@ -76,6 +76,15 @@ export interface ChatMessage {
    * without duplicating private memory text into chat history.
    */
   memoryTrace?: ChatMemoryTrace
+  /**
+   * Present when the user barged in while this reply was being spoken. The
+   * content holds exactly the heard prefix; the marker lets the prompt builder
+   * tell the model where it was cut off and the bubble show a trailing "…".
+   */
+  interrupted?: {
+    heardChars: number
+    fullChars: number
+  }
   /** Night-before reminder offer attached to a proactive line. */
   loopOffer?: {
     memoryId: string

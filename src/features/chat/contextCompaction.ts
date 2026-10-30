@@ -94,6 +94,7 @@ type LlmMessage = {
   role: 'user' | 'assistant' | 'system'
   content: ChatMessageContent
   reasoning_content?: string
+  interrupted?: ChatMessage['interrupted']
 }
 
 // Map a ChatMessage to the slim shape we send to the LLM. Assistant messages
@@ -106,6 +107,9 @@ function toLlmMessage(m: ChatMessage): LlmMessage {
     content: buildLlmContent(m),
     ...(m.role === 'assistant' && m.reasoning_content
       ? { reasoning_content: m.reasoning_content }
+      : {}),
+    ...(m.role === 'assistant' && m.interrupted
+      ? { interrupted: m.interrupted }
       : {}),
   }
 }
@@ -164,6 +168,7 @@ export function compactMessagesForRequest(
     role: 'user' | 'assistant' | 'system'
     content: ChatMessageContent
     reasoning_content?: string
+    interrupted?: ChatMessage['interrupted']
   }>
   compacted: boolean
   olderMessagesText: string | null

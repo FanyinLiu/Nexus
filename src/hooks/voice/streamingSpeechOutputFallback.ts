@@ -11,6 +11,7 @@
  */
 
 import type { AppSettings, VoiceEmotionCue } from '../../types'
+import { InterruptedError } from '../../features/voice/interruptedError.ts'
 import {
   createStreamingSpeechOutputController,
   type StreamingSpeechOutputOptions,
@@ -61,7 +62,7 @@ export function createStreamingSpeechOutputWithFallback(
   function settleAbort() {
     if (settled) return
     settled = true
-    rejectCompletion?.(new Error('Speech playback has been stopped.'))
+    rejectCompletion?.(new InterruptedError())
   }
 
   const sharedCallbacks = {
@@ -140,6 +141,15 @@ export function createStreamingSpeechOutputWithFallback(
     },
     hasStarted() {
       return (fallbackController ?? primaryController).hasStarted()
+    },
+    getSpokenText() {
+      return (fallbackController ?? primaryController).getSpokenText?.() ?? ''
+    },
+    getInterruption() {
+      return (fallbackController ?? primaryController).getInterruption?.() ?? null
+    },
+    wasInterrupted() {
+      return aborted
     },
     abort() {
       if (aborted || settled) return

@@ -112,6 +112,7 @@ export const enChat = {
   'chat.voice.no_interrupt_pet_status': 'Voice barge-in is off — please wait until I finish talking.',
   'chat.voice.sent_trace': '#{label} user message written to chat history',
   'chat.voice.sent_label': 'Voice sent',
+  'chat.voice.interrupted_hint': '(The user interrupted you here.)',
   'chat.local_intent.failed': 'Local task didn\'t go through',
   'chat.local_intent.voice_detail': 'Local task didn\'t go through: {preview}',
   'chat.local_intent.voice_label': 'Local task didn\'t work',

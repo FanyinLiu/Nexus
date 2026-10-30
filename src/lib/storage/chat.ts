@@ -237,6 +237,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
   const loopOffer = normalizeLoopOffer(value.loopOffer)
   const loopCheck = normalizeLoopCheck(value.loopCheck)
   const proactiveWhy = normalizeProactiveWhy(value.proactiveWhy)
+  const interrupted = normalizeChatInterruption(value.interrupted)
 
   return {
     id,
@@ -247,9 +248,22 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     ...(toolResult ? { toolResult } : {}),
     ...(memoryTrace ? { memoryTrace } : {}),
     ...(reasoning ? { reasoning_content: reasoning } : {}),
+    ...(interrupted ? { interrupted } : {}),
     ...(loopOffer ? { loopOffer } : {}),
     ...(loopCheck ? { loopCheck } : {}),
     ...(proactiveWhy ? { proactiveWhy } : {}),
+  }
+}
+
+function normalizeChatInterruption(value: unknown): ChatMessage['interrupted'] {
+  if (!value || typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  const heardChars = Number(record.heardChars)
+  const fullChars = Number(record.fullChars)
+  if (!Number.isFinite(heardChars) || !Number.isFinite(fullChars)) return undefined
+  return {
+    heardChars: Math.max(0, Math.round(heardChars)),
+    fullChars: Math.max(0, Math.round(fullChars)),
   }
 }
 

@@ -136,6 +136,9 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       canInterruptSpeech,
       showPetStatus,
       stopActiveSpeechOutput,
+      abortPendingSpeechOutput: () => {
+        refs.activeStreamingSpeechOutputRef.current?.abort()
+      },
       dispatchVoiceSessionAndSync,
       voiceEchoCooldownUntilRef: refs.voiceEchoCooldownUntilRef,
       ti,

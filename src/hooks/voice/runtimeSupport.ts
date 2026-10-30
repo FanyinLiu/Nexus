@@ -82,6 +82,8 @@ type InterruptSpeakingForVoiceInputRuntimeOptions = {
   canInterruptSpeech: () => boolean
   showPetStatus: ShowPetStatus
   stopActiveSpeechOutput: () => void
+  /** Abort a reply whose audio has not started yet (thinking/processing). */
+  abortPendingSpeechOutput: () => void
   dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => VoiceSessionState
   voiceEchoCooldownUntilRef: MutableRefObject<number>
   ti: Translator
@@ -259,6 +261,10 @@ export function interruptSpeakingForVoiceInputRuntime(
   options: InterruptSpeakingForVoiceInputRuntimeOptions,
 ) {
   if (options.voiceStateRef.current !== 'speaking') {
+    // The reply is still thinking/queued (no audio yet). A new voice turn
+    // must not let that stale reply start speaking over the user later, so
+    // abort its pending TTS controller. This never opens the microphone.
+    options.abortPendingSpeechOutput()
     return true
   }
 

@@ -67,3 +67,15 @@ test('voice resume store clears completed or fully played speech without pending
   voiceResumeStore.markCompleted()
   assert.equal(voiceResumeStore.peekPendingResume(), null)
 })
+
+test('voice resume store appends streamed sentences without resetting progress', () => {
+  voiceResumeStore.setActiveText('First sentence. ')
+  voiceResumeStore.recordChunkPlayed('First sentence. ')
+  voiceResumeStore.appendActiveText('Second sentence.')
+  voiceResumeStore.recordChunkPlayed('Second ')
+  voiceResumeStore.markInterrupted()
+
+  const pending = voiceResumeStore.peekPendingResume()
+  assert.equal(pending?.originalText, 'First sentence. Second sentence.')
+  assert.equal(pending?.remainingText, 'sentence.')
+})

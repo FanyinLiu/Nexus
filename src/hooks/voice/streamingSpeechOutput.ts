@@ -3,6 +3,12 @@ import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.t
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { prepareTextForTts } from '../../features/voice/text.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
+import {
+  resolveHeardSpeech,
+  type HeardSpeechSegment,
+  type HeardSpeechSnapshot,
+} from '../../features/voice/heardSpeech.ts'
+import { InterruptedError } from '../../features/voice/interruptedError.ts'
 import { createId } from '../../lib/storage.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { recordTtsUsage } from '../../features/metering/speechCost.ts'
@@ -34,6 +40,10 @@ export type StreamingSpeechOutputOptions = {
   onStart?: () => void
   onEnd?: () => void
   onError?: (message: string) => void
+  /** A sentence entered the synthesis queue, with the cleaned spoken text. */
+  onSegmentQueued?: (segment: { segmentIndex: number; text: string }) => void
+  /** A sentence's first audio chunk was scheduled for playback. */
+  onSegmentPlayed?: (segment: { segmentIndex: number; text: string }) => void
   /** Phase 1-1: fire transition-log events so the voice bus can observe streaming. */
   busEmit?: (event: VoiceBusEvent) => void
   /** speechGeneration from the caller so events can correlate with tts:started/completed. */
@@ -49,6 +59,8 @@ export type StreamingSpeechOutputRuntime = {
   getPlayer: () => StreamAudioPlayer
   setActiveController?: (controller: StreamingSpeechOutputController | null) => void
   resetPlayer?: () => void
+  /** Injectable clock so the heard-text math is testable without wall time. */
+  now?: () => number
 }
 
 export function createStreamingSpeechOutputController(
@@ -67,6 +79,17 @@ export function createStreamingSpeechOutputController(
   const busEmit = options?.busEmit
   const speechGeneration = options?.speechGeneration ?? 0
   const providerId = speechSettings.speechOutputProviderId
+  const now = runtime.now ?? (() => (
+    typeof performance !== 'undefined' ? performance.now() : Date.now()
+  ))
+  // Per-sentence playback timeline. Main tells us each sentence's text and
+  // duration; the audio player tells us when its first chunk is audible. A
+  // barge-in reads this to keep only the heard part of the reply.
+  const playbackSegments = new Map<number, HeardSpeechSegment>()
+  const playedSegments = new Set<number>()
+  let interruptionSnapshot: HeardSpeechSnapshot | null = null
+  let inferredSegmentIndex = -1
+  let inferredSegmentText = ''
 
   // Text is chunked as the model streams: each completed sentence goes to the
   // provider right away, so she starts speaking on sentence one instead of
@@ -123,6 +146,51 @@ export function createStreamingSpeechOutputController(
     rejectAllPlayed = reject
   })
 
+  function segmentIndexForEvent(event: { text?: string; segmentIndex?: number }): number {
+    if (typeof event.segmentIndex === 'number' && Number.isFinite(event.segmentIndex)) {
+      inferredSegmentIndex = Math.max(inferredSegmentIndex, event.segmentIndex)
+      inferredSegmentText = event.text ?? inferredSegmentText
+      return event.segmentIndex
+    }
+    // Older main builds omit segmentIndex. A repeated text still belongs to
+    // the same sentence; a new text opens the next one.
+    const text = event.text ?? ''
+    if (text && text !== inferredSegmentText) {
+      inferredSegmentIndex += 1
+      inferredSegmentText = text
+    }
+    return Math.max(0, inferredSegmentIndex)
+  }
+
+  function ensurePlaybackSegment(index: number, text: string): HeardSpeechSegment {
+    let segment = playbackSegments.get(index)
+    if (!segment) {
+      segment = { index, text, durationMs: 0, startedAtMs: null }
+      playbackSegments.set(index, segment)
+    } else if (text) {
+      segment.text = text
+    }
+    return segment
+  }
+
+  function noteChunkAudio(segment: HeardSpeechSegment, samples: number[], sampleRate: number) {
+    if (!samples.length || !sampleRate || sampleRate <= 0) return
+    segment.durationMs += (samples.length / sampleRate) * 1000
+  }
+
+  function currentHeardSpeech(): HeardSpeechSnapshot {
+    return resolveHeardSpeech([...playbackSegments.values()], now())
+  }
+
+  function noteSegmentPlayed(segment: HeardSpeechSegment, schedule?: { startedAtMs?: number }) {
+    if (segment.startedAtMs === null) {
+      segment.startedAtMs = schedule?.startedAtMs ?? now()
+    }
+    if (playedSegments.has(segment.index)) return
+    playedSegments.add(segment.index)
+    options?.onSegmentPlayed?.({ segmentIndex: segment.index, text: segment.text })
+  }
+
   const unsubscribe = window.desktopPet.subscribeTtsStream((event: VoiceStreamEvent) => {
     if (event.requestId !== requestId || settled || aborted) {
       return
@@ -149,8 +217,24 @@ export function createStreamingSpeechOutputController(
         })
       }
 
+      const segmentIndex = segmentIndexForEvent(event)
+      const segment = ensurePlaybackSegment(segmentIndex, event.text ?? '')
+      noteChunkAudio(segment, event.samples, event.sampleRate)
+      const firstChunkOfSegment = segment.startedAtMs === null
+      if (firstChunkOfSegment) {
+        segment.startedAtMs = now()
+        noteSegmentPlayed(segment)
+      }
+
       pendingAudioAppends += 1
       void player.appendPcmChunk(event.samples, event.sampleRate, event.channels)
+        .then((schedule) => {
+          // The player knows the exact AudioContext start time; replace the
+          // provisional clock so the proportional heard cut stays honest.
+          if (firstChunkOfSegment && schedule?.startedAtMs) {
+            segment.startedAtMs = schedule.startedAtMs
+          }
+        })
         .catch((error) => {
           fail(error instanceof Error ? error : new Error('Streaming audio playback failed.'))
         })
@@ -158,6 +242,17 @@ export function createStreamingSpeechOutputController(
           pendingAudioAppends = Math.max(0, pendingAudioAppends - 1)
           maybeResolve()
         })
+      return
+    }
+
+    if (event.type === 'segment') {
+      // Main reports the full sentence text/duration once its PCM has been
+      // handed over. Update rather than overwrite the playback start time.
+      const segment = ensurePlaybackSegment(event.segmentIndex, event.text)
+      if (event.text) segment.text = event.text
+      if (Number.isFinite(event.durationMs) && event.durationMs >= 0) {
+        segment.durationMs = Math.max(segment.durationMs, event.durationMs)
+      }
       return
     }
 
@@ -385,6 +480,7 @@ export function createStreamingSpeechOutputController(
     const segmentIndex = segmentCounter++
     pendingSegments += 1
     noteFirstSegmentQueued()
+    options?.onSegmentQueued?.({ segmentIndex, text: cleaned })
     busEmit?.({
       type: 'tts:segment_queued',
       segmentIndex,
@@ -542,10 +638,26 @@ export function createStreamingSpeechOutputController(
     hasStarted() {
       return started
     },
+    getSpokenText() {
+      return [...playbackSegments.values()]
+        .sort((left, right) => left.index - right.index)
+        .map((segment) => segment.text)
+        .join('')
+    },
+    getInterruption() {
+      return interruptionSnapshot
+    },
+    wasInterrupted() {
+      return aborted
+    },
     abort() {
       if (aborted || settled) {
         return
       }
+
+      // Capture the heard prefix before the player is torn down. This is the
+      // exact text the user heard when they barged in.
+      interruptionSnapshot = currentHeardSpeech()
 
       // Loudly trace every abort — this is the single most common cause
       // of "TTS got cut off mid-sentence", and knowing the call stack
@@ -564,7 +676,7 @@ export function createStreamingSpeechOutputController(
       cleanup()
       player.stopAndClear()
       runtime.resetPlayer?.()
-      rejectAllPlayed?.(new Error('Speech playback has been stopped.'))
+      rejectAllPlayed?.(new InterruptedError())
       if (startPromise) {
         void startPromise
           .then(() => window.desktopPet!.ttsStreamAbort({ requestId }))

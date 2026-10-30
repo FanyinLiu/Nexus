@@ -112,6 +112,7 @@ export const koChat = {
   'chat.voice.no_interrupt_pet_status': '음성 끼어들기가 꺼져 있어요. 말을 끝낼 때까지 기다려 주세요.',
   'chat.voice.sent_trace': '#{label} 사용자 메시지를 채팅 기록에 기록',
   'chat.voice.sent_label': '음성 전송 완료',
+  'chat.voice.interrupted_hint': '(여기에서 사용자가 말을 끊었습니다.)',
   'chat.local_intent.failed': '로컬 작업이 잘 안 됐어요',
   'chat.local_intent.voice_detail': '로컬 작업이 잘 안 됐어요: {preview}',
   'chat.local_intent.voice_label': '로컬 작업이 안 됐어요',
