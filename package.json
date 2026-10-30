@@ -29,6 +29,7 @@
     "memory:recall-benchmark": "node --experimental-strip-types --no-warnings scripts/memory-recall-benchmark.mjs",
     "voice:latency:bench": "node --experimental-strip-types --no-warnings scripts/voice-latency-bench.mjs",
     "voice:emotion:bench": "node --experimental-strip-types --no-warnings scripts/voice-emotion-bench.mjs",
+    "voice:turn:bench": "node --no-warnings scripts/voice-turn-end-bench.mjs",
     "architecture:audit": "node scripts/architecture-boundary-audit.mjs",
     "source-size:audit": "node scripts/source-size-audit.mjs",
     "ui:references:audit": "node scripts/open-source-ui-reference-audit.mjs",
@@ -269,6 +270,14 @@
         {
           "from": "public/vendor/vad/silero_vad_v5.onnx",
           "to": "silero_vad_v5.onnx"
+        },
+        {
+          "from": "node_modules/onnxruntime-web/dist/ort.node.min.mjs",
+          "to": "smart-turn-ort/ort.node.min.mjs"
+        },
+        {
+          "from": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+          "to": "smart-turn-ort/ort-wasm-simd-threaded.mjs"
         }
       ]
     },
@@ -322,6 +331,14 @@
         {
           "from": "public/vendor/vad/silero_vad_v5.onnx",
           "to": "silero_vad_v5.onnx"
+        },
+        {
+          "from": "node_modules/onnxruntime-web/dist/ort.node.min.mjs",
+          "to": "smart-turn-ort/ort.node.min.mjs"
+        },
+        {
+          "from": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+          "to": "smart-turn-ort/ort-wasm-simd-threaded.mjs"
         }
       ],
       "notarize": false
@@ -366,6 +383,14 @@
         {
           "from": "public/vendor/vad/silero_vad_v5.onnx",
           "to": "silero_vad_v5.onnx"
+        },
+        {
+          "from": "node_modules/onnxruntime-web/dist/ort.node.min.mjs",
+          "to": "smart-turn-ort/ort.node.min.mjs"
+        },
+        {
+          "from": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+          "to": "smart-turn-ort/ort-wasm-simd-threaded.mjs"
         }
       ]
     },

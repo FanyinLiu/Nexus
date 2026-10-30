@@ -16,6 +16,8 @@ export const jaOnboarding = {
   'model_setup.model.sensevoice.purpose': '話しかけた言葉を聞き取ります。中国語・英語・日本語・韓国語・広東語に対応。このパソコンの中で動作します。',
   'model_setup.model.paraformer-zh-en.name': 'Paraformer 話しながら文字に',
   'model_setup.model.paraformer-zh-en.purpose': '話しているそばから文字にします。中国語と英語に対応。SenseVoice があれば入れなくても大丈夫です。',
+  'model_setup.model.smart-turn-v3.name': '話し終わりを聞き取る',
+  'model_setup.model.smart-turn-v3.purpose': '文の終わり方を聞いて、話し終わったらすぐにお返事します。字幕がなくても大丈夫です。',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 中英の声',
   'model_setup.model.tts-melo-zh-en.purpose': '音声で返事できるようになります。中国語と英語に対応。このパソコンの中で動作し、無料で、オフラインでも使えます。「話し方」で選ぶと使えます。',
   'model_setup.dismiss': 'あとで',

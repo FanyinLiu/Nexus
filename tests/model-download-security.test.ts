@@ -11,6 +11,7 @@ import {
 test('model downloads require allowlisted HTTPS URLs', () => {
   assert.equal(validateModelDownloadUrl('https://huggingface.co/org/model').hostname, 'huggingface.co')
   assert.equal(validateModelDownloadUrl('https://release-assets.githubusercontent.com/file').hostname, 'release-assets.githubusercontent.com')
+  assert.equal(validateModelDownloadUrl('https://cdn-lfs-cn-1.modelscope.cn/blob').hostname, 'cdn-lfs-cn-1.modelscope.cn')
   assert.throws(() => validateModelDownloadUrl('http://huggingface.co/model'), /require HTTPS/)
   assert.throws(() => validateModelDownloadUrl('https://example.com/model'), /not allowlisted/)
   assert.throws(() => validateModelDownloadUrl('https://user:pass@huggingface.co/model'), /credentials/)

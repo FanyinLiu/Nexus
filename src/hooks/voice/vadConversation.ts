@@ -2,11 +2,22 @@ import type { MutableRefObject } from 'react'
 import {
   createVoiceActivityDetector,
   encodeVadAudioToWavBlob,
+  getBrowserVadSilenceMs,
 } from '../../features/hearing/browserVad.ts'
-import { createMainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
+import {
+  createMainProcessVadController,
+  getMainProcessVadSilenceMs,
+} from '../../features/hearing/mainProcessVad.ts'
+import { turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type { BackchannelSession } from './backchannelRuntime.ts'
+import { createTurnEndController, type TurnEndController } from './turnEndController.ts'
+import {
+  createDesktopTurnEndProbe,
+  startDesktopTurnEndSession,
+  stopDesktopTurnEndSession,
+} from './smartTurnProbe.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
@@ -31,7 +42,9 @@ import type {
 import {
   API_RECORDING_MAX_DURATION_MS,
   API_RECORDING_MAX_IDLE_MS,
+  SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
 } from './constants.ts'
+import { createAdaptiveRmsGate } from './support.ts'
 import type {
   VadConversationSession,
   VoiceConversationOptions,
@@ -161,6 +174,14 @@ export async function startVadConversation(
     && wakewordRuntime.hasActiveFrameSource()
   )
 
+  const baseSilenceMs = useFrameDriver
+    ? getMainProcessVadSilenceMs(params.currentSettings.vadSensitivity)
+    : getBrowserVadSilenceMs(params.currentSettings.vadSensitivity)
+  // The main VAD reports a post-hangover `isDetected` flag, so it cannot see a
+  // 250 ms pause while its 1.8 s silence window is still open. The shared mic
+  // frames give us the raw RMS needed for the Smart Turn probe clock.
+  const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
+
   // Declare up front so the shared VAD event handlers below can close over
   // the session variable — TS would otherwise complain about use-before-
   // assignment inside the handlers passed into the detector/frame driver.
@@ -170,6 +191,7 @@ export async function startVadConversation(
   // only ever sees an empty string and picks the neutral listening token.
   let speechStartedAt: number | null = null
   let lastSpeechAt = 0
+  let turnEnd: TurnEndController | null = null
 
   const handleSpeechStart = () => {
     if (params.vadSessionRef.current !== session) return
@@ -201,18 +223,16 @@ export async function startVadConversation(
     const now = performance.now()
     if (speechProbability >= 0.3) {
       speechStartedAt ??= now
-      lastSpeechAt = now
+      // The frame driver keeps `isDetected` high through its 1.8 s hangover;
+      // its pause clock comes from the raw RMS callback instead.
+      if (!useFrameDriver) lastSpeechAt = now
       return
     }
 
     if (!session.speechDetected || speechStartedAt === null) return
-    const silenceMs = Math.max(0, now - lastSpeechAt)
-    params.backchannel?.maybeFire({
-      partialTranscript: '',
-      silenceMs,
-      spokenMs: Math.max(0, lastSpeechAt - speechStartedAt),
-      turnEndAction: 'wait',
-    })
+    // The legacy MicVAD exposes the real per-frame probability, so it can
+    // drive the same controller directly.
+    if (!useFrameDriver) turnEnd?.tick()
   }
 
   const handleMisfire = () => {
@@ -233,6 +253,7 @@ export async function startVadConversation(
 
     params.vadSessionRef.current = null
     params.backchannel?.stop()
+    stopDesktopTurnEndSession()
     if (session.noSpeechTimer) {
       window.clearTimeout(session.noSpeechTimer)
     }
@@ -343,6 +364,21 @@ export async function startVadConversation(
 
       const unsubscribe = wakewordRuntime!.subscribeMicFrames((samples) => {
         mainVad.pushSamples(samples)
+
+        // Pause clock for Smart Turn. The main VAD's `isDetected` is already
+        // held for its silence window, so the raw frame energy is the only
+        // signal that can tell us the user paused 250 ms ago.
+        if (!session || session.cancelled) return
+        let energy = 0
+        for (let i = 0; i < samples.length; i += 1) energy += samples[i] * samples[i]
+        const rms = Math.sqrt(energy / samples.length)
+        const now = performance.now()
+        if (activityGate.isSpeech(rms)) {
+          speechStartedAt ??= now
+          lastSpeechAt = now
+          return
+        }
+        if (session.speechDetected && speechStartedAt !== null) turnEnd?.tick()
       })
 
       session = {
@@ -368,6 +404,7 @@ export async function startVadConversation(
           onFrameProcessed: handleFrameProcessed,
         },
         params.currentSettings.vadSensitivity,
+        { maxSilenceMs: turnEndMaxSilenceMs(baseSilenceMs) },
       )
 
       session = {
@@ -384,7 +421,40 @@ export async function startVadConversation(
       }
     }
 
+    turnEnd = createTurnEndController({
+      probe: createDesktopTurnEndProbe(),
+      getContext: () => ({
+        partialTranscript: '',
+        locale: params.currentSettings.speechRecognitionLang,
+        presetSilenceMs: baseSilenceMs,
+        speechStartedAt,
+        lastSpeechAt,
+        finalizing: params.vadSessionRef.current !== session || session.cancelled,
+      }),
+      onEnd: () => {
+        // Both backends can emit their current utterance on demand: the main
+        // VAD flushes its segment, MicVAD uses pause() with
+        // submitUserSpeechOnPause. The normal speech-end path does the rest.
+        if (session.detector) {
+          void session.detector.pause().catch(() => undefined)
+        } else {
+          void session.frameDriver?.flush()
+        }
+      },
+      onWait: (tick) => {
+        params.backchannel?.maybeFire({
+          partialTranscript: '',
+          silenceMs: tick.silenceMs,
+          spokenMs: tick.spokenMs,
+          turnEndAction: tick.decision.action,
+          modelProbability: tick.modelProbability,
+          modelPending: tick.modelPending,
+        })
+      },
+    })
+
     params.vadSessionRef.current = session
+    startDesktopTurnEndSession()
     params.beginVoiceListeningSession(
       params.transcribeMode === 'local' ? 'local_vad' : 'remote_vad',
     )
@@ -428,6 +498,7 @@ export async function startVadConversation(
 
       console.warn('[VAD] destroy source: noSpeechTimer')
       void params.destroyVadSession(session)
+      stopDesktopTurnEndSession()
       params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
     }, API_RECORDING_MAX_IDLE_MS)
 
@@ -437,6 +508,7 @@ export async function startVadConversation(
       if (!session.speechDetected) {
         console.warn('[VAD] destroy source: maxDurationTimer (no speech)')
         void params.destroyVadSession(session)
+        stopDesktopTurnEndSession()
         params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
         return
       }
@@ -473,6 +545,7 @@ export async function startVadConversation(
     }
   } catch (error) {
     params.backchannel?.stop()
+    stopDesktopTurnEndSession()
     // Partial-init cleanup: anything we wired up before throwing must
     // be torn down here, otherwise mainVad / detector / timers / the
     // session ref leak. Iterate every possible state.

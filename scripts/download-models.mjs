@@ -92,7 +92,7 @@ async function main() {
     console.log(`[${model.label}] (${model.sizeLabel})`)
 
     const rootsForCheck = model.kind === 'standalone'
-      ? [standaloneDir]
+      ? [model.id === 'vad' ? standaloneDir : modelsDir]
       : [modelsDir]
     if (skipAsr && !model.required) {
       console.log('  ⊘ 使用了 --skip-asr，跳过可选模型')
@@ -114,7 +114,9 @@ async function main() {
     try {
       await downloadModel(model, {
         modelsRoot: modelsDir,
-        standaloneRoot: standaloneDir,
+        // Silero VAD is bundled under public/vendor/vad; other standalone
+        // models (Smart Turn) live in the user-style sherpa-models directory.
+        standaloneRoot: model.id === 'vad' ? standaloneDir : modelsDir,
         onProgress: createProgressPrinter(),
       })
       console.log('  ✓ 下载成功')

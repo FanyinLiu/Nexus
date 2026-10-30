@@ -1,6 +1,5 @@
 import type { MutableRefObject } from 'react'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
-import { decideTurnEnd } from '../../features/hearing/turnEnd.ts'
 import { formatTencentHotwordList } from '../../features/hearing/tencentHotwords.ts'
 import {
   parseTencentCredentials,
@@ -36,6 +35,12 @@ import {
 } from './constants.ts'
 import { createAdaptiveRmsGate } from './support.ts'
 import type { BackchannelSession } from './backchannelRuntime.ts'
+import { createTurnEndController } from './turnEndController.ts'
+import {
+  createDesktopTurnEndProbe,
+  startDesktopTurnEndSession,
+  stopDesktopTurnEndSession,
+} from './smartTurnProbe.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
@@ -177,6 +182,7 @@ export async function startTencentConversation(
         if (!speechDetected) {
           finalizing = true
           params.backchannel?.stop()
+          stopDesktopTurnEndSession()
           params.clearTencentConversationState()
           session.abort()
           params.tencentAsrSessionRef.current = null
@@ -208,6 +214,7 @@ export async function startTencentConversation(
 
       finalizing = true
       params.backchannel?.stop()
+      stopDesktopTurnEndSession()
       params.clearTencentConversationState()
 
       try {
@@ -240,7 +247,37 @@ export async function startTencentConversation(
       }
     }
 
+    const turnEnd = createTurnEndController({
+      probe: createDesktopTurnEndProbe(),
+      getContext: () => ({
+        partialTranscript: latestText,
+        locale: params.currentSettings.speechRecognitionLang,
+        presetSilenceMs: SHERPA_STREAM_SILENCE_FINISH_MS,
+        speechStartedAt,
+        lastSpeechAt,
+        finalizing: finalizing || !session || params.tencentAsrSessionRef.current !== session,
+      }),
+      onEnd: () => {
+        void finalizeTranscript(
+          params.ti('voice.pipeline.silence_detected_wrap_up'),
+          latestText,
+          ' (silence finalize)',
+        )
+      },
+      onWait: (tick) => {
+        params.backchannel?.maybeFire({
+          partialTranscript: latestText,
+          silenceMs: tick.silenceMs,
+          spokenMs: tick.spokenMs,
+          turnEndAction: tick.decision.action,
+          modelProbability: tick.modelProbability,
+          modelPending: tick.modelPending,
+        })
+      },
+    })
+
     params.beginVoiceListeningSession('tencent_asr' as VoiceSessionTransport)
+    startDesktopTurnEndSession()
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
@@ -278,31 +315,10 @@ export async function startTencentConversation(
 
         if (!speechDetected || speechStartedAt === null) return
 
-        const silenceMs = Math.max(0, now - lastSpeechAt)
-        const decision = decideTurnEnd({
-          partialTranscript: latestText,
-          silenceMs,
-          locale: params.currentSettings.speechRecognitionLang,
-          // Tencent has partials, so finished text may wrap up early while a
-          // trailing connector keeps the existing 1.8 s window.
-          presetSilenceMs: SHERPA_STREAM_SILENCE_FINISH_MS,
-        })
-
-        if (decision.action === 'end') {
-          void finalizeTranscript(
-            params.ti('voice.pipeline.silence_detected_wrap_up'),
-            latestText,
-            ' (silence finalize)',
-          )
-          return
-        }
-
-        params.backchannel?.maybeFire({
-          partialTranscript: latestText,
-          silenceMs,
-          spokenMs: Math.max(0, lastSpeechAt - speechStartedAt),
-          turnEndAction: decision.action,
-        })
+        // Smart Turn reads the buffered audio; the partial text can still
+        // extend the wait for a trailing connector. Without the model the
+        // controller falls back to the 1.8 s preset.
+        turnEnd.tick()
       },
       onPartial: (text) => {
         if (!session || params.tencentAsrSessionRef.current !== session || finalizing) return
@@ -344,6 +360,7 @@ export async function startTencentConversation(
 
         finalizing = true
         params.backchannel?.stop()
+        stopDesktopTurnEndSession()
         params.clearTencentConversationState()
         params.tencentAsrSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -364,6 +381,7 @@ export async function startTencentConversation(
       if (!speechDetected) {
         finalizing = true
         params.backchannel?.stop()
+        stopDesktopTurnEndSession()
         params.clearTencentConversationState()
         session.abort()
         params.tencentAsrSessionRef.current = null
@@ -375,6 +393,7 @@ export async function startTencentConversation(
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
     params.backchannel?.stop()
+    stopDesktopTurnEndSession()
     params.clearTencentConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

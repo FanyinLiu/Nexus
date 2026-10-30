@@ -13,6 +13,7 @@
 
 import { t } from '../../i18n/runtime.ts'
 import type { VadSensitivity } from '../../types'
+import { turnEndMaxSilenceMs } from './turnEnd.ts'
 
 type VoiceActivityCallbacks = {
   onSpeechStart?: () => void
@@ -43,10 +44,11 @@ type VadPreset = {
 // pauses and missing quieter speech entirely.
 //
 // This main-process path feeds a one-shot transcribeAudio call, so it has
-// no partial transcript to reason about. turnEnd.ts therefore stays out of
-// this controller and the preset silence below remains the only end-of-turn
-// signal. Streaming providers (Paraformer, Tencent ASR) apply turnEnd in
-// their own conversation runners, where partials exist.
+// no partial transcript to reason about. The renderer still runs the Smart
+// Turn probe on this same buffered audio and flushes the segment when the
+// audio (or, without the model, the preset silence) says the turn is over.
+// Streaming providers (Paraformer, Tencent ASR) also apply their partial-text
+// rules in their own conversation runners.
 const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
   low: {
     threshold: 0.45,
@@ -73,6 +75,16 @@ const VAD_PRESETS: Record<VadSensitivity, VadPreset> = {
   },
 }
 
+/**
+ * The preset silence window in milliseconds. Turn-end decisions use this as
+ * the "ordinary text / no partial" fallback; the detector itself is opened
+ * with the wider `turnEndMaxSilenceMs` ceiling so a trailing connector or a
+ * Smart Turn "not finished" verdict has room to finish the thought.
+ */
+export function getMainProcessVadSilenceMs(sensitivity: VadSensitivity = 'medium') {
+  return Math.round(VAD_PRESETS[sensitivity].minSilenceDuration * 1_000)
+}
+
 export async function createMainProcessVadController(
   callbacks: VoiceActivityCallbacks,
   sensitivity: VadSensitivity = 'medium',
@@ -85,7 +97,10 @@ export async function createMainProcessVadController(
   const preset = VAD_PRESETS[sensitivity]
   const startResult = await api.vadStart({
     threshold: preset.threshold,
-    minSilenceDuration: preset.minSilenceDuration,
+    // The renderer's turn-end controller flushes the segment as soon as the
+    // model or the text rules say the turn is over. This wider ceiling is only
+    // the backstop for a model that keeps saying "not finished".
+    minSilenceDuration: turnEndMaxSilenceMs(preset.minSilenceDuration * 1_000) / 1_000,
     minSpeechDuration: preset.minSpeechDuration,
     maxSpeechDuration: preset.maxSpeechDuration,
   })

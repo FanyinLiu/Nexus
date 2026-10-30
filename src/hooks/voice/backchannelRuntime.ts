@@ -31,6 +31,10 @@ export type BackchannelTurnSignal = {
   silenceMs: number
   spokenMs: number
   turnEndAction: TurnEndAction
+  /** Smart Turn p(complete), or null when the model is unavailable. */
+  modelProbability?: number | null
+  /** True while a probe is in flight or the model is warming up. */
+  modelPending?: boolean
 }
 
 export type BackchannelSession = {
@@ -215,6 +219,8 @@ export function createBackchannelSession(deps: BackchannelSessionDeps): Backchan
       spokenMs: signal.spokenMs,
       pauseMs: signal.silenceMs,
       turnEndAction: signal.turnEndAction,
+      modelProbability: signal.modelProbability ?? null,
+      modelPending: signal.modelPending === true,
       msSinceLastBackchannel: lastBackchannelAt === null ? null : now - lastBackchannelAt,
       backchannelsInLast10s: recentBackchannels.length,
       partialTranscript: signal.partialTranscript,

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import * as tencentAsr from '../services/tencentAsr.js'
+import smartTurnService from '../smartTurn.js'
 import * as minecraftGateway from '../services/minecraftGateway.js'
 import * as factorioRcon from '../services/factorioRcon.js'
 import { requireTrustedSender } from './validate.js'
@@ -49,6 +50,7 @@ export function register() {
     if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { ok: true }
     if (samples.length > 320000) return { ok: true }
     const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    smartTurnService.feed(float32)
     tencentAsr.feedAudio(float32)
     return { ok: true }
   })

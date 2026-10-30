@@ -5,7 +5,7 @@ import {
   type VoiceActivityDetector,
 } from '../../features/hearing/browserVad.ts'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
-import { decideTurnEnd, turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
+import { turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
 import {
   startParaformerStream,
   type ParaformerStreamSession,
@@ -35,6 +35,12 @@ import {
 } from './constants.ts'
 import type { BackchannelSession } from './backchannelRuntime.ts'
 import { createAdaptiveRmsGate } from './support.ts'
+import { createTurnEndController } from './turnEndController.ts'
+import {
+  createDesktopTurnEndProbe,
+  startDesktopTurnEndSession,
+  stopDesktopTurnEndSession,
+} from './smartTurnProbe.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
@@ -166,6 +172,7 @@ export async function startParaformerConversation(
         if (!speechDetected) {
           finalizing = true
           params.backchannel?.stop()
+          stopDesktopTurnEndSession()
           params.clearParaformerConversationState()
           session.abort()
           params.paraformerSessionRef.current = null
@@ -184,6 +191,7 @@ export async function startParaformerConversation(
 
       finalizing = true
       params.backchannel?.stop()
+      stopDesktopTurnEndSession()
       params.clearParaformerConversationState()
 
       try {
@@ -226,32 +234,33 @@ export async function startParaformerConversation(
       params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_detected'))
     }
 
-    const evaluatePause = (now: number) => {
-      if (finalizing || !session || params.paraformerSessionRef.current !== session) return
-      if (!speechDetected || speechStartedAt === null) return
-
-      const silenceMs = Math.max(0, now - lastSpeechAt)
-      const decision = decideTurnEnd({
+    const turnEnd = createTurnEndController({
+      probe: createDesktopTurnEndProbe(),
+      getContext: () => ({
         partialTranscript: latestPartial,
-        silenceMs,
         locale: params.currentSettings.speechRecognitionLang,
         presetSilenceMs: baseSilenceMs,
-      })
-
-      if (decision.action === 'end') {
+        speechStartedAt,
+        lastSpeechAt,
+        finalizing: finalizing || !session || params.paraformerSessionRef.current !== session,
+      }),
+      onEnd: () => {
         void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_silence_finalize'))
-        return
-      }
-
-      params.backchannel?.maybeFire({
-        partialTranscript: latestPartial,
-        silenceMs,
-        spokenMs: Math.max(0, lastSpeechAt - speechStartedAt),
-        turnEndAction: decision.action,
-      })
-    }
+      },
+      onWait: (tick) => {
+        params.backchannel?.maybeFire({
+          partialTranscript: latestPartial,
+          silenceMs: tick.silenceMs,
+          spokenMs: tick.spokenMs,
+          turnEndAction: tick.decision.action,
+          modelProbability: tick.modelProbability,
+          modelPending: tick.modelPending,
+        })
+      },
+    })
 
     params.beginVoiceListeningSession('local_paraformer')
+    startDesktopTurnEndSession()
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
@@ -330,13 +339,14 @@ export async function startParaformerConversation(
           markSpeechDetected(now)
           return
         }
-        evaluatePause(now)
+        turnEnd.tick()
       },
       onError: (message) => {
         if (finalizing) return
 
         finalizing = true
         params.backchannel?.stop()
+        stopDesktopTurnEndSession()
         params.clearParaformerConversationState()
         params.paraformerSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -357,6 +367,7 @@ export async function startParaformerConversation(
       if (!speechDetected) {
         finalizing = true
         params.backchannel?.stop()
+        stopDesktopTurnEndSession()
         params.clearParaformerConversationState()
         session.abort()
         params.paraformerSessionRef.current = null
@@ -368,6 +379,7 @@ export async function startParaformerConversation(
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
     params.backchannel?.stop()
+    stopDesktopTurnEndSession()
     params.clearParaformerConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

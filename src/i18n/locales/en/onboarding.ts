@@ -16,6 +16,8 @@ export const enOnboarding = {
   'model_setup.model.sensevoice.purpose': 'Understands what you say in Chinese, English, Japanese, Korean, or Cantonese. Runs on your computer.',
   'model_setup.model.paraformer-zh-en.name': 'Paraformer, words as you speak',
   'model_setup.model.paraformer-zh-en.purpose': 'Shows your words while you talk, Chinese and English only. Not needed if you use SenseVoice.',
+  'model_setup.model.smart-turn-v3.name': 'Smart turn-taking',
+  'model_setup.model.smart-turn-v3.purpose': 'Listens to how your sentence ends so I can reply right after you finish, even without captions.',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS voice (Chinese + English)',
   'model_setup.model.tts-melo-zh-en.purpose': 'Lets me answer you out loud in Chinese or English. Runs on your computer, free, works offline. Pick it under How she speaks to use it.',
   'model_setup.dismiss': 'Maybe later',

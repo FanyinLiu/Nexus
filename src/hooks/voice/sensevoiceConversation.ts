@@ -1,6 +1,5 @@
 import type { MutableRefObject } from 'react'
 import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
-import { decideTurnEnd } from '../../features/hearing/turnEnd.ts'
 import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import {
   startSenseVoiceStream,
@@ -32,6 +31,12 @@ import {
 } from './constants.ts'
 import { createAdaptiveRmsGate } from './support.ts'
 import type { BackchannelSession } from './backchannelRuntime.ts'
+import { createTurnEndController } from './turnEndController.ts'
+import {
+  createDesktopTurnEndProbe,
+  startDesktopTurnEndSession,
+  stopDesktopTurnEndSession,
+} from './smartTurnProbe.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
 type ShowPetStatus = (
@@ -163,6 +168,7 @@ export async function startSenseVoiceConversation(
         if (!speechDetected) {
           finalizing = true
           params.backchannel?.stop()
+          stopDesktopTurnEndSession()
           params.clearSenseVoiceConversationState()
           session.abort()
           params.sensevoiceSessionRef.current = null
@@ -181,6 +187,7 @@ export async function startSenseVoiceConversation(
 
       finalizing = true
       params.backchannel?.stop()
+      stopDesktopTurnEndSession()
       params.clearSenseVoiceConversationState()
 
       try {
@@ -223,7 +230,33 @@ export async function startSenseVoiceConversation(
       }
     }
 
+    const turnEnd = createTurnEndController({
+      probe: createDesktopTurnEndProbe(),
+      getContext: () => ({
+        partialTranscript: '',
+        locale: params.currentSettings.speechRecognitionLang,
+        presetSilenceMs: SHERPA_STREAM_SILENCE_FINISH_MS,
+        speechStartedAt,
+        lastSpeechAt,
+        finalizing,
+      }),
+      onEnd: () => {
+        void finalizeSenseVoiceTranscript(params.ti('voice.pipeline.sensevoice_silence_finalize'))
+      },
+      onWait: (tick) => {
+        params.backchannel?.maybeFire({
+          partialTranscript: '',
+          silenceMs: tick.silenceMs,
+          spokenMs: tick.spokenMs,
+          turnEndAction: tick.decision.action,
+          modelProbability: tick.modelProbability,
+          modelPending: tick.modelPending,
+        })
+      },
+    })
+
     params.beginVoiceListeningSession('local_sensevoice')
+    startDesktopTurnEndSession()
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
@@ -270,34 +303,18 @@ export async function startSenseVoiceConversation(
 
         if (!speechDetected || speechStartedAt === null) return
 
-        const silenceMs = Math.max(0, now - lastSpeechAt)
-        // SenseVoice is offline and has no streaming partial to inspect, so
-        // T7's complete/trailing text rules cannot apply here. Silence keeps
-        // its existing window; only the backchannel may use the pause.
-        const decision = decideTurnEnd({
-          partialTranscript: '',
-          silenceMs,
-          locale: params.currentSettings.speechRecognitionLang,
-          presetSilenceMs: SHERPA_STREAM_SILENCE_FINISH_MS,
-        })
-
-        if (decision.action === 'end') {
-          void finalizeSenseVoiceTranscript(params.ti('voice.pipeline.sensevoice_silence_finalize'))
-          return
-        }
-
-        params.backchannel?.maybeFire({
-          partialTranscript: '',
-          silenceMs,
-          spokenMs: Math.max(0, lastSpeechAt - speechStartedAt),
-          turnEndAction: decision.action,
-        })
+        // SenseVoice is offline and has no streaming partial, so the audio
+        // model is the only signal beyond silence. It probes the turn buffer
+        // at ~250 ms and re-checks every ~300 ms; if it is missing or too
+        // slow the controller falls back to the preset silence window.
+        turnEnd.tick()
       },
       onError: (message) => {
         if (finalizing) return
 
         finalizing = true
         params.backchannel?.stop()
+        stopDesktopTurnEndSession()
         params.clearSenseVoiceConversationState()
         params.sensevoiceSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -325,6 +342,7 @@ export async function startSenseVoiceConversation(
       if (!speechDetected) {
         finalizing = true
         params.backchannel?.stop()
+        stopDesktopTurnEndSession()
         params.clearSenseVoiceConversationState()
         session.abort()
         params.sensevoiceSessionRef.current = null
@@ -336,6 +354,7 @@ export async function startSenseVoiceConversation(
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
     params.backchannel?.stop()
+    stopDesktopTurnEndSession()
     params.clearSenseVoiceConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

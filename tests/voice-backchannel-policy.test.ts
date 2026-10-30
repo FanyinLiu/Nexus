@@ -38,6 +38,7 @@ function input(overrides: Partial<BackchannelInput> = {}): BackchannelInput {
     backchannelsInLast10s: 0,
     partialTranscript: '我今天想跟你说一件事',
     locale: 'zh-CN',
+    modelProbability: null,
     ...overrides,
   }
 }
@@ -142,6 +143,27 @@ test('token choice follows question, agreement, and narrative partials per local
       `${language} empty`,
     )
   }
+})
+
+test('the audio model gates the backchannel for providers without partials', () => {
+  // SenseVoice has no partial text: p < 0.5 is the only "still talking" cue.
+  const unfinished = decideBackchannel(input({ partialTranscript: '', modelProbability: 0.2 }))
+  assert.equal(unfinished.fire, true)
+
+  const finished = decideBackchannel(input({ partialTranscript: '', modelProbability: 0.9 }))
+  assert.deepEqual(finished, { fire: false, reason: 'turn-ended' })
+
+  // A model that is still loading (null) must not suppress the old behavior.
+  const unavailable = decideBackchannel(input({ partialTranscript: '', modelProbability: null }))
+  assert.equal(unavailable.fire, true)
+
+  // ...but an in-flight probe suppresses the acknowledgement until p is known.
+  const pending = decideBackchannel(input({
+    partialTranscript: '',
+    modelProbability: null,
+    modelPending: true,
+  }))
+  assert.deepEqual(pending, { fire: false, reason: 'model-pending' })
 })
 
 test('locale tags normalize to the five maintained token sets', () => {

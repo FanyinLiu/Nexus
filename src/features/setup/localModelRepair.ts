@@ -89,6 +89,7 @@ const LOCAL_MODEL_NAME_KEYS: Record<string, TranslationKey> = {
   'kws-zh': 'model_setup.model.kws-zh.name',
   sensevoice: 'model_setup.model.sensevoice.name',
   'paraformer-zh-en': 'model_setup.model.paraformer-zh-en.name',
+  'smart-turn-v3': 'model_setup.model.smart-turn-v3.name',
   'tts-melo-zh-en': 'model_setup.model.tts-melo-zh-en.name',
 }
 
@@ -98,6 +99,7 @@ const LOCAL_MODEL_PURPOSE_KEYS: Record<string, TranslationKey> = {
   'kws-zh': 'model_setup.model.kws-zh.purpose',
   sensevoice: 'model_setup.model.sensevoice.purpose',
   'paraformer-zh-en': 'model_setup.model.paraformer-zh-en.purpose',
+  'smart-turn-v3': 'model_setup.model.smart-turn-v3.purpose',
   'tts-melo-zh-en': 'model_setup.model.tts-melo-zh-en.purpose',
 }
 

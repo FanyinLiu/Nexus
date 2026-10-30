@@ -42,6 +42,8 @@ const LOCAL_MODEL_KEYS = [
   'model_setup.model.sensevoice.purpose',
   'model_setup.model.paraformer-zh-en.name',
   'model_setup.model.paraformer-zh-en.purpose',
+  'model_setup.model.smart-turn-v3.name',
+  'model_setup.model.smart-turn-v3.purpose',
   'model_setup.model.tts-melo-zh-en.name',
   'model_setup.model.tts-melo-zh-en.purpose',
 ] as const satisfies readonly TranslationKey[]

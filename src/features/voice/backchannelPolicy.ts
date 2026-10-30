@@ -11,7 +11,10 @@ import {
   mayOpenInterruptMic,
   type InterruptMicPolicyInput,
 } from './autoRestartPolicy.ts'
-import type { TurnEndAction } from '../hearing/turnEnd.ts'
+import {
+  TURN_END_MODEL_COMPLETE_PROBABILITY,
+  type TurnEndAction,
+} from '../hearing/turnEnd.ts'
 
 export type BackchannelLanguage = 'zh-CN' | 'zh-TW' | 'en' | 'ja' | 'ko'
 
@@ -27,6 +30,7 @@ export type BackchannelSkipReason =
   | 'disabled'
   | 'mic-not-voice'
   | 'too-short-speech'
+  | 'model-pending'
   | 'not-a-pause'
   | 'turn-ended'
   | 'rate-limited'
@@ -52,6 +56,18 @@ export type BackchannelInput = {
   pauseMs: number
   /** T7's decision for this pause; a finished turn never gets a backchannel. */
   turnEndAction: TurnEndAction
+  /**
+   * Smart Turn p(complete) for the buffered audio, or null when the model is
+   * unavailable/too slow. A confident complete suppresses the backchannel even
+   * before the 300 ms silence threshold is reached.
+   */
+  modelProbability?: number | null
+  /**
+   * True when the model is still warming up / a probe is in flight. Suppress
+   * the acknowledgement until p(complete) is known; `false` with a null
+   * probability means the model is unavailable and the old pacing applies.
+   */
+  modelPending?: boolean
   /** Milliseconds since the previous backchannel, or null if none yet. */
   msSinceLastBackchannel: number | null
   /** Number of backchannels already played in the rolling ten-second window. */
@@ -159,7 +175,21 @@ export function decideBackchannel(input: BackchannelInput): BackchannelDecision 
   ) {
     return { fire: false, reason: 'not-a-pause' }
   }
+  if (input.modelPending === true && typeof input.modelProbability !== 'number') {
+    // The first probe usually lands well inside this pause window; an "mm-hm"
+    // before p(complete) is known would step on a turn that is already over.
+    return { fire: false, reason: 'model-pending' }
+  }
   if (input.turnEndAction === 'end') return { fire: false, reason: 'turn-ended' }
+  if (
+    typeof input.modelProbability === 'number'
+    && Number.isFinite(input.modelProbability)
+    && input.modelProbability >= TURN_END_MODEL_COMPLETE_PROBABILITY
+  ) {
+    // The audio already sounds finished; an "mm-hm" here would step on the
+    // user's last syllable and delay the real reply.
+    return { fire: false, reason: 'turn-ended' }
+  }
   if (
     input.msSinceLastBackchannel !== null
     && input.msSinceLastBackchannel < BACKCHANNEL_MIN_GAP_MS
