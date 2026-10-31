@@ -4,7 +4,12 @@ import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttemp
 import {
   startSenseVoiceStream,
   type SenseVoiceStreamSession,
+  type SenseVoiceTranscript,
 } from '../../features/hearing/localSenseVoice.ts'
+import {
+  createSpeculativeDecoder,
+  shouldStartSpeculativeDecode,
+} from '../../features/hearing/speculativeDecode.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import type {
   VoiceSessionEvent,
@@ -152,6 +157,10 @@ export async function startSenseVoiceConversation(
     let finalizing = false
     let speechStartedAt: number | null = null
     let lastSpeechAt = performance.now()
+    // Bumped on every speech frame. A speculative decode is only reusable for
+    // the epoch it started in; resumed speech makes its result stale.
+    let speechEpoch = 0
+    const speculative = createSpeculativeDecoder<SenseVoiceTranscript>()
     const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
 
     const armNoSpeechTimer = () => {
@@ -198,7 +207,12 @@ export async function startSenseVoiceConversation(
         params.setMood('thinking')
         params.updateVoicePipeline('transcribing', detail)
 
-        const stopResult = await session.stop()
+        // Reuse a decode started during the confident pause; only fall back to
+        // a fresh finish() decode when speech resumed or the decode failed.
+        const speculativeTranscript = await speculative.settle(speechEpoch)
+        const stopResult = await session.stop(
+          speculativeTranscript ? { reuseTranscript: speculativeTranscript } : undefined,
+        )
         params.sensevoiceSessionRef.current = null
         const transcript = normalizeRecognizedVoiceTranscript(stopResult.text)
 
@@ -252,6 +266,29 @@ export async function startSenseVoiceConversation(
           modelProbability: tick.modelProbability,
           modelPending: tick.modelPending,
         })
+        if (
+          session
+          && !finalizing
+          && shouldStartSpeculativeDecode({
+            probability: tick.modelProbability,
+            silenceMs: tick.silenceMs,
+          })
+        ) {
+          const currentSession = session
+          speculative.maybeStart(speechEpoch, async () => {
+            const audio = currentSession.snapshotAudio()
+            if (!audio) return null
+            try {
+              const result = await currentSession.transcribeSamples(
+                audio.samples,
+                audio.sampleRate,
+              )
+              return result.text ? result : null
+            } catch {
+              return null
+            }
+          })
+        }
       },
     })
 
@@ -289,6 +326,8 @@ export async function startSenseVoiceConversation(
         if (activityGate.isSpeech(rms)) {
           lastSpeechAt = now
           if (speechStartedAt === null) speechStartedAt = now
+          speechEpoch += 1
+          speculative.invalidate(speechEpoch)
 
           if (!speechDetected) {
             speechDetected = true
