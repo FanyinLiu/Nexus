@@ -256,6 +256,17 @@ export function renderDesktopPetBridgeTypes(surface) {
   return lines.join('\n')
 }
 
+/**
+ * Normalize CRLF line endings so a Windows checkout (core.autocrlf=true) is
+ * still comparable with the LF generator output.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function normalizeGeneratedTypesLineEndings(text) {
+  return text.replace(/\r\n/g, '\n')
+}
+
 function generateFromPreload() {
   const source = readFileSync(PRELOAD_PATH, 'utf8')
   return renderDesktopPetBridgeTypes(extractDesktopPetBridgeSurface(source))
@@ -265,7 +276,9 @@ function main() {
   const expected = generateFromPreload()
 
   if (process.argv.includes(CHECK_FLAG)) {
-    const actual = existsSync(GENERATED_PATH) ? readFileSync(GENERATED_PATH, 'utf8') : ''
+    const actual = existsSync(GENERATED_PATH)
+      ? normalizeGeneratedTypesLineEndings(readFileSync(GENERATED_PATH, 'utf8'))
+      : ''
     if (actual !== expected) {
       console.error(STALE_MESSAGE)
       process.exit(1)

@@ -5,6 +5,7 @@ import path from 'node:path'
 import vm from 'node:vm'
 import {
   extractDesktopPetBridgeSurface,
+  normalizeGeneratedTypesLineEndings,
   renderDesktopPetBridgeTypes,
 } from '../scripts/generate-ipc-types.mjs'
 
@@ -52,8 +53,15 @@ function loadPanelDesktopPetKeys() {
 
 test('generated bridge types are not stale with respect to electron/preload.js', () => {
   const expected = renderDesktopPetBridgeTypes(extractDesktopPetBridgeSurface(readPreloadSource()))
-  const actual = fs.readFileSync(GENERATED_PATH, 'utf8')
+  const actual = normalizeGeneratedTypesLineEndings(fs.readFileSync(GENERATED_PATH, 'utf8'))
   assert.equal(actual, expected)
+})
+
+test('check comparison accepts CRLF output but still detects content drift', () => {
+  const expected = renderDesktopPetBridgeTypes(extractDesktopPetBridgeSurface(readPreloadSource()))
+
+  assert.equal(normalizeGeneratedTypesLineEndings(expected.replaceAll('\n', '\r\n')), expected)
+  assert.notEqual(normalizeGeneratedTypesLineEndings(`${expected}// drifted\n`), expected)
 })
 
 test('extracted bridge keys match the panel preload surface', () => {
