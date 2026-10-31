@@ -18,6 +18,9 @@ import {
   type StreamingSpeechOutputRuntime,
 } from './streamingSpeechOutput.ts'
 import type { StreamingSpeechOutputController } from './types.ts'
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.tts')
 
 export type StreamingSpeechFallbackOptions = {
   primarySettings: AppSettings
@@ -86,7 +89,7 @@ export function createStreamingSpeechOutputWithFallback(
         onError: settleError,
       },
     )
-    void fallbackController.waitForCompletion().catch(() => undefined)
+    void fallbackController.waitForCompletion().catch(() => { log.debug('fallback speech completion failed', { errorPresent: true }) })
     if (accumulatedText) {
       fallbackController.pushDelta(accumulatedText)
     }
@@ -115,7 +118,7 @@ export function createStreamingSpeechOutputWithFallback(
   )
   // The wrapper owns completion; the inner promise only needs its rejection
   // observed so a failed primary never becomes an unhandled rejection.
-  void primaryController.waitForCompletion().catch(() => undefined)
+  void primaryController.waitForCompletion().catch(() => { log.debug('primary speech completion failed', { errorPresent: true }) })
 
   return {
     pushDelta(delta, cue?: VoiceEmotionCue | null) {

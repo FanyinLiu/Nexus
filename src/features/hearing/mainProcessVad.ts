@@ -13,7 +13,10 @@
 
 import { t } from '../../i18n/runtime.ts'
 import type { VadSensitivity } from '../../types'
+import { createLogger } from '../../lib/logger.ts'
 import { turnEndMaxSilenceMs } from './turnEnd.ts'
+
+const log = createLogger('voice.vad')
 
 type VoiceActivityCallbacks = {
   onSpeechStart?: () => void
@@ -161,13 +164,13 @@ export async function createMainProcessVadController(
       // Clone the buffer — ipcRenderer.invoke structurally clones, but we
       // don't want downstream code mutating our copy while IPC is pending.
       const copy = new Float32Array(samples)
-      feedChain = feedChain.then(() => sendChunk(copy)).catch(() => undefined)
+      feedChain = feedChain.then(() => sendChunk(copy)).catch(() => { log.debug('main-process VAD feed failed', { errorPresent: true }) })
     },
     async flush() {
       if (destroyed) return false
       // Let any in-flight vad:feed land first so the buffer is complete,
       // then force the main-process VAD to emit its current segment.
-      await feedChain.catch(() => undefined)
+      await feedChain.catch(() => undefined) // silent-catch-ok: pending feed failures are logged at the frame handler
       if (destroyed) return false
       try {
         const result = await api!.vadFlush()
@@ -187,7 +190,7 @@ export async function createMainProcessVadController(
     async destroy() {
       if (destroyed) return
       destroyed = true
-      await feedChain.catch(() => undefined)
+      await feedChain.catch(() => undefined) // silent-catch-ok: pending feed failures are logged at the frame handler
       try {
         await api.vadStop()
       } catch (error) {

@@ -33,7 +33,7 @@ function runWorkerBenchmark(signal, modelDir) {
       if (settled) return
       settled = true
       signal.removeEventListener('abort', onAbort)
-      worker.terminate().catch(() => {})
+      worker.terminate().catch(() => {}) // silent-catch-ok: benchmark worker teardown is best-effort after settling
       resolve(result)
     }
     const onAbort = () => finish({ status: 'timeout' })

@@ -20,7 +20,7 @@ function releaseSpeechOutputResult(result) {
     try {
       result.pcmStream.destroy()
     } catch {
-      // ignore cleanup failures — proof classification already has bytes or not
+      // silent-catch-ok: stream teardown is best-effort; proof classification has already captured its bytes
     }
   }
 }

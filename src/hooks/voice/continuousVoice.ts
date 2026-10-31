@@ -10,6 +10,7 @@ import {
 } from '../../features/voice/autoRestartPolicy.ts'
 import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
 import type {
   AppSettings,
@@ -21,6 +22,8 @@ import type {
 } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.capture')
 import {
   SPEECH_INTERRUPT_ANALYSER_FFT_SIZE,
   SPEECH_INTERRUPT_GRACE_MS,
@@ -114,7 +117,7 @@ function destroySpeechInterruptMonitor(
   // Frame-driver path: drop the wakeword subscription so the monitor
   // stops receiving samples. No mic / audioContext to tear down.
   if (session.unsubscribeFrames) {
-    try { session.unsubscribeFrames() } catch { /* no-op */ }
+    try { session.unsubscribeFrames() } catch { /* silent-catch-ok: a frame subscription may already be detached during teardown */ }
     session.unsubscribeFrames = null
     return
   }
@@ -123,18 +126,20 @@ function destroySpeechInterruptMonitor(
   try {
     session.source?.disconnect()
   } catch {
-    // no-op
+    // Audio graph teardown is best-effort once the session is stopping.
+    log.debug('interrupt monitor source disconnect failed', { errorPresent: true })
   }
 
   try {
     session.analyser?.disconnect()
   } catch {
-    // no-op
+    // Audio graph teardown is best-effort once the session is stopping.
+    log.debug('interrupt monitor analyser disconnect failed', { errorPresent: true })
   }
 
   session.stream?.getTracks().forEach((track) => track.stop())
   if (session.audioContext) {
-    void session.audioContext.close().catch(() => undefined)
+    void session.audioContext.close().catch(() => { log.debug('interrupt monitor audio context close failed', { errorPresent: true }) })
   }
 }
 
@@ -319,7 +324,7 @@ export async function startSpeechInterruptMonitor(
       audioContext = new AudioContext()
 
       if (audioContext.state === 'suspended') {
-        await audioContext.resume().catch(() => undefined)
+        await audioContext.resume().catch(() => { log.debug('interrupt monitor audio context resume failed', { errorPresent: true }) })
       }
 
       if (
@@ -327,7 +332,7 @@ export async function startSpeechInterruptMonitor(
         || options.voiceStateRef.current !== 'speaking'
       ) {
         stream.getTracks().forEach((track) => track.stop())
-        void audioContext.close().catch(() => undefined)
+        void audioContext.close().catch(() => { log.debug('interrupt monitor audio context close failed', { errorPresent: true }) })
         return
       }
 
@@ -356,7 +361,7 @@ export async function startSpeechInterruptMonitor(
       options.speechInterruptMonitorRef.current = session
     } catch (error) {
       stream?.getTracks().forEach((track) => track.stop())
-      void audioContext?.close().catch(() => undefined)
+      void audioContext?.close().catch(() => { log.debug('interrupt monitor audio context close failed after setup error', { errorPresent: true }) })
       console.warn('[Voice] speech interruption monitor unavailable', error)
       return
     }

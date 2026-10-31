@@ -7,6 +7,9 @@
  */
 
 import type { SmartTurnProbeResult } from './turnEndController.ts'
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.turn-end')
 
 /** A session id, or the start promise still resolving it. */
 export type TurnEndSessionRef = number | Promise<number | null> | null | undefined
@@ -16,6 +19,7 @@ async function resolveSessionId(session: TurnEndSessionRef): Promise<number | nu
     const value = await session
     return typeof value === 'number' ? value : null
   } catch {
+    log.debug('turn-end session id resolution failed', { errorPresent: true })
     return null
   }
 }
@@ -29,7 +33,10 @@ export function startDesktopTurnEndSession(): Promise<number | null> {
   if (!api?.turnEndStart) return Promise.resolve(null)
   return api.turnEndStart()
     .then((result) => (typeof result?.sessionId === 'number' ? result.sessionId : null))
-    .catch(() => null)
+    .catch(() => {
+      log.debug('turn-end session start failed', { errorPresent: true })
+      return null
+    })
 }
 
 /** Drop the buffered audio as soon as the turn is over; stale ids are ignored. */
@@ -39,7 +46,7 @@ export function stopDesktopTurnEndSession(session?: TurnEndSessionRef) {
   if (session === null) return
   void resolveSessionId(session).then((sessionId) => {
     const payload = sessionId === null ? undefined : { sessionId }
-    void api.turnEndStop!(payload).catch(() => undefined)
+    void api.turnEndStop!(payload).catch(() => { log.debug('turn-end session stop failed', { errorPresent: true }) })
   })
 }
 

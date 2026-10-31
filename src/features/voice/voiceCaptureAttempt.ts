@@ -10,6 +10,10 @@
  * try again.
  */
 
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.capture')
+
 export type VoiceCaptureOutcome = 'open' | 'cancelled' | 'released' | 'denied'
 
 type VoiceCapturePhase = 'idle' | 'pending' | 'open' | 'cancelled'
@@ -170,6 +174,7 @@ function notifyVoiceCaptureOpened() {
       listener()
     } catch {
       // A surface listener must not break the capture that just succeeded.
+      log.warn('voice capture opened listener failed', { errorPresent: true })
     }
   }
 }

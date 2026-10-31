@@ -12,6 +12,7 @@
  */
 
 import { createId } from '../../lib/storage.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { AppSettings, SegmentVoiceStyle, TtsStreamEvent } from '../../types/index.ts'
 import type { InterruptMicPolicyInput } from '../../features/voice/autoRestartPolicy.ts'
 import {
@@ -21,6 +22,8 @@ import {
 } from '../../features/voice/backchannelPolicy.ts'
 import type { TurnEndAction } from '../../features/hearing/turnEnd.ts'
 import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.ts'
+
+const log = createLogger('voice.backchannel')
 
 export type BackchannelClip = {
   samples: Float32Array
@@ -142,7 +145,7 @@ async function synthesizeBackchannelClip(
   const abortRequest = () => {
     if (aborted) return
     aborted = true
-    void api.ttsStreamAbort?.({ requestId })?.catch(() => undefined)
+    void api.ttsStreamAbort?.({ requestId })?.catch(() => { log.debug('backchannel stream abort failed', { errorPresent: true }) })
   }
 
   const unsubscribe = api.subscribeTtsStream((event: TtsStreamEvent) => {
@@ -343,6 +346,7 @@ export function createBackchannelSession(deps: BackchannelSessionDeps): Backchan
       }
     } catch {
       // Best-effort acknowledgement; a failed clip must never disturb the turn.
+      log.debug('backchannel acknowledgement failed', { errorPresent: true })
     }
   }
 

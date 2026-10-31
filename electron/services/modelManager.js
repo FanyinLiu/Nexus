@@ -44,13 +44,19 @@ function broadcast(channel, payload) {
   for (const win of windows) {
     try {
       if (!win.isDestroyed()) win.webContents.send(channel, payload)
-    } catch {}
+    } catch {
+      // silent-catch-ok: a window can be destroyed between the check and the send
+    }
   }
 }
 
 function ensureUserModelsRoot() {
   const root = getUserModelsRoot()
-  try { fs.mkdirSync(root, { recursive: true }) } catch {}
+  try {
+    fs.mkdirSync(root, { recursive: true })
+  } catch (error) {
+    console.warn('[ModelManager] failed to create models directory:', getRedactedErrorMessage(error))
+  }
   return root
 }
 
@@ -208,10 +214,14 @@ export async function getNetworkProbe() {
 
 /** Ensure the models dir exists at app startup so UI can inspect it. */
 export function initModelManager() {
-  try { ensureUserModelsRoot() } catch {}
+  try {
+    ensureUserModelsRoot()
+  } catch (error) {
+    console.warn('[ModelManager] failed to initialize models directory:', getRedactedErrorMessage(error))
+  }
   // Prime the HF probe in the background — the first inventory call will
   // then return quickly without stalling the wizard on a 5s timeout.
-  canReachHuggingFace().catch(() => {})
+  canReachHuggingFace().catch(() => {}) // silent-catch-ok: background network probe; failure is the fallback signal
   // Upgrade copies are best-effort and must not delay the first window.
   // A failed copy leaves the legacy bundled files in place.
   const userRoot = getUserModelsRoot()

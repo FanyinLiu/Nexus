@@ -6,6 +6,7 @@ import {
 } from '../../lib/audioProviders.ts'
 import { resolveMissingSenseVoiceSpeechInput } from '../../features/voice/senseVoiceInstall.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { createLogger } from '../../lib/logger.ts'
 import {
   pendingVoiceCaptureAttempt,
   releaseVoiceCaptureWithoutMicrophone,
@@ -49,6 +50,7 @@ async function modelSetupReminderReplacesMissingModelError(
     const outcome = await modelSetupOutcome
     return outcome?.remind === true
   } catch {
+    log.debug('model setup reminder outcome unavailable', { errorPresent: true })
     return false
   }
 }
@@ -77,6 +79,8 @@ type ShowPetStatus = (
 ) => void
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.runtime')
 
 export type StartVoiceConversationEntrypointOptions = {
   options?: VoiceConversationOptions

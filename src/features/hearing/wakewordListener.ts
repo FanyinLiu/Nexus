@@ -9,8 +9,11 @@
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
 import { getPrimaryWakeWord } from './core.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
+import { createLogger } from '../../lib/logger.ts'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.wakeword')
 
 const KWS_SAMPLE_RATE = 16000
 const KWS_BUFFER_SIZE = 2048
@@ -152,19 +155,19 @@ export async function startWakewordListener(
     callbacks.onStatusChange?.(true)
 
     audioContext = new AudioContextCtor({ sampleRate: KWS_SAMPLE_RATE })
-    await audioContext.resume().catch(() => undefined)
+    await audioContext.resume().catch(() => { log.debug('audio context resume failed', { errorPresent: true }) })
 
     // Auto-resume if Chromium suspends the context (background tab
     // throttling, system audio service restart, power-save mode, etc.).
     audioContext.onstatechange = () => {
       if (audioContext?.state === 'suspended' && !destroyed) {
-        void audioContext.resume().catch(() => undefined)
+        void audioContext.resume().catch(() => { log.debug('audio context auto-resume failed', { errorPresent: true }) })
       }
     }
 
     if (destroyed) {
       stream.getTracks().forEach((t) => t.stop())
-      void audioContext.close().catch(() => undefined)
+      void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
       throw new Error('Wakeword listener was destroyed during audio context setup.')
     }
 
@@ -191,15 +194,15 @@ export async function startWakewordListener(
     destroyed = true
     if (processor) {
       processor.onaudioprocess = null
-      try { processor.disconnect() } catch { /* no-op */ }
+      try { processor.disconnect() } catch { log.debug('processor disconnect failed', { errorPresent: true }) }
       processor = null
     }
     if (source) {
-      try { source.disconnect() } catch { /* no-op */ }
+      try { source.disconnect() } catch { log.debug('source disconnect failed', { errorPresent: true }) }
       source = null
     }
     if (output) {
-      try { output.disconnect() } catch { /* no-op */ }
+      try { output.disconnect() } catch { log.debug('output disconnect failed', { errorPresent: true }) }
       output = null
     }
     if (stream) {
@@ -207,12 +210,12 @@ export async function startWakewordListener(
       stream = null
     }
     if (audioContext) {
-      void audioContext.close().catch(() => undefined)
+      void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
       audioContext = null
     }
     if (kwsStarted) {
       kwsStarted = false
-      wakewordApi.kwsStop().catch(() => undefined)
+      wakewordApi.kwsStop().catch(() => { log.debug('wake word stop failed', { errorPresent: true }) })
       callbacks.onStatusChange?.(false)
     }
   }

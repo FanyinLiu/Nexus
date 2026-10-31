@@ -10,6 +10,10 @@
  * Pure: the caller owns audio snapshots, timers, and the recognizer.
  */
 
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.asr')
+
 /** Probability at or above which a pause is worth a speculative decode. */
 export const SPECULATIVE_DECODE_MIN_PROBABILITY = 0.7
 
@@ -71,7 +75,10 @@ export function createSpeculativeDecoder<T>(): SpeculativeDecoder<T> {
           }
           return value
         })
-        .catch(() => null)
+        .catch(() => {
+          log.debug('speculative decode failed', { errorPresent: true })
+          return null
+        })
         .finally(() => {
           if (run === generation) {
             pending = null
@@ -98,7 +105,7 @@ export function createSpeculativeDecoder<T>(): SpeculativeDecoder<T> {
 
     async settle(epoch) {
       if (pending && pendingEpoch === epoch) {
-        await pending.catch(() => null)
+        await pending.catch(() => null) // silent-catch-ok: a pending decode already normalizes failures to null
       }
       return result?.epoch === epoch ? result.value : null
     },

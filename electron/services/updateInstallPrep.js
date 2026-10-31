@@ -330,7 +330,7 @@ export async function writeUpdateSnapshot(input) {
     await rotateSnapshots(root, input.keep ?? UPDATE_SNAPSHOT_KEEP)
     return { directory, name: finalName }
   } catch (error) {
-    await fs.rm(partial, { recursive: true, force: true }).catch(() => {})
+    await fs.rm(partial, { recursive: true, force: true }).catch(() => {}) // silent-catch-ok: partial snapshot cleanup is best-effort before rethrowing
     if (error instanceof UpdateInstallPrepError) throw error
     throw new UpdateInstallPrepError(
       UPDATE_INSTALL_SNAPSHOT_FAILED,
@@ -388,7 +388,7 @@ export async function removeMemoryFromUpdateSnapshots(userDataPath, options = {}
       removed.push(path.relative(userDataPath, filePath))
     }
     // Fails with ENOTEMPTY when the snapshot kept other files; ignore that.
-    await fs.rmdir(memoryDir).catch(() => {})
+    await fs.rmdir(memoryDir).catch(() => {}) // silent-catch-ok: rmdir fails when the snapshot kept other files; that is expected
   }
   return { removed }
 }
@@ -412,7 +412,7 @@ async function collectMemoryV2Needles(memoryDir, needles) {
     try {
       collectMemoryText(JSON.parse(raw), needles)
     } catch {
-      // A malformed memory file carries no trustworthy field boundaries.
+      // silent-catch-ok: a malformed memory file carries no trustworthy field boundaries
     }
   }
 }
@@ -480,7 +480,7 @@ async function scrubSnapshotDatabase(databasePath, needles) {
       try {
         collectMemoryText(JSON.parse(row.payloadJson), needles)
       } catch {
-        // Damaged payloads are deleted below but cannot seed the scrub list.
+        // silent-catch-ok: damaged payloads are deleted below but cannot seed the scrub list
       }
     }
 
@@ -490,13 +490,13 @@ async function scrubSnapshotDatabase(databasePath, needles) {
       db.prepare('DELETE FROM local_data_records WHERE domain_id IN (?, ?)').run(...MEMORY_DOMAIN_IDS)
       db.exec('COMMIT')
     } catch (error) {
-      try { db.exec('ROLLBACK') } catch {}
+      try { db.exec('ROLLBACK') } catch { /* silent-catch-ok: rollback is best-effort while the original error is rethrown */ }
       throw error
     }
 
-    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);') } catch {}
-    try { db.exec('VACUUM;') } catch {}
-    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);') } catch {}
+    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);') } catch { /* silent-catch-ok: checkpoint is best-effort; the database is closed below */ }
+    try { db.exec('VACUUM;') } catch { /* silent-catch-ok: vacuum is best-effort after memory rows are deleted */ }
+    try { db.exec('PRAGMA wal_checkpoint(TRUNCATE);') } catch { /* silent-catch-ok: post-vacuum checkpoint is best-effort */ }
     // Checkpointed data lives in the main file; dropping WAL mode removes
     // both sidecars even when a stale copy still held old pages.
     db.exec('PRAGMA journal_mode = DELETE;')
@@ -507,7 +507,7 @@ async function scrubSnapshotDatabase(databasePath, needles) {
     if (db) db.close()
     if (rewritten) {
       for (const suffix of ['-wal', '-shm']) {
-        await fs.rm(`${databasePath}${suffix}`, { force: true }).catch(() => {})
+        await fs.rm(`${databasePath}${suffix}`, { force: true }).catch(() => {}) // silent-catch-ok: WAL sidecar removal is best-effort after dropping WAL mode
       }
     }
   }
@@ -559,6 +559,7 @@ async function fileExists(filePath) {
     await fs.access(filePath)
     return true
   } catch {
+    // silent-catch-ok: access probe uses failure as the regular not-present signal
     return false
   }
 }

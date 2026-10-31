@@ -5,7 +5,10 @@ import {
   requestVoiceInputStream,
 } from '../../features/voice/runtimeSupport.ts'
 import { createAdaptiveRmsGate } from './support.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { ApiRecordingSession } from './types.ts'
+
+const log = createLogger('voice.recording')
 
 type RecordingSessionSpeechEvent = {
   firstDetectedSpeech: boolean
@@ -42,7 +45,7 @@ export function cleanupApiRecordingSession(session: ApiRecordingSession) {
   }
 
   session.stream.getTracks().forEach((track) => track.stop())
-  void session.audioContext.close().catch(() => undefined)
+  void session.audioContext.close().catch(() => { log.debug('recording audio context close failed', { errorPresent: true }) })
 }
 
 export async function startRecordingSession(
@@ -64,7 +67,7 @@ export async function startRecordingSession(
   } catch (err) {
     for (const track of stream.getTracks()) track.stop()
     if (audioContext) {
-      void (audioContext as AudioContext).close().catch(() => undefined)
+      void (audioContext as AudioContext).close().catch(() => { log.debug('recording audio context close failed after setup error', { errorPresent: true }) })
     }
     throw err
   }

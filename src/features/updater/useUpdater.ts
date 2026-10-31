@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { captureDurableUpdateSnapshot } from '../../lib/storage/core.ts'
+import { createLogger } from '../../lib/logger.ts'
 import {
   applyUpdaterStatus,
   createInitialUpdaterState,
@@ -8,6 +9,8 @@ import {
   reduceUpdaterEvent,
   type UpdaterState,
 } from './state.ts'
+
+const log = createLogger('updater')
 
 export function useUpdater(): UpdaterState & {
   checkForUpdates: () => Promise<void>
@@ -34,6 +37,7 @@ export function useUpdater(): UpdaterState & {
         setState((prev) => applyUpdaterStatus(prev, status))
       } catch {
         // Updater unavailable in some environments — leave default state.
+        log.debug('updater status unavailable', { errorPresent: true })
       }
     })()
     return () => {
@@ -80,7 +84,7 @@ export function useUpdater(): UpdaterState & {
     try {
       captureDurableUpdateSnapshot()
     } catch {
-      // The main process reports the durable-flush error on the install path.
+      // silent-catch-ok: the main process reports the durable-flush error on the install path
     }
     if (!window.desktopPet?.updaterInstall) return
     await window.desktopPet.updaterInstall()

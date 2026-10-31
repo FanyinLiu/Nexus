@@ -20,6 +20,9 @@ import {
   type ModelSetupVoiceOutcome,
 } from '../features/setup/modelSetupRequests.ts'
 import type { WindowView } from '../types'
+import { createLogger } from './logger.ts'
+
+const log = createLogger('models.setup')
 
 // Serializes the async inventory check with later saves. A wake-word off that
 // lands while the check is in flight must win instead of letting the old save
@@ -31,6 +34,7 @@ async function hasMissingModels(): Promise<boolean> {
     const ready = (await window.desktopPet?.modelsGetInventory?.())?.ready
     return ready === false
   } catch {
+    log.debug('model inventory probe failed', { errorPresent: true })
     return false
   }
 }
@@ -109,7 +113,7 @@ export function cancelModelSetupAfterWakeword(): void {
   wakewordRequestGeneration += 1
   const request = window.desktopPet?.requestModelSetup
   if (!request) return
-  void request({ cancel: true }).catch(() => undefined)
+  void request({ cancel: true }).catch(() => { log.debug('model setup cancel failed', { errorPresent: true }) })
 }
 
 /**
@@ -124,7 +128,7 @@ export function declineModelSetup(): void {
   wakewordRequestGeneration += 1
   const decline = window.desktopPet?.declineModelSetup
   if (!decline) return
-  void decline().catch(() => undefined)
+  void decline().catch(() => { log.debug('model setup decline failed', { errorPresent: true }) })
 }
 
 /**

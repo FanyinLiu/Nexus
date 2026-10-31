@@ -1,4 +1,7 @@
 import { clamp } from '../../lib/common.ts'
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.lip-sync')
 
 export type SpeechLevelControllerOptions = {
   onLevelChange: (level: number) => void
@@ -91,12 +94,13 @@ export function createSpeechLevelController(
 
       cleanupAudio = () => {
         disposed = true
-        void audioContext.close().catch(() => undefined)
+        void audioContext.close().catch(() => { log.debug('lip sync audio context close failed', { errorPresent: true }) })
       }
 
-      void audioContext.resume().catch(() => undefined)
+      void audioContext.resume().catch(() => { log.debug('lip sync audio context resume failed', { errorPresent: true }) })
       animationFrameId = window.requestAnimationFrame(tick)
     } catch {
+      log.debug('lip sync analyser unavailable; falling back to text simulation', { errorPresent: true })
       simulateText(fallbackText, fallbackRate)
     }
   }

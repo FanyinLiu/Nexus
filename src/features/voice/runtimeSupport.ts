@@ -158,7 +158,7 @@ async function openMicrophone(
     })
   // The race observes this rejection. The extra handler keeps a cancel that
   // arrives after the prompt already failed from becoming unhandled.
-  if (cancelGuard) void cancelGuard.catch(() => undefined)
+  if (cancelGuard) void cancelGuard.catch(() => undefined) // silent-catch-ok: the race observes the rejection; this only prevents an unhandled late cancel
   try {
     const stream = await (cancelGuard ? Promise.race([pending, cancelGuard]) : pending)
     if (attemptId !== undefined && !voiceCaptureGrantIsUsable(attemptId, pageVisible())) {
@@ -169,7 +169,7 @@ async function openMicrophone(
   } catch (error) {
     // A grant that arrives after the window closed must not stay live, and
     // must not be turned into a second request when the window is shown.
-    void pending.then(stopMediaStream).catch(() => undefined)
+    void pending.then(stopMediaStream).catch(() => undefined) // silent-catch-ok: a late grant is stopped after cleanup; no user-visible action remains
     throw error
   }
 }

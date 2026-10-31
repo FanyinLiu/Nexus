@@ -14,6 +14,10 @@
 // hooks, the bus reducer, or background services. Storage is in-memory only
 // — a resume offer that survives a full app restart is not the goal.
 
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.resume')
+
 type VoiceResumeSnapshot = {
   originalText: string
   remainingText: string
@@ -113,6 +117,7 @@ class VoiceResumeStoreImpl {
         listener(this.pending ? cloneSnapshot(this.pending) : null)
       } catch {
         // listener errors must not break the store
+        log.warn('voice resume listener failed', { errorPresent: true })
       }
     }
   }

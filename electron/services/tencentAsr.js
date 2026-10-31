@@ -85,7 +85,7 @@ function buildSignedUrl(appId, secretId, secretKey, engineModelType, hotwordList
       const encoded = Buffer.from(hotwordList, 'utf-8').toString('base64')
       url += `&hotword_list=${encodeURIComponent(encoded)}`
     } catch {
-      // Skip hotwords if encoding fails
+      // silent-catch-ok: base64 encoding of a string cannot fail; skip hotwords if it ever does
     }
   }
 
@@ -210,7 +210,7 @@ export async function connect(credentials) {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       _state = 'disconnected'
-      try { ws.close() } catch {}
+      try { ws.close() } catch { /* silent-catch-ok: socket is already closing after a timeout */ }
       reject(new Error(SPEECH_IPC_ERROR_CODES.STT_TIMEOUT))
     }, CONNECTION_TIMEOUT_MS)
 
@@ -250,7 +250,7 @@ export async function connect(credentials) {
           reject(new Error(data.message || `腾讯云连接没成功（${data.code}）`))
           return
         } catch {
-          // Not JSON, ignore
+          // silent-catch-ok: non-JSON frames are expected on this stream and carry no result
         }
       }
 
@@ -328,7 +328,7 @@ export function abortStream() {
     resolve('')
   }
   if (_ws) {
-    try { _ws.close() } catch { /* already closed */ }
+    try { _ws.close() } catch { /* silent-catch-ok: socket was already closed by the peer */ }
     _ws = null
   }
   _state = 'disconnected'
@@ -341,7 +341,7 @@ export async function disconnect() {
     _ws = null
     await new Promise((resolve) => {
       ws.addEventListener('close', resolve, { once: true })
-      try { ws.close() } catch {}
+      try { ws.close() } catch { /* silent-catch-ok: socket is already closed while waiting for close */ }
       setTimeout(resolve, 2_000)
     })
   }

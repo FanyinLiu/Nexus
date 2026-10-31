@@ -157,13 +157,13 @@ function defaultTerminateChild(child, signal) {
       process.kill(-pid, signal)
       return
     } catch {
-      // Fall through to the direct child handle.
+      // silent-catch-ok: the process group may already be gone; fall through to the child handle
     }
   }
   try {
     child.kill?.(signal)
   } catch {
-    // A process that already exited needs no signal.
+    // silent-catch-ok: a process that already exited needs no signal
   }
 }
 
@@ -861,14 +861,14 @@ export function createVoiceSidecarSupervisor(deps) {
         try {
           terminateChild({ pid: externalPid }, 'SIGTERM')
         } catch {
-          // Quit path cannot recover; the OS reaps remaining children.
+          // silent-catch-ok: quit path cannot recover; the OS reaps remaining children
         }
       }
       if (child) {
         try {
           terminateChild(child, 'SIGTERM')
         } catch {
-          // Quit path cannot recover; the OS reaps remaining children.
+          // silent-catch-ok: quit path cannot recover; the OS reaps remaining children
         }
       }
     }

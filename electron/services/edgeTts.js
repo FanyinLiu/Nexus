@@ -127,7 +127,7 @@ export async function synthesizeEdgeTts(text, options = {}) {
     const connectTimeout = setTimeout(() => {
       if (!resolved) {
         resolved = true
-        try { ws?.close() } catch {}
+        try { ws?.close() } catch { /* silent-catch-ok: websocket is already closing; close() is best-effort cleanup */ }
         reject(new Error(SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT))
       }
     }, CONNECT_TIMEOUT_MS)
@@ -157,7 +157,7 @@ export async function synthesizeEdgeTts(text, options = {}) {
           streamEnded = true
           console.warn('[Edge-TTS] synthesis timeout — force-ending stream')
           pcmStream.push(null)
-          try { ws.close() } catch {}
+          try { ws.close() } catch { /* silent-catch-ok: websocket is already closing; close() is best-effort cleanup */ }
         }
       }, SYNTHESIS_TIMEOUT_MS)
 
@@ -175,7 +175,7 @@ export async function synthesizeEdgeTts(text, options = {}) {
             streamEnded = true
             pcmStream.push(null)
           }
-          try { ws.close() } catch {}
+          try { ws.close() } catch { /* silent-catch-ok: websocket is already closing; close() is best-effort cleanup */ }
         }
         return
       }
