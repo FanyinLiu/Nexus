@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Local-data store public API.
  * Implementation is split by domain:

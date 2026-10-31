@@ -1,3 +1,4 @@
+// @ts-check
 import {
   estimateModelContextWindowTokens,
   modelRejectsChatCompletionsTools,
@@ -18,15 +19,76 @@ import {
 } from './services/chatConnectionProof.js'
 import { normalizeBaseUrl } from './netHelpers.js'
 
+/** @typedef {{ function?: { name?: string, description?: string, parameters?: unknown }, name?: string, description?: string, parameters?: unknown }} ChatTool */
+/** @typedef {{ providerId?: string, baseUrl?: string, apiKey?: string, model?: string, messages?: unknown[], tools?: unknown[], temperature?: number, maxTokens?: number }} ChatRequestPayload */
+/** @typedef {{ id?: string, name?: string, model?: string, size?: number, modified_at?: string, details?: { family?: string } }} ChatModelEntry */
+/**
+ * @typedef {Object} DiscoveredChatModel
+ * @property {string} id
+ * @property {string} label
+ * @property {string} providerId
+ * @property {'ollama' | 'preset'} source
+ * @property {number | null} sizeBytes
+ * @property {string | null} modifiedAt
+ * @property {string | null} family
+ * @property {{
+ *   runLocation: 'local' | 'custom' | 'cloud', supportsTools: boolean, supportsVision: boolean,
+ *   supportsSpeech: boolean, contextWindowTokens: number | null, requiresApiKey: boolean,
+ * }} capabilities
+ */
+
+/** @typedef {{ content?: unknown, reasoning_content?: unknown, tool_calls?: unknown }} ChatProbeMessage */
+/** @typedef {{ message?: ChatProbeMessage, finish_reason?: unknown, delta?: ChatProbeMessage, error?: unknown }} ChatProbeChoice */
+/**
+ * @typedef {Object} ChatProbeData
+ * @property {unknown} [error]
+ * @property {unknown} [message]
+ * @property {Array<{ type?: unknown, text?: unknown }>} [content]
+ * @property {ChatProbeChoice[]} [choices]
+ * @property {unknown} [model]
+ * @property {unknown} [model_id]
+ * @property {unknown} [modelId]
+ * @property {{ model?: unknown }} [output]
+ */
+
+/**
+ * @typedef {Object} ChatProviderPayload
+ * @property {unknown} [content]
+ * @property {unknown} [stop_reason]
+ * @property {unknown} [reasoning_content]
+ * @property {unknown} [type]
+ * @property {unknown} [index]
+ * @property {unknown} [done]
+ * @property {unknown} [stop]
+ * @property {{ type?: unknown, text?: unknown, partial_json?: unknown }} [delta]
+ * @property {{ type?: unknown, text?: unknown, id?: unknown, name?: unknown, input?: unknown, partial_json?: unknown }} [content_block]
+ * @property {{ content?: unknown, reasoning_content?: unknown }} [message]
+ * @property {ChatProbeChoice[]} [choices]
+ */
+
+/**
+ * @typedef {Object} ChatToolCallFragment
+ * @property {number} index
+ * @property {string} [id]
+ * @property {string} [type]
+ * @property {{ name?: string, arguments?: string }} [function]
+ */
+
+/** @typedef {{ id?: unknown, type?: string, function?: { name?: unknown, arguments?: unknown } }} ChatToolCall */
+
+/** @param {unknown} baseUrl @returns {string} */
 function stripAnthropicVersionSuffix(baseUrl) {
   return normalizeBaseUrl(baseUrl).replace(/\/v1$/iu, '')
 }
 
+/** @param {unknown} baseUrl @returns {boolean} */
 function isAnthropicCompatibleBaseUrl(baseUrl) {
   return /\/anthropic(?:\/v1)?$/iu.test(normalizeBaseUrl(baseUrl))
 }
 
+/** @param {unknown} content @param {{ trim?: boolean }} [options] @returns {string} */
 function extractTextFromContent(content, { trim = true } = {}) {
+  /** @param {string} text @returns {string} */
   const normalize = (text) => trim ? text.trim() : text
 
   if (typeof content === 'string') {
@@ -45,27 +107,30 @@ function extractTextFromContent(content, { trim = true } = {}) {
     return normalize(text)
   }
 
-  if (typeof content?.text === 'string') {
-    return normalize(content.text)
+  if (typeof /** @type {{ text?: unknown }} */ (content)?.text === 'string') {
+    return normalize(/** @type {{ text: string }} */ (content).text)
   }
 
-  if (typeof content?.delta?.text === 'string') {
-    return normalize(content.delta.text)
+  if (typeof /** @type {{ delta?: { text?: unknown } }} */ (content)?.delta?.text === 'string') {
+    return normalize(/** @type {{ delta: { text: string } }} */ (content).delta.text)
   }
 
   return ''
 }
 
+/** @param {unknown} value @returns {boolean} */
 function hasNonEmptyString(value) {
   return String(value ?? '').trim().length > 0
 }
 
+/** @param {unknown} providerId @returns {boolean} */
 function isMiniMaxTokenPlanProvider(providerId) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   return normalizedProviderId === 'minimax-coding'
     || normalizedProviderId === 'minimax-coding-global'
 }
 
+/** @param {unknown} providerId @param {string} code @returns {string} */
 function formatInvalidChatApiKeyMessage(providerId, code) {
   const label = isMiniMaxTokenPlanProvider(providerId)
     ? 'MiniMax Token Plan API Key'
@@ -75,6 +140,7 @@ function formatInvalidChatApiKeyMessage(providerId, code) {
   return `${label} is not safe for HTTP headers (${code}). Paste the raw key from the provider console only — no plan notes, model names, or comments.`
 }
 
+/** @param {unknown} apiKey @returns {string} */
 function classifyInvalidChatApiKeyCode(apiKey) {
   const value = String(apiKey ?? '').trim()
   if (/[一-鿿぀-ゟ゠-ヿ가-힯]/u.test(value)) return 'api_key_contains_cjk'
@@ -82,13 +148,18 @@ function classifyInvalidChatApiKeyCode(apiKey) {
   return 'api_key_header_unsafe'
 }
 
+/**
+ * @param {unknown} providerId
+ * @param {unknown} apiKey
+ * @returns {string}
+ */
 function normalizeChatApiKeyForHeader(providerId, apiKey) {
   const value = String(apiKey ?? '').trim()
   if (!value) return ''
 
   if (/[^\x21-\x7E]/u.test(value)) {
     const code = classifyInvalidChatApiKeyCode(value)
-    const error = new Error(formatInvalidChatApiKeyMessage(providerId, code))
+    const error = /** @type {Error & { code?: string }} */ (new Error(formatInvalidChatApiKeyMessage(providerId, code)))
     error.code = code
     throw error
   }
@@ -96,6 +167,7 @@ function normalizeChatApiKeyForHeader(providerId, apiKey) {
   return value
 }
 
+/** @param {unknown} providerId @returns {'local' | 'custom' | 'cloud'} */
 function getProviderRunLocation(providerId) {
   const normalized = normalizeChatProviderId(providerId)
   if (normalized === 'ollama') return 'local'
@@ -103,6 +175,11 @@ function getProviderRunLocation(providerId) {
   return 'cloud'
 }
 
+/**
+ * @param {unknown} providerId
+ * @param {ChatModelEntry} entry
+ * @returns {DiscoveredChatModel | null}
+ */
 function buildDiscoveredModel(providerId, entry) {
   const id = String(entry?.id ?? entry?.name ?? entry?.model ?? '').trim()
   if (!id) return null
@@ -127,15 +204,18 @@ function buildDiscoveredModel(providerId, entry) {
   }
 }
 
+/** @param {unknown} data @returns {ChatModelEntry[]} */
 export function extractChatModelEntries(data) {
-  if (Array.isArray(data?.data)) {
-    return data.data
+  const source = /** @type {{ data?: unknown, models?: unknown }} */ (data)
+
+  if (Array.isArray(source?.data)) {
+    return source.data
       .map((item) => ({ ...item, id: String(item?.id ?? '').trim() }))
       .filter((item) => item.id)
   }
 
-  if (Array.isArray(data?.models)) {
-    return data.models
+  if (Array.isArray(source?.models)) {
+    return source.models
       .map((item) => ({
         ...item,
         id: String(item?.name ?? item?.model ?? item?.id ?? '').trim(),
@@ -146,12 +226,17 @@ export function extractChatModelEntries(data) {
   return []
 }
 
+/**
+ * @param {{ providerId?: unknown, data?: unknown }} params
+ * @returns {DiscoveredChatModel[]}
+ */
 export function buildDiscoveredChatModels({ providerId, data }) {
-  return extractChatModelEntries(data)
+  return /** @type {DiscoveredChatModel[]} */ (extractChatModelEntries(data)
     .map((entry) => buildDiscoveredModel(providerId, entry))
-    .filter(Boolean)
+    .filter(Boolean))
 }
 
+/** @type {Readonly<Record<string, 'anthropic'>>} */
 const CHAT_PROVIDER_PROTOCOLS = Object.freeze({
   anthropic: 'anthropic',
   'kimi-coding': 'anthropic',
@@ -162,6 +247,7 @@ const CHAT_PROVIDER_PROTOCOLS = Object.freeze({
   'minimax-coding-global': 'anthropic',
 })
 
+/** @type {Readonly<Record<string, boolean>>} */
 const CHAT_PROVIDER_API_KEY_POLICY = Object.freeze({
   custom: false,
   ollama: false,
@@ -170,15 +256,26 @@ const CHAT_PROVIDER_API_KEY_POLICY = Object.freeze({
 // Host inference table lives in shared/providerHostInference.js (single
 // source of truth, shared with the renderer's inferApiProviderId). The main
 // process keeps its historical 'openai' fallback for unmatched hosts.
+/**
+ * @param {unknown} providerId
+ * @param {unknown} [baseUrl]
+ * @param {unknown} [model]
+ * @returns {string}
+ */
 export function normalizeChatProviderId(providerId, baseUrl = '', model = '') {
   const explicit = String(providerId ?? '').trim().toLowerCase()
   if (explicit) {
     return explicit
   }
 
-  return inferProviderIdFromHost(normalizeBaseUrl(baseUrl), model) ?? 'openai'
+  return inferProviderIdFromHost(normalizeBaseUrl(baseUrl), /** @type {string | null | undefined} */ (model)) ?? 'openai'
 }
 
+/**
+ * @param {unknown} providerId
+ * @param {unknown} [baseUrl]
+ * @returns {string}
+ */
 export function getChatProviderProtocol(providerId, baseUrl = '') {
   const explicit = String(providerId ?? '').trim().toLowerCase()
   if (explicit === 'anthropic' || explicit === 'openai-compatible') {
@@ -200,11 +297,16 @@ export function getChatProviderProtocol(providerId, baseUrl = '') {
   return CHAT_PROVIDER_PROTOCOLS[normalizedProviderId] ?? 'openai-compatible'
 }
 
+/** @param {unknown} providerId @returns {boolean} */
 export function chatProviderRequiresApiKey(providerId) {
   const normalized = normalizeChatProviderId(providerId)
   return CHAT_PROVIDER_API_KEY_POLICY[normalized] ?? true
 }
 
+/**
+ * @param {{ providerId?: unknown, apiKey?: unknown }} params
+ * @returns {ReturnType<typeof buildChatConnectionResult> | null}
+ */
 export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   if (!chatProviderRequiresApiKey(normalizedProviderId)) {
@@ -215,7 +317,7 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
     try {
       normalizeChatApiKeyForHeader(normalizedProviderId, apiKey)
     } catch (error) {
-      const shortCode = error?.code || 'api_key_header_unsafe'
+      const shortCode = /** @type {{ code?: string }} */ (error)?.code || 'api_key_header_unsafe'
       return buildChatConnectionResult({
         ok: false,
         status: 'needs_key',
@@ -251,6 +353,7 @@ export function getChatConnectionTestPreflightFailure({ providerId, apiKey }) {
   })
 }
 
+/** @param {unknown} providerId @param {unknown} apiKey @param {unknown} [baseUrl] @returns {Record<string, string>} */
 function buildChatAuthorizationHeaders(providerId, apiKey, baseUrl = '') {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const protocol = getChatProviderProtocol(normalizedProviderId, baseUrl)
@@ -270,6 +373,10 @@ function buildChatAuthorizationHeaders(providerId, apiKey, baseUrl = '') {
     : {}
 }
 
+/**
+ * @param {unknown} messages
+ * @returns {{ system: string, messages: Array<{ role: 'assistant' | 'user', content: string }> }}
+ */
 function splitSystemMessages(messages) {
   const system = []
   const normalizedMessages = []
@@ -299,16 +406,19 @@ function splitSystemMessages(messages) {
   }
 }
 
+/** @param {unknown} baseUrl @param {string} suffix @returns {string} */
 function resolveAnthropicEndpoint(baseUrl, suffix) {
   const normalized = stripAnthropicVersionSuffix(baseUrl)
   return `${normalized}${suffix}`
 }
 
+/** @param {unknown} model @returns {boolean} */
 function shouldOmitAnthropicTemperature(model) {
   const id = String(model ?? '').trim().toLowerCase()
   return /^claude-opus-4-[78](?:\b|$)/u.test(id)
 }
 
+/** @param {unknown} providerId @param {unknown} model @returns {boolean} */
 function shouldDisableOpenAiCompatibleThinking(providerId, model) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const id = String(model ?? '').trim().toLowerCase()
@@ -320,6 +430,7 @@ function shouldDisableOpenAiCompatibleThinking(providerId, model) {
   )
 }
 
+/** @param {unknown} providerId @param {unknown} model @returns {boolean} */
 function shouldDisableAnthropicThinking(providerId, model) {
   const normalizedProviderId = normalizeChatProviderId(providerId)
   const id = String(model ?? '').trim().toLowerCase()
@@ -344,6 +455,7 @@ function shouldDisableAnthropicThinking(providerId, model) {
  * which this client does not call. Any effort other than "none" rejects
  * temperature, so those requests omit it.
  */
+/** @param {unknown} providerId @param {unknown} model @param {boolean} hasTools @returns {{ omitTemperature: boolean, reasoningEffort: 'none' | undefined }} */
 function openAiChatCompletionsSampling(providerId, model, hasTools) {
   if (normalizeChatProviderId(providerId) !== 'openai') {
     return { omitTemperature: false, reasoningEffort: undefined }
@@ -359,6 +471,7 @@ function openAiChatCompletionsSampling(providerId, model, hasTools) {
   return { omitTemperature: false, reasoningEffort: undefined }
 }
 
+/** @param {ChatRequestPayload} payload @param {{ stream?: boolean }} [options] @returns {{ providerId: string, protocol: string, endpoint: string, headers: Record<string, string>, body: string }} */
 export function buildChatRequest(payload, options = {}) {
   const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
@@ -370,7 +483,7 @@ export function buildChatRequest(payload, options = {}) {
 
     // Convert OpenAI-style tools to Anthropic format
     const anthropicTools = Array.isArray(payload?.tools) && payload.tools.length > 0
-      ? payload.tools.map((t) => ({
+      ? /** @type {ChatTool[]} */ (payload.tools).map((t) => ({
           name: t.function?.name ?? t.name,
           description: t.function?.description ?? t.description ?? '',
           input_schema: t.function?.parameters ?? t.parameters ?? { type: 'object', properties: {} },
@@ -420,6 +533,7 @@ export function buildChatRequest(payload, options = {}) {
   // selecting either model still completes a normal chat turn.
   const sendTools = Boolean(tools) && !modelRejectsChatCompletionsTools(payload?.model)
   const sampling = openAiChatCompletionsSampling(providerId, payload?.model, sendTools)
+  /** @type {Record<string, unknown>} */
   const openAiBody = {
     model: payload?.model,
     messages: payload?.messages,
@@ -446,6 +560,7 @@ export function buildChatRequest(payload, options = {}) {
   }
 }
 
+/** @param {ChatRequestPayload} payload @returns {{ providerId: string, protocol: string, successKind: 'message', endpoint: string, request: { method: 'POST', headers: Record<string, string>, body: string } }} */
 export function buildChatConnectionTestRequest(payload) {
   const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
@@ -473,6 +588,7 @@ export function buildChatConnectionTestRequest(payload) {
   }
 }
 
+/** @param {ChatRequestPayload} payload @returns {{ providerId: string, protocol: string, endpoint: string, request: { method: 'GET', headers: Record<string, string> } }} */
 export function buildChatModelListRequest(payload) {
   const providerId = normalizeChatProviderId(payload?.providerId, payload?.baseUrl, payload?.model)
   const baseUrl = normalizeBaseUrl(payload?.baseUrl)
@@ -491,6 +607,7 @@ export function buildChatModelListRequest(payload) {
   }
 }
 
+/** @param {{ providerId?: unknown, successKind?: string, data?: ChatProbeData, model?: unknown }} params @returns {ReturnType<typeof buildChatConnectionResult>} */
 export function summarizeChatConnectionTestSuccess({ providerId, successKind, data, model }) {
   const checkedAt = new Date().toISOString()
   if (successKind === 'message') {
@@ -520,8 +637,8 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
     }
 
     const { evidence } = classifyChatMessageProbeIdentity({
-      providerId,
-      modelId: model,
+      providerId: /** @type {string | undefined} */ (providerId),
+      modelId: /** @type {string | undefined} */ (model),
       data,
     })
     const identityMismatch = Boolean(evidence.identityMismatch || evidence.usedFallback)
@@ -597,8 +714,9 @@ export function summarizeChatConnectionTestSuccess({ providerId, successKind, da
   })
 }
 
+/** @param {ChatProbeData | null | undefined} data @returns {string} */
 function extractConnectionFailureMessage(data) {
-  const value = data?.error?.message
+  const value = /** @type {{ message?: unknown }} */ (data?.error)?.message
     ?? data?.error
     ?? data?.message
   if (typeof value === 'string') {
@@ -607,6 +725,7 @@ function extractConnectionFailureMessage(data) {
   return ''
 }
 
+/** @param {{ providerId?: unknown, status: number, data?: ChatProbeData, hasApiKey?: boolean, model?: unknown }} params @returns {ReturnType<typeof buildChatConnectionResult>} */
 export function summarizeChatConnectionTestFailure({ providerId, status, data, hasApiKey, model }) {
   const checkedAt = new Date().toISOString()
   const normalizedProviderId = normalizeChatProviderId(providerId)
@@ -759,6 +878,7 @@ export function summarizeChatConnectionTestFailure({ providerId, status, data, h
   })
 }
 
+/** @param {unknown} reason @returns {'refused' | 'timeout' | 'unknown'} */
 function classifyOllamaTransportFailure(reason) {
   const normalized = String(reason ?? '').trim().toLowerCase()
   if (
@@ -777,6 +897,7 @@ function classifyOllamaTransportFailure(reason) {
   return 'unknown'
 }
 
+/** @param {{ providerId?: unknown, reason?: unknown, baseUrl?: unknown, error?: unknown }} params @returns {ReturnType<typeof buildChatConnectionResult>} */
 export function summarizeChatConnectionTransportFailure({ providerId, reason, baseUrl, error }) {
   const checkedAt = new Date().toISOString()
   const normalizedProviderId = normalizeChatProviderId(providerId, baseUrl)
@@ -817,6 +938,11 @@ export function summarizeChatConnectionTransportFailure({ providerId, reason, ba
   })
 }
 
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {string}
+ */
 export function extractChatResponseContent(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return extractTextFromContent(payload?.content)
@@ -840,6 +966,11 @@ export function extractChatResponseContent(providerId, payload) {
  * Returns '' when the model didn't produce a reasoning trace, or for any
  * provider/protocol that doesn't surface one.
  */
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {string}
+ */
 export function extractChatResponseReasoning(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return ''
@@ -855,11 +986,17 @@ export function extractChatResponseReasoning(providerId, payload) {
  * Extract tool_calls from the LLM response (OpenAI format).
  * For Anthropic, converts tool_use content blocks to OpenAI tool_calls format.
  */
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {ChatToolCall[] | null}
+ */
 export function extractChatResponseToolCalls(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     // Anthropic returns tool calls as content blocks with type "tool_use"
     const content = Array.isArray(payload?.content) ? payload.content : []
-    const toolUseBlocks = content.filter((block) => block?.type === 'tool_use')
+    const toolUseBlocks = /** @type {Array<{ type?: unknown, id?: unknown, name?: unknown, input?: unknown }>} */ (content)
+      .filter((block) => block?.type === 'tool_use')
     if (!toolUseBlocks.length) return null
 
     return toolUseBlocks.map((block) => ({
@@ -881,14 +1018,24 @@ export function extractChatResponseToolCalls(providerId, payload) {
 /**
  * Extract finish_reason from the LLM response.
  */
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {string | null}
+ */
 export function extractChatResponseFinishReason(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
-    return payload?.stop_reason ?? null
+    return /** @type {string | null} */ (payload?.stop_reason ?? null)
   }
 
-  return payload?.choices?.[0]?.finish_reason ?? null
+  return /** @type {string | null} */ (payload?.choices?.[0]?.finish_reason ?? null)
 }
 
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {string}
+ */
 export function extractChatStreamingDeltaContent(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return extractTextFromContent(
@@ -915,6 +1062,11 @@ export function extractChatStreamingDeltaContent(providerId, payload) {
  * `delta.reasoning_content` field; the caller accumulates these the same
  * way it accumulates content deltas.
  */
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {string}
+ */
 export function extractChatStreamingDeltaReasoning(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return ''
@@ -934,6 +1086,11 @@ export function extractChatStreamingDeltaReasoning(providerId, payload) {
  * `id`, `type`, `function.name`, or a chunk of `function.arguments` — the
  * caller accumulates fragments with matching indexes across the stream.
  */
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {ChatToolCallFragment[] | null}
+ */
 export function extractChatStreamingDeltaToolCalls(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     if (
@@ -946,10 +1103,12 @@ export function extractChatStreamingDeltaToolCalls(providerId, payload) {
       // been observed dropping one or the other — passing `undefined`
       // through would create a malformed tool_call the accumulator can't
       // serialise cleanly.
+      /** @type {ChatToolCallFragment} */
       const fragment = { index: Number(payload?.index ?? 0), type: 'function' }
       const blockId = payload.content_block.id
       const blockName = payload.content_block.name
       if (typeof blockId === 'string' && blockId) fragment.id = blockId
+      /** @type {{ name?: string, arguments?: string }} */
       const fn = { arguments: '' }
       if (typeof blockName === 'string' && blockName) fn.name = blockName
       fragment.function = fn
@@ -961,7 +1120,7 @@ export function extractChatStreamingDeltaToolCalls(providerId, payload) {
     ) {
       return [{
         index: Number(payload?.index ?? 0),
-        function: { arguments: payload.delta.partial_json ?? '' },
+        function: { arguments: /** @type {string} */ (payload.delta.partial_json ?? '') },
       }]
     }
     return null
@@ -971,10 +1130,12 @@ export function extractChatStreamingDeltaToolCalls(providerId, payload) {
   if (!Array.isArray(deltaCalls) || !deltaCalls.length) return null
 
   return deltaCalls.map((tc, fallbackIndex) => {
+    /** @type {ChatToolCallFragment} */
     const fragment = { index: Number(tc?.index ?? fallbackIndex) }
     if (typeof tc?.id === 'string' && tc.id) fragment.id = tc.id
     if (typeof tc?.type === 'string' && tc.type) fragment.type = tc.type
     if (tc?.function && typeof tc.function === 'object') {
+      /** @type {{ name?: string, arguments?: string }} */
       const fn = {}
       if (typeof tc.function.name === 'string' && tc.function.name) {
         fn.name = tc.function.name
@@ -988,6 +1149,11 @@ export function extractChatStreamingDeltaToolCalls(providerId, payload) {
   })
 }
 
+/**
+ * @param {unknown} providerId
+ * @param {ChatProviderPayload} payload
+ * @returns {boolean}
+ */
 export function isChatStreamingPayloadTerminal(providerId, payload) {
   if (getChatProviderProtocol(providerId) === 'anthropic') {
     return payload?.type === 'message_stop' || payload?.type === 'error'
@@ -1004,6 +1170,7 @@ export function isChatStreamingPayloadTerminal(providerId, payload) {
   return payload?.done === true || payload?.stop === true
 }
 
+/** @param {string} fullContent @param {unknown} incomingDelta @returns {string} */
 export function trimRepeatedStreamingDelta(fullContent, incomingDelta) {
   const delta = String(incomingDelta ?? '')
   if (!delta) return ''

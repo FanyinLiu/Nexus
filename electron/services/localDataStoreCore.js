@@ -1,3 +1,4 @@
+// @ts-check
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createRequire } from 'node:module'
@@ -25,7 +26,82 @@ const EXPORT_FORMAT_VERSION = 1
 const ONBOARDING_RECORD_ID = 'state'
 const ONBOARDING_STORAGE_KEY = 'nexus:onboarding'
 const require = createRequire(import.meta.url)
+/** @type {typeof import('node:sqlite').DatabaseSync | null} */
 let DatabaseSync = null
+
+/**
+ * @typedef {Object} LocalDataStoreOptions
+ * @property {string} [userDataPath]
+ * @property {Date | string | number} [now]
+ * @property {boolean} [includeRecords]
+ * @property {unknown} [state]
+ * @property {boolean} [dryRun]
+ * @property {unknown} [snapshot]
+ */
+
+/**
+ * @typedef {Object} MigrationLedgerEntry
+ * @property {string} id
+ * @property {number} fromVersion
+ * @property {number} toVersion
+ * @property {string} appliedAt
+ * @property {boolean} reversible
+ */
+
+/**
+ * @typedef {Object} LocalDataManifest
+ * @property {string} format
+ * @property {number} formatVersion
+ * @property {string} backend
+ * @property {number} schemaVersion
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ * @property {MigrationLedgerEntry[]} migrations
+ * @property {Record<string, Record<string, unknown>>} domains
+ */
+
+/**
+ * @typedef {Object} LocalDataRuntimeStatus
+ * @property {boolean} initialized
+ * @property {boolean} healthy
+ * @property {string} backend
+ * @property {number} schemaVersion
+ * @property {number} targetSchemaVersion
+ * @property {number} migrationCount
+ * @property {string | null} lastMigrationId
+ * @property {string} storageDirectoryName
+ * @property {string | null} errorKind
+ * @property {string | null} errorMessage
+ */
+
+/**
+ * @typedef {Object} SqliteState
+ * @property {string} backend
+ * @property {number} schemaVersion
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ * @property {MigrationLedgerEntry[]} migrations
+ * @property {Array<{ id: string, metadata: Record<string, unknown> }>} domains
+ */
+
+/**
+ * @typedef {Object} LocalDataRecord
+ * @property {string} domainId
+ * @property {string} recordId
+ * @property {unknown} payload
+ * @property {string} source
+ * @property {string} mirroredAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * @typedef {Object} LocalDataDomainRecord
+ * @property {string} id
+ * @property {unknown} payload
+ * @property {string} source
+ * @property {string} mirroredAt
+ * @property {string} updatedAt
+ */
 
 const BUILT_IN_DOMAINS = [
   {
@@ -164,6 +240,7 @@ const MIGRATIONS = [
   },
 ]
 
+/** @type {LocalDataRuntimeStatus} */
 let runtimeStatus = {
   initialized: false,
   healthy: false,
@@ -177,6 +254,7 @@ let runtimeStatus = {
   errorMessage: null,
 }
 
+/** @param {unknown} value @returns {value is Record<string, unknown>} */
 export function isPlainObject(value) {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return false
   const proto = Object.getPrototypeOf(value)
@@ -191,6 +269,7 @@ async function resolveDefaultUserDataPath() {
   return electron.app.getPath('userData')
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<string>} */
 async function resolveUserDataPath(options = {}) {
   if (typeof options.userDataPath === 'string' && options.userDataPath.trim()) {
     return options.userDataPath
@@ -198,6 +277,10 @@ async function resolveUserDataPath(options = {}) {
   return resolveDefaultUserDataPath()
 }
 
+/**
+ * @param {LocalDataStoreOptions} [options]
+ * @returns {Promise<{ root: string, manifestPath: string, databasePath: string }>}
+ */
 export async function resolveLocalDataPaths(options = {}) {
   const userDataPath = await resolveUserDataPath(options)
   const root = path.join(userDataPath, LOCAL_DATA_DIR_NAME)
@@ -208,6 +291,7 @@ export async function resolveLocalDataPaths(options = {}) {
   }
 }
 
+/** @param {string} filePath @returns {Promise<boolean>} */
 async function pathExists(filePath) {
   try {
     await fs.access(filePath)
@@ -217,28 +301,37 @@ async function pathExists(filePath) {
   }
 }
 
+/** @param {string} filePath @returns {Promise<unknown>} */
 async function readJsonFile(filePath) {
   const raw = await fs.readFile(filePath, 'utf8')
   return JSON.parse(raw)
 }
 
+/**
+ * @param {string} filePath
+ * @param {unknown} value
+ * @param {{ fileMode?: number }} [options]
+ * @returns {Promise<void>}
+ */
 export async function atomicWriteJson(filePath, value, options = {}) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   const tempPath = `${filePath}.${process.pid}.${Date.now()}.tmp`
   // fileMode (e.g. 0o600) applies to the freshly created temp file; the
   // rename then carries it onto the destination.
+  /** @type {import('node:fs').WriteFileOptions} */
   const writeOptions = Number.isInteger(options.fileMode)
-    ? { encoding: 'utf8', mode: options.fileMode }
+    ? { encoding: 'utf8', mode: /** @type {number} */ (options.fileMode) }
     : 'utf8'
   await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, writeOptions)
   await fs.rename(tempPath, filePath)
 }
 
+/** @param {unknown} entry @returns {MigrationLedgerEntry} */
 function normalizeMigrationEntry(entry) {
   if (!isPlainObject(entry)) throw new Error('migration entry must be an object')
   const id = typeof entry.id === 'string' ? entry.id : ''
-  const fromVersion = Number.isInteger(entry.fromVersion) ? entry.fromVersion : -1
-  const toVersion = Number.isInteger(entry.toVersion) ? entry.toVersion : -1
+  const fromVersion = Number.isInteger(entry.fromVersion) ? /** @type {number} */ (entry.fromVersion) : -1
+  const toVersion = Number.isInteger(entry.toVersion) ? /** @type {number} */ (entry.toVersion) : -1
   const appliedAt = typeof entry.appliedAt === 'string' ? entry.appliedAt : ''
   const reversible = entry.reversible === true
   if (!id || fromVersion < 0 || toVersion < 0 || !appliedAt) {
@@ -253,6 +346,7 @@ function normalizeMigrationEntry(entry) {
   }
 }
 
+/** @param {unknown} parsed @returns {LocalDataManifest} */
 function normalizeManifest(parsed) {
   if (!isPlainObject(parsed)) {
     throw new Error('local-data manifest must be a JSON object')
@@ -260,13 +354,13 @@ function normalizeManifest(parsed) {
   if (parsed.format !== LOCAL_DATA_MANIFEST_FORMAT) {
     throw new Error('local-data manifest format is unsupported')
   }
-  if (![LOCAL_DATA_BACKEND, LEGACY_JSON_BACKEND].includes(parsed.backend)) {
+  if (![LOCAL_DATA_BACKEND, LEGACY_JSON_BACKEND].includes(/** @type {string} */ (parsed.backend))) {
     throw new Error('local-data backend is unsupported')
   }
-  if (!Number.isInteger(parsed.schemaVersion) || parsed.schemaVersion < 0) {
+  if (!Number.isInteger(parsed.schemaVersion) || /** @type {number} */ (parsed.schemaVersion) < 0) {
     throw new Error('local-data schemaVersion is invalid')
   }
-  if (parsed.schemaVersion > LOCAL_DATA_SCHEMA_VERSION) {
+  if (/** @type {number} */ (parsed.schemaVersion) > LOCAL_DATA_SCHEMA_VERSION) {
     throw new Error('local-data schemaVersion is newer than this app supports')
   }
   if (!Array.isArray(parsed.migrations)) {
@@ -278,16 +372,17 @@ function normalizeManifest(parsed) {
 
   return {
     format: LOCAL_DATA_MANIFEST_FORMAT,
-    formatVersion: Number.isInteger(parsed.formatVersion) ? parsed.formatVersion : 1,
-    backend: parsed.backend,
-    schemaVersion: parsed.schemaVersion,
+    formatVersion: Number.isInteger(parsed.formatVersion) ? /** @type {number} */ (parsed.formatVersion) : 1,
+    backend: /** @type {string} */ (parsed.backend),
+    schemaVersion: /** @type {number} */ (parsed.schemaVersion),
     createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : nowIso(),
     updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : nowIso(),
     migrations: parsed.migrations.map(normalizeMigrationEntry),
-    domains: { ...parsed.domains },
+    domains: /** @type {Record<string, Record<string, unknown>>} */ ({ ...parsed.domains }),
   }
 }
 
+/** @param {string} appliedAt @returns {LocalDataManifest} */
 function createEmptyManifest(appliedAt) {
   return {
     format: LOCAL_DATA_MANIFEST_FORMAT,
@@ -301,15 +396,25 @@ function createEmptyManifest(appliedAt) {
   }
 }
 
+/**
+ * @param {LocalDataManifest} manifest
+ * @param {string} migrationId
+ * @param {string} fallback
+ * @returns {string}
+ */
 function legacyAppliedAt(manifest, migrationId, fallback) {
   return manifest.migrations.find((entry) => entry.id === migrationId)?.appliedAt ?? fallback
 }
 
+/**
+ * @param {string} databasePath
+ * @returns {import('node:sqlite').DatabaseSync}
+ */
 export function openSqliteDatabase(databasePath) {
   if (!DatabaseSync) {
     DatabaseSync = require('node:sqlite').DatabaseSync
   }
-  const db = new DatabaseSync(databasePath)
+  const db = new (/** @type {typeof import('node:sqlite').DatabaseSync} */ (DatabaseSync))(databasePath)
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -318,6 +423,7 @@ export function openSqliteDatabase(databasePath) {
   return db
 }
 
+/** @param {import('node:sqlite').DatabaseSync} db @returns {void} */
 export function ensureSqliteTables(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS local_data_meta (
@@ -353,10 +459,21 @@ export function ensureSqliteTables(db) {
   `)
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} key
+ * @returns {string | null}
+ */
 export function getMeta(db, key) {
-  return db.prepare('SELECT value FROM local_data_meta WHERE key = ?').get(key)?.value ?? null
+  return /** @type {string | null} */ (db.prepare('SELECT value FROM local_data_meta WHERE key = ?').get(key)?.value ?? null)
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} key
+ * @param {unknown} value
+ * @returns {void}
+ */
 export function setMeta(db, key, value) {
   db.prepare(`
     INSERT INTO local_data_meta (key, value)
@@ -365,6 +482,7 @@ export function setMeta(db, key, value) {
   `).run(key, String(value))
 }
 
+/** @param {import('node:sqlite').DatabaseSync} db @returns {number} */
 function getSqliteSchemaVersion(db) {
   const raw = getMeta(db, 'schemaVersion')
   if (raw == null || raw === '') return 0
@@ -378,12 +496,16 @@ function getSqliteSchemaVersion(db) {
   return version
 }
 
+/** @param {import('node:sqlite').DatabaseSync} db @returns {MigrationLedgerEntry[]} */
 function readSqliteMigrations(db) {
-  return db.prepare(`
-    SELECT id, from_version AS fromVersion, to_version AS toVersion, applied_at AS appliedAt, reversible
-    FROM schema_migrations
-    ORDER BY to_version ASC, applied_at ASC
-  `).all().map((entry) => ({
+  const rows = /** @type {Array<Omit<MigrationLedgerEntry, 'reversible'> & { reversible: number }>} */ (
+    db.prepare(`
+      SELECT id, from_version AS fromVersion, to_version AS toVersion, applied_at AS appliedAt, reversible
+      FROM schema_migrations
+      ORDER BY to_version ASC, applied_at ASC
+    `).all()
+  )
+  return rows.map((entry) => ({
     id: entry.id,
     fromVersion: entry.fromVersion,
     toVersion: entry.toVersion,
@@ -392,12 +514,15 @@ function readSqliteMigrations(db) {
   }))
 }
 
+/** @param {import('node:sqlite').DatabaseSync} db @returns {Array<{ id: string, metadata: Record<string, unknown> }>} */
 function readSqliteDomains(db) {
-  return db.prepare(`
+  const rows = /** @type {Array<{ id: string, metadataJson: string }>} */ (db.prepare(`
     SELECT id, metadata_json AS metadataJson
     FROM domain_registry
     ORDER BY id ASC
-  `).all().map((row) => {
+  `).all())
+  return rows.map((row) => {
+    /** @type {Record<string, unknown>} */
     let metadata = {}
     try {
       const parsed = JSON.parse(row.metadataJson)
@@ -409,13 +534,19 @@ function readSqliteDomains(db) {
   })
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {{ id: string, metadata: Record<string, unknown> }} domain
+ * @param {string} now
+ * @returns {boolean}
+ */
 function registerDomain(db, domain, now) {
   const metadataJson = JSON.stringify(domain.metadata)
-  const existing = db.prepare(`
+  const existing = /** @type {{ metadataJson: string } | undefined} */ (db.prepare(`
     SELECT metadata_json AS metadataJson
     FROM domain_registry
     WHERE id = ?
-  `).get(domain.id)
+  `).get(domain.id))
 
   if (!existing) {
     db.prepare(`
@@ -437,6 +568,11 @@ function registerDomain(db, domain, now) {
   return false
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} now
+ * @returns {boolean}
+ */
 export function ensureBuiltInDomains(db, now) {
   let changed = false
   for (const domain of BUILT_IN_DOMAINS) {
@@ -446,6 +582,10 @@ export function ensureBuiltInDomains(db, now) {
   return changed
 }
 
+/**
+ * @param {{ domainId: string, recordId: string, payloadJson: string, source: string, mirroredAt: string, updatedAt: string }} row
+ * @returns {LocalDataRecord}
+ */
 function parseRecordPayload(row) {
   let payload
   try {
@@ -463,6 +603,11 @@ function parseRecordPayload(row) {
   }
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string | null} [domainId]
+ * @returns {LocalDataRecord[]}
+ */
 export function readSqliteRecords(db, domainId = null) {
   const sql = domainId
     ? `
@@ -478,11 +623,18 @@ export function readSqliteRecords(db, domainId = null) {
       FROM local_data_records
       ORDER BY domain_id ASC, record_id ASC
     `
-  const rows = domainId ? db.prepare(sql).all(domainId) : db.prepare(sql).all()
+  const rows = /** @type {Array<{ domainId: string, recordId: string, payloadJson: string, source: string, mirroredAt: string, updatedAt: string }>} */ (
+    domainId ? db.prepare(sql).all(domainId) : db.prepare(sql).all()
+  )
   return rows.map(parseRecordPayload)
 }
 
+/**
+ * @param {LocalDataRecord[]} records
+ * @returns {Record<string, LocalDataDomainRecord[]>}
+ */
 function recordsByDomain(records) {
+  /** @type {Record<string, LocalDataDomainRecord[]>} */
   const grouped = {}
   for (const record of records) {
     if (!grouped[record.domainId]) grouped[record.domainId] = []
@@ -497,10 +649,22 @@ function recordsByDomain(records) {
   return grouped
 }
 
+/**
+ * @param {string} prefix
+ * @param {Date | string | number} now
+ * @returns {string}
+ */
 export function auditRecordId(prefix, now) {
   return `${prefix}-${nowIso(now).replace(/[:.]/g, '-')}`
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {string} recordId
+ * @param {unknown} payload
+ * @param {string} now
+ * @returns {void}
+ */
 export function insertLocalDataAuditRecord(db, recordId, payload, now) {
   db.prepare(`
     INSERT INTO local_data_records (domain_id, record_id, payload_json, source, mirrored_at, updated_at)
@@ -520,6 +684,11 @@ export function insertLocalDataAuditRecord(db, recordId, payload, now) {
   )
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} label
+ * @returns {number}
+ */
 function parseDateInput(value, label) {
   const parsed = typeof value === 'number'
     ? value
@@ -532,12 +701,17 @@ function parseDateInput(value, label) {
   return parsed
 }
 
+/**
+ * @param {unknown} raw
+ * @returns {{ completedAt: string, firstConversationAt?: string, firstConversationElapsedMs?: number }}
+ */
 export function normalizeOnboardingMirrorState(raw) {
   if (!isPlainObject(raw)) {
     throw new Error('onboarding mirror state must be an object')
   }
 
   const completedAtMs = parseDateInput(raw.completedAt, 'completedAt')
+  /** @type {{ completedAt: string, firstConversationAt?: string, firstConversationElapsedMs?: number }} */
   const normalized = {
     completedAt: new Date(completedAtMs).toISOString(),
   }
@@ -553,6 +727,12 @@ export function normalizeOnboardingMirrorState(raw) {
   return normalized
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {{ id: string, fromVersion: number, toVersion: number, reversible: boolean }} migration
+ * @param {string} appliedAt
+ * @returns {void}
+ */
 function insertMigration(db, migration, appliedAt) {
   db.prepare(`
     INSERT INTO schema_migrations (id, from_version, to_version, applied_at, reversible)
@@ -568,6 +748,12 @@ function insertMigration(db, migration, appliedAt) {
   setMeta(db, 'schemaVersion', migration.toVersion)
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @param {LocalDataManifest} manifest
+ * @param {string} appliedAt
+ * @returns {string[]}
+ */
 function applySqliteMigrations(db, manifest, appliedAt) {
   const applied = []
   db.exec('BEGIN')
@@ -601,6 +787,10 @@ function applySqliteMigrations(db, manifest, appliedAt) {
   return applied
 }
 
+/**
+ * @param {import('node:sqlite').DatabaseSync} db
+ * @returns {SqliteState}
+ */
 export function readSqliteState(db) {
   const schemaVersion = getSqliteSchemaVersion(db)
   const migrations = readSqliteMigrations(db)
@@ -615,6 +805,7 @@ export function readSqliteState(db) {
   }
 }
 
+/** @param {SqliteState} state @returns {LocalDataManifest} */
 export function manifestFromSqliteState(state) {
   return {
     format: LOCAL_DATA_MANIFEST_FORMAT,
@@ -628,6 +819,11 @@ export function manifestFromSqliteState(state) {
   }
 }
 
+/**
+ * @param {SqliteState} state
+ * @param {boolean} [initialized]
+ * @returns {LocalDataRuntimeStatus}
+ */
 export function statusFromSqliteState(state, initialized = true) {
   const lastMigration = state.migrations.at(-1)
   return {
@@ -644,6 +840,7 @@ export function statusFromSqliteState(state, initialized = true) {
   }
 }
 
+/** @param {unknown} error @returns {LocalDataRuntimeStatus} */
 export function statusFromError(error) {
   const message = error instanceof Error ? error.message : String(error)
   const manifestInvalid = /(?:manifest|schemaVersion|backend|format|migration|JSON)/iu.test(message)
@@ -670,20 +867,27 @@ export function statusFromError(error) {
   }
 }
 
+/** @returns {LocalDataRuntimeStatus} */
 export function getLocalDataStatus() {
   return { ...runtimeStatus }
 }
 
 /** @internal Chat/memory domain modules mutate runtime status through this setter. */
+/** @param {LocalDataRuntimeStatus} next @returns {void} */
 export function setLocalDataRuntimeStatus(next) {
   runtimeStatus = next
 }
 
 /** @internal */
+/** @returns {LocalDataRuntimeStatus} */
 export function getLocalDataRuntimeStatusRef() {
   return runtimeStatus
 }
 
+/**
+ * @param {LocalDataStoreOptions} [options]
+ * @returns {Promise<LocalDataRuntimeStatus>}
+ */
 export async function initializeLocalDataStore(options = {}) {
   let db = null
   try {
@@ -713,11 +917,13 @@ export async function initializeLocalDataStore(options = {}) {
   }
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<LocalDataManifest>} */
 export async function readLocalDataManifest(options = {}) {
   const { manifestPath } = await resolveLocalDataPaths(options)
   return normalizeManifest(await readJsonFile(manifestPath))
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<SqliteState>} */
 export async function readLocalDataSqliteState(options = {}) {
   const { databasePath } = await resolveLocalDataPaths(options)
   const db = openSqliteDatabase(databasePath)
@@ -729,6 +935,11 @@ export async function readLocalDataSqliteState(options = {}) {
   }
 }
 
+/**
+ * @param {string} domainId
+ * @param {LocalDataStoreOptions} [options]
+ * @returns {Promise<LocalDataRecord[]>}
+ */
 export async function readLocalDataDomainRecords(domainId, options = {}) {
   const { databasePath } = await resolveLocalDataPaths(options)
   const db = openSqliteDatabase(databasePath)
@@ -740,6 +951,7 @@ export async function readLocalDataDomainRecords(domainId, options = {}) {
   }
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<Record<string, unknown>>} */
 export async function buildLocalDataExportSnapshot(options = {}) {
   const includeRecords = options.includeRecords === true
   const { databasePath } = await resolveLocalDataPaths(options)
@@ -766,7 +978,9 @@ export async function buildLocalDataExportSnapshot(options = {}) {
   }
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<Record<string, unknown>>} */
 export async function mirrorLocalDataOnboardingState(options = {}) {
+  /** @type {ReturnType<typeof normalizeOnboardingMirrorState> | null} */
   let normalizedState = null
   try {
     if (options.state !== null && options.state !== undefined) {
@@ -867,6 +1081,7 @@ export async function mirrorLocalDataOnboardingState(options = {}) {
   }
 }
 
+/** @param {unknown} snapshot @returns {Record<string, unknown>} */
 export function planLocalDataImport(snapshot) {
   if (!isPlainObject(snapshot)) {
     return { ok: false, reason: 'snapshot must be a JSON object' }
@@ -880,7 +1095,7 @@ export function planLocalDataImport(snapshot) {
   if (snapshot.backend !== LOCAL_DATA_BACKEND) {
     return { ok: false, reason: 'unsupported snapshot backend' }
   }
-  if (!Number.isInteger(snapshot.schemaVersion) || snapshot.schemaVersion < 0 || snapshot.schemaVersion > LOCAL_DATA_SCHEMA_VERSION) {
+  if (!Number.isInteger(snapshot.schemaVersion) || /** @type {number} */ (snapshot.schemaVersion) < 0 || /** @type {number} */ (snapshot.schemaVersion) > LOCAL_DATA_SCHEMA_VERSION) {
     return { ok: false, reason: 'unsupported snapshot schema version' }
   }
   const domains = Array.isArray(snapshot.domains) ? snapshot.domains : []
@@ -895,6 +1110,7 @@ export function planLocalDataImport(snapshot) {
   }
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<Record<string, unknown>>} */
 export async function importLocalDataSnapshot(options = {}) {
   const plan = planLocalDataImport(options.snapshot)
   if (!plan.ok || options.dryRun !== false) return { ...plan, applied: false }
@@ -902,10 +1118,12 @@ export async function importLocalDataSnapshot(options = {}) {
   return { ...plan, applied: true }
 }
 
+/** @param {Date | string | number} [now] @returns {string} */
 function rollbackDirectoryName(now = new Date()) {
   return `${LOCAL_DATA_DIR_NAME}.disabled-${nowIso(now).replace(/[:.]/g, '-')}`
 }
 
+/** @param {LocalDataStoreOptions} [options] @returns {Promise<Record<string, unknown>>} */
 export async function rollbackLocalDataStore(options = {}) {
   try {
     const { root } = await resolveLocalDataPaths(options)

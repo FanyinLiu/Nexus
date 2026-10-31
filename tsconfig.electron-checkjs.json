@@ -10,6 +10,10 @@
     "strict": true
   },
   "include": [
-    "electron/ipc/**/*.js"
+    "electron/ipc/**/*.js",
+    "electron/services/keyVault.js",
+    "electron/services/localDataStore.js",
+    "electron/services/localDataStoreCore.js",
+    "electron/chatRuntime.js"
   ]
 }
