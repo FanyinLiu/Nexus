@@ -34,6 +34,10 @@ import type {
   ProviderHealthResult,
   ServiceConnectionRequest,
   ServiceConnectionResponse,
+  SmartTurnProbeResult,
+  SmartTurnSessionPayload,
+  SmartTurnStartResult,
+  SmartTurnStopResult,
   WeatherLookupRequest,
   WeatherLookupResponse,
   WebSearchRequest,
@@ -1043,16 +1047,11 @@ declare global {
       vadStop: () => Promise<{ ok: boolean }>
 
       // Smart Turn v3 end-of-turn probe. Audio stays in the main process.
-      turnEndStart: () => Promise<{ ok: boolean }>
-      turnEndProbe: () => Promise<{
-        available: boolean
-        probability: number | null
-        latencyMs?: number | null
-        timedOut?: boolean
-        consecutiveTimeouts?: number
-        reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
-      }>
-      turnEndStop: () => Promise<{ ok: boolean }>
+      // Every call for a turn carries the generation returned by start; the
+      // handler tolerates a missing payload for older callers.
+      turnEndStart: () => Promise<SmartTurnStartResult>
+      turnEndProbe: (payload?: SmartTurnSessionPayload) => Promise<SmartTurnProbeResult>
+      turnEndStop: (payload?: SmartTurnSessionPayload) => Promise<SmartTurnStopResult>
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */

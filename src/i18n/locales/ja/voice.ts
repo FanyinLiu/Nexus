@@ -69,6 +69,7 @@ export const jaVoice = {
   'voice.provider.vad.silero_fallback': 'Silero VAD を起動できませんでした。互換録音モードに自動的に切り替えました。',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 元の情報: {original}',
   'voice.provider.vad.input_not_enabled': '先に設定で音声入力を有効にしてください。',
+  'voice.service.model_missing': 'ローカル音声モデルがまだインストールされていません。「設定 → 音声」からダウンロードしてから、もう一度お試しください。',
   'voice.streaming_tts.first_audio_timeout': 'ストリーミング TTS が 6 秒経っても音声を出力しませんでした。',
   'voice.streaming_tts.tool_call_filler': '確認しますね。',
   'voice.status.continuous_tencent_start': 'Tencent Cloud リアルタイム認識をオンにしました。どうぞ話してください。',

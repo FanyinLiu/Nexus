@@ -11,7 +11,10 @@ import {
   buildQwen3CportArgs,
   buildQwen3CportBaseUrl,
   buildQwen3CportEnv,
+  isLoopbackListenAddress,
+  isQwen3CportLoopbackOnly,
   mapQwen3CportLanguage,
+  parseLsofListenAddresses,
   resolveQwen3CportConfig,
 } from '../electron/services/qwen3CportService.js'
 import { buildQwen3CportRequestPayload } from '../electron/services/qwen3TtsPayload.js'
@@ -57,6 +60,8 @@ test('C engine is preferred only when both the binary and the checkpoint exist',
     env: {
       NEXUS_QWEN3_CPORT_BIN: '/custom/qwen_tts',
       NEXUS_QWEN3_CPORT_MODEL: '/custom/model',
+      NEXUS_QWEN3_CPORT_BACKEND: 'cuda',
+      NEXUS_QWEN3_CPORT_QUANT: 'int8',
       NEXUS_QWEN3_CPORT_PORT: '9000',
     },
     homedir: () => HOME,
@@ -64,7 +69,16 @@ test('C engine is preferred only when both the binary and the checkpoint exist',
   })
   assert.equal(overridden.binaryPath, '/custom/qwen_tts')
   assert.equal(overridden.modelDir, '/custom/model')
+  assert.equal(overridden.backend, 'cuda')
+  assert.equal(overridden.quant, 'int8')
   assert.deepEqual(overridden.ports, [9000])
+  assert.deepEqual(buildQwen3CportArgs(overridden, 9000), [
+    '-d', '/custom/model',
+    '--int8',
+    '--backend', 'cuda',
+    '--serve', '9000',
+    '--seed', '42',
+  ])
 })
 
 test('C launch uses the fast Metal int4 resident-server recipe on loopback', () => {
@@ -76,8 +90,67 @@ test('C launch uses the fast Metal int4 resident-server recipe on loopback', () 
     '--serve', '8003',
     '--seed', '42',
   ])
+  assert.deepEqual(buildQwen3CportArgs({ ...config, quant: 'none' }, 8003), [
+    '-d', '/models/qwen3',
+    '--backend', 'metal',
+    '--serve', '8003',
+    '--seed', '42',
+  ])
   assert.equal(buildQwen3CportEnv({ PATH: '/bin' }).QWEN_METAL_FUSED_TALKER, '1')
   assert.equal(buildQwen3CportBaseUrl(8003), 'http://127.0.0.1:8003/v1')
+})
+
+test('loopback verification accepts loopback listeners and rejects public binds', async () => {
+  assert.deepEqual(parseLsofListenAddresses('p123\nn127.0.0.1:8003\nn[::1]:8003\n'), [
+    '127.0.0.1:8003',
+    '[::1]:8003',
+  ])
+  assert.equal(isLoopbackListenAddress('127.0.0.1:8003'), true)
+  assert.equal(isLoopbackListenAddress('[::1]:8003'), true)
+  assert.equal(isLoopbackListenAddress('localhost:8003'), true)
+  assert.equal(isLoopbackListenAddress('*:8003'), false)
+  assert.equal(isLoopbackListenAddress('0.0.0.0:8003'), false)
+  assert.equal(isLoopbackListenAddress('[::]:8003'), false)
+  assert.equal(isLoopbackListenAddress('192.168.1.5:8003'), false)
+
+  const loopbackOnly = await isQwen3CportLoopbackOnly({
+    port: 8003,
+    listListenAddresses: async () => ['127.0.0.1:8003'],
+    listInterfaceAddresses: () => ['192.168.1.5'],
+    connect: async () => false,
+  })
+  assert.equal(loopbackOnly, true)
+
+  const publicBind = await isQwen3CportLoopbackOnly({
+    port: 8003,
+    listListenAddresses: async () => ['*:8003'],
+    listInterfaceAddresses: () => ['192.168.1.5'],
+    connect: async () => false,
+  })
+  assert.equal(publicBind, false)
+})
+
+test('without lsof the loopback check probes non-loopback interfaces', async () => {
+  const checked: Array<[string, number]> = []
+  const publicBind = await isQwen3CportLoopbackOnly({
+    port: 8003,
+    listListenAddresses: async () => null,
+    listInterfaceAddresses: () => ['192.168.1.5', '10.0.0.4'],
+    connect: async (host, port) => {
+      checked.push([host, port])
+      return host === '10.0.0.4'
+    },
+  })
+  assert.equal(publicBind, false)
+  assert.deepEqual(checked, [['192.168.1.5', 8003], ['10.0.0.4', 8003]])
+
+  const loopbackOnly = await isQwen3CportLoopbackOnly({
+    port: 8003,
+    listListenAddresses: async () => null,
+    listInterfaceAddresses: () => ['192.168.1.5'],
+    connect: async () => false,
+  })
+  assert.equal(loopbackOnly, true)
 })
 
 test('language tags map to the C server full names, unknown tags stay absent', () => {

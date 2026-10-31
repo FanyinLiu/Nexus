@@ -42,6 +42,7 @@ function createHarness(options: {
   qwen3RestartBaseMs?: number
   qwen3RestartMaxAttempts?: number
   qwen3StabilityMs?: number
+  cportLoopback?: boolean
 }) {
   const spawned: Array<{ command: string; args: string[]; port: number; options: Record<string, unknown> }> = []
   const children: FakeChild[] = []
@@ -89,6 +90,7 @@ function createHarness(options: {
     resolvePythonCommandFor: () => 'python3',
     isPortOpen: async (_host: string, port: number) => livePorts.has(port),
     resolveQwen3Launch: async () => options.launch,
+    verifyQwen3CportLoopback: async () => options.cportLoopback !== false,
     classifyPort: async (state: { id: string, port: number }) => {
       if (state.id !== 'qwen3Tts') return livePorts.has(state.port) ? 'ours' : 'closed'
       if (options.pythonPortState) return options.pythonPortState
@@ -167,6 +169,25 @@ test('Qwen3 selection starts the C server and publishes its runtime', async () =
   await harness.supervisor.stopAll()
   assert.equal(harness.active, 0)
   assert.equal(harness.runtimes.at(-1), null)
+})
+
+test('a C server reachable off loopback is killed and falls back to Python', async () => {
+  const harness = createHarness({ launch: CPORT_SPAWN, cportLoopback: false })
+
+  harness.supervisor.applySettings(QWEN3_SETTINGS)
+  await harness.supervisor.whenIdle()
+
+  assert.equal(harness.children[0].exitCode, 0, 'the unsafe C server is stopped')
+  assert.equal(harness.spawned.length, 2)
+  assert.match(harness.spawned[1].args[0] ?? '', /qwen3_tts_server\.py$/u)
+  assert.equal(harness.spawned[1].port, 8002)
+  assert.equal(harness.supervisor.getState().qwen3Tts.engine, 'python')
+  assert.equal(harness.supervisor.getState().qwen3Tts.phase, 'running')
+  assert.equal(harness.runtimes.at(-1), null)
+  assert.equal(harness.active, 1)
+
+  await harness.supervisor.stopAll()
+  assert.equal(harness.active, 0)
 })
 
 test('a C server that never becomes ready falls back to the Python sidecar', async () => {

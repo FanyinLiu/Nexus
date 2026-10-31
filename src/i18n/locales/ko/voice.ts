@@ -69,6 +69,7 @@ export const koVoice = {
   'voice.provider.vad.silero_fallback': 'Silero VAD가 시작이 안 돼서 호환 녹음 모드로 자동 전환했어요.',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 원본 정보: {original}',
   'voice.provider.vad.input_not_enabled': '먼저 설정에서 음성 입력을 활성화해 주세요.',
+  'voice.service.model_missing': '로컬 음성 모델이 아직 설치되지 않았어요. 「설정 → 음성」에서 다운로드한 다음 다시 시도해 주세요.',
   'voice.streaming_tts.first_audio_timeout': '스트리밍 TTS 가 6 초가 지나도 오디오를 출력하지 않았습니다.',
   'voice.streaming_tts.tool_call_filler': '확인해 볼게요.',
   'voice.status.continuous_tencent_start': 'Tencent Cloud 실시간 인식이 켜졌습니다. 말씀하세요.',

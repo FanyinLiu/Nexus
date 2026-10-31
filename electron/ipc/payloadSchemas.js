@@ -31,6 +31,7 @@ export {
   validateTtsStreamFinishPayload,
   validateTtsStreamPushTextPayload,
   validateTtsStreamStartPayload,
+  validateTurnEndSessionPayload,
   validateVadStartPayload,
   validateVoiceRuntimeSyncPayload,
 } from './voicePayloadSchemas.js'

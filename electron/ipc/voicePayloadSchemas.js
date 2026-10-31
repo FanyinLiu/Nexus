@@ -157,6 +157,15 @@ const vadStartSchema = {
   },
 }
 
+const turnEndSessionSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    sessionId: { type: 'number', optional: true, integer: true, min: 0 },
+  },
+}
+
 export function validateSpeechVoiceListPayload(payload) {
   return validateIpcPayload('audio:list-voices', payload, speechVoiceListSchema)
 }
@@ -203,6 +212,10 @@ export function validateKwsOptionsPayload(channel, payload) {
 
 export function validateVadStartPayload(payload) {
   return validateIpcPayload('vad:start', payload, vadStartSchema)
+}
+
+export function validateTurnEndSessionPayload(payload) {
+  return validateIpcPayload('voice-turn:session', payload, turnEndSessionSchema)
 }
 
 /**

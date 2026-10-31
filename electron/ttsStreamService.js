@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { SPEECH_IPC_ERROR_CODES } from '../shared/speechErrorCodes.js'
 import { decodePcm16LeBufferToFloat32, enhanceSpeechSamples } from './audioPostprocess.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { computeTtsStageDurations, createTtsTimingMarks } from './services/ttsStreamTiming.js'
@@ -200,7 +201,7 @@ function decodeWav(buffer) {
   }
 
   if (!dataOffset || !dataSize) {
-    throw new Error('WAV 音频数据没能解析。')
+    throw new Error(SPEECH_IPC_ERROR_CODES.TTS_DECODE_FAILED)
   }
 
   const dataBuffer = buffer.slice(dataOffset, dataOffset + dataSize)
@@ -480,7 +481,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
           emit(session.sender, {
             type: 'error',
             requestId: session.requestId,
-            message: 'TTS 远端未返回任何音频数据。',
+            message: SPEECH_IPC_ERROR_CODES.TTS_EMPTY_AUDIO,
           })
         }
         resolve()
@@ -498,12 +499,12 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         }
         stretcher?.reset()
         gainStage?.reset()
-        const message = getRedactedErrorMessage(err) || '流式音频传输中断。'
+        const message = getRedactedErrorMessage(err)
         console.error('[TTS-Stream] PCM stream error:', message)
         emit(session.sender, {
           type: 'error',
           requestId: session.requestId,
-          message,
+          message: SPEECH_IPC_ERROR_CODES.TTS_STREAM_INTERRUPTED,
         })
         resolve()
       })
@@ -531,17 +532,14 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     }
 
     if (mime && !mime.includes('octet-stream')) {
-      throw new Error(
-        `远程 TTS 返回了不支持的音频格式 (${result.mimeType})，流式解码仅支持 WAV 或 PCM 格式。`
-        + '请将语音输出格式配置为 WAV 或 PCM。',
-      )
+      throw new Error(SPEECH_IPC_ERROR_CODES.TTS_UNSUPPORTED_FORMAT)
     }
 
     // Unknown or octet-stream MIME — attempt WAV decode as last resort.
     try {
       return decodeWav(rawBuffer)
     } catch {
-      throw new Error('远程 TTS 返回的音频格式不支持流式解码，请将输出格式配置为 WAV 或 PCM。')
+      throw new Error(SPEECH_IPC_ERROR_CODES.TTS_UNSUPPORTED_FORMAT)
     }
   }
 
@@ -722,7 +720,9 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     emit(session.sender, {
       type: 'error',
       requestId: session.requestId,
-      message: error instanceof Error ? error.message : '语音合成好像没接上。',
+      message: error instanceof Error
+        ? error.message
+        : SPEECH_IPC_ERROR_CODES.TTS_STREAM_INTERRUPTED,
     })
   }
 
@@ -730,15 +730,15 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     async start(sender, payload) {
       const requestId = String(payload?.requestId ?? '').trim()
       if (!requestId) {
-        throw new Error('缺少流式 TTS requestId。')
+        throw new Error(SPEECH_IPC_ERROR_CODES.TTS_INVALID_SESSION)
       }
 
       if (sessions.has(requestId)) {
-        throw new Error('流式 TTS requestId 已存在，请重新发起会话。')
+        throw new Error(SPEECH_IPC_ERROR_CODES.TTS_INVALID_SESSION)
       }
 
       if (!synthesizeRemote) {
-        throw new Error('远程流式 TTS 未配置。')
+        throw new Error(SPEECH_IPC_ERROR_CODES.TTS_NOT_CONFIGURED)
       }
 
       const abortController = new AbortController()

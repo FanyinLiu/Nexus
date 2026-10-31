@@ -24,6 +24,8 @@ import {
   buildQwen3CportArgs,
   buildQwen3CportBaseUrl,
   buildQwen3CportEnv,
+  isQwen3CportLoopbackOnly,
+  parseLsofListenAddresses,
   resolveQwen3CportConfig,
 } from './qwen3CportService.js'
 import { openSidecarLog } from './sidecarLog.js'
@@ -78,6 +80,39 @@ function isPortOpen(host, port) {
     socket.once('error', () => resolve(false))
     socket.once('timeout', () => { socket.destroy(); resolve(false) })
     socket.connect(port, host)
+  })
+}
+
+function listQwen3CportListenAddresses(port) {
+  if (process.platform === 'win32') return Promise.resolve(null)
+  return new Promise((resolve) => {
+    execFile(
+      'lsof',
+      ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-Fn'],
+      { timeout: 1_500 },
+      (error, stdout) => {
+        resolve(error ? null : parseLsofListenAddresses(stdout))
+      },
+    )
+  })
+}
+
+function listLocalInterfaceAddresses() {
+  const addresses = []
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const entry of entries ?? []) {
+      if (!entry.internal && entry.address) addresses.push(entry.address)
+    }
+  }
+  return addresses
+}
+
+function verifyQwen3CportLoopback(port) {
+  return isQwen3CportLoopbackOnly({
+    port,
+    listListenAddresses: listQwen3CportListenAddresses,
+    listInterfaceAddresses: listLocalInterfaceAddresses,
+    connect: isPortOpen,
   })
 }
 
@@ -215,6 +250,7 @@ export function createDefaultVoiceSidecarHost() {
     isPortOpen,
     openStderrLog: openSidecarStderr,
     resolveQwen3Launch,
+    verifyQwen3CportLoopback,
     classifyPort,
     isServiceReady,
     onQwen3RuntimeChange: (runtime) => setQwen3TtsRuntime(runtime),

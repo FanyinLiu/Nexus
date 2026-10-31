@@ -241,6 +241,51 @@ test('concurrent ticks share one in-flight probe', async () => {
   assert.equal(calls, 1)
 })
 
+test('reset during an in-flight probe drops the stale result', async () => {
+  let calls = 0
+  let resolveProbe: ((result: SmartTurnProbeResult) => void) | null = null
+  const h = harness({
+    probe: () => {
+      calls += 1
+      return new Promise((resolve) => { resolveProbe = resolve })
+    },
+  })
+
+  h.setNow(250)
+  h.controller.tick()
+  assert.equal(calls, 1)
+  assert.equal(h.waits.length, 1)
+
+  h.controller.reset()
+  resolveProbe!({ available: true, probability: 0.99 })
+  await settle()
+
+  assert.equal(h.waits.length, 1, 'the old probe must not tick the reset controller')
+  assert.equal(h.ends.length, 0)
+  assert.equal(h.controller.isModelUnavailable(), false)
+})
+
+test('a stale probe result leaves the current session usable', async () => {
+  const results: SmartTurnProbeResult[] = [
+    { available: false, probability: null, reason: 'inactive', stale: true },
+    { available: true, probability: 0.9 },
+  ]
+  let calls = 0
+  const h = harness({ probe: async () => results[Math.min(calls++, results.length - 1)] })
+
+  h.setNow(250)
+  h.controller.tick()
+  await settle()
+  assert.equal(h.controller.isModelUnavailable(), false)
+  assert.equal(h.waits.at(-1)?.modelProbability, null)
+
+  h.setNow(550)
+  h.controller.tick()
+  await settle()
+  assert.equal(calls, 2)
+  assert.equal(h.ends.at(-1)?.modelProbability, 0.9)
+})
+
 test('resumed speech invalidates the cached probability', async () => {
   const probabilities = [0.1, 0.95]
   let calls = 0

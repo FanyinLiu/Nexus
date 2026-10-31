@@ -40,6 +40,7 @@ import {
   createDesktopTurnEndProbe,
   startDesktopTurnEndSession,
   stopDesktopTurnEndSession,
+  type TurnEndSessionRef,
 } from './smartTurnProbe.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
@@ -142,6 +143,7 @@ export async function startParaformerConversation(
   // Hoisted to the outer function scope so the outer catch can destroy it
   // if startParaformerStream throws before the session ref assignment.
   let vadDetector: VoiceActivityDetector | null = null
+  let turnEndSession: TurnEndSessionRef = null
 
   try {
     const traceId = createId('voice')
@@ -172,7 +174,7 @@ export async function startParaformerConversation(
         if (!speechDetected) {
           finalizing = true
           params.backchannel?.stop()
-          stopDesktopTurnEndSession()
+          stopDesktopTurnEndSession(turnEndSession)
           params.clearParaformerConversationState()
           session.abort()
           params.paraformerSessionRef.current = null
@@ -191,7 +193,7 @@ export async function startParaformerConversation(
 
       finalizing = true
       params.backchannel?.stop()
-      stopDesktopTurnEndSession()
+      stopDesktopTurnEndSession(turnEndSession)
       params.clearParaformerConversationState()
 
       try {
@@ -234,8 +236,9 @@ export async function startParaformerConversation(
       params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_detected'))
     }
 
+    turnEndSession = startDesktopTurnEndSession()
     const turnEnd = createTurnEndController({
-      probe: createDesktopTurnEndProbe(),
+      probe: createDesktopTurnEndProbe(turnEndSession),
       getContext: () => ({
         partialTranscript: latestPartial,
         locale: params.currentSettings.speechRecognitionLang,
@@ -260,7 +263,6 @@ export async function startParaformerConversation(
     })
 
     params.beginVoiceListeningSession('local_paraformer')
-    startDesktopTurnEndSession()
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
@@ -346,7 +348,7 @@ export async function startParaformerConversation(
 
         finalizing = true
         params.backchannel?.stop()
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.clearParaformerConversationState()
         params.paraformerSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -367,7 +369,7 @@ export async function startParaformerConversation(
       if (!speechDetected) {
         finalizing = true
         params.backchannel?.stop()
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.clearParaformerConversationState()
         session.abort()
         params.paraformerSessionRef.current = null
@@ -379,7 +381,7 @@ export async function startParaformerConversation(
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
     params.backchannel?.stop()
-    stopDesktopTurnEndSession()
+    stopDesktopTurnEndSession(turnEndSession)
     params.clearParaformerConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

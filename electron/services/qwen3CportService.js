@@ -40,9 +40,10 @@ function isNonEmptyString(value) {
 }
 
 /**
- * Resolve the C server binary, checkpoint, and candidate ports.
+ * Resolve the C server binary, checkpoint, backend/quant flags, and ports.
  *
- * `NEXUS_QWEN3_CPORT_BIN`, `NEXUS_QWEN3_CPORT_MODEL` and
+ * `NEXUS_QWEN3_CPORT_BIN`, `NEXUS_QWEN3_CPORT_MODEL`,
+ * `NEXUS_QWEN3_CPORT_BACKEND`, `NEXUS_QWEN3_CPORT_QUANT` and
  * `NEXUS_QWEN3_CPORT_PORT` override the defaults; `NEXUS_QWEN3_CPORT_DISABLE=1`
  * forces the Python sidecar (useful for debugging the fallback path).
  *
@@ -55,6 +56,8 @@ function isNonEmptyString(value) {
  *   available: boolean,
  *   binaryPath: string,
  *   modelDir: string,
+ *   backend: string,
+ *   quant: string,
  *   ports: number[],
  *   reason: string | null,
  * }}
@@ -70,6 +73,12 @@ export function resolveQwen3CportConfig(deps = {}) {
   const modelDir = isNonEmptyString(env.NEXUS_QWEN3_CPORT_MODEL)
     ? env.NEXUS_QWEN3_CPORT_MODEL.trim()
     : path.join(homedir(), 'Models', 'qwen3-tts', 'Qwen3-TTS-12Hz-1.7B-CustomVoice')
+  const backend = isNonEmptyString(env.NEXUS_QWEN3_CPORT_BACKEND)
+    ? env.NEXUS_QWEN3_CPORT_BACKEND.trim()
+    : 'metal'
+  const quant = isNonEmptyString(env.NEXUS_QWEN3_CPORT_QUANT)
+    ? env.NEXUS_QWEN3_CPORT_QUANT.trim()
+    : 'int4'
 
   const forcedPort = Number(env.NEXUS_QWEN3_CPORT_PORT)
   const ports = Number.isInteger(forcedPort) && forcedPort > 0
@@ -77,7 +86,15 @@ export function resolveQwen3CportConfig(deps = {}) {
     : [...QWEN3_CPORT_PORTS]
 
   if (String(env.NEXUS_QWEN3_CPORT_DISABLE ?? '').trim() === '1') {
-    return { available: false, binaryPath, modelDir, ports, reason: 'disabled by NEXUS_QWEN3_CPORT_DISABLE' }
+    return {
+      available: false,
+      binaryPath,
+      modelDir,
+      backend,
+      quant,
+      ports,
+      reason: 'disabled by NEXUS_QWEN3_CPORT_DISABLE',
+    }
   }
 
   const hasBinary = existsSync(binaryPath)
@@ -86,6 +103,8 @@ export function resolveQwen3CportConfig(deps = {}) {
     available: hasBinary && hasModel,
     binaryPath,
     modelDir,
+    backend,
+    quant,
     ports,
     reason: hasBinary && hasModel
       ? null
@@ -96,16 +115,23 @@ export function resolveQwen3CportConfig(deps = {}) {
 /**
  * The fastest launch verified in RESULTS.md: Metal fused talker, int4, fixed
  * seed. Only the resident server is used — one-shot CLI mode peaks at 12 GB.
+ * Backend/quant come from the resolved config so another build can opt out of
+ * Metal without editing code; `quant: 'none'` omits the flag.
  *
- * @param {{ modelDir: string }} config
+ * @param {{ modelDir: string, backend?: string, quant?: string }} config
  * @param {number} port
  * @returns {string[]}
  */
 export function buildQwen3CportArgs(config, port) {
+  const backend = isNonEmptyString(config.backend) ? config.backend.trim() : 'metal'
+  const quant = isNonEmptyString(config.quant) ? config.quant.trim() : 'int4'
+  const quantFlag = quant === 'none'
+    ? []
+    : [quant.startsWith('--') ? quant : `--${quant}`]
   return [
     '-d', config.modelDir,
-    '--int4',
-    '--backend', 'metal',
+    ...quantFlag,
+    '--backend', backend,
     '--serve', String(port),
     '--seed', '42',
   ]
@@ -130,6 +156,78 @@ export function buildQwen3CportEnv(baseEnv = process.env) {
  */
 export function buildQwen3CportBaseUrl(port) {
   return `http://127.0.0.1:${port}/v1`
+}
+
+/**
+ * True when an lsof listen address (or a bare interface host) is loopback.
+ * Wildcards, `0.0.0.0`, and `::` are treated as publicly reachable.
+ *
+ * @param {string} address
+ * @returns {boolean}
+ */
+export function isLoopbackListenAddress(address) {
+  const value = String(address ?? '').trim().toLowerCase()
+  if (!value) return false
+  let host = value
+  if (host.startsWith('[')) {
+    const end = host.indexOf(']')
+    if (end > 0) host = host.slice(1, end)
+  } else if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/u.test(host)) {
+    host = host.slice(0, host.lastIndexOf(':'))
+  } else if (/^[^:]+:\d+$/u.test(host)) {
+    host = host.slice(0, host.lastIndexOf(':'))
+  }
+  if (host === '*' || host === '0.0.0.0' || host === '::' || host === 'any') return false
+  if (host === 'localhost' || host === '::1' || host === '0:0:0:0:0:0:0:1') return true
+  return /^127(?:\.\d{1,3}){3}$/u.test(host)
+}
+
+/**
+ * Pull listen addresses out of `lsof -Fn` output (one `n…` line per socket).
+ *
+ * @param {string} stdout
+ * @returns {string[]}
+ */
+export function parseLsofListenAddresses(stdout) {
+  return String(stdout ?? '')
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith('n'))
+    .map((line) => line.slice(1).trim())
+    .filter(Boolean)
+}
+
+/**
+ * Verify the C server listens only on loopback. lsof is the fast path; when
+ * it is unavailable (Windows / missing binary / permission), probe the
+ * machine's non-loopback interface addresses instead. Fail closed on any
+ * reachable non-loopback listener.
+ *
+ * @param {{
+ *   port: number,
+ *   listListenAddresses: (port: number) => Promise<string[] | null>,
+ *   listInterfaceAddresses: () => string[],
+ *   connect: (host: string, port: number) => Promise<boolean>,
+ * }} deps
+ * @returns {Promise<boolean>}
+ */
+export async function isQwen3CportLoopbackOnly(deps) {
+  let listenAddresses
+  try {
+    listenAddresses = await deps.listListenAddresses(deps.port)
+  } catch {
+    listenAddresses = null
+  }
+  if (Array.isArray(listenAddresses) && listenAddresses.length > 0) {
+    return listenAddresses.every(isLoopbackListenAddress)
+  }
+
+  const candidates = deps.listInterfaceAddresses()
+    .filter((address) => !isLoopbackListenAddress(address))
+  if (!candidates.length) return true
+  const reachable = await Promise.all(
+    candidates.map((address) => deps.connect(address, deps.port).catch(() => false)),
+  )
+  return !reachable.some(Boolean)
 }
 
 /**
