@@ -27,7 +27,9 @@
  */
 
 const MIN_RATE = 0.5
-const MAX_RATE = 2
+// The user's speechRate multiplies the mood tempo, so the ceiling covers the
+// slowest mood row times the top of the rate setting without a second clamp.
+const MAX_RATE = 2.5
 // 48 ms at 24 kHz. Long enough for ~10 pitch periods of a 200 Hz female voice,
 // short enough to keep the first-audio lookahead under 100 ms.
 const DEFAULT_FRAME_SIZE = 1152

@@ -22,7 +22,7 @@ export type SenseVoiceStreamCallbacks = {
   onError?: (message: string) => void
 }
 
-type SenseVoiceStreamStopResult = {
+export type SenseVoiceStreamStopResult = {
   text: string
   audioSamples: Float32Array | null
   sampleRate: number
@@ -35,9 +35,23 @@ type SenseVoiceStreamStopResult = {
   voiceEmotion: VoiceEmotionLabel | null
 }
 
+export type SenseVoiceTranscript = {
+  text: string
+  voiceEmotion: VoiceEmotionLabel | null
+}
+
 export type SenseVoiceStreamSession = {
-  stop: () => Promise<SenseVoiceStreamStopResult>
+  /**
+   * Stop capture and recognize the final buffer. Pass `reuseTranscript` when a
+   * speculative decode already covered an unchanged utterance; the streaming
+   * buffer is then aborted instead of decoded a second time.
+   */
+  stop: (options?: { reuseTranscript?: SenseVoiceTranscript }) => Promise<SenseVoiceStreamStopResult>
   abort: () => void
+  /** Copy of the current in-memory utterance, or null before any audio. */
+  snapshotAudio: () => { samples: Float32Array; sampleRate: number } | null
+  /** One-shot recognition of a snapshot without consuming the stream buffer. */
+  transcribeSamples: (samples: Float32Array, sampleRate: number) => Promise<SenseVoiceTranscript>
 }
 
 function createInputAudioContext(sampleRate?: number) {
@@ -196,14 +210,34 @@ export async function startSenseVoiceStream(
     })
   }
 
+  function snapshotAudio() {
+    const samples = buildRecordedAudioSamples()
+    return samples ? { samples, sampleRate: audioContext.sampleRate } : null
+  }
+
+  async function transcribeSamples(
+    samples: Float32Array,
+    sampleRate: number,
+  ): Promise<SenseVoiceTranscript> {
+    if (!api.sensevoiceTranscribe || !samples.length) {
+      return { text: '', voiceEmotion: null }
+    }
+    const result = await api.sensevoiceTranscribe({ samples, sampleRate })
+    return {
+      text: (result.text || '').trim(),
+      voiceEmotion: result.voiceEmotion ?? null,
+    }
+  }
+
   return {
-    async stop() {
+    async stop(options = {}) {
+      const reuse = options.reuseTranscript
       if (destroyed) {
         return {
-          text: '',
+          text: reuse?.text ?? '',
           audioSamples: buildRecordedAudioSamples(),
           sampleRate: audioContext.sampleRate,
-          voiceEmotion: null,
+          voiceEmotion: reuse?.voiceEmotion ?? null,
         }
       }
 
@@ -211,12 +245,18 @@ export async function startSenseVoiceStream(
       teardownAudioGraph()
       await pushChain.catch(() => undefined)
 
-      let text = ''
-      let voiceEmotion: VoiceEmotionLabel | null = null
+      let text = reuse?.text ?? ''
+      let voiceEmotion = reuse?.voiceEmotion ?? null
       try {
-        const result = await api.sensevoiceFinish()
-        text = (result.text || '').trim()
-        voiceEmotion = result.voiceEmotion ?? null
+        if (reuse) {
+          // The speculative decode already covered this utterance; drop the
+          // streaming buffer instead of running recognition after stop.
+          await api.sensevoiceAbort().catch(() => undefined)
+        } else {
+          const result = await api.sensevoiceFinish()
+          text = (result.text || '').trim()
+          voiceEmotion = result.voiceEmotion ?? null
+        }
       } catch {
         // fall through with empty text
       } finally {
@@ -238,6 +278,9 @@ export async function startSenseVoiceStream(
       teardownAudioGraph()
       api.sensevoiceAbort().catch(() => undefined)
     },
+
+    snapshotAudio,
+    transcribeSamples,
   }
 }
 
