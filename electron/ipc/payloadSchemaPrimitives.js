@@ -1,3 +1,4 @@
+// @ts-check
 export const SHORT_TEXT_MAX = 256
 export const URL_TEXT_MAX = 2_048
 export const SECRET_TEXT_MAX = 20_000

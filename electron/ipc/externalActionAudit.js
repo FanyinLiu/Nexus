@@ -1,42 +1,55 @@
+// @ts-check
 let externalActionAuditSequence = 0
 
+/** @param {unknown} value */
 function textLength(value) {
   return typeof value === 'string' ? value.length : 0
 }
 
+/** @param {unknown} value */
 function hasText(value) {
   return textLength(value) > 0
 }
 
+/** @param {unknown} value */
 function valueKind(value) {
   if (value === null) return 'null'
   if (Array.isArray(value)) return 'array'
   return typeof value
 }
 
+/** @param {unknown} value */
 function plainObjectKeyCount(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return 0
   return Object.keys(value).length
 }
 
+/** @param {number} [nowMs] */
 function nextExternalActionAuditId(nowMs = Date.now()) {
   externalActionAuditSequence = (externalActionAuditSequence + 1) % Number.MAX_SAFE_INTEGER
   return `external-action-${Math.max(0, Math.trunc(nowMs)).toString(36)}-${externalActionAuditSequence.toString(36)}`
 }
 
+/** @param {unknown} value */
 function sanitizeFailureCode(value) {
   const normalized = String(value ?? '').trim()
   if (!normalized) return null
   return normalized.replace(/[^a-zA-Z0-9_.:-]/g, '_').slice(0, 80) || null
 }
 
+/** @param {unknown} error */
 export function resolveExternalActionFailureCode(error) {
   if (!error || typeof error !== 'object') return 'unknown'
-  return sanitizeFailureCode(error.code)
-    ?? sanitizeFailureCode(error.name)
+  const failure = /** @type {{ code?: unknown, name?: unknown }} */ (error)
+  return sanitizeFailureCode(failure.code)
+    ?? sanitizeFailureCode(failure.name)
     ?? 'unknown'
 }
 
+/**
+ * @param {Record<string, unknown>} payload
+ * @param {string} targetKey
+ */
 function summarizeTarget(payload = {}, targetKey) {
   const value = payload?.[targetKey]
   return {
@@ -46,6 +59,7 @@ function summarizeTarget(payload = {}, targetKey) {
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeReply(payload = {}) {
   const replyTo = payload?.replyToMessageId
   return {
@@ -54,6 +68,7 @@ function summarizeReply(payload = {}) {
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeTextPayload(payload = {}) {
   return {
     textLength: textLength(payload?.text),
@@ -63,6 +78,7 @@ function summarizeTextPayload(payload = {}) {
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeAudioPayload(payload = {}) {
   return {
     audioBase64Length: textLength(payload?.audioBase64),
@@ -71,12 +87,14 @@ function summarizeAudioPayload(payload = {}) {
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeGamePayload(payload = {}) {
   return {
     commandLength: textLength(payload?.command),
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeMcpCallPayload(payload = {}) {
   return {
     serverIdPresent: hasText(payload?.serverId),
@@ -87,6 +105,7 @@ function summarizeMcpCallPayload(payload = {}) {
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeMcpSyncPayload(payload = {}) {
   const servers = Array.isArray(payload?.servers) ? payload.servers : []
   return {
@@ -98,6 +117,10 @@ function summarizeMcpSyncPayload(payload = {}) {
   }
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} [payload]
+ */
 export function summarizeExternalActionRequest(channel, payload = {}) {
   switch (channel) {
     case 'telegram:send-message':
@@ -169,19 +192,30 @@ export function summarizeExternalActionRequest(channel, payload = {}) {
   }
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} [result]
+ * @param {unknown} [error]
+ */
 export function summarizeExternalActionResult(channel, result = {}, error = null) {
   const failed = Boolean(error)
+  const resultLike = /** @type {{ response?: unknown } | null | undefined} */ (result)
   return {
     channel,
     ok: !failed,
     resultKind: failed ? 'error' : valueKind(result),
     resultKeyCount: failed ? 0 : plainObjectKeyCount(result),
-    responseLength: failed ? 0 : textLength(result?.response),
+    responseLength: failed ? 0 : textLength(resultLike?.response),
     errorName: failed && error instanceof Error ? error.name : undefined,
     errorMessageLength: failed && error instanceof Error ? textLength(error.message) : 0,
   }
 }
 
+/**
+ * @param {string} actionId
+ * @param {string} channel
+ * @param {Record<string, unknown>} [payload]
+ */
 export function summarizeExternalActionStart(actionId, channel, payload = {}) {
   const input = summarizeExternalActionRequest(channel, payload)
   return {
@@ -194,6 +228,14 @@ export function summarizeExternalActionStart(actionId, channel, payload = {}) {
   }
 }
 
+/**
+ * @param {string} actionId
+ * @param {string} channel
+ * @param {number} startedAtMs
+ * @param {number} finishedAtMs
+ * @param {unknown} [result]
+ * @param {unknown} [error]
+ */
 export function summarizeExternalActionFinish(actionId, channel, startedAtMs, finishedAtMs, result = {}, error = null) {
   const output = summarizeExternalActionResult(channel, result, error)
   return {
@@ -217,6 +259,21 @@ async function getDefaultPermissionCheck() {
   return module.requireExternalActionPermission
 }
 
+/**
+ * @typedef {Object} ExternalActionAuditOptions
+ * @property {() => number} [now]
+ * @property {(category: string, phase: string, detail: unknown) => void} [audit]
+ * @property {(channel: string) => unknown} [requirePermission]
+ * @property {string} [actionId]
+ */
+
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ * @param {() => unknown} action
+ * @param {ExternalActionAuditOptions} [options]
+ * @returns {Promise<unknown>}
+ */
 export async function runAuditedExternalAction(channel, payload, action, options = {}) {
   const now = typeof options.now === 'function' ? options.now : Date.now
   const auditWriter = typeof options.audit === 'function'

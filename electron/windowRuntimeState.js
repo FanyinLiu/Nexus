@@ -75,6 +75,10 @@ export function syncRuntimeState(originWebContentsId = null) {
   }
 }
 
+/**
+ * @param {Record<string, unknown>} partialState
+ * @param {number | null} [originWebContentsId]
+ */
 export function updateRuntimeState(partialState, originWebContentsId = null) {
   const safe = sanitizeRuntimeStatePatch(partialState)
   runtimeState = {
@@ -85,6 +89,10 @@ export function updateRuntimeState(partialState, originWebContentsId = null) {
   syncRuntimeState(originWebContentsId)
 }
 
+/**
+ * @param {'pet' | 'panel'} view
+ * @param {number | null} [originWebContentsId]
+ */
 export function updateHeartbeat(view, originWebContentsId = null) {
   runtimeClientHeartbeat = {
     ...runtimeClientHeartbeat,

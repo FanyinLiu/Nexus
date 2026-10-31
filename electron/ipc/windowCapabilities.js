@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Window-level capability policy for renderer IPC.
  *

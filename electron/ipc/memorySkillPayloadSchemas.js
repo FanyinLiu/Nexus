@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   BODY_TEXT_MAX,
@@ -5,6 +6,59 @@ import {
   SAFE_SKILL_ID_PATTERN,
   SHORT_TEXT_MAX,
 } from './payloadSchemaPrimitives.js'
+
+/**
+ * @typedef {Object} MemoryIndexPayload
+ * @property {string} id
+ * @property {string} content
+ * @property {number[]} embedding
+ * @property {string} [layer]
+ * @property {string} [model]
+ */
+
+/**
+ * @typedef {Object} MemoryVectorSearchPayload
+ * @property {number[]} queryEmbedding
+ * @property {number} [limit]
+ * @property {number} [threshold]
+ * @property {string} [layer]
+ * @property {string} [model]
+ */
+
+/**
+ * @typedef {Object} MemoryKeywordSearchPayload
+ * @property {string} query
+ * @property {number} [limit]
+ * @property {number} [threshold]
+ * @property {string} [layer]
+ */
+
+/**
+ * @typedef {Object} MemoryHybridSearchPayload
+ * @property {number[]} queryEmbedding
+ * @property {string} queryText
+ * @property {number} [limit]
+ * @property {number} [threshold]
+ * @property {string} [layer]
+ * @property {string} [model]
+ */
+
+/**
+ * @typedef {Object} MemoryOllamaEmbedPayload
+ * @property {string} [baseUrl]
+ * @property {string} model
+ * @property {string[]} input
+ * @property {number} [timeoutMs]
+ */
+
+/**
+ * @typedef {Object} SkillSavePayload
+ * @property {string} id
+ * @property {string} title
+ * @property {string} trigger
+ * @property {string} summary
+ * @property {string} content
+ */
 
 const embeddingArraySchema = {
   type: 'array',
@@ -202,24 +256,29 @@ const mcpSyncServersSchema = {
   },
 }
 
+/** @param {unknown} payload @returns {MemoryIndexPayload} */
 export function validateMemoryVectorIndexPayload(payload) {
-  return validateIpcPayload('memory:vector-index', payload, memoryIndexSchema)
+  return /** @type {MemoryIndexPayload} */ (validateIpcPayload('memory:vector-index', payload, memoryIndexSchema))
 }
 
+/** @param {unknown} payload @returns {MemoryIndexPayload[]} */
 export function validateMemoryVectorIndexBatchPayload(payload) {
-  return validateIpcPayload('memory:vector-index-batch', payload, memoryIndexBatchSchema)
+  return /** @type {MemoryIndexPayload[]} */ (validateIpcPayload('memory:vector-index-batch', payload, memoryIndexBatchSchema))
 }
 
+/** @param {unknown} payload @returns {MemoryVectorSearchPayload} */
 export function validateMemoryVectorSearchPayload(payload) {
-  return validateIpcPayload('memory:vector-search', payload, memoryVectorSearchSchema)
+  return /** @type {MemoryVectorSearchPayload} */ (validateIpcPayload('memory:vector-search', payload, memoryVectorSearchSchema))
 }
 
+/** @param {unknown} payload @returns {MemoryKeywordSearchPayload} */
 export function validateMemoryKeywordSearchPayload(payload) {
-  return validateIpcPayload('memory:keyword-search', payload, memoryKeywordSearchSchema)
+  return /** @type {MemoryKeywordSearchPayload} */ (validateIpcPayload('memory:keyword-search', payload, memoryKeywordSearchSchema))
 }
 
+/** @param {unknown} payload @returns {MemoryHybridSearchPayload} */
 export function validateMemoryHybridSearchPayload(payload) {
-  return validateIpcPayload('memory:hybrid-search', payload, memoryHybridSearchSchema)
+  return /** @type {MemoryHybridSearchPayload} */ (validateIpcPayload('memory:hybrid-search', payload, memoryHybridSearchSchema))
 }
 
 const memoryOllamaDetectSchema = {
@@ -237,7 +296,9 @@ const OLLAMA_TIMEOUT_MAX_MS = 30_000
 /**
  * A renderer-supplied timeout is advisory: clamp it so a stuck or hostile
  * caller cannot hold the main process on a request for minutes.
- * @param {{ timeoutMs?: number } | null | undefined} payload
+ * @template {{ timeoutMs?: number }} T
+ * @param {T | null | undefined} payload
+ * @returns {T | null | undefined}
  */
 function clampOllamaTimeout(payload) {
   if (!payload || payload.timeoutMs === undefined) return payload
@@ -247,46 +308,85 @@ function clampOllamaTimeout(payload) {
   }
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ baseUrl?: string, model: string, timeoutMs?: number }}
+ */
 export function validateMemoryOllamaDetectPayload(payload) {
-  return clampOllamaTimeout(validateIpcPayload('memory:ollama-detect', payload, memoryOllamaDetectSchema))
+  return /** @type {{ baseUrl?: string, model: string, timeoutMs?: number }} */ (clampOllamaTimeout(
+    /** @type {{ baseUrl?: string, model: string, timeoutMs?: number } | null | undefined} */ (
+      validateIpcPayload('memory:ollama-detect', payload, memoryOllamaDetectSchema)
+    ),
+  ))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {MemoryOllamaEmbedPayload}
+ */
 export function validateMemoryOllamaEmbedPayload(payload) {
-  return clampOllamaTimeout(validateIpcPayload('memory:ollama-embed', payload, memoryOllamaEmbedSchema))
+  return /** @type {MemoryOllamaEmbedPayload} */ (clampOllamaTimeout(/** @type {MemoryOllamaEmbedPayload | null | undefined} */ (
+    validateIpcPayload('memory:ollama-embed', payload, memoryOllamaEmbedSchema)
+  )))
 }
 
+/** @param {unknown} payload @returns {{ id?: string, ids?: string[] }} */
 export function validateMemoryRemovePayload(payload) {
-  return validateIpcPayload('memory:vector-remove', payload, memoryRemoveSchema)
+  return /** @type {{ id?: string, ids?: string[] }} */ (validateIpcPayload('memory:vector-remove', payload, memoryRemoveSchema))
 }
 
+/** @param {unknown} payload @returns {{ needles?: string[] }} */
 export function validateMemoryClearUserDataPayload(payload) {
-  return validateIpcPayload('memory:clear-user-data', payload, memoryClearUserDataSchema)
+  return /** @type {{ needles?: string[] }} */ (validateIpcPayload('memory:clear-user-data', payload, memoryClearUserDataSchema))
 }
 
+/** @param {unknown} payload @returns {{ memories: Array<Record<string, unknown>> }} */
 export function validateMemoryLongTermSavePayload(payload) {
-  return validateIpcPayload('memory:long-term-save', payload, longTermMemorySaveSchema)
+  return /** @type {{ memories: Array<Record<string, unknown>> }} */ (validateIpcPayload('memory:long-term-save', payload, longTermMemorySaveSchema))
 }
 
+/** @param {unknown} payload @returns {SkillSavePayload} */
 export function validateSkillSavePayload(payload) {
-  return validateIpcPayload('skill:save', payload, skillSaveSchema)
+  return /** @type {SkillSavePayload} */ (validateIpcPayload('skill:save', payload, skillSaveSchema))
 }
 
+/** @param {unknown} payload @returns {{ query: string, limit?: number }} */
 export function validateSkillSearchPayload(payload) {
-  return validateIpcPayload('skill:search', payload, skillSearchSchema)
+  return /** @type {{ query: string, limit?: number }} */ (validateIpcPayload('skill:search', payload, skillSearchSchema))
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ id: string }}
+ */
 export function validateSkillIdPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, skillIdSchema)
+  return /** @type {{ id: string }} */ (validateIpcPayload(channel, payload, skillIdSchema))
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ id?: string }}
+ */
 export function validateMcpIdPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, mcpIdSchema)
+  return /** @type {{ id?: string }} */ (validateIpcPayload(channel, payload, mcpIdSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ serverId?: string, name: string, arguments?: unknown }}
+ */
 export function validateMcpCallToolPayload(payload) {
-  return validateIpcPayload('mcp:call-tool', payload, mcpCallToolSchema)
+  return /** @type {{ serverId?: string, name: string, arguments?: unknown }} */ (validateIpcPayload('mcp:call-tool', payload, mcpCallToolSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ servers: Array<{ id: string, label?: string, command: string, args?: string, enabled: boolean, env?: unknown }> }}
+ */
 export function validateMcpSyncServersPayload(payload) {
-  return validateIpcPayload('mcp:sync-servers', payload, mcpSyncServersSchema)
+  return /** @type {{ servers: Array<{ id: string, label?: string, command: string, args?: string, enabled: boolean, env?: unknown }> }} */ (
+    validateIpcPayload('mcp:sync-servers', payload, mcpSyncServersSchema)
+  )
 }

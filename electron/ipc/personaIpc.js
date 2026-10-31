@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain, shell, dialog, BrowserWindow } from 'electron'
 import * as personaLoader from '../services/personaLoader.js'
 import { acceptPersonaSoulContent } from '../services/personaProfileLoader.js'
@@ -92,7 +93,8 @@ export function register() {
 
   ipcMain.handle('persona:import-card', async (event) => {
     requireTrustedSender(event)
-    const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined
+    // Electron dialogs accept an undefined parent window at runtime.
+    const sourceWindow = /** @type {Electron.BrowserWindow} */ (BrowserWindow.fromWebContents(event.sender) ?? undefined)
     const selection = await dialog.showOpenDialog(sourceWindow, {
       title: 'Import Character Card',
       filters: [

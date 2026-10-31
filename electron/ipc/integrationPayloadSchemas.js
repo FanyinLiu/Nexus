@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   AUDIO_BASE64_MAX,
@@ -8,6 +9,72 @@ import {
   URL_TEXT_MAX,
   integrationPermissionModeSchema,
 } from './payloadSchemaPrimitives.js'
+
+/**
+ * @typedef {Object} ExternalActionPolicyItemPayload
+ * @property {'read-only'|'confirm'|'auto'} mode
+ * @property {boolean} [active]
+ */
+
+/**
+ * @typedef {Object} IntegrationInspectPayload
+ * @property {Array<{ id: string, label: string, command: string, args: string, enabled: boolean }>} mcpServers
+ * @property {boolean} minecraftIntegrationEnabled
+ * @property {string} minecraftServerAddress
+ * @property {number} minecraftServerPort
+ * @property {string} minecraftUsername
+ * @property {boolean} factorioIntegrationEnabled
+ * @property {string} factorioServerAddress
+ * @property {number} factorioServerPort
+ * @property {string} factorioUsername
+ */
+
+/**
+ * @typedef {Object} TelegramSendMessagePayload
+ * @property {number} chatId
+ * @property {string} text
+ * @property {number} [replyToMessageId]
+ * @property {string} [parseMode]
+ */
+
+/**
+ * @typedef {Object} TelegramSendVoicePayload
+ * @property {number} chatId
+ * @property {string} audioBase64
+ * @property {string} mimeType
+ * @property {number} [replyToMessageId]
+ */
+
+/**
+ * @typedef {Object} DiscordSendMessagePayload
+ * @property {string} channelId
+ * @property {string} text
+ * @property {string} [replyToMessageId]
+ */
+
+/**
+ * @typedef {Object} DiscordSendVoicePayload
+ * @property {string} channelId
+ * @property {string} audioBase64
+ * @property {string} mimeType
+ * @property {string} [replyToMessageId]
+ */
+
+/**
+ * @typedef {Object} ExternalActionPolicySyncPayload
+ * @property {Record<string, ExternalActionPolicyItemPayload | undefined>} policies
+ * @property {{ activeWindow?: boolean, clipboard?: boolean, screenshot?: boolean }} [desktopContext]
+ * @property {boolean} [toolOpenExternalRequiresConfirmation]
+ * @property {string} [uiLanguage]
+ */
+
+/**
+ * @typedef {Object} GameConnectPayload
+ * @property {string} address
+ * @property {number} [port]
+ * @property {string} [username]
+ * @property {string} [password]
+ */
 
 const externalActionPolicyItemSchema = {
   type: 'object',
@@ -145,34 +212,50 @@ const gameCommandSchema = {
   },
 }
 
+/** @param {unknown} payload @returns {IntegrationInspectPayload} */
 export function validateIntegrationInspectPayload(payload) {
-  return validateIpcPayload('integrations:inspect', payload, integrationInspectSchema)
+  return /** @type {IntegrationInspectPayload} */ (validateIpcPayload('integrations:inspect', payload, integrationInspectSchema))
 }
 
+/** @param {unknown} payload @returns {TelegramSendMessagePayload} */
 export function validateTelegramSendMessagePayload(payload) {
-  return validateIpcPayload('telegram:send-message', payload, telegramSendMessageSchema)
+  return /** @type {TelegramSendMessagePayload} */ (validateIpcPayload('telegram:send-message', payload, telegramSendMessageSchema))
 }
 
+/** @param {unknown} payload @returns {TelegramSendVoicePayload} */
 export function validateTelegramSendVoicePayload(payload) {
-  return validateIpcPayload('telegram:send-voice', payload, telegramSendVoiceSchema)
+  return /** @type {TelegramSendVoicePayload} */ (validateIpcPayload('telegram:send-voice', payload, telegramSendVoiceSchema))
 }
 
+/** @param {unknown} payload @returns {DiscordSendMessagePayload} */
 export function validateDiscordSendMessagePayload(payload) {
-  return validateIpcPayload('discord:send-message', payload, discordSendMessageSchema)
+  return /** @type {DiscordSendMessagePayload} */ (validateIpcPayload('discord:send-message', payload, discordSendMessageSchema))
 }
 
+/** @param {unknown} payload @returns {DiscordSendVoicePayload} */
 export function validateDiscordSendVoicePayload(payload) {
-  return validateIpcPayload('discord:send-voice', payload, discordSendVoiceSchema)
+  return /** @type {DiscordSendVoicePayload} */ (validateIpcPayload('discord:send-voice', payload, discordSendVoiceSchema))
 }
 
+/** @param {unknown} payload @returns {ExternalActionPolicySyncPayload} */
 export function validateExternalActionPolicySyncPayload(payload) {
-  return validateIpcPayload('external-action-policy:sync', payload, externalActionPolicySyncSchema)
+  return /** @type {ExternalActionPolicySyncPayload} */ (validateIpcPayload('external-action-policy:sync', payload, externalActionPolicySyncSchema))
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {GameConnectPayload}
+ */
 export function validateGameConnectPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, gameConnectSchema)
+  return /** @type {GameConnectPayload} */ (validateIpcPayload(channel, payload, gameConnectSchema))
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ command: string }}
+ */
 export function validateGameCommandPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, gameCommandSchema)
+  return /** @type {{ command: string }} */ (validateIpcPayload(channel, payload, gameCommandSchema))
 }

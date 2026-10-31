@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import { audit } from '../services/auditLog.js'
 import {
@@ -9,10 +10,13 @@ import { saveExternalOpenConfirmation } from '../services/externalOpenConfirmati
 import { requireTrustedSender } from './validate.js'
 import { validateExternalActionPolicySyncPayload } from './payloadSchemas.js'
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizePolicySyncPayload(payload = {}) {
-  const policies = payload?.policies && typeof payload.policies === 'object' && !Array.isArray(payload.policies)
-    ? payload.policies
-    : {}
+  const policies = /** @type {Record<string, { mode?: string, active?: unknown } | undefined>} */ (
+    payload?.policies && typeof payload.policies === 'object' && !Array.isArray(payload.policies)
+      ? payload.policies
+      : {}
+  )
   const integrations = Object.keys(policies).filter((key) => policies[key])
   return {
     integrationCount: integrations.length,

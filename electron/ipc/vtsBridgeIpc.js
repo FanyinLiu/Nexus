@@ -1,3 +1,4 @@
+// @ts-check
 import { BrowserWindow, ipcMain } from 'electron'
 import { audit } from '../services/auditLog.js'
 import { getRedactedErrorMessage } from '../services/errorRedaction.js'
@@ -16,12 +17,17 @@ import {
 } from './payloadSchemas.js'
 import { requireTrustedSender } from './validate.js'
 
+/** @param {unknown} status */
 function broadcastStatus(status) {
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send('vts-bridge:status', status)
   }
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ */
 function summarizePayload(channel, payload) {
   if (channel === 'vts-bridge:connect') {
     return { port: payload?.port }
@@ -37,6 +43,11 @@ function summarizePayload(channel, payload) {
   return {}
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ * @param {() => Promise<Record<string, unknown> | undefined> | Record<string, unknown> | undefined} action
+ */
 async function runAuditedVtsAction(channel, payload, action) {
   audit('vts-bridge', 'request', {
     channel,

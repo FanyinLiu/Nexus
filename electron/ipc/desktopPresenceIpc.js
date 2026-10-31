@@ -1,3 +1,4 @@
+// @ts-check
 // Typed IPC for adaptive desktop presence. Payloads are booleans in and
 // aggregate signals out. requireTrustedSender keeps the channels on the
 // same renderer boundary as the rest of the bridge.
@@ -20,9 +21,10 @@ export function validateDesktopPresencePreferencesPayload(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new Error('desktop presence preferences must be an object')
   }
+  const preferences = /** @type {Record<string, unknown>} */ (payload)
   return {
-    gazeFollowEnabled: payload.gazeFollowEnabled !== false,
-    typingAwarenessEnabled: payload.typingAwarenessEnabled === true,
+    gazeFollowEnabled: preferences.gazeFollowEnabled !== false,
+    typingAwarenessEnabled: preferences.typingAwarenessEnabled === true,
   }
 }
 

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Voice auto-detect probe. Returns hardware facts and, when asked, a
  * short SenseVoice timing. Failures become a payload the renderer can
@@ -12,10 +13,12 @@ import { collectHardwareFacts } from '../services/hardwareProbe.js'
 import { runVoiceBenchmark } from '../services/voiceBenchmark.js'
 import { normalizeBenchmarkStatus } from '../../shared/voiceProfileBudget.js'
 
+/** @param {unknown} value */
 function finiteOrNull(value) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+/** @param {Record<string, unknown> | null | undefined} facts */
 function publicHardware(facts) {
   if (!facts) return null
   return {

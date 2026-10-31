@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 
 import { requireTrustedSender } from './validate.js'

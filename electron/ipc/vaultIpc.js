@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import {
   vaultStore,
@@ -40,10 +41,14 @@ const SINGLE_RETRIEVE_MAX_PER_WINDOW = 3
 const _bulkOpHistory = new WeakMap() // webContents → [timestamps]
 const _singleRetrieveHistory = new WeakMap() // webContents → [timestamps]
 
+/**
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} opName
+ */
 function rateLimitBulkOp(event, opName) {
   const now = Date.now()
   const history = _bulkOpHistory.get(event.sender) ?? []
-  const recent = history.filter((t) => now - t < BULK_OP_WINDOW_MS)
+  const recent = history.filter((/** @type {number} */ t) => now - t < BULK_OP_WINDOW_MS)
   if (recent.length >= BULK_OP_MAX_PER_WINDOW) {
     audit('vault', `${opName}-rate-limited`, { recentCount: recent.length })
     throw new Error(
@@ -55,10 +60,14 @@ function rateLimitBulkOp(event, opName) {
   _bulkOpHistory.set(event.sender, recent)
 }
 
+/**
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} slotName
+ */
 function rateLimitSingleRetrieve(event, slotName) {
   const now = Date.now()
   const history = _singleRetrieveHistory.get(event.sender) ?? []
-  const recent = history.filter((t) => now - t < SINGLE_RETRIEVE_WINDOW_MS)
+  const recent = history.filter((/** @type {number} */ t) => now - t < SINGLE_RETRIEVE_WINDOW_MS)
   if (recent.length >= SINGLE_RETRIEVE_MAX_PER_WINDOW) {
     audit('vault', 'retrieve-rate-limited', {
       slot: {
@@ -76,6 +85,11 @@ function rateLimitSingleRetrieve(event, slotName) {
   _singleRetrieveHistory.set(event.sender, recent)
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ * @param {() => unknown} action
+ */
 async function runAuditedVaultAction(channel, payload, action) {
   audit('vault', 'request', summarizeVaultRequest(channel, payload))
   try {

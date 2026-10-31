@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import {
   applyChatLocalDataMigration,
@@ -42,6 +43,7 @@ function chatMigrationIpcEnabled() {
   return process.env.NEXUS_ENABLE_LOCAL_DATA_CHAT_MIGRATION === '1'
 }
 
+/** @param {string} action */
 function chatMigrationDisabledResult(action) {
   if (action === 'status') {
     return {
@@ -117,6 +119,7 @@ function memoryMigrationIpcEnabled() {
   return process.env.NEXUS_ENABLE_LOCAL_DATA_MEMORY_MIGRATION === '1'
 }
 
+/** @param {string} action */
 function memoryMigrationDisabledResult(action) {
   const targetDomainIds = ['memory-long-term', 'memory-daily']
   if (action === 'status') {
@@ -165,6 +168,7 @@ function companionMigrationIpcEnabled() {
   return process.env.NEXUS_ENABLE_LOCAL_DATA_COMPANION_MIGRATION === '1'
 }
 
+/** @param {string} action */
 function companionMigrationDisabledResult(action) {
   const targetDomainIds = ['companion-relationship', 'companion-tasks']
   const base = {

@@ -1,3 +1,4 @@
+// @ts-check
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import * as pluginHost from '../services/pluginHost.js'
 import * as mcpHost from '../services/mcpHost.js'
@@ -15,14 +16,21 @@ import {
   summarizePluginResult,
 } from './pluginAudit.js'
 
+/** @param {string} channel */
 function pluginAuditCategory(channel) {
   return channel.startsWith('plugin-bus:') ? 'plugin-bus' : 'plugin'
 }
 
+/**
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ */
 async function confirmPluginAction(event, channel, payload) {
   if (!pluginActionNeedsConfirmation(channel)) return true
 
-  const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? undefined
+  // Electron dialogs accept an undefined parent window at runtime.
+  const parentWindow = /** @type {Electron.BrowserWindow} */ (BrowserWindow.fromWebContents(event.sender) ?? undefined)
   const category = pluginAuditCategory(channel)
   const requestSummary = summarizePluginRequest(channel, payload)
   audit(category, 'confirmation-request', requestSummary)
@@ -48,6 +56,12 @@ async function confirmPluginAction(event, channel, payload) {
   return approved
 }
 
+/**
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ * @param {() => Promise<Record<string, unknown> | null | undefined> | Record<string, unknown> | null | undefined} action
+ */
 async function runAuditedPluginAction(event, channel, payload, action) {
   const category = pluginAuditCategory(channel)
   audit(category, 'request', summarizePluginRequest(channel, payload))
@@ -149,6 +163,7 @@ export function register() {
   // ── Plugin Message Bus ───────────────────────────────────────────────────
 
   // Validate serverId against running MCP instances to prevent spoofing
+  /** @param {unknown} serverId */
   function validateServerId(serverId) {
     if (!serverId) return false
     const status = mcpHost.getStatus(String(serverId))

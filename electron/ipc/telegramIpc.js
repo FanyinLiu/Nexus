@@ -1,3 +1,4 @@
+// @ts-check
 import { BrowserWindow, ipcMain } from 'electron'
 import * as telegramGateway from '../services/telegramGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
@@ -39,7 +40,7 @@ export function register() {
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['botToken'])
     const botToken = requireString(requestPayload?.botToken, 'botToken')
     const allowedChatIds = Array.isArray(payload?.allowedChatIds)
-      ? payload.allowedChatIds.filter((id) => typeof id === 'number')
+      ? payload.allowedChatIds.filter((/** @type {unknown} */ id) => typeof id === 'number')
       : []
     await telegramGateway.connect(botToken, allowedChatIds)
     return telegramGateway.getStatus()

@@ -1,3 +1,4 @@
+// @ts-check
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
@@ -51,6 +52,31 @@ import {
   validateSpeechVoiceListPayload,
 } from './payloadSchemas.js'
 
+/**
+ * @typedef {Object} MultipartPart
+ * @property {string} type
+ * @property {string} name
+ * @property {Buffer} [data]
+ * @property {string} [fileName]
+ * @property {string} [mimeType]
+ * @property {string} [value]
+ */
+
+/**
+ * @typedef {Object} VolcengineSynthResult
+ * @property {boolean} ok
+ * @property {boolean} [usedFallback]
+ * @property {string} [reason]
+ * @property {string} [errorMessage]
+ * @property {string} [audioBase64]
+ * @property {string} [mimeType]
+ * @property {string} [cluster]
+ * @property {string} [voice]
+ */
+
+/**
+ * @param {{ AUDIO_TRANSCRIBE_TIMEOUT_MS: number, AUDIO_VOICE_LIST_TIMEOUT_MS: number }} deps
+ */
 export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT_MS }) {
   ipcMain.handle('audio:list-voices', async (event, payload) => {
     requireTrustedSender(event)
@@ -146,7 +172,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
 
     const voices = Array.isArray(data?.voices)
       ? data.voices
-        .map((item) => toSpeechVoiceOption(item))
+        .map((/** @type {unknown} */ item) => toSpeechVoiceOption(item))
         .filter(Boolean)
       : []
 
@@ -217,6 +243,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         'X-Api-Sequence': '-1',
       }
     } else {
+      /** @type {MultipartPart[]} */
       const multipartParts = [
         {
           type: 'file',
@@ -382,8 +409,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       }
     }
 
-    const synthTimeoutMs = resolveSpeechOutputTimeoutMs(payload.providerId, content, payload.model)
-    const synthTimeoutMessage = resolveSpeechOutputTimeoutMessage(payload.providerId)
+    const synthTimeoutMs = resolveSpeechOutputTimeoutMs()
+    const synthTimeoutMessage = resolveSpeechOutputTimeoutMessage()
 
     const baseUrl = resolveSpeechOutputBaseUrl(payload.providerId, payload.baseUrl)
     const rate = Number.isFinite(payload.rate) ? payload.rate : 1
@@ -447,6 +474,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         throw new Error('火山语音合成请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。')
       }
 
+      /** @type {VolcengineSynthResult} */
       let result
       try {
         result = await synthesizeVolcengineSpeechOutputWithFallback({

@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import * as mcpHost from '../services/mcpHost.js'
 import { requireString, requireObject, requireTrustedSender } from './validate.js'

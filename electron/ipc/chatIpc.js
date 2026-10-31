@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import {
   CHAT_IPC_ERROR_CODES,
@@ -61,9 +62,12 @@ import {
   validateServiceConnectionTestPayload,
 } from './payloadSchemas.js'
 
+/** @typedef {Error & { status?: number | string }} ChatIpcError */
+
 // Errors thrown here cross IPC as plain `Error: <message>` strings, so the
 // stable NEXUS_ERR_CHAT_* code rides inside the message (shared/chatErrorCodes.js).
 // The renderer classifies by that code — never by human-readable copy.
+/** @param {{ reasoningLength?: number, finishReason?: string | null }} [options] */
 function buildEmptyChatContentError({ reasoningLength = 0, finishReason = '' } = {}) {
   const details = []
   if (reasoningLength > 0) details.push(`reasoningLength=${reasoningLength}`)
@@ -77,6 +81,7 @@ function buildEmptyChatContentError({ reasoningLength = 0, finishReason = '' } =
 
 // Status-only failures (no provider error body) classify by status class —
 // mirrors the buckets humanizeError used to regex out of the old copy.
+/** @param {number} status */
 function chatIpcErrorCodeForStatus(status) {
   if (status === 403) return CHAT_IPC_ERROR_CODES.FORBIDDEN
   if (status === 404) return CHAT_IPC_ERROR_CODES.NOT_FOUND
@@ -85,18 +90,29 @@ function chatIpcErrorCodeForStatus(status) {
   return CHAT_IPC_ERROR_CODES.PROVIDER_STATUS
 }
 
+/**
+ * @param {NonNullable<ReturnType<typeof getChatConnectionTestPreflightFailure>>} preflightFailure
+ * @returns {ChatIpcError}
+ */
 function buildPreflightIpcError(preflightFailure) {
   const code = preflightFailure.ipcCode
     || chatIpcErrorCodeFromConnectionCode(preflightFailure.code)
     || CHAT_IPC_ERROR_CODES.API_KEY_HEADER_UNSAFE
-  const error = buildChatIpcError(
+  const error = /** @type {ChatIpcError} */ (buildChatIpcError(
     code,
     preflightFailure.messageKey || 'chat preflight check failed',
-  )
+  ))
   if (preflightFailure.status) error.status = preflightFailure.status
   return error
 }
 
+/**
+ * @param {Object} deps
+ * @param {Map<string, AbortController>} deps.activeChatStreamControllers
+ * @param {number} deps.CHAT_REQUEST_TIMEOUT_MS
+ * @param {number} deps.CONNECTION_TEST_TIMEOUT_MS
+ * @param {{ begin: () => void, succeed: () => void, cancel: () => void, retryResume: () => void, retryWait: (reason: string) => void, fail: (kind: string, code?: string) => void } | undefined} deps.companionPresence
+ */
 export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS, CONNECTION_TEST_TIMEOUT_MS, companionPresence }) {
   ipcMain.handle('chat:complete', async (event, payload) => {
     requireTrustedSender(event)
@@ -157,7 +173,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: CHAT_IPC_ERROR_CODES.TIMEOUT,
         maxAttempts: 2,
         onAttempt: () => companionPresence?.retryResume(),
-        onRetry: ({ attempt, reason }) => {
+        onRetry: (/** @type {{ attempt: number, reason: string }} */ { attempt, reason }) => {
           companionPresence?.retryWait(reason)
           console.warn('[chat:complete] transient failure, retrying', { attempt, reason })
         },
@@ -182,7 +198,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       )
     }
 
-    const data = await response.json().catch((parseErr) => {
+    const data = await response.json().catch((/** @type {{ message?: string } | null | undefined} */ parseErr) => {
       console.warn('[chat:complete] response body is not valid JSON:', parseErr?.message)
       return {}
     })
@@ -200,12 +216,12 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         message: redactSensitiveErrorText(data?.error?.message ?? data?.message ?? ''),
       })
       if (response.status === 401) {
-        const error = buildChatIpcError(
+        const error = /** @type {ChatIpcError} */ (buildChatIpcError(
           requestPayload.apiKey || !chatProviderRequiresApiKey(providerId)
             ? CHAT_IPC_ERROR_CODES.AUTH_FAILED
             : CHAT_IPC_ERROR_CODES.MISSING_API_KEY,
           'provider returned HTTP 401',
-        )
+        ))
         error.status = 401
         throw error
       }
@@ -308,7 +324,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         timeoutMessage: CHAT_IPC_ERROR_CODES.TIMEOUT,
         maxAttempts: 2,
         onAttempt: () => companionPresence?.retryResume(),
-        onRetry: ({ attempt, reason }) => {
+        onRetry: (/** @type {{ attempt: number, reason: string }} */ { attempt, reason }) => {
           companionPresence?.retryWait(reason)
           console.warn('[chat:stream] transient failure, retrying', { attempt, reason })
         },
@@ -358,16 +374,19 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
     let fullContent = ''
     let fullReasoning = ''
+    /** @type {string | null} */
     let finishReason = null
+    /** @type {Map<number, { id: string, type: string, function: { name: string, arguments: string } }>} */
     const toolCallAccumulator = new Map()
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let sseBuffer = ''
     let streamCompleted = false
 
+    /** @param {Array<{ index?: number, id?: string, type?: string, function?: { name?: string, arguments?: string } }>} fragments */
     const mergeToolCallFragments = (fragments) => {
       for (const frag of fragments) {
-        const key = Number.isFinite(frag?.index) ? frag.index : 0
+        const key = typeof frag?.index === 'number' && Number.isFinite(frag.index) ? frag.index : 0
         const existing = toolCallAccumulator.get(key) ?? {
           id: '',
           type: 'function',
@@ -384,6 +403,7 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
       }
     }
 
+    /** @param {string} line */
     const processSseLine = (line) => {
       const trimmed = line.trim()
       if (!trimmed || trimmed.startsWith(':') || !trimmed.startsWith('data:')) {
@@ -436,7 +456,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
 
         return isChatStreamingPayloadTerminal(requestSpec.protocol, parsed)
       } catch (err) {
-        console.error('[chat:stream] delta extraction error:', err?.message)
+        console.error(
+          '[chat:stream] delta extraction error:',
+          /** @type {{ message?: string } | null | undefined} */ (err)?.message,
+        )
         return false
       }
     }
@@ -486,7 +509,10 @@ export function register({ activeChatStreamControllers, CHAT_REQUEST_TIMEOUT_MS,
         try {
           event.sender.send('chat:stream-delta', terminalPayload)
         } catch (sendErr) {
-          console.warn('[chat:stream] failed to emit terminal frame:', sendErr?.message)
+          console.warn(
+            '[chat:stream] failed to emit terminal frame:',
+            /** @type {{ message?: string } | null | undefined} */ (sendErr)?.message,
+          )
         }
       }
     }

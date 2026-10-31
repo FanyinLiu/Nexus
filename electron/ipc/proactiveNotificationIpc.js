@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import { showProactiveNotification } from '../services/proactiveNotification.js'
 import { requireTrustedSender } from './validate.js'

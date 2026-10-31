@@ -1,9 +1,30 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   CHAT_MESSAGE_TEXT_MAX,
   SHORT_TEXT_MAX,
 } from './payloadSchemaPrimitives.js'
 import { LOCAL_DATA_COMPANION_STORAGE_KEYS } from '../../shared/localDataStorageKeys.js'
+
+/**
+ * @typedef {Object} LocalDataOnboardingStatePayload
+ * @property {string} completedAt
+ * @property {string} [firstConversationAt]
+ * @property {number} [firstConversationElapsedMs]
+ */
+
+/**
+ * @typedef {Object} LocalDataChatRuntimeMirrorPayload
+ * @property {boolean} confirmed
+ * @property {Record<string, unknown>} session
+ */
+
+/**
+ * @typedef {Object} LocalDataCompanionDatasetMirrorPayload
+ * @property {boolean} confirmed
+ * @property {string} storageKey
+ * @property {unknown} value
+ */
 
 const localDataOnboardingStateSchema = {
   type: 'object',
@@ -325,46 +346,82 @@ const localDataCompanionMigrationRollbackSchema = {
   },
 }
 
+/** @param {unknown} payload @returns {{ state?: LocalDataOnboardingStatePayload }} */
 export function validateLocalDataOnboardingMirrorPayload(payload) {
-  return validateIpcPayload('local-data:mirror-onboarding', payload, localDataOnboardingMirrorSchema)
+  return /** @type {{ state?: LocalDataOnboardingStatePayload }} */ (validateIpcPayload('local-data:mirror-onboarding', payload, localDataOnboardingMirrorSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ confirmed: boolean, migrationPackage: Record<string, unknown> }}
+ */
 export function validateLocalDataChatMigrationApplyPayload(payload) {
-  return validateIpcPayload('local-data:chat-migration-apply', payload, localDataChatMigrationApplySchema)
+  return /** @type {{ confirmed: boolean, migrationPackage: Record<string, unknown> }} */ (
+    validateIpcPayload('local-data:chat-migration-apply', payload, localDataChatMigrationApplySchema)
+  )
 }
 
+/** @param {unknown} payload @returns {{ confirmed: boolean }} */
 export function validateLocalDataChatMigrationRollbackPayload(payload) {
-  return validateIpcPayload('local-data:chat-migration-rollback', payload, localDataChatMigrationRollbackSchema)
+  return /** @type {{ confirmed: boolean }} */ (validateIpcPayload('local-data:chat-migration-rollback', payload, localDataChatMigrationRollbackSchema))
 }
 
+/** @param {unknown} payload @returns {LocalDataChatRuntimeMirrorPayload} */
 export function validateLocalDataChatRuntimeMirrorPayload(payload) {
-  return validateIpcPayload('local-data:chat-session-mirror', payload, localDataChatRuntimeMirrorSchema)
+  return /** @type {LocalDataChatRuntimeMirrorPayload} */ (validateIpcPayload('local-data:chat-session-mirror', payload, localDataChatRuntimeMirrorSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ confirmed: boolean, source: Record<string, unknown> }}
+ */
 export function validateLocalDataChatComparisonPayload(payload) {
-  return validateIpcPayload('local-data:chat-comparison-preview', payload, localDataChatComparisonSchema)
+  return /** @type {{ confirmed: boolean, source: Record<string, unknown> }} */ (
+    validateIpcPayload('local-data:chat-comparison-preview', payload, localDataChatComparisonSchema)
+  )
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ confirmed: boolean, migrationPackage: Record<string, unknown> }}
+ */
 export function validateLocalDataMemoryMigrationApplyPayload(payload) {
-  return validateIpcPayload('local-data:memory-migration-apply', payload, localDataMemoryMigrationApplySchema)
+  return /** @type {{ confirmed: boolean, migrationPackage: Record<string, unknown> }} */ (
+    validateIpcPayload('local-data:memory-migration-apply', payload, localDataMemoryMigrationApplySchema)
+  )
 }
 
+/** @param {unknown} payload @returns {{ confirmed: boolean }} */
 export function validateLocalDataMemoryMigrationRollbackPayload(payload) {
-  return validateIpcPayload('local-data:memory-migration-rollback', payload, localDataMemoryMigrationRollbackSchema)
+  return /** @type {{ confirmed: boolean }} */ (validateIpcPayload('local-data:memory-migration-rollback', payload, localDataMemoryMigrationRollbackSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ confirmed: boolean, migrationPackage: Record<string, unknown> }}
+ */
 export function validateLocalDataCompanionMigrationApplyPayload(payload) {
-  return validateIpcPayload('local-data:companion-migration-apply', payload, localDataCompanionMigrationApplySchema)
+  return /** @type {{ confirmed: boolean, migrationPackage: Record<string, unknown> }} */ (
+    validateIpcPayload('local-data:companion-migration-apply', payload, localDataCompanionMigrationApplySchema)
+  )
 }
 
+/** @param {unknown} payload @returns {LocalDataCompanionDatasetMirrorPayload} */
 export function validateLocalDataCompanionDatasetMirrorPayload(payload) {
-  return validateIpcPayload('local-data:companion-dataset-mirror', payload, localDataCompanionDatasetMirrorSchema)
+  return /** @type {LocalDataCompanionDatasetMirrorPayload} */ (validateIpcPayload('local-data:companion-dataset-mirror', payload, localDataCompanionDatasetMirrorSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ confirmed: boolean, source: Record<string, unknown> }}
+ */
 export function validateLocalDataCompanionComparisonPayload(payload) {
-  return validateIpcPayload('local-data:companion-comparison-preview', payload, localDataCompanionComparisonSchema)
+  return /** @type {{ confirmed: boolean, source: Record<string, unknown> }} */ (
+    validateIpcPayload('local-data:companion-comparison-preview', payload, localDataCompanionComparisonSchema)
+  )
 }
 
+/** @param {unknown} payload @returns {{ confirmed: boolean }} */
 export function validateLocalDataCompanionMigrationRollbackPayload(payload) {
-  return validateIpcPayload('local-data:companion-migration-rollback', payload, localDataCompanionMigrationRollbackSchema)
+  return /** @type {{ confirmed: boolean }} */ (validateIpcPayload('local-data:companion-migration-rollback', payload, localDataCompanionMigrationRollbackSchema))
 }
