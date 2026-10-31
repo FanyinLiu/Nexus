@@ -432,3 +432,44 @@ export interface VoiceTraceEntry {
   tone: VoiceTraceTone
   createdAt: string
 }
+
+/** Generation carried by every Smart Turn call that belongs to one voice turn. */
+export interface SmartTurnSessionPayload {
+  sessionId?: number
+}
+
+/** Session generation returned by start; absent when the bridge is unavailable. */
+export interface SmartTurnStartResult {
+  ok: boolean
+  sessionId?: number
+}
+
+/**
+ * One Smart Turn probe result. `available` is false when no model verdict was
+ * produced; `stale` marks a result whose voice turn was already replaced.
+ */
+export interface SmartTurnProbeResult {
+  available: boolean
+  probability: number | null
+  /** Model run time in ms, when the main process measured one. */
+  latencyMs?: number | null
+  /** True when the probe exceeded the 150 ms inference budget. */
+  timedOut?: boolean
+  /** Consecutive slow probes reported by the main process (diagnostics). */
+  consecutiveTimeouts?: number
+  /**
+   * Why no probability was returned. `timeout` is a latency miss and only
+   * disables the model after several in a row; `error`/`missing` are fatal.
+   */
+  reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
+  /** Generation this result belongs to, when the main process reported one. */
+  sessionId?: number
+  /** True when the probe finished after its voice turn was replaced/stopped. */
+  stale?: boolean
+}
+
+/** Stop result; `stale` marks a session id that an older turn already replaced. */
+export interface SmartTurnStopResult {
+  ok: boolean
+  stale?: boolean
+}

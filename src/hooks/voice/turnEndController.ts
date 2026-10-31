@@ -14,26 +14,9 @@ import {
   TURN_END_MODEL_RECHECK_MS,
   type TurnEndDecision,
 } from '../../features/hearing/turnEnd.ts'
+import type { SmartTurnProbeResult } from '../../types/voice.ts'
 
-export type SmartTurnProbeResult = {
-  available: boolean
-  probability: number | null
-  /** Model run time in ms, when the main process measured one. */
-  latencyMs?: number | null
-  /** True when the probe exceeded the 150 ms inference budget. */
-  timedOut?: boolean
-  /** Consecutive slow probes reported by the main process (diagnostics). */
-  consecutiveTimeouts?: number
-  /**
-   * Why no probability was returned. `timeout` is a latency miss and only
-   * disables the model after several in a row; `error`/`missing` are fatal.
-   */
-  reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
-  /** Generation this result belongs to, when the main process reported one. */
-  sessionId?: number
-  /** True when the probe finished after its voice turn was replaced/stopped. */
-  stale?: boolean
-}
+export type { SmartTurnProbeResult }
 
 /**
  * A single slow probe is usually a cold wasm/JIT tick, not a broken model.
