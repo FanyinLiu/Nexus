@@ -89,6 +89,74 @@ test('a timed-out probe falls back to the text rules', async () => {
   assert.equal(h.ends[0].decision.thresholdMs, 600)
 })
 
+test('three consecutive slow probes disable Smart Turn, one or two do not', async () => {
+  const h = harness({
+    partialTranscript: '好的',
+    probe: async () => ({
+      available: false,
+      probability: null,
+      timedOut: true,
+      reason: 'timeout',
+    }),
+  })
+
+  h.setNow(250)
+  h.controller.tick()
+  await settle()
+  assert.equal(h.controller.isModelUnavailable(), false)
+
+  h.setNow(550)
+  h.controller.tick()
+  await settle()
+  assert.equal(h.controller.isModelUnavailable(), false)
+
+  h.setNow(850)
+  h.controller.tick()
+  await settle()
+  assert.equal(h.controller.isModelUnavailable(), true)
+})
+
+test('a successful probe resets the timeout streak', async () => {
+  const results: SmartTurnProbeResult[] = [
+    { available: false, probability: null, timedOut: true, reason: 'timeout' },
+    { available: true, probability: 0.1 },
+    { available: false, probability: null, timedOut: true, reason: 'timeout' },
+    { available: false, probability: null, timedOut: true, reason: 'timeout' },
+    { available: false, probability: null, timedOut: true, reason: 'timeout' },
+  ]
+  let calls = 0
+  const h = harness({
+    // A trailing connector keeps the text fallback open to 1.6 s, so the
+    // 1.45 s assertion lands before the turn itself ends.
+    partialTranscript: '就是',
+    probe: async () => results[Math.min(calls++, results.length - 1)],
+  })
+
+  for (const at of [250, 550, 850, 1_150]) {
+    h.setNow(at)
+    h.controller.tick()
+    await settle()
+    assert.equal(h.controller.isModelUnavailable(), false, `disabled at ${at}`)
+  }
+
+  h.setNow(1_450)
+  h.controller.tick()
+  await settle()
+  assert.equal(h.controller.isModelUnavailable(), true)
+})
+
+test('a real inference error disables Smart Turn immediately', async () => {
+  const h = harness({
+    probe: async () => ({ available: false, probability: null, reason: 'error' }),
+  })
+
+  h.setNow(250)
+  h.controller.tick()
+  await settle()
+
+  assert.equal(h.controller.isModelUnavailable(), true)
+})
+
 test('a confident complete ends at 300 ms of silence', async () => {
   const h = harness({
     probe: async () => ({ available: true, probability: 0.93, latencyMs: 120 }),

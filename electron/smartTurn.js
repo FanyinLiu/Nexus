@@ -40,7 +40,11 @@ function resolveRuntimePaths() {
   }
 }
 
-class SmartTurnService {
+/**
+ * Main-process Smart Turn session. Exported so the probe result contract can
+ * be exercised without starting the real ONNX runner.
+ */
+export class SmartTurnService {
   constructor() {
     this.active = false
     this.ring = new Float32Array(RING_SAMPLES)
@@ -51,6 +55,7 @@ class SmartTurnService {
     this.loadFailedUntil = 0
     this.downloadAttempted = false
     this.lastProbe = null
+    this.consecutiveTimeouts = 0
   }
 
   /** Start buffering a new user turn. Does not wait for the model. */
@@ -59,6 +64,7 @@ class SmartTurnService {
     this.writeIndex = 0
     this.filled = 0
     this.lastProbe = null
+    this.consecutiveTimeouts = 0
     void this.ensureEngine()
   }
 
@@ -176,22 +182,29 @@ class SmartTurnService {
         at: Date.now(),
       }
       if (result.inferenceMs > SMART_TURN_MAX_INFERENCE_MS) {
-        // Over budget: let the renderer fall back to the T7 rules rather than
-        // making every pause wait on a slow machine.
+        // Over budget: report a latency miss, not a real inference error. The
+        // renderer keeps the T7 rules for this pause and only disables the
+        // model after several consecutive timeouts.
+        this.consecutiveTimeouts += 1
         return {
           available: false,
           probability: null,
           latencyMs: result.inferenceMs,
           timedOut: true,
-          reason: 'error',
+          consecutiveTimeouts: this.consecutiveTimeouts,
+          reason: 'timeout',
         }
       }
+      this.consecutiveTimeouts = 0
       return {
         available: true,
         probability: result.probability,
         latencyMs: result.inferenceMs,
       }
     } catch (error) {
+      // A thrown inference is a real error; reset the latency streak so a
+      // later successful probe starts clean.
+      this.consecutiveTimeouts = 0
       console.warn('[SmartTurn] probe failed:', getRedactedErrorMessage(error))
       return { available: false, probability: null, reason: 'error' }
     }
@@ -205,6 +218,7 @@ class SmartTurnService {
       active: this.active,
       bufferedSamples: this.filled,
       lastProbe: this.lastProbe,
+      consecutiveTimeouts: this.consecutiveTimeouts,
     }
   }
 }

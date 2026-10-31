@@ -1049,7 +1049,8 @@ declare global {
         probability: number | null
         latencyMs?: number | null
         timedOut?: boolean
-        reason?: 'loading' | 'missing' | 'error' | 'too-short' | 'inactive'
+        consecutiveTimeouts?: number
+        reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
       }>
       turnEndStop: () => Promise<{ ok: boolean }>
 
