@@ -10,6 +10,8 @@ import { startSenseVoiceConversation as startSenseVoiceConversationRuntime } fro
 import { startTencentConversation } from './tencentConversation.ts'
 import { startVadConversation } from './vadConversation.ts'
 import { createBackchannelSession } from './backchannelRuntime.ts'
+import { emotionToPetMood } from '../../features/autonomy/emotionModel.ts'
+import { resolveEmotionSpeechTempo } from '../../features/voice/voiceEmotion.ts'
 import { expectHolderValue, type VoiceEngines, type VoiceRuntimeBag } from './voiceRuntimeBag.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
@@ -33,6 +35,10 @@ export function createVoiceConversationStarters(bag: VoiceRuntimeBag): VoiceEngi
       getSettings: () => ctx.settingsRef.current,
       getPlayer: () => bindings.getStreamAudioPlayer(),
       voiceEchoCooldownUntilRef: refs.voiceEchoCooldownUntilRef,
+      getMoodSpeechTempo: () => {
+        const emotion = ctx.getEmotionSnapshot?.()
+        return resolveEmotionSpeechTempo(emotion ? emotionToPetMood(emotion) : 'idle')
+      },
       micPolicy: {
         source: 'voice',
         continuousActive: refs.continuousVoiceActiveRef.current,
