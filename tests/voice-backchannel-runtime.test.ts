@@ -36,10 +36,17 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 function createHarness(settings: AppSettings, moodTempo = 1.5) {
   const calls: Array<{ text: string; speechTempo: number }> = []
+  const played: Array<{ samples: Float32Array; sampleRate: number }> = []
+  const voiceEchoCooldownUntilRef = { current: 0 }
   const session = createBackchannelSession({
     getSettings: () => settings,
-    getPlayer: () => ({ appendBackchannelPcmChunk: () => 100 }),
-    voiceEchoCooldownUntilRef: { current: 0 },
+    getPlayer: () => ({
+      appendBackchannelPcmChunk: (samples: Float32Array, sampleRate: number) => {
+        played.push({ samples, sampleRate })
+        return 100
+      },
+    }),
+    voiceEchoCooldownUntilRef,
     micPolicy: VOICE_MIC,
     getMoodSpeechTempo: () => moodTempo,
     synthesizeClip: async (_settings, text, speechTempo): Promise<BackchannelClip> => {
@@ -47,7 +54,7 @@ function createHarness(settings: AppSettings, moodTempo = 1.5) {
       return { samples: new Float32Array([0.1, 0.2]), sampleRate: 24_000 }
     },
   })
-  return { session, calls }
+  return { session, calls, played, voiceEchoCooldownUntilRef }
 }
 
 test('clips survive stop and are replayed on the next turn', async () => {
@@ -101,6 +108,48 @@ test('clips are requested at the current mood tempo for the local provider', asy
     [1, 1, 1],
     'only the local Qwen3 path carries a client-side tempo',
   )
+})
+
+test('a pause plays one cached clip and arms the echo cooldown', async () => {
+  clearBackchannelClipCache()
+  const harness = createHarness(SETTINGS)
+  harness.session.start()
+  await tick()
+
+  const pause = {
+    partialTranscript: '',
+    silenceMs: 300,
+    spokenMs: 3_000,
+    turnEndAction: 'wait' as const,
+  }
+  harness.session.maybeFire(pause)
+
+  assert.equal(harness.played.length, 1)
+  assert.equal(harness.played[0].sampleRate, 24_000)
+  assert.ok(
+    harness.voiceEchoCooldownUntilRef.current > Date.now(),
+    'the played clip must extend the echo cooldown',
+  )
+
+  // The policy allows at most one acknowledgement per window.
+  harness.session.maybeFire(pause)
+  assert.equal(harness.played.length, 1)
+})
+
+test('a disabled backchannel neither synthesizes nor plays', async () => {
+  clearBackchannelClipCache()
+  const harness = createHarness({ ...SETTINGS, voiceBackchannelEnabled: false })
+  harness.session.start()
+  await tick()
+  harness.session.maybeFire({
+    partialTranscript: '',
+    silenceMs: 300,
+    spokenMs: 3_000,
+    turnEndAction: 'wait',
+  })
+
+  assert.equal(harness.calls.length, 0)
+  assert.equal(harness.played.length, 0)
 })
 
 test('a synthesis timeout aborts the in-flight request', async () => {
