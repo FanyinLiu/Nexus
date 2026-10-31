@@ -18,11 +18,6 @@
 //   Chinese is 3 bytes/char, so ~340 chars fits, but mixed punctuation and
 //   ascii can push it over. 300 is the safe ceiling.
 //
-// When the reply exceeds the provider cap, the caller splits at sentence
-// boundaries and queues each segment as its own push_text. ttsStreamService
-// on the main side serializes them via session.chain (same requestId, same
-// pinned voice), and streamAudioPlayer smooths chunk boundaries, so the
-// user hears one continuous utterance.
 const DEFAULT_MAX_REQUEST_CHARS = 3000
 const PROVIDER_MAX_REQUEST_CHARS: Record<string, number> = {
   'omnivoice-tts': 80,

@@ -16,6 +16,8 @@ type StreamEvent = {
   stages?: Record<string, number | null>
   firstSegmentChars?: number | null
   samples?: Float32Array
+  durationMs?: number
+  sentenceProgress?: Array<{ charEnd: number; endMs: number }>
 }
 
 function createSender() {
@@ -263,6 +265,33 @@ test('stage durations come from the pure helper', () => {
     firstSegmentQueuedToFirstAudibleSampleMs: null,
     streamStartToFirstAudibleSampleMs: null,
   })
+})
+
+test('main reports sentence progress on the post-stretch playback timeline', async () => {
+  const sender = createSender()
+  const input = pcm16BufferFromTone(2, 0.6)
+  const service = createTtsStreamService({
+    synthesizeRemote: async () => ({
+      pcmStream: oneShotStream(input),
+      pcmSampleRate: 24000,
+      speechTempo: 1.8,
+    }),
+  })
+
+  const requestId = 'pipeline-sentence-progress'
+  await service.start(sender, { requestId, providerId: 'qwen3-tts-local' })
+  service.pushText(sender, { requestId, text: '第一句。第二句。' })
+  await service.finish(sender, { requestId })
+
+  const segment = sender.events.find((event) => event.type === 'segment')
+  assert.ok(segment)
+  assert.ok(segment!.durationMs! < 2_000, 'segment duration uses the tempo-stretched output')
+  assert.deepEqual(segment!.sentenceProgress?.map((entry) => entry.charEnd), [4, 8])
+  assert.equal(segment!.sentenceProgress?.[1]?.endMs, segment!.durationMs)
+  assert.ok(
+    Math.abs((segment!.sentenceProgress?.[0]?.endMs ?? 0) - segment!.durationMs! / 2) <= 1,
+    'the first of two equal-length sentences ends at the midpoint',
+  )
 })
 
 test('sped-up local Qwen3 output is loudness-matched and limited to -3 dBFS', async () => {
