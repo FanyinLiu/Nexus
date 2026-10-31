@@ -22,6 +22,7 @@ import {
 } from '../../features/voice/streamingTts.ts'
 import type {
   AppSettings,
+  SegmentVoiceStyle,
   TranslationKey,
   TranslationParams,
   VoiceEmotionCue,
@@ -31,8 +32,10 @@ type Translator = (key: TranslationKey, params?: TranslationParams) => string
 import {
   getMaxRequestCharsForProvider,
   getMaxSegmentCharsForProvider,
+  prefersWholeReplySegments,
   prefersWholeSentenceSegments,
   splitLongTextAtSentences,
+  splitReplyForSingleGeneration,
 } from './speechTextSegmentation.ts'
 import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.ts'
 
@@ -97,6 +100,12 @@ export function createStreamingSpeechOutputController(
   // speaker) covers the entire reply.
   const maxSegmentChars = getMaxSegmentCharsForProvider(providerId)
   const wholeSentenceSegments = prefersWholeSentenceSegments(providerId)
+  // Qwen3's timbre changes when the same reply is generated as several
+  // requests. Buffer the reply and send it once at finish; a very long reply
+  // is split into a few large sentence-aligned chunks.
+  const wholeReplySegments = prefersWholeReplySegments(providerId)
+  let wholeReplyBuffer = ''
+  let replyCue: VoiceEmotionCue | null = options?.initialCue ?? null
   const chunker = new StreamingTtsChunker({
     maxChunkLength: maxSegmentChars,
     // Buffering providers wait for a sentence terminator (or the ceiling)
@@ -462,7 +471,7 @@ export function createStreamingSpeechOutputController(
       })
   }
 
-  function queueSegment(segment: string): boolean {
+  function queueSegment(segment: string, forcedStyle?: SegmentVoiceStyle | null): boolean {
     const cleaned = prepareTextForTts(segment)
     if (!cleaned || settled || aborted) {
       return false
@@ -472,7 +481,13 @@ export function createStreamingSpeechOutputController(
     // punctuation, which is exactly what the ？/！/… heuristic reads. The live
     // getters are called per sentence — not once at stream start. Neutral
     // styles stay local instead of crossing IPC.
-    const resolvedStyle = options?.resolveSegmentVoiceStyle?.(segment.trim(), activeCue)
+    //
+    // Whole-reply mode resolves ONE style for the reply and passes it in; a
+    // per-sentence style would reintroduce the timbre drift this mode exists
+    // to prevent.
+    const resolvedStyle = forcedStyle !== undefined
+      ? forcedStyle
+      : options?.resolveSegmentVoiceStyle?.(segment.trim(), activeCue)
     const style = resolvedStyle && !isNeutralSegmentStyle(resolvedStyle)
       ? resolvedStyle
       : undefined
@@ -558,11 +573,33 @@ export function createStreamingSpeechOutputController(
       return
     }
 
-    // One push_text per sentence: Qwen3 applies a single `instructions` to the
-    // whole request, so batching sentences would flatten them onto one tone.
+    // One push_text per sentence: cloud providers apply one style per request,
+    // so keeping the sentence boundary is what lets T6 colour each sentence.
     // Long single sentences still split by the provider's length ceiling.
     for (const segment of splitLongTextAtSentences(text, maxRequestChars)) {
       if (queueSegment(segment)) {
+        hasQueuedSegment = true
+      }
+    }
+  }
+
+  /**
+   * Whole-reply mode: one request (or a few large chunks) for the entire
+   * reply. The style is resolved once from the whole text so every chunk
+   * shares the same mild tone clause — no inline `[mood]` markup is sent.
+   */
+  function queueWholeReply() {
+    const raw = wholeReplyBuffer.trim()
+    wholeReplyBuffer = ''
+    if (!raw) return
+
+    const cleaned = prepareTextForTts(raw)
+    if (!cleaned) return
+
+    const resolved = options?.resolveSegmentVoiceStyle?.(raw, replyCue)
+    const forcedStyle = resolved && !isNeutralSegmentStyle(resolved) ? resolved : null
+    for (const chunk of splitReplyForSingleGeneration(cleaned)) {
+      if (queueSegment(chunk, forcedStyle)) {
         hasQueuedSegment = true
       }
     }
@@ -588,6 +625,14 @@ export function createStreamingSpeechOutputController(
 
       if (cue) {
         activeCue = cue
+        // Whole-reply mode gets one cue for the whole reply; the first one is
+        // the reply's opening intent, which is the closest to "dominant".
+        if (!replyCue) replyCue = cue
+      }
+
+      if (wholeReplySegments) {
+        wholeReplyBuffer += delta
+        return
       }
 
       // Feed the streaming chunker: every sentence it completes is queued for
@@ -600,6 +645,11 @@ export function createStreamingSpeechOutputController(
       if (finishRequested || settled || aborted) {
         return
       }
+      // A whole reply cannot be flushed between agent rounds: that would split
+      // it into multiple generations and change timbre mid-reply.
+      if (wholeReplySegments) {
+        return
+      }
       flushChunker()
     },
     finish() {
@@ -607,7 +657,11 @@ export function createStreamingSpeechOutputController(
         return
       }
 
-      flushChunker()
+      if (wholeReplySegments) {
+        queueWholeReply()
+      } else {
+        flushChunker()
+      }
 
       finishRequested = true
       if (!streamStarted && pendingSegments === 0) {

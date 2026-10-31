@@ -219,6 +219,11 @@ export interface SegmentVoiceStyle {
   pitch: number
   /** MiniMax's native emotion enum; ignored by other providers. */
   emotion?: string
+  /**
+   * Pitch-preserving playback tempo for providers whose stream cannot carry a
+   * rate (local Qwen3). 1.5 = 1.5x faster. Applied in the main process.
+   */
+  speechTempo?: number
 }
 
 export interface TtsStreamStartRequest {

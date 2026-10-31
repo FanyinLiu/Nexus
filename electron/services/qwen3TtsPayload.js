@@ -14,6 +14,7 @@
  */
 
 import { resolveQwen3TtsSeed } from './ttsSeed.js'
+import { mapQwen3CportLanguage } from './qwen3CportService.js'
 
 /**
  * @param {{
@@ -42,5 +43,38 @@ export function buildQwen3TtsSpeechRequestPayload(payload, content) {
     ...(speed != null ? { speed } : {}),
     ...(instructions ? { instructions } : {}),
     ...(language ? { language } : {}),
+  }
+}
+
+/**
+ * Request body for the pure-C server's `/v1/tts/stream`.
+ *
+ * One request carries the whole reply so the timbre stays identical across
+ * every sentence. `instruct` is the reply's single mild tone clause from the
+ * existing T6 resolver; the named `emotion` steering recipe is deliberately
+ * not used because it changes timbre more than a short natural-language
+ * instruction does. Inline `[mood]` markup is never sent — the renderer has
+ * already stripped it.
+ *
+ * @param {{
+ *   voice?: unknown,
+ *   characterId?: unknown,
+ *   instructions?: unknown,
+ *   language?: unknown,
+ * }} payload
+ * @param {string} content
+ * @returns {{ text: string, speaker: string, seed: number, language?: string, instruct?: string }}
+ */
+export function buildQwen3CportRequestPayload(payload, content) {
+  const voice = String(payload.voice ?? '').trim() || 'vivian'
+  const instruct = String(payload.instructions ?? '').trim()
+  const language = mapQwen3CportLanguage(payload.language)
+
+  return {
+    text: content,
+    speaker: voice,
+    seed: resolveQwen3TtsSeed(payload.characterId, voice),
+    ...(language ? { language } : {}),
+    ...(instruct ? { instruct } : {}),
   }
 }

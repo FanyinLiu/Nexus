@@ -59,8 +59,8 @@ test('inline cue beats the sentence heuristic and the live snapshot', () => {
     emotion: HAPPY,
   })
 
-  assert.match(styled.instruction, /别扭|嘴硬/)
-  assert.doesNotMatch(styled.instruction, /兴奋|轻快/)
+  assert.match(styled.instruction, /撒娇|委屈/)
+  assert.doesNotMatch(styled.instruction, /兴奋|开心/)
 })
 
 test('a neutral cue silences both heuristic and snapshot', () => {
@@ -72,7 +72,9 @@ test('a neutral cue silences both heuristic and snapshot', () => {
     emotion: HAPPY,
   })
 
-  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
+  // No tone instruction and no pace nudge; the 1.5x baseline tempo is the
+  // provider's own default, not a mood effect.
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 })
 })
 
 test('sentence heuristic beats the snapshot', () => {
@@ -82,7 +84,7 @@ test('sentence heuristic beats the snapshot', () => {
     emotion: HAPPY,
   })
 
-  assert.match(styled.instruction, /好奇/)
+  assert.match(styled.instruction, /自然放松|温和/)
   assert.ok(styled.rate > 1)
 })
 
@@ -93,7 +95,7 @@ test('the live snapshot is the fallback for a plain sentence', () => {
     emotion: HAPPY,
   })
 
-  assert.match(styled.instruction, /轻快/)
+  assert.match(styled.instruction, /开心|兴奋/)
 })
 
 test('idle / unknown emotion yields no instruction and no pace change', () => {
@@ -103,8 +105,11 @@ test('idle / unknown emotion yields no instruction and no pace change', () => {
     emotion: IDLE,
   })
 
-  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
-  assert.equal(isNeutralSegmentStyle(styled), true)
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 })
+  // The 1.5x baseline IS a change, so a local Qwen3 style always crosses IPC;
+  // a provider that carries no tempo still has a truly neutral style.
+  assert.equal(isNeutralSegmentStyle(styled), false)
+  assert.equal(isNeutralSegmentStyle({ instruction: '', rate: 1, pitch: 1 }), true)
   assert.equal(isNeutralSegmentStyle(undefined), true)
   assert.equal(isNeutralSegmentStyle({ instruction: '语气轻快。', rate: 1, pitch: 1 }), false)
 })
@@ -226,7 +231,7 @@ test('per-sentence style reaches the Qwen3 payload and keeps base instructions',
   assert.match(String(calls[0]!.payload.instructions), /^整体温柔一点。/)
   assert.match(String(calls[0]!.payload.instructions), /兴奋/)
   assert.ok(Number(calls[0]!.payload.rate) > 1)
-  assert.match(String(calls[1]!.payload.instructions), /别扭/)
+  assert.match(String(calls[1]!.payload.instructions), /撒娇|委屈/)
   // The second payload does not inherit the first sentence's tone.
   assert.doesNotMatch(String(calls[1]!.payload.instructions), /兴奋/)
   // The identity used to derive the stable seed survives the per-sentence copy.
@@ -292,7 +297,7 @@ test('an ellipsis with no feeling word stays hesitant', () => {
     providerId: 'qwen3-tts-local',
     emotion: IDLE,
   })
-  assert.match(styled.instruction, /迟疑/u)
+  assert.match(styled.instruction, /害羞|犹豫/u)
 })
 
 // ── Stage directions colour the sentence they open ─────────────────────────
@@ -364,7 +369,7 @@ test('a stage direction in the middle of a sentence is not a cue', () => {
     providerId: 'qwen3-tts-local',
     emotion: IDLE,
   })
-  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 })
 })
 
 test('the speech filter reports the aside it strips so the sentence keeps its tone', () => {
@@ -442,10 +447,10 @@ test('a sad user read becomes a caring delivery, never a sad one', () => {
     emotion: HAPPY,
   })
   assert.match(styled.instruction, /关切|担心/u)
-  assert.doesNotMatch(styled.instruction, /低落|轻快/u)
+  assert.doesNotMatch(styled.instruction, /难过|低落|开心|兴奋/u)
 })
 
-test('an angry user read becomes a calm delivery, never an angry one', () => {
+test('an angry user read gets the calm direction, never an angry one', () => {
   const mood = voiceEmotionCueFromTag('mood', 'frustrated-8')
   assert.ok(mood)
 
@@ -455,7 +460,7 @@ test('an angry user read becomes a calm delivery, never an angry one', () => {
     cue: mood,
     emotion: IDLE,
   })
-  assert.match(styled.instruction, /平静/u)
+  assert.match(styled.instruction, /自然放松|温和/u)
   assert.doesNotMatch(styled.instruction, /不满/u)
 })
 
@@ -529,4 +534,37 @@ test('Qwen3 payload carries a seed that is stable per character + voice', () => 
   // The seed never changes the speaker or the streamed format.
   assert.equal(first.voice, 'vivian')
   assert.equal(first.response_format, 'pcm')
+})
+
+test('the local Qwen3 path uses the stronger six-group directions', () => {
+  // The owner-approved stronger level, one line per delivery group. Pinned so
+  // a later "milden it again" edit has to be explicit.
+  const cases: Array<[string, string]> = [
+    ['calm', '自然放松地说话，像跟熟人平常聊天，语气温和。'],
+    ['happy', '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。'],
+    ['affectionate', '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。'],
+    ['sad', '难过、低落，声音轻而低沉，说话无力，带着一点哽咽和叹气。'],
+    ['angry', '很生气，语气冲、带着不满和责备，声音有力，咬字重。'],
+    ['hesitant', '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。'],
+  ]
+  for (const [value, expected] of cases) {
+    const cue = voiceEmotionCueFromTag('tts', value)
+    assert.ok(cue, value)
+    const styled = resolveSegmentVoiceStyle({
+      text: '你回来啦。',
+      providerId: 'qwen3-tts-local',
+      cue,
+      emotion: IDLE,
+    })
+    assert.equal(styled.instruction, expected, value)
+  }
+
+  // Every other Chinese provider keeps the old mild clause.
+  const omnivoice = resolveSegmentVoiceStyle({
+    text: '你回来啦。',
+    providerId: 'omnivoice-tts',
+    cue: voiceEmotionCueFromTag('tts', 'happy'),
+    emotion: IDLE,
+  })
+  assert.equal(omnivoice.instruction, '音调高一点，语气轻快上扬。')
 })

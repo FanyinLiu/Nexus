@@ -16,7 +16,9 @@
  * gently, she does not answer sad. Provider capability decides the output:
  * natural-language instructions for Qwen3 / OmniVoice / OpenAI-style
  * providers, MiniMax's native emotion field, and rate/pitch nudges for every
- * provider that can carry them. A neutral / idle sentence yields no
+ * provider that can carry them. The local Qwen3 stream cannot carry a rate, so
+ * it also gets `speechTempo` (see EMOTION_SPEECH_TEMPO) for the pitch-
+ * preserving stretcher in the main process. A neutral / idle sentence yields no
  * instruction at all, so she sounds like herself.
  */
 
@@ -31,6 +33,59 @@ import type { SegmentVoiceStyle, VoiceEmotionCue } from '../../types/voice.ts'
  * sad/angry face slots, and sulky/hesitant/whisper are delivery-only).
  */
 export type SegmentEmotion = PetMood | 'sad' | 'angry' | 'sulky' | 'hesitant' | 'calm' | 'whisper'
+
+/**
+ * Speaking tempo per sentence emotion, for providers that cannot carry a rate
+ * themselves (the local Qwen3 C server ignores `rate` on `/v1/tts/stream`, so
+ * the rate is applied client-side with a pitch-preserving stretcher).
+ *
+ * Baseline 1.5 was chosen by ear: at 1.0 the same voice reads too slowly to
+ * sound like conversation. The rows are deliberately coarse — six groups, not
+ * nineteen — so tuning means nudging one row, not re-auditing every emotion:
+ *
+ *   neutral / calm                1.5
+ *   happy / excited / joy         1.65
+ *   coquettish (撒娇) / playful-sulk 1.4
+ *   sad / hurt / aggrieved        1.25
+ *   angry / annoyed               1.6
+ *   shy / hesitant / embarrassed  1.35
+ */
+export const EMOTION_SPEECH_TEMPO: Record<SegmentEmotion, number> = {
+  // neutral / calm / matter-of-fact
+  idle: 1.5,
+  calm: 1.5,
+  thinking: 1.5,
+  curious: 1.5,
+  proud: 1.5,
+  // happy / excited / joy
+  happy: 1.65,
+  excited: 1.65,
+  playful: 1.65,
+  surprised: 1.65,
+  // coquettish / playful-sulk — drawn-out, wants to be coaxed
+  sulky: 1.4,
+  affectionate: 1.4,
+  // sad / hurt / aggrieved
+  sad: 1.25,
+  worried: 1.25,
+  sleepy: 1.25,
+  whisper: 1.25,
+  // angry / annoyed
+  angry: 1.6,
+  // shy / hesitant / embarrassed
+  embarrassed: 1.35,
+  hesitant: 1.35,
+  confused: 1.35,
+}
+
+/**
+ * Tempo for one sentence emotion; anything outside the table (an unknown cue
+ * word, a future mood) falls back to the neutral row.
+ */
+export function resolveEmotionSpeechTempo(emotion: string | null | undefined): number {
+  const key = String(emotion ?? '').trim() as SegmentEmotion
+  return EMOTION_SPEECH_TEMPO[key] ?? EMOTION_SPEECH_TEMPO.idle
+}
 
 export type SegmentVoiceStyleInput = {
   text: string
@@ -77,25 +132,62 @@ const ZH_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
   whisper: '像说悄悄话一样，用气声，声音很轻很小。',
 }
 
+// The local Qwen3 C server follows vivid natural-language direction much more
+// strongly than the old mild clauses, and T6 still has nineteen categories.
+// Map every category to the nearest of the six stronger groups. The
+// delivery-only shades (sleepy, worried, whisper) keep a dedicated strong line
+// where a group would change what she is doing — `worried` in particular is
+// the caring fallback for a sad USER. The C server's `emotion` steering field
+// and inline [mood] markup stay unused: both changed the timbre unintelligibly.
+const QWEN3_ZH_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
+  // neutral / calm
+  thinking: '自然放松地说话，像跟熟人平常聊天，语气温和。',
+  calm: '自然放松地说话，像跟熟人平常聊天，语气温和。',
+  curious: '自然放松地说话，像跟熟人平常聊天，语气温和。',
+  // happy / excited
+  happy: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  excited: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  surprised: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  proud: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  // coquettish / affectionate / sulky
+  affectionate: '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。',
+  sulky: '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。',
+  playful: '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。',
+  // sad / worried: the low, tearful shade is for her own sadness; `worried`
+  // is also the caring fallback for a sad USER, so it keeps a concerned
+  // delivery instead of mirroring their sadness.
+  sad: '难过、低落，声音轻而低沉，说话无力，带着一点哽咽和叹气。',
+  worried: '关切、温柔地说话，声音放轻，带着担心和安慰。',
+  sleepy: '困倦、懒懒地说话，声音软而慢，带着一点睡意和哈欠。',
+  // angry
+  angry: '很生气，语气冲、带着不满和责备，声音有力，咬字重。',
+  // shy / hesitant
+  embarrassed: '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。',
+  hesitant: '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。',
+  confused: '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。',
+  // A secret is not shyness: keep the breathy delivery the old table had.
+  whisper: '用气声说悄悄话，声音很轻很小，像怕被人听见。',
+}
+
 const EN_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
-  thinking: 'Speak thoughtfully and unhurried.',
-  happy: 'Speak with a light, happy lilt.',
-  sleepy: 'Speak slowly and drowsily.',
-  surprised: 'Speak with a short, surprised brightness.',
-  confused: 'Speak hesitantly, as if working it out.',
-  embarrassed: 'Speak shyly and softly.',
-  excited: 'Sound thrilled and energized, a bit louder and brighter.',
-  affectionate: 'Speak warmly and close, as if murmuring.',
-  proud: 'Speak with quiet, restrained pride.',
-  curious: 'Speak with a curious lift at the end.',
-  worried: 'Speak gently, with a note of concern.',
-  playful: 'Speak with a playful, teasing smile.',
-  sad: 'Speak softly and a little downcast.',
-  angry: 'Speak with a raised, forceful, angry voice.',
-  sulky: 'Mumble sulkily, lower and quieter, pretending not to care.',
-  hesitant: 'Speak hesitantly, letting the ending trail off.',
-  calm: 'Stay calm and steady, a little slower, without pushing back.',
-  whisper: 'Speak very quietly, almost inaudible, using breath instead of voice.',
+  thinking: 'Speak naturally and at ease, like chatting with someone close, in a warm, gentle tone.',
+  happy: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  sleepy: 'Sound drowsy and lazy; speak slowly and softly, with a little sleepiness and a yawn.',
+  surprised: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  confused: 'Sound very shy: a small, soft voice, a little stammering and hesitant, with an embarrassed smile.',
+  embarrassed: 'Sound very shy: a small, soft voice, a little stammering and hesitant, with an embarrassed smile.',
+  excited: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  affectionate: 'Use a coquettish, clingy tone: soft and sweet, drawing out the ends of words upward, a little hurt and wanting to be coaxed.',
+  proud: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  curious: 'Speak naturally and at ease, like chatting with someone close, in a warm, gentle tone.',
+  worried: 'Speak with gentle concern, a softer voice, carrying worry and comfort.',
+  playful: 'Use a coquettish, clingy tone: soft and sweet, drawing out the ends of words upward, a little hurt and wanting to be coaxed.',
+  sad: 'Sound sad and low; speak softly and weakly, with a catch in your throat and a sigh.',
+  angry: 'Sound very angry: sharp, forceful, full of complaint and reproach, with hard consonants.',
+  sulky: 'Use a coquettish, clingy tone: soft and sweet, drawing out the ends of words upward, a little hurt and wanting to be coaxed.',
+  hesitant: 'Sound very shy: a small, soft voice, a little stammering and hesitant, with an embarrassed smile.',
+  calm: 'Speak naturally and at ease, like chatting with someone close, in a warm, gentle tone.',
+  whisper: 'Whisper with breath instead of voice, very quiet and small, as if afraid of being overheard.',
 }
 
 /** Cue words the model may emit; unknown words fall through to the text/snapshot. */
@@ -341,8 +433,13 @@ function colorInstruction(
   emotion: Exclude<SegmentEmotion, 'idle'>,
   style: PersonaSpeechStyle | undefined,
   language: Exclude<InstructionLanguage, 'none'>,
+  providerId: string,
 ): string {
-  const base = language === 'zh' ? ZH_INSTRUCTION[emotion] : EN_INSTRUCTION[emotion]
+  // The local C server takes the stronger six-group directions; every other
+  // Chinese-speaking provider keeps its long-standing mild clauses.
+  const base = language === 'zh'
+    ? (providerId === 'qwen3-tts-local' ? QWEN3_ZH_INSTRUCTION[emotion] : ZH_INSTRUCTION[emotion])
+    : EN_INSTRUCTION[emotion]
   const normalized = normalizePersonaSpeechStyle(style)
   if (!normalized) return base
 
@@ -484,19 +581,27 @@ function resolveEmotion(input: SegmentVoiceStyleInput): SegmentEmotion {
  */
 export function resolveSegmentVoiceStyle(input: SegmentVoiceStyleInput): SegmentVoiceStyle {
   const emotion = resolveEmotion(input)
+  // Only the local Qwen3 path applies tempo client-side; every other provider
+  // takes its own rate/pitch fields or nothing at all.
+  const speechTempo = input.providerId === 'qwen3-tts-local'
+    ? resolveEmotionSpeechTempo(emotion)
+    : undefined
+  const tempoField = speechTempo === undefined ? {} : { speechTempo }
+
   if (emotion === 'idle') {
-    return { instruction: NEUTRAL_INSTRUCTION, rate: 1, pitch: 1 }
+    return { instruction: NEUTRAL_INSTRUCTION, rate: 1, pitch: 1, ...tempoField }
   }
 
   const language = providerInstructionLanguage(input.providerId)
   const instruction = language === 'none'
     ? NEUTRAL_INSTRUCTION
-    : colorInstruction(emotion, input.speechStyle ?? undefined, language)
+    : colorInstruction(emotion, input.speechStyle ?? undefined, language, input.providerId)
   const nudge = EMOTION_NUDGES[emotion]
   const style: SegmentVoiceStyle = {
     instruction,
     rate: roundNudge(nudge.rate),
     pitch: roundNudge(nudge.pitch),
+    ...tempoField,
   }
 
   if (input.providerId === 'minimax-tts') {
@@ -523,13 +628,18 @@ export function createSegmentStyleResolver(
   })
 }
 
-/** True when a style would change nothing, so it need not cross IPC. */
+/**
+ * True when a style would change nothing, so it need not cross IPC. A tempo
+ * counts as a change: the neutral reply is 1.5x, not 1.0x, and main is the
+ * side that applies it.
+ */
 export function isNeutralSegmentStyle(style: SegmentVoiceStyle | null | undefined): boolean {
   if (!style) return true
   return !style.instruction.trim()
     && style.rate === 1
     && style.pitch === 1
     && !style.emotion
+    && (style.speechTempo === undefined || style.speechTempo === 1)
 }
 
 /**

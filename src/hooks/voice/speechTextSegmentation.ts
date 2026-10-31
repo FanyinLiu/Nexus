@@ -36,8 +36,9 @@ export function getMaxRequestCharsForProvider(providerId: string): number {
 // Streaming chunk ceiling per provider. A sentence boundary always wins; this
 // only decides how long a run-on sentence may grow before we split it. Cloud
 // providers buffer the whole response, so they can take a full sentence up to
-// 120 chars; local Qwen3 streams PCM and prefers shorter first chunks so the
-// voice starts sooner. OmniVoice's 80-char request cap is the effective limit.
+// 120 chars. Qwen3 ignores this path (see prefersWholeReplySegments) because
+// its timbre drifts between generations. OmniVoice's 80-char request cap is
+// the effective limit.
 const DEFAULT_MAX_SEGMENT_CHARS = 72
 const PROVIDER_MAX_SEGMENT_CHARS: Record<string, number> = {
   'omnivoice-tts': 80,
@@ -64,6 +65,67 @@ export function getMaxSegmentCharsForProvider(providerId: string): number {
  */
 export function prefersWholeSentenceSegments(providerId: string): boolean {
   return providerId === 'volcengine-tts' || providerId === 'minimax-tts' || providerId === 'omnivoice-tts'
+}
+
+/**
+ * Providers whose voice identity drifts between separate generations.
+ *
+ * Listening tests on the local Qwen3 engine showed that sentence-by-sentence
+ * requests change timbre even with a fixed seed; one continuous generation
+ * keeps it. So a Qwen3 reply is buffered and sent as a single request (with a
+ * few large chunks only when it exceeds the whole-reply ceiling).
+ */
+export function prefersWholeReplySegments(providerId: string): boolean {
+  return providerId === 'qwen3-tts-local'
+}
+
+/**
+ * Whole-reply ceiling before the reply is split. A normal reply is one
+ * request; a very long one is split at sentence ends into at most four large
+ * chunks, which keeps the timbre close while staying under the server's
+ * per-request text limit.
+ */
+export const WHOLE_REPLY_MAX_CHARS = 400
+
+/**
+ * Split a whole reply into a small number of sentence-aligned chunks.
+ *
+ * Unlike `splitLongTextAtSentences`, this never cuts mid-sentence while a
+ * sentence boundary is available, and it grows the target for very long
+ * replies so the result stays "a few large chunks" rather than a sentence
+ * stream. Returns the original text untouched when it already fits.
+ */
+export function splitReplyForSingleGeneration(
+  text: string,
+  maxChars = WHOLE_REPLY_MAX_CHARS,
+): string[] {
+  const trimmed = text.trim()
+  if (!trimmed) return []
+  if (trimmed.length <= maxChars) return [trimmed]
+
+  // At most four chunks: a 2000-character reply uses ~500-character chunks
+  // instead of five 400-character ones.
+  const target = Math.max(maxChars, Math.ceil(trimmed.length / 4))
+  const chunks: string[] = []
+  let start = 0
+
+  while (start < trimmed.length) {
+    let end = Math.min(trimmed.length, start + target)
+    if (end < trimmed.length) {
+      // Prefer the last sentence terminator in the second half of the window.
+      for (let index = end; index > start + Math.floor(target / 2); index -= 1) {
+        if (SENTENCE_BOUNDARY_RE.test(trimmed[index - 1] ?? '')) {
+          end = index
+          break
+        }
+      }
+    }
+    const chunk = trimmed.slice(start, end).trim()
+    if (chunk) chunks.push(chunk)
+    start = end
+  }
+
+  return chunks
 }
 
 const SENTENCE_BOUNDARY_RE = /[。！？!?；;\n]/u

@@ -45,7 +45,11 @@ import {
   synthesizeVolcengineSpeechOutputWithFallback,
 } from './ttsVolcengine.js'
 import { synthesizeLocalTts } from './localTts.js'
-import { buildQwen3TtsSpeechRequestPayload } from './qwen3TtsPayload.js'
+import {
+  buildQwen3CportRequestPayload,
+  buildQwen3TtsSpeechRequestPayload,
+} from './qwen3TtsPayload.js'
+import { getQwen3TtsRuntime } from './qwen3TtsRuntime.js'
 import { resolveOmniVoiceSeed } from './ttsSeed.js'
 import {
   buildXaiSttMultipartParts,
@@ -78,8 +82,9 @@ const qwen3TtsReadyPromises = new Map()
  * checkpoint load, which is far longer than the 20 s first-audio budget. So
  * warm up explicitly (180 s ceiling) before the streaming request starts.
  */
-export async function warmupQwen3Tts(baseUrl, signal) {
-  const existing = qwen3TtsReadyPromises.get(baseUrl)
+export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
+  const cacheKey = `${engine}|${baseUrl}`
+  const existing = qwen3TtsReadyPromises.get(cacheKey)
   if (existing) return existing
 
   const promise = (async () => {
@@ -98,6 +103,9 @@ export async function warmupQwen3Tts(baseUrl, signal) {
       throw new Error(`本地 Qwen3 语音服务还没准备好（${health.status}）。`)
     }
     const status = await readJsonSafe(health)
+    // The C server loads the checkpoint before it starts listening and has no
+    // warmup endpoint; a 200 from `/v1/health` means it can take work.
+    if (engine === 'cport') return status
     if (status?.loaded === true) return status
 
     const warm = await performNetworkRequestWithRetry(`${baseUrl}/v1/warmup`, {
@@ -115,11 +123,11 @@ export async function warmupQwen3Tts(baseUrl, signal) {
   })().catch((error) => {
     // A failed warm-up must not poison every later reply — let the next turn
     // retry once the user has fixed the Python env or freed memory.
-    qwen3TtsReadyPromises.delete(baseUrl)
+    qwen3TtsReadyPromises.delete(cacheKey)
     throw error
   })
 
-  qwen3TtsReadyPromises.set(baseUrl, promise)
+  qwen3TtsReadyPromises.set(cacheKey, promise)
   return promise
 }
 
@@ -132,11 +140,11 @@ export async function warmupQwen3Tts(baseUrl, signal) {
  */
 export async function warmupRemoteTtsSession(sessionPayload, signal) {
   if (!isQwen3TtsSpeechOutputProvider(sessionPayload?.providerId)) return
-  const baseUrl = resolveSpeechOutputBaseUrl(
-    sessionPayload.providerId,
-    sessionPayload.baseUrl,
-  )
-  await warmupQwen3Tts(baseUrl, signal)
+  const runtime = getQwen3TtsRuntime()
+  const baseUrl = runtime.engine === 'cport'
+    ? runtime.baseUrl
+    : resolveSpeechOutputBaseUrl(sessionPayload.providerId, sessionPayload.baseUrl)
+  await warmupQwen3Tts(baseUrl, signal, runtime.engine)
 }
 
 /**
@@ -168,13 +176,24 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
   if (!baseUrl) throw new Error('请先填写语音输出 API Base URL。')
   assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
-  // Local Qwen3-TTS: the sidecar streams 16-bit PCM sentence by sentence, so
+  // Local Qwen3-TTS: the server streams 16-bit PCM while it generates, so
   // return the response body as a Node stream and let playback start on the
-  // first sentence instead of waiting for the whole reply.
+  // first chunk instead of waiting for the whole reply.
+  //
+  // The renderer coalesces a Qwen3 reply into one request, so the C server's
+  // `/v1/tts/stream` keeps the speaker identity stable for the whole reply.
+  // The Python sidecar keeps its own `/v1/audio/speech` contract.
   if (isQwen3TtsSpeechOutputProvider(payload.providerId)) {
-    await warmupQwen3Tts(baseUrl, signal)
-    const endpoint = `${baseUrl}/audio/speech`
-    const requestBody = JSON.stringify(buildQwen3TtsSpeechRequestPayload(payload, content))
+    const runtime = getQwen3TtsRuntime()
+    const engine = runtime.engine
+    const qwen3BaseUrl = engine === 'cport' ? runtime.baseUrl : baseUrl
+    await warmupQwen3Tts(qwen3BaseUrl, signal, engine)
+    const endpoint = engine === 'cport'
+      ? `${qwen3BaseUrl}/tts/stream`
+      : `${qwen3BaseUrl}/audio/speech`
+    const requestBody = JSON.stringify(engine === 'cport'
+      ? buildQwen3CportRequestPayload(payload, content)
+      : buildQwen3TtsSpeechRequestPayload(payload, content))
     const response = await performNetworkRequestWithRetry(endpoint, {
       allowPrivateNetwork: true,
       method: 'POST',
@@ -197,9 +216,13 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     if (!response.body) {
       throw new Error('本地 Qwen3 语音服务没有返回音频流。')
     }
+    // The stream cannot carry a rate, so the sentence's tempo travels with
+    // the result and is applied to the decoded PCM by the stream service.
+    const speechTempo = Number.isFinite(payload.speechTempo) ? payload.speechTempo : undefined
     return {
       pcmStream: Readable.fromWeb(response.body),
       pcmSampleRate: 24000,
+      ...(speechTempo ? { speechTempo } : {}),
     }
   }
 
@@ -472,6 +495,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
 export {
   synthesizeRemoteTts,
   buildQwen3TtsSpeechRequestPayload,
+  buildQwen3CportRequestPayload,
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
   isOpenAiCompatibleSpeechOutputProvider,
