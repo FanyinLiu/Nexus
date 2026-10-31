@@ -70,6 +70,7 @@ export const zhTWVoice = {
   'voice.provider.vad.silero_fallback_detail': '{fallback} 原始資訊：{original}',
   'voice.provider.vad.input_not_enabled': '請先在設定中啟用語音輸入。',
   'voice.streaming_tts.first_audio_timeout': '串流 TTS 超過 6 秒仍未產出音訊。',
+  'voice.streaming_tts.tool_call_filler': '讓我看一下。',
   'voice.status.continuous_tencent_start': '騰訊雲即時辨識已啟用，開始說話吧。',
   'voice.status.tencent_listening': '我在聽，騰訊雲正在即時辨識你說的話。',
   'voice.status.continuous_paraformer_start': 'Paraformer 串流辨識已啟用，邊說邊轉寫。',

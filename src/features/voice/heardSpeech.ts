@@ -13,6 +13,8 @@ export type HeardSpeechSegment = {
   durationMs: number
   /** Wall-clock (performance.now domain) when the segment started, or null. */
   startedAtMs: number | null
+  /** Optional sentence boundaries inside this segment, in playback order. */
+  sentenceProgress?: ReadonlyArray<{ charEnd: number; endMs: number }>
 }
 
 export type HeardSpeechSnapshot = {
@@ -52,6 +54,51 @@ export function cutTextAtNaturalBoundary(text: string, ratio: number): string {
   return end > 0 ? prefix.slice(0, end) : prefix
 }
 
+const PARTIAL_SENTENCE_HEARD_RATIO = 0.6
+
+/**
+ * Resolve the heard head of a segment from main's sentence boundaries.
+ *
+ * A sentence counts once its boundary has passed; the sentence currently
+ * playing is kept only when more than 60% of it was audible. Returns null when
+ * the segment carries no sentence progress, so the caller can fall back to the
+ * duration-proportional estimate.
+ */
+function resolveSentenceProgressHead(
+  segment: HeardSpeechSegment,
+  elapsedMs: number,
+): string | null {
+  const progress = segment.sentenceProgress
+  if (!progress?.length) return null
+
+  const text = segment.text
+  let heardEnd = 0
+  let previousEndMs = 0
+
+  for (const sentence of progress) {
+    const endMs = Number.isFinite(sentence.endMs)
+      ? Math.max(previousEndMs, sentence.endMs)
+      : previousEndMs
+    const requestedCharEnd = Number.isFinite(sentence.charEnd)
+      ? Math.floor(sentence.charEnd)
+      : heardEnd
+    const charEnd = Math.max(heardEnd, Math.min(text.length, requestedCharEnd))
+
+    if (elapsedMs >= endMs) {
+      heardEnd = charEnd
+      previousEndMs = endMs
+      continue
+    }
+
+    const sentenceSpanMs = endMs - previousEndMs
+    const ratio = sentenceSpanMs > 0 ? (elapsedMs - previousEndMs) / sentenceSpanMs : 0
+    if (ratio > PARTIAL_SENTENCE_HEARD_RATIO) heardEnd = charEnd
+    break
+  }
+
+  return text.slice(0, heardEnd)
+}
+
 /**
  * Resolve the heard text at `nowMs`. Segments are consumed in index order;
  * the first unstarted segment ends the walk, and the first unfinished segment
@@ -74,6 +121,12 @@ export function resolveHeardSpeech(
       heardText += segment.text
       completeSegments += 1
       continue
+    }
+
+    const fromSentences = resolveSentenceProgressHead(segment, nowMs - segment.startedAtMs)
+    if (fromSentences !== null) {
+      heardText += fromSentences
+      break
     }
 
     const ratio = (nowMs - segment.startedAtMs) / segment.durationMs

@@ -71,7 +71,7 @@ function emitSampleChunk(session, samples, sampleRate, text, isFinal = false, se
  * been handed over (streaming provider); the renderer combines it with its own
  * audio clock so a barge-in knows how much of the sentence was actually heard.
  */
-function emitSegmentProgress(session, segmentIndex, text, durationMs) {
+function emitSegmentProgress(session, segmentIndex, text, durationMs, sentenceProgress) {
   if (!session?.sender || session.sender.isDestroyed() || session.closed) {
     return
   }
@@ -81,7 +81,69 @@ function emitSegmentProgress(session, segmentIndex, text, durationMs) {
     segmentIndex,
     text,
     durationMs: Math.max(0, Math.round(durationMs)),
+    ...(sentenceProgress?.length ? { sentenceProgress } : {}),
   })
+}
+
+const SENTENCE_END_CHARS = new Set(['。', '！', '？', '…', '!', '?', '.'])
+const SENTENCE_CLOSING_CHARS = new Set(['”', '’', '」', '』', '）', ')', '】', ']', '"', "'"])
+
+/**
+ * Find exclusive character offsets where sentences end. Punctuation runs and
+ * any closing quote/bracket that follows them belong to the sentence, so the
+ * renderer can slice the original text at each boundary unchanged.
+ */
+function findSentenceEndOffsets(text) {
+  const source = String(text ?? '')
+  const offsets = []
+  let index = 0
+
+  while (index < source.length) {
+    if (!SENTENCE_END_CHARS.has(source[index])) {
+      index += 1
+      continue
+    }
+
+    // "3.14" is not a sentence boundary; the decimal point is inside a word.
+    if (
+      source[index] === '.'
+      && /\d/u.test(source[index - 1] ?? '')
+      && /\d/u.test(source[index + 1] ?? '')
+    ) {
+      index += 1
+      continue
+    }
+
+    let end = index + 1
+    while (end < source.length && SENTENCE_END_CHARS.has(source[end])) end += 1
+    while (end < source.length && SENTENCE_CLOSING_CHARS.has(source[end])) end += 1
+    offsets.push(end)
+    index = end
+  }
+
+  if (source.length > 0 && offsets[offsets.length - 1] !== source.length) {
+    offsets.push(source.length)
+  }
+  return offsets
+}
+
+/**
+ * Map sentence boundaries onto the post-tempo-stretch playback timeline. The
+ * total sample count is the real emitted count, so tempo changes scale every
+ * boundary; within this one generation the split is char-proportional.
+ */
+function buildSentenceProgress(text, sampleCount, sampleRate) {
+  if (!text || !Number.isFinite(sampleCount) || sampleCount <= 0) return undefined
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) return undefined
+
+  const offsets = findSentenceEndOffsets(text)
+  if (!offsets.length) return undefined
+
+  const totalMs = (sampleCount / sampleRate) * 1000
+  return offsets.map((charEnd) => ({
+    charEnd,
+    endMs: Math.round((totalMs * charEnd) / text.length),
+  }))
 }
 
 function takeBufferedSamples(bufferedChunks, sampleCount) {
@@ -478,6 +540,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         segmentIndex,
         text,
         sampleRate > 0 ? (emittedSampleCount / sampleRate) * 1000 : 0,
+        buildSentenceProgress(text, emittedSampleCount, sampleRate),
       )
       return
     }
@@ -491,6 +554,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
       segmentIndex,
       text,
       decoded.sampleRate > 0 ? (decoded.samples.length / decoded.sampleRate) * 1000 : 0,
+      buildSentenceProgress(text, decoded.samples.length, decoded.sampleRate),
     )
     emitSamples(
       session,

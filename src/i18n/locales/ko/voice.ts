@@ -70,6 +70,7 @@ export const koVoice = {
   'voice.provider.vad.silero_fallback_detail': '{fallback} 원본 정보: {original}',
   'voice.provider.vad.input_not_enabled': '먼저 설정에서 음성 입력을 활성화해 주세요.',
   'voice.streaming_tts.first_audio_timeout': '스트리밍 TTS 가 6 초가 지나도 오디오를 출력하지 않았습니다.',
+  'voice.streaming_tts.tool_call_filler': '확인해 볼게요.',
   'voice.status.continuous_tencent_start': 'Tencent Cloud 실시간 인식이 켜졌습니다. 말씀하세요.',
   'voice.status.tencent_listening': '듣고 있어요. Tencent Cloud 가 실시간으로 받아쓰고 있습니다.',
   'voice.status.continuous_paraformer_start': 'Paraformer 스트리밍 인식이 켜졌습니다. 말하는 동안 받아씁니다.',

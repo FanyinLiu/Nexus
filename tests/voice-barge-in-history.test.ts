@@ -81,6 +81,27 @@ test('heard text keeps full segments plus the proportional head of the playing o
   assert.equal(cutTextAtNaturalBoundary('Second half here. ', 0.5), 'Second')
 })
 
+test('sentence progress keeps whole sentences and only a mostly-played partial', () => {
+  const sentenceSegments: HeardSpeechSegment[] = [{
+    index: 0,
+    text: '第一句。第二句。第三句。',
+    durationMs: 3_000,
+    startedAtMs: 0,
+    sentenceProgress: [
+      { charEnd: 4, endMs: 1_000 },
+      { charEnd: 8, endMs: 2_000 },
+      { charEnd: 12, endMs: 3_000 },
+    ],
+  }]
+
+  // 50% through the second sentence: only the fully played first survives.
+  assert.equal(resolveHeardSpeech(sentenceSegments, 1_500).heardText, '第一句。')
+  // 70% through the third sentence: it is counted as heard, in full.
+  assert.equal(resolveHeardSpeech(sentenceSegments, 2_700).heardText, '第一句。第二句。第三句。')
+  // 60% is not "more than 60%".
+  assert.equal(resolveHeardSpeech(sentenceSegments, 1_600).heardText, '第一句。')
+})
+
 function installTtsHarness() {
   const pushes: Array<{ requestId: string; text: string }> = []
   const listeners: Array<(event: TtsStreamEvent) => void> = []

@@ -280,6 +280,18 @@ export interface TtsStreamChunkEvent {
 }
 
 /**
+ * Sentence boundary inside one streamed segment. `charEnd` is an exclusive
+ * offset into the segment text; `endMs` is when that sentence finishes playing
+ * relative to the segment start. Main derives both from the post-tempo-stretch
+ * sample count, so a barge-in can keep whole sentences instead of estimating
+ * the cut from the segment's total duration alone.
+ */
+export interface TtsStreamSentenceProgress {
+  charEnd: number
+  endMs: number
+}
+
+/**
  * Per-sentence playback metadata. Main reports the text and total audio
  * duration once the sentence's PCM has been fully handed to the renderer; the
  * renderer pairs it with the local audio clock to know how much was heard.
@@ -290,6 +302,7 @@ export interface TtsStreamSegmentEvent {
   segmentIndex: number
   text: string
   durationMs: number
+  sentenceProgress?: TtsStreamSentenceProgress[]
 }
 
 export interface TtsStreamEndEvent {
