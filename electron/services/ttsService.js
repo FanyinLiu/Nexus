@@ -216,9 +216,13 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     if (!response.body) {
       throw new Error('本地 Qwen3 语音服务没有返回音频流。')
     }
+    // The stream cannot carry a rate, so the sentence's tempo travels with
+    // the result and is applied to the decoded PCM by the stream service.
+    const speechTempo = Number.isFinite(payload.speechTempo) ? payload.speechTempo : undefined
     return {
       pcmStream: Readable.fromWeb(response.body),
       pcmSampleRate: 24000,
+      ...(speechTempo ? { speechTempo } : {}),
     }
   }
 

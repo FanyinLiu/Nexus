@@ -31,7 +31,7 @@ Nexus 是 Electron 桌面伴侣应用（Live2D 宠物 + 聊天 + 语音 + 记忆
 ### 语音输出 TTS
 - 行为：TTS 合成、流式播放、唇形同步、多 provider
 - 渲染：`src/features/voice/`（`streamAudioPlayer.ts`、`voiceSessionMachine.ts`、`speechReply.ts`）
-- 主进程：`electron/ttsStreamService.js`、`electron/services/ttsService.js`、`ttsProviders.js`、`edgeTts.js`、`localTts.js`、`ttsVolcengine.js`、`electron/ipc/ttsStreamIpc.js`
+- 主进程：`electron/ttsStreamService.js`、`electron/services/ttsService.js`、`ttsProviders.js`、`edgeTts.js`、`localTts.js`、`ttsVolcengine.js`、`services/wsolaStretcher.js`（本地 Qwen3 流式变速，情感→语速）、`electron/ipc/ttsStreamIpc.js`
 
 ### 听觉 / STT / 唤醒词
 - 行为：麦克风监听、VAD、唤醒词、本地/云 ASR

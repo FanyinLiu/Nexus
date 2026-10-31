@@ -16,7 +16,9 @@
  * gently, she does not answer sad. Provider capability decides the output:
  * natural-language instructions for Qwen3 / OmniVoice / OpenAI-style
  * providers, MiniMax's native emotion field, and rate/pitch nudges for every
- * provider that can carry them. A neutral / idle sentence yields no
+ * provider that can carry them. The local Qwen3 stream cannot carry a rate, so
+ * it also gets `speechTempo` (see EMOTION_SPEECH_TEMPO) for the pitch-
+ * preserving stretcher in the main process. A neutral / idle sentence yields no
  * instruction at all, so she sounds like herself.
  */
 
@@ -31,6 +33,59 @@ import type { SegmentVoiceStyle, VoiceEmotionCue } from '../../types/voice.ts'
  * sad/angry face slots, and sulky/hesitant/whisper are delivery-only).
  */
 export type SegmentEmotion = PetMood | 'sad' | 'angry' | 'sulky' | 'hesitant' | 'calm' | 'whisper'
+
+/**
+ * Speaking tempo per sentence emotion, for providers that cannot carry a rate
+ * themselves (the local Qwen3 C server ignores `rate` on `/v1/tts/stream`, so
+ * the rate is applied client-side with a pitch-preserving stretcher).
+ *
+ * Baseline 1.5 was chosen by ear: at 1.0 the same voice reads too slowly to
+ * sound like conversation. The rows are deliberately coarse — six groups, not
+ * nineteen — so tuning means nudging one row, not re-auditing every emotion:
+ *
+ *   neutral / calm                1.5
+ *   happy / excited / joy         1.65
+ *   coquettish (撒娇) / playful-sulk 1.4
+ *   sad / hurt / aggrieved        1.25
+ *   angry / annoyed               1.6
+ *   shy / hesitant / embarrassed  1.35
+ */
+export const EMOTION_SPEECH_TEMPO: Record<SegmentEmotion, number> = {
+  // neutral / calm / matter-of-fact
+  idle: 1.5,
+  calm: 1.5,
+  thinking: 1.5,
+  curious: 1.5,
+  proud: 1.5,
+  // happy / excited / joy
+  happy: 1.65,
+  excited: 1.65,
+  playful: 1.65,
+  surprised: 1.65,
+  // coquettish / playful-sulk — drawn-out, wants to be coaxed
+  sulky: 1.4,
+  affectionate: 1.4,
+  // sad / hurt / aggrieved
+  sad: 1.25,
+  worried: 1.25,
+  sleepy: 1.25,
+  whisper: 1.25,
+  // angry / annoyed
+  angry: 1.6,
+  // shy / hesitant / embarrassed
+  embarrassed: 1.35,
+  hesitant: 1.35,
+  confused: 1.35,
+}
+
+/**
+ * Tempo for one sentence emotion; anything outside the table (an unknown cue
+ * word, a future mood) falls back to the neutral row.
+ */
+export function resolveEmotionSpeechTempo(emotion: string | null | undefined): number {
+  const key = String(emotion ?? '').trim() as SegmentEmotion
+  return EMOTION_SPEECH_TEMPO[key] ?? EMOTION_SPEECH_TEMPO.idle
+}
 
 export type SegmentVoiceStyleInput = {
   text: string
@@ -484,8 +539,15 @@ function resolveEmotion(input: SegmentVoiceStyleInput): SegmentEmotion {
  */
 export function resolveSegmentVoiceStyle(input: SegmentVoiceStyleInput): SegmentVoiceStyle {
   const emotion = resolveEmotion(input)
+  // Only the local Qwen3 path applies tempo client-side; every other provider
+  // takes its own rate/pitch fields or nothing at all.
+  const speechTempo = input.providerId === 'qwen3-tts-local'
+    ? resolveEmotionSpeechTempo(emotion)
+    : undefined
+  const tempoField = speechTempo === undefined ? {} : { speechTempo }
+
   if (emotion === 'idle') {
-    return { instruction: NEUTRAL_INSTRUCTION, rate: 1, pitch: 1 }
+    return { instruction: NEUTRAL_INSTRUCTION, rate: 1, pitch: 1, ...tempoField }
   }
 
   const language = providerInstructionLanguage(input.providerId)
@@ -497,6 +559,7 @@ export function resolveSegmentVoiceStyle(input: SegmentVoiceStyleInput): Segment
     instruction,
     rate: roundNudge(nudge.rate),
     pitch: roundNudge(nudge.pitch),
+    ...tempoField,
   }
 
   if (input.providerId === 'minimax-tts') {
@@ -523,13 +586,18 @@ export function createSegmentStyleResolver(
   })
 }
 
-/** True when a style would change nothing, so it need not cross IPC. */
+/**
+ * True when a style would change nothing, so it need not cross IPC. A tempo
+ * counts as a change: the neutral reply is 1.5x, not 1.0x, and main is the
+ * side that applies it.
+ */
 export function isNeutralSegmentStyle(style: SegmentVoiceStyle | null | undefined): boolean {
   if (!style) return true
   return !style.instruction.trim()
     && style.rate === 1
     && style.pitch === 1
     && !style.emotion
+    && (style.speechTempo === undefined || style.speechTempo === 1)
 }
 
 /**

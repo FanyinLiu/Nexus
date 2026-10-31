@@ -11,8 +11,15 @@
  * C-port mode (`--mode=cport`) measures the call-mode contract instead: the
  * WHOLE reply goes to the pure-C server's `/v1/tts/stream` in one generation,
  * so first-audio latency, total wall time, real-time underruns, and RTF all
- * describe the path the app actually uses. It also saves three whole-reply WAV
- * samples (two Chinese, one English) under `~/nexus-shots/cport-int-samples/`.
+ * describe the path the app actually uses. Chunks also run through the same
+ * pitch-preserving stretcher the app applies (the stream has no `rate`
+ * field), so the reported first-audio and audio length are the stretched
+ * ones, with the raw pre-stretch first byte printed alongside.
+ *
+ * It also saves one whole-reply WAV per mood row (neutral, happy,
+ * coquettish, sad, angry, shy — plus an English neutral) under
+ * `~/nexus-shots/cport-rate-samples/`, each rendered with the mild instruct
+ * and tempo the app would send for that mood.
  *
  * No other audio is written anywhere: every chunk is counted and discarded.
  *
@@ -30,6 +37,11 @@ import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 
 import { segmentTextForSpeech } from '../src/features/voice/streamingTts.ts'
+import {
+  resolveEmotionSpeechTempo,
+  resolveSegmentVoiceStyle,
+} from '../src/features/voice/voiceEmotion.ts'
+import { createWsolaStretcher } from '../electron/services/wsolaStretcher.js'
 import {
   buildQwen3CportArgs,
   buildQwen3CportEnv,
@@ -50,11 +62,15 @@ const BASE_URL = (args.get('base-url') ?? 'http://127.0.0.1:8002').replace(/\/+$
 const CPORT_PORT = Number(args.get('port') ?? 8080)
 const CPORT_ROOT = `http://127.0.0.1:${CPORT_PORT}`
 const SAMPLES_DIR = args.get('samples-dir')
-  ?? path.join(homedir(), 'nexus-shots', 'cport-int-samples')
+  ?? path.join(homedir(), 'nexus-shots', 'cport-rate-samples')
 const VOICE = args.get('voice') ?? 'vivian'
 const NO_SPAWN = args.has('no-spawn')
 const STARTUP_TIMEOUT_MS = 240_000
 const REQUEST_TIMEOUT_MS = 120_000
+const SAMPLE_RATE = 24_000
+// Mirrors INITIAL_STREAM_CHUNK_SIZE in electron/ttsStreamService.js: the first
+// chunk the app hands the renderer.
+const FIRST_CHUNK_SAMPLES = 1024
 
 const CHINESE_REPLIES = [
   '好呀，今天天气挺好的，要不要一起出去走走？我刚刚看到窗外的云特别好看。',
@@ -232,8 +248,18 @@ function stopCport(child) {
 /**
  * Whole-reply streaming request. Measures first-audio latency, total wall
  * time, and whether a real-time consumer would ever run dry ("underrun").
+ *
+ * Chunks are fed through the production stretcher as they arrive, so
+ * `firstStretchedMs` is the first sample the app could actually play and
+ * `audioSeconds` is the playback duration after stretching. `tempo` 1 (or
+ * missing) skips the stretcher and the two first-audio numbers are equal.
  */
-async function synthWholeReplyStream(text, language) {
+async function synthWholeReplyStream(text, language, options = {}) {
+  const tempo = Number(options.tempo)
+  const stretcher = Number.isFinite(tempo) && tempo !== 1
+    ? createWsolaStretcher(tempo)
+    : null
+  const collect = options.collect === true
   const started = performance.now()
   const response = await fetchWithTimeout(
     `${CPORT_ROOT}/v1/tts/stream`,
@@ -245,6 +271,7 @@ async function synthWholeReplyStream(text, language) {
         speaker: VOICE,
         language: mapQwen3CportLanguage(language),
         seed: 42,
+        ...(options.instruct ? { instruct: options.instruct } : {}),
       }),
     },
     REQUEST_TIMEOUT_MS,
@@ -256,26 +283,43 @@ async function synthWholeReplyStream(text, language) {
   }
 
   let firstByteMs = null
-  let firstAudioAt = null
-  let bytes = 0
+  let firstStretchedMs = null
+  let firstStretchedAt = null
+  // The app does not hand the renderer a single sample: it waits for
+  // INITIAL_STREAM_CHUNK_SIZE (1024) samples before the first chunk. Measure
+  // both paths at that same threshold, otherwise "before" and "after" are not
+  // comparable.
+  let rawChunkMs = null
+  let outputChunkMs = null
+  let rawSamples = 0
+  let outputSamples = 0
+  let oddByte = null
   let underruns = 0
   let dry = false
-  const reader = response.body.getReader()
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    if (!value || value.byteLength === 0) continue
+  const collected = collect ? [] : null
 
-    const now = performance.now()
-    if (firstByteMs === null) {
-      firstByteMs = now - started
-      firstAudioAt = now
+  const consume = (samples, now) => {
+    const output = stretcher ? stretcher.push(samples) : samples
+    if (!output.length) return
+    if (firstStretchedMs === null) {
+      firstStretchedMs = now - started
+      firstStretchedAt = now
     }
-    bytes += value.byteLength
-    const generatedSeconds = bytes / 2 / 24000
-    const elapsedSeconds = (now - firstAudioAt) / 1000
-    // 50 ms of slack keeps scheduler jitter from counting as a real dry buffer.
-    if (generatedSeconds + 0.05 < elapsedSeconds) {
+    outputSamples += output.length
+    if (outputChunkMs === null && outputSamples >= FIRST_CHUNK_SAMPLES) {
+      outputChunkMs = now - started
+    }
+    if (collected) {
+      const pcm = Buffer.alloc(output.length * 2)
+      for (let index = 0; index < output.length; index += 1) {
+        pcm.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(output[index] * 32767))), index * 2)
+      }
+      collected.push(pcm)
+    }
+    // Same 50 ms slack as the raw path: scheduler jitter is not a dry buffer.
+    const playedSeconds = outputSamples / SAMPLE_RATE
+    const elapsedSeconds = (now - firstStretchedAt) / 1000
+    if (playedSeconds + 0.05 < elapsedSeconds) {
       if (!dry) underruns += 1
       dry = true
     } else {
@@ -283,37 +327,144 @@ async function synthWholeReplyStream(text, language) {
     }
   }
 
+  const reader = response.body.getReader()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (!value || value.byteLength === 0) continue
+
+    const now = performance.now()
+    if (firstByteMs === null) firstByteMs = now - started
+
+    const chunk = oddByte ? Buffer.concat([oddByte, Buffer.from(value)]) : Buffer.from(value)
+    const usable = chunk.length - (chunk.length % 2)
+    if (usable > 0) {
+      const samples = new Float32Array(usable / 2)
+      for (let index = 0; index < samples.length; index += 1) {
+        samples[index] = chunk.readInt16LE(index * 2) / 32768
+      }
+      rawSamples += samples.length
+      if (rawChunkMs === null && rawSamples >= FIRST_CHUNK_SAMPLES) {
+        rawChunkMs = now - started
+      }
+      consume(samples, now)
+    }
+    oddByte = usable < chunk.length ? chunk.subarray(usable) : null
+  }
+
+  if (stretcher) {
+    const tail = stretcher.flush()
+    if (tail.length) consume(tail, performance.now())
+  }
+
   return {
     firstByteMs,
+    firstStretchedMs,
+    rawChunkMs,
+    outputChunkMs,
     totalMs: performance.now() - started,
-    audioSeconds: bytes / 2 / 24000,
+    audioSeconds: outputSamples / SAMPLE_RATE,
+    rawAudioSeconds: rawSamples / SAMPLE_RATE,
     underruns,
+    pcm: collected ? Buffer.concat(collected) : null,
   }
 }
 
-async function saveCportSample(id, text, language) {
-  const response = await fetchWithTimeout(
-    `${CPORT_ROOT}/v1/tts`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        speaker: VOICE,
-        language: mapQwen3CportLanguage(language),
-        seed: 42,
-        response_format: 'wav',
-      }),
-    },
-    REQUEST_TIMEOUT_MS,
-  )
-  if (!response.ok) {
-    throw new Error(`sample ${id} returned HTTP ${response.status}`)
-  }
+/** Minimal 16-bit mono WAV wrapper; the bench owns no audio library. */
+function encodeWav(pcm, sampleRate = SAMPLE_RATE) {
+  const header = Buffer.alloc(44)
+  header.write('RIFF', 0, 'ascii')
+  header.writeUInt32LE(36 + pcm.length, 4)
+  header.write('WAVE', 8, 'ascii')
+  header.write('fmt ', 12, 'ascii')
+  header.writeUInt32LE(16, 16)
+  header.writeUInt16LE(1, 20)
+  header.writeUInt16LE(1, 22)
+  header.writeUInt32LE(sampleRate, 24)
+  header.writeUInt32LE(sampleRate * 2, 28)
+  header.writeUInt16LE(2, 32)
+  header.writeUInt16LE(16, 34)
+  header.write('data', 36, 'ascii')
+  header.writeUInt32LE(pcm.length, 40)
+  return Buffer.concat([header, pcm])
+}
+
+/**
+ * One row per rate-table mood. The emotion cue is the strongest T6 input, so
+ * the bench resolves exactly the instruction and tempo the app would send for
+ * that mood, independently of the sentence's own wording.
+ */
+const RATE_TABLE_SAMPLES = [
+  {
+    id: 'neutral',
+    theMood: 'neutral / calm',
+    emotion: 'neutral',
+    language: 'Chinese',
+    text: '你回来啦。我等你有一小会儿了，今天过得还顺利吗？',
+  },
+  {
+    id: 'happy',
+    theMood: 'happy / excited / joy',
+    emotion: 'happy',
+    language: 'Chinese',
+    text: '你回来啦。我等你有一小会儿了，今天过得还顺利吗？',
+  },
+  {
+    id: 'coquettish',
+    theMood: 'coquettish (撒娇) / playful-sulk',
+    emotion: 'sulky',
+    language: 'Chinese',
+    text: '你回来啦。我等你有一小会儿了，今天过得还顺利吗？',
+  },
+  {
+    id: 'sad',
+    theMood: 'sad / hurt / aggrieved',
+    emotion: 'sad',
+    language: 'Chinese',
+    text: '你回来啦。我等你有一小会儿了，今天过得还顺利吗？',
+  },
+  {
+    id: 'angry',
+    theMood: 'angry / annoyed',
+    emotion: 'angry',
+    language: 'Chinese',
+    text: '你回来啦。我等你有一小会儿了，今天过得还顺利吗？',
+  },
+  {
+    id: 'shy',
+    theMood: 'shy / hesitant / embarrassed',
+    emotion: 'embarrassed',
+    language: 'Chinese',
+    text: '你回来啦。我等你有一小会儿了，今天过得还顺利吗？',
+  },
+  {
+    id: 'en-neutral',
+    theMood: 'neutral / calm (en)',
+    emotion: 'neutral',
+    language: 'English',
+    text: 'You are back. I waited for you a little while — did today go alright?',
+  },
+]
+
+function styleForRateSample(sample) {
+  return resolveSegmentVoiceStyle({
+    text: sample.text,
+    providerId: 'qwen3-tts-local',
+    cue: { kind: 'tts', value: sample.emotion },
+  })
+}
+
+async function saveRateSample(sample) {
+  const style = styleForRateSample(sample)
+  const result = await synthWholeReplyStream(sample.text, sample.language, {
+    instruct: style.instruction,
+    tempo: style.speechTempo,
+    collect: true,
+  })
   mkdirSync(SAMPLES_DIR, { recursive: true })
-  const file = path.join(SAMPLES_DIR, `${id}.wav`)
-  writeFileSync(file, Buffer.from(await response.arrayBuffer()))
-  return file
+  const file = path.join(SAMPLES_DIR, `${sample.id}.wav`)
+  writeFileSync(file, encodeWav(result.pcm ?? Buffer.alloc(0)))
+  return { file, style, result, sample }
 }
 
 async function runCportBench() {
@@ -359,15 +510,25 @@ async function runCportBench() {
     console.log(`Warm C server: mode=${health.mode ?? 'unknown'}`)
     await synthWholeReplyStream('你好，今天过得怎么样？', 'Chinese')
 
+    // Every latency row is measured through the stretcher at the neutral
+    // tempo, which is what a plain reply sounds like now.
+    const neutralTempo = resolveEmotionSpeechTempo('neutral')
+    console.log(`Stretching all rows at the neutral tempo ${neutralTempo}x (pitch-preserving WSOLA).`)
+
     const rows = []
     for (const sample of allSamples) {
-      const result = await synthWholeReplyStream(sample.reply, sample.language)
+      const result = await synthWholeReplyStream(sample.reply, sample.language, {
+        tempo: neutralTempo,
+      })
       rows.push({ ...sample, ...result })
       console.log(
         `${sample.id}  chars=${sample.reply.length}`
-        + `  first-audio=${formatMs(result.firstByteMs)}`
+        + `  first-chunk=${formatMs(result.outputChunkMs)}`
+        + `  (raw ${formatMs(result.rawChunkMs)})`
+        + `  first-sample=${formatMs(result.firstStretchedMs)}`
         + `  total=${formatMs(result.totalMs)}`
         + `  audio=${result.audioSeconds.toFixed(2)}s`
+        + `  raw-audio=${result.rawAudioSeconds.toFixed(2)}s`
         + `  RTF=${(result.totalMs / 1000 / result.audioSeconds).toFixed(2)}`
         + `  underruns=${result.underruns}`,
       )
@@ -375,28 +536,51 @@ async function runCportBench() {
 
     const zh = rows.filter((row) => row.language === 'Chinese')
     const en = rows.filter((row) => row.language === 'English')
-    const firstAudio = (list) => list.map((row) => row.firstByteMs)
+    const firstAudio = (list) => list.map((row) => row.outputChunkMs)
+    const rawFirstAudio = (list) => list.map((row) => row.rawChunkMs)
     const totals = (list) => list.map((row) => row.totalMs)
 
     console.log('')
-    console.log('whole reply -> first audio / total (warm C server, one generation per reply)')
+    console.log(
+      'whole reply -> first 1024-sample chunk after stretching / total '
+      + `(warm C server, one generation per reply, tempo ${neutralTempo}x)`,
+    )
     printStats('zh  ', firstAudio(zh), totals(zh))
     printStats('en  ', firstAudio(en), totals(en))
     printStats('all ', firstAudio(rows), totals(rows))
+    console.log(
+      'first chunk before stretching (same threshold, raw PCM): '
+      + `p50=${formatMs(percentile(rawFirstAudio(rows), 0.5))}`
+      + `  p90=${formatMs(percentile(rawFirstAudio(rows), 0.9))}`,
+    )
+    console.log(
+      'stretcher cost at the first chunk: '
+      + `p50=${formatMs(percentile(
+        rows.map((row) => row.outputChunkMs - row.rawChunkMs),
+        0.5,
+      ))}`
+      + `  p90=${formatMs(percentile(
+        rows.map((row) => row.outputChunkMs - row.rawChunkMs),
+        0.9,
+      ))}`,
+    )
     console.log(
       `underruns (real-time playback simulation): `
       + `${rows.reduce((sum, row) => sum + row.underruns, 0)} across ${rows.length} replies`,
     )
 
-    const samples = [
-      { id: 'zh-1', sample: allSamples[0] },
-      { id: 'zh-2', sample: allSamples[1] },
-      { id: 'en-1', sample: allSamples[5] },
-    ]
     console.log('')
-    for (const { id, sample } of samples) {
-      const file = await saveCportSample(id, sample.reply, sample.language)
-      console.log(`saved ${file}`)
+    console.log(`mood samples -> ${SAMPLES_DIR}`)
+    for (const sample of RATE_TABLE_SAMPLES) {
+      const saved = await saveRateSample(sample)
+      const instruct = saved.style.instruction || '(none)'
+      console.log(
+        `${saved.sample.id.padEnd(11)} ${String(saved.sample.theMood).padEnd(34)}`
+        + ` tempo=${saved.style.speechTempo}x`
+        + `  audio=${saved.result.audioSeconds.toFixed(2)}s`
+        + `  instruct=${instruct}`,
+      )
+      console.log(`            ${saved.file}`)
     }
     console.log('')
     console.log('Budget (call mode, end of user speech -> first audio): p50 <= 2500 ms, p90 <= 4000 ms.')

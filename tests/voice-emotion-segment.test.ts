@@ -72,7 +72,9 @@ test('a neutral cue silences both heuristic and snapshot', () => {
     emotion: HAPPY,
   })
 
-  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
+  // No tone instruction and no pace nudge; the 1.5x baseline tempo is the
+  // provider's own default, not a mood effect.
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 })
 })
 
 test('sentence heuristic beats the snapshot', () => {
@@ -103,8 +105,11 @@ test('idle / unknown emotion yields no instruction and no pace change', () => {
     emotion: IDLE,
   })
 
-  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
-  assert.equal(isNeutralSegmentStyle(styled), true)
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 })
+  // The 1.5x baseline IS a change, so a local Qwen3 style always crosses IPC;
+  // a provider that carries no tempo still has a truly neutral style.
+  assert.equal(isNeutralSegmentStyle(styled), false)
+  assert.equal(isNeutralSegmentStyle({ instruction: '', rate: 1, pitch: 1 }), true)
   assert.equal(isNeutralSegmentStyle(undefined), true)
   assert.equal(isNeutralSegmentStyle({ instruction: '语气轻快。', rate: 1, pitch: 1 }), false)
 })
@@ -364,7 +369,7 @@ test('a stage direction in the middle of a sentence is not a cue', () => {
     providerId: 'qwen3-tts-local',
     emotion: IDLE,
   })
-  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1 })
+  assert.deepEqual(styled, { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 })
 })
 
 test('the speech filter reports the aside it strips so the sentence keeps its tone', () => {
