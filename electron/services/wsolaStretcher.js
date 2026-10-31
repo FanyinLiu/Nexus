@@ -3,40 +3,51 @@
  *
  * The pure-C server ignores `rate` on `/v1/tts/stream`, so the reply's speaking
  * rate has to be produced client-side. WSOLA overlaps fixed analysis frames
- * whose starts follow a nominal hop; around each nominal start it searches a
- * small tolerance window for the offset that best continues the previous
- * frame. Nothing is resampled, so tempo changes and pitch does not.
+ * whose starts follow a nominal hop; around each nominal start it searches for
+ * the offset whose waveform best continues the previous frame. Nothing is
+ * resampled, so tempo changes and pitch does not.
+ *
+ * A 20 ms frame / 50% hop / +/-5 ms search was audible as a tremble on a female
+ * voice: too few pitch periods per frame, and a decimated correlation that
+ * could lock onto the wrong period. This version uses 48 ms frames (24 kHz),
+ * a 1/3 hop (66% overlap), and a full-resolution +/-8.75 ms normalized
+ * correlation over the whole overlap region. 48 ms holds ~10 periods of a
+ * 200 Hz voice, so the search can always find a period-aligned continuation;
+ * wider search windows were measured to admit spurious matches and raise both
+ * spectral distortion and f0 jitter. The synthesis weight is normalized by the
+ * window sum, so the 3-frame overlap never changes the level.
  *
  * This is the streaming variant: `push()` consumes decoded f32le mono chunks
  * and returns only the output that became final, so the first audible sample
- * waits one frame + one hop + the search tolerance of SOURCE audio (~50 ms at
+ * waits one frame + one hop + the search tolerance of SOURCE audio (~68 ms at
  * 24 kHz) instead of the whole reply. `flush()` drains the overlap-add residue
- * plus the un-stretched remainder so the tail is never lost.
- *
- * Units: samples, mono, caller-supplied sample rate. `rate` is a playback
- * multiplier — 1.5 means the same speech in 2/3 of the time.
+ * plus the un-stretched remainder and trims the tail to the exact expected
+ * duration. Units: samples, mono, caller-supplied sample rate. `rate` is a
+ * playback multiplier — 1.5 means the same speech in 2/3 of the time.
  */
 
 const MIN_RATE = 0.5
 const MAX_RATE = 2
-// 20 ms at 24 kHz. Short enough to keep the first-audio lookahead small, long
-// enough for two pitch periods of a low voice inside one frame.
-const DEFAULT_FRAME_SIZE = 480
-// 5 ms of analysis slack. Larger windows align low voices better but cost
-// latency; this covers f0 down to ~130 Hz at the 50%-overlap hop.
-const DEFAULT_SEARCH_TOLERANCE = 120
-// Correlate every other sample. Halves the search cost with no audible
-// difference for speech-band material.
-const CORRELATION_STRIDE = 2
+// 48 ms at 24 kHz. Long enough for ~10 pitch periods of a 200 Hz female voice,
+// short enough to keep the first-audio lookahead under 100 ms.
+const DEFAULT_FRAME_SIZE = 1152
+// Synthesis hop is one third of the frame. 25% (four-frame overlap) measured
+// worse: the extra overlap sums more slightly misaligned periods, which adds
+// phase cancellation instead of smoothing it.
+const HOP_DIVISOR = 3
+// 8.75 ms of analysis slack at 24 kHz. This still covers a full period of a
+// 200 Hz voice; wider +/-12-15 ms windows found spurious matches on the test
+// phrase and raised frame-to-frame f0 jitter at 1.25x.
+const DEFAULT_SEARCH_TOLERANCE = 210
 // Below this overlap weight the normalized sample is numerically meaningless
 // (the Hann taper reaches zero at the frame edge); emit silence instead.
 const WEIGHT_EPSILON = 1e-4
 // Joins the last frame's tail to the un-stretched remainder: both are
 // contiguous source audio, so a short crossfade hides the seam.
 const TAIL_CROSSFADE_SAMPLES = 120
-// Drop consumed input once it grows past one second so a long reply does not
+// Drop consumed input once it grows past two seconds so a long reply does not
 // keep every sample it ever received.
-const COMPACT_THRESHOLD_SAMPLES = 24000
+const COMPACT_THRESHOLD_SAMPLES = 48000
 
 function buildHannWindow(size) {
   const window = new Float32Array(size)
@@ -88,18 +99,22 @@ export function normalizeStretchRate(rate) {
 export function createWsolaStretcher(rate, options = {}) {
   const tempo = normalizeStretchRate(rate)
   const requestedFrame = Number(options.frameSize)
-  const frameSize = Number.isFinite(requestedFrame) && requestedFrame >= 64
-    ? Math.floor(requestedFrame / 2) * 2
+  const frameSize = Number.isFinite(requestedFrame) && requestedFrame >= 256
+    ? Math.floor(requestedFrame / HOP_DIVISOR) * HOP_DIVISOR
     : DEFAULT_FRAME_SIZE
-  const hop = frameSize >> 1
+  const hop = frameSize / HOP_DIVISOR
+  // The new frame is compared against the part of the previous frame that will
+  // still be audible after the next synthesis hop.
+  const matchLength = frameSize - hop
   const tolerance = Number.isFinite(options.searchTolerance)
     ? Math.max(1, Math.floor(options.searchTolerance))
     : DEFAULT_SEARCH_TOLERANCE
   const analysisHop = hop * tempo
   const window = buildHannWindow(frameSize)
 
-  let input = new Float32Array(4096)
+  let input = new Float32Array(8192)
   let inputLength = 0
+  let totalInputSamples = 0
   // Start of the frame currently being analysed (xs in the classic WSOLA loop).
   let position = 0
   // Float accumulator for the nominal analysis position. It drifts
@@ -107,17 +122,18 @@ export function createWsolaStretcher(rate, options = {}) {
   // even though every frame start is rounded and search-adjusted.
   let nominal = 0
   let framesProcessed = 0
+  let emittedSamples = 0
   let ended = false
   // Overlap-add accumulator: after every drained block it holds exactly the
-  // last frame's not-yet-final half, so it never needs to be longer than one
-  // frame.
+  // last frame's not-yet-final three hops, so it never needs to be longer than
+  // one frame.
   const accumulator = new Float32Array(frameSize)
   const weights = new Float32Array(frameSize)
 
   function appendInput(chunk) {
     if (!chunk || chunk.length === 0) return
     if (inputLength + chunk.length > input.length) {
-      let capacity = input.length || 4096
+      let capacity = input.length || 8192
       while (capacity < inputLength + chunk.length) capacity *= 2
       const grown = new Float32Array(capacity)
       grown.set(input.subarray(0, inputLength))
@@ -125,6 +141,7 @@ export function createWsolaStretcher(rate, options = {}) {
     }
     input.set(chunk, inputLength)
     inputLength += chunk.length
+    totalInputSamples += chunk.length
   }
 
   function compact() {
@@ -147,28 +164,39 @@ export function createWsolaStretcher(rate, options = {}) {
     accumulator.fill(0, frameSize - hop)
     weights.copyWithin(0, hop)
     weights.fill(0, frameSize - hop)
+    emittedSamples += block.length
     return block
   }
 
   /**
-   * Offset inside ±tolerance whose window best continues the frame we just
-   * wrote. Normalized cross-correlation keeps loud passages from winning by
-   * energy alone.
+   * Offset inside ±tolerance whose waveform best continues the previous frame.
+   * Normalized cross-correlation keeps loud passages from winning by energy
+   * alone, and the target energy is constant for one search.
    */
   function findBestOffset(center, targetStart) {
     let bestOffset = 0
     let bestScore = Number.NEGATIVE_INFINITY
+    let targetEnergy = 0
+    for (let index = 0; index < matchLength; index += 1) {
+      const value = input[targetStart + index]
+      targetEnergy += value * value
+    }
+    if (targetEnergy < 1e-12) return 0
+    const targetScale = 1 / Math.sqrt(targetEnergy)
+
     for (let offset = -tolerance; offset <= tolerance; offset += 1) {
       const start = center + offset
-      if (start < 0 || start + frameSize > inputLength) continue
+      if (start < 0 || start + matchLength > inputLength) continue
       let correlation = 0
       let energy = 0
-      for (let index = 0; index < frameSize; index += CORRELATION_STRIDE) {
+      // Full resolution, no decimation: a stride of 2 was what let the old
+      // stretcher lock onto a neighbouring half-period on a female voice.
+      for (let index = 0; index < matchLength; index += 1) {
         const candidate = input[start + index]
         correlation += candidate * input[targetStart + index]
         energy += candidate * candidate
       }
-      const score = correlation / (Math.sqrt(energy) + 1e-9)
+      const score = correlation / (Math.sqrt(energy) + 1e-9) * targetScale
       if (score > bestScore) {
         bestScore = score
         bestOffset = offset
@@ -191,7 +219,7 @@ export function createWsolaStretcher(rate, options = {}) {
       const targetStart = position + hop
 
       if (!allowTail) {
-        const required = Math.max(center + tolerance, targetStart) + frameSize
+        const required = Math.max(center + tolerance, targetStart) + matchLength
         if (required > inputLength) return
       }
 
@@ -203,7 +231,7 @@ export function createWsolaStretcher(rate, options = {}) {
       framesProcessed += 1
 
       let next = center
-      if (targetStart + frameSize <= inputLength) {
+      if (targetStart + matchLength <= inputLength) {
         next = center + findBestOffset(center, targetStart)
       }
       const highestStart = inputLength - frameSize
@@ -216,6 +244,25 @@ export function createWsolaStretcher(rate, options = {}) {
       position = next
       nominal = nextNominal
     }
+  }
+
+  function crossfadeTail(tail, remainder) {
+    const fade = Math.min(TAIL_CROSSFADE_SAMPLES, tail.length, remainder.length)
+    if (fade <= 0) {
+      const joined = new Float32Array(tail.length + remainder.length)
+      joined.set(tail, 0)
+      joined.set(remainder, tail.length)
+      return joined
+    }
+    const joined = new Float32Array(tail.length + remainder.length - fade)
+    joined.set(tail.subarray(0, tail.length - fade), 0)
+    for (let index = 0; index < fade; index += 1) {
+      const mix = (index + 1) / (fade + 1)
+      joined[tail.length - fade + index] = tail[tail.length - fade + index] * (1 - mix)
+        + remainder[index] * mix
+    }
+    joined.set(remainder.subarray(fade), tail.length)
+    return joined
   }
 
   return {
@@ -242,44 +289,49 @@ export function createWsolaStretcher(rate, options = {}) {
       if (framesProcessed === 0) {
         // Shorter than one frame: nothing to re-time, hand the whole clip back.
         const whole = input.slice(0, inputLength)
+        emittedSamples += whole.length
         return whole
       }
 
-      // The accumulator still holds the last frame's descending half. It is
-      // contiguous with the remainder of the input, which no further frame
+      // The accumulator still holds the last frame's un-drained three hops. It
+      // is contiguous with the remainder of the input, which no further frame
       // could cover.
-      let tail = drainBlock()
+      let tail = new Float32Array(frameSize - hop)
+      for (let index = 0; index < tail.length; index += 1) {
+        const weight = weights[index]
+        tail[index] = weight > WEIGHT_EPSILON ? accumulator[index] / weight : 0
+      }
       const remainderStart = position + frameSize
       if (remainderStart < inputLength) {
-        const remainder = input.slice(remainderStart, inputLength)
-        const fade = Math.min(TAIL_CROSSFADE_SAMPLES, tail.length, remainder.length)
-        if (fade > 0) {
-          const joined = new Float32Array(tail.length + remainder.length - fade)
-          joined.set(tail.subarray(0, tail.length - fade), 0)
-          for (let index = 0; index < fade; index += 1) {
-            const mix = (index + 1) / (fade + 1)
-            joined[tail.length - fade + index] = tail[tail.length - fade + index] * (1 - mix)
-              + remainder[index] * mix
-          }
-          joined.set(remainder.subarray(fade), tail.length)
-          tail = joined
-        } else {
-          const joined = new Float32Array(tail.length + remainder.length)
-          joined.set(tail, 0)
-          joined.set(remainder, tail.length)
-          tail = joined
-        }
+        tail = crossfadeTail(tail, input.slice(remainderStart, inputLength))
       }
-      blocks.push(tail)
+
+      // Trim to the exact playback length implied by the source. Compaction
+      // has already dropped consumed input, so use the lifetime counter.
+      const expectedTotal = Math.round(totalInputSamples / tempo)
+      const remaining = expectedTotal - emittedSamples
+      if (remaining <= 0) return concatBlocks(blocks)
+      const finalTail = tail.length > remaining ? tail.slice(0, remaining) : tail
+      // The trim can land on a non-zero sample; without a short fade the clip
+      // ends on a click. The stream service disables its own fade-out because
+      // it cannot know which segment is terminal, so the tail owns this.
+      const fade = Math.min(TAIL_CROSSFADE_SAMPLES, finalTail.length)
+      for (let index = 0; index < fade; index += 1) {
+        finalTail[finalTail.length - fade + index] *= (fade - index) / (fade + 1)
+      }
+      emittedSamples += finalTail.length
+      blocks.push(finalTail)
       return concatBlocks(blocks)
     },
 
     reset() {
-      input = new Float32Array(4096)
+      input = new Float32Array(8192)
       inputLength = 0
+      totalInputSamples = 0
       position = 0
       nominal = 0
       framesProcessed = 0
+      emittedSamples = 0
       ended = false
       accumulator.fill(0)
       weights.fill(0)

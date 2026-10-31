@@ -82,6 +82,91 @@ function createRandom(seed) {
   }
 }
 
+/** A vibrato-free female-like voiced signal: steady f0, formants, slow syllables. */
+function syntheticVoicedSignal(frequency, seconds) {
+  const samples = new Float32Array(Math.round(SAMPLE_RATE * seconds))
+  const formants = [[650, 1, 120], [1150, 0.7, 160], [2700, 0.35, 260]]
+  for (let index = 0; index < samples.length; index += 1) {
+    const time = index / SAMPLE_RATE
+    let value = 0
+    for (let harmonic = 1; harmonic <= 30; harmonic += 1) {
+      const hz = frequency * harmonic
+      if (hz > SAMPLE_RATE / 2 - 200) break
+      let weight = 0.05
+      for (const [center, gain, bandwidth] of formants) {
+        weight += gain / (1 + ((hz - center) / bandwidth) ** 2)
+      }
+      value += (weight / harmonic ** 0.35) * Math.sin(2 * Math.PI * hz * time + 0.4 * harmonic)
+    }
+    const envelope = 0.55 + 0.35 * Math.sin(2 * Math.PI * 3 * time) ** 2
+      + 0.1 * Math.sin(2 * Math.PI * 0.7 * time)
+    samples[index] = 0.055 * envelope * value
+  }
+  return samples
+}
+
+/** Autocorrelation f0 estimate used only by the tremble regression. */
+function estimateFrameF0(frame) {
+  let mean = 0
+  for (let index = 0; index < frame.length; index += 1) mean += frame[index]
+  mean /= frame.length
+  const centered = new Float32Array(frame.length)
+  for (let index = 0; index < frame.length; index += 1) centered[index] = frame[index] - mean
+
+  let energy = 0
+  for (let index = 0; index < centered.length; index += 1) energy += centered[index] * centered[index]
+  if (energy < 1e-9) return { f0: 0, clarity: 0 }
+
+  const minLag = Math.max(2, Math.floor(SAMPLE_RATE / 450))
+  const maxLag = Math.min(centered.length - 2, Math.floor(SAMPLE_RATE / 70))
+  let bestLag = 0
+  let bestScore = -1
+  for (let lag = minLag; lag <= maxLag; lag += 1) {
+    let correlation = 0
+    let lagEnergy = 0
+    for (let index = 0; index < centered.length - lag; index += 1) {
+      correlation += centered[index] * centered[index + lag]
+      lagEnergy += centered[index + lag] * centered[index + lag]
+    }
+    const score = correlation / (Math.sqrt(energy * lagEnergy) + 1e-12)
+    if (score > bestScore) {
+      bestScore = score
+      bestLag = lag
+    }
+  }
+  return { f0: bestLag ? SAMPLE_RATE / bestLag : 0, clarity: bestScore }
+}
+
+/** Mean frame-to-frame f0 change on voiced frames, in percent. */
+function meanJitterPercent(samples) {
+  const frameSize = Math.round(SAMPLE_RATE * 0.04)
+  const hop = Math.round(SAMPLE_RATE * 0.02)
+  const track = []
+  for (let start = 0; start + frameSize <= samples.length; start += hop) {
+    track.push(estimateFrameF0(samples.subarray(start, start + frameSize)))
+  }
+  let total = 0
+  let count = 0
+  for (let index = 1; index < track.length; index += 1) {
+    const previous = track[index - 1]!
+    const current = track[index]!
+    if (previous.clarity < 0.5 || current.clarity < 0.5 || previous.f0 <= 0 || current.f0 <= 0) continue
+    total += Math.abs(current.f0 - previous.f0) / ((current.f0 + previous.f0) / 2)
+    count += 1
+  }
+  return count ? (total / count) * 100 : 0
+}
+
+function stretchWith(factory, samples, rate) {
+  const stretcher = factory(rate)
+  const blocks = []
+  for (let offset = 0; offset < samples.length; offset += 1024) {
+    blocks.push(stretcher.push(samples.subarray(offset, offset + 1024)))
+  }
+  blocks.push(stretcher.flush())
+  return concat(blocks)
+}
+
 test('the rate table keeps the six documented rows and a neutral default', () => {
   // Rows from the tuning table, pinned so a careless edit shows up here.
   assert.equal(EMOTION_SPEECH_TEMPO.idle, 1.5)
@@ -242,6 +327,169 @@ test('normalizeStretchRate clamps and rejects nonsense', () => {
   assert.equal(normalizeStretchRate('nonsense'), 1)
   assert.equal(normalizeStretchRate(undefined), 1)
   assert.equal(normalizeStretchRate(0), 1)
+})
+
+
+// ── Frozen 20 ms baseline, only for the tremble regression ─────────────────
+// This is the pre-change WSOLA: 20 ms frames, 50% hop, +/-5 ms search, and a
+// stride-2 correlation. It stays in the test so the regression can compare the
+// old and new output without keeping a second production copy.
+
+function legacyBuildHannWindow(size) {
+  const window = new Float32Array(size)
+  for (let index = 0; index < size; index += 1) {
+    window[index] = 0.5 * (1 - Math.cos((2 * Math.PI * index) / (size - 1)))
+  }
+  return window
+}
+
+function legacyConcatBlocks(blocks) {
+  let total = 0
+  for (const block of blocks) total += block.length
+  const merged = new Float32Array(total)
+  let offset = 0
+  for (const block of blocks) {
+    merged.set(block, offset)
+    offset += block.length
+  }
+  return merged
+}
+
+function createLegacyWsolaStretcher(rate) {
+  const tempo = Math.min(2, Math.max(0.5, Number(rate) || 1))
+  const frameSize = 480
+  const hop = 240
+  const tolerance = 120
+  const analysisHop = hop * tempo
+  const window = legacyBuildHannWindow(frameSize)
+  let input = new Float32Array(4096)
+  let inputLength = 0
+  let position = 0
+  let nominal = 0
+  let framesProcessed = 0
+  let ended = false
+  const accumulator = new Float32Array(frameSize)
+  const weights = new Float32Array(frameSize)
+
+  function appendInput(chunk) {
+    if (inputLength + chunk.length > input.length) {
+      let capacity = input.length || 4096
+      while (capacity < inputLength + chunk.length) capacity *= 2
+      const grown = new Float32Array(capacity)
+      grown.set(input.subarray(0, inputLength))
+      input = grown
+    }
+    input.set(chunk, inputLength)
+    inputLength += chunk.length
+  }
+
+  function drainBlock() {
+    const block = new Float32Array(hop)
+    for (let index = 0; index < hop; index += 1) {
+      const weight = weights[index]
+      block[index] = weight > 1e-4 ? accumulator[index] / weight : 0
+    }
+    accumulator.copyWithin(0, hop)
+    accumulator.fill(0, frameSize - hop)
+    weights.copyWithin(0, hop)
+    weights.fill(0, frameSize - hop)
+    return block
+  }
+
+  function findBestOffset(center, targetStart) {
+    let bestOffset = 0
+    let bestScore = Number.NEGATIVE_INFINITY
+    for (let offset = -tolerance; offset <= tolerance; offset += 1) {
+      const start = center + offset
+      if (start < 0 || start + frameSize > inputLength) continue
+      let correlation = 0
+      let energy = 0
+      for (let index = 0; index < frameSize; index += 2) {
+        const candidate = input[start + index]
+        correlation += candidate * input[targetStart + index]
+        energy += candidate * candidate
+      }
+      const score = correlation / (Math.sqrt(energy) + 1e-9)
+      if (score > bestScore) {
+        bestScore = score
+        bestOffset = offset
+      }
+    }
+    return bestOffset
+  }
+
+  function runFrames(allowTail, blocks) {
+    for (;;) {
+      if (position + frameSize > inputLength) return
+      const frameStart = position
+      const nextNominal = nominal + analysisHop
+      const center = Math.round(nextNominal)
+      const targetStart = position + hop
+      if (!allowTail) {
+        const required = Math.max(center + tolerance, targetStart) + frameSize
+        if (required > inputLength) return
+      }
+      for (let index = 0; index < frameSize; index += 1) {
+        accumulator[index] += input[position + index] * window[index]
+        weights[index] += window[index]
+      }
+      blocks.push(drainBlock())
+      framesProcessed += 1
+      let next = center
+      if (targetStart + frameSize <= inputLength) {
+        next = center + findBestOffset(center, targetStart)
+      }
+      const highestStart = inputLength - frameSize
+      if (next < 0) next = 0
+      if (next > highestStart) next = Math.max(0, highestStart)
+      if (next <= frameStart) return
+      position = next
+      nominal = nextNominal
+    }
+  }
+
+  return {
+    push(chunk) {
+      if (ended || !chunk || chunk.length === 0) return new Float32Array(0)
+      appendInput(chunk)
+      const blocks = []
+      runFrames(false, blocks)
+      return legacyConcatBlocks(blocks)
+    },
+    flush() {
+      if (ended) return new Float32Array(0)
+      ended = true
+      const blocks = []
+      runFrames(true, blocks)
+      if (framesProcessed === 0) return input.slice(0, inputLength)
+      const tail = drainBlock()
+      const remainderStart = position + frameSize
+      if (remainderStart < inputLength) {
+        blocks.push(legacyConcatBlocks([tail, input.slice(remainderStart, inputLength)]))
+      } else {
+        blocks.push(tail)
+      }
+      return legacyConcatBlocks(blocks)
+    },
+  }
+}
+
+test('48 ms WSOLA holds a vibrato-free voice steadier than the old 20 ms one', () => {
+  const input = syntheticVoicedSignal(180, 3)
+  const current = stretchWith(createWsolaStretcher, input, 1.65)
+  const legacy = stretchWith(createLegacyWsolaStretcher, input, 1.65)
+
+  const currentJitter = meanJitterPercent(current)
+  const legacyJitter = meanJitterPercent(legacy)
+  // The baseline must actually tremble on this signal, or the comparison is
+  // vacuous; at 180 Hz the old 20 ms frame lands between pitch periods.
+  assert.ok(legacyJitter > 0.05, `old stretcher jitter ${legacyJitter.toFixed(3)}%`)
+  assert.ok(
+    currentJitter < legacyJitter * 0.5,
+    `new ${currentJitter.toFixed(3)}% vs old ${legacyJitter.toFixed(3)}%`,
+  )
+  const expected = input.length / 1.65
+  assert.ok(Math.abs(current.length - expected) / expected <= 0.03)
 })
 
 test('the stream service stretches local Qwen3 PCM and reports the stretched duration', async () => {
