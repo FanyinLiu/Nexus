@@ -206,6 +206,7 @@ function waitForChildExit(child, timeoutMs) {
  *     | { kind: 'external', engine: 'cport', port: number, baseUrl: string, pid?: number | null }
  *     | { kind: 'spawn', engine: 'cport', port: number, baseUrl: string, command: string, args: string[], options: Record<string, unknown> }
  *   >,
+ *   verifyQwen3CportLoopback?: (port: number) => Promise<boolean>,
  *   classifyPort?: (state: object) => Promise<'ours' | 'foreign' | 'closed'>,
  *   isServiceReady?: (state: object) => Promise<boolean>,
  *   onQwen3RuntimeChange?: (runtime: { engine: 'cport', baseUrl: string } | null) => void,
@@ -232,6 +233,7 @@ export function createVoiceSidecarSupervisor(deps) {
     buildLaunch = (command, args) => buildParentDeathGuardLaunch(command, args),
     openStderrLog,
     resolveQwen3Launch,
+    verifyQwen3CportLoopback,
     classifyPort,
     isServiceReady,
     onQwen3RuntimeChange,
@@ -563,6 +565,16 @@ export function createVoiceSidecarSupervisor(deps) {
   async function startQwen3Cport(state) {
     if (!resolveQwen3Launch) return false
 
+    async function isLoopbackOnly(port) {
+      if (!verifyQwen3CportLoopback) return true
+      try {
+        return await verifyQwen3CportLoopback(port)
+      } catch (error) {
+        logger.warn(`[${state.tag}] Loopback check failed: ${getRedactedErrorMessage(error)}`)
+        return false
+      }
+    }
+
     let plan
     try {
       plan = await resolveQwen3Launch()
@@ -583,6 +595,11 @@ export function createVoiceSidecarSupervisor(deps) {
       state.port = plan.port
       state.baseUrl = plan.baseUrl
       state.externalPid = Number.isInteger(plan.pid) ? plan.pid : null
+      if (!(await isLoopbackOnly(plan.port))) {
+        logger.warn(`[${state.tag}] C server on port ${plan.port} is reachable off loopback — stopping it and using the Python sidecar.`)
+        await stopService(state)
+        return false
+      }
       state.phase = 'running'
       publishQwen3Runtime(state)
       armStabilityTimer(state)
@@ -603,6 +620,11 @@ export function createVoiceSidecarSupervisor(deps) {
     const child = spawnServiceChild(state, plan.command, plan.args, plan.options)
     logger.info(`[${state.tag}] Starting C server on port ${plan.port}...`)
     if (await waitForReady(state, child)) {
+      if (!(await isLoopbackOnly(plan.port))) {
+        logger.warn(`[${state.tag}] C server on port ${plan.port} is reachable off loopback — stopping it and using the Python sidecar.`)
+        await stopService(state)
+        return false
+      }
       state.phase = 'running'
       armStabilityTimer(state)
       logger.info(`[${state.tag}] Ready`)
