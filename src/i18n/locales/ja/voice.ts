@@ -70,6 +70,7 @@ export const jaVoice = {
   'voice.provider.vad.silero_fallback_detail': '{fallback} 元の情報: {original}',
   'voice.provider.vad.input_not_enabled': '先に設定で音声入力を有効にしてください。',
   'voice.streaming_tts.first_audio_timeout': 'ストリーミング TTS が 6 秒経っても音声を出力しませんでした。',
+  'voice.streaming_tts.tool_call_filler': '確認しますね。',
   'voice.status.continuous_tencent_start': 'Tencent Cloud リアルタイム認識をオンにしました。どうぞ話してください。',
   'voice.status.tencent_listening': '聴いています。Tencent Cloud がリアルタイムに文字起こししています。',
   'voice.status.continuous_paraformer_start': 'Paraformer ストリーミング認識をオンにしました。話しながら文字起こしします。',

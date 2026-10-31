@@ -39,6 +39,35 @@ import {
 } from './speechTextSegmentation.ts'
 import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.ts'
 
+// A tool call in whole-reply mode would otherwise leave seconds of dead air:
+// the pre-tool text is still buffered and the model is not generating audio
+// while the tool runs. The filler "let me check" is synthesized once per
+// voice/mood/language and replayed from this cache on later tool bursts.
+const FILLER_AUDIO_CACHE_LIMIT = 24
+const fillerAudioCache = new Map<string, { samples: number[]; sampleRate: number }>()
+
+function fillerCacheKey(settings: AppSettings, style: SegmentVoiceStyle | null | undefined) {
+  return JSON.stringify([
+    settings.speechOutputVoice,
+    settings.speechSynthesisLang,
+    settings.speechOutputInstructions,
+    style?.instruction ?? '',
+    style?.rate ?? 1,
+    style?.pitch ?? 1,
+    style?.emotion ?? '',
+    style?.speechTempo ?? 1,
+  ])
+}
+
+function cacheFillerAudio(key: string, entry: { samples: number[]; sampleRate: number }) {
+  if (!entry.samples.length || !entry.sampleRate) return
+  if (fillerAudioCache.size >= FILLER_AUDIO_CACHE_LIMIT) {
+    const oldest = fillerAudioCache.keys().next().value
+    if (oldest !== undefined) fillerAudioCache.delete(oldest)
+  }
+  fillerAudioCache.set(key, entry)
+}
+
 export type StreamingSpeechOutputOptions = {
   onStart?: () => void
   onEnd?: () => void
@@ -106,6 +135,21 @@ export function createStreamingSpeechOutputController(
   const wholeReplySegments = prefersWholeReplySegments(providerId)
   let wholeReplyBuffer = ''
   let replyCue: VoiceEmotionCue | null = options?.initialCue ?? null
+  // The reply-level style is resolved once and reused by every early tool-call
+  // generation, so a split reply keeps the same mood/pace/instruction.
+  let wholeReplyStyle: SegmentVoiceStyle | null | undefined
+  // A burst is consecutive tool calls with no new reply text between them; the
+  // filler must not repeat inside one burst.
+  let fillerPlayedInToolBurst = false
+  let fillerCapture: {
+    key: string
+    segmentIndex: number
+    sampleRate: number
+    samples: number[]
+  } | null = null
+  // The filler is a UI cue, not reply content. Its segment index is tracked so
+  // playback, heard-text accounting, and per-segment callbacks all skip it.
+  const fillerSegmentIndices = new Set<number>()
   const chunker = new StreamingTtsChunker({
     maxChunkLength: maxSegmentChars,
     // Buffering providers wait for a sentence terminator (or the ceiling)
@@ -200,33 +244,71 @@ export function createStreamingSpeechOutputController(
     options?.onSegmentPlayed?.({ segmentIndex: segment.index, text: segment.text })
   }
 
+  function notePlaybackStarted() {
+    if (!started) {
+      started = true
+      options?.onStart?.()
+    }
+  }
+
+  function noteFirstAudio() {
+    if (firstAudioEmitted) return
+    firstAudioEmitted = true
+    if (firstAudioWatchdog !== null) {
+      clearTimeout(firstAudioWatchdog)
+      firstAudioWatchdog = null
+    }
+    busEmit?.({
+      type: 'tts:first_audio',
+      speechGeneration,
+      reason: VoiceReasonCodes.TTS_SEGMENT_STARTED,
+      provider: providerId,
+      meta: { requestId },
+    })
+  }
+
+  function cacheCapturedFiller(segmentIndex?: number) {
+    if (!fillerCapture || !fillerCapture.samples.length) return
+    if (segmentIndex !== undefined && fillerCapture.segmentIndex !== segmentIndex) return
+    cacheFillerAudio(fillerCapture.key, {
+      samples: fillerCapture.samples,
+      sampleRate: fillerCapture.sampleRate,
+    })
+    fillerCapture = null
+  }
+
   const unsubscribe = window.desktopPet.subscribeTtsStream((event: VoiceStreamEvent) => {
     if (event.requestId !== requestId || settled || aborted) {
       return
     }
 
     if (event.type === 'chunk') {
-      if (!started) {
-        started = true
-        options?.onStart?.()
-      }
-
-      if (!firstAudioEmitted) {
-        firstAudioEmitted = true
-        if (firstAudioWatchdog !== null) {
-          clearTimeout(firstAudioWatchdog)
-          firstAudioWatchdog = null
-        }
-        busEmit?.({
-          type: 'tts:first_audio',
-          speechGeneration,
-          reason: VoiceReasonCodes.TTS_SEGMENT_STARTED,
-          provider: providerId,
-          meta: { requestId },
-        })
-      }
+      notePlaybackStarted()
+      noteFirstAudio()
 
       const segmentIndex = segmentIndexForEvent(event)
+      // The tool-call filler is a UI cue, not reply content: play and cache its
+      // audio, but never let it enter the heard-text timeline or the
+      // per-segment reply callbacks.
+      if (fillerSegmentIndices.has(segmentIndex)) {
+        if (fillerCapture && fillerCapture.segmentIndex === segmentIndex) {
+          if (event.sampleRate > 0) fillerCapture.sampleRate = event.sampleRate
+          for (const sample of event.samples) fillerCapture.samples.push(sample)
+          if (event.isFinal) cacheCapturedFiller(segmentIndex)
+        }
+
+        pendingAudioAppends += 1
+        void player.appendPcmChunk(event.samples, event.sampleRate, event.channels)
+          .catch((error) => {
+            fail(error instanceof Error ? error : new Error('Streaming audio playback failed.'))
+          })
+          .finally(() => {
+            pendingAudioAppends = Math.max(0, pendingAudioAppends - 1)
+            maybeResolve()
+          })
+        return
+      }
+
       const segment = ensurePlaybackSegment(segmentIndex, event.text ?? '')
       noteChunkAudio(segment, event.samples, event.sampleRate)
       const firstChunkOfSegment = segment.startedAtMs === null
@@ -255,10 +337,26 @@ export function createStreamingSpeechOutputController(
     }
 
     if (event.type === 'segment') {
+      // Filler segments only feed the audio cache; their text and duration must
+      // not participate in reply playback accounting.
+      if (fillerSegmentIndices.has(event.segmentIndex)) {
+        if (
+          fillerCapture
+          && fillerCapture.segmentIndex === event.segmentIndex
+          && fillerCapture.samples.length
+        ) {
+          cacheCapturedFiller(event.segmentIndex)
+        }
+        return
+      }
+
       // Main reports the full sentence text/duration once its PCM has been
       // handed over. Update rather than overwrite the playback start time.
       const segment = ensurePlaybackSegment(event.segmentIndex, event.text)
       if (event.text) segment.text = event.text
+      if (event.sentenceProgress?.length) {
+        segment.sentenceProgress = event.sentenceProgress
+      }
       if (Number.isFinite(event.durationMs) && event.durationMs >= 0) {
         segment.durationMs = Math.max(segment.durationMs, event.durationMs)
       }
@@ -299,6 +397,7 @@ export function createStreamingSpeechOutputController(
       // Request-level stream end. Segment-level finished events are emitted
       // inside queueSegment() when each push_text IPC resolves; this path
       // only drives the final settle.
+      cacheCapturedFiller()
       ended = true
       maybeResolve()
     }
@@ -313,6 +412,8 @@ export function createStreamingSpeechOutputController(
       clearTimeout(firstAudioWatchdog)
       firstAudioWatchdog = null
     }
+    // Never cache a partially synthesized filler after an abort or failure.
+    fillerCapture = null
     runtime.setActiveController?.(null)
   }
 
@@ -471,7 +572,11 @@ export function createStreamingSpeechOutputController(
       })
   }
 
-  function queueSegment(segment: string, forcedStyle?: SegmentVoiceStyle | null): boolean {
+  function queueSegment(
+    segment: string,
+    forcedStyle?: SegmentVoiceStyle | null,
+    isFiller = false,
+  ): boolean {
     const cleaned = prepareTextForTts(segment)
     if (!cleaned || settled || aborted) {
       return false
@@ -493,9 +598,14 @@ export function createStreamingSpeechOutputController(
       : undefined
 
     const segmentIndex = segmentCounter++
+    if (isFiller) fillerSegmentIndices.add(segmentIndex)
     pendingSegments += 1
     noteFirstSegmentQueued()
-    options?.onSegmentQueued?.({ segmentIndex, text: cleaned })
+    // The filler is a UI cue: it must not extend the resumable/spoken reply
+    // text the way a real queued sentence does.
+    if (!isFiller) {
+      options?.onSegmentQueued?.({ segmentIndex, text: cleaned })
+    }
     busEmit?.({
       type: 'tts:segment_queued',
       segmentIndex,
@@ -584,24 +694,83 @@ export function createStreamingSpeechOutputController(
   }
 
   /**
+   * Resolve the reply-level voice style once. Tool-call flushes reuse it so an
+   * early generation and the rest of the reply share mood, tempo, and
+   * instruction even though they are separate requests.
+   */
+  function resolveWholeReplyStyle(raw: string, remember = true): SegmentVoiceStyle | null {
+    if (wholeReplyStyle !== undefined) return wholeReplyStyle
+    const resolved = options?.resolveSegmentVoiceStyle?.(raw, replyCue)
+    const style = resolved && !isNeutralSegmentStyle(resolved) ? resolved : null
+    if (remember) wholeReplyStyle = style
+    return style
+  }
+
+  function queueWholeReplyText(raw: string): boolean {
+    const cleaned = prepareTextForTts(raw)
+    if (!cleaned) return false
+
+    const forcedStyle = resolveWholeReplyStyle(raw)
+    let queued = false
+    for (const chunk of splitReplyForSingleGeneration(cleaned)) {
+      if (queueSegment(chunk, forcedStyle)) {
+        queued = true
+        hasQueuedSegment = true
+      }
+    }
+    return queued
+  }
+
+  function flushWholeReplyBuffer(): boolean {
+    const raw = wholeReplyBuffer.trim()
+    wholeReplyBuffer = ''
+    return raw ? queueWholeReplyText(raw) : false
+  }
+
+  /**
    * Whole-reply mode: one request (or a few large chunks) for the entire
    * reply. The style is resolved once from the whole text so every chunk
    * shares the same mild tone clause — no inline `[mood]` markup is sent.
    */
   function queueWholeReply() {
-    const raw = wholeReplyBuffer.trim()
-    wholeReplyBuffer = ''
-    if (!raw) return
+    flushWholeReplyBuffer()
+  }
 
-    const cleaned = prepareTextForTts(raw)
-    if (!cleaned) return
+  /**
+   * A tool call starts while whole-reply mode has nothing left to say: play a
+   * short cached "let me check" instead of several seconds of dead air. Only
+   * local Qwen3 uses this path, and never more than once per tool burst.
+   */
+  function playToolCallFiller() {
+    if (!wholeReplySegments || providerId !== 'qwen3-tts-local') return
+    if (speechSettings.speechOutputEnabled !== true) return
+    if (fillerPlayedInToolBurst) return
+    fillerPlayedInToolBurst = true
 
-    const resolved = options?.resolveSegmentVoiceStyle?.(raw, replyCue)
-    const forcedStyle = resolved && !isNeutralSegmentStyle(resolved) ? resolved : null
-    for (const chunk of splitReplyForSingleGeneration(cleaned)) {
-      if (queueSegment(chunk, forcedStyle)) {
-        hasQueuedSegment = true
-      }
+    // Do not remember a style resolved from an empty reply: the first real
+    // sentence still gets to define the reply's mood when it arrives.
+    const style = resolveWholeReplyStyle(wholeReplyBuffer.trim(), false)
+    const key = fillerCacheKey(speechSettings, style)
+    const cached = fillerAudioCache.get(key)
+    if (cached) {
+      notePlaybackStarted()
+      noteFirstAudio()
+      pendingAudioAppends += 1
+      void player.appendPcmChunk(cached.samples, cached.sampleRate, 1)
+        .catch((error) => {
+          fail(error instanceof Error ? error : new Error('Streaming audio playback failed.'))
+        })
+        .finally(() => {
+          pendingAudioAppends = Math.max(0, pendingAudioAppends - 1)
+          maybeResolve()
+        })
+      return
+    }
+
+    const text = options?.ti?.('voice.streaming_tts.tool_call_filler') ?? 'Let me check.'
+    const segmentIndex = segmentCounter
+    if (queueSegment(text, style, true)) {
+      fillerCapture = { key, segmentIndex, sampleRate: 0, samples: [] }
     }
   }
 
@@ -630,6 +799,10 @@ export function createStreamingSpeechOutputController(
         if (!replyCue) replyCue = cue
       }
 
+      // New text means the next tool call is a new burst, so the filler may
+      // play again if that call has nothing to say first.
+      fillerPlayedInToolBurst = false
+
       if (wholeReplySegments) {
         // Whole-reply providers still need their sidecar warm-up, which runs
         // inside ttsStreamStart. Kick it off on the first delta so the model
@@ -651,9 +824,16 @@ export function createStreamingSpeechOutputController(
       if (finishRequested || settled || aborted) {
         return
       }
-      // A whole reply cannot be flushed between agent rounds: that would split
-      // it into multiple generations and change timbre mid-reply.
       if (wholeReplySegments) {
+        // A tool call is about to run. Speak the text we already have as its
+        // own generation (slight timbre drift is better than dead air), then
+        // keep buffering the rest of the reply. With no pending text, play the
+        // short cached "let me check" filler at most once per tool burst.
+        if (flushWholeReplyBuffer()) {
+          fillerPlayedInToolBurst = false
+        } else {
+          playToolCallFiller()
+        }
         return
       }
       flushChunker()

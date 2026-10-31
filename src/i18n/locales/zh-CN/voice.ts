@@ -68,6 +68,7 @@ export const zhCNVoice = {
   'voice.provider.vad.silero_fallback_detail': '{fallback} 原始信息：{original}',
   'voice.provider.vad.input_not_enabled': '请先在设置中启用语音输入。',
   'voice.streaming_tts.first_audio_timeout': '流式 TTS 超过 6 秒仍未产出音频。',
+  'voice.streaming_tts.tool_call_filler': '让我看一下。',
   'voice.status.continuous_tencent_start': '腾讯云实时识别已开启，开始说话吧。',
   'voice.status.tencent_listening': '我在听，腾讯云正在实时识别你说的话。',
   'voice.status.continuous_paraformer_start': 'Paraformer 流式识别已开启，边说边转写。',

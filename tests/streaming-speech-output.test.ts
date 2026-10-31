@@ -27,7 +27,11 @@ type DesktopPetStub = {
   subscribeTtsStream: (listener: (event: VoiceStreamEvent) => void) => () => void
 }
 
-function createHarness(options: { failPushForFirstRequest?: boolean } = {}) {
+function createHarness(options: {
+  failPushForFirstRequest?: boolean
+  emitSegmentEvents?: boolean
+  sampleCount?: number
+} = {}) {
   const pushes: PushRecord[] = []
   const abortCalls: string[] = []
   const startCalls: string[] = []
@@ -38,8 +42,9 @@ function createHarness(options: { failPushForFirstRequest?: boolean } = {}) {
     for (const listener of [...listeners]) listener(event)
   }
 
-  const emitChunkSoon = (requestId: string) => {
+  const emitChunkSoon = (requestId: string, text: string, segmentIndex: number) => {
     setTimeout(() => {
+      const sampleCount = options.sampleCount ?? 0
       emit({
         type: 'chunk',
         requestId,
@@ -47,9 +52,20 @@ function createHarness(options: { failPushForFirstRequest?: boolean } = {}) {
         format: 'f32le',
         sampleRate: 24000,
         channels: 1,
-        samples: [],
+        text,
+        segmentIndex,
+        samples: Array.from({ length: sampleCount }, () => 0),
         isFinal: false,
       })
+      if (options.emitSegmentEvents) {
+        emit({
+          type: 'segment',
+          requestId,
+          segmentIndex,
+          text,
+          durationMs: sampleCount > 0 ? (sampleCount / 24000) * 1000 : 1_000,
+        })
+      }
     }, 0)
   }
 
@@ -65,8 +81,9 @@ function createHarness(options: { failPushForFirstRequest?: boolean } = {}) {
       if (failedRequestIds.has(payload.requestId)) {
         throw new Error('primary provider unavailable')
       }
+      const index = pushes.length
       pushes.push({ requestId: payload.requestId, text: payload.text, style: payload.style })
-      emitChunkSoon(payload.requestId)
+      emitChunkSoon(payload.requestId, payload.text, index)
       return { ok: true }
     },
     ttsStreamFinish: async (payload) => {
@@ -102,18 +119,33 @@ function createHarness(options: { failPushForFirstRequest?: boolean } = {}) {
     },
   })
 
+  const appendCalls: Array<{ sampleCount: number; sampleRate: number }> = []
+  let stopCalls = 0
   const player = {
-    appendPcmChunk: async () => undefined,
+    appendPcmChunk: async (samples: Float32Array | number[], sampleRate: number) => {
+      appendCalls.push({ sampleCount: samples.length, sampleRate })
+      return undefined
+    },
     waitForDrain: async () => undefined,
-    stopAndClear: () => undefined,
+    stopAndClear: () => { stopCalls += 1 },
   }
 
-  return { pushes, abortCalls, startCalls, listeners, player, emit }
+  return {
+    pushes,
+    abortCalls,
+    startCalls,
+    listeners,
+    player,
+    emit,
+    appendCalls,
+    get stopCalls() { return stopCalls },
+  }
 }
 
 // Sentence-chunking behaviour is exercised on a provider that still streams
 // one sentence per request. Qwen3 has its own whole-reply contract below.
 const SETTINGS = {
+  speechOutputEnabled: true,
   speechOutputProviderId: 'openai-tts',
   speechOutputApiBaseUrl: '',
   speechOutputApiKey: '',
@@ -305,6 +337,100 @@ test('Qwen3 buffers the whole reply into one generation with one style', async (
   assert.match(String(harness.pushes[0]!.style?.instruction), /兴奋/)
 })
 
+test('Qwen3 speaks pre-tool text before a tool call, then buffers the rest', async () => {
+  const harness = createHarness()
+  const styleTexts: string[] = []
+  const controller = createStreamingSpeechOutputController(
+    QWEN3_SETTINGS,
+    { getPlayer: () => harness.player as never },
+    {
+      resolveSegmentVoiceStyle: (text) => {
+        styleTexts.push(text)
+        return { instruction: 'mild', rate: 1, pitch: 1, speechTempo: 1.4 }
+      },
+    },
+  )
+  void controller.waitForCompletion().catch(() => undefined)
+
+  controller.pushDelta('我先查一下天气。')
+  controller.flushPending()
+  await ticks()
+
+  // The pre-tool sentence is its own generation, so the user hears it while
+  // the tool runs instead of waiting for the whole reply.
+  assert.deepEqual(harness.pushes.map((push) => push.text), ['我先查一下天气。'])
+
+  controller.pushDelta('今天很热，记得多喝水。')
+  controller.finish()
+  await ticks()
+
+  assert.deepEqual(
+    harness.pushes.map((push) => push.text),
+    ['我先查一下天气。', '今天很热，记得多喝水。'],
+  )
+  assert.equal(new Set(harness.pushes.map((push) => push.requestId)).size, 1)
+  // Both generations reuse the reply's mood/tempo/instruct.
+  assert.equal(styleTexts.length, 1)
+  for (const push of harness.pushes) {
+    assert.equal(push.style?.instruction, 'mild')
+    assert.equal(push.style?.speechTempo, 1.4)
+  }
+})
+
+test('Qwen3 plays the tool-call filler once per burst from a cached generation', async () => {
+  const harness = createHarness({ emitSegmentEvents: true, sampleCount: 240 })
+  const filler = 'Let me check.'
+  const controller = createStreamingSpeechOutputController(
+    { ...QWEN3_SETTINGS, speechOutputVoice: 'filler-cache-test' } as AppSettings,
+    { getPlayer: () => harness.player as never },
+    {
+      ti: (key) => (key === 'voice.streaming_tts.tool_call_filler' ? filler : String(key)),
+    },
+  )
+  void controller.waitForCompletion().catch(() => undefined)
+
+  controller.flushPending()
+  await ticks()
+  assert.deepEqual(harness.pushes.map((push) => push.text), [filler])
+
+  // A second tool call without new text belongs to the same burst: no repeat.
+  controller.flushPending()
+  await ticks()
+  assert.equal(harness.pushes.length, 1)
+
+  controller.pushDelta('我再看看。')
+  controller.flushPending()
+  await ticks()
+  assert.equal(harness.pushes.length, 2)
+
+  // New text opened a new burst; the filler is now replayed from cache without
+  // another push_text / synthesis request.
+  const appendsBefore = harness.appendCalls.length
+  controller.flushPending()
+  await ticks()
+  assert.equal(harness.pushes.length, 2, 'cached filler did not hit the provider again')
+  assert.ok(harness.appendCalls.length > appendsBefore, 'cached filler was scheduled for playback')
+
+  controller.finish()
+  await ticks()
+})
+
+test('Qwen3 tool-call filler stays silent when voice output is disabled', async () => {
+  const harness = createHarness({ emitSegmentEvents: true, sampleCount: 240 })
+  const controller = createStreamingSpeechOutputController(
+    { ...QWEN3_SETTINGS, speechOutputEnabled: false } as AppSettings,
+    { getPlayer: () => harness.player as never },
+    { ti: (key) => String(key) },
+  )
+  void controller.waitForCompletion().catch(() => undefined)
+
+  controller.flushPending()
+  await ticks()
+
+  assert.deepEqual(harness.pushes, [])
+  assert.deepEqual(harness.appendCalls, [])
+})
+
 test('Qwen3 starts the stream on the first delta so warm-up overlaps the LLM', async () => {
   const harness = createHarness()
   const controller = createStreamingSpeechOutputController(
@@ -355,6 +481,84 @@ test('Qwen3 splits only very long replies, at sentence ends, into a few chunks',
     assert.match(chunk, /。$/u)
   }
   assert.equal(chunks.join(''), longReply)
+})
+
+test('barge-in during the tool-call filler records no filler text', async () => {
+  const harness = createHarness({ emitSegmentEvents: true, sampleCount: 24_000 })
+  const filler = 'Let me check.'
+  const queued: string[] = []
+  const played: string[] = []
+  const clock = { value: 0 }
+  const controller = createStreamingSpeechOutputController(
+    { ...QWEN3_SETTINGS, speechOutputVoice: 'filler-barge-in-test' } as AppSettings,
+    { getPlayer: () => harness.player as never, now: () => clock.value },
+    {
+      ti: (key) => (key === 'voice.streaming_tts.tool_call_filler' ? filler : String(key)),
+      onSegmentQueued: (segment) => { queued.push(segment.text) },
+      onSegmentPlayed: (segment) => { played.push(segment.text) },
+    },
+  )
+  const completion = controller.waitForCompletion().catch((error: unknown) => error)
+
+  controller.flushPending()
+  await ticks()
+  assert.deepEqual(harness.pushes.map((push) => push.text), [filler])
+
+  // The user barges in while the cue is playing. It was audible, but it is
+  // not reply content and must not enter history or reply callbacks.
+  clock.value = 500
+  controller.abort()
+  await completion
+
+  const snapshot = controller.getInterruption?.()
+  assert.equal(snapshot?.heardText, '')
+  assert.equal(snapshot?.heardChars, 0)
+  assert.equal(snapshot?.fullChars, 0)
+  assert.equal(snapshot?.completeSegments, 0)
+  assert.deepEqual(queued, [], 'the filler is not reported as queued reply text')
+  assert.deepEqual(played, [], 'the filler is not reported as played reply text')
+})
+
+test('barge-in after the tool-call filler records only real reply text', async () => {
+  const harness = createHarness({ emitSegmentEvents: true, sampleCount: 24_000 })
+  const filler = 'Let me check.'
+  const queued: string[] = []
+  const played: string[] = []
+  const clock = { value: 0 }
+  const controller = createStreamingSpeechOutputController(
+    { ...QWEN3_SETTINGS, speechOutputVoice: 'filler-after-barge-in-test' } as AppSettings,
+    { getPlayer: () => harness.player as never, now: () => clock.value },
+    {
+      ti: (key) => (key === 'voice.streaming_tts.tool_call_filler' ? filler : String(key)),
+      onSegmentQueued: (segment) => { queued.push(segment.text) },
+      onSegmentPlayed: (segment) => { played.push(segment.text) },
+    },
+  )
+  const completion = controller.waitForCompletion().catch((error: unknown) => error)
+
+  controller.flushPending()
+  await ticks()
+  assert.deepEqual(harness.pushes.map((push) => push.text), [filler])
+
+  controller.pushDelta('我查到了。')
+  controller.flushPending()
+  await ticks()
+  const realText = harness.pushes[1]!.text
+  assert.notEqual(realText, filler)
+
+  // The filler has finished; the barge-in lands during the real reply.
+  clock.value = 2_000
+  controller.abort()
+  await completion
+
+  const snapshot = controller.getInterruption?.()
+  assert.equal(snapshot?.heardText, realText)
+  assert.equal(snapshot?.heardChars, realText.length)
+  assert.equal(snapshot?.fullChars, realText.length)
+  assert.equal(snapshot?.completeSegments, 1)
+  assert.equal(snapshot?.heardText.includes(filler), false)
+  assert.deepEqual(queued, [realText])
+  assert.deepEqual(played, [realText])
 })
 
 test('abort mid-stream sends exactly one ttsStreamAbort', async () => {
