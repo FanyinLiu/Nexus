@@ -44,19 +44,23 @@ const QWEN3_SETTINGS: SidecarSettings = {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+type FakeStderr = EventEmitter & { resume: () => void }
+
 function createFakeChild(pid: number, onSpawn: () => void, onExit: () => void) {
+  const stderr = new EventEmitter() as FakeStderr
+  stderr.resume = () => undefined
   const child = new EventEmitter() as EventEmitter & {
     pid: number
     exitCode: number | null
     killed: boolean
-    stderr: { resume: () => void }
+    stderr: FakeStderr
     unref: () => void
     kill: (signal?: string) => boolean
   }
   child.pid = pid
   child.exitCode = null
   child.killed = false
-  child.stderr = { resume: () => undefined }
+  child.stderr = stderr
   child.unref = () => undefined
   child.kill = (signal = 'SIGTERM') => {
     if (child.exitCode != null) return true
@@ -64,6 +68,8 @@ function createFakeChild(pid: number, onSpawn: () => void, onExit: () => void) {
     child.exitCode = 0
     onExit()
     child.emit('exit', 0, signal)
+    // Node emits 'close' after the stdio streams are done; mirrors that order.
+    child.emit('close', 0, signal)
     return true
   }
   onSpawn()
@@ -75,6 +81,8 @@ function createHarness(options: {
   runtimeDelayMs?: number
   runtimeReady?: Partial<Record<'omniVoice' | 'glmAsr' | 'qwen3Tts', boolean>>
   qwenPython?: string
+  guardedPython?: boolean
+  stderrLog?: boolean
 } = {}) {
   const spawned: Array<{
     command: string
@@ -85,6 +93,10 @@ function createHarness(options: {
   const runtimeChecks: string[] = []
   const readPaths: string[] = []
   const logs = { info: [] as string[], warn: [] as string[] }
+  const stderrWrites: string[] = []
+  const stderrStreams: FakeStderr[] = []
+  const children: EventEmitter[] = []
+  let stderrLogCloses = 0
   // Ports only count as open while a fake process is alive: the supervisor
   // probes the port to decide between "already running" and "spawn one".
   const livePorts = new Set<number>()
@@ -106,6 +118,8 @@ function createHarness(options: {
           active = Math.max(0, active - 1)
         },
       )
+      stderrStreams.push(child.stderr)
+      children.push(child)
       spawned.push({ command, args, port, options: spawnOptions })
       return child
     },
@@ -127,6 +141,19 @@ function createHarness(options: {
     terminateChild: (child: { kill: (signal?: string) => boolean }, signal: string) => {
       child.kill(signal)
     },
+    buildLaunch: options.guardedPython
+      ? (command: string, args: string[]) => ({
+          command: '/bin/sh',
+          args: ['-c', 'guard-script', 'nexus-guard', command, ...args],
+          guarded: true,
+        })
+      : (command: string, args: string[]) => ({ command, args, guarded: false }),
+    openStderrLog: options.stderrLog
+      ? () => ({
+          write: (chunk: string | Uint8Array) => { stderrWrites.push(String(chunk)) },
+          close: () => { stderrLogCloses += 1 },
+        })
+      : undefined,
     logger: {
       info: (message: string) => { logs.info.push(message) },
       warn: (message: string) => { logs.warn.push(message) },
@@ -143,6 +170,10 @@ function createHarness(options: {
     runtimeChecks,
     readPaths,
     logs,
+    stderrWrites,
+    stderrStreams,
+    children,
+    get stderrLogCloses() { return stderrLogCloses },
     get active() { return active },
     get maxActive() { return maxActive },
   }
@@ -377,6 +408,47 @@ test('Qwen3-TTS + speech output on starts exactly one sidecar with its own Pytho
 
   await harness.supervisor.stopAll()
   assert.equal(harness.active, 0)
+})
+
+test('Python sidecars use the parent-death guard and a capped stderr log', async () => {
+  const harness = createHarness({ guardedPython: true, stderrLog: true })
+
+  harness.supervisor.applySettings(GLM_ASR_SETTINGS)
+  await harness.supervisor.whenIdle()
+
+  assert.equal(harness.spawned.length, 1)
+  assert.equal(harness.spawned[0].command, '/bin/sh')
+  // The real guarded command is still present in the guard's argv.
+  assert.match(harness.spawned[0].args.join(' '), /glm_asr_server\.py --port 8001/u)
+  assert.deepEqual(harness.spawned[0].options.stdio, ['pipe', 'ignore', 'pipe'])
+  // Only the child's own stderr is forwarded, and the writer stays open while
+  // it runs so a long-lived sidecar cannot grow the log past its cap.
+  harness.stderrStreams[0].emit('data', 'booting\n')
+  assert.deepEqual(harness.stderrWrites, ['booting\n'])
+  assert.equal(harness.stderrLogCloses, 0)
+
+  await harness.supervisor.stopAll()
+  assert.equal(harness.stderrLogCloses, 1)
+  assert.equal(harness.active, 0)
+})
+
+test('stderr written after exit but before close is still logged', async () => {
+  const harness = createHarness({ guardedPython: true, stderrLog: true })
+
+  harness.supervisor.applySettings(GLM_ASR_SETTINGS)
+  await harness.supervisor.whenIdle()
+
+  const child = harness.children[0]
+  const stderr = harness.stderrStreams[0]
+  child.emit('exit', 1, null)
+  // The pipe can still deliver the crash traceback after 'exit'.
+  stderr.emit('data', 'Traceback: boom\n')
+  assert.deepEqual(harness.stderrWrites, ['Traceback: boom\n'])
+  assert.equal(harness.stderrLogCloses, 0)
+
+  // 'close' fires after the stdio streams are done; only then may we close.
+  child.emit('close', 1, null)
+  assert.equal(harness.stderrLogCloses, 1)
 })
 
 test('Qwen3 Python resolution prefers env, then its venv, then the shared fallback', () => {

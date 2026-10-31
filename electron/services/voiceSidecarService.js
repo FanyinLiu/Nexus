@@ -17,6 +17,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { buildParentDeathGuardLaunch } from './qwen3CportService.js'
 
 /** Protocol version every Python sidecar declares at module scope. */
 export const VOICE_SIDECAR_VERSION = '1'
@@ -28,6 +29,10 @@ const GLM_ASR_PROVIDER_ID = 'glm-asr-local'
 const DEFAULT_DEBOUNCE_MS = 75
 const DEFAULT_POLL_INTERVAL_MS = 1_000
 const DEFAULT_STOP_TIMEOUT_MS = 3_000
+const DEFAULT_QWEN3_RESTART_BASE_MS = 500
+const DEFAULT_QWEN3_RESTART_MAX_ATTEMPTS = 3
+const DEFAULT_QWEN3_STABILITY_MS = 60_000
+const MAX_QWEN3_RESTART_DELAY_MS = 5_000
 
 export const VOICE_SIDECAR_DEFINITIONS = Object.freeze({
   omniVoice: Object.freeze({
@@ -193,6 +198,8 @@ function waitForChildExit(child, timeoutMs) {
  *   isPortOpen: (host: string, port: number) => Promise<boolean>,
  *   ensureRuntimeReady: (serviceId: 'omniVoice' | 'qwen3Tts' | 'glmAsr') => Promise<boolean | { ready?: boolean }>,
  *   terminateChild?: (child: object, signal: string) => void,
+ *   buildLaunch?: (command: string, args: string[]) => { command: string, args: string[], guarded: boolean },
+ *   openStderrLog?: (serviceId: 'omniVoice' | 'qwen3Tts' | 'glmAsr') => { write: (chunk: string | Uint8Array) => void, close: () => void } | null,
  *   resolveQwen3Launch?: () => Promise<
  *     | { kind: 'python' }
  *     | { kind: 'skip', reason?: string }
@@ -206,6 +213,9 @@ function waitForChildExit(child, timeoutMs) {
  *   debounceMs?: number,
  *   pollIntervalMs?: number,
  *   stopTimeoutMs?: number,
+ *   qwen3RestartBaseMs?: number,
+ *   qwen3RestartMaxAttempts?: number,
+ *   qwen3StabilityMs?: number,
  *   startTimeoutMs?: Partial<Record<'omniVoice' | 'qwen3Tts' | 'glmAsr', number>>,
  * }} deps
  */
@@ -219,6 +229,8 @@ export function createVoiceSidecarSupervisor(deps) {
     isPortOpen,
     ensureRuntimeReady,
     terminateChild = defaultTerminateChild,
+    buildLaunch = (command, args) => buildParentDeathGuardLaunch(command, args),
+    openStderrLog,
     resolveQwen3Launch,
     classifyPort,
     isServiceReady,
@@ -227,6 +239,9 @@ export function createVoiceSidecarSupervisor(deps) {
     debounceMs = DEFAULT_DEBOUNCE_MS,
     pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
     stopTimeoutMs = DEFAULT_STOP_TIMEOUT_MS,
+    qwen3RestartBaseMs = DEFAULT_QWEN3_RESTART_BASE_MS,
+    qwen3RestartMaxAttempts = DEFAULT_QWEN3_RESTART_MAX_ATTEMPTS,
+    qwen3StabilityMs = DEFAULT_QWEN3_STABILITY_MS,
     startTimeoutMs = {},
   } = deps ?? {}
 
@@ -250,6 +265,13 @@ export function createVoiceSidecarSupervisor(deps) {
       baseUrl: null,
       externalPid: null,
       stopPromise: null,
+      // Qwen3 crash recovery: a C server that keeps dying falls back to the
+      // Python sidecar for the rest of this selection.
+      restartAttempts: 0,
+      recoveryTimer: null,
+      recoveryPromise: null,
+      stabilityTimer: null,
+      forcePython: false,
       mismatchLogged: false,
       missingScriptLogged: false,
       unavailableLogged: false,
@@ -267,7 +289,7 @@ export function createVoiceSidecarSupervisor(deps) {
   }
 
   function resolveIdleWaiters() {
-    if (debounceTimer || reconcilePromise) return
+    if (debounceTimer || reconcilePromise || hasPendingRecovery()) return
     const waiters = idleWaiters
     idleWaiters = []
     for (const resolve of waiters) resolve()
@@ -299,7 +321,104 @@ export function createVoiceSidecarSupervisor(deps) {
     publishQwen3Runtime(state)
   }
 
+  function clearStabilityTimer(state) {
+    if (state.stabilityTimer) {
+      clearTimeout(state.stabilityTimer)
+      state.stabilityTimer = null
+    }
+  }
+
+  /**
+   * A C server that stayed healthy for a full stability window has earned a
+   * clean crash budget again: three unrelated crashes over a long session must
+   * not permanently pin the selection to the Python sidecar.
+   */
+  function armStabilityTimer(state) {
+    if (state.id !== 'qwen3Tts' || !(qwen3StabilityMs > 0)) return
+    clearStabilityTimer(state)
+    state.stabilityTimer = setTimeout(() => {
+      state.stabilityTimer = null
+      if (state.engine !== 'cport' || state.phase !== 'running') return
+      state.restartAttempts = 0
+      state.forcePython = false
+    }, qwen3StabilityMs)
+    state.stabilityTimer.unref?.()
+  }
+
+  function clearRecovery(state) {
+    if (state.recoveryTimer) {
+      clearTimeout(state.recoveryTimer)
+      state.recoveryTimer = null
+    }
+    clearStabilityTimer(state)
+    state.restartAttempts = 0
+    state.forcePython = false
+  }
+
+  function hasPendingRecovery() {
+    return Object.values(states).some((state) => state.recoveryTimer || state.recoveryPromise)
+  }
+
+  /**
+   * After an unexpected C-server exit, restart it with exponential backoff.
+   * Once the attempts are exhausted, pin this selection to the Python sidecar
+   * instead of crash-looping the resident C model.
+   */
+  function scheduleQwen3Recovery(state) {
+    if (state.id !== 'qwen3Tts' || state.recoveryTimer || state.recoveryPromise) return
+    if (!isDesired(state.id)) return
+
+    const attempt = state.restartAttempts + 1
+    if (attempt > qwen3RestartMaxAttempts) {
+      state.restartAttempts = 0
+      state.forcePython = true
+      logger.warn(`[${state.tag}] C server crashed repeatedly — falling back to the Python sidecar.`)
+      state.recoveryPromise = startService(state)
+        .catch((error) => {
+          logger.warn(`[${state.tag}] Recovery start failed: ${getRedactedErrorMessage(error)}`)
+        })
+        .finally(() => {
+          state.recoveryPromise = null
+          resolveIdleWaiters()
+        })
+      return
+    }
+
+    state.restartAttempts = attempt
+    const delayMs = Math.min(
+      qwen3RestartBaseMs * 2 ** (attempt - 1),
+      MAX_QWEN3_RESTART_DELAY_MS,
+    )
+
+    function runRecovery() {
+      state.recoveryTimer = null
+      if (!isDesired(state.id) || state.child || state.phase === 'stopping') return
+      if (state.phase === 'starting') {
+        // The original start transition is still unwinding after the crash;
+        // re-arm instead of racing it with a second spawn.
+        state.recoveryTimer = setTimeout(runRecovery, Math.max(10, pollIntervalMs))
+        return
+      }
+      if (state.phase !== 'idle') return
+      state.recoveryPromise = (async () => {
+        if (state.stopPromise) await state.stopPromise
+        if (!isDesired(state.id) || state.phase !== 'idle') return
+        await startService(state)
+      })()
+        .catch((error) => {
+          logger.warn(`[${state.tag}] Recovery start failed: ${getRedactedErrorMessage(error)}`)
+        })
+        .finally(() => {
+          state.recoveryPromise = null
+          resolveIdleWaiters()
+        })
+    }
+
+    state.recoveryTimer = setTimeout(runRecovery, Math.max(0, delayMs))
+  }
+
   async function stopService(state) {
+    clearStabilityTimer(state)
     if (state.stopPromise) return state.stopPromise
     if (!state.child && !state.externalPid) {
       state.phase = 'idle'
@@ -370,26 +489,68 @@ export function createVoiceSidecarSupervisor(deps) {
     return false
   }
 
-  function spawnServiceChild(state, command, args, options) {
+  function spawnServiceChild(state, command, args, options, stderrLog = null) {
     const child = spawnProcess(command, args, options)
     state.child = child
-    child.stderr?.resume?.()
+    let logClosed = false
+    const closeLog = () => {
+      if (logClosed) return
+      logClosed = true
+      stderrLog?.close?.()
+    }
+    const stderr = child.stderr
+    if (stderr) {
+      if (stderrLog) {
+        // Only the child's own diagnostics are forwarded; audio never travels
+        // over stderr, so no user text can reach this file.
+        stderr.on?.('data', (chunk) => stderrLog.write(chunk))
+        stderr.on?.('error', () => {})
+      } else {
+        stderr.resume?.()
+      }
+    }
     // The C server's parent-death guard holds this pipe open. An EPIPE here
     // only means the guard is already gone.
     child.stdin?.on?.('error', () => {})
     child.unref?.()
+    // 'exit' can fire before the stderr pipe drains, so closing the writer
+    // there would drop the trailing crash traceback. 'close' fires only after
+    // the stdio streams are closed, which guarantees every chunk was written.
+    child.on?.('close', closeLog)
     child.on?.('error', (error) => {
+      closeLog()
       if (state.child === child) state.child = null
       if (state.phase === 'starting') state.phase = 'idle'
       logger.warn(`[${state.tag}] Spawn error: ${getRedactedErrorMessage(error)}`)
     })
     child.on?.('exit', (code, signal) => {
-      if (state.child === child) state.child = null
-      if (state.phase === 'starting' || state.phase === 'running') {
+      const wasCurrent = state.child === child
+      if (wasCurrent) {
+        state.child = null
+        clearStabilityTimer(state)
+      }
+      if (state.phase === 'running') {
         state.phase = 'idle'
+      }
+      if (state.phase === 'starting') {
+        // Leave the phase alone: startService's finally branch owns the
+        // transition back to idle after waitForReady observes the dead child.
         if (code !== 0 && code != null) {
-          logger.warn(`[${state.tag}] Process exited early (code=${code}, signal=${signal ?? 'none'}).`)
+          logger.warn(`[${state.tag}] Process exited during start (code=${code}, signal=${signal ?? 'none'}).`)
         }
+      } else if (code !== 0 && code != null && state.phase === 'idle' && wasCurrent) {
+        logger.warn(`[${state.tag}] Process exited early (code=${code}, signal=${signal ?? 'none'}).`)
+      }
+      // A stop or quit sets the phase/desired flag before killing the child;
+      // anything else is an unexpected crash. The C server is resident, so a
+      // silent death would otherwise leave every later reply with no audio.
+      const expected = !wasCurrent
+        || state.phase === 'stopping'
+        || Boolean(state.stopPromise)
+        || !isDesired(state.id)
+      if (!expected && state.id === 'qwen3Tts' && state.engine === 'cport') {
+        resetQwen3Engine(state)
+        scheduleQwen3Recovery(state)
       }
     })
     return child
@@ -424,6 +585,7 @@ export function createVoiceSidecarSupervisor(deps) {
       state.externalPid = Number.isInteger(plan.pid) ? plan.pid : null
       state.phase = 'running'
       publishQwen3Runtime(state)
+      armStabilityTimer(state)
       logger.info(`[${state.tag}] Reusing C server on port ${plan.port}.`)
       return true
     }
@@ -442,10 +604,16 @@ export function createVoiceSidecarSupervisor(deps) {
     logger.info(`[${state.tag}] Starting C server on port ${plan.port}...`)
     if (await waitForReady(state, child)) {
       state.phase = 'running'
+      armStabilityTimer(state)
       logger.info(`[${state.tag}] Ready`)
       return true
     }
 
+    if (state.recoveryTimer || state.recoveryPromise) {
+      // The child died during startup; the recovery timer owns the next
+      // attempt. Falling back to Python here would defeat the retry budget.
+      return true
+    }
     logger.warn(`[${state.tag}] C server did not become ready — falling back to Python.`)
     await stopService(state)
     return false
@@ -509,12 +677,23 @@ export function createVoiceSidecarSupervisor(deps) {
     if (!isDesired(state.id)) return
 
     const pythonCommand = pythonCommandFor(state.id)
-    const child = spawnServiceChild(state, pythonCommand, [scriptPath, '--port', String(state.port)], {
-      cwd: path.dirname(scriptPath),
-      stdio: ['ignore', 'ignore', 'ignore'],
-      detached: true,
-      windowsHide: true,
-    })
+    const launch = buildLaunch(pythonCommand, [scriptPath, '--port', String(state.port)])
+    const stderrLog = openStderrLog?.(state.id) ?? null
+    let child
+    try {
+      child = spawnServiceChild(state, launch.command, launch.args, {
+        cwd: path.dirname(scriptPath),
+        // The POSIX guard blocks on stdin until Nexus exits; keeping the pipe
+        // open is what makes a force-killed Electron take the server down too.
+        stdio: [launch.guarded ? 'pipe' : 'ignore', 'ignore', stderrLog ? 'pipe' : 'ignore'],
+        detached: true,
+        windowsHide: true,
+      }, stderrLog)
+    } catch (error) {
+      // The child never started, so nothing else will close the writer.
+      stderrLog?.close?.()
+      throw error
+    }
 
     logger.info(`[${state.tag}] Starting on port ${state.port} via ${pythonCommand}...`)
     if (await waitForReady(state, child)) {
@@ -530,7 +709,7 @@ export function createVoiceSidecarSupervisor(deps) {
     try {
       if (!isDesired(state.id)) return
 
-      if (state.id === 'qwen3Tts') {
+      if (state.id === 'qwen3Tts' && !state.forcePython) {
         const handledByC = await startQwen3Cport(state)
         if (handledByC) return
         if (!isDesired(state.id)) return
@@ -606,14 +785,20 @@ export function createVoiceSidecarSupervisor(deps) {
   }
 
   function applySettings(settings) {
+    const previousPlan = latestPlan
     latestPlan = resolveVoiceSidecarPlan(settings)
+    // Turning Qwen3 voice off is an explicit reset: the next selection may
+    // try the C server again instead of inheriting the crash-loop fallback.
+    if (previousPlan.qwen3Tts && !latestPlan.qwen3Tts) {
+      clearRecovery(states.qwen3Tts)
+    }
     revision += 1
     scheduleReconcile()
     return { ...latestPlan }
   }
 
   function whenIdle() {
-    if (!debounceTimer && !reconcilePromise) return Promise.resolve()
+    if (!debounceTimer && !reconcilePromise && !hasPendingRecovery()) return Promise.resolve()
     return new Promise((resolve) => {
       idleWaiters.push(resolve)
     })
@@ -626,7 +811,10 @@ export function createVoiceSidecarSupervisor(deps) {
     }
     latestPlan = resolveVoiceSidecarPlan(null)
     revision += 1
-    for (const state of Object.values(states)) state.desired = false
+    for (const state of Object.values(states)) {
+      state.desired = false
+      clearRecovery(state)
+    }
     await Promise.all(Object.values(states).map((state) => stopService(state)))
     resolveIdleWaiters()
   }
@@ -640,6 +828,7 @@ export function createVoiceSidecarSupervisor(deps) {
     revision += 1
     for (const state of Object.values(states)) {
       state.desired = false
+      clearRecovery(state)
       const child = state.child
       const externalPid = state.externalPid
       state.child = null

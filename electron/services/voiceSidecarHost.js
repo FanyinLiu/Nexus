@@ -26,6 +26,7 @@ import {
   buildQwen3CportEnv,
   resolveQwen3CportConfig,
 } from './qwen3CportService.js'
+import { openSidecarLog } from './sidecarLog.js'
 import { setQwen3TtsRuntime } from './qwen3TtsRuntime.js'
 
 function resolveAppRoot() {
@@ -49,6 +50,12 @@ function resolvePythonCommand() {
   if (detected) return detected
   if (process.env.NEXUS_PYTHON) return process.env.NEXUS_PYTHON
   return process.platform === 'win32' ? 'python' : 'python3'
+}
+
+function openSidecarStderr(serviceId) {
+  return openSidecarLog({
+    logPath: path.join(app.getPath('userData'), 'logs', `voice-sidecar-${serviceId}.log`),
+  })
 }
 
 function resolvePythonCommandFor(serviceId) {
@@ -206,6 +213,7 @@ export function createDefaultVoiceSidecarHost() {
     resolvePythonCommand,
     resolvePythonCommandFor,
     isPortOpen,
+    openStderrLog: openSidecarStderr,
     resolveQwen3Launch,
     classifyPort,
     isServiceReady,

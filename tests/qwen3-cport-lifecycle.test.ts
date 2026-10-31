@@ -25,12 +25,26 @@ const QWEN3_SETTINGS = {
   speechOutputProviderId: 'qwen3-tts-local',
 }
 
+type FakeChild = EventEmitter & {
+  pid: number
+  exitCode: number | null
+  stderr: { resume: () => void }
+  stdin: { on: () => void }
+  unref: () => void
+  kill: (signal?: string) => boolean
+  crash: (code?: number) => void
+}
+
 function createHarness(options: {
   launch: LaunchPlan
   cportReady?: boolean
   pythonPortState?: 'ours' | 'foreign' | 'closed'
+  qwen3RestartBaseMs?: number
+  qwen3RestartMaxAttempts?: number
+  qwen3StabilityMs?: number
 }) {
   const spawned: Array<{ command: string; args: string[]; port: number; options: Record<string, unknown> }> = []
+  const children: FakeChild[] = []
   const runtimes: Array<{ engine: 'cport'; baseUrl: string } | null> = []
   const terminatedExternalPids: number[] = []
   const logs = { info: [] as string[], warn: [] as string[] }
@@ -42,14 +56,7 @@ function createHarness(options: {
       const serveIndex = args.indexOf('--serve')
       const portIndex = args.indexOf('--port')
       const port = Number(serveIndex >= 0 ? args[serveIndex + 1] : args[portIndex + 1])
-      const child = new EventEmitter() as EventEmitter & {
-        pid: number
-        exitCode: number | null
-        stderr: { resume: () => void }
-        stdin: { on: () => void }
-        unref: () => void
-        kill: (signal?: string) => boolean
-      }
+      const child = new EventEmitter() as FakeChild
       child.pid = 20_000 + spawned.length
       child.exitCode = null
       child.stderr = { resume: () => undefined }
@@ -63,8 +70,16 @@ function createHarness(options: {
         child.emit('exit', 0, signal)
         return true
       }
+      child.crash = (code = 1) => {
+        if (child.exitCode != null) return
+        child.exitCode = code
+        livePorts.delete(port)
+        active = Math.max(0, active - 1)
+        child.emit('exit', code, null)
+      }
       livePorts.add(port)
       active += 1
+      children.push(child)
       spawned.push({ command, args, port, options: spawnOptions })
       return child
     },
@@ -94,6 +109,7 @@ function createHarness(options: {
       }
       if (typeof child.pid === 'number') terminatedExternalPids.push(child.pid)
     },
+    buildLaunch: (command: string, args: string[]) => ({ command, args, guarded: false }),
     logger: {
       info: (message: string) => { logs.info.push(message) },
       warn: (message: string) => { logs.warn.push(message) },
@@ -101,18 +117,24 @@ function createHarness(options: {
     debounceMs: 0,
     pollIntervalMs: 1,
     stopTimeoutMs: 20,
+    qwen3RestartBaseMs: options.qwen3RestartBaseMs ?? 1,
+    qwen3RestartMaxAttempts: options.qwen3RestartMaxAttempts ?? 3,
+    qwen3StabilityMs: options.qwen3StabilityMs,
     startTimeoutMs: { omniVoice: 100, glmAsr: 100, qwen3Tts: 80 },
   })
 
   return {
     supervisor,
     spawned,
+    children,
     runtimes,
     terminatedExternalPids,
     logs,
     get active() { return active },
   }
 }
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const CPORT_SPAWN: LaunchPlan = {
   kind: 'spawn',
@@ -180,6 +202,92 @@ test('a Python port held by another service is never adopted', async () => {
     harness.logs.warn.some((line) => /held by another service/u.test(line)),
     true,
   )
+})
+
+test('an unexpected C-server exit resets the runtime and restarts it', async () => {
+  const harness = createHarness({ launch: CPORT_SPAWN })
+
+  harness.supervisor.applySettings(QWEN3_SETTINGS)
+  await harness.supervisor.whenIdle()
+  assert.equal(harness.spawned.length, 1)
+
+  harness.children[0].crash()
+  // The stale C runtime must be withdrawn immediately, before the restart.
+  assert.equal(harness.runtimes.at(-1), null)
+  assert.equal(harness.supervisor.getState().qwen3Tts.engine, 'python')
+
+  await harness.supervisor.whenIdle()
+  assert.equal(harness.spawned.length, 2)
+  assert.equal(harness.supervisor.getState().qwen3Tts.phase, 'running')
+  assert.equal(harness.supervisor.getState().qwen3Tts.engine, 'cport')
+  assert.deepEqual(harness.runtimes.at(-1), {
+    engine: 'cport',
+    baseUrl: 'http://127.0.0.1:8003/v1',
+  })
+  assert.equal(harness.active, 1)
+
+  await harness.supervisor.stopAll()
+  assert.equal(harness.active, 0)
+})
+
+test('repeated C-server crashes fall back to the Python sidecar', async () => {
+  const harness = createHarness({
+    launch: CPORT_SPAWN,
+    qwen3RestartMaxAttempts: 2,
+  })
+
+  harness.supervisor.applySettings(QWEN3_SETTINGS)
+  await harness.supervisor.whenIdle()
+
+  for (let crash = 0; crash < 3; crash += 1) {
+    harness.children.at(-1)!.crash()
+    await harness.supervisor.whenIdle()
+  }
+
+  assert.equal(harness.spawned.length, 4, 'three C attempts then one Python start')
+  assert.match(harness.spawned.at(-1)!.args.join(' '), /qwen3_tts_server\.py --port 8002/u)
+  assert.equal(harness.supervisor.getState().qwen3Tts.engine, 'python')
+  assert.equal(harness.supervisor.getState().qwen3Tts.phase, 'running')
+  assert.equal(harness.runtimes.at(-1), null)
+  assert.equal(harness.active, 1)
+  assert.equal(
+    harness.logs.warn.some((line) => /falling back to the Python sidecar/u.test(line)),
+    true,
+  )
+
+  await harness.supervisor.stopAll()
+  assert.equal(harness.active, 0)
+})
+
+test('a stable C server earns a fresh crash budget instead of pinning Python', async () => {
+  const harness = createHarness({
+    launch: CPORT_SPAWN,
+    qwen3RestartMaxAttempts: 1,
+    qwen3StabilityMs: 10,
+  })
+
+  harness.supervisor.applySettings(QWEN3_SETTINGS)
+  await harness.supervisor.whenIdle()
+  assert.equal(harness.spawned.length, 1)
+
+  // First crash consumes the only restart attempt.
+  harness.children.at(-1)!.crash()
+  await harness.supervisor.whenIdle()
+  assert.equal(harness.spawned.length, 2)
+  assert.equal(harness.supervisor.getState().qwen3Tts.engine, 'cport')
+
+  // After a healthy window the budget is reset, so this later crash restarts
+  // the C server again rather than falling back to the Python sidecar.
+  await delay(30)
+  harness.children.at(-1)!.crash()
+  await harness.supervisor.whenIdle()
+  assert.equal(harness.spawned.length, 3)
+  assert.equal(harness.supervisor.getState().qwen3Tts.engine, 'cport')
+  assert.equal(harness.supervisor.getState().qwen3Tts.phase, 'running')
+  assert.equal(harness.runtimes.at(-1)?.engine, 'cport')
+
+  await harness.supervisor.stopAll()
+  assert.equal(harness.active, 0)
 })
 
 test('an already-running C server is adopted and stopped on teardown', async () => {
