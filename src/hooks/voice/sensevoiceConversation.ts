@@ -1,6 +1,4 @@
 import type { MutableRefObject } from 'react'
-import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
-import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
 import {
   startSenseVoiceStream,
   type SenseVoiceStreamSession,
@@ -10,95 +8,24 @@ import {
   createSpeculativeDecoder,
   shouldStartSpeculativeDecode,
 } from '../../features/hearing/speculativeDecode.ts'
-import { formatTraceLabel } from '../../features/voice/shared.ts'
-import type {
-  VoiceSessionEvent,
-  VoiceSessionTransport,
-} from '../../features/voice/sessionMachine.ts'
-import { clamp } from '../../lib/common.ts'
-import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { createLogger } from '../../lib/logger.ts'
-import { createId } from '../../lib/index.ts'
-import { mapSpeechError } from '../../lib/voice.ts'
-import type {
-  AppSettings,
-  PetMood,
-  TranslationKey,
-  TranslationParams,
-  VoiceEmotionLabel,
-  VoicePipelineState,
-  VoiceState,
-} from '../../types/index.ts'
-import { resolveSherpaStreamIdleTimeoutMs } from '../../features/voice/sherpaIdleTimeout.ts'
+import type { VoiceEmotionLabel } from '../../types/index.ts'
 import {
-  API_RECORDING_MAX_DURATION_MS,
-  SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
-  SHERPA_STREAM_SILENCE_FINISH_MS,
-} from './constants.ts'
-import { createAdaptiveRmsGate } from './support.ts'
-import type { BackchannelSession } from './backchannelRuntime.ts'
-import { createTurnEndController } from './turnEndController.ts'
-import {
-  createDesktopTurnEndProbe,
-  startDesktopTurnEndSession,
-  stopDesktopTurnEndSession,
-  type TurnEndSessionRef,
-} from './smartTurnProbe.ts'
-import type { VoiceConversationOptions } from './types.ts'
-
-type ShowPetStatus = (
-  message: string,
-  duration?: number,
-  dedupeWindowMs?: number,
-) => void
-
-type Translator = (key: TranslationKey, params?: TranslationParams) => string
+  runStreamingAsrConversation,
+  type AsrConversationDeps,
+  type AsrConversationState,
+  type StreamingAsrAdapter,
+} from './asrRunnerCore.ts'
+import { SHERPA_STREAM_SILENCE_FINISH_MS } from './constants.ts'
 
 const log = createLogger('voice.asr')
 
-export type SenseVoiceConversationState = {
-  noSpeechTimer: number | null
-  maxDurationTimer: number | null
-}
+export type SenseVoiceConversationState = AsrConversationState
 
-export type StartSenseVoiceConversationOptions = {
-  options?: VoiceConversationOptions
-  currentSettings: AppSettings
-  voiceStateRef: MutableRefObject<VoiceState>
-  suppressVoiceReplyRef: MutableRefObject<boolean>
+export type StartSenseVoiceConversationOptions = AsrConversationDeps & {
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   sensevoiceConversationRef: MutableRefObject<SenseVoiceConversationState | null>
-  clearPendingVoiceRestart: () => void
-  canInterruptSpeech: () => boolean
-  interruptSpeakingForVoiceInput: () => boolean
-  setContinuousVoiceSession: (active: boolean) => void
-  shouldKeepContinuousVoiceSession: () => boolean
-  resetNoSpeechRestartCount: () => void
   clearSenseVoiceConversationState: () => void
-  beginVoiceListeningSession: (transport: VoiceSessionTransport) => unknown
-  dispatchVoiceSession: (event: VoiceSessionEvent) => unknown
-  dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => unknown
-  setVoiceState: (state: VoiceState) => void
-  setMood: (mood: PetMood) => void
-  setError: (error: string | null) => void
-  setLiveTranscript: (transcript: string) => void
-  updateVoicePipeline: (
-    step: VoicePipelineState['step'],
-    detail: string,
-    transcript?: string,
-  ) => void
-  appendVoiceTrace: (title: string, detail: string) => void
-  showPetStatus: ShowPetStatus
-  setSpeechLevelValue: (level: number) => void
-  handleRecognizedVoiceTranscript: (
-    transcript: string,
-    options?: { traceId?: string },
-  ) => Promise<boolean>
-  handleVoiceListeningFailure: (
-    message: string,
-    errorCode?: string,
-  ) => void
-  shouldAutoRestartVoice: () => boolean
   /**
    * Optional. Called once with the SenseVoice prosody emotion label
    * (HAPPY / SAD / etc.) right before the transcript is forwarded
@@ -106,315 +33,153 @@ export type StartSenseVoiceConversationOptions = {
    * sound X" before the assistant turn runs.
    */
   applyVoiceEmotion?: (label: VoiceEmotionLabel) => void
-  /** Optional short acknowledgements during the user's turn. */
-  backchannel?: BackchannelSession
-  ti: Translator
 }
 
+/**
+ * SenseVoice is offline and non-streaming: the only mid-turn work is the
+ * speculative decode started when Smart Turn is already confident.
+ */
 export async function startSenseVoiceConversation(
   params: StartSenseVoiceConversationOptions,
 ) {
-  const restart = params.options?.restart ?? false
-  const passive = params.options?.passive ?? false
+  let speechEpoch = 0
+  const speculative = createSpeculativeDecoder<SenseVoiceTranscript>()
 
-  if (
-    !window.desktopPet?.sensevoiceStart
-    || !window.desktopPet.sensevoiceFeed
-    || !window.desktopPet.sensevoiceFinish
-    || !window.desktopPet.sensevoiceAbort
-  ) {
-    params.setContinuousVoiceSession(false)
-    params.setError(params.ti('voice.provider.sensevoice.connect_required'))
-    return
-  }
+  const adapter: StreamingAsrAdapter<
+    SenseVoiceStreamSession,
+    Awaited<ReturnType<SenseVoiceStreamSession['stop']>>,
+    SenseVoiceConversationState
+  > = {
+    sessionRef: params.sensevoiceSessionRef,
+    conversationRef: params.sensevoiceConversationRef,
+    clearConversationState: params.clearSenseVoiceConversationState,
 
-  params.clearPendingVoiceRestart()
-
-  if (params.voiceStateRef.current === 'speaking') {
-    if (!params.canInterruptSpeech()) {
-      params.showPetStatus(params.ti('voice.interruption_disabled'), 2_800, 3_200)
-      return
-    }
-
-    if (!params.interruptSpeakingForVoiceInput()) {
-      return
-    }
-  }
-
-  params.suppressVoiceReplyRef.current = false
-
-  if (!restart) {
-    params.setContinuousVoiceSession(params.shouldKeepContinuousVoiceSession())
-    params.resetNoSpeechRestartCount()
-  }
-
-  params.clearSenseVoiceConversationState()
-
-  // Hoisted so outer catch can abort a session that got assigned by
-  // startSenseVoiceStream before ref assignment completed.
-  let session: SenseVoiceStreamSession | null = null
-  let turnEndSession: TurnEndSessionRef = null
-
-  try {
-    const traceId = createId('voice')
-    const traceLabel = formatTraceLabel(traceId)
-    let speechDetected = false
-    let finalizing = false
-    let speechStartedAt: number | null = null
-    let lastSpeechAt = performance.now()
-    // Bumped on every speech frame. A speculative decode is only reusable for
-    // the epoch it started in; resumed speech makes its result stale.
-    let speechEpoch = 0
-    const speculative = createSpeculativeDecoder<SenseVoiceTranscript>()
-    const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
-
-    const armNoSpeechTimer = () => {
-      const state = params.sensevoiceConversationRef.current
-      if (!state || !session) return
-
-      if (state.noSpeechTimer) {
-        window.clearTimeout(state.noSpeechTimer)
+    prepare: () => {
+      if (
+        !window.desktopPet?.sensevoiceStart
+        || !window.desktopPet.sensevoiceFeed
+        || !window.desktopPet.sensevoiceFinish
+        || !window.desktopPet.sensevoiceAbort
+      ) {
+        params.setContinuousVoiceSession(false)
+        params.setError(params.ti('voice.provider.sensevoice.connect_required'))
+        return null
       }
+      return true
+    },
 
-      state.noSpeechTimer = window.setTimeout(() => {
-        if (!session || finalizing || params.sensevoiceSessionRef.current !== session) return
+    transport: 'local_sensevoice',
+    listeningDetail: params.ti('voice.pipeline.sensevoice_started'),
+    status: {
+      autoRestart: params.ti('voice.status.continuous_sensevoice_start'),
+      listening: params.ti('voice.status.sensevoice_listening'),
+    },
+    trace: {
+      title: 'Start SenseVoice recognition',
+      detail: (traceLabel) => `#${traceLabel} using SenseVoice offline transcription`,
+    },
+    presetSilenceMs: SHERPA_STREAM_SILENCE_FINISH_MS,
+    initialLastSpeechAt: () => performance.now(),
+    partialTranscript: () => '',
 
-        if (!speechDetected) {
-          finalizing = true
-          params.backchannel?.stop()
-          stopDesktopTurnEndSession(turnEndSession)
-          params.clearSenseVoiceConversationState()
-          session.abort()
-          params.sensevoiceSessionRef.current = null
-          params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-          return
-        }
+    startSession: async (_run, handlers) => {
+      // Snapshot the ref before awaiting so we can detect a concurrent
+      // start path (e.g. wake-word retry) that wrote a different session
+      // during our await window.
+      const refBeforeAwait = params.sensevoiceSessionRef.current
+      const session = await startSenseVoiceStream({
+        onActivity: handlers.onActivity,
+        onError: handlers.onError,
+      }, params.ti)
 
-        void finalizeSenseVoiceTranscript(params.ti('voice.pipeline.long_idle_wrap_up'))
-      }, resolveSherpaStreamIdleTimeoutMs(params.currentSettings.wakewordSessionIdleTimeoutMs))
-    }
-
-    const finalizeSenseVoiceTranscript = async (
-      detail: string,
-    ) => {
-      if (!session || finalizing) return
-
-      finalizing = true
-      params.backchannel?.stop()
-      stopDesktopTurnEndSession(turnEndSession)
-      params.clearSenseVoiceConversationState()
-
-      try {
-        params.dispatchVoiceSessionAndSync({
-          type: 'stt_finalizing',
-          text: '',
-        })
-        params.setMood('thinking')
-        params.updateVoicePipeline('transcribing', detail)
-
-        // Reuse a decode started during the confident pause; only fall back to
-        // a fresh finish() decode when speech resumed or the decode failed.
-        const speculativeTranscript = await speculative.settle(speechEpoch)
-        const stopResult = await session.stop(
-          speculativeTranscript ? { reuseTranscript: speculativeTranscript } : undefined,
-        )
-        params.sensevoiceSessionRef.current = null
-        const transcript = normalizeRecognizedVoiceTranscript(stopResult.text)
-
-        if (!transcript) {
-          params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-          return
-        }
-
-        // Feed the prosody emotion to the emotion model **before** the
-        // transcript runs through assistantReply, so the system prompt
-        // built for this turn sees the updated emotion state. NEUTRAL /
-        // EMO_UNKNOWN already mapped to null upstream; only meaningful
-        // labels reach this branch.
-        if (stopResult.voiceEmotion && params.applyVoiceEmotion) {
-          try {
-            params.applyVoiceEmotion(stopResult.voiceEmotion)
-          } catch (err) {
-            console.warn('[SenseVoice] applyVoiceEmotion failed:', err)
-          }
-        }
-
-        params.appendVoiceTrace('SenseVoice recognition complete', `#${traceLabel} received final text`)
-        await params.handleRecognizedVoiceTranscript(transcript, { traceId })
-      } catch (error) {
-        params.sensevoiceSessionRef.current = null
-        params.handleVoiceListeningFailure(
-          humanizeVoiceError(error, { ti: params.ti }),
-        )
+      // If another start path wrote a different session into the ref
+      // while we were awaiting startSenseVoiceStream, the in-flight one
+      // wins. Abort our just-started session rather than clobber.
+      if (params.sensevoiceSessionRef.current !== refBeforeAwait) {
+        try { session.abort() } catch { /* silent-catch-ok: the superseded session is being abandoned; abort is best-effort */ }
+        return null
       }
-    }
+      return session
+    },
 
-    turnEndSession = startDesktopTurnEndSession()
-    const turnEnd = createTurnEndController({
-      probe: createDesktopTurnEndProbe(turnEndSession),
-      getContext: () => ({
-        partialTranscript: '',
-        locale: params.currentSettings.speechRecognitionLang,
-        presetSilenceMs: SHERPA_STREAM_SILENCE_FINISH_MS,
-        speechStartedAt,
-        lastSpeechAt,
-        finalizing,
-      }),
-      onEnd: () => {
-        void finalizeSenseVoiceTranscript(params.ti('voice.pipeline.sensevoice_silence_finalize'))
-      },
-      onWait: (tick) => {
-        params.backchannel?.maybeFire({
-          partialTranscript: '',
-          silenceMs: tick.silenceMs,
-          spokenMs: tick.spokenMs,
-          turnEndAction: tick.decision.action,
-          modelProbability: tick.modelProbability,
-          modelPending: tick.modelPending,
-        })
-        if (
-          session
-          && !finalizing
-          && shouldStartSpeculativeDecode({
-            probability: tick.modelProbability,
-            silenceMs: tick.silenceMs,
-          })
-        ) {
-          const currentSession = session
-          speculative.maybeStart(speechEpoch, async () => {
-            const audio = currentSession.snapshotAudio()
-            if (!audio) return null
-            try {
-              const result = await currentSession.transcribeSamples(
-                audio.samples,
-                audio.sampleRate,
-              )
-              return result.text ? result : null
-            } catch {
-              log.debug('speculative sensevoice transcription failed', { errorPresent: true })
-              return null
-            }
-          })
-        }
-      },
-    })
-
-    params.beginVoiceListeningSession('local_sensevoice')
-    params.setMood('happy')
-    params.setError(null)
-    params.setLiveTranscript('')
-    params.updateVoicePipeline('listening', params.ti('voice.pipeline.sensevoice_started'))
-    params.backchannel?.start()
-
-    if (!passive) {
-      params.showPetStatus(
-        params.shouldAutoRestartVoice()
-          ? params.ti('voice.status.continuous_sensevoice_start')
-          : params.ti('voice.status.sensevoice_listening'),
-        4_200,
-        3_600,
+    stopSession: async (session) => {
+      // Reuse a decode started during the confident pause; only fall back to
+      // a fresh finish() decode when speech resumed or the decode failed.
+      const speculativeTranscript = await speculative.settle(speechEpoch)
+      return session.stop(
+        speculativeTranscript ? { reuseTranscript: speculativeTranscript } : undefined,
       )
-    }
+    },
 
-    params.appendVoiceTrace('Start SenseVoice recognition', `#${traceLabel} using SenseVoice offline transcription`)
-
-    // Snapshot the ref before awaiting so we can detect a concurrent
-    // start path (e.g. wake-word retry) that wrote a different session
-    // during our await window.
-    const refBeforeAwait = params.sensevoiceSessionRef.current
-    session = await startSenseVoiceStream({
-      onActivity: (rms) => {
-        if (!session || params.sensevoiceSessionRef.current !== session || finalizing) return
-
-        params.setSpeechLevelValue(clamp(rms * 6, 0, 1))
-        const now = performance.now()
-
-        if (activityGate.isSpeech(rms)) {
-          lastSpeechAt = now
-          if (speechStartedAt === null) speechStartedAt = now
-          speechEpoch += 1
-          speculative.invalidate(speechEpoch)
-
-          if (!speechDetected) {
-            speechDetected = true
-            params.dispatchVoiceSession({ type: 'speech_detected' })
-            params.resetNoSpeechRestartCount()
-            params.updateVoicePipeline('listening', params.ti('voice.pipeline.sensevoice_detected'))
-          }
-
-          armNoSpeechTimer()
-          return
+    transcriptFromStop: (stopResult) => stopResult.text,
+    onStopResult: (stopResult) => {
+      // Feed the prosody emotion to the emotion model **before** the
+      // transcript runs through assistantReply, so the system prompt
+      // built for this turn sees the updated emotion state. NEUTRAL /
+      // EMO_UNKNOWN already mapped to null upstream; only meaningful
+      // labels reach this branch.
+      if (stopResult.voiceEmotion && params.applyVoiceEmotion) {
+        try {
+          params.applyVoiceEmotion(stopResult.voiceEmotion)
+        } catch (err) {
+          console.warn('[SenseVoice] applyVoiceEmotion failed:', err)
         }
+      }
+    },
+    appendCompleteTrace: (_stopResult, run) => {
+      params.appendVoiceTrace('SenseVoice recognition complete', `#${run.traceLabel} received final text`)
+    },
 
-        if (!speechDetected || speechStartedAt === null) return
-
-        // SenseVoice is offline and has no streaming partial, so the audio
-        // model is the only signal beyond silence. It probes the turn buffer
-        // at ~250 ms and re-checks every ~300 ms; if it is missing or too
-        // slow the controller falls back to the preset silence window.
-        turnEnd.tick()
-      },
-      onError: (message) => {
-        if (finalizing) return
-
-        finalizing = true
-        params.backchannel?.stop()
-        stopDesktopTurnEndSession(turnEndSession)
-        params.clearSenseVoiceConversationState()
-        params.sensevoiceSessionRef.current = null
-        params.handleVoiceListeningFailure(message)
-      },
-    }, params.ti)
-
-    // If another start path wrote a different session into the ref
-    // while we were awaiting startSenseVoiceStream, the in-flight one
-    // wins. Abort our just-started session rather than clobber.
-    if (params.sensevoiceSessionRef.current !== refBeforeAwait) {
-      try { session.abort() } catch { /* silent-catch-ok: the superseded session is being abandoned; abort is best-effort */ }
-      return
-    }
-
-    params.sensevoiceSessionRef.current = session
-    params.sensevoiceConversationRef.current = {
-      noSpeechTimer: null,
-      maxDurationTimer: null,
-    }
-
-    armNoSpeechTimer()
-    params.sensevoiceConversationRef.current.maxDurationTimer = window.setTimeout(() => {
-      if (!session || finalizing || params.sensevoiceSessionRef.current !== session) return
-
-      if (!speechDetected) {
-        finalizing = true
-        params.backchannel?.stop()
-        stopDesktopTurnEndSession(turnEndSession)
-        params.clearSenseVoiceConversationState()
-        session.abort()
-        params.sensevoiceSessionRef.current = null
-        params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
+    onSpeechActivity: () => {
+      // Bumped on every speech frame. A speculative decode is only reusable
+      // for the epoch it started in; resumed speech makes its result stale.
+      speechEpoch += 1
+      speculative.invalidate(speechEpoch)
+    },
+    onFirstSpeechDetected: () => {
+      params.updateVoicePipeline('listening', params.ti('voice.pipeline.sensevoice_detected'))
+    },
+    onTurnEndEnd: (run) => {
+      void run.finalize(params.ti('voice.pipeline.sensevoice_silence_finalize'))
+    },
+    onTurnEndWait: (tick, run) => {
+      const currentSession = run.getSession()
+      if (!currentSession || run.isFinalizing()) return
+      if (
+        !shouldStartSpeculativeDecode({
+          probability: tick.modelProbability,
+          silenceMs: tick.silenceMs,
+        })
+      ) {
         return
       }
+      speculative.maybeStart(speechEpoch, async () => {
+        const audio = currentSession.snapshotAudio()
+        if (!audio) return null
+        try {
+          const result = await currentSession.transcribeSamples(
+            audio.samples,
+            audio.sampleRate,
+          )
+          return result.text ? result : null
+        } catch {
+          log.debug('speculative sensevoice transcription failed', { errorPresent: true })
+          return null
+        }
+      })
+    },
 
-      void finalizeSenseVoiceTranscript(params.ti('voice.pipeline.sensevoice_max_duration'))
-    }, API_RECORDING_MAX_DURATION_MS)
-  } catch (error) {
-    params.backchannel?.stop()
-    stopDesktopTurnEndSession(turnEndSession)
-    params.clearSenseVoiceConversationState()
-    params.setVoiceState('idle')
-    params.setMood('idle')
-    params.setSpeechLevelValue(0)
-    // Prefer the local session handle — the ref may not have been
-    // assigned yet when startSenseVoiceStream threw.
-    session?.abort()
-    params.sensevoiceSessionRef.current?.abort()
-    params.sensevoiceSessionRef.current = null
-    if (isVoiceCaptureCancelled(error)) return
-
-    const message = humanizeVoiceError(error, { ti: params.ti })
-
-    params.updateVoicePipeline('idle', message)
-    params.setError(message)
-    params.showPetStatus(message, 4_800, 4_500)
+    maxDurationFinalize: () => ({
+      detail: params.ti('voice.pipeline.sensevoice_max_duration'),
+    }),
+    cleanupOnError: (session) => {
+      // Prefer the local session handle — the ref may not have been
+      // assigned yet when startSenseVoiceStream threw.
+      session?.abort()
+      params.sensevoiceSessionRef.current?.abort()
+      params.sensevoiceSessionRef.current = null
+    },
   }
+
+  await runStreamingAsrConversation(params, adapter)
 }
