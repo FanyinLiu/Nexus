@@ -91,6 +91,15 @@ test('language tags map to the C server full names, unknown tags stay absent', (
   assert.equal(mapQwen3CportLanguage(''), undefined)
 })
 
+test('parent-death guard is claimed only on POSIX', () => {
+  const direct = buildParentDeathGuardLaunch('/bin/true', ['--x'], { platform: 'win32' })
+  assert.deepEqual(direct, { command: '/bin/true', args: ['--x'], guarded: false })
+
+  const guarded = buildParentDeathGuardLaunch('/bin/true', ['--x'], { platform: 'linux' })
+  assert.equal(guarded.guarded, true)
+  assert.equal(guarded.command, '/bin/sh')
+})
+
 test('C request body carries the whole text, one speaker, one seed, and a mild instruct', () => {
   const body = buildQwen3CportRequestPayload({
     voice: 'serena',
@@ -112,7 +121,13 @@ test('C request body carries the whole text, one speaker, one seed, and a mild i
   assert.equal('input' in body, false)
 })
 
-test('parent-death guard kills the server when the parent pipe closes', async () => {
+test('parent-death guard kills the server when the parent pipe closes', {
+  // The guard is a /bin/sh construct; Windows launches the server unguarded,
+  // so there is no pipe to close and nothing to observe here.
+  skip: process.platform === 'win32'
+    ? 'POSIX-only /bin/sh parent-death guard; Windows has no guard yet'
+    : false,
+}, async () => {
   assert.match(PARENT_DEATH_GUARD_SCRIPT, /cat >\/dev\/null/u)
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-cport-guard-'))
