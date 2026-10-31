@@ -5,7 +5,7 @@
  * free of Electron imports and can be tested with fake processes.
  */
 
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import fs from 'node:fs'
 import net from 'node:net'
 import os from 'node:os'
@@ -19,6 +19,14 @@ import {
   createVoiceSidecarSupervisor,
   resolveQwen3TtsPythonCommand,
 } from './voiceSidecarService.js'
+import {
+  buildParentDeathGuardLaunch,
+  buildQwen3CportArgs,
+  buildQwen3CportBaseUrl,
+  buildQwen3CportEnv,
+  resolveQwen3CportConfig,
+} from './qwen3CportService.js'
+import { setQwen3TtsRuntime } from './qwen3TtsRuntime.js'
 
 function resolveAppRoot() {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -66,6 +74,127 @@ function isPortOpen(host, port) {
   })
 }
 
+async function readHealthJson(url) {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(1_500) })
+    if (!response.ok) return null
+    return await response.json().catch(() => null)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Distinguish our C server from an unrelated listener on the same port.
+ * A closed port is free; a 200 `/v1/health` with `status: "ok"` is ours;
+ * anything else is someone else's process and must not be adopted or killed.
+ */
+async function classifyQwen3CportPort(port) {
+  if (!(await isPortOpen('127.0.0.1', port))) return 'closed'
+  const health = await readHealthJson(`http://127.0.0.1:${port}/v1/health`)
+  return health?.status === 'ok' ? 'ours' : 'foreign'
+}
+
+/** The Python sidecar answers `/health` with `status` and `loaded`. */
+async function classifyPythonPort(port) {
+  if (!(await isPortOpen('127.0.0.1', port))) return 'closed'
+  const health = await readHealthJson(`http://127.0.0.1:${port}/health`)
+  return health && (health.status === 'ok' || typeof health.loaded === 'boolean')
+    ? 'ours'
+    : 'foreign'
+}
+
+/** Find the PID listening on a loopback port so an adopted server can be stopped. */
+function findPortOwnerPid(port) {
+  if (process.platform === 'win32') return Promise.resolve(null)
+  return new Promise((resolve) => {
+    execFile(
+      'lsof',
+      ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'],
+      { timeout: 1_500 },
+      (error, stdout) => {
+        if (error) {
+          resolve(null)
+          return
+        }
+        const pid = Number(String(stdout).trim().split(/\s+/u)[0])
+        resolve(Number.isInteger(pid) && pid > 0 ? pid : null)
+      },
+    )
+  })
+}
+
+/**
+ * Pick the C engine when its binary and checkpoint exist. Ports are tried in
+ * order: a foreign listener is skipped, a closed port is spawned, and an
+ * existing health-verified C server is adopted (and later stopped) so two
+ * copies never run at once.
+ */
+async function resolveQwen3Launch() {
+  const config = resolveQwen3CportConfig({
+    env: process.env,
+    homedir: os.homedir,
+    existsSync: fs.existsSync,
+  })
+  if (!config.available) {
+    console.info(`[Qwen3-TTS] C server unavailable (${config.reason ?? 'not installed'}); using the Python sidecar.`)
+    return { kind: 'python' }
+  }
+
+  for (const port of config.ports) {
+    const status = await classifyQwen3CportPort(port)
+    if (status === 'foreign') continue
+
+    const baseUrl = buildQwen3CportBaseUrl(port)
+    if (status === 'ours') {
+      return {
+        kind: 'external',
+        engine: 'cport',
+        port,
+        baseUrl,
+        pid: await findPortOwnerPid(port),
+      }
+    }
+
+    const guard = buildParentDeathGuardLaunch(
+      config.binaryPath,
+      buildQwen3CportArgs(config, port),
+    )
+    return {
+      kind: 'spawn',
+      engine: 'cport',
+      port,
+      baseUrl,
+      command: guard.command,
+      args: guard.args,
+      options: {
+        cwd: path.dirname(config.binaryPath),
+        env: buildQwen3CportEnv(process.env),
+        // The guard blocks on stdin; keeping the pipe open is what makes a
+        // force-killed Electron take the server down with it.
+        stdio: guard.guarded ? ['pipe', 'ignore', 'ignore'] : ['ignore', 'ignore', 'ignore'],
+        detached: true,
+        windowsHide: true,
+      },
+    }
+  }
+
+  console.info('[Qwen3-TTS] Every C server port is held by another service; using the Python sidecar.')
+  return { kind: 'python' }
+}
+
+function classifyPort(state) {
+  if (state.id === 'qwen3Tts') return classifyPythonPort(state.port)
+  return isPortOpen('127.0.0.1', state.port).then((open) => (open ? 'ours' : 'closed'))
+}
+
+function isServiceReady(state) {
+  if (state.id === 'qwen3Tts' && state.engine === 'cport') {
+    return classifyQwen3CportPort(state.port).then((status) => status === 'ours')
+  }
+  return isPortOpen('127.0.0.1', state.port)
+}
+
 /**
  * @returns {ReturnType<typeof createVoiceSidecarSupervisor>}
  */
@@ -77,6 +206,10 @@ export function createDefaultVoiceSidecarHost() {
     resolvePythonCommand,
     resolvePythonCommandFor,
     isPortOpen,
+    resolveQwen3Launch,
+    classifyPort,
+    isServiceReady,
+    onQwen3RuntimeChange: (runtime) => setQwen3TtsRuntime(runtime),
     ensureRuntimeReady: (serviceId) => (
       serviceId === 'qwen3Tts'
         ? ensurePythonRuntimeStatusFor('qwen3Tts', { binary: resolvePythonCommandFor('qwen3Tts') })

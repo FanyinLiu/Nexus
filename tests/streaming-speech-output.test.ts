@@ -5,7 +5,9 @@ import { createStreamingSpeechOutputController } from '../src/hooks/voice/stream
 import { createStreamingSpeechOutputWithFallback } from '../src/hooks/voice/streamingSpeechOutputFallback.ts'
 import {
   getMaxSegmentCharsForProvider,
+  prefersWholeReplySegments,
   prefersWholeSentenceSegments,
+  splitReplyForSingleGeneration,
 } from '../src/hooks/voice/speechTextSegmentation.ts'
 import { measureSegmentWeight, StreamingTtsChunker } from '../src/features/voice/streamingTts.ts'
 import type { SegmentVoiceStyle, VoiceStreamEvent } from '../src/types/index.ts'
@@ -109,8 +111,10 @@ function createHarness(options: { failPushForFirstRequest?: boolean } = {}) {
   return { pushes, abortCalls, startCalls, listeners, player, emit }
 }
 
+// Sentence-chunking behaviour is exercised on a provider that still streams
+// one sentence per request. Qwen3 has its own whole-reply contract below.
 const SETTINGS = {
-  speechOutputProviderId: 'qwen3-tts-local',
+  speechOutputProviderId: 'openai-tts',
   speechOutputApiBaseUrl: '',
   speechOutputApiKey: '',
   speechOutputModel: '',
@@ -121,6 +125,11 @@ const SETTINGS = {
   speechRate: 1,
   speechPitch: 1,
   speechVolume: 1,
+} as unknown as AppSettings
+
+const QWEN3_SETTINGS = {
+  ...SETTINGS,
+  speechOutputProviderId: 'qwen3-tts-local',
 } as unknown as AppSettings
 
 const ticks = async (count = 4) => {
@@ -264,6 +273,50 @@ test('each sentence still carries its own T6 style', async () => {
   assert.ok((harness.pushes[0]!.style?.rate ?? 1) > 1)
   assert.match(String(harness.pushes[1]!.style?.instruction), /别扭/)
   assert.ok((harness.pushes[1]!.style?.rate ?? 1) < 1)
+})
+
+test('Qwen3 buffers the whole reply into one generation with one style', async () => {
+  const harness = createHarness()
+  const controller = createStreamingSpeechOutputController(
+    QWEN3_SETTINGS,
+    { getPlayer: () => harness.player as never },
+    {
+      resolveSegmentVoiceStyle: (text) => ({
+        instruction: text.includes('！') ? '兴奋' : '别扭',
+        rate: 1,
+        pitch: 1,
+      }),
+    },
+  )
+  void controller.waitForCompletion().catch(() => undefined)
+
+  controller.pushDelta('今天天气真好！')
+  await ticks()
+  // Nothing is synthesized until the whole reply is known.
+  assert.equal(harness.pushes.length, 0)
+
+  controller.pushDelta('我才不会这样呢……')
+  controller.finish()
+  await ticks()
+
+  assert.equal(harness.pushes.length, 1, 'one request for the whole reply')
+  assert.equal(harness.pushes[0]!.text, '今天天气真好！我才不会这样呢…')
+  // The style is resolved once from the whole reply, not per sentence.
+  assert.match(String(harness.pushes[0]!.style?.instruction), /兴奋/)
+})
+
+test('Qwen3 splits only very long replies, at sentence ends, into a few chunks', async () => {
+  assert.equal(prefersWholeReplySegments('qwen3-tts-local'), true)
+  assert.equal(prefersWholeReplySegments('openai-tts'), false)
+
+  const longReply = '第一句内容。第二句内容。第三句内容。第四句内容。'.repeat(20)
+  const chunks = splitReplyForSingleGeneration(longReply, 400)
+  assert.ok(chunks.length > 1 && chunks.length <= 4, `saw ${chunks.length} chunks`)
+  for (const chunk of chunks) {
+    assert.ok(chunk.length <= 520, `chunk too long: ${chunk.length}`)
+    assert.match(chunk, /。$/u)
+  }
+  assert.equal(chunks.join(''), longReply)
 })
 
 test('abort mid-stream sends exactly one ttsStreamAbort', async () => {
