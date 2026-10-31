@@ -69,6 +69,7 @@ export const enVoice = {
   'voice.provider.vad.silero_fallback': 'Silero VAD couldn\'t start — switched to compatibility recording mode.',
   'voice.provider.vad.silero_fallback_detail': '{fallback} Original error: {original}',
   'voice.provider.vad.input_not_enabled': 'Please enable speech input in settings first.',
+  'voice.service.model_missing': 'The local voice model isn\'t installed. Download it in Settings → Voice, then try again.',
   'voice.streaming_tts.first_audio_timeout': 'Streaming TTS did not produce audio within 6 seconds.',
   'voice.streaming_tts.tool_call_filler': 'Let me check.',
   'voice.status.continuous_tencent_start': 'Tencent Cloud live recognition is on — go ahead and speak.',

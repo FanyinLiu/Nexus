@@ -312,9 +312,9 @@ export const REQUIRED_PHRASES = [
     file: 'electron/ttsStreamService.js',
     phrases: [
       "import { getRedactedErrorMessage } from './services/errorRedaction.js'",
-      'const message = getRedactedErrorMessage(err) || \'流式音频传输中断。\'',
+      'const message = getRedactedErrorMessage(err)',
       "console.error('[TTS-Stream] PCM stream error:', message)",
-      'message,',
+      'message: SPEECH_IPC_ERROR_CODES.TTS_STREAM_INTERRUPTED,',
     ],
   },
   {

@@ -67,6 +67,7 @@ export const zhCNVoice = {
   'voice.provider.vad.silero_fallback': 'Silero VAD 没能启动，已自动切到兼容录音模式。',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 原始信息：{original}',
   'voice.provider.vad.input_not_enabled': '请先在设置中启用语音输入。',
+  'voice.service.model_missing': '本地语音模型还没安装。去「设置 → 语音」里下载后再试。',
   'voice.streaming_tts.first_audio_timeout': '流式 TTS 超过 6 秒仍未产出音频。',
   'voice.streaming_tts.tool_call_filler': '让我看一下。',
   'voice.status.continuous_tencent_start': '腾讯云实时识别已开启，开始说话吧。',

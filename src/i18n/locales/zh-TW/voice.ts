@@ -69,6 +69,7 @@ export const zhTWVoice = {
   'voice.provider.vad.silero_fallback': 'Silero VAD 沒能啟動，已自動切換到相容錄音模式。',
   'voice.provider.vad.silero_fallback_detail': '{fallback} 原始資訊：{original}',
   'voice.provider.vad.input_not_enabled': '請先在設定中啟用語音輸入。',
+  'voice.service.model_missing': '本機語音模型還沒安裝。到「設定 → 語音」裡下載後再試。',
   'voice.streaming_tts.first_audio_timeout': '串流 TTS 超過 6 秒仍未產出音訊。',
   'voice.streaming_tts.tool_call_filler': '讓我看一下。',
   'voice.status.continuous_tencent_start': '騰訊雲即時辨識已啟用，開始說話吧。',

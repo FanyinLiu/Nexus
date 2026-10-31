@@ -7,7 +7,11 @@ import {
   SPEECH_IPC_ERROR_CODES,
   extractSpeechIpcErrorCode,
 } from '../shared/speechErrorCodes.js'
-import { humanizeError, humanizeIfSpeechIpcError } from '../src/lib/humanizeError.ts'
+import {
+  humanizeError,
+  humanizeIfSpeechIpcError,
+  humanizeVoiceError,
+} from '../src/lib/humanizeError.ts'
 import { getSpeechOutputErrorMessage } from '../src/hooks/chat/support.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
@@ -35,6 +39,27 @@ test('humanizeError maps speech timeout codes instead of leaking the token', () 
   const stt = humanizeError(new Error(SPEECH_IPC_ERROR_CODES.STT_TIMEOUT), 'stt')
   assert.match(stt, /(too long|faster|try)/i)
   assert.doesNotMatch(stt, /NEXUS_ERR_STT_TIMEOUT/)
+})
+
+test('TTS stream and sherpa service codes map to localized copy', () => {
+  const cases = [
+    [SPEECH_IPC_ERROR_CODES.TTS_EMPTY_AUDIO, 'humanize.tts.empty_audio'],
+    [SPEECH_IPC_ERROR_CODES.TTS_UNSUPPORTED_FORMAT, 'humanize.tts.unsupported_audio'],
+    [SPEECH_IPC_ERROR_CODES.TTS_DECODE_FAILED, 'humanize.tts.unsupported_audio'],
+    [SPEECH_IPC_ERROR_CODES.TTS_NOT_CONFIGURED, 'humanize.tts.not_configured'],
+    [SPEECH_IPC_ERROR_CODES.TTS_STREAM_INTERRUPTED, 'humanize.connection_dropped'],
+    [SPEECH_IPC_ERROR_CODES.TTS_INVALID_SESSION, 'voice.error.generic'],
+    [SPEECH_IPC_ERROR_CODES.SHERPA_MODEL_MISSING, 'voice.service.model_missing'],
+    [SPEECH_IPC_ERROR_CODES.SHERPA_ENGINE_MISSING, 'voice.provider.sensevoice.node_missing'],
+    [SPEECH_IPC_ERROR_CODES.SHERPA_START_FAILED, 'voice.error.engine'],
+  ] as const
+
+  for (const [code, key] of cases) {
+    const wrapped = new Error(`Error invoking remote method 'tts:stream-start': Error: ${code}`)
+    assert.equal(humanizeError(wrapped, 'tts'), enMessages[key], code)
+    assert.equal(humanizeVoiceError(wrapped), enMessages[key], code)
+    assert.doesNotMatch(humanizeError(wrapped, 'tts'), new RegExp(code))
+  }
 })
 
 test('humanizeIfSpeechIpcError ignores non-coded speech copy', () => {

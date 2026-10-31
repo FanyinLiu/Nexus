@@ -110,6 +110,15 @@ const PET_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
 const SPEECH_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
   [SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT]: { key: 'humanize.timeout' },
   [SPEECH_IPC_ERROR_CODES.STT_TIMEOUT]: { key: 'humanize.timeout' },
+  [SPEECH_IPC_ERROR_CODES.TTS_DECODE_FAILED]: { key: 'humanize.tts.unsupported_audio' },
+  [SPEECH_IPC_ERROR_CODES.TTS_EMPTY_AUDIO]: { key: 'humanize.tts.empty_audio' },
+  [SPEECH_IPC_ERROR_CODES.TTS_STREAM_INTERRUPTED]: { key: 'humanize.connection_dropped' },
+  [SPEECH_IPC_ERROR_CODES.TTS_UNSUPPORTED_FORMAT]: { key: 'humanize.tts.unsupported_audio' },
+  [SPEECH_IPC_ERROR_CODES.TTS_NOT_CONFIGURED]: { key: 'humanize.tts.not_configured' },
+  [SPEECH_IPC_ERROR_CODES.TTS_INVALID_SESSION]: { key: 'voice.error.generic' },
+  [SPEECH_IPC_ERROR_CODES.SHERPA_MODEL_MISSING]: { key: 'voice.service.model_missing' },
+  [SPEECH_IPC_ERROR_CODES.SHERPA_ENGINE_MISSING]: { key: 'voice.provider.sensevoice.node_missing' },
+  [SPEECH_IPC_ERROR_CODES.SHERPA_START_FAILED]: { key: 'voice.error.engine' },
 }
 
 const NET_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
@@ -201,6 +210,9 @@ const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
   'humanize.voice.mic_busy': 'Microphone is busy with another app. Close it and try again.',
   'humanize.voice.mic_not_responding': 'The microphone isn\'t responding. Check that it\'s plugged in and not in use by another app, then try again.',
   'humanize.tts.voice_unavailable': 'That voice isn\'t available. Pick another in Settings → Speech Output.',
+  'humanize.tts.empty_audio': 'The speech service sent back no audio. Try again, or pick another voice in Settings → Speech Output.',
+  'humanize.tts.unsupported_audio': 'That voice returned an audio format Nexus can\'t play. Pick another voice in Settings → Speech Output.',
+  'humanize.tts.not_configured': 'Speech output isn\'t set up yet. Choose a voice in Settings → Speech Output.',
   'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
@@ -468,6 +480,13 @@ export function humanizeVoiceError(
       `[Voice] ${category} error:`,
       redactSensitive(raw),
     )
+  }
+  // Stable main-process tokens classify better than any regex, including on
+  // the playback path where a TTS stream code arrives through `onError`.
+  const speechCode = extractSpeechIpcErrorCode(error)
+  const speechCodeMapping = speechCode ? SPEECH_IPC_CODE_KEYS[speechCode] : undefined
+  if (speechCodeMapping) {
+    return lookupTranslation(speechCodeMapping.key, undefined, options.ti ?? t)
   }
   if (options.category !== 'playback') {
     const permissionSentence = humanizeMicPermissionError(error, {

@@ -10,11 +10,13 @@ import {
   downloadMissingRequired,
   getNetworkProbe,
 } from '../services/modelManager.js'
+import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
 import { requireTrustedSender } from './validate.js'
 import {
   validateKwsOptionsPayload,
   validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
+  validateTurnEndSessionPayload,
   validateVadStartPayload,
 } from './payloadSchemas.js'
 
@@ -30,11 +32,12 @@ export function register() {
     payload = validateKwsOptionsPayload('kws:start', payload)
     const status = sherpaKwsService.getStatus(payload)
     if (!status.modelFound) {
-      throw new Error(status.reason || '唤醒词模型未安装，请在设置 → 本地模型向导里下载。')
+      if (status.reason) console.warn('[KWS] model unavailable:', status.reason)
+      throw new Error(SPEECH_IPC_ERROR_CODES.SHERPA_MODEL_MISSING)
     }
     const ok = sherpaKwsService.start(payload)
     if (!ok) {
-      throw new Error('唤醒词引擎没能启动。')
+      throw new Error(SPEECH_IPC_ERROR_CODES.SHERPA_START_FAILED)
     }
     return { ok: true, sampleRate: 16000 }
   })
@@ -109,12 +112,12 @@ export function register() {
       const status = sherpaSenseVoiceService.getStatus()
       throw new Error(
         status.installed
-          ? 'SenseVoice 模型未安装，请在设置 → 本地模型向导里点击下载。'
-          : 'sherpa-onnx-node 原生模块没能加载，可能是安装不完整。',
+          ? SPEECH_IPC_ERROR_CODES.SHERPA_MODEL_MISSING
+          : SPEECH_IPC_ERROR_CODES.SHERPA_ENGINE_MISSING,
       )
     }
     const ok = sherpaSenseVoiceService.startStream()
-    if (!ok) throw new Error('SenseVoice 没能启动。')
+    if (!ok) throw new Error(SPEECH_IPC_ERROR_CODES.SHERPA_START_FAILED)
     return { ok: true, sampleRate: 16000 }
   })
 
@@ -168,12 +171,12 @@ export function register() {
       const status = sherpaParaformerService.getStatus()
       throw new Error(
         status.installed
-          ? 'Paraformer 模型未安装，请在设置 → 本地模型向导里下载（可选模型，默认使用 SenseVoice）。'
-          : 'sherpa-onnx-node 原生模块没能加载，可能是安装不完整。',
+          ? SPEECH_IPC_ERROR_CODES.SHERPA_MODEL_MISSING
+          : SPEECH_IPC_ERROR_CODES.SHERPA_ENGINE_MISSING,
       )
     }
     const ok = sherpaParaformerService.startStream()
-    if (!ok) throw new Error('Paraformer 没能启动。')
+    if (!ok) throw new Error(SPEECH_IPC_ERROR_CODES.SHERPA_START_FAILED)
     return { ok: true, sampleRate: 16000 }
   })
 
@@ -207,19 +210,19 @@ export function register() {
 
   ipcMain.handle('voice-turn:start', (event) => {
     requireTrustedSender(event)
-    smartTurnService.startSession()
-    return { ok: true }
+    return smartTurnService.startSession()
   })
 
-  ipcMain.handle('voice-turn:probe', async (event) => {
+  ipcMain.handle('voice-turn:probe', async (event, payload) => {
     requireTrustedSender(event)
-    return smartTurnService.probe()
+    payload = validateTurnEndSessionPayload(payload)
+    return smartTurnService.probe(payload?.sessionId)
   })
 
-  ipcMain.handle('voice-turn:stop', (event) => {
+  ipcMain.handle('voice-turn:stop', (event, payload) => {
     requireTrustedSender(event)
-    smartTurnService.stopSession()
-    return { ok: true }
+    payload = validateTurnEndSessionPayload(payload)
+    return smartTurnService.stopSession(payload?.sessionId)
   })
 
   // ── Model manager (first-launch setup wizard) ──
