@@ -3,6 +3,8 @@
     "electron/preload.js",
     "scripts/**/*.mjs",
     "scripts/**/*.cjs",
+    "src/types/desktopPetBridgeContract.ts",
+    "src/types/generated/desktopPetBridge.generated.ts",
     "tests/benchmarks.bench.ts",
     "tests/fixtures/settingsSurfaceAuditBaseline.ts",
     "tests/helpers/bundler-import-hooks.mjs",
