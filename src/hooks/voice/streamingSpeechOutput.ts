@@ -631,6 +631,12 @@ export function createStreamingSpeechOutputController(
       }
 
       if (wholeReplySegments) {
+        // Whole-reply providers still need their sidecar warm-up, which runs
+        // inside ttsStreamStart. Kick it off on the first delta so the model
+        // loads while the LLM is still generating instead of after finish().
+        if (!startPromise) {
+          void ensureStarted().catch(() => undefined)
+        }
         wholeReplyBuffer += delta
         return
       }
