@@ -1,4 +1,5 @@
 # Python dependencies for Nexus AI services (OmniVoice TTS + GLM-ASR STT).
+# For the optional Qwen3-TTS Python fallback, see requirements-qwen3.txt.
 # GPU users: install PyTorch with CUDA first:
 #   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126
 # Then:

@@ -1,0 +1,13 @@
+# Python dependencies for the optional Qwen3-TTS fallback sidecar
+# (scripts/qwen3_tts_server.py), used by the app through a dedicated virtualenv.
+# qwen-tts pins transformers==4.57.3, which conflicts with the transformers>=5.0.0
+# in requirements.txt, so it CANNOT share an environment with the OmniVoice /
+# GLM-ASR setup. Install it into its own venv (Python 3.10+ recommended, the
+# system Python is often too old):
+#   python3 -m venv ~/Models/qwen3-tts/.venv
+#   ~/Models/qwen3-tts/.venv/bin/pip install -r requirements-qwen3.txt
+# Set NEXUS_QWEN3_TTS_PYTHON to point the sidecar at a different interpreter.
+
+torch
+numpy
+qwen-tts==0.1.1

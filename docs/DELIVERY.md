@@ -128,11 +128,15 @@ via `--x64 --arm64`):
    progress bars; "稍后再说" is remembered on this computer, so the wizard
    does not open again on a later launch. The next time the user tries to
    talk, the pet says once where to download the models.
-8. **Python fallback.** On a mac without `pip install -r requirements.txt`,
-   the OmniVoice / GLM-ASR sidecars are skipped at startup. Log output
-   should show one of: `[OmniVoice] Skipping auto-start — Python
-   prerequisites not met.` or `[OmniVoice] Script not bundled in this
-   build — skipping auto-start.` — never a Python traceback.
+8. **Python fallback.** `requirements.txt` covers the OmniVoice / GLM-ASR
+   sidecars. The optional Qwen3-TTS Python fallback needs
+   `requirements-qwen3.txt` installed into its own virtualenv
+   (`~/Models/qwen3-tts/.venv`; `NEXUS_QWEN3_TTS_PYTHON` can point elsewhere).
+   Without it the Qwen3 sidecar is skipped. On a mac without
+   `pip install -r requirements.txt`, the OmniVoice / GLM-ASR sidecars are
+   skipped at startup. Log output should show one of: `[OmniVoice] Skipping
+   auto-start — Python prerequisites not met.` or `[OmniVoice] Script not
+   bundled in this build — skipping auto-start.` — never a Python traceback.
 
 Validated macOS commands:
 
