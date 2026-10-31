@@ -132,25 +132,62 @@ const ZH_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
   whisper: '像说悄悄话一样，用气声，声音很轻很小。',
 }
 
+// The local Qwen3 C server follows vivid natural-language direction much more
+// strongly than the old mild clauses, and T6 still has nineteen categories.
+// Map every category to the nearest of the six stronger groups. The
+// delivery-only shades (sleepy, worried, whisper) keep a dedicated strong line
+// where a group would change what she is doing — `worried` in particular is
+// the caring fallback for a sad USER. The C server's `emotion` steering field
+// and inline [mood] markup stay unused: both changed the timbre unintelligibly.
+const QWEN3_ZH_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
+  // neutral / calm
+  thinking: '自然放松地说话，像跟熟人平常聊天，语气温和。',
+  calm: '自然放松地说话，像跟熟人平常聊天，语气温和。',
+  curious: '自然放松地说话，像跟熟人平常聊天，语气温和。',
+  // happy / excited
+  happy: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  excited: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  surprised: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  proud: '非常开心、兴奋，笑着说话，声音明亮上扬，带着雀跃的笑意。',
+  // coquettish / affectionate / sulky
+  affectionate: '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。',
+  sulky: '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。',
+  playful: '撒娇的语气，声音软软的、黏黏的，尾音拖长上扬，有点委屈又想被哄。',
+  // sad / worried: the low, tearful shade is for her own sadness; `worried`
+  // is also the caring fallback for a sad USER, so it keeps a concerned
+  // delivery instead of mirroring their sadness.
+  sad: '难过、低落，声音轻而低沉，说话无力，带着一点哽咽和叹气。',
+  worried: '关切、温柔地说话，声音放轻，带着担心和安慰。',
+  sleepy: '困倦、懒懒地说话，声音软而慢，带着一点睡意和哈欠。',
+  // angry
+  angry: '很生气，语气冲、带着不满和责备，声音有力，咬字重。',
+  // shy / hesitant
+  embarrassed: '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。',
+  hesitant: '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。',
+  confused: '很害羞，声音小、轻柔，说话有点结巴和犹豫，带着不好意思的笑。',
+  // A secret is not shyness: keep the breathy delivery the old table had.
+  whisper: '用气声说悄悄话，声音很轻很小，像怕被人听见。',
+}
+
 const EN_INSTRUCTION: Record<Exclude<SegmentEmotion, 'idle'>, string> = {
-  thinking: 'Speak thoughtfully and unhurried.',
-  happy: 'Speak with a light, happy lilt.',
-  sleepy: 'Speak slowly and drowsily.',
-  surprised: 'Speak with a short, surprised brightness.',
-  confused: 'Speak hesitantly, as if working it out.',
-  embarrassed: 'Speak shyly and softly.',
-  excited: 'Sound thrilled and energized, a bit louder and brighter.',
-  affectionate: 'Speak warmly and close, as if murmuring.',
-  proud: 'Speak with quiet, restrained pride.',
-  curious: 'Speak with a curious lift at the end.',
-  worried: 'Speak gently, with a note of concern.',
-  playful: 'Speak with a playful, teasing smile.',
-  sad: 'Speak softly and a little downcast.',
-  angry: 'Speak with a raised, forceful, angry voice.',
-  sulky: 'Mumble sulkily, lower and quieter, pretending not to care.',
-  hesitant: 'Speak hesitantly, letting the ending trail off.',
-  calm: 'Stay calm and steady, a little slower, without pushing back.',
-  whisper: 'Speak very quietly, almost inaudible, using breath instead of voice.',
+  thinking: 'Speak naturally and at ease, like chatting with someone close, in a warm, gentle tone.',
+  happy: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  sleepy: 'Sound drowsy and lazy; speak slowly and softly, with a little sleepiness and a yawn.',
+  surprised: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  confused: 'Sound very shy: a small, soft voice, a little stammering and hesitant, with an embarrassed smile.',
+  embarrassed: 'Sound very shy: a small, soft voice, a little stammering and hesitant, with an embarrassed smile.',
+  excited: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  affectionate: 'Use a coquettish, clingy tone: soft and sweet, drawing out the ends of words upward, a little hurt and wanting to be coaxed.',
+  proud: 'Sound overjoyed and excited, speaking with a smile: bright, lifted, with a delighted laugh in your voice.',
+  curious: 'Speak naturally and at ease, like chatting with someone close, in a warm, gentle tone.',
+  worried: 'Speak with gentle concern, a softer voice, carrying worry and comfort.',
+  playful: 'Use a coquettish, clingy tone: soft and sweet, drawing out the ends of words upward, a little hurt and wanting to be coaxed.',
+  sad: 'Sound sad and low; speak softly and weakly, with a catch in your throat and a sigh.',
+  angry: 'Sound very angry: sharp, forceful, full of complaint and reproach, with hard consonants.',
+  sulky: 'Use a coquettish, clingy tone: soft and sweet, drawing out the ends of words upward, a little hurt and wanting to be coaxed.',
+  hesitant: 'Sound very shy: a small, soft voice, a little stammering and hesitant, with an embarrassed smile.',
+  calm: 'Speak naturally and at ease, like chatting with someone close, in a warm, gentle tone.',
+  whisper: 'Whisper with breath instead of voice, very quiet and small, as if afraid of being overheard.',
 }
 
 /** Cue words the model may emit; unknown words fall through to the text/snapshot. */
@@ -396,8 +433,13 @@ function colorInstruction(
   emotion: Exclude<SegmentEmotion, 'idle'>,
   style: PersonaSpeechStyle | undefined,
   language: Exclude<InstructionLanguage, 'none'>,
+  providerId: string,
 ): string {
-  const base = language === 'zh' ? ZH_INSTRUCTION[emotion] : EN_INSTRUCTION[emotion]
+  // The local C server takes the stronger six-group directions; every other
+  // Chinese-speaking provider keeps its long-standing mild clauses.
+  const base = language === 'zh'
+    ? (providerId === 'qwen3-tts-local' ? QWEN3_ZH_INSTRUCTION[emotion] : ZH_INSTRUCTION[emotion])
+    : EN_INSTRUCTION[emotion]
   const normalized = normalizePersonaSpeechStyle(style)
   if (!normalized) return base
 
@@ -553,7 +595,7 @@ export function resolveSegmentVoiceStyle(input: SegmentVoiceStyleInput): Segment
   const language = providerInstructionLanguage(input.providerId)
   const instruction = language === 'none'
     ? NEUTRAL_INSTRUCTION
-    : colorInstruction(emotion, input.speechStyle ?? undefined, language)
+    : colorInstruction(emotion, input.speechStyle ?? undefined, language, input.providerId)
   const nudge = EMOTION_NUDGES[emotion]
   const style: SegmentVoiceStyle = {
     instruction,
