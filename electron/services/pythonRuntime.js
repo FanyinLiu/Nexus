@@ -200,7 +200,7 @@ export async function ensurePythonRuntimeStatusFor(serviceId, options = {}) {
     if (!detected) {
       if (!_noPythonLogged) {
         _noPythonLogged = true
-        console.info('[Python] No Python interpreter found — OmniVoice TTS, Qwen3-TTS, and GLM-ASR will be disabled. Install Python 3.10+ and pip install -r requirements.txt to enable them.')
+        console.info('[Python] No Python interpreter found — OmniVoice TTS, Qwen3-TTS, and GLM-ASR will be disabled. Install Python 3.10+ and pip install -r requirements.txt (Qwen3-TTS uses requirements-qwen3.txt in its own venv) to enable them.')
       }
       return {
         pythonAvailable: false,
