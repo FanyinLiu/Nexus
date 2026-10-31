@@ -7,6 +7,7 @@
     "tests/fixtures/settingsSurfaceAuditBaseline.ts",
     "tests/helpers/bundler-import-hooks.mjs",
     "tests/helpers/electron-main-stub-hooks.mjs",
+    "tests/helpers/electron-net-stub-hooks.mjs",
     "tests/helpers/mcp-host-hooks.mjs",
     "tests/helpers/memory-vector-electron-hooks.mjs",
     "tests/helpers/memory-vector-electron-stub.mjs",

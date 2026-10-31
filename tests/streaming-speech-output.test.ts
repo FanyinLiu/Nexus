@@ -305,6 +305,44 @@ test('Qwen3 buffers the whole reply into one generation with one style', async (
   assert.match(String(harness.pushes[0]!.style?.instruction), /兴奋/)
 })
 
+test('Qwen3 starts the stream on the first delta so warm-up overlaps the LLM', async () => {
+  const harness = createHarness()
+  const controller = createStreamingSpeechOutputController(
+    QWEN3_SETTINGS,
+    { getPlayer: () => harness.player as never },
+  )
+  void controller.waitForCompletion().catch(() => undefined)
+
+  controller.pushDelta('今天')
+  await ticks()
+
+  assert.equal(harness.startCalls.length, 1, 'stream/warm-up starts before finish()')
+  assert.equal(harness.pushes.length, 0, 'no synthesis before the whole reply is known')
+
+  controller.finish()
+  await ticks()
+  assert.equal(harness.pushes.length, 1)
+})
+
+test('aborting after an early start but before any segment still aborts the stream', async () => {
+  const harness = createHarness()
+  const controller = createStreamingSpeechOutputController(
+    QWEN3_SETTINGS,
+    { getPlayer: () => harness.player as never },
+  )
+  void controller.waitForCompletion().catch(() => undefined)
+
+  controller.pushDelta('今天')
+  await ticks()
+  assert.equal(harness.startCalls.length, 1)
+  assert.equal(harness.pushes.length, 0)
+
+  controller.abort()
+  await ticks()
+
+  assert.deepEqual(harness.abortCalls, [harness.startCalls[0]])
+})
+
 test('Qwen3 splits only very long replies, at sentence ends, into a few chunks', async () => {
   assert.equal(prefersWholeReplySegments('qwen3-tts-local'), true)
   assert.equal(prefersWholeReplySegments('openai-tts'), false)

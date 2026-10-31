@@ -3,9 +3,9 @@
  *
  * The decision itself lives in `src/features/hearing/turnEnd.ts`; this module
  * only owns the timing (probe at ~250 ms of silence, re-check every ~300 ms),
- * the single-flight guard, and the fallback latch when the model is missing or
- * slower than its latency budget. Every provider runner feeds it the same
- * silence clock it already maintained for T7.
+ * the single-flight guard, and the fallback latch when the model is missing,
+ * genuinely failing, or timed out on several consecutive probes. Every
+ * provider runner feeds it the same silence clock it already maintained for T7.
  */
 
 import {
@@ -22,9 +22,21 @@ export type SmartTurnProbeResult = {
   latencyMs?: number | null
   /** True when the probe exceeded the 150 ms inference budget. */
   timedOut?: boolean
-  /** Why no probability was returned; `loading` keeps retries alive. */
-  reason?: 'loading' | 'missing' | 'error' | 'too-short' | 'inactive'
+  /** Consecutive slow probes reported by the main process (diagnostics). */
+  consecutiveTimeouts?: number
+  /**
+   * Why no probability was returned. `timeout` is a latency miss and only
+   * disables the model after several in a row; `error`/`missing` are fatal.
+   */
+  reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
 }
+
+/**
+ * A single slow probe is usually a cold wasm/JIT tick, not a broken model.
+ * Keep the rule fallback for that pause and only latch the session off after
+ * this many consecutive latency misses.
+ */
+const SMART_TURN_TIMEOUT_DISABLE_AFTER = 3
 
 export type TurnEndContext = {
   partialTranscript: string
@@ -71,6 +83,7 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
   let lastProbeAt = 0
   let probability: number | null = null
   let modelUnavailable = false
+  let consecutiveTimeouts = 0
   let ended = false
   let observedLastSpeechAt: number | null = null
 
@@ -83,14 +96,23 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
           && typeof result.probability === 'number'
           && Number.isFinite(result.probability)) {
           probability = result.probability
+          consecutiveTimeouts = 0
         } else if (result.reason === 'loading' || result.reason === 'too-short') {
           // The model is still warming up or the utterance is shorter than a
           // probe window. Keep the fallback for this pause but allow a retry.
           probability = null
+        } else if (result.timedOut === true || result.reason === 'timeout') {
+          // A slow probe only costs this pause the model verdict. Disable the
+          // session once the latency misses are genuinely consecutive, so one
+          // cold JIT tick cannot turn Smart Turn off for the whole call.
+          consecutiveTimeouts += 1
+          probability = null
+          if (consecutiveTimeouts >= SMART_TURN_TIMEOUT_DISABLE_AFTER) {
+            modelUnavailable = true
+          }
         } else {
-          // One failed/too-slow probe disables the model for this session;
-          // the T7 text rules and the provider preset take over without
-          // paying another 150 ms stall on every pause.
+          // A real load/inference error (missing model, runner threw) is not
+          // worth another 150 ms stall on every pause.
           modelUnavailable = true
           probability = null
         }
@@ -98,6 +120,8 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
         tick()
       })
       .catch(() => {
+        // The probe bridge itself rejected: treat it as a real inference
+        // error and fall back immediately.
         modelUnavailable = true
         probability = null
         inFlight = false
@@ -162,6 +186,7 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
       lastProbeAt = 0
       probability = null
       modelUnavailable = false
+      consecutiveTimeouts = 0
       ended = false
       observedLastSpeechAt = null
     },
