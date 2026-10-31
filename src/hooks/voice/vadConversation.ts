@@ -17,6 +17,7 @@ import {
   createDesktopTurnEndProbe,
   startDesktopTurnEndSession,
   stopDesktopTurnEndSession,
+  type TurnEndSessionRef,
 } from './smartTurnProbe.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
@@ -192,6 +193,10 @@ export async function startVadConversation(
   let speechStartedAt: number | null = null
   let lastSpeechAt = 0
   let turnEnd: TurnEndController | null = null
+  // Only the frame-driver path sends audio to the main Smart Turn ring. The
+  // MicVAD fallback owns its samples in the renderer, so starting a main
+  // session there would only produce "too short" probes every 300 ms.
+  let turnEndSession: TurnEndSessionRef = null
 
   const handleSpeechStart = () => {
     if (params.vadSessionRef.current !== session) return
@@ -253,7 +258,7 @@ export async function startVadConversation(
 
     params.vadSessionRef.current = null
     params.backchannel?.stop()
-    stopDesktopTurnEndSession()
+    stopDesktopTurnEndSession(turnEndSession)
     if (session.noSpeechTimer) {
       window.clearTimeout(session.noSpeechTimer)
     }
@@ -421,8 +426,12 @@ export async function startVadConversation(
       }
     }
 
+    if (useFrameDriver) turnEndSession = startDesktopTurnEndSession()
     turnEnd = createTurnEndController({
-      probe: createDesktopTurnEndProbe(),
+      probe: useFrameDriver
+        ? createDesktopTurnEndProbe(turnEndSession)
+        // Rule-based fallback: no Smart Turn session or probe IPC at all.
+        : async () => ({ available: false, probability: null, reason: 'missing' }),
       getContext: () => ({
         partialTranscript: '',
         locale: params.currentSettings.speechRecognitionLang,
@@ -454,7 +463,6 @@ export async function startVadConversation(
     })
 
     params.vadSessionRef.current = session
-    startDesktopTurnEndSession()
     params.beginVoiceListeningSession(
       params.transcribeMode === 'local' ? 'local_vad' : 'remote_vad',
     )
@@ -498,7 +506,7 @@ export async function startVadConversation(
 
       console.warn('[VAD] destroy source: noSpeechTimer')
       void params.destroyVadSession(session)
-      stopDesktopTurnEndSession()
+      stopDesktopTurnEndSession(turnEndSession)
       params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
     }, API_RECORDING_MAX_IDLE_MS)
 
@@ -508,7 +516,7 @@ export async function startVadConversation(
       if (!session.speechDetected) {
         console.warn('[VAD] destroy source: maxDurationTimer (no speech)')
         void params.destroyVadSession(session)
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
         return
       }
@@ -545,7 +553,7 @@ export async function startVadConversation(
     }
   } catch (error) {
     params.backchannel?.stop()
-    stopDesktopTurnEndSession()
+    stopDesktopTurnEndSession(turnEndSession)
     // Partial-init cleanup: anything we wired up before throwing must
     // be torn down here, otherwise mainVad / detector / timers / the
     // session ref leak. Iterate every possible state.

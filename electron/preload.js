@@ -178,8 +178,8 @@ contextBridge.exposeInMainWorld('desktopPet', {
 
   // Smart Turn v3 end-of-turn probe over the session's in-memory audio ring
   turnEndStart: () => ipcRenderer.invoke('voice-turn:start'),
-  turnEndProbe: () => ipcRenderer.invoke('voice-turn:probe'),
-  turnEndStop: () => ipcRenderer.invoke('voice-turn:stop'),
+  turnEndProbe: (payload) => ipcRenderer.invoke('voice-turn:probe', payload),
+  turnEndStop: (payload) => ipcRenderer.invoke('voice-turn:stop', payload),
 
   // Tencent Cloud Real-Time ASR
   tencentAsrConnect: (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),

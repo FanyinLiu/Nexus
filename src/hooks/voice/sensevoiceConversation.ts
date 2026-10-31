@@ -36,6 +36,7 @@ import {
   createDesktopTurnEndProbe,
   startDesktopTurnEndSession,
   stopDesktopTurnEndSession,
+  type TurnEndSessionRef,
 } from './smartTurnProbe.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
@@ -144,6 +145,7 @@ export async function startSenseVoiceConversation(
   // Hoisted so outer catch can abort a session that got assigned by
   // startSenseVoiceStream before ref assignment completed.
   let session: SenseVoiceStreamSession | null = null
+  let turnEndSession: TurnEndSessionRef = null
 
   try {
     const traceId = createId('voice')
@@ -168,7 +170,7 @@ export async function startSenseVoiceConversation(
         if (!speechDetected) {
           finalizing = true
           params.backchannel?.stop()
-          stopDesktopTurnEndSession()
+          stopDesktopTurnEndSession(turnEndSession)
           params.clearSenseVoiceConversationState()
           session.abort()
           params.sensevoiceSessionRef.current = null
@@ -187,7 +189,7 @@ export async function startSenseVoiceConversation(
 
       finalizing = true
       params.backchannel?.stop()
-      stopDesktopTurnEndSession()
+      stopDesktopTurnEndSession(turnEndSession)
       params.clearSenseVoiceConversationState()
 
       try {
@@ -230,8 +232,9 @@ export async function startSenseVoiceConversation(
       }
     }
 
+    turnEndSession = startDesktopTurnEndSession()
     const turnEnd = createTurnEndController({
-      probe: createDesktopTurnEndProbe(),
+      probe: createDesktopTurnEndProbe(turnEndSession),
       getContext: () => ({
         partialTranscript: '',
         locale: params.currentSettings.speechRecognitionLang,
@@ -256,7 +259,6 @@ export async function startSenseVoiceConversation(
     })
 
     params.beginVoiceListeningSession('local_sensevoice')
-    startDesktopTurnEndSession()
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
@@ -314,7 +316,7 @@ export async function startSenseVoiceConversation(
 
         finalizing = true
         params.backchannel?.stop()
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.clearSenseVoiceConversationState()
         params.sensevoiceSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -342,7 +344,7 @@ export async function startSenseVoiceConversation(
       if (!speechDetected) {
         finalizing = true
         params.backchannel?.stop()
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.clearSenseVoiceConversationState()
         session.abort()
         params.sensevoiceSessionRef.current = null
@@ -354,7 +356,7 @@ export async function startSenseVoiceConversation(
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
     params.backchannel?.stop()
-    stopDesktopTurnEndSession()
+    stopDesktopTurnEndSession(turnEndSession)
     params.clearSenseVoiceConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

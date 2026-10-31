@@ -29,6 +29,10 @@ export type SmartTurnProbeResult = {
    * disables the model after several in a row; `error`/`missing` are fatal.
    */
   reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
+  /** Generation this result belongs to, when the main process reported one. */
+  sessionId?: number
+  /** True when the probe finished after its voice turn was replaced/stopped. */
+  stale?: boolean
 }
 
 /**
@@ -86,12 +90,22 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
   let consecutiveTimeouts = 0
   let ended = false
   let observedLastSpeechAt: number | null = null
+  // Invalidates the resolver of a probe that was in flight when reset() ran.
+  let probeEpoch = 0
 
   function startProbe() {
+    const epoch = probeEpoch
     inFlight = true
     lastProbeAt = now()
     void deps.probe()
       .then((result) => {
+        if (epoch !== probeEpoch) return
+        if (result.stale === true) {
+          // The turn this probe belonged to is gone; leave the current session
+          // untouched and let the next silence frame schedule a fresh probe.
+          inFlight = false
+          return
+        }
         if (result.available && !result.timedOut
           && typeof result.probability === 'number'
           && Number.isFinite(result.probability)) {
@@ -120,6 +134,7 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
         tick()
       })
       .catch(() => {
+        if (epoch !== probeEpoch) return
         // The probe bridge itself rejected: treat it as a real inference
         // error and fall back immediately.
         modelUnavailable = true
@@ -182,6 +197,7 @@ export function createTurnEndController(deps: TurnEndControllerDeps): TurnEndCon
   return {
     tick,
     reset() {
+      probeEpoch += 1
       inFlight = false
       lastProbeAt = 0
       probability = null

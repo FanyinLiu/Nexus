@@ -40,6 +40,7 @@ import {
   createDesktopTurnEndProbe,
   startDesktopTurnEndSession,
   stopDesktopTurnEndSession,
+  type TurnEndSessionRef,
 } from './smartTurnProbe.ts'
 import type { VoiceConversationOptions } from './types.ts'
 
@@ -157,6 +158,7 @@ export async function startTencentConversation(
   // Hoisted so outer catch can abort a session that got assigned before
   // ref assignment completed.
   let session: TencentAsrStreamSession | null = null
+  let turnEndSession: TurnEndSessionRef = null
 
   try {
     const traceId = createId('voice')
@@ -182,7 +184,7 @@ export async function startTencentConversation(
         if (!speechDetected) {
           finalizing = true
           params.backchannel?.stop()
-          stopDesktopTurnEndSession()
+          stopDesktopTurnEndSession(turnEndSession)
           params.clearTencentConversationState()
           session.abort()
           params.tencentAsrSessionRef.current = null
@@ -214,7 +216,7 @@ export async function startTencentConversation(
 
       finalizing = true
       params.backchannel?.stop()
-      stopDesktopTurnEndSession()
+      stopDesktopTurnEndSession(turnEndSession)
       params.clearTencentConversationState()
 
       try {
@@ -247,8 +249,9 @@ export async function startTencentConversation(
       }
     }
 
+    turnEndSession = startDesktopTurnEndSession()
     const turnEnd = createTurnEndController({
-      probe: createDesktopTurnEndProbe(),
+      probe: createDesktopTurnEndProbe(turnEndSession),
       getContext: () => ({
         partialTranscript: latestText,
         locale: params.currentSettings.speechRecognitionLang,
@@ -277,7 +280,6 @@ export async function startTencentConversation(
     })
 
     params.beginVoiceListeningSession('tencent_asr' as VoiceSessionTransport)
-    startDesktopTurnEndSession()
     params.setMood('happy')
     params.setError(null)
     params.setLiveTranscript('')
@@ -360,7 +362,7 @@ export async function startTencentConversation(
 
         finalizing = true
         params.backchannel?.stop()
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.clearTencentConversationState()
         params.tencentAsrSessionRef.current = null
         params.handleVoiceListeningFailure(message)
@@ -381,7 +383,7 @@ export async function startTencentConversation(
       if (!speechDetected) {
         finalizing = true
         params.backchannel?.stop()
-        stopDesktopTurnEndSession()
+        stopDesktopTurnEndSession(turnEndSession)
         params.clearTencentConversationState()
         session.abort()
         params.tencentAsrSessionRef.current = null
@@ -393,7 +395,7 @@ export async function startTencentConversation(
     }, API_RECORDING_MAX_DURATION_MS)
   } catch (error) {
     params.backchannel?.stop()
-    stopDesktopTurnEndSession()
+    stopDesktopTurnEndSession(turnEndSession)
     params.clearTencentConversationState()
     params.setVoiceState('idle')
     params.setMood('idle')

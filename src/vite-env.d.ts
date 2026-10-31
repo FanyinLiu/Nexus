@@ -1043,16 +1043,20 @@ declare global {
       vadStop: () => Promise<{ ok: boolean }>
 
       // Smart Turn v3 end-of-turn probe. Audio stays in the main process.
-      turnEndStart: () => Promise<{ ok: boolean }>
-      turnEndProbe: () => Promise<{
+      // Every call for a turn carries the generation returned by start; the
+      // handler tolerates a missing payload for older callers.
+      turnEndStart: () => Promise<{ ok: boolean; sessionId?: number }>
+      turnEndProbe: (payload?: { sessionId?: number }) => Promise<{
         available: boolean
         probability: number | null
         latencyMs?: number | null
         timedOut?: boolean
         consecutiveTimeouts?: number
         reason?: 'loading' | 'missing' | 'error' | 'timeout' | 'too-short' | 'inactive'
+        sessionId?: number
+        stale?: boolean
       }>
-      turnEndStop: () => Promise<{ ok: boolean }>
+      turnEndStop: (payload?: { sessionId?: number }) => Promise<{ ok: boolean; stale?: boolean }>
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */
