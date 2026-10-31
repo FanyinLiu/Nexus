@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
+import { buildMainI18nReport } from './lib/i18n-main-audit.mjs'
+
 const root = process.cwd()
 
 /** Locale id → directory of per-namespace message modules. */
@@ -126,6 +128,16 @@ for (const [locale, result] of localeEntries) {
 if (issues.length) {
   console.error(`\nI18n audit failed with ${issues.length} issue(s):`)
   for (const issue of issues) console.error(`- ${issue}`)
+  process.exit(1)
+}
+
+const mainReport = await buildMainI18nReport({ root })
+console.log(
+  `main messages: locales=${mainReport.checkedLocales.length} keys=${mainReport.keyCount} used=${mainReport.usedKeyCount}`,
+)
+if (!mainReport.summary.ok) {
+  console.error(`\nMain-process i18n audit failed with ${mainReport.summary.errors} issue(s):`)
+  for (const issue of mainReport.issues) console.error(`- ${issue}`)
   process.exit(1)
 }
 

@@ -1,6 +1,7 @@
 import { systemPreferences, dialog, shell } from 'electron'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { mainT } from '../mainMessages.js'
 
 /**
  * macOS 隐私权限自检 + 引导。
@@ -33,7 +34,7 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }) {
     title,
     message,
     detail,
-    buttons: ['打开系统设置', '稍后'],
+    buttons: [mainT('permission.openSettings'), mainT('permission.later')],
     defaultId: 0,
     cancelId: 1,
     noLink: true,
@@ -67,9 +68,9 @@ async function ensureMicrophonePermission() {
 
     if (status === 'denied' || status === 'restricted') {
       await promptOpenSettings({
-        title: 'Nexus 需要麦克风权限',
-        message: '麦克风权限当前被拒绝。',
-        detail: 'Nexus 需要麦克风才能进行语音对话、唤醒词检测和语音识别。\n\n请在系统设置 → 隐私与安全性 → 麦克风 中勾选 Nexus,然后重启应用。\n\n开发模式下 macOS 识别到的请求方是你的终端 / IDE,打包后才会以 Nexus.app 身份申请权限。',
+        title: mainT('permission.microphoneTitle'),
+        message: mainT('permission.mac.microphoneMessage'),
+        detail: mainT('permission.mac.microphoneDetail'),
         settingsUrl: SETTINGS_URLS.microphone,
       })
       return status
@@ -99,9 +100,9 @@ async function ensureScreenPermission() {
 
     if (status === 'denied' || status === 'restricted') {
       await promptOpenSettings({
-        title: 'Nexus 需要屏幕录制权限',
-        message: '屏幕录制权限当前被拒绝。',
-        detail: 'Nexus 使用屏幕录制来感知你在做什么(OCR / 桌面上下文),让 AI 伙伴能根据画面内容做出反应。\n\n请在系统设置 → 隐私与安全性 → 屏幕录制与系统音频 中勾选 Nexus,然后重启应用。\n\n如果暂时不需要这个功能,可以关掉设置里的"桌面上下文",Nexus 不会再请求。',
+        title: mainT('permission.screenTitle'),
+        message: mainT('permission.mac.screenMessage'),
+        detail: mainT('permission.mac.screenDetail'),
         settingsUrl: SETTINGS_URLS.screen,
       })
       return status
@@ -122,7 +123,7 @@ async function ensureScreenPermission() {
  * 只在启动日志里打一条提示,方便调试。
  */
 function noteAutomationCaveat() {
-  console.info('[mac-perm] automation: 首次访问 Music/Spotify/System Events 时 OS 会自动询问权限')
+  console.info('[mac-perm] automation: the OS asks for permission on first Music/Spotify/System Events access')
 }
 
 /**
