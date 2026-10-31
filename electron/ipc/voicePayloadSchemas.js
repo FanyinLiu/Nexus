@@ -123,7 +123,7 @@ const ttsSegmentStyleSchema = {
     rate: { type: 'number', optional: true, min: 0.5, max: 2 },
     pitch: { type: 'number', optional: true, min: 0.5, max: 2 },
     emotion: { type: 'string', optional: true, maxLength: SHORT_TEXT_MAX, trim: true },
-    speechTempo: { type: 'number', optional: true, min: 0.5, max: 2 },
+    speechTempo: { type: 'number', optional: true, min: 0.5, max: 2.5 },
   },
 }
 

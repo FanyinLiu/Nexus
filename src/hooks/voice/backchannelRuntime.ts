@@ -5,13 +5,14 @@
  * This module owns the pre-synthesized clips, the low-gain playback path, and
  * the echo cooldown so the VAD never mistakes her own "mm-hm" for the user.
  *
- * Clips are synthesized once per voice session with the same provider, voice,
- * character id, rate and pitch as her normal replies, then cached in memory.
- * They are never appended to chat history, memory, or an LLM request.
+ * Clips are synthesized once per provider/voice/language/mood-tempo combination
+ * with the same provider, voice, character id, rate and pitch as her normal
+ * replies, then cached across turns in memory. They are never appended to chat
+ * history, memory, or an LLM request.
  */
 
 import { createId } from '../../lib/storage.ts'
-import type { AppSettings, TtsStreamEvent } from '../../types/index.ts'
+import type { AppSettings, SegmentVoiceStyle, TtsStreamEvent } from '../../types/index.ts'
 import type { InterruptMicPolicyInput } from '../../features/voice/autoRestartPolicy.ts'
 import {
   decideBackchannel,
@@ -40,7 +41,7 @@ export type BackchannelTurnSignal = {
 export type BackchannelSession = {
   /** Begin the session, cache clips, and reset the rate-limit clock. */
   start: () => void
-  /** Drop cached audio when the microphone session ends. */
+  /** End the microphone session; cached clips survive for the next turn. */
   stop: () => void
   /** Called on silence frames; plays only when the policy says yes. */
   maybeFire: (signal: BackchannelTurnSignal) => void
@@ -51,12 +52,60 @@ export type BackchannelSessionDeps = {
   getPlayer: () => Pick<StreamAudioPlayer, 'appendBackchannelPcmChunk'>
   voiceEchoCooldownUntilRef: { current: number }
   micPolicy: InterruptMicPolicyInput
+  /**
+   * Current mood's speech tempo, so an acknowledgement follows the same pace
+   * as a normal reply. Defaults to natural speed when not wired.
+   */
+  getMoodSpeechTempo?: () => number
   /** Test seam; production uses the streaming TTS IPC below. */
-  synthesizeClip?: (settings: AppSettings, text: string) => Promise<BackchannelClip | null>
+  synthesizeClip?: (
+    settings: AppSettings,
+    text: string,
+    speechTempo: number,
+    synthesisTimeoutMs: number,
+  ) => Promise<BackchannelClip | null>
+  /** Test seam for the abort-on-timeout path. */
+  synthesisTimeoutMs?: number
 }
 
 const CLIP_SYNTHESIS_TIMEOUT_MS = 5_000
 const ECHO_TAIL_MS = 250
+
+// Backchannels are UI glue, not reply content: keeping the three clips across
+// turns stops a local model from re-synthesizing them while it is busy with the
+// actual reply. The cache is replaced whenever the rendered audio would change.
+let clipCacheKey: string | null = null
+let clipCache = new Map<string, BackchannelClip>()
+const pendingClipCache = new Map<string, Promise<BackchannelClip | null>>()
+
+/** Drop cached clips. Used when the cached key changes and by tests. */
+export function clearBackchannelClipCache() {
+  clipCacheKey = null
+  clipCache = new Map()
+  pendingClipCache.clear()
+}
+
+function selectClipCache(key: string) {
+  if (clipCacheKey === key) return clipCache
+  clipCacheKey = key
+  clipCache = new Map()
+  pendingClipCache.clear()
+  return clipCache
+}
+
+/**
+ * Everything that changes the synthesized audio. `speechRate` is included
+ * because the main stream multiplies it into `speechTempo`.
+ */
+function backchannelClipCacheKey(settings: AppSettings, speechTempo: number) {
+  return JSON.stringify([
+    settings.speechOutputProviderId,
+    settings.speechOutputVoice,
+    settings.speechSynthesisLang,
+    speechTempo,
+    settings.speechRate,
+  ])
+}
 
 function backchannelEnabled(settings: AppSettings) {
   return settings.voiceBackchannelEnabled === true && settings.speechOutputEnabled === true
@@ -65,6 +114,8 @@ function backchannelEnabled(settings: AppSettings) {
 async function synthesizeBackchannelClip(
   settings: AppSettings,
   text: string,
+  speechTempo: number,
+  synthesisTimeoutMs = CLIP_SYNTHESIS_TIMEOUT_MS,
 ): Promise<BackchannelClip | null> {
   const api = window.desktopPet
   if (
@@ -80,12 +131,19 @@ async function synthesizeBackchannelClip(
   const samples: number[] = []
   let sampleRate = 24_000
   let chunkCount = 0
+  let aborted = false
   let resolveDone: (() => void) | null = null
   let rejectDone: ((reason: Error) => void) | null = null
   const done = new Promise<void>((resolve, reject) => {
     resolveDone = resolve
     rejectDone = reject
   })
+
+  const abortRequest = () => {
+    if (aborted) return
+    aborted = true
+    void api.ttsStreamAbort?.({ requestId })?.catch(() => undefined)
+  }
 
   const unsubscribe = api.subscribeTtsStream((event: TtsStreamEvent) => {
     if (event.requestId !== requestId) return
@@ -105,8 +163,11 @@ async function synthesizeBackchannelClip(
   })
 
   const timeout = setTimeout(() => {
+    // Aborting is what actually releases the local model for the reply; just
+    // rejecting would leave the request running in the main process.
+    abortRequest()
     rejectDone?.(new Error('Backchannel synthesis timed out.'))
-  }, CLIP_SYNTHESIS_TIMEOUT_MS)
+  }, synthesisTimeoutMs)
 
   try {
     await api.ttsStreamStart({
@@ -123,11 +184,16 @@ async function synthesizeBackchannelClip(
       pitch: settings.speechPitch,
       volume: settings.speechVolume,
     })
-    await api.ttsStreamPushText({ requestId, text })
+    const style: SegmentVoiceStyle | undefined = settings.speechOutputProviderId === 'qwen3-tts-local'
+      && Number.isFinite(speechTempo)
+      && speechTempo !== 1
+      ? { instruction: '', rate: 1, pitch: 1, speechTempo }
+      : undefined
+    await api.ttsStreamPushText({ requestId, text, ...(style ? { style } : {}) })
     await api.ttsStreamFinish({ requestId })
     await done
   } catch {
-    void api.ttsStreamAbort?.({ requestId })?.catch(() => undefined)
+    abortRequest()
     return null
   } finally {
     clearTimeout(timeout)
@@ -147,30 +213,47 @@ async function synthesizeBackchannelClip(
  * the provider's activity monitor into `maybeFire()`.
  */
 export function createBackchannelSession(deps: BackchannelSessionDeps): BackchannelSession {
-  const clips = new Map<string, BackchannelClip>()
-  const pendingClips = new Map<string, Promise<BackchannelClip | null>>()
   const recentBackchannels: number[] = []
   let started = false
   let lastBackchannelAt: number | null = null
 
   const synthesize = deps.synthesizeClip ?? synthesizeBackchannelClip
+  const synthesisTimeoutMs = deps.synthesisTimeoutMs ?? CLIP_SYNTHESIS_TIMEOUT_MS
+  const getMoodSpeechTempo = deps.getMoodSpeechTempo ?? (() => 1)
 
-  async function ensureClip(settings: AppSettings, token: string) {
+  function currentTempo(settings: AppSettings): number {
+    // Only the local Qwen3 path carries a client-side tempo; every other
+    // provider speaks at its own natural rate.
+    if (settings.speechOutputProviderId !== 'qwen3-tts-local') return 1
+    const tempo = getMoodSpeechTempo()
+    return Number.isFinite(tempo) && tempo > 0 ? tempo : 1
+  }
+
+  async function ensureClip(
+    settings: AppSettings,
+    token: string,
+    speechTempo: number,
+    cacheKey: string,
+  ) {
+    const clips = selectClipCache(cacheKey)
     const cached = clips.get(token)
     if (cached) return cached
 
-    const pending = pendingClips.get(token)
+    const pendingKey = `${cacheKey}\u0000${token}`
+    const pending = pendingClipCache.get(pendingKey)
     if (pending) return pending
 
-    const next = synthesize(settings, token)
+    const next = synthesize(settings, token, speechTempo, synthesisTimeoutMs)
       .then((clip) => {
-        if (clip) clips.set(token, clip)
+        // A mood/provider change while this request was in flight clears the
+        // cache; never write a stale clip into the replacement cache.
+        if (clip && clipCacheKey === cacheKey) clips.set(token, clip)
         return clip
       })
       .finally(() => {
-        pendingClips.delete(token)
+        pendingClipCache.delete(pendingKey)
       })
-    pendingClips.set(token, next)
+    pendingClipCache.set(pendingKey, next)
     return next
   }
 
@@ -183,20 +266,24 @@ export function createBackchannelSession(deps: BackchannelSessionDeps): Backchan
     const settings = deps.getSettings()
     if (!backchannelEnabled(settings)) return
 
+    const speechTempo = currentTempo(settings)
+    const cacheKey = backchannelClipCacheKey(settings, speechTempo)
+    selectClipCache(cacheKey)
+
     const tokens = new Set(Object.values(getBackchannelTokenSet(settings.speechRecognitionLang)))
     void (async () => {
       for (const token of tokens) {
         // Sequential so a local provider is not asked for three simultaneous
         // synthesis sessions during its first, slow warm-up.
-        await ensureClip(settings, token)
+        await ensureClip(settings, token, speechTempo, cacheKey)
       }
     })()
   }
 
   function stop() {
     started = false
-    clips.clear()
-    pendingClips.clear()
+    // Clips survive the turn so the next one replays them instead of asking a
+    // busy local model for the same three acknowledgements again.
     recentBackchannels.length = 0
     lastBackchannelAt = null
   }
@@ -205,6 +292,9 @@ export function createBackchannelSession(deps: BackchannelSessionDeps): Backchan
     if (!started) return
 
     const settings = deps.getSettings()
+    const speechTempo = currentTempo(settings)
+    const cacheKey = backchannelClipCacheKey(settings, speechTempo)
+    const clips = selectClipCache(cacheKey)
     const now = Date.now()
     while (
       recentBackchannels.length > 0
@@ -232,7 +322,7 @@ export function createBackchannelSession(deps: BackchannelSessionDeps): Backchan
     if (!clip) {
       // The speaker may still be warming up. Do not block the user's turn on
       // a missing clip; the next pause can try again.
-      void ensureClip(settings, decision.token)
+      void ensureClip(settings, decision.token, speechTempo, cacheKey)
       return
     }
 

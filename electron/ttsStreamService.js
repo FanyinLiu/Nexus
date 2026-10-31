@@ -4,6 +4,7 @@ import { decodePcm16LeBufferToFloat32, enhanceSpeechSamples } from './audioPostp
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { computeTtsStageDurations, createTtsTimingMarks } from './services/ttsStreamTiming.js'
 import { createSpeechGainStage } from './services/speechGainStage.js'
+import { isQwen3TtsSpeechOutputProvider } from './services/ttsProviders.js'
 import { createWsolaStretcher, normalizeStretchRate } from './services/wsolaStretcher.js'
 
 const STREAM_CHUNK_SIZE = 4096
@@ -233,12 +234,27 @@ function normalizeSegmentStyle(raw) {
   const rate = Number.isFinite(raw.rate) ? Math.min(Math.max(raw.rate, 0.5), 2) : 1
   const pitch = Number.isFinite(raw.pitch) ? Math.min(Math.max(raw.pitch, 0.5), 2) : 1
   const emotion = typeof raw.emotion === 'string' ? raw.emotion.trim() : ''
-  const speechTempo = Number.isFinite(raw.speechTempo)
-    ? Math.min(Math.max(raw.speechTempo, 0.5), 2)
-    : 1
+  // Same clamp as the WSOLA stretcher: a style may already carry the user's
+  // rate folded in, so the shared range is 0.5x-2.5x.
+  const speechTempo = normalizeStretchRate(raw.speechTempo)
 
   if (!instruction && rate === 1 && pitch === 1 && !emotion && speechTempo === 1) return null
   return { instruction, rate, pitch, emotion, speechTempo }
+}
+
+/**
+ * Effective WSOLA tempo for one sentence. The local Qwen3 stream ignores
+ * `rate` on both engines (C port and Python fallback), so the user's
+ * speechRate and the sentence's mood tempo are folded into the one client-side
+ * stretch. A missing style means a neutral mood, i.e. tempo 1 — the user's
+ * rate still has to be applied. Every other provider reads `rate` itself and
+ * must never receive a speechTempo.
+ */
+function resolveSegmentSpeechTempo(payload, style) {
+  if (!isQwen3TtsSpeechOutputProvider(payload?.providerId)) return undefined
+  const baseRate = Number.isFinite(payload.rate) ? payload.rate : 1
+  const moodTempo = typeof style?.speechTempo === 'number' ? style.speechTempo : 1
+  return normalizeStretchRate(baseRate * moodTempo)
 }
 
 /**
@@ -248,7 +264,15 @@ function normalizeSegmentStyle(raw) {
  * clause follows.
  */
 function applySegmentStyle(payload, style) {
-  if (!style) return payload
+  const speechTempo = resolveSegmentSpeechTempo(payload, style)
+
+  // No style normalizes from a neutral mood, but the local Qwen3 path still
+  // needs the user's rate as a stretch, so it cannot short-circuit here.
+  if (!style) {
+    return speechTempo === undefined || speechTempo === 1
+      ? payload
+      : { ...payload, speechTempo }
+  }
 
   const baseInstructions = String(payload.instructions ?? '').trim()
   const instructions = [baseInstructions, style.instruction].filter(Boolean).join(' ')
@@ -261,9 +285,7 @@ function applySegmentStyle(payload, style) {
     rate: Math.min(Math.max(baseRate * style.rate, 0.5), 2),
     pitch: Math.min(Math.max(basePitch * style.pitch, 0.5), 2),
     ...(style.emotion ? { emotion: style.emotion } : {}),
-    // The tempo is absolute, not a multiplier on the user's speechRate: the C
-    // server ignores `rate` on the stream, so this is the whole speed control.
-    ...(style.speechTempo && style.speechTempo !== 1 ? { speechTempo: style.speechTempo } : {}),
+    ...(speechTempo !== undefined && speechTempo !== 1 ? { speechTempo } : {}),
   }
 }
 
@@ -333,7 +355,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     // Only the locally stretched Qwen3 stream gets loudness matching and
     // limiting. At 1.0x, and for every other provider, the decoded PCM keeps
     // its original level.
-    const gainStage = stretcher && session.payload?.providerId === 'qwen3-tts-local'
+    const gainStage = stretcher && isQwen3TtsSpeechOutputProvider(session.payload?.providerId)
       ? createSpeechGainStage({ sampleRate })
       : null
     let residual = Buffer.alloc(0)

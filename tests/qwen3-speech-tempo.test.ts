@@ -47,6 +47,15 @@ function concat(blocks) {
   return merged
 }
 
+function createSender() {
+  return {
+    isDestroyed: () => false,
+    send: () => undefined,
+    once: () => undefined,
+    removeListener: () => undefined,
+  }
+}
+
 /**
  * Frequency from the zero-crossing rate. WSOLA never resamples, so a pure
  * tone keeps its crossing count per second; that is a sharper pitch probe
@@ -323,7 +332,7 @@ test('abort drops the stretcher state instead of leaking it into the next clip',
 test('normalizeStretchRate clamps and rejects nonsense', () => {
   assert.equal(normalizeStretchRate(1.5), 1.5)
   assert.equal(normalizeStretchRate(0.1), 0.5)
-  assert.equal(normalizeStretchRate(9), 2)
+  assert.equal(normalizeStretchRate(9), 2.5)
   assert.equal(normalizeStretchRate('nonsense'), 1)
   assert.equal(normalizeStretchRate(undefined), 1)
   assert.equal(normalizeStretchRate(0), 1)
@@ -561,6 +570,106 @@ test('the stream service stretches local Qwen3 PCM and reports the stretched dur
     Math.abs(segment.durationMs - (emittedSamples / SAMPLE_RATE) * 1000) < 5,
     'lip-sync duration follows the stretched audio',
   )
+})
+
+test('the user speechRate multiplies the mood tempo on the local Qwen3 path', async () => {
+  const payloads = []
+  const service = createTtsStreamService({
+    synthesizeRemote: async (payload) => {
+      payloads.push(payload)
+      const stream = new Readable({ read() {} })
+      stream.push(Buffer.alloc(4800 * 2, 0))
+      stream.push(null)
+      return {
+        pcmStream: stream,
+        pcmSampleRate: SAMPLE_RATE,
+        speechTempo: payload.speechTempo,
+      }
+    },
+  })
+
+  const requestId = 'tempo-user-rate'
+  const sender = createSender()
+  await service.start(sender, { requestId, providerId: 'qwen3-tts-local', rate: 0.8 })
+  service.pushText(sender, {
+    requestId,
+    text: '第一句。',
+    style: { instruction: '', rate: 1, pitch: 1, speechTempo: 1.5 },
+  })
+  await service.finish(sender, { requestId })
+
+  assert.equal(payloads.length, 1)
+  assert.ok(
+    Math.abs(payloads[0].speechTempo - 1.2) < 1e-9,
+    '0.8 x 1.5 reaches the provider payload',
+  )
+  assert.equal(payloads[0].rate, 0.8, 'the rate still reaches providers that read it')
+})
+
+/** Capture the payload that reaches the provider for one style-less segment. */
+async function captureNoStylePayload(providerId: string, rate: number) {
+  const payloads = []
+  const service = createTtsStreamService({
+    synthesizeRemote: async (payload) => {
+      payloads.push(payload)
+      const stream = new Readable({ read() {} })
+      stream.push(Buffer.alloc(4800 * 2, 0))
+      stream.push(null)
+      return { pcmStream: stream, pcmSampleRate: SAMPLE_RATE }
+    },
+  })
+
+  const requestId = `tempo-no-style-${providerId}-${rate}`
+  const sender = createSender()
+  await service.start(sender, { requestId, providerId, rate })
+  // No style at all: the neutral-mood path whose style normalizes to null.
+  service.pushText(sender, { requestId, text: '嗯，好的。' })
+  await service.finish(sender, { requestId })
+  return payloads
+}
+
+test('a neutral segment still folds the user speechRate on the local Qwen3 path', async () => {
+  const payloads = await captureNoStylePayload('qwen3-tts-local', 1.3)
+  assert.equal(payloads.length, 1)
+  assert.equal(payloads[0].speechTempo, 1.3)
+})
+
+test('a neutral segment leaves other providers without a speech tempo', async () => {
+  const payloads = await captureNoStylePayload('omnivoice-tts', 1.3)
+  assert.equal(payloads.length, 1)
+  assert.equal('speechTempo' in payloads[0], false)
+  assert.equal(payloads[0].rate, 1.3, 'the provider still reads rate itself')
+})
+
+test('rate 1 with no style asks for no stretch', async () => {
+  const payloads = await captureNoStylePayload('qwen3-tts-local', 1)
+  assert.equal(payloads.length, 1)
+  assert.equal('speechTempo' in payloads[0], false)
+})
+
+test('the folded tempo is clamped to the 0.5x-2.5x stretcher range', async () => {
+  const payloads = []
+  const service = createTtsStreamService({
+    synthesizeRemote: async (payload) => {
+      payloads.push(payload)
+      const stream = new Readable({ read() {} })
+      stream.push(Buffer.alloc(2, 0))
+      stream.push(null)
+      return { pcmStream: stream, pcmSampleRate: SAMPLE_RATE }
+    },
+  })
+
+  const requestId = 'tempo-clamp'
+  const sender = createSender()
+  await service.start(sender, { requestId, providerId: 'qwen3-tts-local', rate: 2 })
+  service.pushText(sender, {
+    requestId,
+    text: '第一句。',
+    style: { instruction: '', rate: 1, pitch: 1, speechTempo: 2 },
+  })
+  await service.finish(sender, { requestId })
+
+  assert.equal(payloads[0].speechTempo, 2.5)
 })
 
 test('a style without a tempo leaves other providers untouched', async () => {

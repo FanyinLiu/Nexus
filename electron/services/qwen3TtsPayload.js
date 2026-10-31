@@ -22,17 +22,14 @@ import { mapQwen3CportLanguage } from './qwen3CportService.js'
  *   characterId?: unknown,
  *   instructions?: unknown,
  *   language?: unknown,
- *   rate?: unknown,
  *   model?: unknown,
  * }} payload
  * @param {string} content
- * @returns {{ input: string, voice: string, response_format: 'pcm', seed: number, speed?: number, instructions?: string, language?: string }}
+ * @returns {{ input: string, voice: string, response_format: 'pcm', seed: number, instructions?: string, language?: string }}
  */
 export function buildQwen3TtsSpeechRequestPayload(payload, content) {
   const instructions = String(payload.instructions ?? '').trim()
   const language = String(payload.language ?? '').trim()
-  const rate = Number(payload.rate)
-  const speed = Number.isFinite(rate) ? Math.min(Math.max(rate, 0.25), 4) : undefined
   const voice = String(payload.voice ?? '').trim() || 'vivian'
 
   return {
@@ -40,7 +37,6 @@ export function buildQwen3TtsSpeechRequestPayload(payload, content) {
     voice,
     response_format: 'pcm',
     seed: resolveQwen3TtsSeed(payload.characterId, voice),
-    ...(speed != null ? { speed } : {}),
     ...(instructions ? { instructions } : {}),
     ...(language ? { language } : {}),
   }
