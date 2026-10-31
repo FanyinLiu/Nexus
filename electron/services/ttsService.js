@@ -8,6 +8,7 @@ import {
   normalizeLanguageCode,
   audioFormatToMimeType,
 } from '../net.js'
+import { shouldLabelAsConnectionFailure } from '../netHelpers.js'
 import { synthesizeEdgeTts } from './edgeTts.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import {
@@ -74,6 +75,31 @@ function formatSpeechTextLogMeta(text) {
 
 /** Per-base-URL warm-up cache so each sentence does not re-probe the sidecar. */
 const qwen3TtsReadyPromises = new Map()
+
+/** Forget a warm-up result so the next request re-checks the engine health. */
+export function clearQwen3TtsWarmup(baseUrl, engine = 'python') {
+  qwen3TtsReadyPromises.delete(`${engine}|${baseUrl}`)
+}
+
+/**
+ * True when a failed local request means the server is gone (crash, restart,
+ * refused socket) rather than a bad request. Only these errors invalidate the
+ * cached warm-up; a 4xx from a live server must not force a re-probe.
+ */
+export function isQwen3ConnectionError(error) {
+  if (!error || error.name === 'AbortError') return false
+  const code = String(error.code ?? '')
+  if (
+    code === 'ECONNREFUSED'
+    || code === 'ECONNRESET'
+    || code === 'EPIPE'
+    || code === 'ENOTFOUND'
+    || code === 'ETIMEDOUT'
+  ) {
+    return true
+  }
+  return shouldLabelAsConnectionFailure(error.message ?? error)
+}
 
 /**
  * Make sure the local Qwen3-TTS sidecar is up and its model is loaded.
@@ -194,18 +220,27 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     const requestBody = JSON.stringify(engine === 'cport'
       ? buildQwen3CportRequestPayload(payload, content)
       : buildQwen3TtsSpeechRequestPayload(payload, content))
-    const response = await performNetworkRequestWithRetry(endpoint, {
-      allowPrivateNetwork: true,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: requestBody,
-      timeoutMs: synthTimeoutMs,
-      timeoutMessage: synthTimeoutMessage,
-      signal,
-      // Retrying a speech POST would synthesize the sentence twice; playback
-      // would then repeat the first clause. Reconnect happens one level up.
-      maxAttempts: 1,
-    })
+    let response
+    try {
+      response = await performNetworkRequestWithRetry(endpoint, {
+        allowPrivateNetwork: true,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+        timeoutMs: synthTimeoutMs,
+        timeoutMessage: synthTimeoutMessage,
+        signal,
+        // Retrying a speech POST would synthesize the sentence twice; playback
+        // would then repeat the first clause. Reconnect happens one level up.
+        maxAttempts: 1,
+      })
+    } catch (error) {
+      // The server died after its healthy warm-up. Drop the cached success so
+      // the next reply re-checks health and the supervisor can fall back to
+      // the Python sidecar.
+      if (isQwen3ConnectionError(error)) clearQwen3TtsWarmup(qwen3BaseUrl, engine)
+      throw error
+    }
 
     if (!response.ok) {
       throw new Error(await extractResponseErrorMessage(
@@ -219,8 +254,12 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     // The stream cannot carry a rate, so the sentence's tempo travels with
     // the result and is applied to the decoded PCM by the stream service.
     const speechTempo = Number.isFinite(payload.speechTempo) ? payload.speechTempo : undefined
+    const pcmStream = Readable.fromWeb(response.body)
+    pcmStream.once('error', (error) => {
+      if (isQwen3ConnectionError(error)) clearQwen3TtsWarmup(qwen3BaseUrl, engine)
+    })
     return {
-      pcmStream: Readable.fromWeb(response.body),
+      pcmStream,
       pcmSampleRate: 24000,
       ...(speechTempo ? { speechTempo } : {}),
     }
