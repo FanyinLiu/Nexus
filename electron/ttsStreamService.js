@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { decodePcm16LeBufferToFloat32, enhanceSpeechSamples } from './audioPostprocess.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { computeTtsStageDurations, createTtsTimingMarks } from './services/ttsStreamTiming.js'
+import { createSpeechGainStage } from './services/speechGainStage.js'
 import { createWsolaStretcher, normalizeStretchRate } from './services/wsolaStretcher.js'
 
 const STREAM_CHUNK_SIZE = 4096
@@ -266,6 +267,12 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
     // renderer. Every other provider leaves this undefined and is untouched.
     const stretchRate = normalizeStretchRate(result.speechTempo)
     const stretcher = stretchRate === 1 ? null : createWsolaStretcher(stretchRate)
+    // Only the locally stretched Qwen3 stream gets loudness matching and
+    // limiting. At 1.0x, and for every other provider, the decoded PCM keeps
+    // its original level.
+    const gainStage = stretcher && session.payload?.providerId === 'qwen3-tts-local'
+      ? createSpeechGainStage({ sampleRate })
+      : null
     let residual = Buffer.alloc(0)
     const bufferedChunks = []
     let bufferedSampleCount = 0
@@ -331,6 +338,7 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
       stream.on('data', (chunk) => {
         if (session.closed) {
           stretcher?.reset()
+          gainStage?.reset()
           stream.destroy()
           resolve()
           return
@@ -342,9 +350,13 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         const usableLength = merged.length - (merged.length % 2)
         if (usableLength > 0) {
           const samples = decodePcm16LeBufferToFloat32(merged.slice(0, usableLength))
+          // The matcher compares the stretched timeline against the source
+          // samples the stretcher is about to consume.
+          gainStage?.pushReference(samples)
+          const stretched = stretcher ? stretcher.push(samples) : samples
           // Lead-in/peak shaping runs on the stretched timeline so its
           // millisecond values mean playback milliseconds.
-          bufferSamples(stretcher ? stretcher.push(samples) : samples)
+          bufferSamples(gainStage ? gainStage.process(stretched) : stretched)
         }
         residual = usableLength < merged.length ? merged.slice(usableLength) : Buffer.alloc(0)
       })
@@ -354,13 +366,21 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
           const usableLength = residual.length - (residual.length % 2)
           if (usableLength > 0) {
             const samples = decodePcm16LeBufferToFloat32(residual.slice(0, usableLength))
-            bufferSamples(stretcher ? stretcher.push(samples) : samples)
+            gainStage?.pushReference(samples)
+            const stretched = stretcher ? stretcher.push(samples) : samples
+            bufferSamples(gainStage ? gainStage.process(stretched) : stretched)
           }
         }
         // Drain the overlap-add residue plus the un-stretched remainder, so
         // the last words are not swallowed when the stream ends.
         if (stretcher) {
           const tail = stretcher.flush()
+          if (tail.length) bufferSamples(gainStage ? gainStage.process(tail) : tail)
+        }
+        // ...and the limiter's look-ahead delay, which still holds the very
+        // last milliseconds of the reply.
+        if (gainStage) {
+          const tail = gainStage.flush()
           if (tail.length) bufferSamples(tail)
         }
         flushBufferedSamples(true)
@@ -388,10 +408,12 @@ export function createTtsStreamService({ synthesizeRemote, warmupRemote }) {
         // it would paint an error after the user already moved on.
         if (session.closed) {
           stretcher?.reset()
+          gainStage?.reset()
           resolve()
           return
         }
         stretcher?.reset()
+        gainStage?.reset()
         const message = getRedactedErrorMessage(err) || '流式音频传输中断。'
         console.error('[TTS-Stream] PCM stream error:', message)
         emit(session.sender, {
