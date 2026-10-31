@@ -1,6 +1,32 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+
+/**
+ * Drops the asyncify ONNX Runtime WASM asset that onnxruntime-web references
+ * statically via `new URL('ort-wasm-simd-threaded.asyncify.wasm', import.meta.url)`,
+ * which otherwise makes Vite copy it into dist/assets.
+ *
+ * Safe because transformers.js replaces `env.wasm.wasmPaths` with the jsdelivr
+ * CDN before creating any session, so this emitted file is never fetched — it
+ * is ~24 MB of dead weight. The browser VAD / main-process Smart Turn runtimes
+ * use the separately vendored public/vendor/ort files, which this must not
+ * touch. If transformers is ever pointed at local WASM, it must use vendor/ort
+ * instead of this bundle-emitted asset.
+ */
+function dropUnusedOrtAsyncify(): Plugin {
+  return {
+    name: 'nexus-drop-unused-ort-asyncify',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      for (const [fileName, output] of Object.entries(bundle)) {
+        if (output.type === 'asset' && /ort-wasm-simd-threaded\.asyncify[^/]*\.wasm$/.test(fileName)) {
+          delete bundle[fileName]
+        }
+      }
+    },
+  }
+}
 
 function resolveManualChunk(id: string) {
   const normalizedId = id.replace(/\\/g, '/')
@@ -168,7 +194,7 @@ const chunkGroups = [
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [tailwindcss(), react()],
+  plugins: [tailwindcss(), react(), dropUnusedOrtAsyncify()],
   build: {
     minify: 'esbuild',
     cssMinify: 'lightningcss',
