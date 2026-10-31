@@ -42,7 +42,7 @@
 
 | 资源 | 当前来源 | 当前加载/打包方式 | 后续方向 |
 |---|---|---|---|
-| ONNX Runtime WASM | `public/vendor/ort/` -> `dist/assets` | 构建资产内，`performance:baseline` 预算守住 25 MB WASM 上限。 | 继续排除 asyncify/jspi/training/webgl/webgpu 变体，不把未使用 WASM 打回包内。 |
+| ONNX Runtime WASM | `public/vendor/ort/` -> `dist/assets` | 构建资产内，`performance:baseline` 预算守住 25 MB WASM 上限；Vite 构建由 `nexus-drop-unused-ort-asyncify` 插件丢弃 transformers.js 误产出的 `ort-wasm-simd-threaded.asyncify*.wasm`（运行时 wasmPaths 始终指向 CDN）。 | 继续排除 asyncify/jspi/training/webgl/webgpu 变体，不把未使用 WASM 打回包内。 |
 | Live2D/Pixi/Cubism vendor | `public/vendor/` | `PetView` 懒加载 `Live2DCanvas`，Live2D vendor 由 `ensureLive2DVendorScripts` 按需加载。 | 不进入默认首屏；保持 Sprite/static avatar 可以在无 Live2D 时启动。 |
 | 记忆向量 Transformers | `@huggingface/transformers` | `src/features/memory/vectorSearchRuntime.ts` 动态导入。 | 仅向量召回使用时加载；不能回到 renderer 静态导入。 |
 | OCR/Tesseract | `tesseract.js` | `src/features/vision/ocrWorker.ts` 动态导入。 | 只在用户启用屏幕 OCR 时加载。 |

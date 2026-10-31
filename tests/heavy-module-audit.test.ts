@@ -86,6 +86,35 @@ test('heavy module audit rejects static renderer imports of heavy modules', () =
   })
 })
 
+test('heavy module audit accepts the vendored plain and JSEP ORT WASM in dist/assets', () => {
+  withHeavyModuleFixture({
+    'dist/assets/ort-wasm-simd-threaded.wasm': '',
+    'dist/assets/ort-wasm-simd-threaded.jsep.wasm': '',
+    'dist/assets/ort-wasm-simd-threaded.jsep-abcd1234.wasm': '',
+  }, (root) => {
+    const report = buildHeavyModuleAuditReport(root)
+
+    assert.deepEqual(report.errors.unusedOrtDistAssets, [])
+    assert.equal(report.summary.ok, true)
+  })
+})
+
+test('heavy module audit rejects asyncify and jspi ORT WASM emitted into dist/assets', () => {
+  withHeavyModuleFixture({
+    'dist/assets/ort-wasm-simd-threaded.asyncify-abcd1234.wasm': '',
+    'dist/assets/ort-wasm-simd-threaded.jspi-abcd1234.wasm': '',
+    'dist/assets/ort-wasm-simd-threaded.wasm': '',
+  }, (root) => {
+    const report = buildHeavyModuleAuditReport(root)
+
+    assert.deepEqual(report.errors.unusedOrtDistAssets, [
+      'ort-wasm-simd-threaded.asyncify-abcd1234.wasm',
+      'ort-wasm-simd-threaded.jspi-abcd1234.wasm',
+    ])
+    assert.equal(report.summary.ok, false)
+  })
+})
+
 test('heavy module audit rejects missing unused ORT packaging exclusions', () => {
   withHeavyModuleFixture({}, (root) => {
     const report = buildHeavyModuleAuditReport(root)

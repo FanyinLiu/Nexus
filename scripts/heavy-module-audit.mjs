@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { walkFiles } from './lib/audit-framework.mjs'
@@ -39,6 +39,11 @@ const REQUIRED_LAZY_PATTERNS = [
   },
 ]
 
+const UNUSED_ORT_WASM_ASSET_PATTERNS = [
+  /^ort-wasm-simd-threaded\.asyncify[^/]*\.wasm$/,
+  /^ort-wasm-simd-threaded\.jspi[^/]*\.wasm$/,
+]
+
 function stripTypeOnlyImports(source) {
   return source
     .replace(/import\s+type\s+[^;]+from\s+['"][^'"]+['"];?/g, '')
@@ -63,11 +68,27 @@ function findStaticHeavyImports(root = ROOT) {
   return violations
 }
 
+/**
+ * Lists asyncify/jspi ORT WASM files that a Vite build emitted into dist/assets.
+ * transformers.js always resolves wasmPaths to the CDN, so these are dead
+ * weight; the vite plugin `nexus-drop-unused-ort-asyncify` should have removed
+ * them. Returns [] when no build output exists.
+ */
+function findUnusedOrtDistAssets(root = ROOT) {
+  const assetsDir = join(root, 'dist', 'assets')
+  if (!existsSync(assetsDir)) return []
+
+  return readdirSync(assetsDir)
+    .filter((fileName) => UNUSED_ORT_WASM_ASSET_PATTERNS.some((pattern) => pattern.test(fileName)))
+    .sort()
+}
+
 export function buildHeavyModuleAuditReport(root = ROOT) {
   const staticRendererImports = findStaticHeavyImports(root)
   const missingLazyPatterns = REQUIRED_LAZY_PATTERNS
     .filter((item) => !readFileSync(join(root, item.file), 'utf8').includes(item.pattern))
     .map(({ file, pattern, reason }) => ({ file, pattern, reason }))
+  const unusedOrtDistAssets = findUnusedOrtDistAssets(root)
 
   const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
   const packageText = JSON.stringify(packageJson, null, 2)
@@ -83,6 +104,7 @@ export function buildHeavyModuleAuditReport(root = ROOT) {
     staticRendererImports,
     missingLazyPatterns,
     missingPackagingExclusions,
+    unusedOrtDistAssets,
   }
   const errorCount = Object.values(errors).reduce((sum, list) => sum + list.length, 0)
 
@@ -97,6 +119,7 @@ export function buildHeavyModuleAuditReport(root = ROOT) {
     privacy: {
       readsUserStorage: false,
       staticSourceOnly: true,
+      readsDistBuildOutput: true,
     },
   }
 }
