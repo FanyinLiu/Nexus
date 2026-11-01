@@ -356,7 +356,7 @@ export const zhTWCore = {
   'memory.export.title': '匯出記憶庫',
   'memory.import.title': '匯入記憶庫',
   'memory.import.success': '已匯入 {memoryCount} 條長期記憶，{dayCount} 天日誌。',
-  'memory.clear.success': '長期記憶與每日日誌都已清空。',
+  'memory.clear.success': '長期記憶、每日日誌和收件匣訊息都已清除。',
   'memory.title.project': '專案',
   'memory.title.goal': '目標',
   'memory.title.habit': '習慣',

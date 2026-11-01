@@ -354,7 +354,7 @@ export const zhCNCore = {
   'memory.export.title': '导出记忆库',
   'memory.import.title': '导入记忆库',
   'memory.import.success': '已导入 {memoryCount} 条长期记忆，{dayCount} 天日记。',
-  'memory.clear.success': '长期记忆和每日日志都已清空。',
+  'memory.clear.success': '长期记忆、每日日志和收件箱消息都已清空。',
   'memory.title.project': '项目',
   'memory.title.goal': '目标',
   'memory.title.habit': '习惯',

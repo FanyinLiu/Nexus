@@ -242,6 +242,45 @@ test('a debounced write scheduled before clear cannot recreate the file', async 
   assert.equal(fs.existsSync(inboxPath(directory)), false)
 })
 
+test('a failed clear re-arms the debounced write so the entry still lands on disk', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const directory = createTempDir(t)
+  const store = storeAt(directory)
+  t.mock.method(fsp, 'rm', async () => {
+    throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
+  })
+
+  store.upsert(makeMessage())
+  assert.equal(fs.existsSync(inboxPath(directory)), false)
+
+  assert.equal(await store.clear(), false)
+  // The restored timer fires on the next debounce window; awaiting flush here
+  // only waits for that in-flight write, it does not start another one.
+  t.mock.timers.tick(1_000)
+  await store.flush()
+
+  assert.equal(fs.existsSync(inboxPath(directory)), true)
+  const restarted = storeAt(directory)
+  assert.deepEqual(restarted.list().entries.map((entry) => entry.id), ['msg-1'])
+})
+
+test('flushPending after a failed clear still writes the cached entry', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const directory = createTempDir(t)
+  const store = storeAt(directory)
+  t.mock.method(fsp, 'rm', async () => {
+    throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
+  })
+
+  store.upsert(makeMessage())
+  assert.equal(await store.clear(), false)
+  assert.equal(await store.flush(), true)
+
+  assert.equal(fs.existsSync(inboxPath(directory)), true)
+  const restarted = storeAt(directory)
+  assert.deepEqual(restarted.list().entries.map((entry) => entry.id), ['msg-1'])
+})
+
 test('a clear during an in-flight persist leaves no file and a restarted store empty', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const directory = createTempDir(t)
