@@ -115,16 +115,13 @@ function createFailingRunner(
     loadDesktopContextSnapshot: async () => null,
     suppressVoiceReplyRef: { current: false },
     beginStreamingSpeechReply: options.beginStreamingSpeechReply ?? (() => null),
-    setMood: () => {},
     busEmit: (event: Record<string, unknown>) => { calls.busEvents.push(event) },
     updateVoicePipeline: (stage: string, status: string) => { calls.voicePipeline.push({ stage, status }) },
     appendVoiceTrace: (label: string, detail: string, tone: string) => { calls.voiceTraces.push({ label, detail, tone }) },
     clearPendingVoiceRestart: () => {},
     resetNoSpeechRestartCount: () => {},
-    updatePetStatus: () => {},
     appendDailyMemoryEntries: () => {},
     appendDebugConsoleEvent: () => {},
-    queuePetPerformanceCue: () => {},
     consumeOnThisDayPromptText: () => {
       calls.onThisDayConsumeCount += 1
       return options.onThisDay?.consume?.() ?? ''
@@ -180,16 +177,13 @@ function createSuccessfulRunner(options: {
     loadDesktopContextSnapshot: async () => null,
     suppressVoiceReplyRef: { current: false },
     beginStreamingSpeechReply: () => null,
-    setMood: () => {},
     busEmit: (event: Record<string, unknown>) => { calls.busEvents.push(event) },
     updateVoicePipeline: (stage: string, status: string) => { calls.voicePipeline.push({ stage, status }) },
     appendVoiceTrace: (label: string, detail: string, tone: string) => { calls.voiceTraces.push({ label, detail, tone }) },
     clearPendingVoiceRestart: () => {},
     resetNoSpeechRestartCount: () => {},
-    updatePetStatus: () => {},
     appendDailyMemoryEntries: () => { calls.dailyMemoryAppendCount += 1 },
     appendDebugConsoleEvent: () => {},
-    queuePetPerformanceCue: () => {},
     onAssistantReplyDelivered: () => {},
     consumeOnThisDayPromptText: () => {
       calls.onThisDayConsumeCount += 1

@@ -20,6 +20,51 @@ export interface PresenceHistoryItem {
   createdAt: string
 }
 
+// Pet performance leaf types live here so the chat pipeline can describe a
+// performance cue without importing the pet feature directory. The pet
+// feature re-exports them for its own modules.
+
+export type PetExpressionSlot =
+  | 'idle'
+  | 'thinking'
+  | 'happy'
+  | 'sleepy'
+  | 'surprised'
+  | 'confused'
+  | 'embarrassed'
+  | 'listening'
+  | 'speaking'
+  | 'touchHead'
+  | 'touchFace'
+  | 'touchBody'
+
+export type PetPerformanceAccent =
+  | 'peek'
+  | 'search'
+  | 'organize'
+  | 'write'
+  | 'deliver'
+  | 'confirm'
+  | 'sparkle'
+  | 'listen'
+  | 'shy'
+
+export type PetPerformancePlan = {
+  expressionSlot?: PetExpressionSlot
+  motionSlot?: PetExpressionSlot
+  // Model-defined gesture name (e.g. 'wave', 'nod'). Looked up in
+  // motionGroups.gestures at apply time; unknown names are silent no-ops
+  // so personas on gesture-poor models don't break.
+  gestureName?: string
+  accentStyle?: PetPerformanceAccent
+  durationMs: number
+  stageDirection: string
+}
+
+export type PetPerformanceCue = PetPerformancePlan & {
+  id: string
+}
+
 // PetMood drives Live2D expression selection, system-prompt tone hints, and
 // presence-message variety. The union intentionally covers more shades than
 // the model's expression file count — multiple moods can map to the same

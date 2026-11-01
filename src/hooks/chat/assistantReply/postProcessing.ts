@@ -28,6 +28,7 @@ import { isInterruptedError } from '../../../features/voice/interruptedError.ts'
 import { shorten } from '../../../lib/common.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
 import { createId } from '../../../lib/index.ts'
+import { emitPetNotify } from '../../../lib/petNotifyBus.ts'
 import { t } from '../../../i18n/runtime.ts'
 import type {
   AppSettings,
@@ -268,7 +269,7 @@ export async function postProcessAssistantReply(
   }
 
   if (!assistantMessageContent && !chatToolResult && assistantReplyForStatus) {
-    dependencies.ctx.updatePetStatus(shorten(assistantReplyForStatus, 24), 2_400)
+    emitPetNotify({ type: 'status', text: shorten(assistantReplyForStatus, 24), duration: 2_400 })
   }
 
   const activeStreamingTtsController = streamingTtsController && assistantSpeechOutput
@@ -306,7 +307,7 @@ export async function postProcessAssistantReply(
   // those resets, on every path, or the face depends on whether voice is on.
   const moodToApply = replyMood ?? 'idle'
   const applyReplyMood = () => {
-    window.setTimeout(() => dependencies.ctx.setMood(moodToApply), 0)
+    window.setTimeout(() => emitPetNotify({ type: 'mood', mood: moodToApply }), 0)
   }
 
   if (handledByStreamingTts) {
@@ -537,11 +538,14 @@ export async function postProcessAssistantReply(
       ),
     )
   }
-  dependencies.ctx.queuePetPerformanceCue([
-    ...assistantPerformance.cues,
-    ...inlineExpressionOverrideCues,
-    ...inlineGestureCues,
-  ])
+  emitPetNotify({
+    type: 'performance_cue_queue',
+    cues: [
+      ...assistantPerformance.cues,
+      ...inlineExpressionOverrideCues,
+      ...inlineGestureCues,
+    ],
+  })
 
   return true
 }
@@ -617,7 +621,7 @@ export function handleAssistantTurnFailure(
       console.warn('[assistantReply] streaming TTS finish() during error handler failed', finishErr)
     }
   }
-  dependencies.ctx.setMood('confused')
+  emitPetNotify({ type: 'mood', mood: 'confused' })
   dependencies.presentPetDialogBubble(
     {
       content: t('chat.assistant.failure_bubble', { error: friendlyMessage }),
@@ -645,7 +649,7 @@ export function handleAssistantTurnFailure(
   if (shouldResumeContinuousVoice) {
     dependencies.ctx.clearPendingVoiceRestart()
     dependencies.ctx.resetNoSpeechRestartCount()
-    dependencies.ctx.updatePetStatus(t('chat.assistant.voice_paused_pet_status'), 3200)
+    emitPetNotify({ type: 'status', text: t('chat.assistant.voice_paused_pet_status'), duration: 3200 })
     // Longer delay so the user has time to read the error bubble before
     // the mic re-opens — otherwise the no-speech toast stacks on top of
     // the error and it looks like the UI is thrashing.
@@ -656,8 +660,8 @@ export function handleAssistantTurnFailure(
       delayMs: 3200,
     })
   } else if (fromVoice) {
-    dependencies.ctx.updatePetStatus(t('chat.assistant.voice_retry_pet_status'), 3200)
+    emitPetNotify({ type: 'status', text: t('chat.assistant.voice_retry_pet_status'), duration: 3200 })
   }
-  window.setTimeout(() => dependencies.ctx.setMood('idle'), 2600)
+  window.setTimeout(() => emitPetNotify({ type: 'mood', mood: 'idle' }), 2600)
   return false
 }

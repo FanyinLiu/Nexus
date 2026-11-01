@@ -14,6 +14,7 @@ import { archiveEvictedMemories } from '../../features/memory/memoryCapCommit.ts
 import { bookClearPlanReminders } from '../../features/memory/loopOutreach.ts'
 import { planTurnMemoryWrite } from '../../features/memory/reconcile.ts'
 import { appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
+import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import { formatTraceLabel, logVoiceEvent } from '../../features/voice/index.ts'
 import { createId, shorten } from '../../lib/index.ts'
 import type { Translator } from '../../types/i18n.ts'
@@ -135,7 +136,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
         ctx.updateVoicePipeline('blocked_busy', t('chat.voice.blocked_detail'), content)
         ctx.appendVoiceTrace(t('chat.voice.blocked_label'), t('chat.voice.blocked_trace', { label: traceLabel }), 'error')
         setError(t('chat.voice.blocked_error'))
-        ctx.updatePetStatus(t('chat.voice.blocked_pet_status'), 2_600)
+        emitPetNotify({ type: 'status', text: t('chat.voice.blocked_pet_status'), duration: 2_600 })
       }
       return false
     }
@@ -172,17 +173,17 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
       if (ctx.voiceStateRef.current === 'speaking') {
         if (!ctx.canInterruptSpeech()) {
           setError(t('chat.voice.no_interrupt_error'))
-          ctx.updatePetStatus(t('chat.voice.no_interrupt_pet_status'), 3_000)
+          emitPetNotify({ type: 'status', text: t('chat.voice.no_interrupt_pet_status'), duration: 3_000 })
           return false
         }
 
         ctx.stopActiveSpeechOutput()
         ctx.setVoiceState('idle')
-        ctx.setMood('happy')
+        emitPetNotify({ type: 'mood', mood: 'happy' })
       }
 
       hidePetDialogBubble()
-      ctx.markPresenceActivity()
+      emitPetNotify({ type: 'presence_activity' })
       if (fromVoice) {
         ctx.appendVoiceTrace(t('chat.voice.sent_label'), t('chat.voice.sent_trace', { label: traceLabel }))
       }
@@ -370,7 +371,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
             detail: errorMessage,
             tone: 'error',
           })
-          ctx.updatePetStatus(errorMessage, 3_200)
+          emitPetNotify({ type: 'status', text: errorMessage, duration: 3_200 })
           if (fromVoice) {
             ctx.updateVoicePipeline('reply_failed', t('chat.local_intent.voice_detail', { preview: shorten(errorMessage, 36) }), content)
             ctx.appendVoiceTrace(t('chat.local_intent.voice_label'), t('chat.local_intent.voice_trace', { label: traceLabel, preview: shorten(errorMessage, 40) }), 'error')

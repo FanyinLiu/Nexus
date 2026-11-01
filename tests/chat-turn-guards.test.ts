@@ -153,11 +153,8 @@ test('hard timeout invalidates the turnId so a tool-phase abort stays silent and
     const ctx = {
       appendVoiceTrace: () => undefined,
       busEmit: (event: { type: string }) => { busEventTypes.push(event.type) },
-      clearPetPerformanceCue: () => undefined,
       setLiveTranscript: () => undefined,
-      setMood: () => undefined,
       setVoiceState: (state: string) => { voiceStateRef.current = state },
-      updatePetStatus: () => undefined,
       updateVoicePipeline: () => undefined,
       voiceStateRef,
     }

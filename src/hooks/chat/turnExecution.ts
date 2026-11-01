@@ -1,7 +1,8 @@
 import { t } from '../../i18n/runtime.ts'
+import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import type { AssistantRuntimeActivity } from '../../types/index.ts'
 import type { AssistantReplyRunnerOptions } from './assistantReply.ts'
-import type { ChatPetDeps, ChatVoiceDeps } from './types.ts'
+import type { ChatVoiceDeps } from './types.ts'
 
 const TURN_HARD_TIMEOUT_MS = 90_000
 
@@ -14,7 +15,7 @@ export type ExecuteAssistantTurnDeps = {
     | 'setVoiceState'
     | 'updateVoicePipeline'
     | 'voiceStateRef'
-  > & Pick<ChatPetDeps, 'clearPetPerformanceCue' | 'setMood' | 'updatePetStatus'>
+  >
   setBusy: (value: boolean) => void
   setError: (value: string | null) => void
   busyRef: { current: boolean }
@@ -75,8 +76,8 @@ export async function executeAssistantTurn(
 
   busyRef.current = true
   setBusy(true)
-  ctx.clearPetPerformanceCue()
-  ctx.setMood('thinking')
+  emitPetNotify({ type: 'performance_cue_clear' })
+  emitPetNotify({ type: 'mood', mood: 'thinking' })
   ctx.setVoiceState('processing')
   ctx.busEmit({ type: 'chat:busy_changed', busy: true })
   setError(null)
@@ -90,9 +91,10 @@ export async function executeAssistantTurn(
     ctx.appendVoiceTrace(t('chat.turn.voice_sending_label'), t('chat.turn.voice_sending_trace', { label: traceLabel }))
   }
 
-  ctx.updatePetStatus(
-    fromVoice ? t('chat.turn.voice_status') : t('chat.turn.text_status'),
-  )
+  emitPetNotify({
+    type: 'status',
+    text: fromVoice ? t('chat.turn.voice_status') : t('chat.turn.text_status'),
+  })
 
   let sendSucceeded: boolean
   let hardTimeoutTimer: number | null = null
@@ -123,9 +125,9 @@ export async function executeAssistantTurn(
             setBusy(false)
             // Timeout gets its own user-facing copy — distinct from the
             // user-cancel path, which stays silent (session:aborted).
-            ctx.setMood('confused')
+            emitPetNotify({ type: 'mood', mood: 'confused' })
             setError(t('humanize.timeout'))
-            ctx.updatePetStatus(t('humanize.timeout'))
+            emitPetNotify({ type: 'status', text: t('humanize.timeout') })
             if (ctx.voiceStateRef.current === 'processing') {
               ctx.setVoiceState('idle')
               ctx.busEmit({ type: 'session:completed' })
