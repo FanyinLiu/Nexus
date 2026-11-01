@@ -70,9 +70,9 @@ function findStaticHeavyImports(root = ROOT) {
 
 /**
  * Lists asyncify/jspi ORT WASM files that a Vite build emitted into dist/assets.
- * transformers.js always resolves wasmPaths to the CDN, so these are dead
- * weight; the vite plugin `nexus-drop-unused-ort-asyncify` should have removed
- * them. Returns [] when no build output exists.
+ * transformers.js is pointed at dist/vendor/ort (not a CDN), so these emitted
+ * copies are dead weight; the vite plugin `nexus-drop-unused-ort-asyncify`
+ * should have removed them. Returns [] when no build output exists.
  */
 function findUnusedOrtDistAssets(root = ROOT) {
   const assetsDir = join(root, 'dist', 'assets')

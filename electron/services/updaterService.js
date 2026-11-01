@@ -6,9 +6,11 @@
 //     It registers event listeners and triggers a silent background check.
 //   - The renderer can also explicitly trigger checkForUpdatesNow() through IPC,
 //     used by the "Check for updates" button in settings.
-//   - When an update is available it is downloaded automatically (in the
+//   - When an update is available its signed channel manifest is verified
+//     first; only then is the update downloaded automatically (in the
 //     background). It is installed only when the user clicks restart.
-//     Ordinary quit does not apply a downloaded update.
+//     Ordinary quit does not apply a downloaded update, and an update whose
+//     manifest did not verify can neither download nor install.
 //   - quitAndInstallUpdate flushes durable stores and snapshots them first.
 //     A flush or snapshot failure is broadcast and does not quit.
 //
@@ -29,9 +31,14 @@ import {
   normalizeGithubReleasePayload,
   resolveUpdaterMode,
 } from './updatePolicy.js'
-import { UPDATE_INSTALL_PREP_FAILED } from '../../shared/updateErrorCodes.js'
+import {
+  UPDATE_INSTALL_PREP_FAILED,
+  UPDATE_MANIFEST_UNVERIFIED,
+} from '../../shared/updateErrorCodes.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { flushPetPrefsStore } from './petPrefsStore.js'
+import { createVerifiedUpdateGate } from './updateDownloadGate.js'
+import { verifyUpdateManifestSignature } from './updateManifestSignature.js'
 import {
   applyAutoUpdaterInstallPolicy,
   buildDurableFlushScript,
@@ -47,6 +54,10 @@ import { flushRuntimeLogWriteBuffer } from '../windowManager.js'
 import { markUpdateInstallQuit, clearUpdateInstallQuit } from './updateInstallQuitFlag.js'
 
 const { autoUpdater } = electronUpdater
+
+// Manifest signatures only cover the Windows/Linux channel files. macOS keeps
+// its existing manual-download or future signed auto-update path unchanged.
+const verifiesUpdateManifests = process.platform === 'win32' || process.platform === 'linux'
 
 let initialized = false
 let lastStatus = { type: 'idle' }
@@ -64,6 +75,34 @@ function broadcast(payload) {
     }
   }
 }
+
+function broadcastManifestRefused() {
+  broadcast({
+    type: 'error',
+    code: UPDATE_MANIFEST_UNVERIFIED,
+    messageKey: 'updater.error.unverified_update',
+    recommendationKey: 'updater.error.unverified_update_rec',
+    message: UPDATE_MANIFEST_UNVERIFIED,
+  })
+}
+
+const updateDownloadGate = createVerifiedUpdateGate({
+  verifyManifest: ({ updateInfo, tag }) => verifyUpdateManifestSignature({
+    updateInfo,
+    tag,
+    platform: process.platform,
+    arch: process.arch,
+    fetchImpl: (...args) => globalThis.fetch(...args),
+  }),
+  downloadUpdate: () => autoUpdater.downloadUpdate(),
+  onRefused: ({ reason }) => {
+    console.warn('[updater] update manifest verification refused download:', reason)
+    broadcastManifestRefused()
+  },
+  onDownloadError: (error) => {
+    console.warn('[updater] update download failed to start:', getRedactedErrorMessage(error))
+  },
+})
 
 export function initAutoUpdater({ getWindows }) {
   if (initialized) return
@@ -92,6 +131,11 @@ export function initAutoUpdater({ getWindows }) {
   }
 
   applyAutoUpdaterInstallPolicy(autoUpdater)
+  if (verifiesUpdateManifests) {
+    // The detached manifest signature is checked first; the gate calls
+    // downloadUpdate() only after that verification succeeds.
+    autoUpdater.autoDownload = false
+  }
 
   autoUpdater.on('checking-for-update', () => {
     broadcast({ type: 'checking' })
@@ -102,6 +146,10 @@ export function initAutoUpdater({ getWindows }) {
       type: 'available',
       version: info?.version ?? null,
       releaseNotes: typeof info?.releaseNotes === 'string' ? info.releaseNotes : null,
+    })
+    if (!verifiesUpdateManifests) return
+    void updateDownloadGate.handleUpdateAvailable(info).catch((error) => {
+      console.warn('[updater] update download gate failed:', getRedactedErrorMessage(error))
     })
   })
 
@@ -331,6 +379,12 @@ function broadcastPrepFailure(error) {
  * not call quitAndInstall. Unsigned macOS stays on the manual page.
  */
 export function quitAndInstallUpdate() {
+  const downloadedVersion = lastStatus?.type === 'downloaded' ? lastStatus.version : null
+  if (verifiesUpdateManifests && updateMode === 'auto-download' && !updateDownloadGate.isVerified(downloadedVersion)) {
+    console.warn('[updater] install refused because the update manifest was not verified in this session')
+    broadcastManifestRefused()
+    return Promise.resolve(false)
+  }
   const run = installChain.then(() => decideUpdateInstall({
     isPackaged: app.isPackaged,
     updateMode,

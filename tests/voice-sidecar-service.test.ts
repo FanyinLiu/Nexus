@@ -9,6 +9,7 @@ import {
   resolveQwen3TtsPythonCommand,
   resolveVoiceSidecarPlan,
 } from '../electron/services/voiceSidecarService.js'
+import { getSidecarToken } from '../electron/services/localServiceSecurity.js'
 
 type SidecarSettings = {
   speechInputEnabled?: boolean
@@ -274,6 +275,19 @@ test('GLM-ASR + voice on starts exactly one GLM sidecar', async () => {
 
   await harness.supervisor.stopAll()
   assert.equal(harness.active, 0)
+})
+
+test('Python sidecars receive the per-launch token in their environment', async () => {
+  const harness = createHarness()
+
+  harness.supervisor.applySettings(GLM_ASR_SETTINGS)
+  await harness.supervisor.whenIdle()
+
+  const spawnEnv = harness.spawned[0].options.env as Record<string, string>
+  assert.equal(spawnEnv.NEXUS_SIDECAR_TOKEN, getSidecarToken())
+  assert.match(spawnEnv.NEXUS_SIDECAR_TOKEN, /^[0-9a-f]{64}$/u)
+
+  await harness.supervisor.stopAll()
 })
 
 test('OmniVoice + speech output on starts exactly one OmniVoice sidecar', async () => {

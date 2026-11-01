@@ -13,23 +13,87 @@ SIDECAR_VERSION = "1"
 import argparse
 import io
 import logging
+import os
 import struct
 import threading
+from pathlib import Path
 
 import torch
 import torchaudio
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 
+from nexus_sidecar_guard import (
+    MAX_JSON_BODY_BYTES,
+    authorize_request,
+    require_sidecar_token,
+)
 from omnivoice import OmniVoice
 
 logger = logging.getLogger(__name__)
+
+# Full commit SHA for k2-fsa/OmniVoice. A local checkpoint directory is loaded
+# offline; a Hub id must never fall back to the floating main branch. Override
+# with --model-revision or NEXUS_OMNIVOICE_MODEL_REVISION.
+OMNIVOICE_DEFAULT_REVISION = "c5fdb5ccb189668d56333f77ba2629f4cd7535f4"
+OMNIVOICE_REVISION_ENV = "NEXUS_OMNIVOICE_MODEL_REVISION"
 
 app = FastAPI()
 model = None
 model_lock = threading.Lock()
 sampling_rate = 24000
+_SIDECAR_TOKEN = ""
+
+
+@app.middleware("http")
+async def nexus_sidecar_guard(request: Request, call_next):
+    failure = authorize_request(
+        token=_SIDECAR_TOKEN,
+        method=request.method,
+        headers=request.headers,
+        content_types=("application/json",),
+        max_body_bytes=MAX_JSON_BODY_BYTES,
+    )
+    if failure:
+        status, message = failure
+        return JSONResponse(status_code=status, content={"error": {"message": message}})
+    return await call_next(request)
+
+
+def hf_cache_snapshot(model_id, revision=None):
+    """Return a cached Hugging Face snapshot directory for `model_id`."""
+    cache_root = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface")) / "hub"
+    snapshots = cache_root / ("models--" + str(model_id).replace("/", "--")) / "snapshots"
+    if revision:
+        candidate = snapshots / str(revision)
+        if candidate.is_dir():
+            return candidate
+    try:
+        candidates = sorted(
+            (entry for entry in snapshots.iterdir() if entry.is_dir()),
+            key=lambda entry: entry.name,
+            reverse=True,
+        )
+    except OSError:
+        candidates = []
+    return candidates[0] if candidates else None
+
+
+def resolve_pretrained_source(model_id, revision):
+    """Return (source, kwargs) for a pinned, offline-first from_pretrained call."""
+    expanded = Path(str(model_id)).expanduser()
+    if expanded.is_dir():
+        return str(expanded), {"local_files_only": True}
+    snapshot = hf_cache_snapshot(model_id, revision)
+    if snapshot is not None:
+        return str(snapshot), {"local_files_only": True}
+    if not revision:
+        raise RuntimeError(
+            f"{model_id} is not cached locally and no pinned revision is configured; "
+            f"set {OMNIVOICE_REVISION_ENV} or --model-revision to a full commit SHA."
+        )
+    return str(model_id), {"revision": str(revision), "local_files_only": False}
 
 
 def get_best_device():
@@ -186,16 +250,21 @@ async def list_models():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "omnivoice"}
 
 
 def main():
-    global model, sampling_rate
+    global model, sampling_rate, _SIDECAR_TOKEN
 
     parser = argparse.ArgumentParser(description="OmniVoice OpenAI-compatible TTS server")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--host", type=str, default="127.0.0.1")
     parser.add_argument("--model", type=str, default="k2-fsa/OmniVoice")
+    parser.add_argument(
+        "--model-revision",
+        type=str,
+        default=os.environ.get(OMNIVOICE_REVISION_ENV) or OMNIVOICE_DEFAULT_REVISION,
+    )
     parser.add_argument("--device", type=str, default=None)
     args = parser.parse_args()
 
@@ -204,9 +273,17 @@ def main():
         level=logging.INFO,
     )
 
+    _SIDECAR_TOKEN = require_sidecar_token()
+
     device = args.device or get_best_device()
-    logger.info(f"Loading OmniVoice from {args.model} on {device} ...")
-    model = OmniVoice.from_pretrained(args.model, device_map=device, dtype=torch.float16)
+    source, load_kwargs = resolve_pretrained_source(args.model, args.model_revision)
+    logger.info(f"Loading OmniVoice from {source} on {device} ...")
+    model = OmniVoice.from_pretrained(
+        source,
+        device_map=device,
+        dtype=torch.float16,
+        **load_kwargs,
+    )
     sampling_rate = model.sampling_rate
     logger.info(f"Model loaded. Sample rate: {sampling_rate}. Starting server on {args.host}:{args.port}")
 

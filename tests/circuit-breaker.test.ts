@@ -6,6 +6,7 @@ import {
   getCircuitState,
   resetCircuit,
 } from '../src/features/tools/circuitBreaker.ts'
+import { MCP_TOOL_NOT_ALLOWED_CODE } from '../shared/mcpToolErrors.js'
 
 test('executeWithProtection opens the circuit after consecutive runtime failures', async () => {
   const toolId = 'test-runtime-failures'
@@ -75,6 +76,24 @@ test('half-open circuits allow only one recovery probe at a time', async () => {
     Date.now = originalNow
     resetCircuit(toolId)
   }
+})
+
+test('a user refusal is terminal: no retry and no circuit penalty', async () => {
+  const toolId = 'test-user-refusal'
+  resetCircuit(toolId)
+  let attempts = 0
+
+  await assert.rejects(
+    executeWithProtection(toolId, async () => {
+      attempts += 1
+      throw new Error(`${MCP_TOOL_NOT_ALLOWED_CODE}: MCP tool [srv/write_file] call was not allowed by the user`)
+    }),
+    (error: unknown) => error instanceof Error && error.message.includes(MCP_TOOL_NOT_ALLOWED_CODE),
+  )
+
+  assert.equal(attempts, 1)
+  assert.deepEqual(getCircuitState(toolId), { state: 'closed', failures: 0 })
+  resetCircuit(toolId)
 })
 
 test('half-open caller errors release the recovery probe slot', async () => {

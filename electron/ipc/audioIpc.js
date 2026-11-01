@@ -17,6 +17,8 @@ import {
   buildAuthorizationHeaders,
   parseVolcengineSpeechCredentials,
   isOpenAiCompatibleSpeechOutputProvider,
+  isOmniVoiceSpeechOutputProvider,
+  isQwen3TtsSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,
@@ -41,6 +43,7 @@ import {
   resolveDashScopeTtsModel,
 } from '../services/ttsService.js'
 import { synthesizeLocalTts } from '../services/localTts.js'
+import { withSidecarAuth } from '../services/localServiceSecurity.js'
 import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
 import { getRedactedErrorMessage, redactSensitiveErrorText } from '../services/errorRedaction.js'
 import { extractSpeechInputText } from '../services/speechConnectionProof.js'
@@ -126,6 +129,13 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
             headers: buildAuthorizationHeaders(payload.providerId, payload.apiKey),
             body: undefined,
           }
+
+    if (
+      isOmniVoiceSpeechOutputProvider(payload.providerId)
+      || isQwen3TtsSpeechOutputProvider(payload.providerId)
+    ) {
+      request.headers = withSidecarAuth(request.url, request.headers)
+    }
 
     let response
     try {
@@ -323,6 +333,10 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         'Content-Type': multipart.contentType,
         'Content-Length': String(multipart.body.length),
       }
+    }
+
+    if (payload.providerId === 'glm-asr-local' && headers) {
+      headers = withSidecarAuth(endpoint, headers)
     }
 
     let response
@@ -540,6 +554,15 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       }
     } else {
       throw new Error(mainT('audio.outputProviderUnsupported'))
+    }
+
+    if (
+      headers
+      && endpoint
+      && (isOmniVoiceSpeechOutputProvider(payload.providerId)
+        || isQwen3TtsSpeechOutputProvider(payload.providerId))
+    ) {
+      headers = withSidecarAuth(endpoint, headers)
     }
 
     let response

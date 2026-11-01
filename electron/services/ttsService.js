@@ -47,6 +47,7 @@ import {
   synthesizeVolcengineSpeechOutputWithFallback,
 } from './ttsVolcengine.js'
 import { synthesizeLocalTts } from './localTts.js'
+import { withSidecarAuth } from './localServiceSecurity.js'
 import {
   buildQwen3CportRequestPayload,
   buildQwen3TtsSpeechRequestPayload,
@@ -119,6 +120,7 @@ export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
     const health = await performNetworkRequestWithRetry(`${baseUrl}/health`, {
       allowPrivateNetwork: true,
       method: 'GET',
+      headers: withSidecarAuth(`${baseUrl}/health`),
       timeoutMs: 5_000,
       timeoutMessage: SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT,
       signal,
@@ -139,6 +141,10 @@ export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
     const warm = await performNetworkRequestWithRetry(`${baseUrl}/v1/warmup`, {
       allowPrivateNetwork: true,
       method: 'POST',
+      headers: withSidecarAuth(`${baseUrl}/v1/warmup`, {
+        'Content-Type': 'application/json',
+      }),
+      body: '{}',
       timeoutMs: QWEN3_TTS_WARMUP_TIMEOUT_MS,
       timeoutMessage: SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT,
       signal,
@@ -227,7 +233,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
       response = await performNetworkRequestWithRetry(endpoint, {
         allowPrivateNetwork: true,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withSidecarAuth(endpoint, { 'Content-Type': 'application/json' }),
         body: requestBody,
         timeoutMs: synthTimeoutMs,
         timeoutMessage: synthTimeoutMessage,
@@ -285,10 +291,13 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
       openAiPayload.seed = resolveOmniVoiceSeed(payload.characterId, openAiPayload.voice)
     }
     const requestBody = JSON.stringify(openAiPayload)
-    const headers = {
+    const baseHeaders = {
       'Content-Type': 'application/json',
       ...buildAuthorizationHeaders(payload.providerId, payload.apiKey),
     }
+    const headers = isOmniVoiceSpeechOutputProvider(payload.providerId)
+      ? withSidecarAuth(endpoint, baseHeaders)
+      : baseHeaders
 
     const response = await performNetworkRequestWithRetry(endpoint, {
       allowPrivateNetwork: true,
@@ -541,6 +550,7 @@ export {
   parseVolcengineSpeechCredentials,
   isOpenAiCompatibleSpeechOutputProvider,
   isQwen3TtsSpeechOutputProvider,
+  isOmniVoiceSpeechOutputProvider,
   isMiniMaxSpeechOutputProvider,
   isDashScopeSpeechOutputProvider,
   isVolcengineSpeechOutputProvider,

@@ -2,7 +2,7 @@
   "name": "nexus",
   "private": true,
   "version": "0.4.8",
-    "description": "Local-first desktop AI companion with Live2D, memory, voice, and light tools.",
+  "description": "Local-first desktop AI companion with Live2D, memory, voice, and light tools.",
   "author": {
     "name": "FanyinLiu",
     "email": "nexus@fanyinliu.com"
@@ -131,7 +131,7 @@
     "@vitejs/plugin-react": "~6.0.4",
     "cross-env": "^10.1.0",
     "csso": "^5.0.5",
-    "electron": "^43.7.11",
+    "electron": "^43.8.6",
     "electron-builder": "^26.0.12",
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
@@ -153,15 +153,15 @@
   },
   "overrides": {
     "axios": "^1.16.1",
-    "brace-expansion@1": "1.1.18",
-    "brace-expansion@2": "2.1.4",
-    "brace-expansion@5": "5.0.9",
+    "brace-expansion@1": "1.1.21",
+    "brace-expansion@2": "2.1.7",
+    "brace-expansion@5": "5.0.12",
     "fast-uri": "^3.1.2",
     "gh-pages": "^6.3.0",
     "ip-address": "^10.2.0",
     "js-yaml": "^4.3.2",
     "minimatch@10": {
-      "brace-expansion": "5.0.9"
+      "brace-expansion": "5.0.12"
     },
     "protobufjs": "^7.6.5",
     "qs": "^6.15.2",
@@ -208,6 +208,7 @@
       "shared/**/*",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py",
+      "scripts/nexus_sidecar_guard.py",
       "scripts/send-message-webhook.mjs",
       "scripts/communication-adapters/**/*",
       "package.json",
@@ -230,6 +231,7 @@
       "node_modules/uiohook-napi/**/*",
       "scripts/omnivoice_server.py",
       "scripts/glm_asr_server.py",
+      "scripts/nexus_sidecar_guard.py",
       "scripts/send-message-webhook.mjs",
       "scripts/communication-adapters/**/*"
     ],

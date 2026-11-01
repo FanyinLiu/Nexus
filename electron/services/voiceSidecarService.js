@@ -18,6 +18,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { buildSidecarEnv } from './localServiceSecurity.js'
 import { buildParentDeathGuardLaunch } from './qwen3CportService.js'
 
 /** Protocol version every Python sidecar declares at module scope. */
@@ -675,10 +676,12 @@ export function createVoiceSidecarSupervisor(deps) {
     if (!isDesired(state.id)) return
 
     // A busy port is only "already running" when the health probe says it is
-    // our server. An unrelated listener must not be adopted or killed.
+    // our server. An unrelated listener must not be adopted or killed; without
+    // an injected classifier there is no way to authenticate it, so treat it as
+    // foreign (fail closed).
     const portState = classifyPort
       ? await classifyPort(state)
-      : (await isPortOpen('127.0.0.1', state.port) ? 'ours' : 'closed')
+      : (await isPortOpen('127.0.0.1', state.port) ? 'foreign' : 'closed')
     if (portState === 'foreign') {
       logOnce(state, 'foreignPortLogged', `[${state.tag}] Port ${state.port} is held by another service — skipping start.`)
       return
@@ -706,6 +709,7 @@ export function createVoiceSidecarSupervisor(deps) {
     try {
       child = spawnServiceChild(state, launch.command, launch.args, {
         cwd: path.dirname(scriptPath),
+        env: buildSidecarEnv(process.env),
         // The POSIX guard blocks on stdin until Nexus exits; keeping the pipe
         // open is what makes a force-killed Electron take the server down too.
         stdio: [launch.guarded ? 'pipe' : 'ignore', 'ignore', stderrLog ? 'pipe' : 'ignore'],

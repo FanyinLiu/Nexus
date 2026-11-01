@@ -384,6 +384,8 @@ export const zhTWCore = {
   'updater.error.install_prep_failed_rec': '先留在目前版本，稍後再點「重新啟動以安裝」。',
   'updater.error.snapshot_failed': '安裝前沒能備份資料，這次更新已取消。',
   'updater.error.snapshot_failed_rec': '現有資料還在。可以稍後再點「重新啟動以安裝」。',
+  'updater.error.unverified_update': '無法確認這次更新是否安全，所以沒有安裝。',
+  'updater.error.unverified_update_rec': '你可以改從發佈頁面下載新版本。',
   'failover.error.all_failed': '{domain} 的請求都沒成功。',
   'file.error.record_read_failed': '錄音檔沒能讀出來。',
   'file.error.not_supported': '目前環境不支援文字檔案操作。',

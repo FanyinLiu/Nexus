@@ -91,9 +91,11 @@ Current baseline:
   signing/runtime risks, rollback path, and companion-first next phase. It is a
   per-release operator handoff, not a replacement for `docs/RELEASING.md`.
 - The updater runtime uses full `electron-updater` auto-download/install on
-  Windows, Linux, and future signed macOS builds. Current unsigned macOS builds
-  resolve to `manual-download`: they check GitHub Releases and open the release
-  page instead of attempting to auto-install an unsigned package.
+  Windows and Linux after verifying the detached Ed25519 signature on the
+  channel manifest (`latest*.yml.sig`); an unverified manifest neither downloads
+  nor installs. Current unsigned macOS builds resolve to `manual-download`:
+  they check GitHub Releases and open the release page instead of attempting to
+  auto-install an unsigned package.
 - `npm run release:signing:readiness` is a non-blocking M2 report for future
   signed macOS and Windows release profiles. `npm run release:signing:gate`
   requires all signed profiles, while `release:signing:gate:mac` and
