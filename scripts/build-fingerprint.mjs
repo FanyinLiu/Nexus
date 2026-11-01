@@ -30,6 +30,7 @@ const FIXED_BUILD_INPUTS = [
   'scripts/electron-builder.smoke.cjs',
   'scripts/omnivoice_server.py',
   'scripts/glm_asr_server.py',
+  'scripts/nexus_sidecar_guard.py',
   'scripts/send-message-webhook.mjs',
 ]
 

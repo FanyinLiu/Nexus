@@ -31,12 +31,34 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 
+from nexus_sidecar_guard import (
+    MAX_AUDIO_BODY_BYTES,
+    authorize_request,
+    require_sidecar_token,
+)
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GLM-ASR-Nano STT Server")
 model = None
 processor = None
 model_lock = threading.Lock()
+_SIDECAR_TOKEN = ""
+
+
+@app.middleware("http")
+async def nexus_sidecar_guard(request, call_next):
+    failure = authorize_request(
+        token=_SIDECAR_TOKEN,
+        method=request.method,
+        headers=request.headers,
+        content_types=("multipart/form-data",),
+        max_body_bytes=MAX_AUDIO_BODY_BYTES,
+    )
+    if failure:
+        status, message = failure
+        return JSONResponse(status_code=status, content={"error": {"message": message}})
+    return await call_next(request)
 
 
 def get_best_device():
@@ -110,10 +132,11 @@ async def list_models():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model_loaded": model is not None}
+    return {"status": "ok", "service": "glm-asr", "model_loaded": model is not None}
 
 
 def main():
+    global _SIDECAR_TOKEN
     parser = argparse.ArgumentParser(description="GLM-ASR-Nano STT Server")
     parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--host", default="127.0.0.1")
@@ -127,6 +150,8 @@ def main():
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
+
+    _SIDECAR_TOKEN = require_sidecar_token()
 
     device = get_best_device()
     dtype = get_best_dtype(device)
