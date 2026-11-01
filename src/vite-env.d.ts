@@ -37,7 +37,6 @@ import type {
   SmartTurnProbeResult,
   SmartTurnSessionPayload,
   SmartTurnStartResult,
-  SmartTurnStopResult,
   WeatherLookupRequest,
   WeatherLookupResponse,
   WebSearchRequest,
@@ -54,6 +53,7 @@ import type {
   TtsStreamStartResponse,
 } from './types'
 import type { LocalDataCompanionStorageKey } from '../shared/localDataStorageKeys.js'
+import type { DesktopPetGeneratedBridge } from './types/generated/desktopPetBridge.generated.ts'
 
 
 type MinecraftGatewayEvent = {
@@ -505,20 +505,20 @@ declare global {
       getPetWindowState: () => Promise<PetWindowState>
       setPetFreeMode: (freeMode: boolean) => Promise<PetWindowState | null>
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
-      dragBy: (delta: { x: number; y: number }) => Promise<void>
-      openPanel: (section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings') => Promise<void>
-      requestModelSetup: (options?: { delayMs?: number; cancel?: boolean }) => Promise<void>
-      claimModelSetupReminder?: (options?: { peek?: boolean }) => Promise<{ declined: boolean; remind: boolean }>
-      consumeModelSetupRequest?: () => Promise<boolean>
-      declineModelSetup?: () => Promise<void>
+      dragBy: DesktopPetGeneratedBridge['dragBy']
+      openPanel: DesktopPetGeneratedBridge['openPanel']
+      requestModelSetup: DesktopPetGeneratedBridge['requestModelSetup']
+      claimModelSetupReminder?: DesktopPetGeneratedBridge['claimModelSetupReminder']
+      consumeModelSetupRequest?: DesktopPetGeneratedBridge['consumeModelSetupRequest']
+      declineModelSetup?: DesktopPetGeneratedBridge['declineModelSetup']
       subscribeModelSetupRequest?: (listener: () => void) => () => void
-      getPanelSection: () => Promise<{ section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null; intentToken?: number }>
-      openPetMenu: () => Promise<void>
-      closePanel: () => Promise<void>
-      closeSettings?: () => Promise<void>
+      getPanelSection: DesktopPetGeneratedBridge['getPanelSection']
+      openPetMenu: DesktopPetGeneratedBridge['openPetMenu']
+      closePanel: DesktopPetGeneratedBridge['closePanel']
+      closeSettings?: DesktopPetGeneratedBridge['closeSettings']
       setSystemVibrancy?: (enabled: boolean) => Promise<{ applied: boolean }>
-      getPanelWindowState: () => Promise<PanelWindowState>
-      setPanelWindowState: (state: Partial<PanelWindowState>) => Promise<PanelWindowState>
+      getPanelWindowState: DesktopPetGeneratedBridge['getPanelWindowState']
+      setPanelWindowState: DesktopPetGeneratedBridge['setPanelWindowState']
       isPanelWindow: () => Promise<boolean>
       subscribePanelSection: (listener: (payload: { section: 'chat' | 'settings'; intent?: 'text' | 'recent' | null; intentToken?: number }) => void) => () => void
       subscribeSettingsReturnFocus?: (listener: () => void) => () => void
@@ -527,7 +527,7 @@ declare global {
       getRuntimeState: () => Promise<RuntimeStateSnapshot>
       heartbeatRuntimeState: (payload: { view: 'pet' | 'panel' }) => Promise<RuntimeStateSnapshot>
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
-      getLaunchOnStartup: () => Promise<boolean>
+      getLaunchOnStartup: DesktopPetGeneratedBridge['getLaunchOnStartup']
       setLaunchOnStartup: (value: boolean) => Promise<boolean>
       getPlatformProfile: () => Promise<PlatformProfile>
       listPetModels: () => Promise<PetModelDefinition[]>
@@ -574,47 +574,47 @@ declare global {
 
       // Tencent Cloud Real-Time ASR
       tencentAsrConnect: (payload: { apiKey?: string; appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
-      tencentAsrDisconnect: () => Promise<{ ok: boolean }>
+      tencentAsrDisconnect: DesktopPetGeneratedBridge['tencentAsrDisconnect']
       tencentAsrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
       tencentAsrFinish: () => Promise<{ text: string }>
-      tencentAsrAbort: () => Promise<{ ok: boolean }>
-      tencentAsrStatus: () => Promise<{ state: string }>
+      tencentAsrAbort: DesktopPetGeneratedBridge['tencentAsrAbort']
+      tencentAsrStatus: DesktopPetGeneratedBridge['tencentAsrStatus']
       subscribeTencentAsrResult: (listener: (event: { type: 'partial' | 'final' | 'error'; text: string }) => void) => () => void
 
       // Minecraft Gateway
       minecraftConnect: (payload: { address: string; port: number; username: string }) => Promise<MinecraftGatewayStatus>
-      minecraftDisconnect: () => Promise<{ ok: boolean }>
+      minecraftDisconnect: DesktopPetGeneratedBridge['minecraftDisconnect']
       minecraftSendCommand: (payload: { command: string }) => Promise<{ ok: boolean }>
-      minecraftStatus: () => Promise<MinecraftGatewayStatus>
+      minecraftStatus: DesktopPetGeneratedBridge['minecraftStatus']
       minecraftGameContext: () => Promise<MinecraftGameContext>
 
       // Factorio RCON
       factorioConnect: (payload: { address: string; port: number; password: string }) => Promise<FactorioRconStatus>
-      factorioDisconnect: () => Promise<{ ok: boolean }>
+      factorioDisconnect: DesktopPetGeneratedBridge['factorioDisconnect']
       factorioExecute: (payload: { command: string }) => Promise<{ response: string }>
-      factorioStatus: () => Promise<FactorioRconStatus>
+      factorioStatus: DesktopPetGeneratedBridge['factorioStatus']
       factorioGameContext: () => Promise<FactorioGameContext>
 
       // Telegram Gateway
       telegramConnect: (payload: { botToken: string; allowedChatIds?: number[] }) => Promise<TelegramGatewayStatus>
-      telegramDisconnect: () => Promise<{ ok: boolean }>
+      telegramDisconnect: DesktopPetGeneratedBridge['telegramDisconnect']
       telegramSendMessage: (payload: { chatId: number; text: string; replyToMessageId?: number; parseMode?: string }) => Promise<{ ok: boolean }>
       telegramSendVoice: (payload: { chatId: number; audioBase64: string; mimeType: string; replyToMessageId?: number }) => Promise<{ ok: boolean }>
-      telegramPairingList: () => Promise<PairingRequest[]>
+      telegramPairingList: DesktopPetGeneratedBridge['telegramPairingList']
       telegramPairingResolve: (payload: { senderId: string }) => Promise<{ removed: boolean }>
       subscribeTelegramPairing: (listener: (request: PairingRequest) => void) => () => void
-      telegramStatus: () => Promise<TelegramGatewayStatus>
+      telegramStatus: DesktopPetGeneratedBridge['telegramStatus']
       subscribeTelegramMessage: (listener: (msg: TelegramIncomingMessage) => void) => () => void
 
       // Discord Gateway
       discordConnect: (payload: { botToken: string; allowedChannelIds?: string[] }) => Promise<DiscordGatewayStatus>
-      discordDisconnect: () => Promise<{ ok: boolean }>
+      discordDisconnect: DesktopPetGeneratedBridge['discordDisconnect']
       discordSendMessage: (payload: { channelId: string; text: string; replyToMessageId?: string }) => Promise<{ ok: boolean }>
       discordSendVoice: (payload: { channelId: string; audioBase64: string; mimeType: string; replyToMessageId?: string }) => Promise<{ ok: boolean }>
-      discordPairingList: () => Promise<PairingRequest[]>
+      discordPairingList: DesktopPetGeneratedBridge['discordPairingList']
       discordPairingResolve: (payload: { senderId: string }) => Promise<{ removed: boolean }>
       subscribeDiscordPairing: (listener: (request: PairingRequest) => void) => () => void
-      discordStatus: () => Promise<DiscordGatewayStatus>
+      discordStatus: DesktopPetGeneratedBridge['discordStatus']
       subscribeDiscordMessage: (listener: (msg: DiscordIncomingMessage) => void) => () => void
 
       // MCP Host (multi-server) — start/stop/restart restricted to main process only
@@ -642,12 +642,7 @@ declare global {
         changes: Array<{ integration: string; from: string; to: string; active: boolean }>
         rejected: Array<{ integration: string; from: string; to: string; active: boolean }>
       }>
-      voiceRuntimeSync: (payload: {
-        speechInputEnabled: boolean
-        speechInputProviderId: string
-        speechOutputEnabled: boolean
-        speechOutputProviderId: string
-      }) => Promise<{ ok: boolean }>
+      voiceRuntimeSync: DesktopPetGeneratedBridge['voiceRuntimeSync']
       localDataStatus: () => Promise<LocalDataStatus>
       localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>
       localDataChatMigrationStatus: () => Promise<LocalDataChatMigrationStatusResult>
@@ -698,7 +693,7 @@ declare global {
       pluginEnable: (payload: { id: string }) => Promise<PluginStatus>
       pluginDisable: (payload: { id: string }) => Promise<PluginStatus>
       pluginStatus: (payload: { id: string }) => Promise<PluginStatus | null>
-      pluginDir: () => Promise<string>
+      pluginDir: DesktopPetGeneratedBridge['pluginDir']
       pluginApprove: (payload: { id: string }) => Promise<PluginStatus | null>
       pluginRevoke: (payload: { id: string }) => Promise<PluginStatus | null>
 
@@ -713,21 +708,10 @@ declare global {
         from: string
         timestamp: string
       }>>
-      pluginBusStats: () => Promise<{
-        topicCount: number
-        totalSubscriptions: number
-        recentMessageCount: number
-      }>
+      pluginBusStats: DesktopPetGeneratedBridge['pluginBusStats']
 
       // Memory Vector Store
-      memoryVectorIndex: (payload: {
-        id: string
-        content: string
-        embedding: number[]
-        layer?: string
-        /** Embedding model id the vector came from. */
-        model?: string
-      }) => Promise<{ ok: boolean }>
+      memoryVectorIndex: DesktopPetGeneratedBridge['memoryVectorIndex']
       memoryVectorIndexBatch: (payload: Array<{
         id: string
         content: string
@@ -748,33 +732,16 @@ declare global {
         layer: string
         score: number
       }>>
-      memoryVectorRemove: (payload: { id?: string; ids?: string[] }) => Promise<{ ok: boolean; count?: number }>
+      memoryVectorRemove: DesktopPetGeneratedBridge['memoryVectorRemove']
       /**
        * Clear-all hook the renderer purge calls: vector snapshot plus
        * local-data vacuum. Same channel as memoryClearUserData.
        */
-      memoryVectorClear: (payload?: { needles?: string[] }) => Promise<{ ok: boolean; removed?: number; localDataCleared?: boolean }>
+      memoryVectorClear: DesktopPetGeneratedBridge['memoryVectorClear']
       /** Alias of memoryVectorClear. */
-      memoryClearUserData: (payload?: { needles?: string[] }) => Promise<{ ok: boolean; removed?: number; localDataCleared?: boolean }>
-      memoryVectorStats: () => Promise<{
-        totalEntries: number
-        longTermCount: number
-        dailyCount: number
-        maxEntries: number
-        storePath: string
-        logPath: string
-      }>
-      memoryKeywordSearch: (payload: {
-        query: string
-        limit?: number
-        threshold?: number
-        layer?: string
-      }) => Promise<Array<{
-        id: string
-        content: string
-        layer: string
-        score: number
-      }>>
+      memoryClearUserData: DesktopPetGeneratedBridge['memoryClearUserData']
+      memoryVectorStats: DesktopPetGeneratedBridge['memoryVectorStats']
+      memoryKeywordSearch: DesktopPetGeneratedBridge['memoryKeywordSearch']
       memoryHybridSearch: (payload: {
         queryEmbedding: number[]
         queryText: string
@@ -821,12 +788,12 @@ declare global {
         backupPath?: string | null
       }>
       memoryLongTermSave: (payload: { memories: unknown[] }) => Promise<{ ok: boolean; count: number }>
-      memoryLongTermClear: () => Promise<{ ok: boolean }>
+      memoryLongTermClear: DesktopPetGeneratedBridge['memoryLongTermClear']
       /** Session-level localStorage clear used by the memory reset procedure. */
-      memoryResetLocalStorage: () => Promise<{ ok: boolean }>
+      memoryResetLocalStorage: DesktopPetGeneratedBridge['memoryResetLocalStorage']
       /** Main-process quit handshake: flush the debounced memory write, then ack. */
       onMemoryFlushRequest?: (listener: () => void | Promise<void>) => () => void
-      memoryFlushComplete: () => Promise<{ ok: boolean }>
+      memoryFlushComplete: DesktopPetGeneratedBridge['memoryFlushComplete']
 
       // Auto-generated Skills
       skillSave: (payload: {
@@ -844,33 +811,12 @@ declare global {
         usedCount: number
         lastUsedAt: string | null
       }>
-      skillSearch: (payload: {
-        query: string
-        limit?: number
-      }) => Promise<Array<{
-        id: string
-        title: string
-        trigger: string
-        summary: string
-        content: string
-        relevance: number
-      }>>
-      skillList: () => Promise<Array<{
-        id: string
-        title: string
-        trigger: string
-        summary: string
-        createdAt: string
-        usedCount: number
-      }>>
-      skillGet: (payload: { id: string }) => Promise<{
-        id: string
-        title: string
-        content: string
-      } | null>
+      skillSearch: DesktopPetGeneratedBridge['skillSearch']
+      skillList: DesktopPetGeneratedBridge['skillList']
+      skillGet: DesktopPetGeneratedBridge['skillGet']
       skillRemove: (payload: { id: string }) => Promise<boolean>
-      skillMarkUsed: (payload: { id: string }) => Promise<{ ok: boolean }>
-      skillStats: () => Promise<{ totalSkills: number; maxSkills: number; skillsDir: string }>
+      skillMarkUsed: DesktopPetGeneratedBridge['skillMarkUsed']
+      skillStats: DesktopPetGeneratedBridge['skillStats']
 
       // Persona (SOUL.md file-based identity)
       personaLoadSoul: () => Promise<string>
@@ -892,8 +838,8 @@ declare global {
           markdownOk?: boolean
         }
       }) => Promise<{ ok: boolean }>
-      personaPaths: () => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
-      personaOpenDir: () => Promise<{ ok: boolean }>
+      personaPaths: DesktopPetGeneratedBridge['personaPaths']
+      personaOpenDir: DesktopPetGeneratedBridge['personaOpenDir']
       personaInit: (payload: { defaultSoul: string }) => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
       /**
        * Load a v2 per-profile persona (userData/personas/<id>/soul.md etc.).
@@ -996,24 +942,24 @@ declare global {
 
       // SenseVoice offline ASR (sherpa-onnx OfflineRecognizer)
       sensevoiceStatus: () => Promise<{ installed: boolean; modelFound: boolean; installState?: 'installed' | 'not-installed' | 'engine-missing'; modelsDir: string; currentModelId: string | null }>
-      sensevoiceStart: () => Promise<{ ok: boolean; sampleRate: number }>
+      sensevoiceStart: DesktopPetGeneratedBridge['sensevoiceStart']
       sensevoiceFeed: (
         payload: { samples: number[] | Float32Array },
       ) => Promise<{ ok: boolean }>
       sensevoiceFinish: () => Promise<{ text: string; voiceEmotion: VoiceEmotionLabel | null }>
-      sensevoiceAbort: () => Promise<{ ok: boolean }>
+      sensevoiceAbort: DesktopPetGeneratedBridge['sensevoiceAbort']
       sensevoiceTranscribe: (
         payload: { samples: number[] | Float32Array; sampleRate?: number },
       ) => Promise<{ text: string; voiceEmotion: VoiceEmotionLabel | null }>
 
       // Paraformer streaming ASR (sherpa-onnx OnlineRecognizer)
-      paraformerStatus: () => Promise<{ installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: string | null }>
-      paraformerStart: () => Promise<{ ok: boolean; sampleRate: number }>
+      paraformerStatus: DesktopPetGeneratedBridge['paraformerStatus']
+      paraformerStart: DesktopPetGeneratedBridge['paraformerStart']
       paraformerFeed: (
         payload: { samples: number[] | Float32Array },
       ) => Promise<{ text: string; isEndpoint: boolean }>
       paraformerFinish: () => Promise<{ text: string }>
-      paraformerAbort: () => Promise<{ ok: boolean }>
+      paraformerAbort: DesktopPetGeneratedBridge['paraformerAbort']
 
       kwsStatus: (payload?: { wakeWord?: string }) => Promise<{
         installed: boolean
@@ -1022,19 +968,14 @@ declare global {
         reason?: string
         modelKind?: 'zh' | 'en' | null
       }>
-      kwsStart: (payload?: { wakeWord?: string }) => Promise<{ ok: boolean }>
+      kwsStart: DesktopPetGeneratedBridge['kwsStart']
       kwsFeed: (
         payload: { samples: number[] | Float32Array; sampleRate?: number },
       ) => Promise<{ keyword: string | null }>
-      kwsStop: () => Promise<{ ok: boolean }>
+      kwsStop: DesktopPetGeneratedBridge['kwsStop']
 
-      vadStatus: () => Promise<{ installed: boolean; modelFound: boolean; active: boolean }>
-      vadStart: (payload?: {
-        threshold?: number
-        minSilenceDuration?: number
-        minSpeechDuration?: number
-        maxSpeechDuration?: number
-      }) => Promise<{ ok: boolean; sampleRate?: number; reason?: string }>
+      vadStatus: DesktopPetGeneratedBridge['vadStatus']
+      vadStart: DesktopPetGeneratedBridge['vadStart']
       vadFeed: (
         payload: { samples: number[] | Float32Array },
       ) => Promise<{
@@ -1044,44 +985,25 @@ declare global {
         segments: Float32Array[]
       }>
       vadFlush: () => Promise<{ segments: Float32Array[] }>
-      vadStop: () => Promise<{ ok: boolean }>
+      vadStop: DesktopPetGeneratedBridge['vadStop']
 
       // Smart Turn v3 end-of-turn probe. Audio stays in the main process.
       // Every call for a turn carries the generation returned by start; the
       // handler tolerates a missing payload for older callers.
       turnEndStart: () => Promise<SmartTurnStartResult>
       turnEndProbe: (payload?: SmartTurnSessionPayload) => Promise<SmartTurnProbeResult>
-      turnEndStop: (payload?: SmartTurnSessionPayload) => Promise<SmartTurnStopResult>
+      turnEndStop: DesktopPetGeneratedBridge['turnEndStop']
 
       // Autonomy: system idle & power events
       /** Returns system idle time in seconds. */
-      getSystemIdleTime: () => Promise<number>
+      getSystemIdleTime: DesktopPetGeneratedBridge['getSystemIdleTime']
       subscribePowerEvents: (listener: (event: { kind: import('./types').PowerEventKind }) => void) => () => void
 
       // Adaptive desktop presence. Gaze is relative to the receiving window.
       // Typing signals never include key codes.
-      setDesktopPresencePreferences: (preferences: {
-        gazeFollowEnabled: boolean
-        typingAwarenessEnabled: boolean
-      }) => Promise<{
-        running: boolean
-        permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'
-        platform: string
-        messageKey: string
-        recommendationKey: string
-      }>
-      getDesktopTypingStatus: () => Promise<{
-        running: boolean
-        permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'
-        platform: string
-        messageKey: string
-        recommendationKey: string
-      }>
-      openDesktopTypingPermission: () => Promise<{
-        opened: boolean
-        messageKey: string
-        recommendationKey: string
-      }>
+      setDesktopPresencePreferences: DesktopPetGeneratedBridge['setDesktopPresencePreferences']
+      getDesktopTypingStatus: DesktopPetGeneratedBridge['getDesktopTypingStatus']
+      openDesktopTypingPermission: DesktopPetGeneratedBridge['openDesktopTypingPermission']
       subscribeDesktopGaze: (listener: (sample: {
         paused: boolean
         x: number
@@ -1103,18 +1025,13 @@ declare global {
       }) => void) => () => void
 
       // Autonomy: notification bridge
-      getNotificationChannels: () => Promise<import('./types').NotificationChannel[]>
-      getNotificationWebhookInfo: () => Promise<{
-        url: string
-        requiresAuth: boolean
-        tokenFileName: string
-        maxBodyBytes: number
-      }>
+      getNotificationChannels: DesktopPetGeneratedBridge['getNotificationChannels']
+      getNotificationWebhookInfo: DesktopPetGeneratedBridge['getNotificationWebhookInfo']
       setNotificationChannels: (channels: import('./types').NotificationChannel[]) => Promise<void>
-      startNotificationBridge: () => Promise<void>
-      stopNotificationBridge: () => Promise<void>
+      startNotificationBridge: DesktopPetGeneratedBridge['startNotificationBridge']
+      stopNotificationBridge: DesktopPetGeneratedBridge['stopNotificationBridge']
       notificationWatcherSet: (payload: { enabled: boolean; appsPattern?: string }) => Promise<NotificationWatcherStatus>
-      notificationWatcherStatus: () => Promise<NotificationWatcherStatus>
+      notificationWatcherStatus: DesktopPetGeneratedBridge['notificationWatcherStatus']
       subscribeNotificationWatcherStatus: (listener: (status: NotificationWatcherStatus) => void) => () => void
       subscribeNotifications: (listener: (message: import('./types').NotificationMessage) => void) => () => void
 
@@ -1186,7 +1103,7 @@ declare global {
         updateMode?: string | null
         last: import('./features/updater/types').UpdaterEvent
       }>
-      updaterInstall: () => Promise<boolean>
+      updaterInstall: DesktopPetGeneratedBridge['updaterInstall']
       subscribeUpdaterEvent: (listener: (event: import('./features/updater/types').UpdaterEvent) => void) => () => void
     }
   }

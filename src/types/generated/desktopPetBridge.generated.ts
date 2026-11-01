@@ -478,3 +478,566 @@ export type DesktopPetEventChannel =
   | 'tts:stream-event'
   | 'updater:event'
   | 'vts-bridge:status'
+
+export interface DesktopPetBridgeMethodArguments {
+  claimModelSetupReminder: readonly [options?: { peek?: boolean }]
+  closePanel: readonly []
+  closeSettings: readonly []
+  completeChat: unknown
+  completeChatStream: unknown
+  consumeModelSetupRequest: readonly []
+  controlSystemMediaSession: readonly [payload: { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' }]
+  declineModelSetup: readonly []
+  discordConnect: unknown
+  discordDisconnect: readonly []
+  discordPairingList: readonly []
+  discordPairingResolve: unknown
+  discordSendMessage: readonly [payload: { channelId: string; text: string; replyToMessageId?: string }]
+  discordSendVoice: readonly [payload: { channelId: string; audioBase64: string; mimeType: string; replyToMessageId?: string }]
+  discordStatus: readonly []
+  dragBy: readonly [delta: { x: number; y: number }]
+  externalActionPolicyGet: readonly []
+  externalActionPolicySync: readonly [payload: { policies: Record<string, undefined | { mode: 'read-only' | 'confirm' | 'auto'; active?: boolean }>; desktopContext?: { activeWindow?: boolean; clipboard?: boolean; screenshot?: boolean }; toolOpenExternalRequiresConfirmation?: boolean; uiLanguage?: string }]
+  factorioConnect: readonly [payload: { address: string; port?: number; username?: string; password?: string }]
+  factorioDisconnect: readonly []
+  factorioExecute: readonly [payload: { command: string }]
+  factorioGameContext: readonly []
+  factorioStatus: readonly []
+  getDesktopContext: unknown
+  getDesktopTypingStatus: readonly []
+  getLaunchOnStartup: readonly []
+  getNotificationChannels: readonly []
+  getNotificationWebhookInfo: readonly []
+  getPanelSection: readonly []
+  getPanelWindowState: readonly []
+  getPetWindowState: readonly []
+  getPlatformProfile: readonly []
+  getRuntimeState: readonly []
+  getSystemIdleTime: readonly []
+  getSystemMediaSession: readonly []
+  getWeather: unknown
+  heartbeatRuntimeState: readonly [payload?: { view: 'pet' | 'panel' }]
+  importPetModel: readonly []
+  inspectIntegrations: readonly [payload: { mcpServers: Array<{ id: string; label: string; command: string; args: string; enabled: boolean }>; minecraftIntegrationEnabled: boolean; minecraftServerAddress: string; minecraftServerPort: number; minecraftUsername: string; factorioIntegrationEnabled: boolean; factorioServerAddress: string; factorioServerPort: number; factorioUsername: string }]
+  isPanelWindow: readonly []
+  kwsFeed: unknown
+  kwsStart: readonly [payload?: { wakeWord?: string }]
+  kwsStatus: readonly [payload?: { wakeWord?: string }]
+  kwsStop: readonly []
+  listChatModels: readonly [payload: { providerId?: string; baseUrl: string; apiKey: string; model?: string }]
+  listPetModels: readonly []
+  listSpeechVoices: readonly [payload: { providerId: string; baseUrl: string; apiKey: string }]
+  localDataApplyChatMigration: unknown
+  localDataApplyCompanionMigration: unknown
+  localDataApplyMemoryMigration: unknown
+  localDataChatMigrationStatus: readonly []
+  localDataCompanionMigrationStatus: readonly []
+  localDataCompareChatSessions: unknown
+  localDataCompareCompanion: unknown
+  localDataMemoryMigrationStatus: readonly []
+  localDataMirrorChatSession: unknown
+  localDataMirrorCompanionDataset: unknown
+  localDataMirrorOnboarding: unknown
+  localDataReadChatSessions: readonly []
+  localDataReadCompanion: readonly []
+  localDataReadMemory: readonly []
+  localDataRollbackChatMigration: readonly [payload: { confirmed: boolean }]
+  localDataRollbackCompanionMigration: readonly [payload: { confirmed: boolean }]
+  localDataRollbackMemoryMigration: readonly [payload: { confirmed: boolean }]
+  localDataStatus: readonly []
+  mcpCallTool: unknown
+  mcpListTools: readonly [payload?: { id?: string }]
+  mcpStatus: readonly [payload?: { id?: string }]
+  mcpSyncServers: unknown
+  memoryClearUserData: readonly [payload?: { needles?: Array<string> }]
+  memoryFlushComplete: readonly []
+  memoryHybridSearch: readonly [payload: { queryEmbedding: Array<number>; queryText: string; limit?: number; threshold?: number; layer?: string; model?: string }]
+  memoryKeywordSearch: readonly [payload: { query: string; limit?: number; threshold?: number; layer?: string }]
+  memoryLongTermClear: readonly []
+  memoryLongTermLoad: readonly []
+  memoryLongTermSave: unknown
+  memoryOllamaDetect: readonly [payload: { baseUrl?: string; model: string; timeoutMs?: number }]
+  memoryOllamaEmbed: readonly [payload: { baseUrl?: string; model: string; input: Array<string>; timeoutMs?: number }]
+  memoryResetLocalStorage: readonly []
+  memoryVectorClear: readonly [payload?: { needles?: Array<string> }]
+  memoryVectorIndex: readonly [payload: { id: string; content: string; embedding: Array<number>; layer?: string; model?: string }]
+  memoryVectorIndexBatch: readonly [payload: Array<{ id: string; content: string; embedding: Array<number>; layer?: string; model?: string }>]
+  memoryVectorRemove: readonly [payload?: { id?: string; ids?: Array<string> }]
+  memoryVectorSearch: readonly [payload: { queryEmbedding: Array<number>; limit?: number; threshold?: number; layer?: string; model?: string }]
+  memoryVectorStats: readonly []
+  minecraftConnect: readonly [payload: { address: string; port?: number; username?: string; password?: string }]
+  minecraftDisconnect: readonly []
+  minecraftGameContext: readonly []
+  minecraftSendCommand: readonly [payload: { command: string }]
+  minecraftStatus: readonly []
+  modelsDownload: unknown
+  modelsDownloadMissing: readonly [payload?: { speechInputProviderId?: string }]
+  modelsGetInventory: readonly []
+  modelsNetworkProbe: readonly []
+  notificationWatcherSet: unknown
+  notificationWatcherStatus: readonly []
+  onMemoryFlushRequest: unknown
+  openDesktopTypingPermission: readonly []
+  openExternalLink: unknown
+  openPanel: readonly [section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings']
+  openPetMenu: readonly []
+  openTextFile: readonly [payload: { title: string; filters?: Array<{ name: string; extensions: Array<string> }> }]
+  paraformerAbort: readonly []
+  paraformerFeed: unknown
+  paraformerFinish: readonly []
+  paraformerStart: readonly []
+  paraformerStatus: readonly []
+  personaImportCard: readonly []
+  personaInit: unknown
+  personaLoadMemory: readonly []
+  personaLoadProfile: unknown
+  personaLoadSoul: readonly []
+  personaOpenDir: readonly []
+  personaPaths: readonly []
+  personaProfileDir: unknown
+  personaSaveMemory: unknown
+  personaSaveSoul: unknown
+  personaSaveStyle: unknown
+  pluginApprove: readonly [payload: { id: string }]
+  pluginBusPublish: unknown
+  pluginBusRecent: readonly [payload?: { limit?: number }]
+  pluginBusStats: readonly []
+  pluginBusSubscribe: unknown
+  pluginBusSubscriptions: readonly []
+  pluginBusUnsubscribe: unknown
+  pluginDir: readonly []
+  pluginDisable: readonly [payload: { id: string }]
+  pluginEnable: readonly [payload: { id: string }]
+  pluginList: readonly []
+  pluginRestart: readonly [payload: { id: string }]
+  pluginRevoke: readonly [payload: { id: string }]
+  pluginScan: readonly []
+  pluginStart: readonly [payload: { id: string }]
+  pluginStatus: readonly [payload: { id: string }]
+  pluginStop: readonly [payload: { id: string }]
+  probeLocalServices: unknown
+  requestModelSetup: readonly [options?: { delayMs?: number; cancel?: boolean }]
+  saveTextFile: readonly [payload: { title: string; defaultFileName: string; content: string; filters?: Array<{ name: string; extensions: Array<string> }> }]
+  searchWeb: unknown
+  sensevoiceAbort: readonly []
+  sensevoiceFeed: unknown
+  sensevoiceFinish: readonly []
+  sensevoiceStart: readonly []
+  sensevoiceStatus: readonly []
+  sensevoiceTranscribe: unknown
+  setDesktopPresencePreferences: readonly [preferences: { gazeFollowEnabled: boolean; typingAwarenessEnabled: boolean }]
+  setLaunchOnStartup: unknown
+  setNotificationChannels: unknown
+  setPanelWindowState: readonly [state?: { collapsed?: boolean }]
+  setPetFreeMode: unknown
+  setSystemVibrancy: unknown
+  showConfirmDialog: unknown
+  showProactiveNotification: unknown
+  skillGet: readonly [payload: { id: string }]
+  skillList: readonly []
+  skillMarkUsed: readonly [payload: { id: string }]
+  skillRemove: readonly [payload: { id: string }]
+  skillSave: readonly [payload: { id: string; title: string; trigger: string; summary: string; content: string }]
+  skillSearch: readonly [payload: { query: string; limit?: number }]
+  skillStats: readonly []
+  startNotificationBridge: readonly []
+  stopNotificationBridge: readonly []
+  subscribeDesktopGaze: unknown
+  subscribeDesktopTyping: unknown
+  subscribeDesktopTypingStatus: unknown
+  subscribeDiscordMessage: unknown
+  subscribeDiscordPairing: unknown
+  subscribeModelSetupRequest: unknown
+  subscribeModelsProgress: unknown
+  subscribeNotificationWatcherStatus: unknown
+  subscribeNotifications: unknown
+  subscribePanelSection: unknown
+  subscribePanelWindowState: unknown
+  subscribePetModelLibraryChanged: unknown
+  subscribePetWindowState: unknown
+  subscribePowerEvents: unknown
+  subscribeRuntimeState: unknown
+  subscribeSettingsReturnFocus: unknown
+  subscribeTelegramMessage: unknown
+  subscribeTelegramPairing: unknown
+  subscribeTencentAsrResult: unknown
+  subscribeTtsStream: unknown
+  subscribeUpdaterEvent: unknown
+  subscribeVtsBridgeStatus: unknown
+  synthesizeAudio: readonly [payload: { providerId: string; baseUrl: string; apiKey: string; model?: string; voice?: string; characterId?: string; text: string; instructions?: string; language?: string; rate?: number; pitch?: number; volume?: number }]
+  telegramConnect: unknown
+  telegramDisconnect: readonly []
+  telegramPairingList: readonly []
+  telegramPairingResolve: unknown
+  telegramSendMessage: readonly [payload: { chatId: number; text: string; replyToMessageId?: number; parseMode?: string }]
+  telegramSendVoice: readonly [payload: { chatId: number; audioBase64: string; mimeType: string; replyToMessageId?: number }]
+  telegramStatus: readonly []
+  tencentAsrAbort: readonly []
+  tencentAsrConnect: readonly [payload?: { apiKey?: string; appId?: string; secretId?: string; secretKey?: string; engineModelType?: string; hotwordList?: string }]
+  tencentAsrDisconnect: readonly []
+  tencentAsrFeed: unknown
+  tencentAsrFinish: readonly []
+  tencentAsrStatus: readonly []
+  testChatConnection: readonly [payload: { providerId?: string; baseUrl: string; apiKey: string; capability: 'text' | 'speech-input' | 'speech-output'; model?: string; voice?: string }]
+  testServiceConnection: readonly [payload: { providerId?: string; baseUrl: string; apiKey: string; capability: 'text' | 'speech-input' | 'speech-output'; model?: string; voice?: string }]
+  transcribeAudio: readonly [payload: { providerId: string; baseUrl: string; apiKey: string; model?: string; traceId?: string; language?: string; hotwords?: string; audioBase64: string; mimeType: string; fileName?: string }]
+  ttsStreamAbort: readonly [payload: { requestId: string }]
+  ttsStreamFinish: readonly [payload: { requestId: string }]
+  ttsStreamPushText: unknown
+  ttsStreamStart: readonly [payload: { requestId: string; providerId: string; baseUrl: string; apiKey: string; model?: string; voice?: string; characterId?: string; instructions?: string; language?: string; rate?: number; pitch?: number; volume?: number }]
+  turnEndProbe: readonly [payload?: { sessionId?: number }]
+  turnEndStart: readonly []
+  turnEndStop: readonly [payload?: { sessionId?: number }]
+  updatePetWindowState: readonly [state?: { isPinned?: boolean; clickThrough?: boolean; petHotspotActive?: boolean; roamCapable?: boolean }]
+  updateRuntimeState: unknown
+  updaterCheck: readonly []
+  updaterInstall: readonly []
+  updaterStatus: readonly []
+  vadFeed: unknown
+  vadFlush: readonly []
+  vadStart: readonly [payload?: { threshold?: number; minSilenceDuration?: number; minSpeechDuration?: number; maxSpeechDuration?: number }]
+  vadStatus: readonly []
+  vadStop: readonly []
+  vaultDelete: unknown
+  vaultIsAvailable: readonly []
+  vaultListSlots: readonly []
+  vaultRetrieve: unknown
+  vaultRetrieveMany: unknown
+  vaultStore: unknown
+  vaultStoreMany: unknown
+  voiceProfileProbe: unknown
+  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string }]
+  vtsBridgeConnect: readonly [payload: { port: number }]
+  vtsBridgeDisconnect: readonly []
+  vtsBridgeMigrateLegacyToken: unknown
+  vtsBridgeStatus: readonly []
+  vtsBridgeUpdateInput: readonly [payload: { expressionSlot: string; speechLevel: number; gazeTarget: { x: number; y: number }; isSpeaking: boolean; isListening: boolean }]
+}
+
+export interface DesktopPetBridgeMethodResults {
+  claimModelSetupReminder: { declined: boolean; remind: boolean }
+  closePanel: void
+  closeSettings: void
+  completeChat: unknown
+  completeChatStream: unknown
+  consumeModelSetupRequest: boolean
+  controlSystemMediaSession: { ok: boolean; hasSession: boolean; action: string; message: undefined | string }
+  declineModelSetup: void
+  discordConnect: { state: 'error' | 'disconnected' | 'connecting' | 'connected'; botUsername: null | string; allowedChannelIds: Array<string>; lastError: null | string }
+  discordDisconnect: { ok: boolean }
+  discordPairingList: Array<{ senderId: string; name: string; code: string; createdAt: number }>
+  discordPairingResolve: { removed: boolean }
+  discordSendMessage: unknown
+  discordSendVoice: unknown
+  discordStatus: { state: 'error' | 'disconnected' | 'connecting' | 'connected'; botUsername: null | string; allowedChannelIds: Array<string>; lastError: null | string }
+  dragBy: void
+  externalActionPolicyGet: unknown
+  externalActionPolicySync: unknown
+  factorioConnect: { state: 'disconnected' | 'connecting' | 'connected' | 'authenticating'; address: null | string; port: null | number; recentCommands: Array<{ command: string; response: string; timestamp: string }> }
+  factorioDisconnect: { ok: boolean }
+  factorioExecute: unknown
+  factorioGameContext: null | { game: string; connected: boolean; address: string; recentCommands: Array<{ command: string; response: string; timestamp: string }> }
+  factorioStatus: { state: 'disconnected' | 'connecting' | 'connected' | 'authenticating'; address: null | string; port: null | number; recentCommands: Array<{ command: string; response: string; timestamp: string }> }
+  getDesktopContext: unknown
+  getDesktopTypingStatus: { running: boolean; permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'; platform: 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku' | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd'; messageKey: string; recommendationKey: string }
+  getLaunchOnStartup: boolean
+  getNotificationChannels: Array<{ id: string; kind: 'rss' | 'webhook' | 'calendar'; name: string; enabled: boolean; config: Record<string, string>; lastCheckedAt?: string; checkIntervalMinutes: number }>
+  getNotificationWebhookInfo: { url: string; requiresAuth: boolean; tokenFileName: string; maxBodyBytes: number }
+  getPanelSection: { section: 'chat' | 'settings'; intent: null | 'text' | 'recent'; intentToken: number }
+  getPanelWindowState: { collapsed: boolean }
+  getPetWindowState: unknown
+  getPlatformProfile: unknown
+  getRuntimeState: { petOnline: boolean; panelOnline: boolean; petLastSeenAt: string; panelLastSeenAt: string; mood: string; continuousVoiceActive: boolean; panelSettingsOpen: boolean; voiceState: string; wakewordPhase: string; wakewordActive: boolean; wakewordAvailable: boolean; wakewordWakeWord: string; wakewordReason: string; wakewordLastTriggeredAt: string; wakewordError: string; wakewordUpdatedAt: string; assistantActivity: string; searchInProgress: boolean; ttsInProgress: boolean; schedulerArmed: boolean; schedulerNextRunAt: string; activeTaskLabel: string; updatedAt: string }
+  getSystemIdleTime: number
+  getSystemMediaSession: unknown
+  getWeather: unknown
+  heartbeatRuntimeState: { petOnline: boolean; panelOnline: boolean; petLastSeenAt: string; panelLastSeenAt: string; mood: string; continuousVoiceActive: boolean; panelSettingsOpen: boolean; voiceState: string; wakewordPhase: string; wakewordActive: boolean; wakewordAvailable: boolean; wakewordWakeWord: string; wakewordReason: string; wakewordLastTriggeredAt: string; wakewordError: string; wakewordUpdatedAt: string; assistantActivity: string; searchInProgress: boolean; ttsInProgress: boolean; schedulerArmed: boolean; schedulerNextRunAt: string; activeTaskLabel: string; updatedAt: string }
+  importPetModel: unknown
+  inspectIntegrations: unknown
+  isPanelWindow: unknown
+  kwsFeed: { keyword: null | string }
+  kwsStart: { ok: boolean; sampleRate: number }
+  kwsStatus: { installed: boolean; modelFound: boolean; modelsDir: string; active: boolean; reason: string; modelKind: null | string }
+  kwsStop: { ok: boolean }
+  listChatModels: unknown
+  listPetModels: unknown
+  listSpeechVoices: unknown
+  localDataApplyChatMigration: unknown
+  localDataApplyCompanionMigration: unknown
+  localDataApplyMemoryMigration: unknown
+  localDataChatMigrationStatus: unknown
+  localDataCompanionMigrationStatus: unknown
+  localDataCompareChatSessions: unknown
+  localDataCompareCompanion: unknown
+  localDataMemoryMigrationStatus: unknown
+  localDataMirrorChatSession: unknown
+  localDataMirrorCompanionDataset: { relationshipDatasetCount: number; taskDatasetCount: number; totalRecordCount: number; payloadBytes: number; recordPayloadsIncluded: boolean; lastAuditRecordId: null; lastAuditAction: null; lastAuditAt: null; ok: boolean; targetDomainIds: Array<string>; schemaVersion: number; errorKind: string; errorMessage: string } | { recordPayloadsIncluded: boolean; relationship: Array<never>; tasks: Array<never>; malformedRecordCount: number; ok: boolean; targetDomainIds: Array<string>; schemaVersion: number; errorKind: string; errorMessage: string } | { compared: boolean; recordPayloadsIncluded: boolean; status: string; sourceDatasetCount: number; sqliteDatasetCount: number; matchedDatasetCount: number; metadataMismatchCount: number; missingSqliteDatasetCount: number; extraSqliteDatasetCount: number; malformedSqliteRecordCount: number; sourceRecordCount: number; sqliteRecordCount: number; sourcePayloadBytes: number; sqlitePayloadBytes: number; issueCodes: Array<never>; auditRecordId: null; ok: boolean; targetDomainIds: Array<string>; schemaVersion: number; errorKind: string; errorMessage: string } | { mirrored: boolean; ok: boolean; targetDomainIds: Array<string>; schemaVersion: number; errorKind: string; errorMessage: string } | { recordsDeleted: number; auditRecordId: null; ok: boolean; targetDomainIds: Array<string>; schemaVersion: number; errorKind: string; errorMessage: string } | { applied: boolean; recordsWritten: number; auditRecordId: null; ok: boolean; targetDomainIds: Array<string>; schemaVersion: number; errorKind: string; errorMessage: string } | { ok: boolean; mirrored: boolean; errorKind: null | string; errorMessage: null | string; datasetId?: undefined; schemaVersion?: undefined } | { ok: boolean; mirrored: boolean; datasetId: string; schemaVersion: number; errorKind: null; errorMessage: null }
+  localDataMirrorOnboarding: unknown
+  localDataReadChatSessions: unknown
+  localDataReadCompanion: unknown
+  localDataReadMemory: unknown
+  localDataRollbackChatMigration: unknown
+  localDataRollbackCompanionMigration: unknown
+  localDataRollbackMemoryMigration: unknown
+  localDataStatus: { initialized: boolean; healthy: boolean; backend: string; schemaVersion: number; targetSchemaVersion: number; migrationCount: number; lastMigrationId: null | string; storageDirectoryName: string; errorKind: null | string; errorMessage: null | string }
+  mcpCallTool: unknown
+  mcpListTools: unknown
+  mcpStatus: unknown
+  mcpSyncServers: unknown
+  memoryClearUserData: { ok: boolean; removed: number; localDataCleared: boolean; snapshotMemoryFilesRemoved: number }
+  memoryFlushComplete: { ok: boolean }
+  memoryHybridSearch: unknown
+  memoryKeywordSearch: Array<{ id: string; content: string; layer: string; score: number }>
+  memoryLongTermClear: { ok: boolean }
+  memoryLongTermLoad: unknown
+  memoryLongTermSave: { ok: boolean; count: number }
+  memoryOllamaDetect: { reachable: boolean; installed: boolean; baseUrl: string; model: string; code?: 'not-local' }
+  memoryOllamaEmbed: { ok: true; embeddings: Array<Array<number>>; model: string; dimensions: number } | { ok: false; code: 'error' | 'unreachable' | 'not-local' | 'model-missing' | 'not-embedding-model' | 'bad-response'; message: string }
+  memoryResetLocalStorage: { ok: boolean }
+  memoryVectorClear: { ok: boolean; removed: number; localDataCleared: boolean; snapshotMemoryFilesRemoved: number }
+  memoryVectorIndex: { ok: boolean }
+  memoryVectorIndexBatch: unknown
+  memoryVectorRemove: { ok: boolean; count: number } | { ok: boolean; count?: undefined }
+  memoryVectorSearch: unknown
+  memoryVectorStats: { totalEntries: number; longTermCount: number; dailyCount: number; maxEntries: number; storePath: string; logPath: string }
+  minecraftConnect: { state: 'disconnected' | 'connecting' | 'connected'; address: null | string; port: null | number; username: null | string; reconnectCount: number; recentEvents: Array<{ type: string; body: string; sender: string; timestamp: string }> }
+  minecraftDisconnect: { ok: boolean }
+  minecraftGameContext: null | { game: string; connected: boolean; address: string; username: string; recentChat: Array<string>; recentPlayerEvents: Array<string> }
+  minecraftSendCommand: unknown
+  minecraftStatus: { state: 'disconnected' | 'connecting' | 'connected'; address: null | string; port: null | number; username: null | string; reconnectCount: number; recentEvents: Array<{ type: string; body: string; sender: string; timestamp: string }> }
+  modelsDownload: { models: Array<{ id: string; label: string; sizeLabel: string; purpose: string; required: boolean; kind: string; present: boolean; verified: boolean; location: null | string; resumable: boolean }>; ready: boolean; missingRequired: Array<string>; primaryDir: string; searchRoots: Array<string>; downloading: Array<string>; disk: { resumable: boolean; freeBytes: null | number; neededBytes: number; ok: boolean } }
+  modelsDownloadMissing: unknown
+  modelsGetInventory: { models: Array<{ id: string; label: string; sizeLabel: string; purpose: string; required: boolean; kind: string; present: boolean; verified: boolean; location: null | string; resumable: boolean }>; ready: boolean; missingRequired: Array<string>; primaryDir: string; searchRoots: Array<string>; downloading: Array<string>; disk: { resumable: boolean; freeBytes: null | number; neededBytes: number; ok: boolean } }
+  modelsNetworkProbe: unknown
+  notificationWatcherSet: { status: 'error' | 'unsupported' | 'stopped' | 'running' | 'needs-permission'; lastError: null | string; platformSupported: boolean }
+  notificationWatcherStatus: { status: 'error' | 'unsupported' | 'stopped' | 'running' | 'needs-permission'; lastError: null | string; platformSupported: boolean }
+  onMemoryFlushRequest: unknown
+  openDesktopTypingPermission: { opened: boolean; messageKey: string; recommendationKey: string }
+  openExternalLink: unknown
+  openPanel: void
+  openPetMenu: void
+  openTextFile: unknown
+  paraformerAbort: { ok: boolean }
+  paraformerFeed: unknown
+  paraformerFinish: unknown
+  paraformerStart: { ok: boolean; sampleRate: number }
+  paraformerStatus: { installed: boolean; modelFound: boolean; modelsDir: string; currentModelId: null | string }
+  personaImportCard: unknown
+  personaInit: { personaDir: string; soulPath: string; memoryPath: string }
+  personaLoadMemory: unknown
+  personaLoadProfile: unknown
+  personaLoadSoul: unknown
+  personaOpenDir: { ok: boolean }
+  personaPaths: { personaDir: string; soulPath: string; memoryPath: string }
+  personaProfileDir: { dir: string }
+  personaSaveMemory: { ok: boolean }
+  personaSaveSoul: { ok: boolean }
+  personaSaveStyle: { ok: boolean }
+  pluginApprove: unknown
+  pluginBusPublish: unknown
+  pluginBusRecent: unknown
+  pluginBusStats: { topicCount: number; totalSubscriptions: number; recentMessageCount: number }
+  pluginBusSubscribe: unknown
+  pluginBusSubscriptions: unknown
+  pluginBusUnsubscribe: unknown
+  pluginDir: string
+  pluginDisable: unknown
+  pluginEnable: unknown
+  pluginList: unknown
+  pluginRestart: unknown
+  pluginRevoke: unknown
+  pluginScan: unknown
+  pluginStart: unknown
+  pluginStatus: unknown
+  pluginStop: unknown
+  probeLocalServices: unknown
+  requestModelSetup: void
+  saveTextFile: unknown
+  searchWeb: unknown
+  sensevoiceAbort: { ok: boolean }
+  sensevoiceFeed: { ok: boolean }
+  sensevoiceFinish: unknown
+  sensevoiceStart: { ok: boolean; sampleRate: number }
+  sensevoiceStatus: { installed: boolean; modelFound: boolean; installState: string; modelsDir: string; currentModelId: null | string }
+  sensevoiceTranscribe: unknown
+  setDesktopPresencePreferences: { running: boolean; permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'; platform: 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku' | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd'; messageKey: string; recommendationKey: string }
+  setLaunchOnStartup: boolean
+  setNotificationChannels: void
+  setPanelWindowState: { collapsed: boolean }
+  setPetFreeMode: unknown
+  setSystemVibrancy: { applied: boolean }
+  showConfirmDialog: boolean
+  showProactiveNotification: { ok: boolean }
+  skillGet: null | { content: string; id: string; title: string; trigger: string; summary: string; createdAt: string; usedCount: number; lastUsedAt: null | string }
+  skillList: Array<{ id: string; title: string; trigger: string; summary: string; createdAt: string; usedCount: number }>
+  skillMarkUsed: { ok: boolean }
+  skillRemove: void
+  skillSave: void
+  skillSearch: Array<{ content: string; relevance: number; id: string; title: string; trigger: string; summary: string; createdAt: string; usedCount: number; lastUsedAt: null | string }>
+  skillStats: { totalSkills: number; maxSkills: number; skillsDir: string }
+  startNotificationBridge: void
+  stopNotificationBridge: void
+  subscribeDesktopGaze: unknown
+  subscribeDesktopTyping: unknown
+  subscribeDesktopTypingStatus: unknown
+  subscribeDiscordMessage: unknown
+  subscribeDiscordPairing: unknown
+  subscribeModelSetupRequest: unknown
+  subscribeModelsProgress: unknown
+  subscribeNotificationWatcherStatus: unknown
+  subscribeNotifications: unknown
+  subscribePanelSection: unknown
+  subscribePanelWindowState: unknown
+  subscribePetModelLibraryChanged: unknown
+  subscribePetWindowState: unknown
+  subscribePowerEvents: unknown
+  subscribeRuntimeState: unknown
+  subscribeSettingsReturnFocus: unknown
+  subscribeTelegramMessage: unknown
+  subscribeTelegramPairing: unknown
+  subscribeTencentAsrResult: unknown
+  subscribeTtsStream: unknown
+  subscribeUpdaterEvent: unknown
+  subscribeVtsBridgeStatus: unknown
+  synthesizeAudio: unknown
+  telegramConnect: { state: 'error' | 'disconnected' | 'connecting' | 'connected'; botUsername: null | string; allowedChatIds: Array<number>; lastError: null | string; updateOffset: number }
+  telegramDisconnect: { ok: boolean }
+  telegramPairingList: Array<{ senderId: string; name: string; code: string; createdAt: number }>
+  telegramPairingResolve: { removed: boolean }
+  telegramSendMessage: unknown
+  telegramSendVoice: unknown
+  telegramStatus: { state: 'error' | 'disconnected' | 'connecting' | 'connected'; botUsername: null | string; allowedChatIds: Array<number>; lastError: null | string; updateOffset: number }
+  tencentAsrAbort: { ok: boolean }
+  tencentAsrConnect: { state: 'ready' | 'disconnected' | 'connecting' | 'streaming' }
+  tencentAsrDisconnect: { ok: boolean }
+  tencentAsrFeed: { ok: boolean }
+  tencentAsrFinish: unknown
+  tencentAsrStatus: { state: 'ready' | 'disconnected' | 'connecting' | 'streaming' }
+  testChatConnection: unknown
+  testServiceConnection: unknown
+  transcribeAudio: { text: string }
+  ttsStreamAbort: unknown
+  ttsStreamFinish: unknown
+  ttsStreamPushText: unknown
+  ttsStreamStart: unknown
+  turnEndProbe: { available: boolean; probability: null | number; latencyMs?: null | number; timedOut?: boolean; reason?: string; sessionId?: number; stale?: boolean }
+  turnEndStart: { ok: boolean; sessionId: number }
+  turnEndStop: { ok: boolean; stale?: boolean }
+  updatePetWindowState: unknown
+  updateRuntimeState: void
+  updaterCheck: unknown
+  updaterInstall: boolean
+  updaterStatus: { currentVersion: string; isPackaged: boolean; updateMode: string; last: { type: string } }
+  vadFeed: unknown
+  vadFlush: unknown
+  vadStart: { ok: boolean; reason: string; sampleRate?: undefined } | { ok: boolean; sampleRate: number; reason?: undefined }
+  vadStatus: { installed: boolean; modelFound: boolean; active: boolean }
+  vadStop: { ok: boolean }
+  vaultDelete: unknown
+  vaultIsAvailable: unknown
+  vaultListSlots: unknown
+  vaultRetrieve: unknown
+  vaultRetrieveMany: unknown
+  vaultStore: unknown
+  vaultStoreMany: unknown
+  voiceProfileProbe: { ok: boolean; probeTimedOut: boolean; hardware: null | { platform: null | string; arch: null | string; release: null | string; logicalCores: null | number; cpuModel: null | string; totalMemBytes: null | number; freeMemBytes: null | number; freeDiskBytes: null | number; onBattery: null | boolean; gpuVendorId: null | number; gpuDeviceId: null | number }; benchmark: { status: 'ok' | 'error' | 'not-run' | 'timeout' | 'skipped'; sttRtf: null | number } | { status: string; sttRtf: null } }
+  voiceRuntimeSync: { ok: boolean }
+  vtsBridgeConnect: unknown
+  vtsBridgeDisconnect: unknown
+  vtsBridgeMigrateLegacyToken: unknown
+  vtsBridgeStatus: { state: string; modelName: string; port: number; error: string }
+  vtsBridgeUpdateInput: { state: string; modelName: string; port: number; error: string }
+}
+
+export interface DesktopPetGeneratedBridge {
+  claimModelSetupReminder: (...args: DesktopPetBridgeMethodArguments['claimModelSetupReminder']) => Promise<DesktopPetBridgeMethodResults['claimModelSetupReminder']>
+  closePanel: (...args: DesktopPetBridgeMethodArguments['closePanel']) => Promise<DesktopPetBridgeMethodResults['closePanel']>
+  closeSettings: (...args: DesktopPetBridgeMethodArguments['closeSettings']) => Promise<DesktopPetBridgeMethodResults['closeSettings']>
+  consumeModelSetupRequest: (...args: DesktopPetBridgeMethodArguments['consumeModelSetupRequest']) => Promise<DesktopPetBridgeMethodResults['consumeModelSetupRequest']>
+  controlSystemMediaSession: (...args: DesktopPetBridgeMethodArguments['controlSystemMediaSession']) => Promise<DesktopPetBridgeMethodResults['controlSystemMediaSession']>
+  declineModelSetup: (...args: DesktopPetBridgeMethodArguments['declineModelSetup']) => Promise<DesktopPetBridgeMethodResults['declineModelSetup']>
+  discordDisconnect: (...args: DesktopPetBridgeMethodArguments['discordDisconnect']) => Promise<DesktopPetBridgeMethodResults['discordDisconnect']>
+  discordPairingList: (...args: DesktopPetBridgeMethodArguments['discordPairingList']) => Promise<DesktopPetBridgeMethodResults['discordPairingList']>
+  discordStatus: (...args: DesktopPetBridgeMethodArguments['discordStatus']) => Promise<DesktopPetBridgeMethodResults['discordStatus']>
+  dragBy: (...args: DesktopPetBridgeMethodArguments['dragBy']) => Promise<DesktopPetBridgeMethodResults['dragBy']>
+  factorioConnect: (...args: DesktopPetBridgeMethodArguments['factorioConnect']) => Promise<DesktopPetBridgeMethodResults['factorioConnect']>
+  factorioDisconnect: (...args: DesktopPetBridgeMethodArguments['factorioDisconnect']) => Promise<DesktopPetBridgeMethodResults['factorioDisconnect']>
+  factorioGameContext: (...args: DesktopPetBridgeMethodArguments['factorioGameContext']) => Promise<DesktopPetBridgeMethodResults['factorioGameContext']>
+  factorioStatus: (...args: DesktopPetBridgeMethodArguments['factorioStatus']) => Promise<DesktopPetBridgeMethodResults['factorioStatus']>
+  getDesktopTypingStatus: (...args: DesktopPetBridgeMethodArguments['getDesktopTypingStatus']) => Promise<DesktopPetBridgeMethodResults['getDesktopTypingStatus']>
+  getLaunchOnStartup: (...args: DesktopPetBridgeMethodArguments['getLaunchOnStartup']) => Promise<DesktopPetBridgeMethodResults['getLaunchOnStartup']>
+  getNotificationChannels: (...args: DesktopPetBridgeMethodArguments['getNotificationChannels']) => Promise<DesktopPetBridgeMethodResults['getNotificationChannels']>
+  getNotificationWebhookInfo: (...args: DesktopPetBridgeMethodArguments['getNotificationWebhookInfo']) => Promise<DesktopPetBridgeMethodResults['getNotificationWebhookInfo']>
+  getPanelSection: (...args: DesktopPetBridgeMethodArguments['getPanelSection']) => Promise<DesktopPetBridgeMethodResults['getPanelSection']>
+  getPanelWindowState: (...args: DesktopPetBridgeMethodArguments['getPanelWindowState']) => Promise<DesktopPetBridgeMethodResults['getPanelWindowState']>
+  getRuntimeState: (...args: DesktopPetBridgeMethodArguments['getRuntimeState']) => Promise<DesktopPetBridgeMethodResults['getRuntimeState']>
+  getSystemIdleTime: (...args: DesktopPetBridgeMethodArguments['getSystemIdleTime']) => Promise<DesktopPetBridgeMethodResults['getSystemIdleTime']>
+  heartbeatRuntimeState: (...args: DesktopPetBridgeMethodArguments['heartbeatRuntimeState']) => Promise<DesktopPetBridgeMethodResults['heartbeatRuntimeState']>
+  kwsStart: (...args: DesktopPetBridgeMethodArguments['kwsStart']) => Promise<DesktopPetBridgeMethodResults['kwsStart']>
+  kwsStatus: (...args: DesktopPetBridgeMethodArguments['kwsStatus']) => Promise<DesktopPetBridgeMethodResults['kwsStatus']>
+  kwsStop: (...args: DesktopPetBridgeMethodArguments['kwsStop']) => Promise<DesktopPetBridgeMethodResults['kwsStop']>
+  localDataStatus: (...args: DesktopPetBridgeMethodArguments['localDataStatus']) => Promise<DesktopPetBridgeMethodResults['localDataStatus']>
+  memoryClearUserData: (...args: DesktopPetBridgeMethodArguments['memoryClearUserData']) => Promise<DesktopPetBridgeMethodResults['memoryClearUserData']>
+  memoryFlushComplete: (...args: DesktopPetBridgeMethodArguments['memoryFlushComplete']) => Promise<DesktopPetBridgeMethodResults['memoryFlushComplete']>
+  memoryKeywordSearch: (...args: DesktopPetBridgeMethodArguments['memoryKeywordSearch']) => Promise<DesktopPetBridgeMethodResults['memoryKeywordSearch']>
+  memoryLongTermClear: (...args: DesktopPetBridgeMethodArguments['memoryLongTermClear']) => Promise<DesktopPetBridgeMethodResults['memoryLongTermClear']>
+  memoryOllamaDetect: (...args: DesktopPetBridgeMethodArguments['memoryOllamaDetect']) => Promise<DesktopPetBridgeMethodResults['memoryOllamaDetect']>
+  memoryOllamaEmbed: (...args: DesktopPetBridgeMethodArguments['memoryOllamaEmbed']) => Promise<DesktopPetBridgeMethodResults['memoryOllamaEmbed']>
+  memoryResetLocalStorage: (...args: DesktopPetBridgeMethodArguments['memoryResetLocalStorage']) => Promise<DesktopPetBridgeMethodResults['memoryResetLocalStorage']>
+  memoryVectorClear: (...args: DesktopPetBridgeMethodArguments['memoryVectorClear']) => Promise<DesktopPetBridgeMethodResults['memoryVectorClear']>
+  memoryVectorIndex: (...args: DesktopPetBridgeMethodArguments['memoryVectorIndex']) => Promise<DesktopPetBridgeMethodResults['memoryVectorIndex']>
+  memoryVectorRemove: (...args: DesktopPetBridgeMethodArguments['memoryVectorRemove']) => Promise<DesktopPetBridgeMethodResults['memoryVectorRemove']>
+  memoryVectorStats: (...args: DesktopPetBridgeMethodArguments['memoryVectorStats']) => Promise<DesktopPetBridgeMethodResults['memoryVectorStats']>
+  minecraftConnect: (...args: DesktopPetBridgeMethodArguments['minecraftConnect']) => Promise<DesktopPetBridgeMethodResults['minecraftConnect']>
+  minecraftDisconnect: (...args: DesktopPetBridgeMethodArguments['minecraftDisconnect']) => Promise<DesktopPetBridgeMethodResults['minecraftDisconnect']>
+  minecraftGameContext: (...args: DesktopPetBridgeMethodArguments['minecraftGameContext']) => Promise<DesktopPetBridgeMethodResults['minecraftGameContext']>
+  minecraftStatus: (...args: DesktopPetBridgeMethodArguments['minecraftStatus']) => Promise<DesktopPetBridgeMethodResults['minecraftStatus']>
+  modelsGetInventory: (...args: DesktopPetBridgeMethodArguments['modelsGetInventory']) => Promise<DesktopPetBridgeMethodResults['modelsGetInventory']>
+  notificationWatcherStatus: (...args: DesktopPetBridgeMethodArguments['notificationWatcherStatus']) => Promise<DesktopPetBridgeMethodResults['notificationWatcherStatus']>
+  openDesktopTypingPermission: (...args: DesktopPetBridgeMethodArguments['openDesktopTypingPermission']) => Promise<DesktopPetBridgeMethodResults['openDesktopTypingPermission']>
+  openPanel: (...args: DesktopPetBridgeMethodArguments['openPanel']) => Promise<DesktopPetBridgeMethodResults['openPanel']>
+  openPetMenu: (...args: DesktopPetBridgeMethodArguments['openPetMenu']) => Promise<DesktopPetBridgeMethodResults['openPetMenu']>
+  paraformerAbort: (...args: DesktopPetBridgeMethodArguments['paraformerAbort']) => Promise<DesktopPetBridgeMethodResults['paraformerAbort']>
+  paraformerStart: (...args: DesktopPetBridgeMethodArguments['paraformerStart']) => Promise<DesktopPetBridgeMethodResults['paraformerStart']>
+  paraformerStatus: (...args: DesktopPetBridgeMethodArguments['paraformerStatus']) => Promise<DesktopPetBridgeMethodResults['paraformerStatus']>
+  personaOpenDir: (...args: DesktopPetBridgeMethodArguments['personaOpenDir']) => Promise<DesktopPetBridgeMethodResults['personaOpenDir']>
+  personaPaths: (...args: DesktopPetBridgeMethodArguments['personaPaths']) => Promise<DesktopPetBridgeMethodResults['personaPaths']>
+  pluginBusStats: (...args: DesktopPetBridgeMethodArguments['pluginBusStats']) => Promise<DesktopPetBridgeMethodResults['pluginBusStats']>
+  pluginDir: (...args: DesktopPetBridgeMethodArguments['pluginDir']) => Promise<DesktopPetBridgeMethodResults['pluginDir']>
+  requestModelSetup: (...args: DesktopPetBridgeMethodArguments['requestModelSetup']) => Promise<DesktopPetBridgeMethodResults['requestModelSetup']>
+  sensevoiceAbort: (...args: DesktopPetBridgeMethodArguments['sensevoiceAbort']) => Promise<DesktopPetBridgeMethodResults['sensevoiceAbort']>
+  sensevoiceStart: (...args: DesktopPetBridgeMethodArguments['sensevoiceStart']) => Promise<DesktopPetBridgeMethodResults['sensevoiceStart']>
+  sensevoiceStatus: (...args: DesktopPetBridgeMethodArguments['sensevoiceStatus']) => Promise<DesktopPetBridgeMethodResults['sensevoiceStatus']>
+  setDesktopPresencePreferences: (...args: DesktopPetBridgeMethodArguments['setDesktopPresencePreferences']) => Promise<DesktopPetBridgeMethodResults['setDesktopPresencePreferences']>
+  setPanelWindowState: (...args: DesktopPetBridgeMethodArguments['setPanelWindowState']) => Promise<DesktopPetBridgeMethodResults['setPanelWindowState']>
+  skillGet: (...args: DesktopPetBridgeMethodArguments['skillGet']) => Promise<DesktopPetBridgeMethodResults['skillGet']>
+  skillList: (...args: DesktopPetBridgeMethodArguments['skillList']) => Promise<DesktopPetBridgeMethodResults['skillList']>
+  skillMarkUsed: (...args: DesktopPetBridgeMethodArguments['skillMarkUsed']) => Promise<DesktopPetBridgeMethodResults['skillMarkUsed']>
+  skillRemove: (...args: DesktopPetBridgeMethodArguments['skillRemove']) => Promise<DesktopPetBridgeMethodResults['skillRemove']>
+  skillSave: (...args: DesktopPetBridgeMethodArguments['skillSave']) => Promise<DesktopPetBridgeMethodResults['skillSave']>
+  skillSearch: (...args: DesktopPetBridgeMethodArguments['skillSearch']) => Promise<DesktopPetBridgeMethodResults['skillSearch']>
+  skillStats: (...args: DesktopPetBridgeMethodArguments['skillStats']) => Promise<DesktopPetBridgeMethodResults['skillStats']>
+  startNotificationBridge: (...args: DesktopPetBridgeMethodArguments['startNotificationBridge']) => Promise<DesktopPetBridgeMethodResults['startNotificationBridge']>
+  stopNotificationBridge: (...args: DesktopPetBridgeMethodArguments['stopNotificationBridge']) => Promise<DesktopPetBridgeMethodResults['stopNotificationBridge']>
+  telegramDisconnect: (...args: DesktopPetBridgeMethodArguments['telegramDisconnect']) => Promise<DesktopPetBridgeMethodResults['telegramDisconnect']>
+  telegramPairingList: (...args: DesktopPetBridgeMethodArguments['telegramPairingList']) => Promise<DesktopPetBridgeMethodResults['telegramPairingList']>
+  telegramStatus: (...args: DesktopPetBridgeMethodArguments['telegramStatus']) => Promise<DesktopPetBridgeMethodResults['telegramStatus']>
+  tencentAsrAbort: (...args: DesktopPetBridgeMethodArguments['tencentAsrAbort']) => Promise<DesktopPetBridgeMethodResults['tencentAsrAbort']>
+  tencentAsrConnect: (...args: DesktopPetBridgeMethodArguments['tencentAsrConnect']) => Promise<DesktopPetBridgeMethodResults['tencentAsrConnect']>
+  tencentAsrDisconnect: (...args: DesktopPetBridgeMethodArguments['tencentAsrDisconnect']) => Promise<DesktopPetBridgeMethodResults['tencentAsrDisconnect']>
+  tencentAsrStatus: (...args: DesktopPetBridgeMethodArguments['tencentAsrStatus']) => Promise<DesktopPetBridgeMethodResults['tencentAsrStatus']>
+  transcribeAudio: (...args: DesktopPetBridgeMethodArguments['transcribeAudio']) => Promise<DesktopPetBridgeMethodResults['transcribeAudio']>
+  turnEndProbe: (...args: DesktopPetBridgeMethodArguments['turnEndProbe']) => Promise<DesktopPetBridgeMethodResults['turnEndProbe']>
+  turnEndStart: (...args: DesktopPetBridgeMethodArguments['turnEndStart']) => Promise<DesktopPetBridgeMethodResults['turnEndStart']>
+  turnEndStop: (...args: DesktopPetBridgeMethodArguments['turnEndStop']) => Promise<DesktopPetBridgeMethodResults['turnEndStop']>
+  updaterInstall: (...args: DesktopPetBridgeMethodArguments['updaterInstall']) => Promise<DesktopPetBridgeMethodResults['updaterInstall']>
+  updaterStatus: (...args: DesktopPetBridgeMethodArguments['updaterStatus']) => Promise<DesktopPetBridgeMethodResults['updaterStatus']>
+  vadStart: (...args: DesktopPetBridgeMethodArguments['vadStart']) => Promise<DesktopPetBridgeMethodResults['vadStart']>
+  vadStatus: (...args: DesktopPetBridgeMethodArguments['vadStatus']) => Promise<DesktopPetBridgeMethodResults['vadStatus']>
+  vadStop: (...args: DesktopPetBridgeMethodArguments['vadStop']) => Promise<DesktopPetBridgeMethodResults['vadStop']>
+  voiceRuntimeSync: (...args: DesktopPetBridgeMethodArguments['voiceRuntimeSync']) => Promise<DesktopPetBridgeMethodResults['voiceRuntimeSync']>
+  vtsBridgeStatus: (...args: DesktopPetBridgeMethodArguments['vtsBridgeStatus']) => Promise<DesktopPetBridgeMethodResults['vtsBridgeStatus']>
+  vtsBridgeUpdateInput: (...args: DesktopPetBridgeMethodArguments['vtsBridgeUpdateInput']) => Promise<DesktopPetBridgeMethodResults['vtsBridgeUpdateInput']>
+}
+
+export type DesktopPetGeneratedBridgeKey = keyof DesktopPetGeneratedBridge

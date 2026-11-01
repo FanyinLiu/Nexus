@@ -219,7 +219,7 @@ test('preload and renderer types expose optional close/focus-return compatibilit
   const focusBridge = sliceBetween(preload, 'subscribeSettingsReturnFocus:', 'subscribePanelWindowState:')
   assert.match(focusBridge, /ipcRenderer\.on\('settings:return-focus'/)
   assert.match(focusBridge, /ipcRenderer\.removeListener\('settings:return-focus'/)
-  assert.match(types, /closeSettings\?: \(\) => Promise<void>/)
+  assert.match(types, /closeSettings\?: (?:(?:\(\) => Promise<void>)|DesktopPetGeneratedBridge\['closeSettings'\])/)
   assert.match(types, /subscribeSettingsReturnFocus\?: \(listener: \(\) => void\) => \(\) => void/)
 })
 
