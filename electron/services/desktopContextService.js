@@ -492,6 +492,7 @@ function captureActiveWindowContextWindows() {
   return activeWindowContextCache.pending
 }
 
+/** @returns {Promise<Record<string, unknown> | null>} */
 export function captureActiveWindowContext() {
   if (process.platform === 'darwin') {
     return captureActiveWindowContextMac()

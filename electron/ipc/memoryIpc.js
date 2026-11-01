@@ -1,3 +1,4 @@
+// @ts-check
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { clearMemoryUserData } from '../services/memoryUserDataClear.js'
 import { createMemoryFlushAckGate, createMemoryQuitFlushHandler } from '../services/memoryFlushAckGate.js'

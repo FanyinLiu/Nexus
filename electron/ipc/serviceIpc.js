@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import * as tencentAsr from '../services/tencentAsr.js'
 import smartTurnService from '../smartTurn.js'
@@ -12,6 +13,7 @@ import {
   validateTencentAsrConnectPayload,
 } from './payloadSchemas.js'
 
+/** @param {unknown} apiKey */
 function parseTencentAsrApiKey(apiKey) {
   const parts = String(apiKey ?? '').split(':')
   if (parts.length < 3) return null

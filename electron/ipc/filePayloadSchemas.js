@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   SAFE_FILE_EXTENSION_PATTERN,
@@ -54,10 +55,26 @@ const textFileOpenSchema = {
   },
 }
 
+/**
+ * @typedef {Object} TextFileFilter
+ * @property {string} name
+ * @property {string[]} extensions
+ */
+
+/**
+ * @param {unknown} payload
+ * @returns {{ title: string, defaultFileName: string, content: string, filters?: TextFileFilter[] }}
+ */
 export function validateTextFileSavePayload(payload) {
-  return validateIpcPayload('file:save-text', payload, textFileSaveSchema)
+  return /** @type {{ title: string, defaultFileName: string, content: string, filters?: TextFileFilter[] }} */ (
+    validateIpcPayload('file:save-text', payload, textFileSaveSchema)
+  )
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ title: string, filters?: TextFileFilter[] }}
+ */
 export function validateTextFileOpenPayload(payload) {
-  return validateIpcPayload('file:open-text', payload, textFileOpenSchema)
+  return /** @type {{ title: string, filters?: TextFileFilter[] }} */ (validateIpcPayload('file:open-text', payload, textFileOpenSchema))
 }

@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   SECRET_TEXT_MAX,
@@ -79,18 +80,35 @@ const vaultRetrieveManySchema = {
   },
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ slot: string, plaintext: string }}
+ */
 export function validateVaultStorePayload(payload) {
-  return validateIpcPayload('vault:store', payload, vaultStoreSchema)
+  return /** @type {{ slot: string, plaintext: string }} */ (validateIpcPayload('vault:store', payload, vaultStoreSchema))
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ slot: string }}
+ */
 export function validateVaultSlotPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, vaultSlotPayloadSchema)
+  return /** @type {{ slot: string }} */ (validateIpcPayload(channel, payload, vaultSlotPayloadSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ entries: Array<{ slot: string, plaintext: string }> }}
+ */
 export function validateVaultStoreManyPayload(payload) {
-  return validateIpcPayload('vault:store-many', payload, vaultStoreManySchema)
+  return /** @type {{ entries: Array<{ slot: string, plaintext: string }> }} */ (validateIpcPayload('vault:store-many', payload, vaultStoreManySchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ slots: string[] }}
+ */
 export function validateVaultRetrieveManyPayload(payload) {
-  return validateIpcPayload('vault:retrieve-many', payload, vaultRetrieveManySchema)
+  return /** @type {{ slots: string[] }} */ (validateIpcPayload('vault:retrieve-many', payload, vaultRetrieveManySchema))
 }

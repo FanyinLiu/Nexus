@@ -1,11 +1,18 @@
+// @ts-check
+/** @param {unknown} value */
 function textLength(value) {
   return typeof value === 'string' ? value.length : 0
 }
 
+/** @param {unknown} value */
 function hasText(value) {
   return textLength(value) > 0
 }
 
+/**
+ * @param {Record<string, unknown>} [request]
+ * @param {Record<string, unknown>} [policy]
+ */
 export function summarizeDesktopContextRequest(request = {}, policy = {}) {
   const requested = {
     activeWindow: Boolean(request?.includeActiveWindow),
@@ -29,6 +36,7 @@ export function summarizeDesktopContextRequest(request = {}, policy = {}) {
   }
 }
 
+/** @param {Record<string, unknown>} [snapshot] */
 export function summarizeDesktopContextSnapshot(snapshot = {}) {
   const hasActiveWindow =
     hasText(snapshot?.activeWindowTitle) ||

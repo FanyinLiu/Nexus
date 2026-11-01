@@ -1,5 +1,7 @@
+// @ts-check
 import { isVaultRef } from '../../shared/vaultRefs.js'
 
+/** @param {unknown} slot */
 function summarizeSlot(slot) {
   return {
     present: typeof slot === 'string' && slot.length > 0,
@@ -7,6 +9,7 @@ function summarizeSlot(slot) {
   }
 }
 
+/** @param {unknown} slots */
 function summarizeSlotList(slots) {
   const list = Array.isArray(slots) ? slots.filter((slot) => typeof slot === 'string') : []
   return {
@@ -15,6 +18,7 @@ function summarizeSlotList(slots) {
   }
 }
 
+/** @param {unknown} entries */
 function summarizeEntries(entries) {
   if (!entries || typeof entries !== 'object' || Array.isArray(entries)) {
     return {
@@ -34,6 +38,7 @@ function summarizeEntries(entries) {
   }
 }
 
+/** @param {unknown} value */
 function summarizeVaultRef(value) {
   return {
     present: isVaultRef(value),
@@ -41,6 +46,10 @@ function summarizeVaultRef(value) {
   }
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} [payload]
+ */
 export function summarizeVaultRequest(channel, payload = {}) {
   switch (channel) {
     case 'vault:is-available':
@@ -73,14 +82,20 @@ export function summarizeVaultRequest(channel, payload = {}) {
   }
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} result
+ * @param {unknown} [error]
+ */
 export function summarizeVaultResult(channel, result, error = null) {
   if (error) {
+    const failure = /** @type {{ name?: string, message?: unknown } | null | undefined} */ (error)
     return {
       channel,
       ok: false,
       resultKind: 'error',
-      errorName: error?.name,
-      errorMessageLength: error?.message ? String(error.message).length : 0,
+      errorName: failure?.name,
+      errorMessageLength: failure?.message ? String(failure.message).length : 0,
     }
   }
 
@@ -90,6 +105,7 @@ export function summarizeVaultResult(channel, result, error = null) {
       ? 'null'
       : typeof result
 
+  /** @type {Record<string, unknown>} */
   const summary = {
     channel,
     ok: true,

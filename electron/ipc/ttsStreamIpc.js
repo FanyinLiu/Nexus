@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import { requireTrustedSender } from './validate.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
@@ -9,6 +10,10 @@ import {
   validateTtsStreamStartPayload,
 } from './payloadSchemas.js'
 
+/**
+ * @param {Object} deps
+ * @param {{ start: (sender: Electron.WebContents, payload: unknown) => unknown, pushText: (sender: Electron.WebContents, payload: unknown) => unknown, finish: (sender: Electron.WebContents, payload: unknown) => unknown, abort: (sender: Electron.WebContents, payload: unknown) => unknown }} deps.ttsStreamService
+ */
 export function register({ ttsStreamService }) {
   ipcMain.handle('tts:stream-start', async (event, payload) => {
     requireTrustedSender(event)

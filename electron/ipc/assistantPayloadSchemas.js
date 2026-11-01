@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   CHAT_MESSAGE_TEXT_MAX,
@@ -7,6 +8,79 @@ import {
   optionalBoolean,
   optionalShortString,
 } from './payloadSchemaPrimitives.js'
+
+/**
+ * @typedef {Object} RendererToolPolicy
+ * @property {boolean} [enabled]
+ * @property {boolean} [requiresConfirmation]
+ */
+
+/**
+ * @typedef {Object} ChatCompletionPayload
+ * @property {string} [providerId]
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ * @property {string} model
+ * @property {string} [traceId]
+ * @property {string} [requestId]
+ * @property {unknown[]} messages
+ * @property {number} [temperature]
+ * @property {number} [maxTokens]
+ * @property {unknown[]} [tools]
+ */
+
+/**
+ * @typedef {Object} ChatModelListPayload
+ * @property {string} [providerId]
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ * @property {string} [model]
+ */
+
+/**
+ * @typedef {Object} ServiceConnectionTestPayload
+ * @property {string} [providerId]
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ * @property {'text'|'speech-input'|'speech-output'} capability
+ * @property {string} [model]
+ * @property {string} [voice]
+ */
+
+/**
+ * @typedef {Object} WebSearchToolPayload
+ * @property {string} query
+ * @property {number} [limit]
+ * @property {string} [providerId]
+ * @property {string} [baseUrl]
+ * @property {string} [apiKey]
+ * @property {string} [displayQuery]
+ * @property {string[]} [keywords]
+ * @property {string[]} [candidateQueries]
+ * @property {string} [subject]
+ * @property {string} [facet]
+ * @property {string} [matchProfile]
+ * @property {string[]} [strictTerms]
+ * @property {string[]} [softTerms]
+ * @property {string[]} [phraseTerms]
+ * @property {boolean} [fallbackToBing]
+ * @property {RendererToolPolicy} [policy]
+ */
+
+/**
+ * @typedef {Object} WeatherToolPayload
+ * @property {string} location
+ * @property {string} [fallbackLocation]
+ * @property {string} [locale]
+ * @property {boolean} [quiet]
+ * @property {RendererToolPolicy} [policy]
+ */
+
+/**
+ * @typedef {Object} ExternalLinkToolPayload
+ * @property {string} url
+ * @property {RendererToolPolicy} [policy]
+ */
 
 const rendererToolPolicySchema = {
   type: 'object',
@@ -181,30 +255,59 @@ const externalLinkRequestSchema = {
   },
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {ChatCompletionPayload}
+ */
 export function validateChatCompletionPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, chatCompletionSchema)
+  return /** @type {ChatCompletionPayload} */ (validateIpcPayload(channel, payload, chatCompletionSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ requestId?: string }}
+ */
 export function validateChatAbortStreamPayload(payload) {
-  return validateIpcPayload('chat:abort-stream', payload, chatAbortStreamSchema)
+  return /** @type {{ requestId?: string }} */ (validateIpcPayload('chat:abort-stream', payload, chatAbortStreamSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {ChatModelListPayload}
+ */
 export function validateChatModelListPayload(payload) {
-  return validateIpcPayload('chat:list-models', payload, chatModelListSchema)
+  return /** @type {ChatModelListPayload} */ (validateIpcPayload('chat:list-models', payload, chatModelListSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {ServiceConnectionTestPayload}
+ */
 export function validateServiceConnectionTestPayload(payload) {
-  return validateIpcPayload('service:test-connection', payload, serviceConnectionTestSchema)
+  return /** @type {ServiceConnectionTestPayload} */ (validateIpcPayload('service:test-connection', payload, serviceConnectionTestSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {WebSearchToolPayload}
+ */
 export function validateWebSearchToolPayload(payload) {
-  return validateIpcPayload('tool:web-search', payload, webSearchRequestSchema)
+  return /** @type {WebSearchToolPayload} */ (validateIpcPayload('tool:web-search', payload, webSearchRequestSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {WeatherToolPayload}
+ */
 export function validateWeatherToolPayload(payload) {
-  return validateIpcPayload('tool:get-weather', payload, weatherLookupRequestSchema)
+  return /** @type {WeatherToolPayload} */ (validateIpcPayload('tool:get-weather', payload, weatherLookupRequestSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {ExternalLinkToolPayload}
+ */
 export function validateExternalLinkToolPayload(payload) {
-  return validateIpcPayload('tool:open-external', payload, externalLinkRequestSchema)
+  return /** @type {ExternalLinkToolPayload} */ (validateIpcPayload('tool:open-external', payload, externalLinkRequestSchema))
 }

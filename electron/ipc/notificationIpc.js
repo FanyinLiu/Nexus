@@ -1,3 +1,4 @@
+// @ts-check
 import { BrowserWindow, ipcMain } from 'electron'
 import * as notificationBridge from '../services/notificationBridge.js'
 import * as macWatcher from '../services/macNotificationWatcher.js'

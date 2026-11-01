@@ -1,3 +1,4 @@
+// @ts-check
 import { ipcMain } from 'electron'
 import sherpaKwsService from '../sherpaKws.js'
 import sherpaVadService from '../sherpaVad.js'

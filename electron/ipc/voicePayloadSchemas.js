@@ -1,3 +1,4 @@
+// @ts-check
 import { LOCAL_SPEECH_INPUT_PROVIDER_IDS } from '../../shared/voiceModelDownloads.js'
 import { validateIpcPayload } from './schemaValidator.js'
 import {
@@ -7,6 +8,76 @@ import {
   SHORT_TEXT_MAX,
   URL_TEXT_MAX,
 } from './payloadSchemaPrimitives.js'
+
+/**
+ * @typedef {Object} SpeechVoiceListPayload
+ * @property {string} providerId
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ */
+
+/**
+ * @typedef {Object} AudioTranscriptionPayload
+ * @property {string} providerId
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ * @property {string} [model]
+ * @property {string} [traceId]
+ * @property {string} [language]
+ * @property {string} [hotwords]
+ * @property {string} audioBase64
+ * @property {string} mimeType
+ * @property {string} [fileName]
+ */
+
+/**
+ * @typedef {Object} AudioSynthesisPayload
+ * @property {string} providerId
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ * @property {string} [model]
+ * @property {string} [voice]
+ * @property {string} [characterId]
+ * @property {string} text
+ * @property {string} [instructions]
+ * @property {string} [language]
+ * @property {number} [rate]
+ * @property {number} [pitch]
+ * @property {number} [volume]
+ */
+
+/**
+ * @typedef {Object} TtsStreamStartPayload
+ * @property {string} requestId
+ * @property {string} providerId
+ * @property {string} baseUrl
+ * @property {string} apiKey
+ * @property {string} [model]
+ * @property {string} [voice]
+ * @property {string} [characterId]
+ * @property {string} [instructions]
+ * @property {string} [language]
+ * @property {number} [rate]
+ * @property {number} [pitch]
+ * @property {number} [volume]
+ */
+
+/**
+ * @typedef {Object} TtsSegmentStyle
+ * @property {string} [instruction]
+ * @property {number} [rate]
+ * @property {number} [pitch]
+ * @property {string} [emotion]
+ * @property {number} [speechTempo]
+ */
+
+/**
+ * @typedef {Object} VoiceRuntimeSyncPayload
+ * @property {boolean} speechInputEnabled
+ * @property {string} speechInputProviderId
+ * @property {boolean} speechOutputEnabled
+ * @property {string} speechOutputProviderId
+ */
 
 const modelDownloadSchema = {
   type: 'object',
@@ -166,65 +237,96 @@ const turnEndSessionSchema = {
   },
 }
 
+/** @param {unknown} payload @returns {SpeechVoiceListPayload} */
 export function validateSpeechVoiceListPayload(payload) {
-  return validateIpcPayload('audio:list-voices', payload, speechVoiceListSchema)
+  return /** @type {SpeechVoiceListPayload} */ (validateIpcPayload('audio:list-voices', payload, speechVoiceListSchema))
 }
 
+/** @param {unknown} payload @returns {AudioTranscriptionPayload} */
 export function validateAudioTranscriptionPayload(payload) {
-  return validateIpcPayload('audio:transcribe', payload, audioTranscriptionSchema)
+  return /** @type {AudioTranscriptionPayload} */ (validateIpcPayload('audio:transcribe', payload, audioTranscriptionSchema))
 }
 
+/** @param {unknown} payload @returns {AudioSynthesisPayload} */
 export function validateAudioSynthesisPayload(payload) {
-  return validateIpcPayload('audio:synthesize', payload, audioSynthesisSchema)
+  return /** @type {AudioSynthesisPayload} */ (validateIpcPayload('audio:synthesize', payload, audioSynthesisSchema))
 }
 
+/** @param {unknown} payload @returns {TtsStreamStartPayload} */
 export function validateTtsStreamStartPayload(payload) {
-  return validateIpcPayload('tts:stream-start', payload, ttsStreamStartSchema)
+  return /** @type {TtsStreamStartPayload} */ (validateIpcPayload('tts:stream-start', payload, ttsStreamStartSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ requestId: string, text: string, style?: TtsSegmentStyle }}
+ */
 export function validateTtsStreamPushTextPayload(payload) {
-  return validateIpcPayload('tts:stream-push-text', payload, ttsStreamPushTextSchema)
+  return /** @type {{ requestId: string, text: string, style?: TtsSegmentStyle }} */ (validateIpcPayload('tts:stream-push-text', payload, ttsStreamPushTextSchema))
 }
 
+/** @param {unknown} payload @returns {{ requestId: string }} */
 export function validateTtsStreamFinishPayload(payload) {
-  return validateIpcPayload('tts:stream-finish', payload, requestIdSchema)
+  return /** @type {{ requestId: string }} */ (validateIpcPayload('tts:stream-finish', payload, requestIdSchema))
 }
 
+/** @param {unknown} payload @returns {{ requestId: string }} */
 export function validateTtsStreamAbortPayload(payload) {
-  return validateIpcPayload('tts:stream-abort', payload, requestIdSchema)
+  return /** @type {{ requestId: string }} */ (validateIpcPayload('tts:stream-abort', payload, requestIdSchema))
 }
 
+/** @param {unknown} payload @returns {{ modelId: string }} */
 export function validateModelDownloadPayload(payload) {
-  return validateIpcPayload('models:download', payload, modelDownloadSchema)
+  return /** @type {{ modelId: string }} */ (validateIpcPayload('models:download', payload, modelDownloadSchema))
 }
 
+/** @param {unknown} payload @returns {{ speechInputProviderId?: string }} */
 export function validateModelDownloadMissingPayload(payload) {
-  return validateIpcPayload('models:download-missing', payload, modelDownloadMissingSchema)
+  return /** @type {{ speechInputProviderId?: string }} */ (validateIpcPayload('models:download-missing', payload, modelDownloadMissingSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ apiKey?: string, appId?: string, secretId?: string, secretKey?: string, engineModelType?: string, hotwordList?: string }}
+ */
 export function validateTencentAsrConnectPayload(payload) {
-  return validateIpcPayload('tencent-asr:connect', payload, tencentAsrConnectSchema)
+  return /** @type {{ apiKey?: string, appId?: string, secretId?: string, secretKey?: string, engineModelType?: string, hotwordList?: string }} */ (
+    validateIpcPayload('tencent-asr:connect', payload, tencentAsrConnectSchema)
+  )
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ wakeWord?: string }}
+ */
 export function validateKwsOptionsPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, kwsOptionsSchema)
+  return /** @type {{ wakeWord?: string }} */ (validateIpcPayload(channel, payload, kwsOptionsSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ threshold?: number, minSilenceDuration?: number, minSpeechDuration?: number, maxSpeechDuration?: number }}
+ */
 export function validateVadStartPayload(payload) {
-  return validateIpcPayload('vad:start', payload, vadStartSchema)
+  return /** @type {{ threshold?: number, minSilenceDuration?: number, minSpeechDuration?: number, maxSpeechDuration?: number }} */ (
+    validateIpcPayload('vad:start', payload, vadStartSchema)
+  )
 }
 
+/** @param {unknown} payload @returns {{ sessionId?: number }} */
 export function validateTurnEndSessionPayload(payload) {
-  return validateIpcPayload('voice-turn:session', payload, turnEndSessionSchema)
+  return /** @type {{ sessionId?: number }} */ (validateIpcPayload('voice-turn:session', payload, turnEndSessionSchema))
 }
 
 /**
  * Validate the compact voice-engine snapshot that drives on-demand sidecar
  * lifecycle in the main process.
  * @param {unknown} payload
+ * @returns {VoiceRuntimeSyncPayload}
  */
 export function validateVoiceRuntimeSyncPayload(payload) {
-  return validateIpcPayload('voice-runtime:sync', payload, voiceRuntimeSyncSchema)
+  return /** @type {VoiceRuntimeSyncPayload} */ (validateIpcPayload('voice-runtime:sync', payload, voiceRuntimeSyncSchema))
 }
 
 const voiceRuntimeSyncSchema = {
@@ -247,7 +349,7 @@ const voiceProfileProbeSchema = {
   },
 }
 
-/** @param {unknown} payload */
+/** @param {unknown} payload @returns {{ benchmark?: boolean }} */
 export function validateVoiceProfileProbePayload(payload) {
-  return validateIpcPayload('voice-profile:probe', payload, voiceProfileProbeSchema)
+  return /** @type {{ benchmark?: boolean }} */ (validateIpcPayload('voice-profile:probe', payload, voiceProfileProbeSchema))
 }

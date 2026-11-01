@@ -1,3 +1,5 @@
+// @ts-check
+/** @param {unknown} rawUrl */
 function parseExternalLinkInput(rawUrl) {
   const trimmed = typeof rawUrl === 'string' ? rawUrl.trim() : ''
   if (!trimmed) return null
@@ -11,6 +13,7 @@ function parseExternalLinkInput(rawUrl) {
   }
 }
 
+/** @param {unknown} rawUrl */
 function summarizeUrlShape(rawUrl) {
   const inputLength = typeof rawUrl === 'string' ? rawUrl.length : 0
   const parsed = parseExternalLinkInput(rawUrl)
@@ -36,8 +39,11 @@ function summarizeUrlShape(rawUrl) {
   }
 }
 
+/** @param {Record<string, unknown>} [payload] */
 export function summarizeExternalLinkRequest(payload = {}) {
-  const policy = payload?.policy && typeof payload.policy === 'object' ? payload.policy : {}
+  const policy = /** @type {Record<string, unknown>} */ (
+    payload?.policy && typeof payload.policy === 'object' ? payload.policy : {}
+  )
   return {
     channel: 'tool:open-external',
     url: summarizeUrlShape(payload?.url),
@@ -48,7 +54,12 @@ export function summarizeExternalLinkRequest(payload = {}) {
   }
 }
 
+/**
+ * @param {Record<string, unknown>} [result]
+ * @param {unknown} [error]
+ */
 export function summarizeExternalLinkResult(result = {}, error = null) {
+  const failure = /** @type {{ name?: string, message?: unknown } | null | undefined} */ (error)
   const summary = {
     channel: 'tool:open-external',
     ok: !error,
@@ -61,8 +72,8 @@ export function summarizeExternalLinkResult(result = {}, error = null) {
           : typeof result,
     urlLength: typeof result?.url === 'string' ? result.url.length : undefined,
     messageLength: typeof result?.message === 'string' ? result.message.length : undefined,
-    errorName: error?.name,
-    errorMessageLength: error?.message ? String(error.message).length : 0,
+    errorName: failure?.name,
+    errorMessageLength: failure?.message ? String(failure.message).length : 0,
   }
 
   return Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== undefined))

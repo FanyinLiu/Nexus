@@ -89,6 +89,21 @@ function extractObservedChatModelId(data) {
   )
 }
 
+/**
+ * @param {Object} [options]
+ * @param {boolean} [options.ok]
+ * @param {string} [options.messageKey]
+ * @param {string} [options.recommendationKey]
+ * @param {Record<string, unknown>} [options.messageParams]
+ * @param {string} [options.code]
+ * @param {import('../../shared/chatErrorCodes.js').ChatIpcErrorCode} [options.ipcCode]
+ * @param {string} [options.status]
+ * @param {unknown} [options.evidence]
+ * @param {string} [options.recommendation]
+ * @param {string} [options.checkedAt]
+ * @param {unknown[]} [options.discoveredModels]
+ * @param {string} [options.diagnosticDetail]
+ */
 export function buildChatConnectionResult({
   ok,
   messageKey,

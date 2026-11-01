@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   SHORT_TEXT_MAX,
@@ -31,14 +32,28 @@ const pluginBusRecentSchema = {
   },
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ id: string }}
+ */
 export function validatePluginIdPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, pluginIdSchema)
+  return /** @type {{ id: string }} */ (validateIpcPayload(channel, payload, pluginIdSchema))
 }
 
+/**
+ * @param {string} channel
+ * @param {unknown} payload
+ * @returns {{ serverId: string, topic: string, data?: unknown }}
+ */
 export function validatePluginBusTopicPayload(channel, payload) {
-  return validateIpcPayload(channel, payload, pluginBusTopicSchema)
+  return /** @type {{ serverId: string, topic: string, data?: unknown }} */ (validateIpcPayload(channel, payload, pluginBusTopicSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ limit?: number }}
+ */
 export function validatePluginBusRecentPayload(payload) {
-  return validateIpcPayload('plugin-bus:recent', payload, pluginBusRecentSchema)
+  return /** @type {{ limit?: number }} */ (validateIpcPayload('plugin-bus:recent', payload, pluginBusRecentSchema))
 }

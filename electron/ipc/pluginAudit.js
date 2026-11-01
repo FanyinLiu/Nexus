@@ -1,3 +1,5 @@
+// @ts-check
+/** @param {unknown} value */
 function summarizeTextRef(value) {
   return {
     present: typeof value === 'string' && value.length > 0,
@@ -5,6 +7,7 @@ function summarizeTextRef(value) {
   }
 }
 
+/** @param {unknown} value */
 function summarizeDataShape(value) {
   if (value === null) {
     return { kind: 'null', serializedLength: 4 }
@@ -42,6 +45,7 @@ function summarizeDataShape(value) {
   return { kind: typeof value, serializedLength: serializedLength(value) }
 }
 
+/** @param {unknown} value */
 function serializedLength(value) {
   try {
     const serialized = JSON.stringify(value)
@@ -51,7 +55,9 @@ function serializedLength(value) {
   }
 }
 
+/** @param {Record<string, unknown>} result */
 function summarizeCommonResultFields(result) {
+  /** @type {Record<string, unknown>} */
   const summary = {}
   for (const key of ['ok', 'accepted', 'running', 'enabled', 'approved', 'commandTrusted']) {
     if (typeof result?.[key] === 'boolean') {
@@ -70,6 +76,10 @@ function summarizeCommonResultFields(result) {
   return summary
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown>} [payload]
+ */
 export function summarizePluginRequest(channel, payload = {}) {
   if (channel.startsWith('plugin-bus:')) {
     return {
@@ -86,6 +96,11 @@ export function summarizePluginRequest(channel, payload = {}) {
   }
 }
 
+/**
+ * @param {string} channel
+ * @param {Record<string, unknown> | null} [result]
+ * @param {unknown} [error]
+ */
 export function summarizePluginResult(channel, result = {}, error = null) {
   const resultKind = error
     ? 'error'
@@ -94,6 +109,8 @@ export function summarizePluginResult(channel, result = {}, error = null) {
       : result === null
         ? 'null'
         : typeof result
+  const failure = /** @type {{ name?: string, message?: unknown } | null | undefined} */ (error)
+  /** @type {Record<string, unknown>} */
   const summary = {
     channel,
     ok: !error,
@@ -102,14 +119,15 @@ export function summarizePluginResult(channel, result = {}, error = null) {
       ? Object.keys(result).length
       : undefined,
     resultArrayLength: Array.isArray(result) ? result.length : undefined,
-    ...summarizeCommonResultFields(result),
-    errorName: error?.name,
-    errorMessageLength: error?.message ? String(error.message).length : 0,
+    ...summarizeCommonResultFields(result ?? {}),
+    errorName: failure?.name,
+    errorMessageLength: failure?.message ? String(failure.message).length : 0,
   }
 
   return Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== undefined))
 }
 
+/** @param {string} channel */
 export function pluginActionNeedsConfirmation(channel) {
   return [
     'plugin:start',

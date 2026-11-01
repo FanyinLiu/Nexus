@@ -1,3 +1,4 @@
+// @ts-check
 import { validateIpcPayload } from './schemaValidator.js'
 import {
   SECRET_TEXT_MAX,
@@ -51,14 +52,22 @@ const vtsBridgeInputSchema = {
   },
 }
 
+/** @param {unknown} payload @returns {{ port: number }} */
 export function validateVtsBridgeConnectPayload(payload) {
-  return validateIpcPayload('vts-bridge:connect', payload, vtsBridgeConnectSchema)
+  return /** @type {{ port: number }} */ (validateIpcPayload('vts-bridge:connect', payload, vtsBridgeConnectSchema))
 }
 
+/** @param {unknown} payload @returns {{ token: string }} */
 export function validateVtsBridgeLegacyTokenPayload(payload) {
-  return validateIpcPayload('vts-bridge:migrate-legacy-token', payload, vtsBridgeLegacyTokenSchema)
+  return /** @type {{ token: string }} */ (validateIpcPayload('vts-bridge:migrate-legacy-token', payload, vtsBridgeLegacyTokenSchema))
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {{ expressionSlot: string, speechLevel: number, gazeTarget: { x: number, y: number }, isSpeaking: boolean, isListening: boolean }}
+ */
 export function validateVtsBridgeInputPayload(payload) {
-  return validateIpcPayload('vts-bridge:update-input', payload, vtsBridgeInputSchema)
+  return /** @type {{ expressionSlot: string, speechLevel: number, gazeTarget: { x: number, y: number }, isSpeaking: boolean, isListening: boolean }} */ (
+    validateIpcPayload('vts-bridge:update-input', payload, vtsBridgeInputSchema)
+  )
 }

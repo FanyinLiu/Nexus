@@ -1,3 +1,28 @@
+// @ts-check
+/**
+ * Descriptor accepted by `validateIpcPayload`. Payload schema modules build
+ * these as plain object literals, so `type`/`unknown` stay wide strings.
+ *
+ * @typedef {Object} IpcFieldSchema
+ * @property {string} [type]
+ * @property {boolean} [optional]
+ * @property {unknown} [default]
+ * @property {boolean} [trim]
+ * @property {boolean} [allowEmpty]
+ * @property {number} [maxLength]
+ * @property {boolean} [clamp]
+ * @property {RegExp} [pattern]
+ * @property {number} [min]
+ * @property {number} [max]
+ * @property {boolean} [integer]
+ * @property {number} [maxItems]
+ * @property {IpcFieldSchema} [items]
+ * @property {Record<string, IpcFieldSchema>} [fields]
+ * @property {string} [unknown]
+ * @property {readonly unknown[]} [values]
+ * @property {boolean} [keepUndefined]
+ */
+
 /**
  * @param {unknown} value
  * @returns {value is Record<string, unknown>}
@@ -10,22 +35,37 @@ function isPlainObject(value) {
   return proto === Object.prototype || proto === null
 }
 
+/** @param {string} path */
 function formatSchemaPath(path) {
   return path || 'payload'
 }
 
+/**
+ * @param {string} path
+ * @param {string} message
+ */
 function schemaError(path, message) {
   return new Error(`${formatSchemaPath(path)} ${message}`)
 }
 
+/**
+ * @param {unknown} value
+ * @param {PropertyKey} key
+ */
 function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key)
 }
 
+/** @param {IpcFieldSchema} schema */
 function defaultFor(schema) {
   return hasOwn(schema, 'default') ? schema.default : undefined
 }
 
+/**
+ * @param {unknown} value
+ * @param {IpcFieldSchema} schema
+ * @param {string} path
+ */
 function validateStringSchema(value, schema, path) {
   if (typeof value !== 'string') {
     throw schemaError(path, 'must be a string')
@@ -34,11 +74,12 @@ function validateStringSchema(value, schema, path) {
   if (schema.allowEmpty === false && !nextValue) {
     throw schemaError(path, 'must be a non-empty string')
   }
-  if (Number.isInteger(schema.maxLength) && nextValue.length > schema.maxLength) {
+  const maxLength = schema.maxLength
+  if (typeof maxLength === 'number' && Number.isInteger(maxLength) && nextValue.length > maxLength) {
     if (schema.clamp) {
-      return nextValue.slice(0, schema.maxLength)
+      return nextValue.slice(0, maxLength)
     }
-    throw schemaError(path, `must be at most ${schema.maxLength} characters`)
+    throw schemaError(path, `must be at most ${maxLength} characters`)
   }
   if (schema.pattern && !schema.pattern.test(nextValue)) {
     throw schemaError(path, 'has an invalid format')
@@ -46,6 +87,11 @@ function validateStringSchema(value, schema, path) {
   return nextValue
 }
 
+/**
+ * @param {unknown} value
+ * @param {IpcFieldSchema} schema
+ * @param {string} path
+ */
 function validateNumberSchema(value, schema, path) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw schemaError(path, 'must be a finite number')
@@ -62,23 +108,38 @@ function validateNumberSchema(value, schema, path) {
   return value
 }
 
+/**
+ * @param {unknown} value
+ * @param {IpcFieldSchema} schema
+ * @param {string} path
+ * @returns {unknown[]}
+ */
 function validateArraySchema(value, schema, path) {
   if (!Array.isArray(value)) {
     throw schemaError(path, 'must be an array')
   }
-  if (Number.isInteger(schema.maxItems) && value.length > schema.maxItems) {
-    throw schemaError(path, `must contain at most ${schema.maxItems} items`)
+  const maxItems = schema.maxItems
+  if (typeof maxItems === 'number' && Number.isInteger(maxItems) && value.length > maxItems) {
+    throw schemaError(path, `must contain at most ${maxItems} items`)
   }
-  if (!schema.items) return [...value]
-  return value.map((item, index) => validateSchemaValue(item, schema.items, `${path}[${index}]`))
+  const items = schema.items
+  if (!items) return [...value]
+  return value.map((item, index) => validateSchemaValue(item, items, `${path}[${index}]`))
 }
 
+/**
+ * @param {unknown} value
+ * @param {IpcFieldSchema} schema
+ * @param {string} path
+ * @returns {Record<string, unknown>}
+ */
 function validateObjectSchema(value, schema, path) {
   if (!isPlainObject(value)) {
     throw schemaError(path, 'must be a plain object')
   }
 
   const fields = schema.fields ?? {}
+  /** @type {Record<string, unknown>} */
   const output = {}
 
   for (const [key, fieldSchema] of Object.entries(fields)) {
@@ -115,6 +176,12 @@ function validateObjectSchema(value, schema, path) {
   return output
 }
 
+/**
+ * @param {unknown} value
+ * @param {IpcFieldSchema} schema
+ * @param {string} path
+ * @returns {unknown}
+ */
 function validateSchemaValue(value, schema, path) {
   if (!schema || typeof schema !== 'object') {
     throw new Error('IPC schema descriptor missing')
@@ -157,7 +224,7 @@ function validateSchemaValue(value, schema, path) {
  *
  * @param {string} channel
  * @param {unknown} value
- * @param {Record<string, unknown>} schema
+ * @param {IpcFieldSchema} schema
  * @returns {unknown}
  */
 export function validateIpcPayload(channel, value, schema) {

@@ -1,3 +1,4 @@
+// @ts-check
 /** @param {unknown} value @returns {URL|null} */
 function parseUrl(value) {
   try {

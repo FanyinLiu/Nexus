@@ -438,6 +438,18 @@ export function redactSpeechConnectionText(value) {
  * mirrors the key itself — renderers always translate the key, so no
  * human-readable fallback copy lives in the main process.
  */
+/**
+ * @param {Object} [options]
+ * @param {boolean} [options.ok]
+ * @param {string} [options.messageKey]
+ * @param {Record<string, unknown>} [options.messageParams]
+ * @param {string} [options.code]
+ * @param {string} [options.status]
+ * @param {unknown} [options.evidence]
+ * @param {string} [options.recommendation]
+ * @param {string} [options.checkedAt]
+ * @param {string} [options.diagnosticDetail]
+ */
 export function buildSpeechConnectionResult({
   ok,
   messageKey,

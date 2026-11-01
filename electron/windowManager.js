@@ -136,8 +136,10 @@ function attachRendererLogCapture(webContents, label) {
 const PET_ALWAYS_ON_TOP_LEVEL = 'floating'
 const WINDOWS_TRAY_GUID = '4cf28656-71be-4e31-8f33-b83f76e8db10'
 
+/** @type {import('electron').BrowserWindow | null} */
 export let mainWindow = null
 let petHiddenForPanel = false
+/** @type {import('electron').BrowserWindow | null} */
 export let panelWindow = null
 let tray = null
 let panelBlurTimer = null
@@ -336,6 +338,7 @@ export function closePanelWindow() {
   panelWindow?.hide()
 }
 
+/** @param {import('electron').BrowserWindow | null} [sourceWindow] */
 export function showPetContextMenu(sourceWindow = mainWindow) {
   if (!sourceWindow || sourceWindow.isDestroyed()) return
 

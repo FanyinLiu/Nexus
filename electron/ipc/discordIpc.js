@@ -1,3 +1,4 @@
+// @ts-check
 import { BrowserWindow, ipcMain } from 'electron'
 import * as discordGateway from '../services/discordGateway.js'
 import { requireTrustedSender, requireString } from './validate.js'
@@ -39,7 +40,7 @@ export function register() {
     const requestPayload = await resolveVaultRefsForSender(event.sender, payload, ['botToken'])
     const botToken = requireString(requestPayload?.botToken, 'botToken')
     const allowedChannelIds = Array.isArray(payload?.allowedChannelIds)
-      ? payload.allowedChannelIds.filter((id) => typeof id === 'string' && id.length > 0)
+      ? payload.allowedChannelIds.filter((/** @type {unknown} */ id) => typeof id === 'string' && id.length > 0)
       : []
     await discordGateway.connect(botToken, allowedChannelIds)
     return discordGateway.getStatus()

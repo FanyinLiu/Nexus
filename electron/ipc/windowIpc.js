@@ -1,3 +1,4 @@
+// @ts-check
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import path from 'node:path'
 import {
@@ -85,6 +86,7 @@ const POWER_EVENT_CHANNEL = 'app:power-event'
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
 let powerEventForwardingRegistered = false
 
+/** @param {Record<string, unknown>} [payload] */
 function summarizeFileDialogPayload(payload) {
   return {
     title: payload?.title ?? '',
@@ -92,6 +94,7 @@ function summarizeFileDialogPayload(payload) {
   }
 }
 
+/** @param {Record<string, unknown> | null} [result] */
 function summarizeTextFileResult(result) {
   const extension = typeof result?.filePath === 'string'
     ? result.filePath.split(/[\\/]/).pop()?.split('.').pop() ?? ''
@@ -103,10 +106,18 @@ function summarizeTextFileResult(result) {
   }
 }
 
+/**
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ */
 async function confirmPetModelAction(event, channel, payload) {
-  if (!petModelActionNeedsConfirmation(channel, payload)) return true
+  if (!petModelActionNeedsConfirmation()) return true
 
-  const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+  // Electron dialogs accept an undefined parent window at runtime.
+  const parentWindow = /** @type {Electron.BrowserWindow} */ (
+    BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+  )
   audit('pet-model', 'confirmation-request', summarizePetModelRequest(channel, payload))
   const { response } = await dialog.showMessageBox(parentWindow, {
     type: 'warning',
@@ -125,6 +136,13 @@ async function confirmPetModelAction(event, channel, payload) {
   return approved
 }
 
+/**
+ * @param {Electron.IpcMainInvokeEvent} event
+ * @param {string} channel
+ * @param {Record<string, unknown>} payload
+ * @param {() => Promise<Record<string, unknown> | null | undefined> | Record<string, unknown> | null | undefined} action
+ * @param {{ notifyLibraryChanged?: boolean }} [options]
+ */
 async function runAuditedPetModelAction(event, channel, payload, action, options = {}) {
   audit('pet-model', 'request', summarizePetModelRequest(channel, payload))
   try {
@@ -151,6 +169,7 @@ function broadcastPetModelLibraryChanged() {
   }
 }
 
+/** @param {import('../../shared/powerEventKinds.js').PowerEventKind} kind */
 function broadcastPowerEvent(kind) {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win || win.isDestroyed?.()) continue
@@ -161,8 +180,11 @@ function broadcastPowerEvent(kind) {
 function registerPowerEventForwarding() {
   if (powerEventForwardingRegistered) return
   powerEventForwardingRegistered = true
+  // powerMonitor.on() overloads are per-event literals; the shared tuple is a
+  // union, so narrow the overload set to the supported power events.
+  const powerEvents = /** @type {{ on(event: import('../../shared/powerEventKinds.js').PowerEventKind, listener: () => void): void }} */ (powerMonitor)
   for (const kind of POWER_EVENT_KINDS) {
-    powerMonitor.on(kind, () => {
+    powerEvents.on(kind, () => {
       broadcastPowerEvent(kind)
     })
   }
@@ -374,7 +396,10 @@ export function register() {
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
     requireTrustedSender(event)
-    const parentWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    // Electron dialogs accept an undefined parent window at runtime.
+    const parentWindow = /** @type {Electron.BrowserWindow} */ (
+      BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    )
     const { response } = await dialog.showMessageBox(parentWindow, {
       type: 'question',
       buttons: ['确定', '取消'],
@@ -388,7 +413,10 @@ export function register() {
   ipcMain.handle('file:save-text', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateTextFileSavePayload(payload)
-    const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    // Electron dialogs accept an undefined parent window at runtime.
+    const sourceWindow = /** @type {Electron.BrowserWindow} */ (
+      BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    )
     audit('file', 'save-text-dialog-open', {
       ...summarizeFileDialogPayload(payload),
       defaultFileName: payload.defaultFileName,
@@ -402,7 +430,10 @@ export function register() {
   ipcMain.handle('file:open-text', async (event, payload) => {
     requireTrustedSender(event)
     payload = validateTextFileOpenPayload(payload)
-    const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    // Electron dialogs accept an undefined parent window at runtime.
+    const sourceWindow = /** @type {Electron.BrowserWindow} */ (
+      BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
+    )
     audit('file', 'open-text-dialog-open', summarizeFileDialogPayload(payload))
     const result = await openTextFileFromDialog(sourceWindow, payload)
     audit('file', 'open-text-dialog-result', summarizeTextFileResult(result))
@@ -447,6 +478,7 @@ export function register() {
     request = validateDesktopContextRequestPayload(request)
     const contextPolicy = normalizeDesktopContextPolicy(request?.policy, getSavedDesktopContextFlags())
     audit('desktop-context', 'capture-request', summarizeDesktopContextRequest(request, contextPolicy))
+    /** @type {Record<string, unknown>} */
     const snapshot = {
       capturedAt: new Date().toISOString(),
     }
