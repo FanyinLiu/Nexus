@@ -411,7 +411,7 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
     'Release workflow is explicitly unsigned and checksum-backed',
     unsignedWorkflow.ready ? 'ok' : 'error',
     unsignedWorkflow.ready
-      ? 'signing secrets are absent, package flags are explicit, tag/version match is enforced, and every platform uploads SHA256 metadata'
+      ? 'platform code-signing secrets are absent, package flags are explicit, tag/version match is enforced, and every platform uploads SHA256 metadata'
       : `not ready: ${unsignedWorkflow.blockers.join('; ')}`,
   )
 
@@ -664,6 +664,7 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
         'WINDOWS_SIGNING_CLIENT_SECRET',
         'WINDOWS_SIGNING_ACCOUNT',
         'WINDOWS_SIGNING_CERTIFICATE_PROFILE',
+        'NEXUS_UPDATE_SIGNING_KEY',
       ],
     },
     checks,

@@ -384,6 +384,8 @@ export const koCore = {
   'updater.error.install_prep_failed_rec': '이 버전을 유지한 뒤, 나중에 다시 「재시작하여 설치」를 눌러 주세요.',
   'updater.error.snapshot_failed': '설치 전에 데이터를 백업하지 못해 업데이트를 취소했어요.',
   'updater.error.snapshot_failed_rec': '현재 데이터는 그대로예요. 나중에 다시 「재시작하여 설치」를 눌러 주세요.',
+  'updater.error.unverified_update': '이 업데이트가 안전한지 확인할 수 없어서 설치하지 않았어요.',
+  'updater.error.unverified_update_rec': '새 버전은 릴리스 페이지에서 내려받을 수 있어요.',
   'failover.error.all_failed': '{domain} 요청이 다 안 됐어요.',
   'file.error.record_read_failed': '녹음 파일을 못 읽었어요.',
   'file.error.not_supported': '현재 환경은 텍스트 파일 작업을 지원하지 않아요.',
