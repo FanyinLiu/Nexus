@@ -48,19 +48,32 @@ export type PendingReminderDraftInput =
   | Omit<Extract<PendingReminderDraft, { kind: 'missing_time' }>, 'createdAtMs'>
   | Omit<Extract<PendingReminderDraft, { kind: 'missing_prompt' }>, 'createdAtMs'>
 
-export type UseChatContext = {
+/** Settings persistence surface the chat pipeline reads and writes. */
+export type ChatSettingsDeps = {
   settingsRef: RefObject<AppSettings>
   setSettings: Dispatch<SetStateAction<AppSettings>>
   applySettingsUpdate?: (update: (current: AppSettings) => AppSettings) => Promise<AppSettings> | AppSettings
+}
+
+/** Long-term / daily memory stores the chat pipeline recalls into and appends to. */
+type ChatMemoryDeps = {
   memoriesRef: RefObject<MemoryItem[]>
   dailyMemoriesRef: RefObject<DailyMemoryStore>
   setMemories: Dispatch<SetStateAction<MemoryItem[]>>
   appendDailyMemoryEntries: (entries: DailyMemoryEntry[]) => DailyMemoryStore
+}
+
+/** Pet mood, status chip, performance cues, and presence. */
+export type ChatPetDeps = {
   setMood: (mood: PetMood) => void
   updatePetStatus: (text: string, duration?: number) => void
   clearPetPerformanceCue: () => void
   queuePetPerformanceCue: (cues: Array<Omit<PetPerformanceCue, 'id'>> | null | undefined) => void
   markPresenceActivity: (options?: { dismissAmbient?: boolean }) => void
+}
+
+/** Voice session state, TTS control, and the voice event bus. */
+export type ChatVoiceDeps = {
   voiceStateRef: RefObject<VoiceState>
   suppressVoiceReplyRef: RefObject<boolean>
   setVoiceState: (state: VoiceState) => void
@@ -86,7 +99,10 @@ export type UseChatContext = {
   fillComposerWithVoiceTranscript: (transcript: string) => void
   stopActiveSpeechOutput: () => void
   canInterruptSpeech: () => boolean
-  loadDesktopContextSnapshot: () => Promise<DesktopContextSnapshot | null>
+}
+
+/** One-way companion signals the chat pipeline reads from and reports into. */
+type ChatCompanionSignalDeps = {
   /**
    * Get the current emotion state formatted as prompt text (from
    * useAutonomyController.getEmotionPrompt). Injected via a ref wrapper to
@@ -186,6 +202,10 @@ export type UseChatContext = {
    * with a short cooldown upstream.
    */
   onUserMoodSignal?: (signal: import('../../features/autonomy/emotionModel.ts').EmotionSignal) => void
+}
+
+/** Reminder task store the local reminder-intent runner mutates. */
+export type ChatReminderDeps = {
   reminderTasksRef: RefObject<ReminderTask[]>
   addReminderTask: (input: {
     title: string
@@ -200,8 +220,25 @@ export type UseChatContext = {
     updates: Partial<Omit<ReminderTask, 'id' | 'createdAt'>>,
   ) => ReminderTask | null
   removeReminderTask: (id: string) => ReminderTask | null
+}
+
+/** Ambient environment surface: desktop-context snapshots and debug logging. */
+export type ChatEnvironmentDeps = {
+  loadDesktopContextSnapshot: () => Promise<DesktopContextSnapshot | null>
   appendDebugConsoleEvent: (event: DebugConsoleEventDraft) => void
 }
+
+/**
+ * Dependency bag passed to `useChat`. Composed from the concern groups above so
+ * a helper can accept just the slice it needs without a bespoke Pick list.
+ */
+export type UseChatContext = ChatSettingsDeps
+  & ChatMemoryDeps
+  & ChatPetDeps
+  & ChatVoiceDeps
+  & ChatCompanionSignalDeps
+  & ChatReminderDeps
+  & ChatEnvironmentDeps
 
 export type CompanionNoticePayload = {
   chatContent: string

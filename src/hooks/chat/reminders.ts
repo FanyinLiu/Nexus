@@ -13,10 +13,12 @@ import { getLocale, t } from '../../i18n/runtime.ts'
 import type { AssistantRuntimeActivity, DebugConsoleEventDraft } from '../../types/index.ts'
 import { formatReminderNextRunLabel } from './support.ts'
 import type {
+  ChatEnvironmentDeps,
+  ChatReminderDeps,
+  ChatVoiceDeps,
   CompanionNoticePayload,
   PendingReminderDraft,
   PendingReminderDraftInput,
-  UseChatContext,
 } from './types.ts'
 
 export type ResolvedReminderIntent = {
@@ -34,18 +36,19 @@ export type LocalReminderActionOptions = {
 
 type LocalReminderActionDependencies = {
   ctx: Pick<
-    UseChatContext,
+    ChatReminderDeps,
     | 'addReminderTask'
-    | 'appendDebugConsoleEvent'
-    | 'appendVoiceTrace'
     | 'reminderTasksRef'
     | 'removeReminderTask'
+    | 'updateReminderTask'
+  > & Pick<
+    ChatVoiceDeps,
+    | 'appendVoiceTrace'
     | 'scheduleVoiceRestart'
     | 'shouldAutoRestartVoice'
     | 'suppressVoiceReplyRef'
-    | 'updateReminderTask'
     | 'updateVoicePipeline'
-  >
+  > & Pick<ChatEnvironmentDeps, 'appendDebugConsoleEvent'>
   clearPendingReminderDraft: () => void
   pushCompanionNotice: (notice: CompanionNoticePayload) => Promise<void>
   setAssistantActivity: (activity: AssistantRuntimeActivity) => void

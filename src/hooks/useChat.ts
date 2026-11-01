@@ -359,21 +359,9 @@ export function useChat(ctx: UseChatContext) {
   // petView, overlays, panelView) invalidate on every parent re-render — which
   // in turn cascaded into their children's useEffect deps and, wherever those
   // effects wrote back to state, produced a "Maximum update depth exceeded"
-  // render storm. Stabilizing here cuts the cascade at its source.
-  return useMemo(() => ({
-    messages,
-    currentSessionId,
-    input,
-    busy,
-    error,
-    assistantActivity,
-    petDialogBubble,
-    petThoughtBubble,
-    pendingImage,
-    messagesRef,
-    inputRef,
-    busyRef,
-    sendMessageRef,
+  // render storm. Stabilizing here cuts the cascade at its source. Actions are
+  // memoized as their own group so a state-only change doesn't rebuild them.
+  const chatActions = useMemo(() => ({
     setMessages,
     applyRemoteMessages,
     setInput: setInputValue,
@@ -394,15 +382,6 @@ export function useChat(ctx: UseChatContext) {
     hidePetDialogBubble,
     sendMessage: stableSendMessage,
   }), [
-    messages,
-    input,
-    busy,
-    error,
-    assistantActivity,
-    currentSessionId,
-    petDialogBubble,
-    petThoughtBubble,
-    pendingImage,
     setMessages,
     applyRemoteMessages,
     setInputValue,
@@ -422,5 +401,33 @@ export function useChat(ctx: UseChatContext) {
     cancelActiveTurn,
     hidePetDialogBubble,
     stableSendMessage,
+  ])
+
+  return useMemo(() => ({
+    messages,
+    currentSessionId,
+    input,
+    busy,
+    error,
+    assistantActivity,
+    petDialogBubble,
+    petThoughtBubble,
+    pendingImage,
+    messagesRef,
+    inputRef,
+    busyRef,
+    sendMessageRef,
+    ...chatActions,
+  }), [
+    messages,
+    input,
+    busy,
+    error,
+    assistantActivity,
+    currentSessionId,
+    petDialogBubble,
+    petThoughtBubble,
+    pendingImage,
+    chatActions,
   ])
 }
