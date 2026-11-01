@@ -356,7 +356,7 @@ export const enCore = {
   'memory.export.title': 'Export memory archive',
   'memory.import.title': 'Import memory archive',
   'memory.import.success': 'Imported {memoryCount} long-term memories and {dayCount} days of diary entries.',
-  'memory.clear.success': 'Long-term memories and daily diary are both cleared.',
+  'memory.clear.success': 'Long-term memory, daily logs and inbox messages are all cleared.',
   'memory.title.project': 'Project',
   'memory.title.goal': 'Goal',
   'memory.title.habit': 'Habit',

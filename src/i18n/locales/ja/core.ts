@@ -356,7 +356,7 @@ export const jaCore = {
   'memory.export.title': '記憶アーカイブを書き出す',
   'memory.import.title': '記憶アーカイブを読み込む',
   'memory.import.success': '長期記憶 {memoryCount} 件、日誌 {dayCount} 日分を読み込みました。',
-  'memory.clear.success': '長期記憶と日誌はすべてクリアされました。',
+  'memory.clear.success': '長期記憶、日次ログ、受信箱のメッセージをすべて消去しました。',
   'memory.title.project': 'プロジェクト',
   'memory.title.goal': '目標',
   'memory.title.habit': '習慣',

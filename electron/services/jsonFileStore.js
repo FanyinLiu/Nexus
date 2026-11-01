@@ -91,8 +91,12 @@ export function createSyncJsonFileStore({
   // then remove the file and reset the cache. Without the cancel a timer that
   // was armed before the clear could recreate the file afterwards. A failed
   // delete keeps the cache untouched so memory still matches what is on disk;
-  // the caller must treat false as a failed clear, not as success.
+  // because the timer was cancelled for the delete, re-arm the debounce in
+  // that case so entries that only existed in memory are still written later
+  // and flushPending() can land them. The caller must treat false as a failed
+  // clear, not as success.
   async function clear() {
+    const hadTimer = writeTimer !== null
     if (writeTimer) {
       clearTimeout(writeTimer)
       writeTimer = null
@@ -110,6 +114,7 @@ export function createSyncJsonFileStore({
         cache = null
         return true
       }
+      if (hadTimer) persistDebounced()
       onPersistError(error)
       return false
     }
