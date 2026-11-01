@@ -18,6 +18,13 @@ export const PROACTIVE_TITLE_MAX_LENGTH = 80
 /** Body budget from the message contract; the IPC schema enforces it. */
 export const PROACTIVE_BODY_MAX_LENGTH = 160
 
+/**
+ * Storage budget for the optional untruncated body. `body` stays the short
+ * display copy every outlet renders; `fullBody` preserves the source text for
+ * an expanded inbox view and is never pushed to a presentation surface.
+ */
+export const PROACTIVE_FULL_BODY_MAX_LENGTH = 10000
+
 /** Every proactive source the router can carry. Order is not contractual. */
 export const PROACTIVE_SOURCES = Object.freeze([
   'reminder',

@@ -250,6 +250,7 @@ function createHarness(options: {
   const windows = createWindows(options.capabilities ?? ['pet'])
   const clock = options.clock ?? createFakeClock()
   const fakeStrip = createFakeStrip()
+  const osNotifications: Array<{ title: string; body: string }> = []
   const ipc = createProactiveIpc({
     ipcMain: fakeIpc.ipcMain,
     getAllWindows: windows.getAllWindows,
@@ -263,10 +264,12 @@ function createHarness(options: {
     clearInterval: clock.clearInterval,
     strip: fakeStrip.strip,
     getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
-    showOsNotification: () => {},
+    showOsNotification: (payload: { title: string; body: string }) => {
+      osNotifications.push(payload)
+    },
     isPanelFocused: () => options.panelFocused === true,
   })
-  return { ...fakeIpc, ...fakeInbox, ...windows, clock, ipc, fakeStrip }
+  return { ...fakeIpc, ...fakeInbox, ...windows, clock, ipc, fakeStrip, osNotifications }
 }
 
 test('untrusted senders are rejected before any inbox write', async () => {
@@ -356,6 +359,42 @@ test('the prune sweep publishes inbox:changed to the pet only when entries were 
   const changesAfter = harness.sentByWindow[0]?.filter((item) => item.channel === 'inbox:changed') ?? []
   assert.equal(changesAfter.length, 1)
   assert.equal(harness.calls.prune, 2)
+})
+
+test('display outlets never forward fullBody to the bubble, strip or OS notification', async () => {
+  const harness = createHarness({
+    trusted: () => true,
+    capabilities: ['pet'],
+  })
+  const fullBody = 'The complete expanded copy that only the inbox may read.'
+
+  await harness.invoke('proactive:deliver', { trusted: true }, {
+    message: makeMessage({ body: 'Short bubble body', fullBody, actions: [] }),
+    context: makeContext(),
+  })
+  await harness.invoke('proactive:deliver', { trusted: true }, {
+    message: makeMessage({ id: 'strip-1', body: 'Short strip body', fullBody, actions: ['done'] }),
+    context: makeContext(),
+  })
+  await harness.invoke('proactive:deliver', { trusted: true }, {
+    message: makeMessage({ id: 'os-1', body: 'Short OS body', fullBody, actions: [] }),
+    context: makeContext({ focusState: 'idle', awayNotificationsEnabled: true }),
+  })
+
+  const presentations = harness.sentByWindow[0]
+    ?.filter((item) => item.channel === 'proactive:present') ?? []
+  assert.equal(presentations.length, 1)
+  const presented = presentations[0]?.payload as { message: ProactiveMessage }
+  assert.equal(presented.message.body, 'Short bubble body')
+  assert.equal('fullBody' in presented.message, false)
+
+  assert.equal(harness.fakeStrip.shown.length, 1)
+  assert.equal(harness.fakeStrip.shown[0]?.body, 'Short strip body')
+  assert.equal('fullBody' in (harness.fakeStrip.shown[0] ?? {}), false)
+
+  assert.equal(harness.osNotifications.length, 1)
+  assert.equal(harness.osNotifications[0]?.body, 'Short OS body')
+  assert.equal('fullBody' in (harness.osNotifications[0] ?? {}), false)
 })
 
 test('stopping the prune sweep clears the interval', (t: TestContext) => {

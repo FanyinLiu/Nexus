@@ -10,6 +10,7 @@
 
 import {
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_FULL_BODY_MAX_LENGTH,
   PROACTIVE_TITLE_MAX_LENGTH,
 } from '../../../shared/proactiveDelivery.js'
 import type {
@@ -30,6 +31,8 @@ export type CapsuleProactiveMessage = Omit<SharedProactiveMessage, 'kind'> & {
 export interface CapsuleDeliveryText {
   title: string
   body: string
+  /** Untruncated copy when the message needed clipping; display stays on body. */
+  fullBody?: string
 }
 
 /**
@@ -43,13 +46,20 @@ export function buildCapsuleProactiveMessage(
   delivery: CapsuleDeliveryText,
   now: number,
 ): CapsuleProactiveMessage {
+  const body = clipText(delivery.body, PROACTIVE_BODY_MAX_LENGTH)
+  // Only carry the expanded copy when it actually adds text; an identical
+  // fullBody would duplicate the payload for every ordinary capsule.
+  const fullBody = delivery.fullBody && delivery.fullBody !== body
+    ? delivery.fullBody.slice(0, PROACTIVE_FULL_BODY_MAX_LENGTH)
+    : undefined
   return {
     id: `capsule:${capsule.id}`,
     source: 'capsule',
     kind: 'capsule',
     priority: 'high',
     title: clipText(delivery.title, PROACTIVE_TITLE_MAX_LENGTH),
-    body: clipText(delivery.body, PROACTIVE_BODY_MAX_LENGTH),
+    body,
+    ...(fullBody !== undefined ? { fullBody } : {}),
     actions: [],
     createdAt: now,
     origin: { capsuleId: capsule.id },
@@ -110,6 +120,12 @@ export interface DeliverDueCapsuleResult {
  * The inbox stores the message on success, so an inbox-only rule still counts
  * as delivered. A failed router call is retried once as the old OS toast so
  * the user never loses a message to a bridge error.
+ *
+ * Success is settled before any chat push: once the router or the fallback
+ * notification resolves, the capsule is marked delivered even when the
+ * scheduler stopped in the meantime. A chat push runs afterwards and may still
+ * fail; that error reaches the caller's log instead of re-delivering the
+ * capsule on every tick.
  */
 export async function deliverDueCapsule(
   deps: DeliverDueCapsuleDeps,
@@ -125,19 +141,26 @@ export async function deliverDueCapsule(
     const context = await deps.buildContext()
     decision = await deps.deliver({ message, context, preferences: deps.preferences })
   } catch {
+    // A throwing notification propagates before the mark, so a total bridge
+    // failure stays retryable instead of silently consuming the capsule.
     await deliverLegacy(deps)
     return { path: 'fallback' }
   }
 
-  if (planCapsulePresentation(decision).chatLine && deps.pushChatLine) {
-    await deps.pushChatLine(deps.delivery.body)
+  deps.markDelivered(deps.capsule.id)
+  if (planCapsulePresentation(decision).chatLine && deps.pushChatLine && !deps.isStopped()) {
+    // Rule 2 is the panel surface, so the line carries the untruncated copy.
+    await deps.pushChatLine(deps.delivery.fullBody ?? deps.delivery.body)
   }
-  if (!deps.isStopped()) deps.markDelivered(deps.capsule.id)
   return { path: 'router', rule: decision.rule }
 }
 
-/** Pre-M1.1 surfacing: one OS notification, then mark the capsule delivered. */
+/**
+ * Pre-M1.1 surfacing: one OS notification, then mark the capsule delivered.
+ * The mark does not depend on the scheduler being live: the notification
+ * already reached the user.
+ */
 async function deliverLegacy(deps: DeliverDueCapsuleDeps): Promise<void> {
   await deps.showNotification?.(deps.delivery)
-  if (!deps.isStopped()) deps.markDelivered(deps.capsule.id)
+  deps.markDelivered(deps.capsule.id)
 }

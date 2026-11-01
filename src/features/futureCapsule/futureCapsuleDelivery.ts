@@ -69,7 +69,14 @@ export interface BuildDeliveryBodyInput {
 
 export interface BuildDeliveryBodyResult {
   title: string
+  /** Display copy: the message snippet is collapsed and clipped. */
   body: string
+  /**
+   * The same localized copy with the capsule message verbatim. It differs from
+   * `body` only when the message needed snippet collapsing or clipping, and is
+   * meant for the inbox's expanded view rather than any display outlet.
+   */
+  fullBody: string
 }
 
 const TITLE_BY_LOCALE: Record<string, string> = {
@@ -105,5 +112,11 @@ export function buildFutureCapsuleDelivery(input: BuildDeliveryBodyInput): Build
   return {
     title: titleLabel,
     body: copy.format({ companionName, daysAgo, message, title }),
+    fullBody: copy.format({
+      companionName,
+      daysAgo,
+      message: input.capsule.message,
+      title,
+    }),
   }
 }

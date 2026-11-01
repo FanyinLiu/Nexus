@@ -110,6 +110,29 @@ test('buildFutureCapsuleDelivery: trims very long message', () => {
   assert.match(result.body, /…/)
 })
 
+test('buildFutureCapsuleDelivery: fullBody keeps the original message verbatim', () => {
+  const original = `line one\n\n${'y'.repeat(300)} end`
+  const result = buildFutureCapsuleDelivery({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    capsule: { ...baseCapsule, message: original },
+    now: new Date('2026-04-30T12:00:00Z'),
+  })
+  assert.ok(result.body.length < result.fullBody.length)
+  assert.ok(result.fullBody.includes(original))
+  assert.ok(result.fullBody.includes('\n\n'), 'fullBody must not collapse whitespace')
+})
+
+test('buildFutureCapsuleDelivery: short messages make fullBody equal body', () => {
+  const result = buildFutureCapsuleDelivery({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    capsule: baseCapsule,
+    now: new Date('2026-04-30T12:00:00Z'),
+  })
+  assert.equal(result.fullBody, result.body)
+})
+
 test('buildFutureCapsuleDelivery: unknown locale falls back to en-US', () => {
   const result = buildFutureCapsuleDelivery({
     uiLanguage: 'eo' as never,

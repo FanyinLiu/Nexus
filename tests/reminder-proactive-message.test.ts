@@ -4,9 +4,11 @@ import test from 'node:test'
 import {
   buildReminderDeliveryContext,
   buildReminderProactiveMessage,
+  readProactiveDesktopContext,
 } from '../src/features/reminders/proactiveMessage.ts'
 import * as reminderMessage from '../src/features/reminders/proactiveMessage.ts'
 import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../src/features/uiV2/caption.ts'
+import type { AppSettings } from '../src/types/index.ts'
 
 const NOW = new Date(2026, 0, 1, 14, 0, 0).getTime()
 
@@ -96,4 +98,70 @@ test('the reminder module no longer exports a source-specific auto-hide', () => 
   assert.equal('REMINDER_NOTICE_AUTO_HIDE_MS' in reminderMessage, false)
   assert.equal('proactiveBubbleAutoHideMs' in reminderMessage, false)
   assert.equal(PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS, 12_000)
+})
+
+// ── Desktop context permission ──────────────────────────────────────────────
+
+function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+  return {
+    contextAwarenessEnabled: true,
+    activeWindowContextEnabled: true,
+    companionAwarenessPaused: false,
+    ...overrides,
+  } as AppSettings
+}
+
+function installDesktopPet(
+  getDesktopContext: (payload: { includeActiveWindow: boolean }) => Promise<unknown>,
+): () => void {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'window')
+  Object.defineProperty(globalThis, 'window', {
+    value: { desktopPet: { getDesktopContext } },
+    configurable: true,
+    writable: true,
+  })
+  return () => {
+    if (original) Object.defineProperty(globalThis, 'window', original)
+    else Reflect.deleteProperty(globalThis, 'window')
+  }
+}
+
+const DENIED_CONTEXT_CASES: ReadonlyArray<{
+  name: string
+  settings: Partial<AppSettings>
+}> = [
+  { name: 'context awareness off', settings: { contextAwarenessEnabled: false } },
+  { name: 'active window context off', settings: { activeWindowContextEnabled: false } },
+  { name: 'companion awareness paused', settings: { companionAwarenessPaused: true } },
+]
+
+for (const denied of DENIED_CONTEXT_CASES) {
+  test(`readProactiveDesktopContext skips the bridge when ${denied.name}`, async (t) => {
+    let calls = 0
+    const restore = installDesktopPet(async () => {
+      calls += 1
+      return { activeWindowTitle: 'should not be read' }
+    })
+    t.after(restore)
+
+    const result = await readProactiveDesktopContext(makeSettings(denied.settings))
+
+    assert.equal(result, null)
+    assert.equal(calls, 0)
+  })
+}
+
+test('readProactiveDesktopContext calls the bridge once with the active-window request when granted', async (t) => {
+  const snapshot = { activeWindowTitle: 'Editor', activeWindowAppName: 'Code' }
+  const payloads: Array<{ includeActiveWindow: boolean }> = []
+  const restore = installDesktopPet(async (payload) => {
+    payloads.push(payload)
+    return snapshot
+  })
+  t.after(restore)
+
+  const result = await readProactiveDesktopContext(makeSettings())
+
+  assert.deepEqual(result, snapshot)
+  assert.deepEqual(payloads, [{ includeActiveWindow: true }])
 })

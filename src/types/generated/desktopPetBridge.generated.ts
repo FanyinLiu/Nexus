@@ -777,7 +777,7 @@ export interface DesktopPetBridgeMethodResults {
   kwsStop: { ok: boolean }
   listChatModels: unknown
   listPetModels: unknown
-  listProactiveInbox: { entries: Array<{ status: 'done' | 'unread' | 'dismissed'; updatedAt: number; id: string; source: 'reminder' | 'agenda' | 'bracket' | 'letter' | 'capsule' | 'open_arc' | 'away' | 'dream'; kind: string; priority: 'high' | 'normal' | 'low'; title: string; body: string; speech?: string; actions: Array<'done' | 'snooze' | 'open' | 'reply'>; createdAt: number; expiresAt?: number; origin?: { taskId?: string; letterId?: string; capsuleId?: string; arcId?: string } }>; unreadCount: number; removedIds: Array<string> }
+  listProactiveInbox: { entries: Array<{ status: 'done' | 'unread' | 'dismissed'; updatedAt: number; id: string; source: 'reminder' | 'agenda' | 'bracket' | 'letter' | 'capsule' | 'open_arc' | 'away' | 'dream'; kind: string; priority: 'high' | 'normal' | 'low'; title: string; body: string; fullBody?: string; speech?: string; actions: Array<'done' | 'snooze' | 'open' | 'reply'>; createdAt: number; expiresAt?: number; origin?: { taskId?: string; letterId?: string; capsuleId?: string; arcId?: string } }>; unreadCount: number; removedIds: Array<string> }
   listSpeechVoices: unknown
   localDataApplyChatMigration: unknown
   localDataApplyCompanionMigration: unknown

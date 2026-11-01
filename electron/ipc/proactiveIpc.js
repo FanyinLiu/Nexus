@@ -35,6 +35,7 @@ import {
 /** @typedef {import('../../shared/proactiveDelivery.js').DeliveryContext} DeliveryContext */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveDeliveryPreferences} ProactiveDeliveryPreferences */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveInboxChange} ProactiveInboxChange */
+/** @typedef {import('../../shared/proactiveDelivery.js').ProactiveMessage} ProactiveMessage */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactivePresentation} ProactivePresentation */
 /** @typedef {import('../services/proactiveInboxStore.js').InboxMutation} InboxMutation */
 /** @typedef {import('../services/reminderStripQueue.js').ReminderStripLabels} ReminderStripLabels */
@@ -155,6 +156,19 @@ export function createProactiveIpc({
     sendToWindows('proactive:present', presentation, ['pet'])
   }
 
+  /**
+   * Presentation surfaces render the short `body`; the expanded copy belongs
+   * to `inbox:list` only, so it never travels with a bubble event.
+   * @param {ProactiveMessage} message
+   * @returns {ProactiveMessage}
+   */
+  function withoutFullBody(message) {
+    if (message.fullBody === undefined) return message
+    const display = { ...message }
+    delete display.fullBody
+    return display
+  }
+
   /** @param {InboxMutation} mutation */
   function publishInboxChange(mutation) {
     /** @type {ProactiveInboxChange} */
@@ -240,7 +254,7 @@ export function createProactiveIpc({
   })
 
   outlets.register('bubble', (message) => {
-    presentToPet({ outlet: 'bubble', message })
+    presentToPet({ outlet: 'bubble', message: withoutFullBody(message) })
   })
 
   // The strip window lives in this process, so the outlet queues the reminder

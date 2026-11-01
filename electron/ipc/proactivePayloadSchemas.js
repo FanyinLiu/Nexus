@@ -2,16 +2,18 @@
 /**
  * Payload schemas for the proactive delivery and inbox channels.
  *
- * Title and body budgets are part of the message contract (design 4.1) and are
- * enforced here rather than clamped: a message that breaks the contract is a
- * caller bug, and silently truncating it would hide that. `systemDnd` is the
- * one nullable field — null means the platform could not report Do Not
- * Disturb, and the router treats it as false.
+ * Title, body and fullBody budgets are part of the message contract (design
+ * 4.1) and are enforced here rather than clamped: a message that breaks the
+ * contract is a caller bug, and silently truncating it would hide that.
+ * `fullBody` is optional and display-only; `body` remains the short copy every
+ * outlet renders. `systemDnd` is the one nullable field — null means the
+ * platform could not report Do Not Disturb, and the router treats it as false.
  */
 
 import {
   PROACTIVE_ACTIONS,
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_FULL_BODY_MAX_LENGTH,
   PROACTIVE_INBOX_STATUSES,
   PROACTIVE_PRIORITIES,
   PROACTIVE_SOURCES,
@@ -38,6 +40,8 @@ const proactiveMessageSchema = {
     priority: { type: 'enum', values: PROACTIVE_PRIORITIES },
     title: { type: 'string', maxLength: PROACTIVE_TITLE_MAX_LENGTH, allowEmpty: false },
     body: { type: 'string', maxLength: PROACTIVE_BODY_MAX_LENGTH },
+    // Optional expanded copy; display outlets still render only `body`.
+    fullBody: { type: 'string', optional: true, maxLength: PROACTIVE_FULL_BODY_MAX_LENGTH },
     speech: { type: 'string', optional: true, maxLength: SPEECH_MAX_LENGTH },
     actions: {
       type: 'array',

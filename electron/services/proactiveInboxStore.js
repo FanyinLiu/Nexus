@@ -15,6 +15,7 @@
 import {
   PROACTIVE_ACTIONS,
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_FULL_BODY_MAX_LENGTH,
   PROACTIVE_INBOX_STATUSES,
   PROACTIVE_PRIORITIES,
   PROACTIVE_SOURCES,
@@ -123,6 +124,13 @@ function normalizeEntry(value) {
     ? record.actions.filter((action) => typeof action === 'string' && VALID_ACTIONS.has(action))
     : []
   const speech = typeof record.speech === 'string' && record.speech.trim() ? record.speech : undefined
+  // fullBody is optional and display-only: a bad or oversized copy is dropped
+  // without invalidating the entry, whose short body is still renderable.
+  const fullBody = typeof record.fullBody === 'string'
+    && record.fullBody.length > 0
+    && record.fullBody.length <= PROACTIVE_FULL_BODY_MAX_LENGTH
+    ? record.fullBody
+    : undefined
   const expiresAt = finiteNumber(record.expiresAt)
   const origin = normalizeOrigin(record.origin)
 
@@ -133,6 +141,7 @@ function normalizeEntry(value) {
     priority,
     title,
     body,
+    ...(fullBody !== undefined ? { fullBody } : {}),
     ...(speech !== undefined ? { speech } : {}),
     actions: /** @type {ProactiveInboxEntry['actions']} */ (actions),
     createdAt,
