@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ---- Desktop pet locomotion: roam, edge-peek, spontaneous gestures ----
 // A small main-process state machine walks a pet window along its current
 // row and broadcasts a coarse `locomotionActivity`; the renderer maps that

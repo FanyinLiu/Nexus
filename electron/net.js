@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { net } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { NET_IPC_ERROR_CODES } from '../shared/netErrorCodes.js'

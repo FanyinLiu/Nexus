@@ -88,6 +88,18 @@ test('release artifact audit requires every declared platform pattern and verifi
   })
 })
 
+test('remote release audit accepts detached update manifest signature assets', () => {
+  withFixture((root) => {
+    writeAllChecksums(root)
+    writeFileSync(join(root, 'latest.yml.sig'), 'fixture-signature\n')
+    writeFileSync(join(root, 'latest-linux.yml.sig'), 'fixture-signature\n')
+    const report = verifyReleaseDirectory(root, 'v0.4.3')
+
+    assert.equal(report.ok, true)
+    assert.equal(report.errors.length, 0)
+  })
+})
+
 test('checksum generation fails when one required artifact family is absent', () => {
   withFixture((root) => {
     rmSync(join(root, 'Nexus-0.4.3-arm64-mac.zip.blockmap'))

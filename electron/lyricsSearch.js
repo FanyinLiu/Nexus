@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { normalizeWhitespace } from './textNormalize.js'
 
 const LRCLIB_SEARCH_ENDPOINT = 'https://lrclib.net/api/search'

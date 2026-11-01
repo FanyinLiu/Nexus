@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure-Node model downloader — reused by both the in-app runtime (modelManager.js)
  * and the dev-time CLI script (scripts/download-models.mjs).

@@ -1,5 +1,4 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
-import type { PetPerformanceCue } from '../../features/pet/performance.ts'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
 import type { StreamingSpeechOutputController } from '../voice/types.ts'
 import type {
@@ -11,7 +10,6 @@ import type {
   DebugConsoleEventDraft,
   DesktopContextSnapshot,
   MemoryItem,
-  PetMood,
   ReminderTask,
   VoiceEmotionCue,
   VoicePipelineState,
@@ -61,15 +59,6 @@ type ChatMemoryDeps = {
   dailyMemoriesRef: RefObject<DailyMemoryStore>
   setMemories: Dispatch<SetStateAction<MemoryItem[]>>
   appendDailyMemoryEntries: (entries: DailyMemoryEntry[]) => DailyMemoryStore
-}
-
-/** Pet mood, status chip, performance cues, and presence. */
-export type ChatPetDeps = {
-  setMood: (mood: PetMood) => void
-  updatePetStatus: (text: string, duration?: number) => void
-  clearPetPerformanceCue: () => void
-  queuePetPerformanceCue: (cues: Array<Omit<PetPerformanceCue, 'id'>> | null | undefined) => void
-  markPresenceActivity: (options?: { dismissAmbient?: boolean }) => void
 }
 
 /** Voice session state, TTS control, and the voice event bus. */
@@ -234,7 +223,6 @@ export type ChatEnvironmentDeps = {
  */
 export type UseChatContext = ChatSettingsDeps
   & ChatMemoryDeps
-  & ChatPetDeps
   & ChatVoiceDeps
   & ChatCompanionSignalDeps
   & ChatReminderDeps

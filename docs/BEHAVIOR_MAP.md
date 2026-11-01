@@ -97,7 +97,7 @@ Nexus 是 Electron 桌面伴侣应用（Live2D 宠物 + 聊天 + 语音 + 记忆
 - 提醒：`src/features/reminders/`、`src/app/controllers/useReminderController.ts`
 
 ### 更新 / 安全 / 审计
-- 更新：`electron/services/updaterService.js`、`updatePolicy.js`、`electron/ipc/updaterIpc.js`
+- 更新：`electron/services/updaterService.js`、`updatePolicy.js`、`updateManifestSignature.js`、`updateDownloadGate.js`、`electron/ipc/updaterIpc.js`
 - 安全：`electron/services/urlSafety.js`、`errorRedaction.js`、`auditLog.js`、`modelDownloadSecurity.js`、`electron/ipc/*Audit.js`、`trustedSenderPolicy.js`
 - 渲染安全域：`src/features/safety/`
 

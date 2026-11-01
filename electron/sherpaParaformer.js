@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Paraformer streaming ASR service for Electron main process.
  *

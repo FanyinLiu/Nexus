@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure network helpers — no Electron imports, so they can be unit-tested
  * from plain Node.js. net.js re-exports these alongside the electron-

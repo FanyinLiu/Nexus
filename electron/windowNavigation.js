@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { normalizeExternalUrl } from './tools/toolRegistryUtils.js'
 
 function parseUrl(value) {

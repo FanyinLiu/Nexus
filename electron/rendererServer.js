@@ -1,7 +1,10 @@
+// @ts-nocheck
 import http from 'node:http'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { isLoopbackHostHeader } from './services/localServiceSecurity.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -111,6 +114,20 @@ function getAssetAccessControlOrigin(request) {
     : rendererServerUrl || `http://${rendererServerHost}:${rendererServerPreferredPort}`
 }
 
+/** The port the asset listener actually owns, for the Host-header check. */
+function getRendererServerPort() {
+  if (rendererServerUrl) {
+    try {
+      const port = Number(new URL(rendererServerUrl).port)
+      if (Number.isInteger(port) && port > 0) return port
+    } catch {
+      // silent-catch-ok: fall back to the live server address below
+    }
+  }
+  const address = rendererServer?.address?.()
+  return address && typeof address === 'object' ? address.port : null
+}
+
 export async function ensureRendererServer() {
   if (rendererServerUrl) {
     return rendererServerUrl
@@ -126,6 +143,14 @@ export async function ensureRendererServer() {
   function createRendererServerInstance() {
     return http.createServer(async (request, response) => {
       try {
+        // DNS-rebinding pages keep their own hostname in the Host header while
+        // connecting to loopback, so only our exact loopback host:port is served.
+        if (!isLoopbackHostHeader(request.headers.host, getRendererServerPort())) {
+          response.writeHead(403)
+          response.end('Forbidden')
+          return
+        }
+
         const requestUrl = new URL(request.url ?? '/', `http://${rendererServerHost}`)
         let filePath = ''
         let servedRoot = rendererRoot
@@ -217,8 +242,17 @@ export async function ensureRendererServer() {
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
             // PixiJS fetches a tiny data URL once to detect ImageBitmap
-            // support before choosing its texture upload path.
-            "connect-src 'self' data: https:",
+            // support before choosing its texture upload path. Everything else
+            // is an explicit allowlist: user-configured LLM/speech/Ollama
+            // endpoints are proxied through main-process IPC, while the
+            // renderer itself only reaches loopback services and Hugging Face
+            // model files fetched by transformers.js. The plain-browser
+            // preview fallback in src/features/memory/ollamaEmbedding.ts can
+            // still fetch a configured Ollama URL directly when the desktop
+            // bridge is absent; packaged Electron always uses IPC. Follow-up:
+            // move that fallback behind IPC or generate connect-src from the
+            // saved endpoints. Keep this in sync with index.html.
+            "connect-src 'self' data: blob: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.co",
             "media-src 'self' blob:",
             "worker-src 'self' blob:",
             "object-src 'none'",

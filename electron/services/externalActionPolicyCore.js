@@ -1,3 +1,4 @@
+// @ts-nocheck
 const EXTERNAL_ACTION_INTEGRATIONS = ['telegram', 'discord', 'minecraft', 'factorio', 'mcp']
 const EXTERNAL_ACTION_MODES = ['read-only', 'confirm', 'auto']
 const EXTERNAL_ACTION_GRANT_SCOPES = ['once', 'session', 'always']

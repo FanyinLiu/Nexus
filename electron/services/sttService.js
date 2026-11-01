@@ -1,8 +1,10 @@
+// @ts-nocheck
 import { randomUUID } from 'node:crypto'
 
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
 import { performNetworkRequest, readJsonSafe, getVolcengineStatus, buildMultipartBody, normalizeLanguageCode } from '../net.js'
 import { isVolcengineSpeechInputProvider, isOpenAiCompatibleSpeechInputProvider, isXaiSpeechInputProvider, parseVolcengineSpeechCredentials, buildAuthorizationHeaders, buildXaiSttMultipartParts, createSilentWavBase64, synthesizeRemoteTts } from './ttsService.js'
+import { withSidecarAuth } from './localServiceSecurity.js'
 import {
   SPEECH_CONNECTION_MESSAGE,
   buildSpeechConnectionEvidence,
@@ -142,6 +144,10 @@ async function runSpeechInputConnectionSmokeTest(payload, baseUrl) {
       messageKey: SPEECH_CONNECTION_MESSAGE.INPUT_UNSUPPORTED,
       code: 'unknown_connection_error',
     })
+  }
+
+  if (payload.providerId === 'glm-asr-local' && headers) {
+    headers = withSidecarAuth(endpoint, headers)
   }
 
   const response = await performNetworkRequest(endpoint, {

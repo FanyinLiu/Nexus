@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Smart Turn session service (main process).
  *

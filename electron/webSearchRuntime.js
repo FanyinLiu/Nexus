@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { dedupeSearchItems } from './webSearchSignals.js'
 import { normalizeWhitespace } from './textNormalize.js'
 import {

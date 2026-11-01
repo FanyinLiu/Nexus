@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { normalizeWhitespace } from './textNormalize.js'
 import {
   DEFAULT_DUCKDUCKGO_HTML_ENDPOINT,

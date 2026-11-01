@@ -19,6 +19,7 @@
  * @returns {{ marks: Record<string, number | null>, mark: (name: string) => void, snapshot: () => Record<string, number | null> }}
  */
 export function createTtsTimingMarks(now = () => performance.now()) {
+  /** @type {Record<string, number | null>} */
   const marks = {
     streamStart: now(),
     firstSegmentQueued: null,
@@ -45,6 +46,9 @@ export function createTtsTimingMarks(now = () => performance.now()) {
  * Milliseconds between two marks, or null when either one is missing.
  * Negative deltas are clamped to 0 so an injected non-monotonic clock in a
  * test can never produce a nonsense duration.
+ * @param {number | null} start
+ * @param {number | null} end
+ * @returns {number | null}
  */
 function between(start, end) {
   if (typeof start !== 'number' || typeof end !== 'number') return null

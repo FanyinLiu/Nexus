@@ -58,6 +58,7 @@ declare global {
               autoInteract?: boolean
               autoUpdate?: boolean
               motionPreload?: MotionPreloadValue
+              checkMocConsistency?: boolean
             },
           ) => Promise<Live2DModelType>
         }

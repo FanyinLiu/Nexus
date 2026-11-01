@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { checkUrlSafety } from '../services/urlSafety.js'
 
 export function normalizeExternalUrl(rawUrl) {

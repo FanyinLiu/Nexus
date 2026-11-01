@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function createSettingsReturnFocusCoordinator(onConsume) {
   let pending = false
 

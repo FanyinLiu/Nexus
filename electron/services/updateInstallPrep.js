@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Pre-install barrier for electron-updater.
 //
 // prepareForUpdateInstall flushes durable state in a fixed order, then
@@ -84,7 +85,9 @@ export class UpdateInstallPrepError extends Error {
 
 /**
  * Downloaded updates stay staged until the user clicks restart.
- * autoDownload stays on; ordinary quit must not call quitAndInstall.
+ * autoDownload defaults on; the updater service disables it until the
+ * Windows/Linux manifest signature verifies. Ordinary quit must not call
+ * quitAndInstall.
  * @param {{ autoDownload?: boolean, autoInstallOnAppQuit?: boolean, allowDowngrade?: boolean }} autoUpdater
  */
 export function applyAutoUpdaterInstallPolicy(autoUpdater) {

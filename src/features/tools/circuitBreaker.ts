@@ -8,6 +8,7 @@
  */
 
 import { t } from '../../i18n/runtime.ts'
+import { isMcpToolNotAllowedError } from '../../../shared/mcpToolErrors.js'
 
 const CONSECUTIVE_FAILURE_THRESHOLD = 3
 const OPEN_COOLDOWN_MS = 30_000
@@ -85,7 +86,8 @@ function isCallAllowed(toolId: string): boolean {
 }
 
 export type ToolCallOptions = {
-  timeoutMs?: number
+  /** Milliseconds before the call is abandoned. `null` waits for the call. */
+  timeoutMs?: number | null
   maxRetries?: number
 }
 
@@ -103,6 +105,9 @@ function isNonRetriableCallerError(error: Error): boolean {
   return (
     error.message.includes('Invalid')
     || error.message.includes('not available')
+    // The user explicitly refused this call. Retrying would re-prompt them
+    // and could duplicate a side effect; it must not trip the circuit either.
+    || isMcpToolNotAllowedError(error)
   )
 }
 
@@ -123,7 +128,9 @@ export async function executeWithProtection<T>(
     throw new Error(t('tools.circuit.open', { toolId }))
   }
 
-  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const timeoutMs = options?.timeoutMs === undefined
+    ? DEFAULT_TIMEOUT_MS
+    : options.timeoutMs
   const maxRetries = options?.maxRetries ?? MAX_RETRIES
   let lastError: Error | undefined
 
@@ -139,7 +146,9 @@ export async function executeWithProtection<T>(
     }
 
     try {
-      const result = await withTimeout(callFn(), timeoutMs)
+      const result = timeoutMs === null
+        ? await callFn()
+        : await withTimeout(callFn(), timeoutMs)
       recordSuccess(toolId)
       return result
     } catch (err) {

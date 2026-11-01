@@ -263,8 +263,17 @@ Current v0.4.4 release posture:
   `SHA256SUMS-windows.txt`, `SHA256SUMS-macos.txt`, and
   `SHA256SUMS-linux.txt` beside the matching platform assets. Linux users who
   download one package format can run
-  `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`. SHA-256 is the current
-  integrity path; the current workflow does not generate GPG signature assets.
+  `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`. SHA-256 is the manual
+  download integrity path; the current workflow does not generate GPG
+  signature assets.
+- **Signed update manifests.** Windows and Linux auto-update consume
+  `latest.yml` / `latest-linux*.yml` only after the app verifies the detached
+  Ed25519 signature in the adjacent `<manifest>.sig`. The CI build signs each
+  manifest with the `NEXUS_UPDATE_SIGNING_KEY` GitHub Actions secret (PKCS8
+  Ed25519 PEM), verifies the result against the public key embedded in
+  `electron/services/updateSigningKey.js`, and fails the job when the secret is
+  missing so an unsigned Windows/Linux release is never published. The private
+  key is never stored in this repository.
 - **Official source.** Only `https://github.com/FanyinLiu/Nexus/releases` is
   official. Release notes and READMEs must tell users to delete artifacts from
   mirrors or unknown sources and download again from GitHub.

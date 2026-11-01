@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Streaming WSOLA time-stretch for the local Qwen3 PCM path.
  *

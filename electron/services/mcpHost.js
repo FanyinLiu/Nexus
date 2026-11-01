@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { spawn } from 'node:child_process'
 import { unsubscribeAll } from './pluginMessageBus.js'
 import {
@@ -19,12 +20,14 @@ import {
   summarizeMcpToolNamesForLog,
 } from './mcpHostUtils.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { runConfirmedMcpToolCall } from './mcpToolConfirmation.js'
 
 const REQUEST_TIMEOUT_MS = 15_000
 
 // Shell metacharacters that could enable command injection when shell: true is used.
 // We reject commands containing these to allow safe spawning without a shell.
-const SHELL_META_PATTERN = /[&|;<>`"$(){}!\r\n]/
+// `%` and `^` are Windows cmd.exe variable/escape characters.
+const SHELL_META_PATTERN = /[&|;<>`"$(){}!%^\r\n]/
 const MAX_RESTART_ATTEMPTS = 3
 const BASE_RESTART_DELAY_MS = 3_000
 
@@ -53,7 +56,7 @@ class McpInstance {
     this.pendingStartEnv = null
     /** @type {string[]} Declared capabilities from plugin manifest. */
     this.capabilities = ['tools']
-    /** @type {Map<string, { name: string, description: string, inputSchema: object }>} */
+    /** @type {Map<string, { name: string, description: string, inputSchema: object, annotations: object | null }>} */
     this.tools = new Map()
     /** @type {Map<number, { resolve: Function, reject: Function, timeoutId: ReturnType<typeof setTimeout> }>} */
     this.pending = new Map()
@@ -167,6 +170,9 @@ class McpInstance {
           name: tool.name,
           description: tool.description ?? '',
           inputSchema: tool.inputSchema ?? {},
+          annotations: tool.annotations && typeof tool.annotations === 'object'
+            ? tool.annotations
+            : null,
         })
       }
     }
@@ -416,9 +422,9 @@ class McpInstance {
     // A tool that isn't in that snapshot means the server has changed its
     // tool surface since approval — usually a server update, occasionally
     // a tampered binary. Either way, surface to the user before calling.
+    const toolMeta = this.tools.get(name)
     const toolApproved = await isMcpToolApproved(this.id, name)
     if (!toolApproved) {
-      const toolMeta = this.tools.get(name)
       const approved = await promptMcpToolApproval(this.id, name, toolMeta?.description ?? '')
       if (!approved) {
         throw new Error(`MCP tool [${this.id}/${name}] rejected by user`)
@@ -430,7 +436,15 @@ class McpInstance {
     this.metrics.lastCallAt = new Date().toISOString()
 
     try {
-      const result = await this._sendRequest('tools/call', { name, arguments: toolArgs })
+      // Side-effecting tools are confirmed on every call, not just the first.
+      // This runs in the main process so a compromised renderer cannot skip it.
+      const result = await runConfirmedMcpToolCall({
+        serverId: this.id,
+        toolName: name,
+        toolArgs,
+        toolMeta,
+        call: () => this._sendRequest('tools/call', { name, arguments: toolArgs }),
+      })
       this.metrics.totalLatencyMs += Date.now() - start
       return result
     } catch (err) {

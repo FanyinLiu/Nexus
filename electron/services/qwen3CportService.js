@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure-C Qwen3-TTS server: discovery, launch spec, and parent-death guard.
  *
@@ -15,6 +16,8 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+
+import { buildSidecarEnv } from './localServiceSecurity.js'
 
 /** Preferred ports, in order. The first free one is used. */
 export const QWEN3_CPORT_PORTS = Object.freeze([8003, 8004, 8005])
@@ -140,12 +143,14 @@ export function buildQwen3CportArgs(config, port) {
 /**
  * Environment for the C server. `QWEN_METAL_FUSED_TALKER=1` is required for
  * the fast Metal path; without it the same binary uses a slower matvec seam.
+ * `NEXUS_SIDECAR_TOKEN` authenticates every HTTP request from Nexus.
  *
  * @param {Record<string, string | undefined>} baseEnv
+ * @param {string} [token]
  * @returns {Record<string, string | undefined>}
  */
-export function buildQwen3CportEnv(baseEnv = process.env) {
-  return { ...baseEnv, QWEN_METAL_FUSED_TALKER: '1' }
+export function buildQwen3CportEnv(baseEnv = process.env, token) {
+  return buildSidecarEnv({ ...baseEnv, QWEN_METAL_FUSED_TALKER: '1' }, token)
 }
 
 /**

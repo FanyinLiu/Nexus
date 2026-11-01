@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tencent Cloud Real-Time Speech Recognition WebSocket client.
  *

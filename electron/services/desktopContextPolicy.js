@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Saved desktop-context capture flags.
  *

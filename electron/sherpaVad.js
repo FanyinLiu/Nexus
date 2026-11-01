@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sherpa-onnx Silero VAD service (main process).
  *
@@ -16,14 +17,16 @@
 
 import { createRequire } from 'node:module'
 import { findStandaloneFile } from './services/modelPaths.js'
+import { createLogger } from './logger.js'
 
 const require = createRequire(import.meta.url)
+const log = createLogger('SherpaVAD')
 
 let sherpa = null
 try {
   sherpa = require('sherpa-onnx-node')
 } catch {
-  console.warn('[SherpaVAD] sherpa-onnx-node is not installed or failed to load.')
+  log.warn('sherpa-onnx-node is not installed or failed to load.')
 }
 
 const SAMPLE_RATE = 16000

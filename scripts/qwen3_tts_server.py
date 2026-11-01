@@ -23,6 +23,12 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from nexus_sidecar_guard import (
+    MAX_JSON_BODY_BYTES,
+    authorize_request,
+    require_sidecar_token,
+)
+
 logger = logging.getLogger("qwen3_tts")
 
 DEFAULT_MODEL_DIR = (
@@ -30,6 +36,13 @@ DEFAULT_MODEL_DIR = (
 )
 SAMPLE_RATE = 24000
 MAX_SENTENCE_CHARS = 120
+
+# Pinned Hub revision for the optional "pass a Hub id" path. Local directories
+# are loaded with local_files_only=True instead, so an already-downloaded
+# checkpoint never touches the network. Override with
+# NEXUS_QWEN3_TTS_MODEL_REVISION or --model-revision to test another commit.
+QWEN3_TTS_DEFAULT_REVISION = "0c0e3051f131929182e2c023b9537f8b1c68adfe"
+QWEN3_TTS_REVISION_ENV = "NEXUS_QWEN3_TTS_MODEL_REVISION"
 
 # Known CustomVoice speakers. The loaded model is the source of truth; this
 # list keeps `/health` and `/v1/speakers` answerable before the first load.
@@ -91,6 +104,48 @@ _model_device = None
 _model_error = None
 _model_lock = threading.Lock()
 _model_dir = str(DEFAULT_MODEL_DIR)
+_model_revision = QWEN3_TTS_DEFAULT_REVISION
+_SIDECAR_TOKEN = ""
+
+
+def hf_cache_snapshot(model_id, revision=None):
+    """Return a cached Hugging Face snapshot directory for `model_id`.
+
+    Prefers an explicit revision, then the newest snapshot on disk. Loading the
+    snapshot path with local_files_only=True keeps an already-downloaded model
+    completely offline instead of re-resolving the floating main branch.
+    """
+    cache_root = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface")) / "hub"
+    snapshots = cache_root / ("models--" + str(model_id).replace("/", "--")) / "snapshots"
+    if revision:
+        candidate = snapshots / str(revision)
+        if candidate.is_dir():
+            return candidate
+    try:
+        candidates = sorted(
+            (entry for entry in snapshots.iterdir() if entry.is_dir()),
+            key=lambda entry: entry.name,
+            reverse=True,
+        )
+    except OSError:
+        candidates = []
+    return candidates[0] if candidates else None
+
+
+def resolve_pretrained_source(model, revision):
+    """Return (source, kwargs) for a pinned, offline-first from_pretrained call."""
+    expanded = Path(str(model)).expanduser()
+    if expanded.is_dir():
+        return str(expanded), {"local_files_only": True}
+    snapshot = hf_cache_snapshot(model, revision)
+    if snapshot is not None:
+        return str(snapshot), {"local_files_only": True}
+    if not revision:
+        raise RuntimeError(
+            f"{model} is not cached locally and no pinned revision is configured; "
+            f"set {QWEN3_TTS_REVISION_ENV} or --model-revision to a full commit SHA."
+        )
+    return str(model), {"revision": str(revision), "local_files_only": False}
 
 
 def pick_device():
@@ -118,12 +173,14 @@ def load_model_locked():
     device = pick_device()
     dtype = torch.float32 if device == "cpu" else torch.float16
     started = time.monotonic()
-    logger.info("Loading Qwen3-TTS from %s on %s (%s) ...", _model_dir, device, dtype)
+    source, load_kwargs = resolve_pretrained_source(_model_dir, _model_revision)
+    logger.info("Loading Qwen3-TTS from %s on %s (%s) ...", source, device, dtype)
     try:
         _model = Qwen3TTSModel.from_pretrained(
-            _model_dir,
+            source,
             device_map=device,
             dtype=dtype,
+            **load_kwargs,
         )
     except Exception as error:  # noqa: BLE001 - reported to the caller as 503
         _model_error = f"{type(error).__name__}: {error}"
@@ -305,6 +362,29 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
     def log_message(self, message, *args):
         logger.debug("%s - %s", self.address_string(), message % args)
 
+    def _authorize(self):
+        failure = authorize_request(
+            token=_SIDECAR_TOKEN,
+            method=self.command,
+            headers=self.headers,
+            content_types=("application/json",),
+            max_body_bytes=MAX_JSON_BODY_BYTES,
+        )
+        if failure:
+            status, message = failure
+            # The rejected body was never read; do not reuse this connection.
+            self.close_connection = True
+            self._send_json(status, {"error": {"message": message}})
+            return False
+        return True
+
+    def do_OPTIONS(self):
+        if not self._authorize():
+            return
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -325,12 +405,15 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"0\r\n\r\n")
 
     def do_GET(self):
+        if not self._authorize():
+            return
         path = self.path.split("?", 1)[0]
         if path == "/health":
             self._send_json(
                 200,
                 {
                     "status": "ok",
+                    "service": "qwen3-tts",
                     "loaded": _model is not None,
                     "device": _model_device,
                     "model": _model_dir,
@@ -360,6 +443,8 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"error": {"message": "not found"}})
 
     def do_POST(self):
+        if not self._authorize():
+            return
         path = self.path.split("?", 1)[0]
         if path == "/v1/warmup":
             self._handle_warmup()
@@ -371,10 +456,19 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_JSON_BODY_BYTES:
+            raise ValueError("payload too large")
         raw = self.rfile.read(length) if length > 0 else b"{}"
         return json.loads(raw.decode("utf-8", errors="replace") or "{}")
 
     def _handle_warmup(self):
+        try:
+            # The guard requires a bounded Content-Length on POST; consume the
+            # (ignored) body so an HTTP/1.1 connection stays in sync.
+            self._read_json_body()
+        except (ValueError, json.JSONDecodeError):
+            self._send_json(400, {"error": {"message": "invalid JSON body"}})
+            return
         started = time.monotonic()
         try:
             with _model_lock:
@@ -553,7 +647,7 @@ def run_selftest():
 
 
 def main():
-    global _model_dir
+    global _model_dir, _model_revision, _SIDECAR_TOKEN
 
     parser = argparse.ArgumentParser(description="Qwen3-TTS local speech sidecar")
     parser.add_argument("--port", type=int, default=8002)
@@ -563,6 +657,11 @@ def main():
         type=str,
         default=os.environ.get("NEXUS_QWEN3_TTS_MODEL_DIR") or str(DEFAULT_MODEL_DIR),
     )
+    parser.add_argument(
+        "--model-revision",
+        type=str,
+        default=os.environ.get(QWEN3_TTS_REVISION_ENV) or QWEN3_TTS_DEFAULT_REVISION,
+    )
     parser.add_argument("--selftest", action="store_true")
     args = parser.parse_args()
 
@@ -571,10 +670,13 @@ def main():
         level=logging.INFO,
     )
     _model_dir = str(Path(args.model_dir).expanduser())
+    _model_revision = str(args.model_revision or "").strip()
 
     if args.selftest:
         run_selftest()
         return
+
+    _SIDECAR_TOKEN = require_sidecar_token()
 
     server = ThreadingHTTPServer((args.host, args.port), Qwen3TtsHandler)
     server.daemon_threads = True

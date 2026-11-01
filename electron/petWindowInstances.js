@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BrowserWindow } from 'electron'
 import { createPetLocomotion } from './petLocomotion.js'
 import { getSavedPetPref, savePetPref } from './services/petPrefsStore.js'
