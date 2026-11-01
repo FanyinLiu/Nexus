@@ -4,407 +4,174 @@ import {
   getBrowserVadSilenceMs,
   type VoiceActivityDetector,
 } from '../../features/hearing/browserVad.ts'
-import { normalizeRecognizedVoiceTranscript } from '../../features/hearing/core.ts'
-import { turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
 import {
   startParaformerStream,
   type ParaformerStreamSession,
 } from '../../features/hearing/localParaformer.ts'
-import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
-import { resolveSherpaStreamIdleTimeoutMs } from '../../features/voice/sherpaIdleTimeout.ts'
-import { formatTraceLabel } from '../../features/voice/shared.ts'
-import type {
-  VoiceSessionEvent,
-  VoiceSessionTransport,
-} from '../../features/voice/sessionMachine.ts'
+import { turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
 import { clamp } from '../../lib/common.ts'
-import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { createLogger } from '../../lib/logger.ts'
-import { createId } from '../../lib/index.ts'
-import { mapSpeechError } from '../../lib/voice.ts'
-import type {
-  AppSettings,
-  PetMood,
-  TranslationKey,
-  TranslationParams,
-  VoicePipelineState,
-  VoiceState,
-} from '../../types/index.ts'
 import {
-  API_RECORDING_MAX_DURATION_MS,
-  SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
-} from './constants.ts'
-import type { BackchannelSession } from './backchannelRuntime.ts'
-import { createAdaptiveRmsGate } from './support.ts'
-import { createTurnEndController } from './turnEndController.ts'
-import {
-  createDesktopTurnEndProbe,
-  startDesktopTurnEndSession,
-  stopDesktopTurnEndSession,
-  type TurnEndSessionRef,
-} from './smartTurnProbe.ts'
-import type { VoiceConversationOptions } from './types.ts'
-
-type ShowPetStatus = (
-  message: string,
-  duration?: number,
-  dedupeWindowMs?: number,
-) => void
-
-type Translator = (key: TranslationKey, params?: TranslationParams) => string
+  runStreamingAsrConversation,
+  type AsrConversationDeps,
+  type AsrConversationState,
+  type StreamingAsrAdapter,
+} from './asrRunnerCore.ts'
 
 const log = createLogger('voice.asr')
 
-export type ParaformerConversationState = {
-  noSpeechTimer: number | null
-  maxDurationTimer: number | null
+export type ParaformerConversationState = AsrConversationState & {
   vadDetector: VoiceActivityDetector | null
 }
 
-export type StartParaformerConversationOptions = {
-  options?: VoiceConversationOptions
-  currentSettings: AppSettings
-  voiceStateRef: MutableRefObject<VoiceState>
-  suppressVoiceReplyRef: MutableRefObject<boolean>
+export type StartParaformerConversationOptions = AsrConversationDeps & {
   paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   paraformerConversationRef: MutableRefObject<ParaformerConversationState | null>
-  clearPendingVoiceRestart: () => void
-  canInterruptSpeech: () => boolean
-  interruptSpeakingForVoiceInput: () => boolean
-  setContinuousVoiceSession: (active: boolean) => void
-  shouldKeepContinuousVoiceSession: () => boolean
-  resetNoSpeechRestartCount: () => void
   clearParaformerConversationState: () => void
-  beginVoiceListeningSession: (transport: VoiceSessionTransport) => unknown
-  dispatchVoiceSession: (event: VoiceSessionEvent) => unknown
-  dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => unknown
-  setVoiceState: (state: VoiceState) => void
-  setMood: (mood: PetMood) => void
-  setError: (error: string | null) => void
-  setLiveTranscript: (transcript: string) => void
-  updateVoicePipeline: (
-    step: VoicePipelineState['step'],
-    detail: string,
-    transcript?: string,
-  ) => void
-  appendVoiceTrace: (title: string, detail: string) => void
-  showPetStatus: ShowPetStatus
-  setSpeechLevelValue: (level: number) => void
-  handleRecognizedVoiceTranscript: (
-    transcript: string,
-    options?: { traceId?: string },
-  ) => Promise<boolean>
-  handleVoiceListeningFailure: (
-    message: string,
-    errorCode?: string,
-  ) => void
-  shouldAutoRestartVoice: () => boolean
-  /** Optional short acknowledgements during the user's turn. */
-  backchannel?: BackchannelSession
-  ti: Translator
 }
 
+/**
+ * Paraformer streams partials, so its Silero detector owns the speech
+ * boundaries while the partial text can end the turn earlier.
+ */
 export async function startParaformerConversation(
   params: StartParaformerConversationOptions,
 ) {
-  const restart = params.options?.restart ?? false
-  const passive = params.options?.passive ?? false
-
-  if (
-    !window.desktopPet?.paraformerStart
-    || !window.desktopPet.paraformerFeed
-    || !window.desktopPet.paraformerFinish
-    || !window.desktopPet.paraformerAbort
-  ) {
-    params.setContinuousVoiceSession(false)
-    params.setError(params.ti('voice.provider.paraformer.connect_required'))
-    return
-  }
-
-  params.clearPendingVoiceRestart()
-
-  if (params.voiceStateRef.current === 'speaking') {
-    if (!params.canInterruptSpeech()) {
-      params.showPetStatus(params.ti('voice.interruption_disabled'), 2_800, 3_200)
-      return
-    }
-
-    if (!params.interruptSpeakingForVoiceInput()) {
-      return
-    }
-  }
-
-  params.suppressVoiceReplyRef.current = false
-
-  if (!restart) {
-    params.setContinuousVoiceSession(params.shouldKeepContinuousVoiceSession())
-    params.resetNoSpeechRestartCount()
-  }
-
-  params.clearParaformerConversationState()
-
-  // Hoisted to the outer function scope so the outer catch can destroy it
-  // if startParaformerStream throws before the session ref assignment.
+  let latestPartial = ''
   let vadDetector: VoiceActivityDetector | null = null
-  let turnEndSession: TurnEndSessionRef = null
 
-  try {
-    const traceId = createId('voice')
-    const traceLabel = formatTraceLabel(traceId)
-    let session: ParaformerStreamSession | null = null
-    let speechDetected = false
-    let finalizing = false
-    let latestPartial = ''
-    let speechStartedAt: number | null = null
-    let lastSpeechAt = 0
-    const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
-    // The VAD's usual redemption window is the ordinary-text default.
-    // turnEnd may shorten it for finished text or extend it for a trailing
-    // connector; the detector itself is configured with that wider ceiling.
-    const baseSilenceMs = getBrowserVadSilenceMs(params.currentSettings.vadSensitivity)
+  // The VAD's usual redemption window is the ordinary-text default.
+  // turnEnd may shorten it for finished text or extend it for a trailing
+  // connector; the detector itself is configured with that wider ceiling.
+  const baseSilenceMs = getBrowserVadSilenceMs(params.currentSettings.vadSensitivity)
 
-    const armNoSpeechTimer = () => {
-      const state = params.paraformerConversationRef.current
-      if (!state || !session) return
+  const adapter: StreamingAsrAdapter<
+    ParaformerStreamSession,
+    Awaited<ReturnType<ParaformerStreamSession['stop']>>,
+    ParaformerConversationState
+  > = {
+    sessionRef: params.paraformerSessionRef,
+    conversationRef: params.paraformerConversationRef,
+    clearConversationState: params.clearParaformerConversationState,
 
-      if (state.noSpeechTimer) {
-        window.clearTimeout(state.noSpeechTimer)
+    prepare: () => {
+      if (
+        !window.desktopPet?.paraformerStart
+        || !window.desktopPet.paraformerFeed
+        || !window.desktopPet.paraformerFinish
+        || !window.desktopPet.paraformerAbort
+      ) {
+        params.setContinuousVoiceSession(false)
+        params.setError(params.ti('voice.provider.paraformer.connect_required'))
+        return null
       }
+      return true
+    },
 
-      state.noSpeechTimer = window.setTimeout(() => {
-        if (!session || finalizing || params.paraformerSessionRef.current !== session) return
+    transport: 'local_paraformer',
+    listeningDetail: params.ti('voice.pipeline.paraformer_started'),
+    status: {
+      autoRestart: params.ti('voice.status.continuous_paraformer_start'),
+      listening: params.ti('voice.status.paraformer_listening'),
+    },
+    trace: {
+      title: 'Start Paraformer recognition',
+      detail: (traceLabel) => `#${traceLabel} running Paraformer streaming transcription`,
+    },
+    presetSilenceMs: baseSilenceMs,
+    partialTranscript: () => latestPartial,
+    isTurnEndFinalizing: (run) => run.isFinalizing() || !run.isCurrentSession(),
+    armNoSpeechTimerOnSpeech: false,
+    setFrameSpeechLevel: (rms) => {
+      // When VAD is unavailable, fall back to RMS-based speech level display.
+      if (!vadDetector) {
+        params.setSpeechLevelValue(clamp(rms * 6, 0, 1))
+      }
+    },
 
-        if (!speechDetected) {
-          finalizing = true
-          params.backchannel?.stop()
-          stopDesktopTurnEndSession(turnEndSession)
-          params.clearParaformerConversationState()
-          session.abort()
-          params.paraformerSessionRef.current = null
-          params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-          return
-        }
-
-        void finalizeParaformerTranscript(params.ti('voice.pipeline.long_idle_wrap_up'))
-      }, resolveSherpaStreamIdleTimeoutMs(params.currentSettings.wakewordSessionIdleTimeoutMs))
-    }
-
-    const finalizeParaformerTranscript = async (
-      detail: string,
-    ) => {
-      if (!session || finalizing) return
-
-      finalizing = true
-      params.backchannel?.stop()
-      stopDesktopTurnEndSession(turnEndSession)
-      params.clearParaformerConversationState()
-
+    startSession: async (run, handlers) => {
+      // ── Silero VAD for accurate speech boundary detection ──────────────
       try {
-        params.dispatchVoiceSessionAndSync({
-          type: 'stt_finalizing',
-          text: '',
+        vadDetector = await createVoiceActivityDetector({
+          onSpeechStart: () => {
+            if (run.isFinalizing() || !run.isCurrentSession()) return
+            run.markSpeechDetected(performance.now())
+            run.armNoSpeechTimer()
+          },
+          onSpeechEnd: async () => {
+            // The detector's ceiling was reached. turnEnd may already have
+            // finalized earlier from the partial text; finalize is idempotent.
+            if (run.isFinalizing() || !run.isCurrentSession()) return
+            void run.finalize(params.ti('voice.pipeline.paraformer_silence_finalize'))
+          },
+          onFrameProcessed: (speechProbability) => {
+            if (!run.isCurrentSession() || run.isFinalizing()) return
+            params.setSpeechLevelValue(speechProbability)
+            if (speechProbability >= 0.3) {
+              run.markSpeechDetected(performance.now())
+            }
+          },
+          onMisfire: () => {
+            // Very short noise burst, not real speech — ignore
+          },
+        }, params.currentSettings.vadSensitivity, {
+          // Streaming partials let turnEnd finish before this ceiling; without
+          // this override a trailing "然后..." would still cut at the preset.
+          maxSilenceMs: turnEndMaxSilenceMs(baseSilenceMs),
         })
-        params.setMood('thinking')
-        params.updateVoicePipeline('transcribing', detail)
-
-        const stopResult = await session.stop()
-        params.paraformerSessionRef.current = null
-        const transcript = normalizeRecognizedVoiceTranscript(stopResult.text)
-
-        if (!transcript) {
-          params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-          return
-        }
-
-        params.appendVoiceTrace('Paraformer recognition complete', `#${traceLabel} received final text`)
-        await params.handleRecognizedVoiceTranscript(transcript, { traceId })
-      } catch (error) {
-        params.paraformerSessionRef.current = null
-        params.handleVoiceListeningFailure(
-          humanizeVoiceError(error, { ti: params.ti }),
-        )
+        await vadDetector.start()
+      } catch (vadError) {
+        console.warn('[Paraformer] Silero VAD unavailable, speech end detection will rely on Paraformer endpoints only', vadError)
+        vadDetector = null
       }
-    }
 
-    const markSpeechDetected = (now: number) => {
-      lastSpeechAt = now
-      if (speechStartedAt === null) {
-        speechStartedAt = now
-      }
-      if (speechDetected) return
+      // ── Paraformer streaming ASR for transcription ──────────────────────
+      return startParaformerStream({
+        onPartial: (text) => {
+          if (run.isFinalizing() || !run.isCurrentSession()) return
+          latestPartial = text
+          params.setLiveTranscript(text)
+          params.dispatchVoiceSession({ type: 'stt_partial', text })
+        },
+        onEndpoint: (text) => {
+          if (run.isFinalizing() || !run.isCurrentSession()) return
+          params.appendVoiceTrace('Paraformer endpoint', `segment recognized: ${text.slice(0, 40)}`)
+        },
+        onActivity: handlers.onActivity,
+        onError: handlers.onError,
+      }, params.ti)
+    },
 
-      speechDetected = true
-      params.dispatchVoiceSession({ type: 'speech_detected' })
-      params.resetNoSpeechRestartCount()
+    stopSession: (session) => session.stop(),
+    transcriptFromStop: (stopResult) => stopResult.text,
+    appendCompleteTrace: (_stopResult, run) => {
+      params.appendVoiceTrace('Paraformer recognition complete', `#${run.traceLabel} received final text`)
+    },
+
+    onFirstSpeechDetected: () => {
       params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_detected'))
-    }
+    },
+    onTurnEndEnd: (run) => {
+      void run.finalize(params.ti('voice.pipeline.paraformer_silence_finalize'))
+    },
 
-    turnEndSession = startDesktopTurnEndSession()
-    const turnEnd = createTurnEndController({
-      probe: createDesktopTurnEndProbe(turnEndSession),
-      getContext: () => ({
-        partialTranscript: latestPartial,
-        locale: params.currentSettings.speechRecognitionLang,
-        presetSilenceMs: baseSilenceMs,
-        speechStartedAt,
-        lastSpeechAt,
-        finalizing: finalizing || !session || params.paraformerSessionRef.current !== session,
-      }),
-      onEnd: () => {
-        void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_silence_finalize'))
-      },
-      onWait: (tick) => {
-        params.backchannel?.maybeFire({
-          partialTranscript: latestPartial,
-          silenceMs: tick.silenceMs,
-          spokenMs: tick.spokenMs,
-          turnEndAction: tick.decision.action,
-          modelProbability: tick.modelProbability,
-          modelPending: tick.modelPending,
-        })
-      },
-    })
+    buildStateExtras: () => ({ vadDetector }),
+    maxDurationFinalize: () => ({
+      detail: params.ti('voice.pipeline.paraformer_max_duration'),
+    }),
+    cleanupOnError: () => {
+      params.paraformerSessionRef.current?.abort()
+      params.paraformerSessionRef.current = null
 
-    params.beginVoiceListeningSession('local_paraformer')
-    params.setMood('happy')
-    params.setError(null)
-    params.setLiveTranscript('')
-    params.updateVoicePipeline('listening', params.ti('voice.pipeline.paraformer_started'))
-    params.backchannel?.start()
-
-    if (!passive) {
-      params.showPetStatus(
-        params.shouldAutoRestartVoice()
-          ? params.ti('voice.status.continuous_paraformer_start')
-          : params.ti('voice.status.paraformer_listening'),
-        4_200,
-        3_600,
-      )
-    }
-
-    params.appendVoiceTrace('Start Paraformer recognition', `#${traceLabel} running Paraformer streaming transcription`)
-
-    // ── Silero VAD for accurate speech boundary detection ──────────────
-    try {
-      vadDetector = await createVoiceActivityDetector({
-        onSpeechStart: () => {
-          if (finalizing || !session || params.paraformerSessionRef.current !== session) return
-          markSpeechDetected(performance.now())
-          armNoSpeechTimer()
-        },
-        onSpeechEnd: async () => {
-          // The detector's ceiling was reached. turnEnd may already have
-          // finalized earlier from the partial text; finalize is idempotent.
-          if (finalizing || !session || params.paraformerSessionRef.current !== session) return
-          void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_silence_finalize'))
-        },
-        onFrameProcessed: (speechProbability) => {
-          if (!session || params.paraformerSessionRef.current !== session || finalizing) return
-          params.setSpeechLevelValue(speechProbability)
-          if (speechProbability >= 0.3) {
-            markSpeechDetected(performance.now())
-          }
-        },
-        onMisfire: () => {
-          // Very short noise burst, not real speech — ignore
-        },
-      }, params.currentSettings.vadSensitivity, {
-        // Streaming partials let turnEnd finish before this ceiling; without
-        // this override a trailing "然后..." would still cut at the preset.
-        maxSilenceMs: turnEndMaxSilenceMs(baseSilenceMs),
-      })
-      await vadDetector.start()
-    } catch (vadError) {
-      console.warn('[Paraformer] Silero VAD unavailable, speech end detection will rely on Paraformer endpoints only', vadError)
-      vadDetector = null
-    }
-
-    // ── Paraformer streaming ASR for transcription ──────────────────────
-    session = await startParaformerStream({
-      onPartial: (text) => {
-        if (finalizing || !session || params.paraformerSessionRef.current !== session) return
-        latestPartial = text
-        params.setLiveTranscript(text)
-        params.dispatchVoiceSession({ type: 'stt_partial', text })
-      },
-      onEndpoint: (text) => {
-        if (finalizing || !session || params.paraformerSessionRef.current !== session) return
-        params.appendVoiceTrace('Paraformer endpoint', `segment recognized: ${text.slice(0, 40)}`)
-      },
-      onActivity: (rms) => {
-        if (!session || params.paraformerSessionRef.current !== session || finalizing) return
-
-        // When VAD is unavailable, fall back to RMS-based speech level display
-        if (!vadDetector) {
-          params.setSpeechLevelValue(clamp(rms * 6, 0, 1))
-        }
-
-        const now = performance.now()
-        if (activityGate.isSpeech(rms)) {
-          markSpeechDetected(now)
-          return
-        }
-        turnEnd.tick()
-      },
-      onError: (message) => {
-        if (finalizing) return
-
-        finalizing = true
-        params.backchannel?.stop()
-        stopDesktopTurnEndSession(turnEndSession)
-        params.clearParaformerConversationState()
-        params.paraformerSessionRef.current = null
-        params.handleVoiceListeningFailure(message)
-      },
-    }, params.ti)
-
-    params.paraformerSessionRef.current = session
-    params.paraformerConversationRef.current = {
-      noSpeechTimer: null,
-      maxDurationTimer: null,
-      vadDetector,
-    }
-
-    armNoSpeechTimer()
-    params.paraformerConversationRef.current.maxDurationTimer = window.setTimeout(() => {
-      if (!session || finalizing || params.paraformerSessionRef.current !== session) return
-
-      if (!speechDetected) {
-        finalizing = true
-        params.backchannel?.stop()
-        stopDesktopTurnEndSession(turnEndSession)
-        params.clearParaformerConversationState()
-        session.abort()
-        params.paraformerSessionRef.current = null
-        params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
-        return
+      // If startParaformerStream threw after createVoiceActivityDetector
+      // already started, the detector's mic + AudioContext would leak
+      // because the ref assignment hadn't happened yet.
+      if (vadDetector) {
+        void vadDetector.destroy().catch(() => { log.debug('VAD detector teardown failed after start error', { errorPresent: true }) })
+        vadDetector = null
       }
-
-      void finalizeParaformerTranscript(params.ti('voice.pipeline.paraformer_max_duration'))
-    }, API_RECORDING_MAX_DURATION_MS)
-  } catch (error) {
-    params.backchannel?.stop()
-    stopDesktopTurnEndSession(turnEndSession)
-    params.clearParaformerConversationState()
-    params.setVoiceState('idle')
-    params.setMood('idle')
-    params.setSpeechLevelValue(0)
-    params.paraformerSessionRef.current?.abort()
-    params.paraformerSessionRef.current = null
-
-    // If startParaformerStream threw after createVoiceActivityDetector
-    // already started, the detector's mic + AudioContext would leak
-    // because the ref assignment hadn't happened yet.
-    if (vadDetector) {
-      void vadDetector.destroy().catch(() => { log.debug('VAD detector teardown failed after start error', { errorPresent: true }) })
-      vadDetector = null
-    }
-    if (isVoiceCaptureCancelled(error)) return
-
-    const message = humanizeVoiceError(error, { ti: params.ti })
-
-    params.updateVoicePipeline('idle', message)
-    params.setError(message)
-    params.showPetStatus(message, 4_800, 4_500)
+    },
   }
+
+  await runStreamingAsrConversation(params, adapter)
 }

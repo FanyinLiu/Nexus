@@ -11,21 +11,9 @@ import {
 import { turnEndMaxSilenceMs } from '../../features/hearing/turnEnd.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
-import type { BackchannelSession } from './backchannelRuntime.ts'
-import { createTurnEndController, type TurnEndController } from './turnEndController.ts'
-import {
-  createDesktopTurnEndProbe,
-  startDesktopTurnEndSession,
-  stopDesktopTurnEndSession,
-  type TurnEndSessionRef,
-} from './smartTurnProbe.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import { formatTraceLabel } from '../../features/voice/shared.ts'
 import { isVoiceCaptureCancelled } from '../../features/voice/voiceCaptureAttempt.ts'
-import type {
-  VoiceSessionEvent,
-  VoiceSessionTransport,
-} from '../../features/voice/sessionMachine.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { blobToBase64 } from '../../lib/common.ts'
 import { createLogger } from '../../lib/logger.ts'
@@ -33,39 +21,27 @@ import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { recordSttUsage } from '../../features/metering/speechCost.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
-import type {
-  AppSettings,
-  PetMood,
-  TranslationKey,
-  TranslationParams,
-  VoicePipelineState,
-  VoiceState,
-} from '../../types/index.ts'
 import {
   API_RECORDING_MAX_DURATION_MS,
   API_RECORDING_MAX_IDLE_MS,
-  SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD,
 } from './constants.ts'
-import { createAdaptiveRmsGate } from './support.ts'
+import {
+  beginAsrConversation,
+  createAsrSpeechClock,
+  createAsrTurnEnd,
+  startAsrListeningPhase,
+  type AsrConversationDeps,
+  type AsrTurnEndRuntime,
+} from './asrRunnerCore.ts'
 import type {
   VadConversationSession,
   VoiceConversationOptions,
 } from './types.ts'
 
-type ShowPetStatus = (
-  message: string,
-  duration?: number,
-  dedupeWindowMs?: number,
-) => void
-
-type Translator = (key: TranslationKey, params?: TranslationParams) => string
-
 const log = createLogger('voice.vad')
 
-export type StartVadConversationOptions = {
+export type StartVadConversationOptions = AsrConversationDeps & {
   transcribeMode: 'api' | 'local'
-  options?: VoiceConversationOptions
-  currentSettings: AppSettings
   vadSessionRef: MutableRefObject<VadConversationSession | null>
   wakewordRuntimeRef: MutableRefObject<WakewordRuntimeController | null>
   /**
@@ -75,86 +51,40 @@ export type StartVadConversationOptions = {
    * IPC and would otherwise be detected as a false speech onset.
    */
   voiceEchoCooldownUntilRef: MutableRefObject<number>
-  voiceStateRef: MutableRefObject<VoiceState>
-  suppressVoiceReplyRef: MutableRefObject<boolean>
-  clearPendingVoiceRestart: () => void
-  canInterruptSpeech: () => boolean
-  interruptSpeakingForVoiceInput: () => boolean
-  setContinuousVoiceSession: (active: boolean) => void
-  shouldKeepContinuousVoiceSession: () => boolean
-  resetNoSpeechRestartCount: () => void
-  beginVoiceListeningSession: (transport: VoiceSessionTransport) => unknown
-  dispatchVoiceSession: (event: VoiceSessionEvent) => unknown
-  dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => unknown
-  setVoiceState: (state: VoiceState) => void
-  setMood: (mood: PetMood) => void
-  setError: (error: string | null) => void
-  setLiveTranscript: (transcript: string) => void
-  updateVoicePipeline: (
-    step: VoicePipelineState['step'],
-    detail: string,
-    transcript?: string,
-  ) => void
-  appendVoiceTrace: (title: string, detail: string) => void
-  showPetStatus: ShowPetStatus
-  setSpeechLevelValue: (level: number) => void
   resetSpeechLevel: () => void
   destroyVadSession: (session: VadConversationSession | null) => Promise<void>
-  handleRecognizedVoiceTranscript: (
-    transcript: string,
-    options?: { traceId?: string },
-  ) => Promise<boolean>
-  handleVoiceListeningFailure: (
-    message: string,
-    errorCode?: string,
-  ) => void
   startFallbackConversation: (
     options?: VoiceConversationOptions,
   ) => Promise<void>
-  shouldAutoRestartVoice: () => boolean
   busEmit?: (event: VoiceBusEvent) => void
-  /** Optional short acknowledgements during the user's turn. */
-  backchannel?: BackchannelSession
-  ti: Translator
 }
 
+/**
+ * Event-driven VAD runner. It shares the core's gate/listening/turn-end
+ * primitives, but owns its detector wiring and one-shot transcription.
+ *
+ * The MicVAD fallback runs rule-only turn end: its samples stay in the
+ * renderer, so there is no main-process Smart Turn session to probe.
+ */
 export async function startVadConversation(
   params: StartVadConversationOptions,
 ) {
-  const restart = params.options?.restart ?? false
-  const passive = params.options?.passive ?? false
-
-  if (params.transcribeMode === 'api' && !window.desktopPet?.transcribeAudio) {
-    params.setContinuousVoiceSession(false)
-    params.setError(params.ti('voice.provider.api.connect_required'))
-    return
-  }
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    params.setContinuousVoiceSession(false)
-    params.setError(params.ti('voice.provider.vad.no_mic_input'))
-    return
-  }
-
-  params.clearPendingVoiceRestart()
-
-  if (params.voiceStateRef.current === 'speaking') {
-    if (!params.canInterruptSpeech()) {
-      params.showPetStatus(params.ti('voice.interruption_disabled'), 2_800, 3_200)
-      return
+  const plan = beginAsrConversation(params, () => {
+    if (params.transcribeMode === 'api' && !window.desktopPet?.transcribeAudio) {
+      params.setContinuousVoiceSession(false)
+      params.setError(params.ti('voice.provider.api.connect_required'))
+      return null
     }
 
-    if (!params.interruptSpeakingForVoiceInput()) {
-      return
+    if (!navigator.mediaDevices?.getUserMedia) {
+      params.setContinuousVoiceSession(false)
+      params.setError(params.ti('voice.provider.vad.no_mic_input'))
+      return null
     }
-  }
 
-  params.suppressVoiceReplyRef.current = false
-
-  if (!restart) {
-    params.setContinuousVoiceSession(params.shouldKeepContinuousVoiceSession())
-    params.resetNoSpeechRestartCount()
-  }
+    return true
+  })
+  if (!plan) return
 
   // Prefer the shared-audio path: if the always-on wakeword listener is
   // live, VAD subscribes to its ScriptProcessor frames and runs Silero on
@@ -175,7 +105,7 @@ export async function startVadConversation(
   const useFrameDriver = Boolean(
     wakewordRuntime
     && (wakewordPhase === 'listening' || wakewordPhase === 'paused')
-    && wakewordRuntime.hasActiveFrameSource()
+    && wakewordRuntime.hasActiveFrameSource(),
   )
 
   const baseSilenceMs = useFrameDriver
@@ -184,7 +114,7 @@ export async function startVadConversation(
   // The main VAD reports a post-hangover `isDetected` flag, so it cannot see a
   // 250 ms pause while its 1.8 s silence window is still open. The shared mic
   // frames give us the raw RMS needed for the Smart Turn probe clock.
-  const activityGate = createAdaptiveRmsGate(SHERPA_STREAM_ACTIVITY_RMS_THRESHOLD)
+  const clock = createAsrSpeechClock(0)
 
   // Declare up front so the shared VAD event handlers below can close over
   // the session variable — TS would otherwise complain about use-before-
@@ -193,13 +123,8 @@ export async function startVadConversation(
 
   // Backchannel pacing: this path has no partial transcript, so the policy
   // only ever sees an empty string and picks the neutral listening token.
-  let speechStartedAt: number | null = null
-  let lastSpeechAt = 0
-  let turnEnd: TurnEndController | null = null
-  // Only the frame-driver path sends audio to the main Smart Turn ring. The
-  // MicVAD fallback owns its samples in the renderer, so starting a main
-  // session there would only produce "too short" probes every 300 ms.
-  let turnEndSession: TurnEndSessionRef = null
+  let turnEnd: AsrTurnEndRuntime | null = null
+  const stopTurnEnd = () => turnEnd?.stop()
 
   const handleSpeechStart = () => {
     if (params.vadSessionRef.current !== session) return
@@ -207,9 +132,7 @@ export async function startVadConversation(
     // user barge-in, so the tail end of the aborted TTS doesn't bounce
     // back through the mic and look like user speech.
     if (Date.now() < params.voiceEchoCooldownUntilRef.current) return
-    const now = performance.now()
-    speechStartedAt ??= now
-    lastSpeechAt = now
+    clock.markSpeech(performance.now())
     session.speechDetected = true
     params.dispatchVoiceSession({ type: 'speech_detected' })
     params.busEmit?.({
@@ -230,17 +153,17 @@ export async function startVadConversation(
 
     const now = performance.now()
     if (speechProbability >= 0.3) {
-      speechStartedAt ??= now
+      clock.markSpeechStart(now)
       // The frame driver keeps `isDetected` high through its 1.8 s hangover;
       // its pause clock comes from the raw RMS callback instead.
-      if (!useFrameDriver) lastSpeechAt = now
+      if (!useFrameDriver) clock.markLastSpeech(now)
       return
     }
 
-    if (!session.speechDetected || speechStartedAt === null) return
+    if (!session.speechDetected || clock.getSpeechStartedAt() === null) return
     // The legacy MicVAD exposes the real per-frame probability, so it can
     // drive the same controller directly.
-    if (!useFrameDriver) turnEnd?.tick()
+    if (!useFrameDriver) turnEnd?.controller.tick()
   }
 
   const handleMisfire = () => {
@@ -261,7 +184,7 @@ export async function startVadConversation(
 
     params.vadSessionRef.current = null
     params.backchannel?.stop()
-    stopDesktopTurnEndSession(turnEndSession)
+    stopTurnEnd()
     if (session.noSpeechTimer) {
       window.clearTimeout(session.noSpeechTimer)
     }
@@ -381,12 +304,13 @@ export async function startVadConversation(
         for (let i = 0; i < samples.length; i += 1) energy += samples[i] * samples[i]
         const rms = Math.sqrt(energy / samples.length)
         const now = performance.now()
-        if (activityGate.isSpeech(rms)) {
-          speechStartedAt ??= now
-          lastSpeechAt = now
+        if (clock.isSpeech(rms)) {
+          clock.markSpeech(now)
           return
         }
-        if (session.speechDetected && speechStartedAt !== null) turnEnd?.tick()
+        if (session.speechDetected && clock.getSpeechStartedAt() !== null) {
+          turnEnd?.controller.tick()
+        }
       })
 
       session = {
@@ -429,20 +353,14 @@ export async function startVadConversation(
       }
     }
 
-    if (useFrameDriver) turnEndSession = startDesktopTurnEndSession()
-    turnEnd = createTurnEndController({
-      probe: useFrameDriver
-        ? createDesktopTurnEndProbe(turnEndSession)
-        // Rule-based fallback: no Smart Turn session or probe IPC at all.
-        : async () => ({ available: false, probability: null, reason: 'missing' }),
-      getContext: () => ({
-        partialTranscript: '',
-        locale: params.currentSettings.speechRecognitionLang,
-        presetSilenceMs: baseSilenceMs,
-        speechStartedAt,
-        lastSpeechAt,
-        finalizing: params.vadSessionRef.current !== session || session.cancelled,
-      }),
+    turnEnd = createAsrTurnEnd({
+      mode: useFrameDriver ? 'smart-turn' : 'rule-only',
+      locale: params.currentSettings.speechRecognitionLang,
+      presetSilenceMs: baseSilenceMs,
+      partialTranscript: () => '',
+      getSpeechStartedAt: clock.getSpeechStartedAt,
+      getLastSpeechAt: clock.getLastSpeechAt,
+      isFinalizing: () => params.vadSessionRef.current !== session || session.cancelled,
       onEnd: () => {
         // Both backends can emit their current utterance on demand: the main
         // VAD flushes its segment, MicVAD uses pause() with
@@ -453,50 +371,33 @@ export async function startVadConversation(
           void session.frameDriver?.flush()
         }
       },
-      onWait: (tick) => {
-        params.backchannel?.maybeFire({
-          partialTranscript: '',
-          silenceMs: tick.silenceMs,
-          spokenMs: tick.spokenMs,
-          turnEndAction: tick.decision.action,
-          modelProbability: tick.modelProbability,
-          modelPending: tick.modelPending,
-        })
-      },
+      backchannel: params.backchannel,
     })
 
     params.vadSessionRef.current = session
-    params.beginVoiceListeningSession(
-      params.transcribeMode === 'local' ? 'local_vad' : 'remote_vad',
-    )
-    params.setMood('happy')
-    params.setError(null)
-    params.setLiveTranscript('')
-    params.backchannel?.start()
-    params.updateVoicePipeline(
-      'listening',
-      params.transcribeMode === 'local'
-        ? (
-            params.shouldAutoRestartVoice()
-              ? params.ti('voice.pipeline.vad_local_continuous')
-              : params.ti('voice.pipeline.vad_local_listening')
-          )
-        : (
-            params.shouldAutoRestartVoice()
-              ? params.ti('voice.pipeline.vad_api_continuous')
-              : params.ti('voice.pipeline.vad_api_listening')
-          ),
-    )
-
-    if (!passive) {
-      params.showPetStatus(
+    startAsrListeningPhase(params, {
+      transport: params.transcribeMode === 'local' ? 'local_vad' : 'remote_vad',
+      detail: () => (
+        params.transcribeMode === 'local'
+          ? (
+              params.shouldAutoRestartVoice()
+                ? params.ti('voice.pipeline.vad_local_continuous')
+                : params.ti('voice.pipeline.vad_local_listening')
+            )
+          : (
+              params.shouldAutoRestartVoice()
+                ? params.ti('voice.pipeline.vad_api_continuous')
+                : params.ti('voice.pipeline.vad_api_listening')
+            )
+      ),
+      status: () => (
         params.shouldAutoRestartVoice()
           ? params.ti('voice.status.continuous_vad_start')
-          : params.ti('voice.status.vad_listening'),
-        4_200,
-        3_600,
-      )
-    }
+          : params.ti('voice.status.vad_listening')
+      ),
+      order: 'pipeline-after-backchannel',
+      passive: plan.passive,
+    })
 
     session.noSpeechTimer = window.setTimeout(() => {
       if (
@@ -509,7 +410,7 @@ export async function startVadConversation(
 
       console.warn('[VAD] destroy source: noSpeechTimer')
       void params.destroyVadSession(session)
-      stopDesktopTurnEndSession(turnEndSession)
+      stopTurnEnd()
       params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
     }, API_RECORDING_MAX_IDLE_MS)
 
@@ -519,7 +420,7 @@ export async function startVadConversation(
       if (!session.speechDetected) {
         console.warn('[VAD] destroy source: maxDurationTimer (no speech)')
         void params.destroyVadSession(session)
-        stopDesktopTurnEndSession(turnEndSession)
+        stopTurnEnd()
         params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
         return
       }
@@ -556,7 +457,7 @@ export async function startVadConversation(
     }
   } catch (error) {
     params.backchannel?.stop()
-    stopDesktopTurnEndSession(turnEndSession)
+    stopTurnEnd()
     // Partial-init cleanup: anything we wired up before throwing must
     // be torn down here, otherwise mainVad / detector / timers / the
     // session ref leak. Iterate every possible state.
