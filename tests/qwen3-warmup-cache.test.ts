@@ -3,6 +3,8 @@ import http from 'node:http'
 import { register } from 'node:module'
 import test from 'node:test'
 
+import { getSidecarToken } from '../electron/services/localServiceSecurity.js'
+
 register(new URL('./helpers/electron-net-stub-hooks.mjs', import.meta.url))
 
 type TtsService = typeof import('../electron/services/ttsService.js')
@@ -11,8 +13,10 @@ const ttsServicePromise: Promise<TtsService> = import('../electron/services/ttsS
 test('a connection error after warm-up drops the cached health check', async () => {
   const tts = await ttsServicePromise
   let healthChecks = 0
+  const authorizationHeaders: Array<string | undefined> = []
 
   const server = http.createServer((request, response) => {
+    authorizationHeaders.push(request.headers.authorization)
     if (request.url === '/v1/health') {
       healthChecks += 1
       response.writeHead(200, { 'Content-Type': 'application/json' })
@@ -32,6 +36,7 @@ test('a connection error after warm-up drops the cached health check', async () 
     await tts.warmupQwen3Tts(baseUrl, undefined, 'python')
     await tts.warmupQwen3Tts(baseUrl, undefined, 'python')
     assert.equal(healthChecks, 1, 'a successful warm-up is reused')
+    assert.equal(authorizationHeaders[0], `Bearer ${getSidecarToken()}`)
 
     await assert.rejects(
       tts.synthesizeRemoteTts(

@@ -23,6 +23,12 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from nexus_sidecar_guard import (
+    MAX_JSON_BODY_BYTES,
+    authorize_request,
+    require_sidecar_token,
+)
+
 logger = logging.getLogger("qwen3_tts")
 
 DEFAULT_MODEL_DIR = (
@@ -99,6 +105,7 @@ _model_error = None
 _model_lock = threading.Lock()
 _model_dir = str(DEFAULT_MODEL_DIR)
 _model_revision = QWEN3_TTS_DEFAULT_REVISION
+_SIDECAR_TOKEN = ""
 
 
 def hf_cache_snapshot(model_id, revision=None):
@@ -355,6 +362,29 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
     def log_message(self, message, *args):
         logger.debug("%s - %s", self.address_string(), message % args)
 
+    def _authorize(self):
+        failure = authorize_request(
+            token=_SIDECAR_TOKEN,
+            method=self.command,
+            headers=self.headers,
+            content_types=("application/json",),
+            max_body_bytes=MAX_JSON_BODY_BYTES,
+        )
+        if failure:
+            status, message = failure
+            # The rejected body was never read; do not reuse this connection.
+            self.close_connection = True
+            self._send_json(status, {"error": {"message": message}})
+            return False
+        return True
+
+    def do_OPTIONS(self):
+        if not self._authorize():
+            return
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def _send_json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -375,12 +405,15 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"0\r\n\r\n")
 
     def do_GET(self):
+        if not self._authorize():
+            return
         path = self.path.split("?", 1)[0]
         if path == "/health":
             self._send_json(
                 200,
                 {
                     "status": "ok",
+                    "service": "qwen3-tts",
                     "loaded": _model is not None,
                     "device": _model_device,
                     "model": _model_dir,
@@ -410,6 +443,8 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"error": {"message": "not found"}})
 
     def do_POST(self):
+        if not self._authorize():
+            return
         path = self.path.split("?", 1)[0]
         if path == "/v1/warmup":
             self._handle_warmup()
@@ -421,10 +456,19 @@ class Qwen3TtsHandler(BaseHTTPRequestHandler):
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_JSON_BODY_BYTES:
+            raise ValueError("payload too large")
         raw = self.rfile.read(length) if length > 0 else b"{}"
         return json.loads(raw.decode("utf-8", errors="replace") or "{}")
 
     def _handle_warmup(self):
+        try:
+            # The guard requires a bounded Content-Length on POST; consume the
+            # (ignored) body so an HTTP/1.1 connection stays in sync.
+            self._read_json_body()
+        except (ValueError, json.JSONDecodeError):
+            self._send_json(400, {"error": {"message": "invalid JSON body"}})
+            return
         started = time.monotonic()
         try:
             with _model_lock:
@@ -603,7 +647,7 @@ def run_selftest():
 
 
 def main():
-    global _model_dir, _model_revision
+    global _model_dir, _model_revision, _SIDECAR_TOKEN
 
     parser = argparse.ArgumentParser(description="Qwen3-TTS local speech sidecar")
     parser.add_argument("--port", type=int, default=8002)
@@ -631,6 +675,8 @@ def main():
     if args.selftest:
         run_selftest()
         return
+
+    _SIDECAR_TOKEN = require_sidecar_token()
 
     server = ThreadingHTTPServer((args.host, args.port), Qwen3TtsHandler)
     server.daemon_threads = True

@@ -382,6 +382,8 @@ export const zhCNCore = {
   'updater.error.install_prep_failed_rec': '先留在当前版本，稍后再点「重启以安装」。',
   'updater.error.snapshot_failed': '安装前没能备份数据，这次更新已取消。',
   'updater.error.snapshot_failed_rec': '现有数据还在。可以稍后再点「重启以安装」。',
+  'updater.error.unverified_update': '没法确认这次更新是否安全，所以没有安装。',
+  'updater.error.unverified_update_rec': '你可以改从发布页面下载新版本。',
   'failover.error.all_failed': '{domain} 的请求都没成功。',
   'file.error.record_read_failed': '录音文件没能读出来。',
   'file.error.not_supported': '当前环境不支持文本文件操作。',

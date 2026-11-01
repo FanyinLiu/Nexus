@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { app } from 'electron'
 
 import { ensurePythonRuntimeStatusFor, getDetectedPythonBinary } from './pythonRuntime.js'
+import { probeSidecarHealth } from './localServiceSecurity.js'
 import {
   createVoiceSidecarSupervisor,
   resolveQwen3TtsPythonCommand,
@@ -116,35 +117,26 @@ function verifyQwen3CportLoopback(port) {
   })
 }
 
-async function readHealthJson(url) {
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(1_500) })
-    if (!response.ok) return null
-    return await response.json().catch(() => null) // silent-catch-ok: health probe response body is optional
-  } catch {
-    // silent-catch-ok: sidecar health probe failure is the expected unavailable signal
-    return null
-  }
-}
-
 /**
  * Distinguish our C server from an unrelated listener on the same port.
- * A closed port is free; a 200 `/v1/health` with `status: "ok"` is ours;
- * anything else is someone else's process and must not be adopted or killed.
+ * A closed port is free; a token-authenticated 200 `/v1/health` with
+ * `status: "ok"` is ours; anything else — including a 401 from a server
+ * started by a previous launch — is foreign and must not be adopted or killed.
  */
 async function classifyQwen3CportPort(port) {
   if (!(await isPortOpen('127.0.0.1', port))) return 'closed'
-  const health = await readHealthJson(`http://127.0.0.1:${port}/v1/health`)
-  return health?.status === 'ok' ? 'ours' : 'foreign'
+  return probeSidecarHealth(`http://127.0.0.1:${port}/v1/health`, {
+    kind: 'qwen3-cport',
+  })
 }
 
-/** The Python sidecar answers `/health` with `status` and `loaded`. */
-async function classifyPythonPort(port) {
+/** The Python sidecar answers `/health` with `status`, `service`, and `loaded`. */
+async function classifyPythonPort(port, service) {
   if (!(await isPortOpen('127.0.0.1', port))) return 'closed'
-  const health = await readHealthJson(`http://127.0.0.1:${port}/health`)
-  return health && (health.status === 'ok' || typeof health.loaded === 'boolean')
-    ? 'ours'
-    : 'foreign'
+  return probeSidecarHealth(`http://127.0.0.1:${port}/health`, {
+    kind: 'python',
+    service,
+  })
 }
 
 /** Find the PID listening on a loopback port so an adopted server can be stopped. */
@@ -226,9 +218,18 @@ async function resolveQwen3Launch() {
   return { kind: 'python' }
 }
 
+/**
+ * Every Python sidecar must answer an authenticated health probe before it can
+ * be adopted. A listener from a previous launch answers 401 with this launch's
+ * token and is treated as foreign, never adopted or killed.
+ */
 function classifyPort(state) {
-  if (state.id === 'qwen3Tts') return classifyPythonPort(state.port)
-  return isPortOpen('127.0.0.1', state.port).then((open) => (open ? 'ours' : 'closed'))
+  const service = state.id === 'qwen3Tts'
+    ? 'qwen3-tts'
+    : state.id === 'omniVoice'
+      ? 'omnivoice'
+      : 'glm-asr'
+  return classifyPythonPort(state.port, service)
 }
 
 function isServiceReady(state) {

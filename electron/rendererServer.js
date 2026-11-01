@@ -3,6 +3,8 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { isLoopbackHostHeader } from './services/localServiceSecurity.js'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -111,6 +113,20 @@ function getAssetAccessControlOrigin(request) {
     : rendererServerUrl || `http://${rendererServerHost}:${rendererServerPreferredPort}`
 }
 
+/** The port the asset listener actually owns, for the Host-header check. */
+function getRendererServerPort() {
+  if (rendererServerUrl) {
+    try {
+      const port = Number(new URL(rendererServerUrl).port)
+      if (Number.isInteger(port) && port > 0) return port
+    } catch {
+      // silent-catch-ok: fall back to the live server address below
+    }
+  }
+  const address = rendererServer?.address?.()
+  return address && typeof address === 'object' ? address.port : null
+}
+
 export async function ensureRendererServer() {
   if (rendererServerUrl) {
     return rendererServerUrl
@@ -126,6 +142,14 @@ export async function ensureRendererServer() {
   function createRendererServerInstance() {
     return http.createServer(async (request, response) => {
       try {
+        // DNS-rebinding pages keep their own hostname in the Host header while
+        // connecting to loopback, so only our exact loopback host:port is served.
+        if (!isLoopbackHostHeader(request.headers.host, getRendererServerPort())) {
+          response.writeHead(403)
+          response.end('Forbidden')
+          return
+        }
+
         const requestUrl = new URL(request.url ?? '/', `http://${rendererServerHost}`)
         let filePath = ''
         let servedRoot = rendererRoot

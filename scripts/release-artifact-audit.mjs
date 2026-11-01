@@ -20,16 +20,19 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const RELEASE_ARTIFACT_CONTRACTS = Object.freeze({
   windows: Object.freeze({
     artifactPatterns: Object.freeze(['*.exe', '*.exe.blockmap', 'latest.yml']),
+    signaturePatterns: Object.freeze(['latest.yml.sig']),
     updaterArtifactPatterns: Object.freeze(['*.exe']),
     checksumFile: 'SHA256SUMS-windows.txt',
   }),
   macos: Object.freeze({
     artifactPatterns: Object.freeze(['*.dmg', '*.dmg.blockmap', '*.zip', '*.zip.blockmap', 'latest-mac.yml']),
+    signaturePatterns: Object.freeze([]),
     updaterArtifactPatterns: Object.freeze(['*.dmg', '*.zip']),
     checksumFile: 'SHA256SUMS-macos.txt',
   }),
   linux: Object.freeze({
     artifactPatterns: Object.freeze(['*.AppImage', '*.deb', '*.tar.gz', 'latest-linux*.yml']),
+    signaturePatterns: Object.freeze(['latest-linux*.yml.sig']),
     updaterArtifactPatterns: Object.freeze(['*.AppImage', '*.deb']),
     checksumFile: 'SHA256SUMS-linux.txt',
   }),
@@ -285,7 +288,7 @@ export function verifyReleaseDirectory(releaseDir, tag) {
   const files = listTopLevelFiles(releaseDir)
   const errors = []
   const allowedPatterns = Object.values(RELEASE_ARTIFACT_CONTRACTS)
-    .flatMap((contract) => [...contract.artifactPatterns, contract.checksumFile])
+    .flatMap((contract) => [...contract.artifactPatterns, ...contract.signaturePatterns, contract.checksumFile])
   const unrecognized = files.filter((fileName) => !allowedPatterns.some((pattern) => matchesPattern(fileName, pattern)))
   if (unrecognized.length) errors.push(`unrecognized release assets: ${unrecognized.join(', ')}`)
 
