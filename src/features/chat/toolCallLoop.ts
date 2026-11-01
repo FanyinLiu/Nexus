@@ -31,6 +31,7 @@ import { executeWithProtection } from '../tools/circuitBreaker.ts'
 import { runPostToolHooks, runPreToolHooks } from '../tools/hooks.ts'
 import { extractPromptModeToolCalls } from './promptModeMcp.ts'
 import type { McpToolDescriptor } from './mcpToolTypes.ts'
+import { wrapUntrustedToolOutput } from './untrustedToolOutput.ts'
 
 export type { McpToolDescriptor } from './mcpToolTypes.ts'
 
@@ -196,6 +197,11 @@ async function executeMcpToolCall(
         name: toolName,
         arguments: finalArgs,
       }),
+      // The main process may show a native confirmation dialog before running
+      // the tool. That wait is user-paced, so the renderer must neither time
+      // it out nor retry it: a refusal is terminal and a retry could duplicate
+      // a side effect the user just approved once.
+      { timeoutMs: null, maxRetries: 0 },
     )
     const resultStr = truncateToolResult(
       typeof result === 'string' ? result : JSON.stringify(result),
@@ -428,9 +434,10 @@ export async function runToolCallLoop(
           }
         }
         executedToolCallSignatures.add(signature)
+        const result = await executeMcpToolCall(tc, settings, builtInCallbacks)
         return {
           id: tc.id,
-          result: await executeMcpToolCall(tc, settings, builtInCallbacks),
+          result: wrapUntrustedToolOutput(result, `tool:${tc.function.name}`),
         }
       }),
     )
