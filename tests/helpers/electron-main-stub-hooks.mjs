@@ -132,3 +132,7 @@ export const session = { defaultSession: {} }
 export const shell = { openExternal: () => Promise.resolve() }
 export class Tray {}
 export const ipcMain = { handle: () => undefined }
+export const powerMonitor = {
+  getSystemIdleState: () => 'active',
+  getSystemIdleTime: () => 0,
+}

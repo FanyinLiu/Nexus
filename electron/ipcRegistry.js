@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
@@ -26,6 +26,7 @@ import * as proactiveIpc from './ipc/proactiveIpc.js'
 import { getBoundWindowCapability } from './ipc/windowCapabilities.js'
 import * as reminderStrip from './services/reminderStrip.js'
 import { showProactiveNotification } from './services/proactiveNotification.js'
+import { createProactiveDeliveryContextProvider } from './services/proactiveDeliveryContext.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -36,6 +37,9 @@ const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 20_000
 const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
+
+// Matches the renderer focus-awareness default (autonomyIdleThresholdSeconds).
+const FOCUS_IDLE_THRESHOLD_SECONDS = 300
 
 const activeChatStreamControllers = new Map()
 
@@ -114,14 +118,44 @@ export function registerIpc(options = {}) {
   voiceProfileIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
+  const isPanelFocused = () => {
+    const focused = BrowserWindow.getFocusedWindow()
+    return !!focused && getBoundWindowCapability(focused.webContents) === 'panel'
+  }
+  // Renderer-supplied preferences are kept in memory only: a snoozed strip
+  // item needs the latest quiet window, not a persisted copy of app settings.
+  const deliveryPreferences = { current: null }
+  const deliveryContext = createProactiveDeliveryContextProvider({
+    isPanelFocused,
+    getFocusState: () => {
+      const state = powerMonitor.getSystemIdleState(FOCUS_IDLE_THRESHOLD_SECONDS)
+      if (state === 'locked') return 'locked'
+      if (state === 'idle') return 'idle'
+      return 'active'
+    },
+    getActiveWindow: async () => {
+      // Kept dynamic: the desktop-context service pulls native Electron
+      // modules, and the re-route path only reads it when awareness is on.
+      const { captureActiveWindowContext } = await import('./services/desktopContextService.js')
+      const snapshot = await captureActiveWindowContext()
+      if (!snapshot) return null
+      return {
+        title: typeof snapshot.activeWindowTitle === 'string' ? snapshot.activeWindowTitle : '',
+        appName: typeof snapshot.activeWindowAppName === 'string' ? snapshot.activeWindowAppName : '',
+      }
+    },
+    getPreferences: () => deliveryPreferences.current,
+    now: () => Date.now(),
+  })
   proactiveIpc.register({
     app,
     ipcMain,
     getAllWindows: () => BrowserWindow.getAllWindows(),
     requireTrustedSender,
-    isPanelFocused: () => {
-      const focused = BrowserWindow.getFocusedWindow()
-      return !!focused && getBoundWindowCapability(focused.webContents) === 'panel'
+    isPanelFocused,
+    getDeliveryContext: deliveryContext.getDeliveryContext,
+    setDeliveryPreferences: (preferences) => {
+      deliveryPreferences.current = preferences
     },
     strip: {
       show: reminderStrip.showReminderStrip,

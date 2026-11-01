@@ -73,7 +73,7 @@ function createFakeStrip() {
   let withdrawAllCount = 0
   let configured: {
     onAction: (action: string, id: string) => void
-    isPending: (id: string) => boolean
+    canReshow: (id: string) => boolean | Promise<boolean>
   } | null = null
   return {
     strip: {

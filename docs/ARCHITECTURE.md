@@ -722,6 +722,12 @@ the main-process router; on the active-focus rule the reminder strip shows it
 and the pet speaks without a bubble. Weather, web search and chat-action
 reminder tasks keep their existing execution path.
 
+When a snoozed strip item comes back, main rebuilds the current delivery
+context and re-runs `routeDelivery` for the stored inbox message. It reappears
+only when the decision still includes the strip; otherwise it is dropped there
+and the unread inbox entry is left untouched, with no bubble, speech or OS
+notification.
+
 ## Feature Notes
 
 ### Voice

@@ -80,6 +80,33 @@ function createFakeStrip() {
 }
 
 type Handler = (event: unknown, payload?: unknown) => unknown
+type SentMessage = { channel: string; payload: unknown }
+type WindowCapability = 'pet' | 'panel'
+
+function createFakeWindow(capability: WindowCapability, sent: SentMessage[]) {
+  return {
+    capability,
+    isDestroyed: () => false,
+    webContents: {
+      isDestroyed: () => false,
+      send: (channel: string, payload: unknown) => {
+        sent.push({ channel, payload })
+      },
+    },
+  }
+}
+
+function assertNoContentKeys(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) assertNoContentKeys(item)
+    return
+  }
+  if (value === null || typeof value !== 'object') return
+  for (const [key, nested] of Object.entries(value)) {
+    assert.ok(!['title', 'body', 'speech'].includes(key), `inbox:changed leaked ${key}`)
+    assertNoContentKeys(nested)
+  }
+}
 
 function createHarness(t: TestContext) {
   const directory = createTempDir(t)
@@ -88,17 +115,13 @@ function createHarness(t: TestContext) {
     now: () => NOW,
   })
   const handlers = new Map<string, Handler>()
-  const sent: Array<{ channel: string; payload: unknown }> = []
+  const sent: SentMessage[] = []
+  const panelSent: SentMessage[] = []
   const fakeStrip = createFakeStrip()
-  const windows = [{
-    isDestroyed: () => false,
-    webContents: {
-      isDestroyed: () => false,
-      send: (channel: string, payload: unknown) => {
-        sent.push({ channel, payload })
-      },
-    },
-  }]
+  const windows = [
+    createFakeWindow('pet', sent),
+    createFakeWindow('panel', panelSent),
+  ]
 
   const ipc = createProactiveIpc({
     ipcMain: {
@@ -107,7 +130,7 @@ function createHarness(t: TestContext) {
       },
     },
     getAllWindows: () => windows,
-    getWindowCapability: () => 'pet',
+    getWindowCapability: (webContents) => windows.find((win) => win.webContents === webContents)?.capability ?? 'unknown',
     requireTrustedSender: () => {},
     inbox: store,
     logger: createFakeLogger(),
@@ -131,6 +154,7 @@ function createHarness(t: TestContext) {
       return await handler({ trusted: true }, payload)
     },
     changes: () => sent.filter((item) => item.channel === 'inbox:changed').map((item) => item.payload),
+    panelChanges: () => panelSent.filter((item) => item.channel === 'inbox:changed').map((item) => item.payload),
   }
 }
 
@@ -154,6 +178,31 @@ test('strip Done marks the inbox entry done and publishes the lower unread count
     changes: [{ id: message.id, status: 'done' }],
     removedIds: [],
   })
+  assert.deepEqual(harness.panelChanges(), [])
+})
+
+test('inbox:update to dismissed publishes ids and status only, to the pet window only', async (t) => {
+  const harness = createHarness(t)
+  const message = makeMessage({ id: 'dismissed-id', speech: 'Stand up and stretch' })
+  harness.store.upsert(message)
+  assert.equal(harness.store.list().unreadCount, 1)
+
+  await harness.invoke('inbox:update', { id: 'dismissed-id', status: 'dismissed' })
+
+  assert.deepEqual(harness.changes().at(-1), {
+    unreadCount: 0,
+    changes: [{ id: 'dismissed-id', status: 'dismissed' }],
+    removedIds: [],
+  })
+  assert.deepEqual(harness.panelChanges(), [])
+
+  const serialized = JSON.stringify(harness.changes())
+  assert.equal(serialized.includes('Stand up'), false)
+  assert.equal(serialized.includes('Time to move'), false)
+  assert.equal(serialized.includes(message.speech ?? ''), false)
+  for (const payload of harness.changes()) assertNoContentKeys(payload)
+
+  assert.ok(harness.fakeStrip.withdrawn.includes('dismissed-id'))
 })
 
 test('inbox:update to done or dismissed withdraws the id from the strip', async (t) => {

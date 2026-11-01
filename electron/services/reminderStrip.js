@@ -47,11 +47,14 @@ let session = null
 /**
  * Inbox side effects supplied by the proactive IPC wiring. The defaults keep
  * the strip usable in unit tests that never configure an inbox.
- * @type {{ onAction: (action: string, id: string) => void, isPending: (id: string) => boolean }}
+ * @type {{
+ *   onAction: (action: string, id: string) => void,
+ *   canReshow: (id: string) => boolean | Promise<boolean>,
+ * }}
  */
 let actionDeps = {
   onAction: () => {},
-  isPending: () => true,
+  canReshow: () => true,
 }
 
 /** @returns {BrowserWindow | null} */
@@ -124,7 +127,7 @@ function ensureSession() {
       }
       actionDeps.onAction(action, item.id)
     },
-    isPending: (id) => actionDeps.isPending(id),
+    canReshow: (id) => actionDeps.canReshow(id),
   })
   return session
 }
@@ -195,13 +198,13 @@ function createStripWindow() {
  * IPC factory; keeping it injected keeps this module and the session testable.
  * @param {{
  *   onAction?: (action: string, id: string) => void,
- *   isPending?: (id: string) => boolean,
+ *   canReshow?: (id: string) => boolean | Promise<boolean>,
  * }} dependencies
  */
 export function configureReminderStrip(dependencies) {
   actionDeps = {
     onAction: typeof dependencies.onAction === 'function' ? dependencies.onAction : () => {},
-    isPending: typeof dependencies.isPending === 'function' ? dependencies.isPending : () => true,
+    canReshow: typeof dependencies.canReshow === 'function' ? dependencies.canReshow : () => true,
   }
 }
 

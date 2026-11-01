@@ -74,12 +74,26 @@ const deliveryContextSchema = {
   },
 }
 
+const deliveryPreferencesSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    quietStart: { type: 'number', integer: true, min: 0, max: 23 },
+    quietEnd: { type: 'number', integer: true, min: 0, max: 23 },
+    desktopAwarenessAllowed: { type: 'boolean' },
+    awayNotificationsEnabled: { type: 'boolean' },
+  },
+}
+
 const proactiveDeliverySchema = {
   type: 'object',
   unknown: 'reject',
   fields: {
     message: proactiveMessageSchema,
     context: deliveryContextSchema,
+    // Older renderers omit preferences; the snooze re-route then treats the
+    // quiet window as off and desktop awareness as disallowed.
+    preferences: { ...deliveryPreferencesSchema, optional: true },
   },
 }
 

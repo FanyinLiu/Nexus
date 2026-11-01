@@ -7,9 +7,12 @@
  * ten-minute snooze timers, and the action -> side-effect hand-off. Timers are
  * injected so node:test can drive them with a fake clock.
  *
- * A snoozed item comes back only when the inbox entry is still `unread` at
- * the deadline. Re-delivering the same id before then cancels the pending
- * timer; withdrawing an item (done, dismissed, clear-all) cancels it too.
+ * A snoozed item comes back only when `canReshow` allows it at the deadline.
+ * The caller re-routes the stored inbox message there, so a fullscreen or
+ * quiet-hours decision can drop it from the strip without touching the inbox.
+ * Re-delivering the same id before then cancels the pending check; withdrawing
+ * an item (done, dismissed, clear-all) cancels it too, even while an async
+ * `canReshow` is still in flight.
  */
 
 import {
@@ -28,7 +31,7 @@ import {
  * @property {number} snoozeMs
  * @property {(snapshot: { items: ReminderStripItem[] }) => void} onQueueChange
  * @property {(action: string, item: ReminderStripItem) => void} onAction
- * @property {(id: string) => boolean} isPending
+ * @property {(id: string) => boolean | Promise<boolean>} canReshow
  */
 
 /**
@@ -48,12 +51,19 @@ export function createReminderStripSession({
   snoozeMs,
   onQueueChange,
   onAction,
-  isPending,
+  canReshow,
 }) {
   /** @type {ReminderStripItem[]} */
   let queue = []
   /** @type {Map<string, unknown>} */
   const snoozeTimers = new Map()
+  /**
+   * One token per scheduled snooze. The token outlives the timer handle while
+   * the async check runs, so withdraw/re-show can invalidate it and a slow
+   * decision can never queue the item twice.
+   * @type {Map<string, object>}
+   */
+  const snoozeTokens = new Map()
 
   function snapshot() {
     return snapshotOf(queue)
@@ -66,9 +76,13 @@ export function createReminderStripSession({
   /** @param {string} id */
   function clearSnooze(id) {
     const timer = snoozeTimers.get(id)
-    if (timer === undefined) return
-    clearTimer(timer)
-    snoozeTimers.delete(id)
+    if (timer !== undefined) {
+      clearTimer(timer)
+      snoozeTimers.delete(id)
+    }
+    // Always drop the token, even when the timer already fired: that is what
+    // invalidates a canReshow promise still waiting to resolve.
+    snoozeTokens.delete(id)
   }
 
   /**
@@ -76,13 +90,31 @@ export function createReminderStripSession({
    */
   function scheduleSnooze(item) {
     clearSnooze(item.id)
+    const token = {}
+    snoozeTokens.set(item.id, token)
     const timer = setTimer(() => {
       snoozeTimers.delete(item.id)
-      // The inbox is the source of truth: a reminder handled elsewhere must
-      // not pop back up when the snooze deadline arrives.
-      if (!isPending(item.id)) return
-      queue = enqueueReminderStripItem(queue, item)
-      notify()
+      if (snoozeTokens.get(item.id) !== token) return
+      void (async () => {
+        let allowed
+        try {
+          allowed = await canReshow(item.id)
+        } catch {
+          // The caller owns logging; a failed re-route simply keeps the item
+          // off the strip and leaves the inbox entry untouched.
+          allowed = false
+        }
+        if (!allowed) {
+          if (snoozeTokens.get(item.id) === token) snoozeTokens.delete(item.id)
+          return
+        }
+        // Withdrawing or re-showing the same id while the check ran replaced
+        // the token; never queue over that newer state.
+        if (snoozeTokens.get(item.id) !== token) return
+        snoozeTokens.delete(item.id)
+        queue = enqueueReminderStripItem(queue, item)
+        notify()
+      })()
     }, snoozeMs)
     snoozeTimers.set(item.id, timer)
   }
@@ -137,7 +169,7 @@ export function createReminderStripSession({
 
   /** Drop every item and cancel every pending snooze (inbox clear-all). */
   function withdrawAll() {
-    for (const id of [...snoozeTimers.keys()]) clearSnooze(id)
+    for (const id of new Set([...snoozeTimers.keys(), ...snoozeTokens.keys()])) clearSnooze(id)
     const hadItems = queue.length > 0
     queue = []
     if (hadItems) notify()
@@ -147,6 +179,7 @@ export function createReminderStripSession({
   function destroy() {
     for (const timer of snoozeTimers.values()) clearTimer(timer)
     snoozeTimers.clear()
+    snoozeTokens.clear()
     queue = []
   }
 

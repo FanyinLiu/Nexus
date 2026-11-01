@@ -21,6 +21,7 @@
 
 import path from 'node:path'
 
+import { routeDelivery } from '../../shared/proactiveDelivery.js'
 import { createLogger } from '../logger.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
@@ -31,6 +32,8 @@ import {
   validateProactiveDeliveryPayload,
 } from './proactivePayloadSchemas.js'
 
+/** @typedef {import('../../shared/proactiveDelivery.js').DeliveryContext} DeliveryContext */
+/** @typedef {import('../../shared/proactiveDelivery.js').ProactiveDeliveryPreferences} ProactiveDeliveryPreferences */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveInboxChange} ProactiveInboxChange */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactivePresentation} ProactivePresentation */
 /** @typedef {import('../services/proactiveInboxStore.js').InboxMutation} InboxMutation */
@@ -71,7 +74,7 @@ const INBOX_CHANGE_CONSUMERS = Object.freeze(['pet'])
  * @property {() => unknown} withdrawAll
  * @property {(dependencies: {
  *   onAction: (action: string, id: string) => void,
- *   isPending: (id: string) => boolean,
+ *   canReshow: (id: string) => boolean | Promise<boolean>,
  * }) => void} [configure]
  */
 
@@ -92,6 +95,8 @@ const INBOX_CHANGE_CONSUMERS = Object.freeze(['pet'])
  * @property {() => ReminderStripLabels} getStripLabels
  * @property {(payload: { title: string, body: string }) => unknown} showOsNotification
  * @property {() => boolean} isPanelFocused
+ * @property {() => Promise<DeliveryContext>} [getDeliveryContext]
+ * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
  */
 
 /**
@@ -110,6 +115,16 @@ export function createProactiveIpc({
   getStripLabels,
   showOsNotification,
   isPanelFocused,
+  getDeliveryContext = async () => ({
+    panelFocused: false,
+    fullscreen: false,
+    focusState: 'active',
+    inQuietHours: false,
+    systemDnd: null,
+    awayNotificationsEnabled: false,
+    stripEnabled: true,
+  }),
+  setDeliveryPreferences = () => {},
 }) {
   /** @type {{ unref?: () => void } | null} */
   let pruneTimer = null
@@ -157,9 +172,24 @@ export function createProactiveIpc({
     for (const id of mutation.removedIds) strip.withdraw(id)
   }
 
-  /** @param {string} id */
-  function isInboxEntryPending(id) {
-    return inbox.list().entries.some((entry) => entry.id === id && entry.status === 'unread')
+  /**
+   * Rebuild the current delivery context and ask the pure router whether the
+   * stored message may return on the strip. A failed context read keeps the
+   * entry in the inbox instead of risking a wrong surface.
+   * @param {string} id
+   * @returns {Promise<boolean>}
+   */
+  async function canReshowStripEntry(id) {
+    const entry = inbox.list().entries.find((item) => item.id === id && item.status === 'unread')
+    if (!entry) return false
+    let context
+    try {
+      context = await getDeliveryContext()
+    } catch {
+      logger.warn('proactive strip re-route context failed', { status: 'context-failed' })
+      return false
+    }
+    return routeDelivery(entry, context).outlets.includes('strip')
   }
 
   /**
@@ -176,7 +206,7 @@ export function createProactiveIpc({
 
   strip.configure?.({
     onAction: handleStripAction,
-    isPending: isInboxEntryPending,
+    canReshow: canReshowStripEntry,
   })
 
   const outlets = createProactiveOutletRegistry({ logger })
@@ -230,7 +260,8 @@ export function createProactiveIpc({
 
   ipcMain.handle('proactive:deliver', async (event, payload) => {
     requireTrustedSender(event)
-    const { message, context } = validateProactiveDeliveryPayload(payload)
+    const { message, context, preferences } = validateProactiveDeliveryPayload(payload)
+    if (preferences) setDeliveryPreferences(preferences)
     // The pet window cannot see whether the panel is focused, so main, which
     // owns every window, adds that one signal before the pure router runs.
     return router.deliver(message, {
@@ -320,6 +351,8 @@ let activeIpc = null
  *   getAllWindows: ProactiveIpcDependencies['getAllWindows'],
  *   requireTrustedSender: ProactiveIpcDependencies['requireTrustedSender'],
  *   isPanelFocused: ProactiveIpcDependencies['isPanelFocused'],
+ *   getDeliveryContext: ProactiveIpcDependencies['getDeliveryContext'],
+ *   setDeliveryPreferences: ProactiveIpcDependencies['setDeliveryPreferences'],
  *   strip: ProactiveIpcDependencies['strip'],
  *   showOsNotification: ProactiveIpcDependencies['showOsNotification'],
  * }} dependencies
@@ -330,6 +363,8 @@ export function register({
   getAllWindows,
   requireTrustedSender,
   isPanelFocused,
+  getDeliveryContext,
+  setDeliveryPreferences,
   strip,
   showOsNotification,
 }) {
@@ -357,6 +392,8 @@ export function register({
     getStripLabels: () => buildReminderStripLabels(),
     showOsNotification,
     isPanelFocused,
+    getDeliveryContext,
+    setDeliveryPreferences,
   })
 }
 

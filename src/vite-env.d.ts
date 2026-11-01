@@ -9,6 +9,7 @@ import type {
   DeliveryContext,
   DeliveryDecision,
   DeliverySurface,
+  ProactiveDeliveryPreferences,
   ProactiveInboxChange,
   ProactiveMessage as SharedProactiveMessage,
 } from '../shared/proactiveDelivery.js'
@@ -540,7 +541,11 @@ declare global {
       getRuntimeState: () => Promise<RuntimeStateSnapshot>
       heartbeatRuntimeState: (payload: { view: 'pet' | 'panel' }) => Promise<RuntimeStateSnapshot>
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
-      deliverProactiveMessage: (payload: { message: ProactiveMessage; context: DeliveryContext }) => Promise<DeliveryDecision>
+      deliverProactiveMessage: (payload: {
+        message: ProactiveMessage
+        context: DeliveryContext
+        preferences?: ProactiveDeliveryPreferences
+      }) => Promise<DeliveryDecision>
       listProactiveInbox: DesktopPetGeneratedBridge['listProactiveInbox']
       updateProactiveInboxEntry: DesktopPetGeneratedBridge['updateProactiveInboxEntry']
       subscribeProactiveInbox: (listener: (change: ProactiveInboxChange) => void) => () => void

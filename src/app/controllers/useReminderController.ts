@@ -17,6 +17,7 @@ import {
 } from '../../features/tools'
 import {
   buildReminderDeliveryContext,
+  buildReminderDeliveryPreferences,
   buildReminderProactiveMessage,
   planReminderPresentation,
   proactiveBubbleAutoHideMs,
@@ -133,11 +134,12 @@ export function useReminderController({
           now,
         })
 
+        const preferences = buildReminderDeliveryPreferences(currentSettings)
         let decision: DeliveryDecision | null = null
         const deliver = window.desktopPet?.deliverProactiveMessage
         if (deliver) {
           try {
-            decision = await deliver({ message, context })
+            decision = await deliver({ message, context, preferences })
           } catch (error) {
             reminderLog.warn('reminder routing failed; using the legacy notice', {
               error: getRedactedLogErrorMessage(error),

@@ -16,12 +16,13 @@ import type {
   DeliveryDecision,
   FocusState,
   ProactiveAction,
+  ProactiveDeliveryPreferences,
   ProactiveMessage as SharedProactiveMessage,
   ProactiveSource,
 } from '../../../shared/proactiveDelivery.js'
 import { isQuietHour, isLikelyFullscreenSurface } from '../autonomy/proactiveBudget.ts'
 import type { ProactiveMessageKind } from '../autonomy/proactiveEtiquette.ts'
-import type { ReminderTask } from '../../types/index.ts'
+import type { AppSettings, ReminderTask } from '../../types/index.ts'
 
 /** The bubble auto-hide the reminder notice has always used. */
 export const REMINDER_NOTICE_AUTO_HIDE_MS = 16_000
@@ -109,6 +110,36 @@ export function buildReminderDeliveryContext(
 
 function isLikelyFullscreenSurfaceFromSignals(signals: ReminderContextSignals): boolean {
   return isLikelyFullscreenSurface(signals.activeWindowTitle, signals.activeWindowAppName)
+}
+
+/** The settings subset the delivery-preference snapshot needs. */
+export type ReminderPreferenceSettings = Pick<
+  AppSettings,
+  | 'proactiveQuietHoursStart'
+  | 'proactiveQuietHoursEnd'
+  | 'contextAwarenessEnabled'
+  | 'activeWindowContextEnabled'
+  | 'companionAwarenessPaused'
+  | 'proactiveAwayNotificationsEnabled'
+>
+
+/**
+ * Snapshot the delivery preferences main keeps for a snooze re-route.
+ *
+ * Desktop awareness mirrors `readReminderDesktopContext`: when it is off or
+ * paused the active-window snapshot is not read, so fullscreen must stay false.
+ */
+export function buildReminderDeliveryPreferences(
+  settings: ReminderPreferenceSettings,
+): ProactiveDeliveryPreferences {
+  return {
+    quietStart: settings.proactiveQuietHoursStart,
+    quietEnd: settings.proactiveQuietHoursEnd,
+    desktopAwarenessAllowed: settings.contextAwarenessEnabled
+      && settings.activeWindowContextEnabled
+      && !settings.companionAwarenessPaused,
+    awayNotificationsEnabled: settings.proactiveAwayNotificationsEnabled,
+  }
 }
 
 /** What the reminder controller still does itself after the main process routes. */
