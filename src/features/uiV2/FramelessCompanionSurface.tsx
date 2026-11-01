@@ -248,7 +248,13 @@ export function FramelessCompanionSurface({
     phase: basePhase,
     petDialogBubble: chat.petDialogBubble,
     assistantReply: proactiveTitle
-      ? (proactiveCaptionActive ? proactiveTitle : undefined)
+      ? (proactiveCaptionActive
+          ? proactiveTitle
+          : basePhase === 'error' || basePhase === 'offline'
+            ? undefined
+            // The bubble's own content is all the surface has for a spoken
+            // line, so a stale proactive title must not hide it mid-speech.
+            : chat.petDialogBubble?.content)
       : basePhase === 'error' || basePhase === 'offline'
         ? undefined
         : chat.petDialogBubble?.content,

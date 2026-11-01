@@ -73,13 +73,20 @@ export async function clearMemoryUserData(options = {}) {
     if (inboxFailed) {
       log.warn('proactive inbox clear failed after memory clear error', {
         source: 'proactive-inbox',
+        error: getRedactedErrorMessage(inboxFailure),
       })
     }
     throw outcome.error
   }
   // A successful memory clear still fails when the inbox cannot be emptied:
   // the caller must not report success while proactive text remains on disk.
-  if (inboxFailed) throw inboxFailure
+  if (inboxFailed) {
+    log.warn('proactive inbox clear failed', {
+      source: 'proactive-inbox',
+      error: getRedactedErrorMessage(inboxFailure),
+    })
+    throw inboxFailure
+  }
   return outcome.value
 
   /**

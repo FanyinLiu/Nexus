@@ -51,6 +51,9 @@ const PROACTIVE_INBOX_PRUNE_INTERVAL_MS = 60 * 60 * 1000
  */
 const INBOX_CHANGE_CONSUMERS = Object.freeze(['pet'])
 
+/** Stable failure token: the inbox file survived a clear-all delete. */
+const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
+
 /** @typedef {object} ProactiveIpcWebContents
  * @property {() => boolean} isDestroyed
  * @property {(channel: string, payload: unknown) => void} send
@@ -317,11 +320,16 @@ export function createProactiveIpc({
   /**
    * Empty the inbox for clear-all, drop every strip item and snooze timer, and
    * push the zero count so the pet badge disappears even when no `inbox:list`
-   * follows.
-   * @returns {Promise<boolean>}
+   * follows. A failed delete must not publish a zero count, empty entries or
+   * withdraw the strip: the file still holds the messages, so the badge has to
+   * stay and the failure must reach clear-all's caller.
+   * @returns {Promise<true>}
    */
   async function clearInbox() {
     const cleared = await inbox.clear()
+    if (!cleared) {
+      throw new Error(PROACTIVE_INBOX_CLEAR_FAILED)
+    }
     strip.withdrawAll()
     publishInboxChange({
       changed: true,
@@ -329,7 +337,7 @@ export function createProactiveIpc({
       removedIds: [],
       unreadCount: 0,
     })
-    return cleared
+    return true
   }
 
   startPrune()
