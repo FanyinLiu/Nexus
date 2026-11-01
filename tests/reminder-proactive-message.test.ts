@@ -4,9 +4,9 @@ import test from 'node:test'
 import {
   buildReminderDeliveryContext,
   buildReminderProactiveMessage,
-  proactiveBubbleAutoHideMs,
-  REMINDER_NOTICE_AUTO_HIDE_MS,
 } from '../src/features/reminders/proactiveMessage.ts'
+import * as reminderMessage from '../src/features/reminders/proactiveMessage.ts'
+import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../src/features/uiV2/caption.ts'
 
 const NOW = new Date(2026, 0, 1, 14, 0, 0).getTime()
 
@@ -92,9 +92,8 @@ test('the delivery context stays out of quiet hours outside the window', () => {
   assert.equal(context.awayNotificationsEnabled, false)
 })
 
-test('the reminder bubble keeps its 16 s auto-hide without changing other sources', () => {
-  assert.equal(proactiveBubbleAutoHideMs('reminder', 0), REMINDER_NOTICE_AUTO_HIDE_MS)
-  assert.equal(REMINDER_NOTICE_AUTO_HIDE_MS, 16_000)
-  assert.equal(proactiveBubbleAutoHideMs('agenda', 0), 0)
-  assert.equal(proactiveBubbleAutoHideMs('agenda', 14_000), 14_000)
+test('the reminder module no longer exports a source-specific auto-hide', () => {
+  assert.equal('REMINDER_NOTICE_AUTO_HIDE_MS' in reminderMessage, false)
+  assert.equal('proactiveBubbleAutoHideMs' in reminderMessage, false)
+  assert.equal(PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS, 12_000)
 })

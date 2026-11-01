@@ -18,14 +18,10 @@ import type {
   ProactiveAction,
   ProactiveDeliveryPreferences,
   ProactiveMessage as SharedProactiveMessage,
-  ProactiveSource,
 } from '../../../shared/proactiveDelivery.js'
 import { isQuietHour, isLikelyFullscreenSurface } from '../autonomy/proactiveBudget.ts'
 import type { ProactiveMessageKind } from '../autonomy/proactiveEtiquette.ts'
 import type { AppSettings, ReminderTask } from '../../types/index.ts'
-
-/** The bubble auto-hide the reminder notice has always used. */
-export const REMINDER_NOTICE_AUTO_HIDE_MS = 16_000
 
 /** A reminder message whose `kind` is already narrowed for the renderer bridge. */
 export type ReminderProactiveMessage = Omit<SharedProactiveMessage, 'kind'> & {
@@ -168,16 +164,4 @@ export function planReminderPresentation(
     bubble: false,
     speech: decision.rule === 2 || decision.rule === 3 || decision.rule === 4,
   }
-}
-
-/**
- * Auto-hide for the pet bubble, derived from the message source. Only the
- * reminder source is migrated in this milestone; every other source keeps the
- * fallback its own path already uses.
- */
-export function proactiveBubbleAutoHideMs(
-  source: ProactiveSource,
-  fallbackMs: number,
-): number {
-  return source === 'reminder' ? REMINDER_NOTICE_AUTO_HIDE_MS : fallbackMs
 }

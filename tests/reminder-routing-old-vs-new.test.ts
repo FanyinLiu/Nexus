@@ -7,6 +7,8 @@ import {
   buildReminderProactiveMessage,
   planReminderPresentation,
 } from '../src/features/reminders/proactiveMessage.ts'
+import { resolveProactivePresentation } from '../src/features/proactive/proactivePresentation.ts'
+import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../src/features/uiV2/caption.ts'
 
 const NOW = 1_700_000_000_000
 
@@ -95,5 +97,16 @@ for (const testCase of CASES) {
     assert.deepEqual(OLD_PLAN, { chatLine: true, bubble: true, speech: true })
     // New behaviour is the routing rule's plan.
     assert.deepEqual(planReminderPresentation(decision), testCase.plan)
+
+    if (testCase.rule === 4) {
+      // Old reminder bubble auto-hid at 16 s; the new one collapses at 12 s
+      // with hover pause.
+      const bubble = resolveProactivePresentation({
+        outlet: 'bubble',
+        message: makeMessage(),
+      })
+      assert.equal(bubble?.proactiveTitle, 'Stand up')
+      assert.equal(PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS, 12_000)
+    }
   })
 }

@@ -20,10 +20,9 @@ import {
   buildReminderDeliveryPreferences,
   buildReminderProactiveMessage,
   planReminderPresentation,
-  proactiveBubbleAutoHideMs,
-  REMINDER_NOTICE_AUTO_HIDE_MS,
   shouldRunReminderScheduler,
 } from '../../features/reminders'
+import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../../features/uiV2/caption.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
@@ -162,7 +161,7 @@ export function useReminderController({
             // add a second bubble next to the strip.
             bubbleContent: plan.bubble ? displayText : '',
             speechContent: plan.speech ? defaultSpeechText : '',
-            autoHideMs: proactiveBubbleAutoHideMs(message.source, REMINDER_NOTICE_AUTO_HIDE_MS),
+            autoHideMs: PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
             dedupeKey: message.id,
           })
         } else {
@@ -172,7 +171,7 @@ export function useReminderController({
             chatContent: t('chat.prefix.reminder_task', { title: task.title, content: displayText }),
             bubbleContent: displayText,
             speechContent: defaultSpeechText,
-            autoHideMs: REMINDER_NOTICE_AUTO_HIDE_MS,
+            autoHideMs: PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
           })
         }
 
