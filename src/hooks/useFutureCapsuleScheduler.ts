@@ -3,17 +3,29 @@ import {
   markDelivered,
 } from '../features/futureCapsule/futureCapsuleStore.ts'
 import { buildFutureCapsuleDelivery } from '../features/futureCapsule/futureCapsuleDelivery.ts'
+import { deliverDueCapsule } from '../features/futureCapsule/capsuleProactiveMessage.ts'
+import {
+  buildReminderDeliveryContext,
+  buildReminderDeliveryPreferences,
+  readProactiveDesktopContext,
+} from '../features/reminders/proactiveMessage.ts'
+import { PROACTIVE_LEGACY_PATH } from '../features/proactive/legacyPaths.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
 import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import { usePollingScheduler } from './usePollingScheduler.ts'
-import type { AppSettings } from '../types'
+import type { CompanionNoticePayload } from './chat/types.ts'
+import type { AppSettings, FocusState } from '../types'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000  // 5 min — same cadence as bracket / errand
 
 interface UseFutureCapsuleSchedulerOptions {
   settings: AppSettings
   enabled?: boolean
+  /** Pet-window view of the user's focus; main adds the panel signal itself. */
+  focusState?: FocusState
+  /** Shared chat path for a rule-2 capsule line; absent keeps the inbox only. */
+  pushCompanionNotice?: (payload: CompanionNoticePayload) => Promise<void>
 }
 
 /**
@@ -21,21 +33,28 @@ interface UseFutureCapsuleSchedulerOptions {
  *
  * Polls every 5 minutes. When a pending capsule's `scheduledFor` date
  * has arrived (or passed — late-running app catches up), the scheduler
- * fires an OS notification carrying the past-self message in the
- * companion's voice and marks the capsule delivered.
+ * hands the past-self message to the proactive router, which decides the
+ * surface and always writes the inbox. A one-off capsule is high priority,
+ * so the badge counts it as soon as it exists.
  *
  * One delivery per tick, so a queue of overdue capsules drips out one
  * day at a time rather than dumping on the user. Manual approval
  * contract is enforced upstream: the runner only delivers entries the
- * user explicitly created.
+ * user explicitly created. `PROACTIVE_LEGACY_PATH.capsule` restores the
+ * pre-router OS notification for one release.
  */
-export function useFutureCapsuleScheduler({ settings, enabled = true }: UseFutureCapsuleSchedulerOptions) {
+export function useFutureCapsuleScheduler({
+  settings,
+  enabled = true,
+  focusState = 'active',
+  pushCompanionNotice,
+}: UseFutureCapsuleSchedulerOptions) {
   usePollingScheduler({
     enabled,
     intervalMs: POLL_INTERVAL_MS,
     requireNotificationBridge: true,
-    live: { settings },
-    tick: async ({ settings: s }, isStopped) => {
+    live: { settings, focusState, pushCompanionNotice },
+    tick: async ({ settings: s, focusState: focus, pushCompanionNotice: push }, isStopped) => {
       const due = findDueCapsule()
       if (!due) return
 
@@ -60,9 +79,40 @@ export function useFutureCapsuleScheduler({ settings, enabled = true }: UseFutur
       if (!admission.allow) return
 
       try {
-        await window.desktopPet?.showProactiveNotification?.(delivery)
-        if (isStopped()) return
-        markDelivered(due.id)
+        const now = Date.now()
+        await deliverDueCapsule({
+          capsule: due,
+          delivery,
+          now,
+          useLegacyPath: PROACTIVE_LEGACY_PATH.capsule,
+          deliver: window.desktopPet?.deliverProactiveMessage,
+          showNotification: window.desktopPet?.showProactiveNotification,
+          buildContext: async () => {
+            const desktopContext = await readProactiveDesktopContext(s)
+            return buildReminderDeliveryContext({
+              focusState: focus,
+              activeWindowTitle: desktopContext?.activeWindowTitle,
+              activeWindowAppName: desktopContext?.activeWindowAppName,
+              quietStart: s.proactiveQuietHoursStart,
+              quietEnd: s.proactiveQuietHoursEnd,
+              awayNotificationsEnabled: s.proactiveAwayNotificationsEnabled,
+              now,
+            })
+          },
+          preferences: buildReminderDeliveryPreferences(s),
+          ...(push
+            ? {
+                pushChatLine: (text: string) => push({
+                  chatContent: text,
+                  // Rule 2 is panel-only: an empty bubble suppresses the pet bubble that would otherwise default to chatContent.
+                  bubbleContent: '',
+                  dedupeKey: `capsule:${due.id}`,
+                }),
+              }
+            : {}),
+          markDelivered,
+          isStopped,
+        })
       } catch (err) {
         console.warn('[future-capsule] delivery failed:', getRedactedLogErrorMessage(err))
       }
