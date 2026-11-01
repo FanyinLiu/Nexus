@@ -1,9 +1,9 @@
 /**
  * Pet-side presentation decision for a router outlet event.
  *
- * Only `bubble` may open a dialog bubble. `strip` is a deliberate no-op in
- * this milestone: the strip window does not exist yet and the pet must not
- * fall back to a bubble for a message that already reached the inbox.
+ * Only `bubble` may open a dialog bubble. `strip` is a deliberate no-op: the
+ * strip is a main-process window, so the pet never receives a strip
+ * presentation and must never fall back to a bubble for one.
  */
 
 import type { ProactivePresentation } from '../../../shared/proactiveDelivery.js'

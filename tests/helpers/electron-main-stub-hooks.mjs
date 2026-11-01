@@ -6,8 +6,9 @@
 // Only electron/ipcRegistry.js, updaterService.js, and
 // electron/services/errorRedaction.js load for real: 'electron' and
 // 'electron-updater' resolve to this module's stubs, and every eager IPC
-// module / TTS service the registry pulls in is swapped for a no-op stub so
-// no real handlers, windows, or network services start.
+// module / TTS service / proactive delivery service the registry pulls in is
+// swapped for a no-op stub so no real handlers, windows, or network services
+// start.
 
 import { EventEmitter } from 'node:events'
 
@@ -59,6 +60,25 @@ export async function load(url, context, nextLoad) {
   }
   if (url.endsWith('/electron/ttsStreamService.js')) {
     return { format: 'module', shortCircuit: true, source: 'export function createTtsStreamService() { return {} }\n' }
+  }
+  if (url.endsWith('/electron/services/proactiveNotification.js')) {
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source: 'export function showProactiveNotification() { return false }\nexport function focusCompanionPanel() {}\n',
+    }
+  }
+  if (url.endsWith('/electron/services/reminderStrip.js')) {
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source: `export function configureReminderStrip() {}
+export function showReminderStrip() { return false }
+export function withdrawReminderStripItem() { return false }
+export function withdrawAllReminderStripItems() {}
+export function destroyReminderStrip() {}
+`,
+    }
   }
   return nextLoad(url, context)
 }

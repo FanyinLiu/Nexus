@@ -80,6 +80,14 @@ function createFakeIpc(inbox: ReturnType<typeof createProactiveInboxStore>) {
     logger: createFakeLogger(),
     setInterval: () => ({ unref: () => {} }),
     clearInterval: () => {},
+    strip: {
+      show: () => true,
+      withdraw: () => true,
+      withdrawAll: () => {},
+    },
+    getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
+    showOsNotification: () => {},
+    isPanelFocused: () => false,
   })
 
   return { ipc, sent }
@@ -118,7 +126,7 @@ test('clearing the inbox publishes inbox:changed with a zero unread count', asyn
   assert.equal(changes.length, 1)
   assert.deepEqual(changes[0]?.payload, {
     unreadCount: 0,
-    entries: [],
+    changes: [],
     removedIds: [],
   })
   assert.equal(fs.existsSync(inboxPath(directory)), false)

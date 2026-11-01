@@ -1,19 +1,53 @@
 // Reminder strip page. Renders the head of the queue the main process owns
 // and reports clicks. A reminder nobody touches collapses on its own; hovering
 // the strip holds it open.
+//
+// This is a sandboxed static page with no bundler and no type imports, so the
+// bridge surface is declared locally with JSDoc instead.
+
+// @ts-check
+
+/**
+ * @typedef {{ done: string, snooze: string, open: string }} StripLabels
+ * @typedef {{ id: string, title: string, body: string, labels: StripLabels }} StripItem
+ * @typedef {{ items: StripItem[] }} StripSnapshot
+ * @typedef {{
+ *   ready: () => Promise<StripSnapshot>,
+ *   act: (id: string, action: string) => Promise<unknown>,
+ *   onItems: (callback: (payload: StripSnapshot) => void) => () => void,
+ * }} ReminderStripBridge
+ */
+
 ;(() => {
   const AUTO_COLLAPSE_MS = 12_000
   const RESUME_AFTER_HOVER_MS = 5_000
 
-  const bridge = window.reminderStrip
-  const strip = document.getElementById('strip')
-  const text = document.getElementById('strip-text')
-  const count = document.getElementById('strip-count')
-  const done = document.getElementById('strip-done')
-  const snooze = document.getElementById('strip-snooze')
-  if (!bridge || !strip || !text || !count || !done || !snooze) return
+  /** @type {ReminderStripBridge | undefined} */
+  const bridge = /** @type {{ reminderStrip?: ReminderStripBridge }} */ (
+    /** @type {unknown} */ (window)
+  ).reminderStrip
 
+  /**
+   * @param {string} id
+   * @returns {HTMLElement}
+   */
+  function requiredElement(id) {
+    const element = document.getElementById(id)
+    if (!element) throw new Error(`missing strip element: ${id}`)
+    return element
+  }
+
+  if (!bridge) return
+  const stripBridge = bridge
+  const strip = requiredElement('strip')
+  const text = requiredElement('strip-text')
+  const count = requiredElement('strip-count')
+  const done = requiredElement('strip-done')
+  const snooze = requiredElement('strip-snooze')
+
+  /** @type {StripItem | null} */
   let current = null
+  /** @type {ReturnType<typeof setTimeout> | null} */
   let collapseTimer = null
   let hovering = false
 
@@ -24,6 +58,17 @@
     }
   }
 
+  // A rejected action or initial read means the main side failed or the strip
+  // is being torn down. Drop the local render state so the next onItems push
+  // (the main process always sends the queue again) draws a fresh row.
+  function resetRenderState() {
+    current = null
+    hovering = false
+    clearCollapse()
+    strip.hidden = true
+  }
+
+  /** @param {number} delayMs */
   function scheduleCollapse(delayMs) {
     clearCollapse()
     if (!current || hovering) return
@@ -34,13 +79,19 @@
     }, delayMs)
   }
 
+  /**
+   * @param {string} id
+   * @param {string} action
+   */
   function act(id, action) {
     clearCollapse()
-    bridge.act(id, action).catch((error) => {
-      console.warn('[reminder-strip] action failed:', error instanceof Error ? error.message : String(error))
-    })
+    stripBridge.act(id, action).then(
+      () => {},
+      () => resetRenderState(),
+    )
   }
 
+  /** @param {StripSnapshot} payload */
   function render(payload) {
     const items = payload && Array.isArray(payload.items) ? payload.items : []
     const head = items[0] ?? null
@@ -76,8 +127,6 @@
     scheduleCollapse(RESUME_AFTER_HOVER_MS)
   })
 
-  bridge.onItems(render)
-  bridge.ready().then(render).catch((error) => {
-    console.warn('[reminder-strip] initial load failed:', error instanceof Error ? error.message : String(error))
-  })
+  stripBridge.onItems(render)
+  stripBridge.ready().then(render, resetRenderState)
 })()

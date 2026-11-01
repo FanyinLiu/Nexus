@@ -60,6 +60,45 @@ function createFakeLogger(): Logger {
   return logger
 }
 
+type StripPayload = {
+  id: string
+  title: string
+  body: string
+  labels: { done: string; snooze: string; open: string }
+}
+
+function createFakeStrip() {
+  const shown: StripPayload[] = []
+  const withdrawn: string[] = []
+  let withdrawAllCount = 0
+  let configured: {
+    onAction: (action: string, id: string) => void
+    isPending: (id: string) => boolean
+  } | null = null
+  return {
+    strip: {
+      show: (payload: StripPayload) => {
+        shown.push(payload)
+        return true
+      },
+      withdraw: (id: string) => {
+        withdrawn.push(id)
+        return true
+      },
+      withdrawAll: () => {
+        withdrawAllCount += 1
+      },
+      configure: (dependencies: NonNullable<typeof configured>) => {
+        configured = dependencies
+      },
+    },
+    shown,
+    withdrawn,
+    withdrawAllCount: () => withdrawAllCount,
+    configured: () => configured,
+  }
+}
+
 type Handler = (event: unknown, payload?: unknown) => unknown
 
 function createFakeIpcMain() {
@@ -204,11 +243,13 @@ function createHarness(options: {
   trusted: (event: unknown) => boolean
   capabilities?: Capability[]
   clock?: IntervalClock
+  panelFocused?: boolean
 }) {
   const fakeIpc = createFakeIpcMain()
   const fakeInbox = createFakeInbox()
   const windows = createWindows(options.capabilities ?? ['pet'])
   const clock = options.clock ?? createFakeClock()
+  const fakeStrip = createFakeStrip()
   const ipc = createProactiveIpc({
     ipcMain: fakeIpc.ipcMain,
     getAllWindows: windows.getAllWindows,
@@ -220,8 +261,12 @@ function createHarness(options: {
     logger: createFakeLogger(),
     setInterval: clock.setInterval,
     clearInterval: clock.clearInterval,
+    strip: fakeStrip.strip,
+    getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
+    showOsNotification: () => {},
+    isPanelFocused: () => options.panelFocused === true,
   })
-  return { ...fakeIpc, ...fakeInbox, ...windows, clock, ipc }
+  return { ...fakeIpc, ...fakeInbox, ...windows, clock, ipc, fakeStrip }
 }
 
 test('untrusted senders are rejected before any inbox write', async () => {
@@ -273,7 +318,7 @@ test('presentation events go only to the pet window', async () => {
   assert.deepEqual(presentations[2], [])
 })
 
-test('the prune sweep publishes inbox:changed only when entries were removed', (t: TestContext) => {
+test('the prune sweep publishes inbox:changed to the pet only when entries were removed', (t: TestContext) => {
   t.mock.timers.enable({ apis: ['setInterval'] })
   const harness = createHarness({
     trusted: () => true,
@@ -294,10 +339,11 @@ test('the prune sweep publishes inbox:changed only when entries were removed', (
   assert.equal(firstChanges.length, 1)
   assert.deepEqual(firstChanges[0]?.payload, {
     unreadCount: 2,
-    entries: [],
+    changes: [],
     removedIds: ['old'],
   })
-  assert.equal((harness.sentByWindow[1] ?? []).filter((item) => item.channel === 'inbox:changed').length, 1)
+  assert.deepEqual(harness.fakeStrip.withdrawn, ['old'])
+  assert.equal((harness.sentByWindow[1] ?? []).filter((item) => item.channel === 'inbox:changed').length, 0)
 
   harness.setPruneResult({
     changed: false,

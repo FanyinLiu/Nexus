@@ -5,33 +5,35 @@
  *
  * Least privilege by construction:
  * - the strip loads a static page from electron/reminderStrip/ with its own
- *   two-method preload; it never gets the desktopPet bridge;
+ *   three-method preload; it never gets the desktopPet bridge;
  * - its two IPC channels live on the strip webContents only
  *   (`webContents.ipc`), so no other window can call them;
  * - it opens no links and allows no navigation.
  *
- * The main process owns the queue and the snooze timers; the page only
- * renders the head of the queue and reports clicks.
+ * The queue and the snooze timers live in reminderStripSession.js; this module
+ * only owns the BrowserWindow, its placement and the IPC wiring. The router's
+ * strip outlet calls showReminderStrip in-process, so no renderer round trip
+ * is involved.
  */
 
 import { BrowserWindow, screen } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mainWindow } from '../windowManager.js'
-import { getRedactedErrorMessage } from './errorRedaction.js'
+import { createLogger } from '../logger.js'
 import { focusCompanionPanel } from './proactiveNotification.js'
 import {
   REMINDER_STRIP_HEIGHT,
   REMINDER_STRIP_SNOOZE_MS,
   REMINDER_STRIP_WIDTH,
   computeReminderStripPosition,
-  enqueueReminderStripItem,
-  normalizeReminderStripAction,
-  normalizeReminderStripPayload,
-  removeReminderStripItem,
 } from './reminderStripQueue.js'
+import { createReminderStripSession } from './reminderStripSession.js'
 
+/** @typedef {import('./reminderStripQueue.js').ReminderStripLabels} ReminderStripLabels */
 /** @typedef {import('./reminderStripQueue.js').ReminderStripItem} ReminderStripItem */
+
+const log = createLogger('reminders.strip')
 
 const STRIP_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'reminderStrip')
 const STRIP_PAGE = path.join(STRIP_DIR, 'index.html')
@@ -39,28 +41,22 @@ const STRIP_PRELOAD = path.join(STRIP_DIR, 'preload.js')
 
 /** @type {BrowserWindow | null} */
 let stripWindow = null
-/** @type {ReminderStripItem[]} */
-let queue = []
-/** @type {Map<string, ReturnType<typeof setTimeout>>} */
-const snoozeTimers = new Map()
+/** @type {ReturnType<typeof createReminderStripSession> | null} */
+let session = null
+
+/**
+ * Inbox side effects supplied by the proactive IPC wiring. The defaults keep
+ * the strip usable in unit tests that never configure an inbox.
+ * @type {{ onAction: (action: string, id: string) => void, isPending: (id: string) => boolean }}
+ */
+let actionDeps = {
+  onAction: () => {},
+  isPending: () => true,
+}
 
 /** @returns {BrowserWindow | null} */
 function liveStripWindow() {
   return stripWindow && !stripWindow.isDestroyed() ? stripWindow : null
-}
-
-/**
- * True when the IPC sender is the strip itself, so the strip can never
- * enqueue reminders through the shared bridge channel.
- * @param {unknown} contents
- */
-export function isReminderStripContents(contents) {
-  const win = liveStripWindow()
-  return !!win && contents === win.webContents
-}
-
-function snapshot() {
-  return { items: queue.map(({ id, title, body, labels }) => ({ id, title, body, labels })) }
 }
 
 function petAnchorBounds() {
@@ -82,12 +78,13 @@ function placeStripWindow() {
 
 function pushQueue() {
   const win = liveStripWindow()
-  if (!win) return
-  if (!queue.length) {
+  if (!win || !session) return
+  const current = session.snapshot()
+  if (!current.items.length) {
     win.hide()
     return
   }
-  win.webContents.send('reminder-strip:items', snapshot())
+  win.webContents.send('reminder-strip:items', current)
   if (!win.isVisible()) {
     placeStripWindow()
     win.showInactive()
@@ -95,26 +92,41 @@ function pushQueue() {
 }
 
 /**
- * @param {unknown} payload
+ * Queue changes either create the window (first item) or refresh it.
+ * @param {{ items: ReminderStripItem[] }} snapshot
  */
-function handleStripAction(payload) {
-  const request = normalizeReminderStripAction(payload)
-  if (!request) return { ok: false }
-  const { items, removed } = removeReminderStripItem(queue, request.id)
-  queue = items
-  if (removed && request.action === 'snooze') {
-    const existing = snoozeTimers.get(removed.id)
-    if (existing) clearTimeout(existing)
-    snoozeTimers.set(removed.id, setTimeout(() => {
-      snoozeTimers.delete(removed.id)
-      enqueueAndShow(removed)
-    }, REMINDER_STRIP_SNOOZE_MS))
+function handleQueueChange(snapshot) {
+  if (!snapshot.items.length) {
+    liveStripWindow()?.hide()
+    return
   }
-  if (removed && request.action === 'open') {
-    focusCompanionPanel()
+  if (!liveStripWindow()) {
+    // ready-to-show pushes the current queue once the page is up.
+    createStripWindow()
+    return
   }
   pushQueue()
-  return { ok: !!removed }
+}
+
+function ensureSession() {
+  if (session) return session
+  session = createReminderStripSession({
+    setTimer: (callback, ms) => setTimeout(callback, ms),
+    clearTimer: (timer) => clearTimeout(/** @type {ReturnType<typeof setTimeout>} */ (timer)),
+    snoozeMs: REMINDER_STRIP_SNOOZE_MS,
+    onQueueChange: handleQueueChange,
+    onAction: (action, item) => {
+      // Opening the panel is a strip-only concern; everything else (inbox
+      // status changes) is owned by the proactive IPC wiring.
+      if (action === 'open') {
+        focusCompanionPanel()
+        return
+      }
+      actionDeps.onAction(action, item.id)
+    },
+    isPending: (id) => actionDeps.isPending(id),
+  })
+  return session
 }
 
 function createStripWindow() {
@@ -148,57 +160,78 @@ function createStripWindow() {
 
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', (event) => event.preventDefault())
-  win.webContents.ipc.handle('reminder-strip:ready', () => snapshot())
-  win.webContents.ipc.handle('reminder-strip:action', (_event, payload) => handleStripAction(payload))
+  win.webContents.ipc.handle('reminder-strip:ready', () => {
+    try {
+      return ensureSession().snapshot()
+    } catch {
+      // The page must still render empty rather than break its startup.
+      log.warn('reminder strip ready failed', { status: 'ready-failed' })
+      return { items: [] }
+    }
+  })
+  win.webContents.ipc.handle('reminder-strip:action', (_event, payload) => {
+    try {
+      return ensureSession().handleAction(payload)
+    } catch {
+      log.warn('reminder strip action failed', { status: 'action-failed' })
+      return { ok: false }
+    }
+  })
 
   win.once('ready-to-show', () => pushQueue())
   win.on('closed', () => {
     if (stripWindow === win) stripWindow = null
   })
 
-  win.loadFile(STRIP_PAGE).catch((error) => {
-    console.warn('[reminder-strip] page failed to load:', getRedactedErrorMessage(error))
+  win.loadFile(STRIP_PAGE).catch(() => {
+    log.warn('reminder strip page failed to load', { status: 'load-failed' })
   })
+  stripWindow = win
   return win
 }
 
 /**
- * @param {ReminderStripItem} item
+ * Wire the inbox side effects the session needs. Called once by the proactive
+ * IPC factory; keeping it injected keeps this module and the session testable.
+ * @param {{
+ *   onAction?: (action: string, id: string) => void,
+ *   isPending?: (id: string) => boolean,
+ * }} dependencies
  */
-function enqueueAndShow(item) {
-  queue = enqueueReminderStripItem(queue, item)
-  const existing = liveStripWindow()
-  if (!existing) {
-    // ready-to-show pushes the queue once the page is up.
-    stripWindow = createStripWindow()
-    placeStripWindow()
-    return
+export function configureReminderStrip(dependencies) {
+  actionDeps = {
+    onAction: typeof dependencies.onAction === 'function' ? dependencies.onAction : () => {},
+    isPending: typeof dependencies.isPending === 'function' ? dependencies.isPending : () => true,
   }
-  pushQueue()
 }
 
 /**
  * Queue a due reminder on the strip. Returns false when the payload carries
  * nothing to show.
- * @param {unknown} payload
+ * @param {{ id: string, title: string, body: string, labels: ReminderStripLabels }} payload
  * @returns {boolean}
  */
 export function showReminderStrip(payload) {
-  const item = normalizeReminderStripPayload(payload)
-  if (!item) return false
-  const pendingSnooze = snoozeTimers.get(item.id)
-  if (pendingSnooze) {
-    clearTimeout(pendingSnooze)
-    snoozeTimers.delete(item.id)
-  }
-  enqueueAndShow(item)
-  return true
+  return ensureSession().show(payload)
+}
+
+/**
+ * Remove one id from the queue and cancel its snooze timer.
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function withdrawReminderStripItem(id) {
+  return session?.withdraw(id) ?? false
+}
+
+/** Clear-all: drop every queued reminder and every pending snooze timer. */
+export function withdrawAllReminderStripItems() {
+  session?.withdrawAll()
 }
 
 export function destroyReminderStrip() {
-  for (const timer of snoozeTimers.values()) clearTimeout(timer)
-  snoozeTimers.clear()
-  queue = []
+  session?.destroy()
+  session = null
   const win = liveStripWindow()
   stripWindow = null
   if (win) win.destroy()

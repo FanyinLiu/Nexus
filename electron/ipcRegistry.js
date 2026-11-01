@@ -23,7 +23,9 @@ import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as proactiveIpc from './ipc/proactiveIpc.js'
-import * as reminderStripIpc from './ipc/reminderStripIpc.js'
+import { getBoundWindowCapability } from './ipc/windowCapabilities.js'
+import * as reminderStrip from './services/reminderStrip.js'
+import { showProactiveNotification } from './services/proactiveNotification.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -117,8 +119,18 @@ export function registerIpc(options = {}) {
     ipcMain,
     getAllWindows: () => BrowserWindow.getAllWindows(),
     requireTrustedSender,
+    isPanelFocused: () => {
+      const focused = BrowserWindow.getFocusedWindow()
+      return !!focused && getBoundWindowCapability(focused.webContents) === 'panel'
+    },
+    strip: {
+      show: reminderStrip.showReminderStrip,
+      withdraw: reminderStrip.withdrawReminderStripItem,
+      withdrawAll: reminderStrip.withdrawAllReminderStripItems,
+      configure: reminderStrip.configureReminderStrip,
+    },
+    showOsNotification: showProactiveNotification,
   })
-  reminderStripIpc.register()
   mcpIpc.register()
   externalActionPolicyIpc.register()
   voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
@@ -159,7 +171,7 @@ export function registerIpc(options = {}) {
       discordGateway?.disconnect().catch(() => {}),
       notificationBridge?.stop(),
       import('./services/vtsBridge.js').then((vtsBridge) => vtsBridge.shutdownVtsBridge()).catch(() => {}),
-      import('./services/reminderStrip.js').then((reminderStrip) => reminderStrip.destroyReminderStrip()).catch(() => {}),
+      Promise.resolve(reminderStrip.destroyReminderStrip()),
     ])
   })
 }

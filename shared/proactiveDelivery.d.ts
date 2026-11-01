@@ -97,9 +97,19 @@ export interface ProactiveInboxSnapshot {
   removedIds: string[]
 }
 
+export interface ProactiveInboxChangeItem {
+  id: string
+  status: ProactiveInboxStatus
+}
+
+/**
+ * Main -> renderer metadata push. Deliberately carries no title, body or
+ * speech; a window that needs the content reads it through `inbox:list`.
+ */
 export interface ProactiveInboxChange {
   unreadCount: number
-  entries: ProactiveInboxEntry[]
+  /** Only the entries whose status changed in this mutation. */
+  changes: ProactiveInboxChangeItem[]
   removedIds: string[]
 }
 

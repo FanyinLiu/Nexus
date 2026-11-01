@@ -9,7 +9,8 @@ const log = createLogger('proactive.inbox')
  * Live unread count behind the pet's red dot.
  *
  * Lifecycle only: one initial read, then whatever `inbox:changed` pushes. The
- * label/no-label decision belongs to the feature module, not this hook.
+ * push is metadata-only (count, changed ids, removed ids), which is all this
+ * hook needs. The label/no-label decision belongs to the feature module.
  */
 export function useProactiveUnreadCount(): number {
   const [unreadCount, setUnreadCount] = useState(0)
