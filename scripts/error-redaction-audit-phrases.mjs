@@ -528,7 +528,7 @@ export const REQUIRED_PHRASES = [
       "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
       "message: getRedactedLogErrorMessage(error) || t('settings.memory.export_error')",
       "message: getRedactedLogErrorMessage(error) || t('settings.memory.import_error')",
-      "message: getRedactedLogErrorMessage(error) || t('settings.memory.clear_error')",
+      "log.warn('memory archive clear failed', {\n        source: 'memory-clear',\n        error: getRedactedLogErrorMessage(error),\n      })\n      setMemoryClearStatus({\n        ok: false,\n        message: t('settings.memory.clear_error'),\n        tone: 'error',\n      })",
     ],
   },
   {

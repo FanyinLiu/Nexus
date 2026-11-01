@@ -17,6 +17,7 @@ import {
   SCREEN_VLM_MODEL_OPTIONS,
 } from '../../features/memory/constants.ts'
 import { resolveMemoryTransparencySummary } from '../../features/memory/memorySettingsView.ts'
+import type { MemoryClearStatusView } from '../../features/memory/memorySettingsView.ts'
 import { resolveMemoryEmbeddingStatusView } from '../../features/memory/memoryEmbeddingStatusView.ts'
 import {
   getAutoMemoryEmbeddingState,
@@ -81,7 +82,7 @@ export type MemorySectionV3Props = {
   clearingMemoryArchive: boolean
   chatBusy: boolean
   memoryArchiveStatus: StatusMessage
-  memoryClearStatus: StatusMessage
+  memoryClearStatus: MemoryClearStatusView | null
   onExportMemoryArchive: () => void
   onImportMemoryArchive: () => void
   onClearMemoryArchive: () => void
@@ -757,7 +758,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
           <button type="button" className="is-danger" disabled={clearingMemoryArchive || chatBusy} onClick={onClearMemoryArchive}>{clearingMemoryArchive ? ti('settings.memory.long_term.clearing') : ti('settings.memory.long_term.clear')}</button>
           <button type="button" className="is-danger" disabled={!dailyMemoryEntries.length || chatBusy} onClick={onClearDailyMemory}>{ti('memory_panel.clear_diary')}</button>
         </SettingsV3Toolbar>
-        {memoryClearStatus ? <SettingsV3Notice tone={memoryClearStatus.ok ? 'success' : 'error'} title={memoryClearStatus.message} announce /> : null}
+        {memoryClearStatus ? <SettingsV3Notice tone={memoryClearStatus.tone} title={memoryClearStatus.message} announce /> : null}
       </SettingsV3Disclosure>
     </SettingsV3Page>
   )
