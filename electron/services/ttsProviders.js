@@ -1,3 +1,4 @@
+// @ts-nocheck
 const SPEECH_PROVIDER_IDS = Object.freeze({
   volcengineSTT:  'volcengine-stt',
   volcengineTTS:  'volcengine-tts',

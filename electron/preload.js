@@ -1,3 +1,4 @@
+// @ts-nocheck
 const { contextBridge, ipcRenderer } = require('electron')
 
 // The panel owns the model installer UI. The URL token is only a renderer-side

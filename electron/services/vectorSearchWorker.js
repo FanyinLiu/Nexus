@@ -4,6 +4,11 @@
  */
 import { parentPort } from 'node:worker_threads'
 
+/**
+ * @param {number[]} left
+ * @param {number[]} right
+ * @returns {number}
+ */
 function cosineSimilarity(left, right) {
   if (!left?.length || !right?.length || left.length !== right.length) return 0
 
@@ -19,7 +24,10 @@ function cosineSimilarity(left, right) {
   return denom === 0 ? 0 : dot / denom
 }
 
-parentPort.on('message', (msg) => {
+/** @type {NonNullable<typeof parentPort>} */
+const port = /** @type {NonNullable<typeof parentPort>} */ (parentPort)
+
+port.on('message', (msg) => {
   if (msg.type !== 'search') return
 
   const { queryEmbedding, entries, limit, threshold, layer, model, requestId } = msg
@@ -42,7 +50,7 @@ parentPort.on('message', (msg) => {
 
   results.sort((a, b) => b.score - a.score)
 
-  parentPort.postMessage({
+  port.postMessage({
     type: 'search-result',
     requestId,
     results: results.slice(0, limit),

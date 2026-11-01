@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Quit-time handshake for the debounced long-term memory write.
 //
 // The renderer buffers memory saves for 250 ms. `beforeunload` cannot await an

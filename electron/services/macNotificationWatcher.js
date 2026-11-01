@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * In-app macOS Notification Center watcher.
  *

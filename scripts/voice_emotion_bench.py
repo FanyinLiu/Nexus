@@ -19,15 +19,63 @@ file only knows how to synthesize and measure.
 import json
 import os
 import sys
+from pathlib import Path
 
 DEFAULT_MODEL_DIR = "~/Models/qwen3-tts/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 
+# Keep the bench on the same pinned checkpoint as the sidecar. A local model
+# directory is loaded offline; a Hub id must carry this full commit SHA (or an
+# override) instead of the floating default branch.
+QWEN3_TTS_DEFAULT_REVISION = "0c0e3051f131929182e2c023b9537f8b1c68adfe"
+QWEN3_TTS_REVISION_ENV = "NEXUS_QWEN3_TTS_MODEL_REVISION"
 
-def load_model(model_dir):
+
+def hf_cache_snapshot(model_id, revision=None):
+    """Return a cached Hugging Face snapshot directory for `model_id`."""
+    cache_root = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface")) / "hub"
+    snapshots = cache_root / ("models--" + str(model_id).replace("/", "--")) / "snapshots"
+    if revision:
+        candidate = snapshots / str(revision)
+        if candidate.is_dir():
+            return candidate
+    try:
+        candidates = sorted(
+            (entry for entry in snapshots.iterdir() if entry.is_dir()),
+            key=lambda entry: entry.name,
+            reverse=True,
+        )
+    except OSError:
+        candidates = []
+    return candidates[0] if candidates else None
+
+
+def resolve_pretrained_source(model, revision):
+    """Return (source, kwargs) for a pinned, offline-first from_pretrained call."""
+    expanded = Path(str(model)).expanduser()
+    if expanded.is_dir():
+        return str(expanded), {"local_files_only": True}
+    snapshot = hf_cache_snapshot(model, revision)
+    if snapshot is not None:
+        return str(snapshot), {"local_files_only": True}
+    if not revision:
+        raise RuntimeError(
+            f"{model} is not cached locally and no pinned revision is configured; "
+            f"set {QWEN3_TTS_REVISION_ENV} to a full commit SHA."
+        )
+    return str(model), {"revision": str(revision), "local_files_only": False}
+
+
+def load_model(model_dir, revision=None):
     import torch
     from qwen_tts import Qwen3TTSModel
 
-    return Qwen3TTSModel.from_pretrained(model_dir, device_map="mps", dtype=torch.float16)
+    source, load_kwargs = resolve_pretrained_source(model_dir, revision)
+    return Qwen3TTSModel.from_pretrained(
+        source,
+        device_map="mps",
+        dtype=torch.float16,
+        **load_kwargs,
+    )
 
 
 def seed_everything(seed):
@@ -72,6 +120,11 @@ def main():
     import torch
 
     model_dir = os.path.expanduser(str(spec.get("model_dir") or DEFAULT_MODEL_DIR))
+    revision = str(
+        spec.get("model_revision")
+        or os.environ.get(QWEN3_TTS_REVISION_ENV)
+        or QWEN3_TTS_DEFAULT_REVISION
+    ).strip()
     speaker = str(spec.get("speaker") or "vivian")
     seeds = [int(seed) for seed in (spec.get("seeds") or [spec.get("seed") or 42])]
     samples = spec.get("samples") or []
@@ -79,7 +132,7 @@ def main():
         print(json.dumps({"error": "no samples"}))
         return 1
 
-    model = load_model(model_dir)
+    model = load_model(model_dir, revision)
     print(json.dumps({"event": "model_loaded", "torch": torch.__version__, "seeds": seeds}), flush=True)
 
     # One throwaway generation so the first measured sample does not pay for

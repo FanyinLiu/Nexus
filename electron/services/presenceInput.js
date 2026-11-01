@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Owns the single global input hook in the main process.
 // uiohook has no mouse-only start mode: any running hook can receive keyboard
 // events. It therefore runs only while typing awareness is on. Linux gaze

@@ -19,6 +19,7 @@ const PYTHON_RUNTIME = Object.freeze({
   baseUrl: QWEN3_PYTHON_BASE_URL,
 })
 
+/** @type {{ engine: 'python' | 'cport', baseUrl: string }} */
 let currentRuntime = PYTHON_RUNTIME
 
 /**

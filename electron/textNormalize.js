@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Shared text normalization helpers for the web/search pipelines.
 // Pure functions only — keep this module dependency-free.
 

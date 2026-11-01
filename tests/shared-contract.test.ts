@@ -100,6 +100,7 @@ const SINGLE_SOURCE_CONTRACTS: Array<{ name: string; canonicalFile: string; lite
     literals: [
       `'NEXUS_ERR_UPDATE_INSTALL_PREP_FAILED'`,
       `'NEXUS_ERR_UPDATE_INSTALL_SNAPSHOT_FAILED'`,
+      `'NEXUS_ERR_UPDATE_MANIFEST_UNVERIFIED'`,
     ],
   },
   {

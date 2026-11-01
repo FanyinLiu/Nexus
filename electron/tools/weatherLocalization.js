@@ -1,3 +1,4 @@
+// @ts-nocheck
 const WEATHER_LOCALES = new Set(['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko'])
 
 const WEATHER_CODE_KEYS = {

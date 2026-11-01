@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Pure geometry helpers extracted from windowManager.js so they can be
 // unit-tested without loading Electron.
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Live2D model library: bundled samples plus models the user imported.
  * Sprite and portrait packages are not a pet type anymore.

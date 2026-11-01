@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Shared skeleton for the small main-process JSON file stores. Two variants:
 //   - createSyncJsonFileStore: sync load-once read (window-creation paths
 //     need bounds synchronously) plus debounced whole-cache persists.

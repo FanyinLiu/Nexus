@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { app, screen } from 'electron'
 import path from 'node:path'
 

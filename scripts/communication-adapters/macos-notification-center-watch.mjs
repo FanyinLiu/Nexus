@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 
 import fs from 'node:fs/promises'
 import os from 'node:os'

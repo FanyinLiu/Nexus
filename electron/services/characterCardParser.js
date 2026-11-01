@@ -5,6 +5,10 @@ const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0
 const MAX_CHUNK_LENGTH = 50 * 1024 * 1024 // 50 MB — generous for embedded card data
 const MAX_INFLATE_OUTPUT = 20 * 1024 * 1024 // 20 MB
 
+/**
+ * @param {Buffer} buffer
+ * @returns {string | null}
+ */
 function extractCharaFromPng(buffer) {
   if (!buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
     throw new Error('Not a valid PNG file.')
@@ -21,7 +25,7 @@ function extractCharaFromPng(buffer) {
     if (dataEnd > buffer.length) break
 
     if (type === 'tEXt' || type === 'zTXt') {
-      const nullIndex = buffer.indexOf(0x00, dataStart, dataEnd)
+      const nullIndex = buffer.indexOf(0x00, dataStart, /** @type {any} */ (dataEnd))
       if (nullIndex < 0) { offset = dataEnd + 4; continue }
 
       const keyword = buffer.toString('ascii', dataStart, nullIndex)
@@ -44,6 +48,10 @@ function extractCharaFromPng(buffer) {
   return null
 }
 
+/**
+ * @param {any} raw
+ * @returns {{ spec: any, data: any }}
+ */
 function validateCardData(raw) {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Invalid character card: not a JSON object.')
@@ -59,6 +67,10 @@ function validateCardData(raw) {
   return { spec: raw.spec ?? 'chara_card_v2', data }
 }
 
+/**
+ * @param {string} filePath
+ * @returns {Promise<{ spec: any, data: any }>}
+ */
 export async function parseCharacterCard(filePath) {
   const ext = String(filePath).toLowerCase()
   let raw

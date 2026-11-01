@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Official xAI speech request builders.
  *

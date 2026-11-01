@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Global pointer query for Linux gaze.
 // Electron's cursor query on X11 can stay at the last point delivered to a
 // BrowserWindow, so desktop motion never becomes a gaze sample. xdotool reads

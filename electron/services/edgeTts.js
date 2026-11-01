@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Microsoft Edge TTS WebSocket client.
  *

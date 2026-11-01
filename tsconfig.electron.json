@@ -9,8 +9,5 @@
     "skipLibCheck": true,
     "strict": true
   },
-  "include": [
-    "electron/ipc/trustedSenderPolicy.js",
-    "electron/ipc/validate.js"
-  ]
+  "include": ["electron/**/*.js"]
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Discord Bot gateway.
  *

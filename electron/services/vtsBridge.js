@@ -1,3 +1,4 @@
+// @ts-nocheck
 import WebSocket from 'ws'
 import { audit } from './auditLog.js'
 import {

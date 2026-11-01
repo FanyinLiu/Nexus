@@ -317,6 +317,7 @@ jobs:
               release/*.exe
               release/*.exe.blockmap
               release/latest.yml
+              release/latest.yml.sig
               release/SHA256SUMS-windows.txt
           # Apple Silicon only. Intel Mac (macos-13) was dropped in v0.2.8 —
           # GitHub deprecated the free-tier `macos-13` runner pool and queue
@@ -347,6 +348,7 @@ jobs:
               release/*.tar.gz
               release/SHA256SUMS-linux.txt
               release/latest-linux*.yml
+              release/latest-linux*.yml.sig
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -528,6 +530,40 @@ jobs:
             process.exit(1)
           }
           NODE
+
+      - name: Sign Windows and Linux update manifests
+        if: matrix.platform == 'windows' || matrix.platform == 'linux'
+        shell: bash
+        env:
+          NEXUS_UPDATE_SIGNING_KEY: ${{ secrets.NEXUS_UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "${NEXUS_UPDATE_SIGNING_KEY:-}" ]; then
+            echo "::error::NEXUS_UPDATE_SIGNING_KEY is missing or empty. Refusing to publish unsigned Windows/Linux update manifests."
+            exit 1
+          fi
+          shopt -s nullglob
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            manifests=(release/latest.yml)
+          else
+            manifests=(release/latest-linux*.yml)
+          fi
+          if [ ${#manifests[@]} -eq 0 ]; then
+            echo "::error::No update manifest was produced for ${{ matrix.platform }}."
+            exit 1
+          fi
+          node scripts/sign-update-manifest.mjs "${manifests[@]}"
+
+      - name: Verify Windows and Linux update manifest signatures
+        if: matrix.platform == 'windows' || matrix.platform == 'linux'
+        shell: bash
+        run: |
+          shopt -s nullglob
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            manifests=(release/latest.yml)
+          else
+            manifests=(release/latest-linux*.yml)
+          fi
+          node scripts/sign-update-manifest.mjs --verify "${manifests[@]}"
 
       - name: List built artifacts
         shell: bash

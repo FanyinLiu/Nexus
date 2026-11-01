@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Offline-classifiable chat connection proof helpers.
  *

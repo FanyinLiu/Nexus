@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Local hardware snapshot for voice-tier selection.
  *

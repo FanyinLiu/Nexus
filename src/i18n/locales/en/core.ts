@@ -384,6 +384,8 @@ export const enCore = {
   'updater.error.install_prep_failed_rec': 'Stay on this version, then try Restart to install again.',
   'updater.error.snapshot_failed': 'Couldn\'t snapshot your data before install, so the update was canceled.',
   'updater.error.snapshot_failed_rec': 'Your current data was left in place. Try Restart to install again.',
+  'updater.error.unverified_update': 'This update couldn\'t be verified as safe, so it wasn\'t installed.',
+  'updater.error.unverified_update_rec': 'You can download it from the releases page instead.',
   'failover.error.all_failed': '{domain} request didn\'t go through.',
   'file.error.record_read_failed': 'Couldn\'t read the recording.',
   'file.error.not_supported': 'The current environment does not support text file operations.',

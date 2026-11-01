@@ -6,6 +6,10 @@ import { createHash } from 'node:crypto'
  * Deliberately lives in its own module so unit tests can import it
  * without dragging the Electron `app`/`dialog` surface into the test
  * runner.
+ *
+ * @param {unknown} command
+ * @param {unknown} [args]
+ * @returns {string}
  */
 export function hashMcpCommand(command, args = []) {
   const argsArr = Array.isArray(args) ? args : []

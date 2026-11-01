@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * File-based persona system.
  * Reads SOUL.md (core identity) and MEMORY.md (persistent companion memory)

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { screen } from 'electron'
 import { clampWindowPosition, getPanelWindowPosition } from './windowManagerHelpers.js'
 import { getSavedBounds } from './services/windowBoundsStore.js'

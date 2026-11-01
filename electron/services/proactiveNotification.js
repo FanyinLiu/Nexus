@@ -5,6 +5,9 @@ import { panelWindow, mainWindow, createPanelWindow, getPetIconPath } from '../w
  * Fire an OS-level notification with title + body. Clicking it focuses the
  * panel window (creating it if needed). Returns false when the platform has
  * no Notification support (rare on Linux without notify-send).
+ *
+ * @param {{ title?: unknown, body?: unknown }} notification
+ * @returns {boolean}
  */
 export function showProactiveNotification({ title, body }) {
   if (!Notification.isSupported()) return false

@@ -94,7 +94,7 @@ check('developer npm scripts cover run, package and release verification', () =>
     'build',
     'verify:release',
     'verify:pr',
-    'typecheck:electron-security',
+    'typecheck:electron',
     'ipc:audit',
     'storage:audit',
     'heavy:audit',
@@ -316,8 +316,8 @@ check('pull requests run the complete policy gate', () => {
 })
 
 check('trusted IPC boundary has a JavaScript typecheck gate', () => {
-  assert(pkg.scripts?.['typecheck:electron-security'], 'trusted IPC boundary typecheck script is missing')
-  assert(pkg.scripts?.verify?.includes?.('typecheck:electron-security') || pkg.scripts?.['verify:pr']?.includes('typecheck:electron-security'), 'PR verification must run the trusted IPC typecheck')
+  assert(pkg.scripts?.['typecheck:electron'], 'electron JavaScript typecheck script is missing')
+  assert(pkg.scripts?.verify?.includes?.('typecheck:electron') || pkg.scripts?.['verify:pr']?.includes('typecheck:electron'), 'PR verification must run the electron JavaScript typecheck')
   assert(existsSync(join(ROOT, 'electron/ipc/windowCapabilities.js')), 'window capability matrix must exist')
   const validate = readText('electron/ipc/validate.js')
   assert(

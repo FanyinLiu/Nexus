@@ -1,3 +1,4 @@
+// @ts-nocheck
 import nodeNet from 'node:net'
 
 /**

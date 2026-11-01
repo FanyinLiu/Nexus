@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RUNTIME_STATE_BOOLEAN_FIELD_NAMES, RUNTIME_STATE_FIELD_NAMES } from '../shared/runtimeStateFields.js'
 import { COMPANION_PRESENCE_PHASES } from '../shared/runtimeStateSnapshot.js'
 

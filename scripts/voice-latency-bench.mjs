@@ -27,9 +27,14 @@
  * spawns one (Python from `$NEXUS_QWEN3_TTS_PYTHON` or the venv, C from
  * `~/Models/qwen3-tts-c/src/qwen_tts`). If neither is available it prints a
  * note and exits 0 — this is a developer convenience, never a gate.
+ *
+ * Both servers require `NEXUS_SIDECAR_TOKEN` and an `Authorization: Bearer`
+ * header. The bench reuses `$NEXUS_SIDECAR_TOKEN` when set; otherwise it mints
+ * a token and only the sidecars it spawns can accept it.
  */
 
 import { spawn } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
@@ -71,6 +76,8 @@ const SAMPLE_RATE = 24_000
 // Mirrors INITIAL_STREAM_CHUNK_SIZE in electron/ttsStreamService.js: the first
 // chunk the app hands the renderer.
 const FIRST_CHUNK_SAMPLES = 1024
+// Never printed: both servers refuse unauthenticated requests.
+const SIDECAR_TOKEN = process.env.NEXUS_SIDECAR_TOKEN || randomBytes(32).toString('hex')
 
 const CHINESE_REPLIES = [
   '好呀，今天天气挺好的，要不要一起出去走走？我刚刚看到窗外的云特别好看。',
@@ -118,9 +125,18 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5_000) {
   return fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) })
 }
 
+/** Auth headers every sidecar/C-server request needs; extra headers win. */
+function authHeaders(headers = {}) {
+  return { Authorization: `Bearer ${SIDECAR_TOKEN}`, ...headers }
+}
+
 async function sidecarHealth(timeoutMs) {
   try {
-    const response = await fetchWithTimeout(`${BASE_URL}/health`, {}, timeoutMs)
+    const response = await fetchWithTimeout(
+      `${BASE_URL}/health`,
+      { headers: authHeaders() },
+      timeoutMs,
+    )
     if (!response.ok) return null
     return await response.json()
   } catch {
@@ -132,7 +148,11 @@ function startSidecar(pythonBinary) {
   const child = spawn(
     pythonBinary,
     [path.join(repoRoot, 'scripts', 'qwen3_tts_server.py'), '--port', String(portFromBaseUrl())],
-    { cwd: repoRoot, stdio: 'ignore' },
+    {
+      cwd: repoRoot,
+      env: { ...process.env, NEXUS_SIDECAR_TOKEN: SIDECAR_TOKEN },
+      stdio: 'ignore',
+    },
   )
   child.on('error', () => undefined)
   return child
@@ -167,7 +187,7 @@ async function synthFirstSentence(text, language) {
     `${BASE_URL}/v1/audio/speech`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         input: text,
         voice: VOICE,
@@ -209,7 +229,11 @@ function firstSentence(reply) {
 
 async function cportHealth(timeoutMs = 1_500) {
   try {
-    const response = await fetchWithTimeout(`${CPORT_ROOT}/v1/health`, {}, timeoutMs)
+    const response = await fetchWithTimeout(
+      `${CPORT_ROOT}/v1/health`,
+      { headers: authHeaders() },
+      timeoutMs,
+    )
     if (!response.ok) return null
     const data = await response.json()
     return data?.status === 'ok' ? data : null
@@ -224,7 +248,7 @@ function startCport(config) {
     buildQwen3CportArgs(config, CPORT_PORT),
     {
       cwd: path.dirname(config.binaryPath),
-      env: buildQwen3CportEnv(process.env),
+      env: buildQwen3CportEnv(process.env, SIDECAR_TOKEN),
       stdio: 'ignore',
       detached: true,
     },
@@ -265,7 +289,7 @@ async function synthWholeReplyStream(text, language, options = {}) {
     `${CPORT_ROOT}/v1/tts/stream`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         text,
         speaker: VOICE,
@@ -594,7 +618,15 @@ async function warmUp() {
   const health = await sidecarHealth(5_000)
   if (health?.loaded === true) return health
 
-  const response = await fetchWithTimeout(`${BASE_URL}/v1/warmup`, { method: 'POST' }, STARTUP_TIMEOUT_MS)
+  const response = await fetchWithTimeout(
+    `${BASE_URL}/v1/warmup`,
+    {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: '{}',
+    },
+    STARTUP_TIMEOUT_MS,
+  )
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
     throw new Error(`warmup failed (HTTP ${response.status})${detail ? `: ${detail.slice(0, 300)}` : ''}`)

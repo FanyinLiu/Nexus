@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from 'node:path'
 
 export const IMPORTED_PET_MODELS_ROUTE = '/__imported_live2d__'

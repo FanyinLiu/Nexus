@@ -14,10 +14,12 @@
  * @returns {<T>(fn: () => T | Promise<T>) => Promise<T>}
  */
 export function createAsyncLock() {
+  /** @type {Promise<void> | null} */
   let pending = null
   return async function withLock(fn) {
     while (pending) await pending
-    let release
+    /** @type {() => void} */
+    let release = () => {}
     pending = new Promise((r) => { release = r })
     try {
       return await fn()
