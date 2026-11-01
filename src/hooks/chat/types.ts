@@ -102,7 +102,7 @@ export type ChatVoiceDeps = {
 }
 
 /** One-way companion signals the chat pipeline reads from and reports into. */
-type ChatCompanionSignalDeps = {
+export type ChatCompanionSignalDeps = {
   /**
    * Get the current emotion state formatted as prompt text (from
    * useAutonomyController.getEmotionPrompt). Injected via a ref wrapper to
