@@ -178,7 +178,7 @@ test('an inbox entry makes the clear run and reach memory:clear-user-data with n
     assert.deepEqual(harness.vectorClearPayloads[0]?.needles, [])
     assert.deepEqual(harness.inboxEntries, [])
     const after = renderer.render(options)
-    assert.deepEqual(after.memoryClearStatus, { ok: true, message: 'cleared' })
+    assert.deepEqual(after.memoryClearStatus, { ok: true, message: 'cleared', tone: 'success' })
     assert.equal(after.memoryClearStatus?.message === t('settings.memory.clear_empty_hint'), false)
   } finally {
     renderer.unmount()
@@ -208,7 +208,43 @@ test('all three stores empty show the clear-section hint and skip the clear IPC'
     assert.deepEqual(after.memoryClearStatus, {
       ok: false,
       message: t('settings.memory.clear_empty_hint'),
+      tone: 'info',
     })
+  } finally {
+    renderer.unmount()
+    delete (globalThis as { window?: unknown }).window
+  }
+})
+
+test('a failed clear shows only the localized clear error and leaves the archive status untouched', async () => {
+  installWindow({ inboxEntries: ['msg-1'] })
+  const { confirm } = confirmRecorder()
+  const renderer = createHookRenderer(useMemoryArchiveActions)
+  try {
+    const options = makeOptions(confirm, {
+      onExportMemoryArchive: async () => ({ canceled: false, message: 'exported' }),
+      onClearMemoryArchive: async () => {
+        throw new Error('ENOENT /Users/x/secret')
+      },
+    })
+    // Seed the export/import status so the assertion proves the clear path
+    // does not overwrite it.
+    await renderer.render(options).handleExportMemoryArchive()
+    const afterExport = renderer.render(options)
+    assert.deepEqual(afterExport.memoryArchiveStatus, { ok: true, message: 'exported' })
+
+    await afterExport.handleClearMemoryArchive()
+    const after = renderer.render(options)
+    assert.deepEqual(after.memoryClearStatus, {
+      ok: false,
+      message: t('settings.memory.clear_error'),
+      tone: 'error',
+    })
+    const shown = after.memoryClearStatus?.message ?? ''
+    assert.equal(shown.includes('ENOENT'), false)
+    assert.equal(shown.includes('secret'), false)
+    assert.equal(shown.includes('/Users'), false)
+    assert.deepEqual(after.memoryArchiveStatus, { ok: true, message: 'exported' })
   } finally {
     renderer.unmount()
     delete (globalThis as { window?: unknown }).window
@@ -227,7 +263,7 @@ test('a failed inbox read is treated as may-have-content and the clear still run
     assert.equal(calls.length, 1)
     assert.equal(harness.vectorClearPayloads.length, 1)
     const after = renderer.render(options)
-    assert.deepEqual(after.memoryClearStatus, { ok: true, message: 'cleared' })
+    assert.deepEqual(after.memoryClearStatus, { ok: true, message: 'cleared', tone: 'success' })
   } finally {
     renderer.unmount()
     delete (globalThis as { window?: unknown }).window

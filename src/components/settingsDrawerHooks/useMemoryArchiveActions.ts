@@ -4,6 +4,7 @@ import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 import { createLogger } from '../../lib/logger.ts'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport.ts'
+import type { MemoryClearStatusView } from '../../features/memory/memorySettingsView.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../../types'
 
 const log = createLogger('settings.memoryArchive')
@@ -59,7 +60,7 @@ export function useMemoryArchiveActions({
 }: UseMemoryArchiveActionsOptions) {
   const { t } = useTranslation()
   const [memoryArchiveStatus, setMemoryArchiveStatus] = useState<ConnectionResult | null>(null)
-  const [memoryClearStatus, setMemoryClearStatus] = useState<ConnectionResult | null>(null)
+  const [memoryClearStatus, setMemoryClearStatus] = useState<MemoryClearStatusView | null>(null)
   const [exportingMemoryArchive, setExportingMemoryArchive] = useState(false)
   const [importingMemoryArchive, setImportingMemoryArchive] = useState(false)
   const [clearingMemoryArchive, setClearingMemoryArchive] = useState(false)
@@ -127,6 +128,7 @@ export function useMemoryArchiveActions({
       setMemoryClearStatus({
         ok: false,
         message: t('settings.memory.clear_empty_hint'),
+        tone: 'info',
       })
       return
     }
@@ -148,11 +150,19 @@ export function useMemoryArchiveActions({
       setMemoryClearStatus({
         ok: true,
         message: result.message,
+        tone: 'success',
       })
     } catch (error) {
+      // A clear failure can quote paths and archive text; the status is
+      // localized copy only, the redacted detail stays in the log.
+      log.warn('memory archive clear failed', {
+        source: 'memory-clear',
+        error: getRedactedLogErrorMessage(error),
+      })
       setMemoryClearStatus({
         ok: false,
-        message: getRedactedLogErrorMessage(error) || t('settings.memory.clear_error'),
+        message: t('settings.memory.clear_error'),
+        tone: 'error',
       })
     } finally {
       setClearingMemoryArchive(false)

@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import React from 'react'
 
 import {
+  PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS,
   PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
   companionCaptionPhaseAcceptsText,
   useReadableCaption,
@@ -189,17 +190,48 @@ test('a proactive caption collapses at exactly 12 seconds', () => {
   }
 })
 
-test('hovering a proactive caption pauses its timer and leaving resumes it', () => {
+test('hovering a proactive caption holds it, and leaving collapses it 5 seconds later', () => {
+  const clock = createClock()
+  installWindow(clock)
+  const caption = createCaption()
+  try {
+    assert.equal(PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS, 5_000)
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', paused: true, proactive: true }), 'Proactive title')
+    clock.tick(20_000)
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', paused: true, proactive: true }), 'Proactive title')
+
+    // Leaving arms a fixed 5s window, not the remaining 12s.
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
+    clock.tick(4_900)
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
+    clock.tick(100)
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), '')
+  } finally {
+    caption.unmount()
+    delete (globalThis as { window?: unknown }).window
+  }
+})
+
+test('re-hovering during the 5s leave window pauses it again and restarts on the next leave', () => {
   const clock = createClock()
   installWindow(clock)
   const caption = createCaption()
   try {
     assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
     assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', paused: true, proactive: true }), 'Proactive title')
+    clock.tick(2_000)
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
+    clock.tick(2_000)
+
+    // Re-enter inside the leave window: the countdown is cancelled again.
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', paused: true, proactive: true }), 'Proactive title')
     clock.tick(20_000)
     assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', paused: true, proactive: true }), 'Proactive title')
+
+    // Leaving again restarts a full 5s window.
     assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
-    clock.tick(11_900)
+    clock.tick(4_900)
     assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), 'Proactive title')
     clock.tick(100)
     assert.equal(caption.render({ text: 'Proactive title', phase: 'idle', proactive: true }), '')
@@ -286,6 +318,20 @@ test('a proactive caption does not replace a listening or thinking surface', () 
     assert.equal(caption.render({ text: 'Normal reply', phase: 'done' }), 'Normal reply')
     assert.equal(caption.render({ text: 'Proactive title', phase: 'listening', proactive: true }), '')
     assert.equal(caption.render({ text: 'Proactive title', phase: 'thinking', proactive: true }), '')
+  } finally {
+    caption.unmount()
+    delete (globalThis as { window?: unknown }).window
+  }
+})
+
+test('a proactive caption never covers a speaking, error, or offline caption', () => {
+  const clock = createClock()
+  installWindow(clock)
+  const caption = createCaption()
+  try {
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'speaking', proactive: true }), '')
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'error', proactive: true }), '')
+    assert.equal(caption.render({ text: 'Proactive title', phase: 'offline', proactive: true }), '')
   } finally {
     caption.unmount()
     delete (globalThis as { window?: unknown }).window

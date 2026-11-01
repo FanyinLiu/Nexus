@@ -11,7 +11,6 @@ import {
 import { pickHoverReaction } from '../appSupport.ts'
 import { MusicPopupCard } from '../../components/MusicPopupCard.tsx'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
-import { PetDialogBubble } from '../../components/PetDialogBubble.tsx'
 import { PetThoughtBubble } from '../../components/PetThoughtBubble.tsx'
 import {
   classifyWeatherCondition,
@@ -22,8 +21,7 @@ import {
   SunlightTint,
   WeatherAmbient,
 } from '../../features/panelScene'
-import { proactiveBubbleIdentity } from '../../features/proactive/proactivePresentation.ts'
-import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../../features/uiV2/caption.ts'
+import { LegacyPetDialogLayer } from './LegacyPetDialogLayer.tsx'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { useSpeechLevelSnapshot } from '../../hooks/voice/speechLevelPublishing.ts'
 import { clamp } from '../../lib'
@@ -97,10 +95,6 @@ export function LegacyPetView({
   const mascotRef = useRef<HTMLDivElement | null>(null)
   const tapTimerRef = useRef<number | null>(null)
   const dragStateRef = useRef<{ x: number; y: number } | null>(null)
-  const proactiveBubbleRef = useRef(chat.petDialogBubble)
-  useEffect(() => {
-    proactiveBubbleRef.current = chat.petDialogBubble
-  }, [chat.petDialogBubble])
 
   const ti = (
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -408,19 +402,7 @@ export function LegacyPetView({
     }
   }, [])
 
-  // The legacy bubble has no hover-pause timer of its own, so a proactive
-  // message would otherwise stay up until the next reply replaces it. The
-  // identity check keeps a newer bubble safe from this older countdown.
-  const proactiveBubbleKey = proactiveBubbleIdentity(chat.petDialogBubble)
   const hidePetDialogBubble = chat.hidePetDialogBubble
-  useEffect(() => {
-    if (!proactiveBubbleKey) return undefined
-    const timerId = window.setTimeout(() => {
-      if (proactiveBubbleIdentity(proactiveBubbleRef.current) !== proactiveBubbleKey) return
-      hidePetDialogBubble()
-    }, PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS)
-    return () => window.clearTimeout(timerId)
-  }, [hidePetDialogBubble, proactiveBubbleKey])
 
   return (
       <section
@@ -469,12 +451,11 @@ export function LegacyPetView({
             ) : null}
 
             {chat.petDialogBubble ? (
-              <div className="pet-window__dialog-layer">
-                <PetDialogBubble
-                  bubble={chat.petDialogBubble}
-                  assistantName={settings.companionName}
-                />
-              </div>
+              <LegacyPetDialogLayer
+                bubble={chat.petDialogBubble}
+                assistantName={settings.companionName}
+                onCollapse={hidePetDialogBubble}
+              />
             ) : null}
 
             {chat.petThoughtBubble && !chat.petDialogBubble ? (

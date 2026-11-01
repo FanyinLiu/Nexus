@@ -1,7 +1,17 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useRef, useState } from 'react'
 import type { PetDialogBubbleState } from '../../types/index.ts'
+import {
+  PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS,
+  PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
+} from '../proactive/proactiveCollapse.ts'
+import { useProactiveCollapseTimer } from '../../hooks/useProactiveCollapseTimer.ts'
 import type { CompanionSurfacePhase } from './state.ts'
+
+// Both proactive collapse windows are defined next to the scheduler in
+// features/proactive/proactiveCollapse.ts; re-exported here because this
+// module is the caption surface's public entry point.
+export { PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS, PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS }
 
 /**
  * Phases in which a new caption is allowed onto the pet bubble. A router-driven
@@ -18,9 +28,6 @@ export function companionCaptionPhaseAcceptsText(
 
 /** How long a companion notice stays up before the bubble dismisses itself. */
 export const COMPANION_NOTICE_AUTO_HIDE_MS = 14_000
-
-/** Proactive router bubbles collapse like the reminder strip, not a chat reply. */
-export const PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS = 12_000
 
 export type ReadableCaptionOptions = {
   /** True only while the caption is a router-driven proactive bubble title. */
@@ -79,12 +86,24 @@ export function useReadableCaption(
     nextText && companionCaptionPhaseAcceptsText(phase, proactive) ? nextText : ''
   ))
   const timerRef = useRef<number | null>(null)
-  // Keep the callback out of the timer effect deps: a caller that rebuilds the
-  // closure every render must not restart the 12s countdown.
+  // Keep the callback out of the timer deps: a caller that rebuilds the
+  // closure every render must not restart the countdown.
   const onProactiveCollapseRef = useRef(options.onProactiveCollapse)
   useEffect(() => {
     onProactiveCollapseRef.current = options.onProactiveCollapse
   }, [options.onProactiveCollapse])
+
+  useProactiveCollapseTimer({
+    active: proactive
+      && Boolean(visibleText)
+      && (phase === 'idle' || phase === 'done'),
+    paused,
+    identity: proactiveKey,
+    onCollapse: () => {
+      onProactiveCollapseRef.current?.()
+      setVisibleText('')
+    },
+  })
 
   useEffect(() => {
     if (phase === 'listening' || phase === 'thinking') {
@@ -111,20 +130,11 @@ export function useReadableCaption(
     setVisibleText(nextText)
   }, [nextText, phase, proactive, proactiveKey])
 
+  // Non-proactive captions keep the reading-time countdown (and its hover
+  // pause) exactly as before; proactive bubbles are timed by the shared
+  // scheduler above.
   useEffect(() => {
-    if (!visibleText || paused) return undefined
-    if (proactive) {
-      if (phase !== 'idle' && phase !== 'done') return undefined
-      timerRef.current = window.setTimeout(() => {
-        timerRef.current = null
-        onProactiveCollapseRef.current?.()
-        setVisibleText('')
-      }, PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS)
-      return () => {
-        if (timerRef.current !== null) window.clearTimeout(timerRef.current)
-        timerRef.current = null
-      }
-    }
+    if (proactive || !visibleText || paused) return undefined
     if (phase !== 'idle') return undefined
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null
@@ -134,7 +144,7 @@ export function useReadableCaption(
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
       timerRef.current = null
     }
-  }, [paused, phase, proactive, proactiveKey, visibleText])
+  }, [paused, phase, proactive, visibleText])
 
   return visibleText
 }
