@@ -89,7 +89,9 @@ export function createSyncJsonFileStore({
 
   // Clear-all path: cancel the debounce, let an already-started write finish,
   // then remove the file and reset the cache. Without the cancel a timer that
-  // was armed before the clear could recreate the file afterwards.
+  // was armed before the clear could recreate the file afterwards. A failed
+  // delete keeps the cache untouched so memory still matches what is on disk;
+  // the caller must treat false as a failed clear, not as success.
   async function clear() {
     if (writeTimer) {
       clearTimeout(writeTimer)
@@ -101,12 +103,18 @@ export function createSyncJsonFileStore({
     }
     try {
       await fsp.rm(getStorePath(), { force: true })
-      cache = null
-      return true
     } catch (error) {
+      // force:true already suppresses ENOENT; an explicit check keeps a
+      // missing file a success for callers that observe the raw error.
+      if (/** @type {{ code?: string }} */ (error).code === 'ENOENT') {
+        cache = null
+        return true
+      }
       onPersistError(error)
       return false
     }
+    cache = null
+    return true
   }
 
   return { load, persistDebounced, flushPending, clear }

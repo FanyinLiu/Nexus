@@ -377,3 +377,34 @@ test('a failed clear renders the localized error tone and leaks no path or secre
     delete (globalThis as { window?: unknown }).window
   }
 })
+
+test('an undeletable inbox shows only the localized clear error, never the success text', async () => {
+  installWindow(['msg-1'])
+  const { confirm } = confirmRecorder()
+  const options = makeOptions(confirm, {
+    onClearMemoryArchive: async () => {
+      throw new Error('EACCES: permission denied, unlink /Users/x/proactive-inbox.json')
+    },
+  })
+  const renderer = createRenderer(MemoryClearSection)
+  try {
+    const tree = renderer.render(options)
+    await (clearButton(tree).props.onClick as () => Promise<void>)()
+
+    const after = renderer.render(options)
+    const rendered = notice(after)
+    assert.equal(rendered.props.title, t('settings.memory.clear_error'))
+    assert.equal(rendered.props.tone, 'error')
+
+    const success = t('memory.clear.success')
+    for (const text of collectStrings(after)) {
+      assert.equal(text.includes('EACCES'), false, text)
+      assert.equal(text.includes('proactive-inbox.json'), false, text)
+      assert.equal(text.includes('/Users'), false, text)
+      assert.notEqual(text, success)
+    }
+  } finally {
+    renderer.unmount()
+    delete (globalThis as { window?: unknown }).window
+  }
+})

@@ -12,6 +12,7 @@ import type {
 } from '../src/types/index.ts'
 import type { PetModelDefinition } from '../src/features/pet/models.ts'
 import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../src/features/uiV2/caption.ts'
+import { t } from '../src/i18n/runtime.ts'
 
 register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
 
@@ -172,6 +173,10 @@ function captionText(tree: unknown): string {
 
 function presenceError(): RuntimeStateSnapshot['companionPresence'] {
   return { phase: 'error', mood: 'idle', updatedAt: '2026-01-01T00:00:00.000Z' }
+}
+
+function presenceOffline(): RuntimeStateSnapshot['companionPresence'] {
+  return { phase: 'offline', mood: 'idle', updatedAt: '2026-01-01T00:00:00.000Z' }
 }
 
 function surfaceProps(input: {
@@ -391,6 +396,58 @@ test('a proactive bubble does not replace a listening or thinking caption', () =
   } finally {
     listening.unmount()
     thinking.unmount()
+  }
+})
+
+test('a proactive bubble does not replace the speaking caption', () => {
+  const view = createRenderer(FramelessCompanionSurface)
+  try {
+    const text = captionText(view.render(surfaceProps({
+      bubble: {
+        content: 'Speaking text',
+        proactiveTitle: 'Proactive title',
+      },
+      voiceState: 'speaking',
+    })))
+    assert.equal(text, 'Speaking text')
+    assert.equal(text.includes('Proactive title'), false, text)
+  } finally {
+    view.unmount()
+  }
+})
+
+test('a proactive bubble does not replace the error caption', () => {
+  const view = createRenderer(FramelessCompanionSurface)
+  try {
+    const text = captionText(view.render(surfaceProps({
+      bubble: {
+        content: 'Proactive body',
+        proactiveTitle: 'Proactive title',
+      },
+      error: SPECIFIC,
+    })))
+    assert.ok(text.includes(SPECIFIC), text)
+    assert.equal(text.includes('Proactive title'), false, text)
+  } finally {
+    view.unmount()
+  }
+})
+
+test('a proactive bubble does not replace the offline caption', () => {
+  const view = createRenderer(FramelessCompanionSurface)
+  try {
+    const offline = t('ui_v2.offline_recovery')
+    const text = captionText(view.render(surfaceProps({
+      bubble: {
+        content: 'Proactive body',
+        proactiveTitle: 'Proactive title',
+      },
+      presence: presenceOffline(),
+    })))
+    assert.ok(text.includes(offline), text)
+    assert.equal(text.includes('Proactive title'), false, text)
+  } finally {
+    view.unmount()
   }
 })
 
