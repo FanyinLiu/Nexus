@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -7,6 +7,9 @@ import { test } from 'node:test'
 import { buildErrorRedactionReport } from '../scripts/error-redaction-audit.mjs'
 import { REQUIRED_PHRASES } from '../scripts/error-redaction-audit-phrases.mjs'
 import { CHECKED_FILES } from '../scripts/error-redaction-audit-rules.mjs'
+
+const MEMORY_CLEAR_FILE = 'src/components/settingsDrawerHooks/useMemoryArchiveActions.ts'
+const MEMORY_CLEAR_ID = 'settings-memory-archive-redacts-action-errors'
 
 function buildBaselineContentByFile() {
   const contentByFile = new Map<string, string[]>()
@@ -42,6 +45,77 @@ function withErrorRedactionFixture<T>(overrides: Record<string, string>, callbac
     rmSync(root, { recursive: true, force: true })
   }
 }
+
+/**
+ * The real read path must accept a Windows checkout. Multi-line required
+ * phrases only match after both the file and the phrase are normalized.
+ */
+function withCrlfErrorRedactionFixture<T>(callback: (root: string) => T): T {
+  const root = createErrorRedactionFixture()
+  try {
+    for (const file of CHECKED_FILES) {
+      const fullPath = join(root, file)
+      const content = readFileSync(fullPath, 'utf8')
+      writeFileSync(fullPath, content.replace(/\r?\n/g, '\r\n'))
+    }
+    return callback(root)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+function memoryClearFixtureContent(): string {
+  return (buildBaselineContentByFile().get(MEMORY_CLEAR_FILE) ?? []).join('\n')
+}
+
+function memoryClearPhraseBlock(): string {
+  const item = REQUIRED_PHRASES.find((entry) => entry.id === MEMORY_CLEAR_ID)
+  const phrase = item?.phrases.find((entry) => entry.includes('memory archive clear failed'))
+  assert.ok(phrase, 'expected the memory-clear required phrase')
+  return phrase
+}
+
+test('error redaction audit accepts CRLF checkouts for multi-line phrases', () => {
+  withCrlfErrorRedactionFixture((root) => {
+    const report = buildErrorRedactionReport(root)
+
+    assert.equal(report.summary.ok, true)
+    assert.deepEqual(report.errors.missingRequiredPhrases, [])
+  })
+})
+
+test('error redaction audit fails when the memory-clear redaction block is removed', () => {
+  const block = memoryClearPhraseBlock()
+  withErrorRedactionFixture({
+    [MEMORY_CLEAR_FILE]: memoryClearFixtureContent().replace(block, ''),
+  }, (root) => {
+    const report = buildErrorRedactionReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.missingRequiredPhrases.some((item) => item.id === MEMORY_CLEAR_ID),
+    )
+  })
+})
+
+test('error redaction audit fails when the memory-clear block is split', () => {
+  const block = memoryClearPhraseBlock()
+  const split = block.replace(
+    "      })\n      setMemoryClearStatus({",
+    "      })\n      await Promise.resolve()\n      setMemoryClearStatus({",
+  )
+  assert.notEqual(split, block)
+  withErrorRedactionFixture({
+    [MEMORY_CLEAR_FILE]: memoryClearFixtureContent().replace(block, split),
+  }, (root) => {
+    const report = buildErrorRedactionReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.ok(
+      report.errors.missingRequiredPhrases.some((item) => item.id === MEMORY_CLEAR_ID),
+    )
+  })
+})
 
 test('error redaction audit passes a minimal required-phrase fixture', () => {
   withErrorRedactionFixture({}, (root) => {

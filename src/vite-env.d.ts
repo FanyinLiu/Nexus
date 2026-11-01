@@ -6,6 +6,14 @@ import type {
 } from './features/pet'
 import type { VoiceEmotionLabel } from './types'
 import type {
+  DeliveryContext,
+  DeliveryDecision,
+  DeliverySurface,
+  ProactiveInboxChange,
+  ProactiveMessage as SharedProactiveMessage,
+} from '../shared/proactiveDelivery.js'
+import type { ProactiveMessageKind } from './features/autonomy/proactiveEtiquette.ts'
+import type {
   AudioSynthesisRequest,
   AudioSynthesisResponse,
   AudioTranscriptionRequest,
@@ -498,6 +506,11 @@ type LocalDataCompanionMirrorResult = { ok: boolean; mirrored: boolean; datasetI
 type LocalDataCompanionMigrationApplyResult = LocalDataCompanionBaseResult & { relationshipDatasetCount?: number; taskDatasetCount?: number; relationshipRecordCount?: number; taskRecordCount?: number; totalRecordCount?: number; payloadBytes?: number; requiresConfirmation?: boolean; writesData?: boolean; applied: boolean; recordsWritten: number; auditRecordId: string | null }
 type LocalDataCompanionMigrationRollbackResult = LocalDataCompanionBaseResult & { recordsDeleted: number; auditRecordId: string | null }
 
+// shared/proactiveDelivery.d.ts keeps `kind` as a string because shared/ may
+// not import src/. The renderer knows the etiquette layer's kind union, so the
+// bridge surface is narrowed here instead of duplicating the message model.
+type ProactiveMessage = Omit<SharedProactiveMessage, 'kind'> & { kind: ProactiveMessageKind }
+
 declare global {
   interface Window {
     desktopPet?: {
@@ -527,6 +540,11 @@ declare global {
       getRuntimeState: () => Promise<RuntimeStateSnapshot>
       heartbeatRuntimeState: (payload: { view: 'pet' | 'panel' }) => Promise<RuntimeStateSnapshot>
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
+      deliverProactiveMessage: (payload: { message: ProactiveMessage; context: DeliveryContext }) => Promise<DeliveryDecision>
+      listProactiveInbox: DesktopPetGeneratedBridge['listProactiveInbox']
+      updateProactiveInboxEntry: DesktopPetGeneratedBridge['updateProactiveInboxEntry']
+      subscribeProactiveInbox: (listener: (change: ProactiveInboxChange) => void) => () => void
+      subscribeProactivePresentation: (listener: (presentation: { outlet: DeliverySurface; message: ProactiveMessage }) => void) => () => void
       getLaunchOnStartup: DesktopPetGeneratedBridge['getLaunchOnStartup']
       setLaunchOnStartup: (value: boolean) => Promise<boolean>
       getPlatformProfile: () => Promise<PlatformProfile>

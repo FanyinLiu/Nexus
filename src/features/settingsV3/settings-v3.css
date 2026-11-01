@@ -117,6 +117,7 @@
 .settings-v3-notice.is-warning { color: var(--sv3-warning); background: color-mix(in srgb, var(--sv3-warning) 10%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-warning) 28%, var(--sv3-line)); }
 .settings-v3-notice.is-error { color: var(--sv3-danger); background: color-mix(in srgb, var(--sv3-danger) 10%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-danger) 28%, var(--sv3-line)); }
 .settings-v3-notice.is-success { color: var(--sv3-success); background: color-mix(in srgb, var(--sv3-success) 10%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-success) 28%, var(--sv3-line)); }
+.settings-v3-notice.is-info { color: var(--sv3-ink); background: color-mix(in srgb, var(--sv3-muted) 8%, var(--sv3-surface)); border-color: color-mix(in srgb, var(--sv3-muted) 22%, var(--sv3-line)); }
 .settings-v3-notice svg { width: 19px; height: 19px; margin-top: 1px; }
 .settings-v3-notice > div { display: grid; gap: 2px; }
 .settings-v3-notice span { font-size: 12px; line-height: 1.5; }

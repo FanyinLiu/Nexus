@@ -39,7 +39,7 @@ const FILE_BUDGETS = {
   'src/hooks/useVoice.ts': 879,
   'src/hooks/voice/streamingSpeechOutput.ts': 938,
   // Generated from electron/preload by scripts/generate-ipc-types.mjs (ipc:types:check).
-  'src/types/generated/desktopPetBridge.generated.ts': 1044,
+  'src/types/generated/desktopPetBridge.generated.ts': 1066,
   'src/vite-env.d.ts': 1196,
   'tests/fixtures/settingsSurfaceAuditBaseline.ts': 1197,
   // IPC payload schema suite keeps one test per domain plus the high-risk

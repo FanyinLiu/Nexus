@@ -1,12 +1,12 @@
 // @ts-nocheck
-import { app } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
 import { createCompanionPresenceTracker } from './companionPresenceTracker.js'
 import { buildRuntimeStateSnapshot, updateRuntimeState } from './windowRuntimeState.js'
 
-import { installIpcChannelBinding } from './ipc/validate.js'
+import { installIpcChannelBinding, requireTrustedSender } from './ipc/validate.js'
 import * as windowIpc from './ipc/windowIpc.js'
 import * as chatIpc from './ipc/chatIpc.js'
 import * as audioIpc from './ipc/audioIpc.js'
@@ -22,6 +22,7 @@ import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
+import * as proactiveIpc from './ipc/proactiveIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -66,7 +67,7 @@ function loadDeferredModules() {
 
       ttsStreamIpc.register({ ttsStreamService })
       pluginIpc.register()
-      memoryIpc.register()
+      memoryIpc.register({ clearProactiveInbox: proactiveIpc.clearProactiveInbox })
       skillIpc.register()
 
       console.info('[IPC] Deferred modules loaded')
@@ -110,6 +111,12 @@ export function registerIpc(options = {}) {
   voiceProfileIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
+  proactiveIpc.register({
+    app,
+    ipcMain,
+    getAllWindows: () => BrowserWindow.getAllWindows(),
+    requireTrustedSender,
+  })
   mcpIpc.register()
   externalActionPolicyIpc.register()
   voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
@@ -130,6 +137,8 @@ export function registerIpc(options = {}) {
 
   app.once('before-quit', async () => {
     desktopPresenceIpc.stop()
+    proactiveIpc.stopProactiveInboxPrune()
+    await proactiveIpc.flushProactiveInbox()
     const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
       import('./services/mcpHost.js').catch(() => null),
       import('./services/memoryVectorStore.js').catch(() => null),

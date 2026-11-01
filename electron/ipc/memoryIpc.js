@@ -26,7 +26,12 @@ import {
 
 const MEMORY_FLUSH_QUIT_TIMEOUT_MS = 2_500
 
-export function register() {
+/**
+ * @param {{
+ *   clearProactiveInbox?: () => Promise<unknown> | unknown,
+ * }} [dependencies]
+ */
+export function register({ clearProactiveInbox } = {}) {
   const longTermMemoryStore = createLongTermMemoryFileStore({
     filePath: resolveLongTermMemoryFilePath(app.getPath('userData')),
   })
@@ -122,6 +127,7 @@ export function register() {
       // Flush first so the log scrub sees the renderer's already-scrubbed
       // values and can drop the older records that still quote them.
       flushStorage: () => session.defaultSession?.flushStorageData?.(),
+      ...(clearProactiveInbox ? { clearProactiveInbox } : {}),
     })
     return {
       ok: true,

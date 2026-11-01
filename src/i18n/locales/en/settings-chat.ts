@@ -56,7 +56,7 @@ export const enSettingsChat = {
   'settings.chat_history.clear_error': 'Couldn\'t clear chat history — try again in a moment?',
   'settings.chat_history.import_confirm': 'Importing will replace the current chat history but will not touch the memory archive. Continue?',
   'settings.chat_history.nothing_to_clear': 'There is no chat history to clear.',
-  'settings.chat_history.clear_confirm': 'Clear the current chat history? Long-term memory and daily notes will not be deleted.',
+  'settings.chat_history.clear_confirm': 'Clear the current chat history? Long-term memory and daily logs will not be deleted.',
   'settings.chat_connection.ready': 'Connected. The model returned a real reply.',
   'settings.chat_connection.identity_unverified': 'The service replied, but it did not identify the model, so the requested model is not yet verified.',
   'settings.chat_connection.identity_unverified_rec': 'Check whether the service returns a model identifier. Compatible gateways may need separate routing verification.',

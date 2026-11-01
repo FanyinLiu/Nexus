@@ -1,5 +1,4 @@
 // Required phrase inventory for the source-only error-redaction audit.
-// Split from the executable script so each file stays within source-size limits.
 
 export const REQUIRED_PHRASES = [
   {
@@ -19,8 +18,7 @@ export const REQUIRED_PHRASES = [
     ],
   },
   {
-    // The regex chain itself is single-sourced in shared/redaction.js; both
-    // the main-process and renderer helpers are thin wrappers over it.
+    // The regex chain is single-sourced in shared/redaction.js; both helpers wrap it.
     id: 'shared-redaction-chain-canonical',
     file: 'shared/redaction.js',
     phrases: [
@@ -164,8 +162,7 @@ export const REQUIRED_PHRASES = [
     ],
   },
   {
-    // Sidecar start/stop is on demand now, so these dependency logs live in the
-    // supervisor instead of main.js; the redaction requirement follows them.
+    // Sidecar start/stop is on demand, so these dependency logs live in the supervisor.
     id: 'voice-sidecar-redacts-dependency-logs',
     file: 'electron/services/voiceSidecarService.js',
     phrases: [
@@ -233,10 +230,7 @@ export const REQUIRED_PHRASES = [
   {
     id: 'window-navigation-log-summary-tests',
     file: 'tests/window-navigation.test.ts',
-    phrases: [
-      'summarize URLs without exposing hosts paths queries or fragments',
-      'summarize navigation errors without exposing raw messages',
-    ],
+    phrases: ['summarize URLs without exposing hosts paths queries or fragments', 'summarize navigation errors without exposing raw messages'],
   },
   {
     id: 'chat-ipc-redacts-network-errors',
@@ -428,10 +422,7 @@ export const REQUIRED_PHRASES = [
   {
     id: 'error-redaction-tests',
     file: 'tests/error-redaction.test.ts',
-    phrases: [
-      'main-process error redaction strips common API secrets',
-      'main-process error redaction handles Error objects',
-    ],
+    phrases: ['main-process error redaction strips common API secrets', 'main-process error redaction handles Error objects'],
   },
   {
     id: 'renderer-log-redaction-helper',
@@ -528,7 +519,15 @@ export const REQUIRED_PHRASES = [
       "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
       "message: getRedactedLogErrorMessage(error) || t('settings.memory.export_error')",
       "message: getRedactedLogErrorMessage(error) || t('settings.memory.import_error')",
-      "message: getRedactedLogErrorMessage(error) || t('settings.memory.clear_error')",
+      `log.warn('memory archive clear failed', {
+        source: 'memory-clear',
+        error: getRedactedLogErrorMessage(error),
+      })
+      setMemoryClearStatus({
+        ok: false,
+        message: t('settings.memory.clear_error'),
+        tone: 'error',
+      })`,
     ],
   },
   {
