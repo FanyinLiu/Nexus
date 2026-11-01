@@ -8,10 +8,10 @@ import { clearCompactionCache } from '../../features/chat/contextCompaction.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage } from '../../types/index.ts'
 import { sanitizeLoadedMessages } from './support.ts'
-import type { UseChatContext } from './types.ts'
+import type { ChatSettingsDeps } from './types.ts'
 
 type ChatHistoryArchiveDependencies = {
-  ctx: Pick<UseChatContext, 'settingsRef'>
+  ctx: Pick<ChatSettingsDeps, 'settingsRef'>
   t: Translator
   messagesRef: { current: ChatMessage[] }
   setMessages: (next: ChatMessage[]) => void

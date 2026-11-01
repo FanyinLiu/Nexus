@@ -1,25 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   getWindowViewSync,
 } from '../appSupport.ts'
-import {
-  loadPetWindowPreferences,
-} from '../../lib'
 import type {
   AppSettings,
   ChatMessage,
-  Goal,
-  MemoryItem,
-  PanelWindowState,
   PlatformProfile,
   VoiceEmotionLabel,
   VoiceState,
   WindowView,
 } from '../../types'
-import type { PersonaSpeechStyle } from '../../features/autonomy/v2/personaTypes.ts'
 import { showCompanionNoticeBubble } from '../../features/uiV2/caption.ts'
 import { useChat } from '../../hooks/useChat.ts'
-import type { AssistantReplyDeliveredPayload } from '../../hooks/chat/types.ts'
 import { useDesktopContext } from '../../hooks/useDesktopContext.ts'
 import { useGameIntegration } from '../../hooks/useGameIntegration.ts'
 import { useMemory } from '../../hooks/useMemory.ts'
@@ -29,31 +21,25 @@ import { usePetBehavior } from '../../hooks/usePetBehavior.ts'
 import { useVoice } from '../../hooks/useVoice.ts'
 import { useReminderController } from './useReminderController.ts'
 import { getSettingsSnapshot } from '../store/settingsStore.ts'
-import { useAppOverlays } from './useAppOverlays.ts'
 import { useAutonomyController } from './useAutonomyController.ts'
 import { useBudgetConfigSync } from './useBudgetConfigSync.ts'
 import { useBackgroundSchedulers } from './useBackgroundSchedulers.ts'
 import { useDebugConsole } from './useDebugConsole.ts'
 import { useDesktopBridge } from './useDesktopBridge.ts'
 import { useIntegrationWhitelists } from './useIntegrationWhitelists.ts'
-import { useMediaSessionController } from './useMediaSessionController.ts'
 import { useReminderTaskStore } from './useReminderTaskStore.ts'
 import { useSettingsNavigation } from './useSettingsNavigation.ts'
 import { useSettingsSubscription } from './useSettingsSubscription.ts'
-import { loadUserAffectWindow } from '../../features/autonomy/userAffectTimeline.ts'
-import { computeAffectSnapshot } from '../../features/autonomy/affectDynamics.ts'
-import { buildAffectGuidance, classifyAffectGuidance } from '../../features/autonomy/affectGuidance.ts'
-import { recordGuidanceFired } from '../../features/autonomy/guidanceTelemetry.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync.ts'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
-import {
-  loadAutonomyGoals,
-  normalizeAutonomyGoals,
-  pruneLegacyStorageKeys,
-  saveAutonomyGoals,
-} from '../../lib/storage.ts'
-import { classifyMessageSignals, voiceEmotionToSignal } from '../../features/autonomy/emotionModel.ts'
-import type { EmotionState as AppEmotionState } from '../../features/autonomy/emotionModel.ts'
+import { pruneLegacyStorageKeys } from '../../lib/storage.ts'
+import { useAppViewModels } from './useAppViewModels.ts'
+import { useAutonomyAwareSendMessage } from './useAutonomyAwareSendMessage.ts'
+import { useAutonomyGoals } from './useAutonomyGoals.ts'
+import { useCompanionSignalBridge, useInstallAutonomySignals } from './useCompanionSignalBridge.ts'
+import { useControllerRefSync } from './useControllerRefSync.ts'
+import { usePanelWindowControls } from './usePanelWindowControls.ts'
+import { useWindowChromeActions } from './useWindowChromeActions.ts'
 
 type ChatController = ReturnType<typeof useChat>
 type ReminderTaskStore = ReturnType<typeof useReminderTaskStore>
@@ -64,38 +50,15 @@ export function useAppController() {
   const [settings, setSettings] = useState<AppSettings>(() => getSettingsSnapshot())
   useCompanionLocalDataAuthority()
 
-  const [panelWindowState, setPanelWindowState] = useState<PanelWindowState>({ collapsed: false })
-  const [isPinned, setIsPinned] = useState(() => loadPetWindowPreferences().isPinned)
-  const [clickThrough, setClickThrough] = useState(() => loadPetWindowPreferences().clickThrough)
-
-  const applyPanelWindowState = useCallback(async (partialState: Partial<PanelWindowState>) => {
-    if (!window.desktopPet?.setPanelWindowState) {
-      setPanelWindowState((current) => ({ ...current, ...partialState }))
-      return
-    }
-
-    try {
-      const nextState = await window.desktopPet.setPanelWindowState(partialState)
-      setPanelWindowState(nextState)
-    } catch {
-      setPanelWindowState((current) => ({ ...current, ...partialState }))
-    }
-  }, [])
+  const {
+    applyPanelWindowState, clickThrough, isPinned, panelWindowState,
+    setClickThrough, setIsPinned, setPanelWindowState,
+  } = usePanelWindowControls()
 
   const {
-    closePanelFallback,
-    openChatPanelForVoice,
-    openSettingsPanel,
-    openSettingsSection,
-    preferredMemoryFocus,
-    preferredSettingsSectionId,
-    setSettingsOpen,
-    settingsOpen,
-  } = useSettingsNavigation({
-    applyPanelWindowState,
-    setView,
-    view,
-  })
+    closePanelFallback, openChatPanelForVoice, openSettingsPanel, openSettingsSection,
+    preferredMemoryFocus, preferredSettingsSectionId, setSettingsOpen, settingsOpen,
+  } = useSettingsNavigation({ applyPanelWindowState, setView, view })
 
   useEffect(() => {
     // Sweep dead localStorage entries from the 3048bbd prune (scheduler /
@@ -108,21 +71,7 @@ export function useAppController() {
   useIntegrationWhitelists(settings)
   useMcpServerSync(settings.mcpServers)
 
-  const [goals, setGoals] = useState<Goal[]>(() => loadAutonomyGoals())
-  const goalsRef = useRef(goals)
-  // Render-time adjust (React docs pattern): when the loaded/edited goals are
-  // not in normalized form, fix state immediately during render instead of
-  // synchronously inside an effect (react-hooks/set-state-in-effect). The
-  // comparison guard terminates the loop because normalization is idempotent.
-  const normalizedGoals = normalizeAutonomyGoals(goals)
-  if (JSON.stringify(normalizedGoals) !== JSON.stringify(goals)) {
-    setGoals(normalizedGoals)
-  }
-  useEffect(() => {
-    const normalized = normalizeAutonomyGoals(goals)
-    goalsRef.current = normalized
-    saveAutonomyGoals(normalized)
-  }, [goals])
+  const { goalsRef, setGoals } = useAutonomyGoals()
 
   const settingsRef = useRef(settings)
   const settingsOpenRef = useRef(settingsOpen)
@@ -166,55 +115,15 @@ export function useAppController() {
     setTypingActivity: pet.setTypingActivity,
   })
 
-  const panelCollapsed = panelWindowState.collapsed
+  const {
+    closePanel, openPetMenu, panelCollapsed, toggleClickThrough,
+    toggleContinuousVoiceMode, togglePanelCollapse, togglePinned,
+  } = useWindowChromeActions({
+    applyPanelWindowState, closePanelFallback, panelWindowState, setClickThrough,
+    setIsPinned, setSettings, setSettingsOpen, settingsRef,
+  })
 
-  const togglePanelCollapse = useCallback(() => {
-    const nextCollapsed = !panelCollapsed
-    if (nextCollapsed) {
-      setSettingsOpen(false)
-    }
-    void applyPanelWindowState({ collapsed: nextCollapsed })
-  }, [applyPanelWindowState, panelCollapsed, setSettingsOpen])
-
-  const closePanel = useCallback(() => {
-    const closePanelWindow = window.desktopPet?.closePanel
-    if (closePanelWindow) {
-      void closePanelWindow().catch(closePanelFallback)
-      return
-    }
-
-    closePanelFallback()
-  }, [closePanelFallback])
-
-  const openPetMenu = useCallback(() => {
-    const pending = window.desktopPet?.openPetMenu?.()
-    pending?.catch(() => undefined)
-  }, [])
-
-  const togglePinned = useCallback(() => {
-    setIsPinned((current) => !current)
-  }, [])
-
-  const toggleClickThrough = useCallback(() => {
-    setClickThrough((current) => !current)
-  }, [])
-
-  const toggleContinuousVoiceMode = useCallback(() => {
-    void commitSettingsUpdate(
-      (current) => ({
-        ...current,
-        continuousVoiceModeEnabled: !current.continuousVoiceModeEnabled,
-      }),
-      (nextSettings) => {
-        settingsRef.current = nextSettings
-        setSettings(nextSettings)
-      },
-    )
-  }, [])
-
-  const voiceEmotionApplyRef = useRef<(label: VoiceEmotionLabel) => void>(() => {})
-  const emotionVoiceSnapshotRef = useRef<() => AppEmotionState | undefined>(() => undefined)
-  const personaSpeechStyleGetterRef = useRef<() => PersonaSpeechStyle | undefined>(() => undefined)
+  const signalBridge = useCompanionSignalBridge({ settingsRef })
 
   const voice = useVoice({
     settings,
@@ -243,37 +152,10 @@ export function useAppController() {
     // Forward to the autonomy emotion model. Wired through a ref because
     // autonomy is created later in this hook and we need to keep useVoice's
     // ctx referentially stable.
-    applyVoiceEmotion: (label: VoiceEmotionLabel) => voiceEmotionApplyRef.current(label),
-    getEmotionSnapshot: () => emotionVoiceSnapshotRef.current(),
-    getSpeechStyle: () => personaSpeechStyleGetterRef.current(),
+    applyVoiceEmotion: (label: VoiceEmotionLabel) => signalBridge.voiceEmotionApplyRef.current(label),
+    getEmotionSnapshot: () => signalBridge.emotionVoiceSnapshotRef.current(),
+    getSpeechStyle: () => signalBridge.personaSpeechStyleGetterRef.current(),
   })
-
-  // Ref bridge for emotion/relationship/rhythm prompt getters:
-  // useChat must be created before useAutonomyController (autonomy depends on
-  // chat), so we cannot pass autonomy.getEmotionPrompt / getRelationshipPrompt /
-  // getRhythmPrompt directly into useChat. We create empty refs here first, then
-  // after autonomy is created, a useEffect installs the real getters. The wrapper
-  // function references seen by useChat ctx are stable, so ctx won't rebuild.
-  const emotionPromptGetterRef = useRef<() => string>(() => '')
-  const emotionAttitudeGetterRef = useRef<() => string>(() => '')
-  const relationshipPromptGetterRef = useRef<() => string>(() => '')
-  const rhythmPromptGetterRef = useRef<() => string>(() => '')
-  const emotionSnapshotGetterRef = useRef<() => { energy: number; warmth: number; curiosity: number; concern: number } | undefined>(() => undefined)
-  const milestoneConsumerRef = useRef<() => string>(() => '')
-  const anniversaryConsumerRef = useRef<(uiLanguage: string) => string>(() => '')
-  const onThisDayConsumerRef = useRef<(uiLanguage: string, memories: MemoryItem[]) => string>(() => '')
-  const commitOnThisDayConsumerRef = useRef<() => void>(() => {})
-  const messageFollowUpConsumerRef = useRef<() => string>(() => '')
-  const assistantReplyFailedRef = useRef<(() => void) | null>(null)
-  const emotionSignalApplyRef = useRef<((signal: import('../../features/autonomy/emotionModel.ts').EmotionSignal) => void) | null>(null)
-  // Empathy cooldown: the affect classifier runs every turn; without a gate
-  // a stuck-low week would ratchet concern on every single reply.
-  const lastEmpathySignalAtRef = useRef(0)
-  const lastMoodSignalAtRef = useRef(0)
-  // Same ref-wrapper dance for the reverse direction: the messaging bridges
-  // (created inside useAutonomyController) want to hear about completed
-  // assistant replies so they can route them back to Telegram/Discord.
-  const assistantReplyDeliveredRef = useRef<((payload: AssistantReplyDeliveredPayload) => void) | null>(null)
 
   const chat = useChat({
     settingsRef,
@@ -309,64 +191,7 @@ export function useAppController() {
     stopActiveSpeechOutput: voice.stopActiveSpeechOutput,
     canInterruptSpeech: () => settingsRef.current.voiceInterruptionEnabled,
     loadDesktopContextSnapshot: desktopContext.loadDesktopContextSnapshot,
-    getEmotionPromptText: () => emotionPromptGetterRef.current(),
-    getEmotionAttitudeText: () => emotionAttitudeGetterRef.current(),
-    getRelationshipPromptText: () => relationshipPromptGetterRef.current(),
-    getRhythmPromptText: () => rhythmPromptGetterRef.current(),
-    // Affect guidance has no hook-ordering dependency on autonomy — the data
-    // sources (userAffectTimeline + affectDynamics) are pure modules. Compute
-    // on demand each turn: 14-day window establishes the trait-level baseline
-    // (M1.4 stuck-low / volatile / steady-warm); 3-day window is the
-    // state-level recent reading the classifier compares against to detect a
-    // recent-drop (M1.5). Returns '' when nothing notable applies. Silent
-    // telemetry: when a non-'none' state fires, record it for later threshold
-    // analysis — never user-facing (see feedback_nexus_silent_emotion).
-    getAffectGuidancePromptText: () => {
-      const longSamples = loadUserAffectWindow(14)
-      const recentSamples = loadUserAffectWindow(3)
-      const snapshot = computeAffectSnapshot(longSamples)
-      const recentSnapshot = computeAffectSnapshot(recentSamples)
-      const state = classifyAffectGuidance({ snapshot, recentSnapshot })
-      if (state !== 'none') {
-        recordGuidanceFired({
-          kind: `affect:${state}` as const,
-          beforeValence: snapshot.baselineValence,
-        })
-        // Empathy loop: a low-mood read doesn't just instruct the reply —
-        // it nudges her actual emotion (concern up, warmth up), so the
-        // softness is felt, not performed. 6 h cooldown; positive states
-        // deliberately excluded this iteration (restraint first).
-        if (state === 'stuck-low' || state === 'recent-drop') {
-          const now = Date.now()
-          if (now - lastEmpathySignalAtRef.current > 6 * 60 * 60 * 1000) {
-            lastEmpathySignalAtRef.current = now
-            emotionSignalApplyRef.current?.('user_low_mood_observed')
-          }
-        }
-      }
-      return buildAffectGuidance({
-        uiLanguage: settingsRef.current.uiLanguage,
-        snapshot,
-        recentSnapshot,
-      })
-    },
-    getEmotionSnapshot: () => emotionSnapshotGetterRef.current(),
-    onAssistantReplyDelivered: (payload) => assistantReplyDeliveredRef.current?.(payload),
-    onAssistantReplyFailed: () => assistantReplyFailedRef.current?.(),
-    onUserMoodSignal: (signal) => {
-      // Per-message LLM mood reads during a long emotional conversation
-      // would ratchet the same signal every turn; one nudge per 5 minutes
-      // is enough for tone to follow.
-      const now = Date.now()
-      if (now - lastMoodSignalAtRef.current < 5 * 60 * 1000) return
-      lastMoodSignalAtRef.current = now
-      emotionSignalApplyRef.current?.(signal)
-    },
-    consumeMilestonePromptText: () => milestoneConsumerRef.current(),
-    consumeAnniversaryPromptText: (uiLanguage: string) => anniversaryConsumerRef.current(uiLanguage),
-    consumeOnThisDayPromptText: (uiLanguage: string, memories: MemoryItem[]) => onThisDayConsumerRef.current(uiLanguage, memories),
-    commitOnThisDayPromptText: () => commitOnThisDayConsumerRef.current(),
-    consumeMessageFollowUpPromptText: () => messageFollowUpConsumerRef.current(),
+    ...signalBridge.companionSignals,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,
     addReminderTask: (input) => addReminderTaskFnRef.current?.(input) ?? null,
     updateReminderTask: (id, updates) => updateReminderTaskFnRef.current?.(id, updates) ?? null,
@@ -374,51 +199,26 @@ export function useAppController() {
     appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
   })
 
-  // Forward the latest chat handlers to refs so the closures we passed into
-  // useChat (which call setErrorRef.current(...) etc.) always see up-to-date
-  // implementations. This is a deliberate break of the hook-circular-dependency
-  // between useAutonomyController, useChat, and these setters — hence the
-  // ref-mutation-through-effect pattern is intentional.
-  useEffect(() => {
-    setErrorRef.current = chat.setError
-    setInputFnRef.current = chat.setInput
-    appendSystemMessageRef.current = chat.appendSystemMessage
-    presentPetDialogBubbleRef.current = chat.presentPetDialogBubble
-  }, [chat.appendSystemMessage, chat.presentPetDialogBubble, chat.setError, chat.setInput])
-
-  useEffect(() => {
-    settingsRef.current = settings
-  }, [settings])
-
-  useEffect(() => {
-    settingsOpenRef.current = settingsOpen
-  }, [settingsOpen])
-
-  useEffect(() => {
-    busyRef.current = chat.busy
-  }, [chat.busy])
-
-  useEffect(() => {
-    inputRef.current = chat.input
-  }, [chat.input])
-
-  useEffect(() => {
-    messagesRef.current = chat.messages
-  }, [chat.messages])
-
-  useEffect(() => {
-    voiceStateRef.current = voice.voiceState
-  }, [voice.voiceState])
-
-  useEffect(() => {
-    addReminderTaskFnRef.current = reminderTaskStore.addReminderTask
-    updateReminderTaskFnRef.current = reminderTaskStore.updateReminderTask
-    removeReminderTaskFnRef.current = reminderTaskStore.removeReminderTask
-  }, [
-    reminderTaskStore.addReminderTask,
-    reminderTaskStore.removeReminderTask,
-    reminderTaskStore.updateReminderTask,
-  ])
+  useControllerRefSync({
+    addReminderTaskFnRef,
+    appendSystemMessageRef,
+    busyRef,
+    chat,
+    inputRef,
+    messagesRef,
+    presentPetDialogBubbleRef,
+    reminderTaskStore,
+    removeReminderTaskFnRef,
+    setErrorRef,
+    setInputFnRef,
+    settings,
+    settingsOpen,
+    settingsOpenRef,
+    settingsRef,
+    updateReminderTaskFnRef,
+    voice,
+    voiceStateRef,
+  })
 
   const {
     runtimeSnapshot,
@@ -491,7 +291,7 @@ export function useAppController() {
     busyRef,
     chat,
     debugConsole,
-    assistantReplyDeliveredRef,
+    assistantReplyDeliveredRef: signalBridge.assistantReplyDeliveredRef,
     triggerIdleGesture: (gestureName: string) => {
       // Silent ambient gesture from V2 idle_motion action — push into the
       // shared performance-cue queue so the same Live2D layer that handles
@@ -517,243 +317,28 @@ export function useAppController() {
     focusState: autonomy.focusAwareness.focusState,
   })
 
-  // Install autonomy's emotion/relationship/rhythm prompt getters into the refs
-  // created at the top. This lets useChat (when assembling chat options) read
-  // the latest emotion/relationship/rhythm state text into the system prompt.
-  // The autonomy getters are now stable (useCallback with [] deps), so this
-  // effect only runs once after mount.
-  useEffect(() => {
-    emotionPromptGetterRef.current = autonomy.getEmotionPrompt
-    emotionAttitudeGetterRef.current = autonomy.getEmotionAttitudeText
-    relationshipPromptGetterRef.current = autonomy.getRelationshipPrompt
-    rhythmPromptGetterRef.current = autonomy.getRhythmPrompt
-    emotionSnapshotGetterRef.current = () => autonomy.emotionStateRef.current
-    milestoneConsumerRef.current = autonomy.consumePendingMilestoneText
-    anniversaryConsumerRef.current = autonomy.consumeAnniversaryPromptText
-    onThisDayConsumerRef.current = autonomy.consumeOnThisDayPromptText
-    commitOnThisDayConsumerRef.current = autonomy.commitOnThisDayPromptText
-    messageFollowUpConsumerRef.current = autonomy.consumeMessageFollowUpPromptText
-    assistantReplyFailedRef.current = () => autonomy.applyEmotionSignal('error_occurred')
-    emotionSignalApplyRef.current = autonomy.applyEmotionSignal
-    // SenseVoice prosody → emotion model: voice ctx forwards labels here.
-    voiceEmotionApplyRef.current = (label: VoiceEmotionLabel) => {
-      autonomy.applyEmotionSignal(voiceEmotionToSignal(label))
-    }
-    // Her live emotion → her voice (style + pace, derived at the speak entry).
-    emotionVoiceSnapshotRef.current = () => autonomy.emotionStateRef.current
-    personaSpeechStyleGetterRef.current = () => autonomy.personaSpeechStyleRef.current
-    // The deps list pulls each consumed property of `autonomy` rather than
-    // the object itself — autonomy is rebuilt every render in
-    // useAutonomyController, so depending on the parent re-runs this effect
-    // unnecessarily.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autonomy.applyEmotionSignal, autonomy.consumePendingMilestoneText, autonomy.consumeAnniversaryPromptText, autonomy.consumeOnThisDayPromptText, autonomy.commitOnThisDayPromptText, autonomy.consumeMessageFollowUpPromptText, autonomy.emotionStateRef, autonomy.getEmotionAttitudeText, autonomy.getEmotionPrompt, autonomy.getRelationshipPrompt, autonomy.getRhythmPrompt, autonomy.personaSpeechStyleRef])
-
-  // Wake autonomy when user sends a chat message.
-  //
-  // Depending on the whole `autonomy` object (or even `chat.sendMessage`) in
-  // this wrapper's useCallback deps rebuilt it every render — the autonomy
-  // return value is a fresh object whenever any inner hook returns a new
-  // reference, and `chat.sendMessage` was also a function identity that
-  // rotated on chat state changes. That pushed a new `autonomyAwareSendMessage`
-  // into downstream useMemos (`chatWithAutonomy`, `petView`, `overlays`), which
-  // then re-rendered components whose effects wrote back to state — a classic
-  // "Maximum update depth exceeded" loop, observable as a log spam storm the
-  // moment a chat turn settles.
-  //
-  // Fix: stash the live references in refs and let the wrapper close over
-  // empty deps. The wrapper identity is now stable for the lifetime of the
-  // component, so `chatWithAutonomy` / `petView` / `overlays` stop churning.
-  const autonomyRef = useRef(autonomy)
-  const originalSendMessageRef = useRef(chat.sendMessage)
-  useEffect(() => {
-    autonomyRef.current = autonomy
-  }, [autonomy])
-  useEffect(() => {
-    originalSendMessageRef.current = chat.sendMessage
-  }, [chat.sendMessage])
-
-  const autonomyAwareSendMessage = useCallback(async (
-    ...args: Parameters<ChatController['sendMessage']>
-  ) => {
-    const live = autonomyRef.current
-    live.focusAwareness.markActive()
-    if (settingsRef.current.autonomyWakeOnInput !== false) {
-      live.autonomyTick.wakeUp()
-    }
-    live.markInteraction()
-
-    // Classify user message text for emotion signals
-    const messageText = typeof args[0] === 'string' ? args[0] : ''
-    if (messageText) {
-      live.applyEmotionSignal('user_returned')
-      for (const signal of classifyMessageSignals(messageText)) {
-        live.applyEmotionSignal(signal)
-      }
-      live.processRelationshipMessage(messageText)
-    }
-
-    const emotion = live.emotionStateRef.current
-    if (emotion && messageText) {
-      live.updateSessionContext(emotion, messageText)
-    }
-
-    const result = await originalSendMessageRef.current(...args)
-    if (result) {
-      live.memoryDream.incrementSessionCount()
-      live.applyEmotionSignal('task_completed')
-    }
-    return result
-  }, [])
-
-  // Point sendMessageRef to the autonomy-aware wrapper so that voice
-  // and other ref-based paths also trigger emotion/interaction tracking.
-  useEffect(() => {
-    sendMessageRef.current = autonomyAwareSendMessage
-  }, [autonomyAwareSendMessage])
-
-  // Patch chat.sendMessage with autonomy-aware wrapper.
-  // `autonomyAwareSendMessage` is now a stable identity, so this memo only
-  // invalidates when `chat` itself changes shape — which is what we want.
-  const chatWithAutonomy = useMemo(() => ({
-    ...chat,
-    sendMessage: autonomyAwareSendMessage,
-  }), [chat, autonomyAwareSendMessage])
-
-  const mediaSessionController = useMediaSessionController({
-    view,
-    platformProfile,
-    appendSystemMessage: chat.appendSystemMessage,
+  useInstallAutonomySignals({
+    autonomy,
+    bridge: signalBridge,
   })
 
-  const { overlays } = useAppOverlays({
-    view,
-    settings,
+  const { chatWithAutonomy } = useAutonomyAwareSendMessage({
+    autonomy,
+    chat,
+    sendMessageRef,
     settingsRef,
-    platformProfile,
-    setSettings,
-    settingsOpen,
-    preferredSettingsSectionId,
-    preferredMemoryFocus,
-    setSettingsOpen,
-    petModelPresets,
-    petModelPresetsReady,
-    petRuntimeContinuousVoiceActive,
-    reminderTasks: reminderTaskStore.reminderTasks,
-    debugConsoleEvents: debugConsole.debugConsoleEvents,
-    loadPetModels,
-    memory,
-    chat: chatWithAutonomy,
-    pet,
-    voice,
-    addReminderTask: reminderTaskStore.addReminderTask,
-    updateReminderTask: reminderTaskStore.updateReminderTask,
-    removeReminderTask: reminderTaskStore.removeReminderTask,
-    clearDebugConsoleEvents: debugConsole.clearDebugConsoleEvents,
-    notificationChannels: autonomy.notificationBridge.channels,
-    notificationChannelsLoading: autonomy.notificationBridge.channelsLoading,
-    onAddNotificationChannel: autonomy.notificationBridge.addChannel,
-    onUpdateNotificationChannel: autonomy.notificationBridge.updateChannel,
-    onRemoveNotificationChannel: autonomy.notificationBridge.removeChannel,
   })
 
-  const petView = useMemo(() => ({
-    settings,
-    petModel,
-    petModelSelectionResolved,
-    pet,
-    voice,
-    chat: chatWithAutonomy,
-    isPinned,
-    clickThrough,
-    runtimeSnapshot,
-    mediaSession: mediaSessionController.mediaSession,
-    musicActionBusy: mediaSessionController.musicActionBusy,
-    dismissedMusicSessionKey: mediaSessionController.dismissedMusicSessionKey,
-    remotePanelSettingsOpen: remotePanelSettingsOpen || (view === 'pet' && settingsOpen),
-    openSettingsPanel,
-    openChatPanelForVoice,
-    openPetMenu,
-    togglePinned,
-    toggleClickThrough,
-    toggleContinuousVoiceMode,
-    handleMediaSessionControl: mediaSessionController.handleMediaSessionControl,
-    dismissCurrentMediaSession: mediaSessionController.dismissCurrentMediaSession,
-    startMediaPolling: mediaSessionController.startMediaPolling,
-    autonomyState: autonomy.autonomyTick.autonomyState,
-    focusState: autonomy.focusAwareness.focusState,
-    notificationUnreadCount: autonomy.notificationBridge.unreadCount,
-  }), [
-    settings,
-    petModel,
-    petModelSelectionResolved,
-    pet,
-    voice,
-    chatWithAutonomy,
-    isPinned,
-    clickThrough,
-    runtimeSnapshot,
-    mediaSessionController.mediaSession,
-    mediaSessionController.musicActionBusy,
-    mediaSessionController.dismissedMusicSessionKey,
-    remotePanelSettingsOpen,
-    settingsOpen,
-    view,
-    openSettingsPanel,
-    openChatPanelForVoice,
-    openPetMenu,
-    togglePinned,
-    toggleClickThrough,
-    toggleContinuousVoiceMode,
-    mediaSessionController.handleMediaSessionControl,
-    mediaSessionController.dismissCurrentMediaSession,
-    mediaSessionController.startMediaPolling,
-    autonomy.autonomyTick.autonomyState,
-    autonomy.focusAwareness.focusState,
-    autonomy.notificationBridge.unreadCount,
-  ])
-
-  const panelView = useMemo(() => ({
-    settings,
-    petModel,
-    memory,
-    pet,
-    voice,
-    chat: chatWithAutonomy,
-    runtimeSnapshot,
-    petRuntimeContinuousVoiceActive,
-    panelCollapsed,
-    openSettingsPanel,
-    openSettingsSection,
-    togglePanelCollapse,
-    closePanel,
-    autonomyState: autonomy.autonomyTick.autonomyState,
-    focusState: autonomy.focusAwareness.focusState,
-    notificationBridge: autonomy.notificationBridge,
-    contextScheduler: autonomy.contextScheduler,
-    replyToTelegram: autonomy.replyToTelegram,
-    replyToDiscord: autonomy.replyToDiscord,
-  }), [
-    settings,
-    petModel,
-    memory,
-    pet,
-    voice,
-    chatWithAutonomy,
-    runtimeSnapshot,
-    petRuntimeContinuousVoiceActive,
-    panelCollapsed,
-    openSettingsPanel,
-    openSettingsSection,
-    togglePanelCollapse,
-    closePanel,
-    autonomy.autonomyTick.autonomyState,
-    autonomy.focusAwareness.focusState,
-    autonomy.notificationBridge,
-    autonomy.contextScheduler,
-    autonomy.replyToTelegram,
-    autonomy.replyToDiscord,
-  ])
+  const { overlays, panelView, petView } = useAppViewModels({
+    autonomy, chatWithAutonomy, clickThrough, closePanel, debugConsole, isPinned,
+    loadPetModels, memory, openChatPanelForVoice, openPetMenu, openSettingsPanel,
+    openSettingsSection, panelCollapsed, pet, petModel, petModelPresets,
+    petModelPresetsReady, petModelSelectionResolved, petRuntimeContinuousVoiceActive,
+    platformProfile, preferredMemoryFocus, preferredSettingsSectionId,
+    remotePanelSettingsOpen, reminderTaskStore, runtimeSnapshot, setSettings,
+    setSettingsOpen, settings, settingsRef, settingsOpen, toggleClickThrough,
+    toggleContinuousVoiceMode, togglePanelCollapse, togglePinned, view, voice,
+  })
 
   return {
     view,

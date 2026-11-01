@@ -4,10 +4,11 @@ import { createId } from '../../lib/index.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
 import { getSpeechOutputErrorMessage } from './support.ts'
-import type { CompanionNoticePayload, UseChatContext } from './types.ts'
+import type { ChatPetDeps, ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
 
 type CompanionNoticeDependencies = {
-  ctx: UseChatContext
+  ctx: Pick<ChatPetDeps, 'markPresenceActivity' | 'setMood'>
+    & Pick<ChatVoiceDeps, 'speakAssistantReply' | 'voiceStateRef'>
   t: Translator
   busyRef: { current: boolean }
   appendChatMessage: (message: ChatMessage) => void

@@ -1,23 +1,20 @@
 import { t } from '../../i18n/runtime.ts'
 import type { AssistantRuntimeActivity } from '../../types/index.ts'
 import type { AssistantReplyRunnerOptions } from './assistantReply.ts'
-import type { UseChatContext } from './types.ts'
+import type { ChatPetDeps, ChatVoiceDeps } from './types.ts'
 
 const TURN_HARD_TIMEOUT_MS = 90_000
 
 export type ExecuteAssistantTurnDeps = {
   ctx: Pick<
-    UseChatContext,
+    ChatVoiceDeps,
     | 'appendVoiceTrace'
     | 'busEmit'
-    | 'clearPetPerformanceCue'
     | 'setLiveTranscript'
-    | 'setMood'
     | 'setVoiceState'
-    | 'updatePetStatus'
     | 'updateVoicePipeline'
     | 'voiceStateRef'
-  >
+  > & Pick<ChatPetDeps, 'clearPetPerformanceCue' | 'setMood' | 'updatePetStatus'>
   setBusy: (value: boolean) => void
   setError: (value: string | null) => void
   busyRef: { current: boolean }
