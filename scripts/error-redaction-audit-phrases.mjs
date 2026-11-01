@@ -1,5 +1,4 @@
 // Required phrase inventory for the source-only error-redaction audit.
-// Split from the executable script so each file stays within source-size limits.
 
 export const REQUIRED_PHRASES = [
   {
@@ -19,8 +18,7 @@ export const REQUIRED_PHRASES = [
     ],
   },
   {
-    // The regex chain itself is single-sourced in shared/redaction.js; both
-    // the main-process and renderer helpers are thin wrappers over it.
+    // The regex chain is single-sourced in shared/redaction.js; both helpers wrap it.
     id: 'shared-redaction-chain-canonical',
     file: 'shared/redaction.js',
     phrases: [
@@ -164,8 +162,7 @@ export const REQUIRED_PHRASES = [
     ],
   },
   {
-    // Sidecar start/stop is on demand now, so these dependency logs live in the
-    // supervisor instead of main.js; the redaction requirement follows them.
+    // Sidecar start/stop is on demand, so these dependency logs live in the supervisor.
     id: 'voice-sidecar-redacts-dependency-logs',
     file: 'electron/services/voiceSidecarService.js',
     phrases: [
@@ -528,7 +525,10 @@ export const REQUIRED_PHRASES = [
       "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
       "message: getRedactedLogErrorMessage(error) || t('settings.memory.export_error')",
       "message: getRedactedLogErrorMessage(error) || t('settings.memory.import_error')",
-      "log.warn('memory archive clear failed', {\n        source: 'memory-clear',\n        error: getRedactedLogErrorMessage(error),\n      })\n      setMemoryClearStatus({\n        ok: false,\n        message: t('settings.memory.clear_error'),\n        tone: 'error',\n      })",
+      "log.warn('memory archive clear failed', {",
+      "source: 'memory-clear',",
+      'error: getRedactedLogErrorMessage(error),',
+      "message: t('settings.memory.clear_error'),",
     ],
   },
   {
