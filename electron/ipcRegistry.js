@@ -1,12 +1,12 @@
 // @ts-nocheck
-import { app } from 'electron'
+import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
 import { createCompanionPresenceTracker } from './companionPresenceTracker.js'
 import { buildRuntimeStateSnapshot, updateRuntimeState } from './windowRuntimeState.js'
 
-import { installIpcChannelBinding } from './ipc/validate.js'
+import { installIpcChannelBinding, requireTrustedSender } from './ipc/validate.js'
 import * as windowIpc from './ipc/windowIpc.js'
 import * as chatIpc from './ipc/chatIpc.js'
 import * as audioIpc from './ipc/audioIpc.js'
@@ -22,6 +22,11 @@ import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
+import * as proactiveIpc from './ipc/proactiveIpc.js'
+import { getBoundWindowCapability } from './ipc/windowCapabilities.js'
+import * as reminderStrip from './services/reminderStrip.js'
+import { showProactiveNotification } from './services/proactiveNotification.js'
+import { createProactiveDeliveryContextProvider } from './services/proactiveDeliveryContext.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -32,6 +37,9 @@ const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 const AUDIO_TRANSCRIBE_TIMEOUT_MS = 20_000
 const AUDIO_VOICE_LIST_TIMEOUT_MS = 15_000
+
+// Matches the renderer focus-awareness default (autonomyIdleThresholdSeconds).
+const FOCUS_IDLE_THRESHOLD_SECONDS = 300
 
 const activeChatStreamControllers = new Map()
 
@@ -66,7 +74,7 @@ function loadDeferredModules() {
 
       ttsStreamIpc.register({ ttsStreamService })
       pluginIpc.register()
-      memoryIpc.register()
+      memoryIpc.register({ clearProactiveInbox: proactiveIpc.clearProactiveInbox })
       skillIpc.register()
 
       console.info('[IPC] Deferred modules loaded')
@@ -110,6 +118,53 @@ export function registerIpc(options = {}) {
   voiceProfileIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
+  const isPanelFocused = () => {
+    const focused = BrowserWindow.getFocusedWindow()
+    return !!focused && getBoundWindowCapability(focused.webContents) === 'panel'
+  }
+  // Renderer-supplied preferences are kept in memory only: a snoozed strip
+  // item needs the latest quiet window, not a persisted copy of app settings.
+  const deliveryPreferences = { current: null }
+  const deliveryContext = createProactiveDeliveryContextProvider({
+    isPanelFocused,
+    getFocusState: () => {
+      const state = powerMonitor.getSystemIdleState(FOCUS_IDLE_THRESHOLD_SECONDS)
+      if (state === 'locked') return 'locked'
+      if (state === 'idle') return 'idle'
+      return 'active'
+    },
+    getActiveWindow: async () => {
+      // Kept dynamic: the desktop-context service pulls native Electron
+      // modules, and the re-route path only reads it when awareness is on.
+      const { captureActiveWindowContext } = await import('./services/desktopContextService.js')
+      const snapshot = await captureActiveWindowContext()
+      if (!snapshot) return null
+      return {
+        title: typeof snapshot.activeWindowTitle === 'string' ? snapshot.activeWindowTitle : '',
+        appName: typeof snapshot.activeWindowAppName === 'string' ? snapshot.activeWindowAppName : '',
+      }
+    },
+    getPreferences: () => deliveryPreferences.current,
+    now: () => Date.now(),
+  })
+  proactiveIpc.register({
+    app,
+    ipcMain,
+    getAllWindows: () => BrowserWindow.getAllWindows(),
+    requireTrustedSender,
+    isPanelFocused,
+    getDeliveryContext: deliveryContext.getDeliveryContext,
+    setDeliveryPreferences: (preferences) => {
+      deliveryPreferences.current = preferences
+    },
+    strip: {
+      show: reminderStrip.showReminderStrip,
+      withdraw: reminderStrip.withdrawReminderStripItem,
+      withdrawAll: reminderStrip.withdrawAllReminderStripItems,
+      configure: reminderStrip.configureReminderStrip,
+    },
+    showOsNotification: showProactiveNotification,
+  })
   mcpIpc.register()
   externalActionPolicyIpc.register()
   voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
@@ -130,6 +185,8 @@ export function registerIpc(options = {}) {
 
   app.once('before-quit', async () => {
     desktopPresenceIpc.stop()
+    proactiveIpc.stopProactiveInboxPrune()
+    await proactiveIpc.flushProactiveInbox()
     const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
       import('./services/mcpHost.js').catch(() => null),
       import('./services/memoryVectorStore.js').catch(() => null),
@@ -148,6 +205,7 @@ export function registerIpc(options = {}) {
       discordGateway?.disconnect().catch(() => {}),
       notificationBridge?.stop(),
       import('./services/vtsBridge.js').then((vtsBridge) => vtsBridge.shutdownVtsBridge()).catch(() => {}),
+      Promise.resolve(reminderStrip.destroyReminderStrip()),
     ])
   })
 }
