@@ -201,7 +201,7 @@ export const zhTWSettingsMemory = {
   'settings.memory.import_error': '記憶庫沒能匯入，等一下再試試？',
   'settings.memory.clear_error': '記憶庫沒能清空，等一下再試試？',
   'settings.memory.import_confirm': '匯入會取代目前長期記憶和每日日誌。要繼續嗎？',
-  'settings.memory.nothing_to_clear': '目前沒有可清空的記憶內容。',
+  'settings.memory.clear_empty_hint': '沒有可以清除的內容',
   'settings.memory.clear_confirm': '確認清空目前長期記憶和每日日誌嗎？',
   'settings.memory.loops.title': '未完成的事',
   'settings.memory.loops.note': '從對話裡記下的承諾。可以修改、標成完成，或不再提醒。',

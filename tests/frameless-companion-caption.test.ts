@@ -4,8 +4,14 @@ import { test } from 'node:test'
 
 import React from 'react'
 
-import type { AppSettings, PetDialogBubbleState, RuntimeStateSnapshot } from '../src/types/index.ts'
+import type {
+  AppSettings,
+  PetDialogBubbleState,
+  RuntimeStateSnapshot,
+  VoiceState,
+} from '../src/types/index.ts'
 import type { PetModelDefinition } from '../src/features/pet/models.ts'
+import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../src/features/uiV2/caption.ts'
 
 register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
 
@@ -115,6 +121,9 @@ function createRenderer<P>(component: (props: P) => unknown) {
       renderNow()
       return tree
     },
+    unmount() {
+      for (const slot of effects) slot?.cleanup?.()
+    },
   }
 }
 
@@ -169,6 +178,9 @@ function surfaceProps(input: {
   error?: string | null
   bubble?: PetDialogBubbleState | null
   presence?: RuntimeStateSnapshot['companionPresence']
+  voiceState?: VoiceState
+  chatBusy?: boolean
+  onHideBubble?: () => void
 } = {}) {
   return {
     settings: {
@@ -200,7 +212,7 @@ function surfaceProps(input: {
       setPetTouchZone: () => {},
     },
     voice: {
-      voiceState: 'idle' as const,
+      voiceState: input.voiceState ?? ('idle' as const),
       speechLevelSource: { current: 0, getSnapshot: () => 0, subscribe: () => () => {} },
       continuousVoiceActive: false,
       toggleVoiceConversation: () => {},
@@ -208,10 +220,11 @@ function surfaceProps(input: {
     },
     chat: {
       assistantActivity: 'idle' as const,
-      busy: false,
+      busy: input.chatBusy ?? false,
       error: input.error ?? null,
       petDialogBubble: input.bubble ?? null,
       cancelActiveTurn: () => {},
+      hidePetDialogBubble: input.onHideBubble ?? (() => {}),
     },
     isPinned: false,
     clickThrough: false,
@@ -223,6 +236,63 @@ function surfaceProps(input: {
     openChatPanelForVoice: () => {},
     togglePinned: () => {},
     toggleClickThrough: () => {},
+  }
+}
+
+type Timer = { at: number; callback: () => void }
+
+function createClock() {
+  let now = 0
+  let nextId = 1
+  const timers = new Map<number, Timer>()
+
+  return {
+    setTimeout(callback: () => void, delay?: number) {
+      const id = nextId++
+      timers.set(id, { at: now + (delay ?? 0), callback })
+      return id
+    },
+    clearTimeout(id: number) {
+      timers.delete(id)
+    },
+    tick(ms: number) {
+      const target = now + ms
+      for (;;) {
+        let next: { id: number; timer: Timer } | null = null
+        for (const [id, timer] of timers) {
+          if (timer.at > target) continue
+          if (!next || timer.at < next.timer.at) next = { id, timer }
+        }
+        if (!next) break
+        timers.delete(next.id)
+        now = next.timer.at
+        next.timer.callback()
+      }
+      now = target
+    },
+  }
+}
+
+type WindowTimerHost = {
+  setTimeout: (callback: () => void, delay?: number) => number
+  clearTimeout: (id: number) => void
+}
+
+function installFakeClock() {
+  const clock = createClock()
+  const target = globalThis.window as unknown as WindowTimerHost
+  const previous = {
+    setTimeout: target.setTimeout,
+    clearTimeout: target.clearTimeout,
+  }
+  target.setTimeout = clock.setTimeout
+  target.clearTimeout = clock.clearTimeout
+  return {
+    clock,
+    restore() {
+      target.setTimeout = previous.setTimeout
+      target.clearTimeout = previous.clearTimeout
+    },
   }
 }
 
@@ -284,4 +354,154 @@ test('a presence error with no specific line still uses the generic recovery cap
   const view = createRenderer(FramelessCompanionSurface)
   const text = captionText(view.render(surfaceProps({ presence: presenceError() })))
   assert.ok(text.includes(GENERIC), text)
+})
+
+test('an idle pet shows a proactive bubble title instead of its body', () => {
+  const view = createRenderer(FramelessCompanionSurface)
+  try {
+    const text = captionText(view.render(surfaceProps({
+      bubble: {
+        content: 'Proactive body that must stay hidden',
+        proactiveTitle: 'Proactive title',
+      },
+    })))
+    assert.ok(text.includes('Proactive title'), text)
+    assert.equal(text.includes('Proactive body that must stay hidden'), false, text)
+  } finally {
+    view.unmount()
+  }
+})
+
+test('a proactive bubble does not replace a listening or thinking caption', () => {
+  const listening = createRenderer(FramelessCompanionSurface)
+  const thinking = createRenderer(FramelessCompanionSurface)
+  try {
+    const bubble = {
+      content: 'Proactive body',
+      proactiveTitle: 'Proactive title',
+    }
+    assert.equal(captionText(listening.render(surfaceProps({
+      bubble,
+      voiceState: 'listening',
+    }))), '')
+    assert.equal(captionText(thinking.render(surfaceProps({
+      bubble,
+      chatBusy: true,
+    }))), '')
+  } finally {
+    listening.unmount()
+    thinking.unmount()
+  }
+})
+
+test('a collapsed proactive caption is dropped and never comes back on a phase round-trip', () => {
+  const { clock, restore } = installFakeClock()
+  const view = createRenderer(FramelessCompanionSurface)
+  let hides = 0
+  try {
+    const bubble: PetDialogBubbleState = {
+      content: 'Proactive body',
+      proactiveTitle: 'Proactive title',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+    const onHideBubble = () => {
+      hides += 1
+    }
+
+    assert.equal(captionText(view.render(surfaceProps({ bubble, onHideBubble }))), 'Proactive title')
+    clock.tick(PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS - 1)
+    assert.equal(captionText(view.render(surfaceProps({ bubble, onHideBubble }))), 'Proactive title')
+    clock.tick(1)
+    assert.equal(captionText(view.render(surfaceProps({ bubble: null, onHideBubble }))), '')
+    assert.equal(hides, 1)
+
+    assert.equal(captionText(view.render(surfaceProps({
+      bubble: null,
+      voiceState: 'listening',
+      onHideBubble,
+    }))), '')
+    assert.equal(captionText(view.render(surfaceProps({ bubble: null, onHideBubble }))), '')
+    assert.equal(captionText(view.render(surfaceProps({
+      bubble: null,
+      chatBusy: true,
+      onHideBubble,
+    }))), '')
+    const errorText = captionText(view.render(surfaceProps({
+      bubble: null,
+      presence: presenceError(),
+      onHideBubble,
+    })))
+    assert.equal(errorText.includes('Proactive title'), false, errorText)
+    assert.equal(captionText(view.render(surfaceProps({ bubble: null, onHideBubble }))), '')
+    assert.equal(hides, 1)
+  } finally {
+    view.unmount()
+    restore()
+  }
+})
+
+test('a newer reply that replaced a proactive bubble is not hidden by its old countdown', () => {
+  const { clock, restore } = installFakeClock()
+  const view = createRenderer(FramelessCompanionSurface)
+  let hides = 0
+  try {
+    const onHideBubble = () => {
+      hides += 1
+    }
+    const proactive: PetDialogBubbleState = {
+      content: 'Proactive body',
+      proactiveTitle: 'Proactive title',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+    const reply: PetDialogBubbleState = {
+      content: 'Fresh reply',
+      createdAt: '2026-01-01T00:00:06.000Z',
+    }
+
+    assert.equal(captionText(view.render(surfaceProps({ bubble: proactive, onHideBubble }))), 'Proactive title')
+    clock.tick(6_000)
+    assert.equal(captionText(view.render(surfaceProps({
+      bubble: reply,
+      voiceState: 'speaking',
+      onHideBubble,
+    }))), 'Fresh reply')
+
+    clock.tick(PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS * 2)
+    assert.equal(hides, 0)
+  } finally {
+    view.unmount()
+    restore()
+  }
+})
+
+test('a newer proactive bubble with the same title gets its own collapse window', () => {
+  const { clock, restore } = installFakeClock()
+  const view = createRenderer(FramelessCompanionSurface)
+  let hides = 0
+  try {
+    const onHideBubble = () => {
+      hides += 1
+    }
+    const first: PetDialogBubbleState = {
+      content: 'Proactive body',
+      proactiveTitle: 'Proactive title',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+    const second: PetDialogBubbleState = {
+      content: 'Proactive body',
+      proactiveTitle: 'Proactive title',
+      createdAt: '2026-01-01T00:00:06.000Z',
+    }
+
+    assert.equal(captionText(view.render(surfaceProps({ bubble: first, onHideBubble }))), 'Proactive title')
+    clock.tick(6_000)
+    assert.equal(captionText(view.render(surfaceProps({ bubble: second, onHideBubble }))), 'Proactive title')
+    clock.tick(6_000)
+    assert.equal(hides, 0)
+    clock.tick(6_000)
+    assert.equal(hides, 1)
+  } finally {
+    view.unmount()
+    restore()
+  }
 })

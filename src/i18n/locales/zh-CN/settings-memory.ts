@@ -199,7 +199,7 @@ export const zhCNSettingsMemory = {
   'settings.memory.import_error': '记忆库没能导入，稍后再试试？',
   'settings.memory.clear_error': '记忆库没能清掉，稍后再试试？',
   'settings.memory.import_confirm': '导入会替换当前长期记忆和每日日志。要继续吗？',
-  'settings.memory.nothing_to_clear': '当前没有可清空的记忆内容。',
+  'settings.memory.clear_empty_hint': '没有可以清除的内容',
   'settings.memory.clear_confirm': '确认清空当前长期记忆和每日日志吗？',
   'settings.memory.loops.title': '未完成的事',
   'settings.memory.loops.note': '从对话里记下的承诺。可以修改、标成完成，或不再提醒。',

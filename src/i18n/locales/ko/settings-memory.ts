@@ -201,7 +201,7 @@ export const koSettingsMemory = {
   'settings.memory.import_error': '기억 보관소 가져오기가 안 됐어요 — 잠시 후 다시 해볼래요?',
   'settings.memory.clear_error': '기억 보관소 지우기가 안 됐어요 — 잠시 후 다시 해볼래요?',
   'settings.memory.import_confirm': '가져오기 하면 현재 장기 기억과 일일 로그가 대체됩니다. 계속하시겠어요?',
-  'settings.memory.nothing_to_clear': '지울 수 있는 기억 내용이 없습니다.',
+  'settings.memory.clear_empty_hint': '지울 내용이 없습니다',
   'settings.memory.clear_confirm': '현재 장기 기억과 일일 로그를 지우시겠어요?',
   'settings.memory.loops.title': '아직 끝나지 않은 일',
   'settings.memory.loops.note': '대화에서 알아챈 약속입니다. 고치거나, 완료로 표시하거나, 다시 알리지 않게 할 수 있습니다.',

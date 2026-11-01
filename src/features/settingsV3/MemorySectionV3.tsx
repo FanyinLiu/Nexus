@@ -81,6 +81,7 @@ export type MemorySectionV3Props = {
   clearingMemoryArchive: boolean
   chatBusy: boolean
   memoryArchiveStatus: StatusMessage
+  memoryClearStatus: StatusMessage
   onExportMemoryArchive: () => void
   onImportMemoryArchive: () => void
   onClearMemoryArchive: () => void
@@ -132,6 +133,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
   clearingMemoryArchive,
   chatBusy,
   memoryArchiveStatus,
+  memoryClearStatus,
   onExportMemoryArchive,
   onImportMemoryArchive,
   onClearMemoryArchive,
@@ -755,6 +757,7 @@ export const MemorySectionV3 = memo(function MemorySectionV3({
           <button type="button" className="is-danger" disabled={clearingMemoryArchive || chatBusy} onClick={onClearMemoryArchive}>{clearingMemoryArchive ? ti('settings.memory.long_term.clearing') : ti('settings.memory.long_term.clear')}</button>
           <button type="button" className="is-danger" disabled={!dailyMemoryEntries.length || chatBusy} onClick={onClearDailyMemory}>{ti('memory_panel.clear_diary')}</button>
         </SettingsV3Toolbar>
+        {memoryClearStatus ? <SettingsV3Notice tone={memoryClearStatus.ok ? 'success' : 'error'} title={memoryClearStatus.message} announce /> : null}
       </SettingsV3Disclosure>
     </SettingsV3Page>
   )

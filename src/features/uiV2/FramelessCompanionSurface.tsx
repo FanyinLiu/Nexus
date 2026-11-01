@@ -22,6 +22,7 @@ import type {
 } from '../../types'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import { proactiveBubbleIdentity } from '../proactive/proactivePresentation.ts'
 import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
@@ -68,6 +69,7 @@ export type FramelessCompanionSurfaceProps = {
     error: string | null
     petDialogBubble: PetDialogBubbleState | null
     cancelActiveTurn: () => void
+    hidePetDialogBubble: () => void
   }
   isPinned: boolean
   clickThrough: boolean
@@ -137,6 +139,10 @@ export function FramelessCompanionSurface({
   const [captionPaused, setCaptionPaused] = useState(false)
   const [revealedStateLabel, setRevealedStateLabel] = useState<'listening' | 'thinking' | null>(null)
   const [blockGenericRecovery, setBlockGenericRecovery] = useState(false)
+  const petDialogBubbleRef = useRef(chat.petDialogBubble)
+  useEffect(() => {
+    petDialogBubbleRef.current = chat.petDialogBubble
+  }, [chat.petDialogBubble])
 
   const ti = useCallback((
     key: Parameters<typeof pickTranslatedUiText>[1],
@@ -219,6 +225,21 @@ export function FramelessCompanionSurface({
       ? false
       : blockGenericRecovery
   if (blockGeneric !== blockGenericRecovery) setBlockGenericRecovery(blockGeneric)
+  const proactiveTitle = chat.petDialogBubble?.proactiveTitle?.trim()
+  const proactiveBubbleKey = proactiveBubbleIdentity(chat.petDialogBubble)
+  // A proactive bubble only speaks on an idle/done pet. It must not replace a
+  // listening, thinking, speaking, error, or offline caption.
+  const proactiveCaptionActive = Boolean(proactiveTitle)
+    && (phase === 'idle' || phase === 'done')
+  const hidePetDialogBubble = chat.hidePetDialogBubble
+  const collapseProactiveBubble = useCallback(() => {
+    const current = petDialogBubbleRef.current
+    // The countdown belongs to one message. A reply or a newer proactive
+    // bubble may have replaced it while the timer was running, and that
+    // message must keep its own bubble.
+    if (proactiveBubbleIdentity(current) !== proactiveBubbleKey) return
+    hidePetDialogBubble()
+  }, [hidePetDialogBubble, proactiveBubbleKey])
   const nextCaption = resolveFramelessCompanionCaption({
     captionOverride,
     // basePhase, not the lagged presentation phase: the render that clears
@@ -226,9 +247,11 @@ export function FramelessCompanionSurface({
     // generic recovery line.
     phase: basePhase,
     petDialogBubble: chat.petDialogBubble,
-    assistantReply: basePhase === 'error' || basePhase === 'offline'
-      ? undefined
-      : chat.petDialogBubble?.content,
+    assistantReply: proactiveTitle
+      ? (proactiveCaptionActive ? proactiveTitle : undefined)
+      : basePhase === 'error' || basePhase === 'offline'
+        ? undefined
+        : chat.petDialogBubble?.content,
     chatError: chat.error,
     wakewordError: runtimeSnapshot.wakewordError,
     // Empty skips the generic fallback. `trimmed` treats it as no line, and
@@ -243,6 +266,11 @@ export function FramelessCompanionSurface({
     nextCaption,
     captionPhaseForCompanionNotice(phase, hasPriorityNotice),
     captionPaused,
+    {
+      proactive: proactiveCaptionActive,
+      proactiveKey: proactiveBubbleKey,
+      onProactiveCollapse: collapseProactiveBubble,
+    },
   )
   const showCaption = Boolean(caption)
 
