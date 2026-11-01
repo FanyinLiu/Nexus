@@ -1,12 +1,12 @@
 // @ts-nocheck
-import { app } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'
 import { createTtsStreamService } from './ttsStreamService.js'
 import { createCompanionPresenceTracker } from './companionPresenceTracker.js'
 import { buildRuntimeStateSnapshot, updateRuntimeState } from './windowRuntimeState.js'
 
-import { installIpcChannelBinding } from './ipc/validate.js'
+import { installIpcChannelBinding, requireTrustedSender } from './ipc/validate.js'
 import * as windowIpc from './ipc/windowIpc.js'
 import * as chatIpc from './ipc/chatIpc.js'
 import * as audioIpc from './ipc/audioIpc.js'
@@ -67,7 +67,7 @@ function loadDeferredModules() {
 
       ttsStreamIpc.register({ ttsStreamService })
       pluginIpc.register()
-      memoryIpc.register()
+      memoryIpc.register({ clearProactiveInbox: proactiveIpc.clearProactiveInbox })
       skillIpc.register()
 
       console.info('[IPC] Deferred modules loaded')
@@ -111,7 +111,12 @@ export function registerIpc(options = {}) {
   voiceProfileIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
-  proactiveIpc.register()
+  proactiveIpc.register({
+    app,
+    ipcMain,
+    getAllWindows: () => BrowserWindow.getAllWindows(),
+    requireTrustedSender,
+  })
   mcpIpc.register()
   externalActionPolicyIpc.register()
   voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })

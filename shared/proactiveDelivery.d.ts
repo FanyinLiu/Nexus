@@ -17,7 +17,7 @@ export type ProactiveSource =
   | 'away'
   | 'dream'
 
-export type DeliverySurface = 'inbox' | 'panel' | 'strip' | 'bubble' | 'os_notification'
+export type DeliverySurface = 'inbox' | 'badge' | 'panel' | 'strip' | 'bubble' | 'os_notification'
 
 export type ProactiveAction = 'done' | 'snooze' | 'open' | 'reply'
 
@@ -25,9 +25,12 @@ export type ProactivePriority = 'high' | 'normal' | 'low'
 
 export type FocusState = 'active' | 'idle' | 'away' | 'locked'
 
+export type ProactiveInboxStatus = 'unread' | 'done' | 'dismissed'
+
 export const PROACTIVE_SOURCES: readonly ProactiveSource[]
 export const PROACTIVE_ACTIONS: readonly ProactiveAction[]
 export const PROACTIVE_PRIORITIES: readonly ProactivePriority[]
+export const PROACTIVE_INBOX_STATUSES: readonly ProactiveInboxStatus[]
 
 export interface ProactiveMessage {
   /** Dedupe key: a repeated id updates the existing inbox entry in place. */
@@ -69,14 +72,21 @@ export type ProactiveDeliveryRule = 1 | 2 | 3 | 4 | 5 | 6
 export interface DeliveryDecision {
   rule: ProactiveDeliveryRule
   /** Always starts with `inbox`; `panel` and `os_notification` may be unregistered. */
-  outlets: Array<'inbox' | 'badge' | 'panel' | 'strip' | 'bubble' | 'os_notification'>
+  outlets: DeliverySurface[]
 }
-
-export type ProactiveInboxStatus = 'unread' | 'done' | 'dismissed'
 
 export interface ProactiveInboxEntry extends ProactiveMessage {
   status: ProactiveInboxStatus
   updatedAt: number
+}
+
+/** Mutable per-delivery state shared between the inbox and badge outlets. */
+export interface DeliveryState {
+  unreadCount: number
+  entries: ProactiveInboxEntry[]
+  removedIds: string[]
+  changed: boolean
+  published: boolean
 }
 
 export interface ProactiveInboxSnapshot {

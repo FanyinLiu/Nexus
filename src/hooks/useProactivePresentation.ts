@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { resolveProactivePresentation } from '../features/proactive/proactivePresentation.ts'
 import type { PetDialogBubbleState } from '../types/index.ts'
 
 /**
@@ -8,7 +9,7 @@ import type { PetDialogBubbleState } from '../types/index.ts'
  * `bubble` uses the existing dialog-bubble path. `strip` is deliberately
  * ignored in this milestone: the strip window does not exist yet and the
  * renderer must not fall back to a bubble for it — the message is already in
- * the inbox.
+ * the inbox. The decision itself lives in the feature module.
  */
 export function useProactivePresentation(
   presentPetDialogBubble: (bubble: PetDialogBubbleState) => void,
@@ -18,10 +19,9 @@ export function useProactivePresentation(
     if (!bridge?.subscribeProactivePresentation) return
 
     return bridge.subscribeProactivePresentation((presentation) => {
-      if (presentation.outlet !== 'bubble') return
-      const content = (presentation.message.body || presentation.message.title).trim()
-      if (!content) return
-      presentPetDialogBubble({ content })
+      const bubble = resolveProactivePresentation(presentation)
+      if (!bubble) return
+      presentPetDialogBubble(bubble)
     })
   }, [presentPetDialogBubble])
 }

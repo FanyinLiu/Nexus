@@ -12,6 +12,14 @@
  * (no actions, not high priority) so the dot is not permanently lit.
  */
 
+import {
+  PROACTIVE_ACTIONS,
+  PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_INBOX_STATUSES,
+  PROACTIVE_PRIORITIES,
+  PROACTIVE_SOURCES,
+  PROACTIVE_TITLE_MAX_LENGTH,
+} from '../../shared/proactiveDelivery.js'
 import { createSyncJsonFileStore } from './jsonFileStore.js'
 
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveInboxEntry} ProactiveInboxEntry */
@@ -41,10 +49,14 @@ export const PROACTIVE_INBOX_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 /** @type {Array<'taskId' | 'letterId' | 'capsuleId' | 'arcId'>} */
 const ORIGIN_KEYS = ['taskId', 'letterId', 'capsuleId', 'arcId']
 
-const VALID_STATUSES = new Set(['unread', 'done', 'dismissed'])
-const VALID_SOURCES = new Set(['reminder', 'agenda', 'bracket', 'letter', 'capsule', 'open_arc', 'away', 'dream'])
-const VALID_PRIORITIES = new Set(['high', 'normal', 'low'])
-const VALID_ACTIONS = new Set(['done', 'snooze', 'open', 'reply'])
+/** @type {Set<string>} */
+const VALID_STATUSES = new Set(PROACTIVE_INBOX_STATUSES)
+/** @type {Set<string>} */
+const VALID_SOURCES = new Set(PROACTIVE_SOURCES)
+/** @type {Set<string>} */
+const VALID_PRIORITIES = new Set(PROACTIVE_PRIORITIES)
+/** @type {Set<string>} */
+const VALID_ACTIONS = new Set(PROACTIVE_ACTIONS)
 
 /**
  * @param {unknown} value
@@ -89,7 +101,17 @@ function normalizeEntry(value) {
   const body = typeof record.body === 'string' ? record.body : ''
   const createdAt = finiteNumber(record.createdAt)
   const source = typeof record.source === 'string' ? record.source : ''
-  if (!id || !kind || !title || createdAt === null || !VALID_SOURCES.has(source)) return null
+  if (
+    !id
+    || !kind
+    || !title
+    || title.length > PROACTIVE_TITLE_MAX_LENGTH
+    || body.length > PROACTIVE_BODY_MAX_LENGTH
+    || createdAt === null
+    || !VALID_SOURCES.has(source)
+  ) {
+    return null
+  }
 
   const status = typeof record.status === 'string' ? record.status : ''
   if (!VALID_STATUSES.has(status)) return null
@@ -310,5 +332,15 @@ export function createProactiveInboxStore({
     return store.flushPending()
   }
 
-  return { list, prune, upsert, setStatus, flush }
+  /**
+   * Delete the persisted inbox and reset the cache. Clear-all routes through
+   * this so a stale file cannot bring the badge back after a restart; the
+   * jsonFileStore cancels any pending debounced write first.
+   * @returns {Promise<boolean>}
+   */
+  function clear() {
+    return store.clear()
+  }
+
+  return { list, prune, upsert, setStatus, flush, clear }
 }
