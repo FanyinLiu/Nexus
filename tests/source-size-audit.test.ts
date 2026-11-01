@@ -44,12 +44,12 @@ test('source size audit includes CSS files in the default source inventory', () 
 
 test('source size audit fails for a new oversized CSS source file', () => {
   withSourceSizeFixture({
-    'src/styles/oversized.css': Array.from({ length: 1201 }, (_, index) => `.x${index} { color: red; }`).join('\n'),
+    'src/styles/oversized.css': Array.from({ length: 801 }, (_, index) => `.x${index} { color: red; }`).join('\n'),
   }, (root) => {
     const report = buildSourceSizeReport(root)
 
     assert.deepEqual(report.errors.overBudget, [
-      { file: 'src/styles/oversized.css', lines: 1201, budget: 1200 },
+      { file: 'src/styles/oversized.css', lines: 801, budget: 800 },
     ])
     assert.equal(report.summary.ok, false)
   })

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { walkFiles } from './lib/audit-framework.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_MAX_LINES = 1200
+const DEFAULT_MAX_LINES = 800
 const SOURCE_ROOTS = ['src', 'electron', 'scripts', 'tests']
 const SOURCE_PATTERN = /\.(ts|tsx|js|mjs|cjs|css)$/
 const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'release', 'release-smoke', '.git'])
@@ -14,15 +14,40 @@ const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'release', 'release
 const FILE_BUDGETS = {
   // Locale messages are split under src/i18n/locales/<locale>/*.ts (≤500 lines each).
   // localDataStore is a thin facade; SQLite core + chat domain live in sibling modules.
+  'electron/chatRuntime.js': 1196,
+  'electron/ipc/chatIpc.js': 891,
+  'electron/services/localDataStoreCore.js': 1169,
+  'electron/services/voiceSidecarService.js': 903,
+  'electron/ttsStreamService.js': 861,
+  'scripts/error-redaction-audit-phrases.mjs': 920,
+  'scripts/live2d-three-model-smoke.mjs': 956,
+  'scripts/open-source-ui-reference-audit.mjs': 1067,
+  'scripts/open-source-ui-reference-pro-workflow.mjs': 994,
+  'scripts/packaged-sustained-runtime.mjs': 902,
+  'scripts/settings-surface-audit.mjs': 839,
   'src/app/App.css': 8400,
-  'src/app/styles/settings.css': 7300,
-  'src/app/styles/settings-themes.css': 11000,
   'src/app/styles/settings-chat-final.css': 2600,
-  'tests/settings-surface-audit.test.ts': 1300,
+  'src/app/styles/settings-product-reference-final.css': 1022,
+  'src/app/styles/settings-themes.css': 11000,
+  'src/app/styles/settings.css': 7300,
+  'src/app/views/LegacyPanelView.tsx': 917,
+  'src/features/memory/reconcile.ts': 803,
+  'src/features/models/providerCatalog.ts': 864,
+  'src/features/onboarding/styles/onboarding-guide-shell.css': 870,
+  'src/features/pet/components/Live2DCanvas.tsx': 959,
+  'src/features/pet/performance.ts': 1016,
+  'src/hooks/useVoice.ts': 879,
+  'src/hooks/voice/streamingSpeechOutput.ts': 938,
+  // Generated from electron/preload by scripts/generate-ipc-types.mjs (ipc:types:check).
+  'src/types/generated/desktopPetBridge.generated.ts': 1044,
+  'src/vite-env.d.ts': 1196,
+  'tests/fixtures/settingsSurfaceAuditBaseline.ts': 1197,
   // IPC payload schema suite keeps one test per domain plus the high-risk
   // unknown-field rejection gate. The suite is one test per domain and stays
-  // above the default 1200-line budget.
+  // above the default 800-line budget.
   'tests/ipc-payload-schema.test.ts': 1400,
+  'tests/settings-surface-audit.test.ts': 1300,
+  'tests/storage-settings.test.ts': 1196,
 }
 
 function countLines(source) {

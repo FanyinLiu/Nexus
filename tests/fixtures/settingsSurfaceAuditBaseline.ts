@@ -151,6 +151,37 @@ export function SettingsDrawer() {
   return <SettingsHomeView groups={settingsHomeGroups} onOpenHomeAction={handleOpenSettingsHomeAction} />
 }
 `,
+  'src/components/settingsDrawer/SettingsDrawerHomePage.tsx': `
+export function SettingsDrawerHomePage({ groups, onOpenHomeAction }) {
+  return <SettingsHomeView groups={groups} onOpenHomeAction={onOpenHomeAction} />
+}
+`,
+  'src/components/settingsDrawer/SettingsDrawerHeader.tsx': `
+export function SettingsDrawerHeader() {
+  return <button role="menuitemradio" aria-checked={isActive} tabIndex={isActive ? 0 : -1} />
+}
+`,
+  'src/components/settingsDrawer/SettingsDrawerSectionNav.tsx': `
+export function SettingsDrawerSectionNav() {
+  return <nav className="settings-section-nav" />
+}
+`,
+  'src/components/settingsDrawer/SettingsDrawerSectionPage.tsx': `
+export function SettingsDrawerSectionPage() {
+  return <div className="settings-page sp" />
+}
+`,
+  'src/components/settingsDrawer/settingsDrawerProps.ts': `
+export type SettingsDrawerProps = {}
+`,
+  'src/components/settingsDrawer/useSettingsDrawerViewModel.ts': `
+export function useSettingsDrawerViewModel() {
+  const settingsHomeGroups = []
+  const card = { trustGroup: getSettingsTrustSurfaceGroupId(section.id) }
+  const settingsDrawerClassName = 'settings-drawer--light-section settings-drawer--warm-section settings-drawer--day-section'
+  return { settingsHomeGroups, card, settingsDrawerClassName }
+}
+`,
   'src/components/SettingsHomeView.tsx': `
 import { SettingsHomePresence } from './SettingsHomePresence.tsx'
 

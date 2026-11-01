@@ -16,6 +16,8 @@ const ROOT = resolveProjectRoot(import.meta.url)
 const REQUIRED_FILES = [
   'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
   'src/components/SettingsDrawer.tsx',
+  'src/components/settingsDrawer/SettingsDrawerHeader.tsx',
+  'src/components/settingsDrawer/SettingsDrawerHomePage.tsx',
   'src/components/SettingsDrawerV2.tsx',
   'src/components/settingsDrawerHooks/useSettingsLanguageControl.ts',
   'src/components/SettingsHomeView.tsx',
@@ -108,7 +110,7 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'settings-menu-dom-contract',
-    file: 'src/components/SettingsDrawer.tsx',
+    file: 'src/components/settingsDrawer/SettingsDrawerHeader.tsx',
     description: 'The SettingsDrawer preserves the language menu DOM and radio semantics.',
     patterns: [
       'role="menuitemradio"',
@@ -196,6 +198,8 @@ const FORBIDDEN_SOURCE_PATTERNS = [
     files: [
       'docs/FOCUS_MANAGEMENT_REFERENCE_REVIEW.md',
       'src/components/SettingsDrawer.tsx',
+      'src/components/settingsDrawer/SettingsDrawerHeader.tsx',
+      'src/components/settingsDrawer/SettingsDrawerHomePage.tsx',
       'src/components/SettingsHomeView.tsx',
     ],
     description: 'Focus management must not become dashboard, IDE, terminal, or workbench chrome.',
@@ -209,7 +213,12 @@ const FORBIDDEN_SOURCE_PATTERNS = [
   },
   {
     id: 'global-focus-manager',
-    files: ['src/components/SettingsDrawer.tsx', 'src/components/SettingsHomeView.tsx'],
+    files: [
+      'src/components/SettingsDrawer.tsx',
+      'src/components/settingsDrawer/SettingsDrawerHeader.tsx',
+      'src/components/settingsDrawer/SettingsDrawerHomePage.tsx',
+      'src/components/SettingsHomeView.tsx',
+    ],
     description: 'The focus contract should stay local to SettingsDrawer instead of becoming a global focus manager.',
     patterns: [
       'window.__nexusFocusManager',

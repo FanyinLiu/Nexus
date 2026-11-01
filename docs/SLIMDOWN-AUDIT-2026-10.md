@@ -60,8 +60,9 @@ Code lines by subtree (before this PR):
 
 ## Largest source files
 
-Default `source-size:audit` budget is 1,200 lines. These are the largest
-code files. CSS files with a raised budget are called out.
+Default `source-size:audit` budget is 800 lines (it was 1,200 when this audit
+was written). These are the largest code files. CSS files with a raised budget
+are called out.
 
 | Lines | File | Note |
 | ---: | --- | --- |

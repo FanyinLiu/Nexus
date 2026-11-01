@@ -193,6 +193,7 @@ test('selection never silently no-ops when locale is already loaded and active',
 
 test('SettingsDrawer wires coordinator, open ref, focus return, and menu stacking elevation', () => {
   const drawer = readFileSync(join(ROOT, 'src/components/SettingsDrawer.tsx'), 'utf8')
+  const header = readFileSync(join(ROOT, 'src/components/settingsDrawer/SettingsDrawerHeader.tsx'), 'utf8')
   const hook = readFileSync(join(ROOT, 'src/components/settingsDrawerHooks/useSettingsLanguageControl.ts'), 'utf8')
 
   assert.match(drawer, /useSettingsLanguageControl/)
@@ -204,8 +205,8 @@ test('SettingsDrawer wires coordinator, open ref, focus return, and menu stackin
   assert.match(hook, /closeLanguageMenuAndRestoreFocus/)
   assert.match(hook, /languageButtonRef\.current\?\.focus\(\)/)
   assert.match(hook, /handleSelectLanguage/)
-  assert.match(drawer, /languageMenuOpen \? \{ zIndex: 5 \}/)
-  assert.match(drawer, /settings-home-presence/)
+  assert.match(header, /languageMenuOpen \? \{ zIndex: 5 \}/)
+  assert.match(header, /settings-home-presence/)
   assert.doesNotMatch(
     hook,
     /if \(open && languageLoadGenerationRef\.current === requestGeneration\)/,
@@ -216,7 +217,7 @@ test('SettingsDrawer wires coordinator, open ref, focus return, and menu stackin
 
 test('focus audit baseline keeps language generation and menuitemradio contracts concrete', () => {
   const audit = readFileSync(join(ROOT, 'scripts/focus-management-surface-audit.mjs'), 'utf8')
-  const drawer = readFileSync(join(ROOT, 'src/components/SettingsDrawer.tsx'), 'utf8')
+  const header = readFileSync(join(ROOT, 'src/components/settingsDrawer/SettingsDrawerHeader.tsx'), 'utf8')
   const hook = readFileSync(join(ROOT, 'src/components/settingsDrawerHooks/useSettingsLanguageControl.ts'), 'utf8')
 
   for (const token of [
@@ -231,13 +232,13 @@ test('focus audit baseline keeps language generation and menuitemradio contracts
   }
   for (const token of ['role="menuitemradio"', 'aria-checked={isActive}', 'tabIndex={isActive ? 0 : -1}'] as const) {
     assert.ok(audit.includes(token), `audit should require ${token}`)
-    assert.ok(drawer.includes(token), `drawer should implement ${token}`)
+    assert.ok(header.includes(token), `drawer header should implement ${token}`)
   }
 
-  // Stronger than regex-only: behavior stays in the hook while DOM stays in the drawer.
+  // Stronger than regex-only: behavior stays in the hook while DOM stays in the drawer header.
   assert.ok(hook.includes('createLanguageSelectionCoordinator'))
   assert.ok(hook.includes('ensureLocaleLoaded'))
-  assert.ok(drawer.includes('closeLanguageMenuAndRestoreFocus()'))
-  assert.ok(drawer.includes('role="menuitemradio"'))
-  assert.ok(drawer.includes('aria-checked={isActive}'))
+  assert.ok(header.includes('closeLanguageMenuAndRestoreFocus()'))
+  assert.ok(header.includes('role="menuitemradio"'))
+  assert.ok(header.includes('aria-checked={isActive}'))
 })

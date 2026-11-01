@@ -91,6 +91,7 @@ test('settings commits use the serial functional mutation authority', async () =
   const commitSource = await readSource(new URL('../src/app/store/commitSettingsUpdate.ts', import.meta.url))
   const themeSource = await readSource(new URL('../src/app/providers/ThemeProvider.tsx', import.meta.url))
   const drawerSource = await readSource(new URL('../src/components/SettingsDrawer.tsx', import.meta.url))
+  const drawerPropsSource = await readSource(new URL('../src/components/settingsDrawer/settingsDrawerProps.ts', import.meta.url))
   const overlaysSource = await readSource(new URL('../src/app/controllers/useAppOverlays.ts', import.meta.url))
   const setThemeSource = themeSource.match(/setTheme:\s*\([\s\S]*?\n\s*\},\n\s*theme,/)?.[0] ?? ''
   const settingsOnSaveSource = overlaysSource.match(/onSave: async \(nextSettings, baselineSettings, saveOptions\) => \{[\s\S]*?\n\s*\},\n\s*onImportPetModel/)?.[0] ?? ''
@@ -102,7 +103,7 @@ test('settings commits use the serial functional mutation authority', async () =
   assert.doesNotMatch(commitSource, /getSettingsSnapshot|setSettingsSnapshot/)
   assert.match(setThemeSource, /updateSettingsSnapshot\([\s\S]*?\)\.catch\(/)
   assert.doesNotMatch(setThemeSource, /getSettingsSnapshot|setSettingsSnapshot/)
-  assert.match(drawerSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean; vaultFree\?: boolean \},\s*\) => Promise<AppSettings>/)
+  assert.match(drawerPropsSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean; vaultFree\?: boolean \},\s*\) => Promise<AppSettings>/)
   assert.match(commitDraftSource, /const savePromise = commitSettingsDraft\(\{/)
   assert.match(commitDraftSource, /if \(saveInFlightRef\.current\) return saveInFlightRef\.current/)
   assert.match(commitDraftSource, /saveInFlightRef\.current = savePromise/)
