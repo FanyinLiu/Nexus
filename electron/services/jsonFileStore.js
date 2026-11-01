@@ -87,7 +87,29 @@ export function createSyncJsonFileStore({
     }
   }
 
-  return { load, persistDebounced, flushPending }
+  // Clear-all path: cancel the debounce, let an already-started write finish,
+  // then remove the file and reset the cache. Without the cancel a timer that
+  // was armed before the clear could recreate the file afterwards.
+  async function clear() {
+    if (writeTimer) {
+      clearTimeout(writeTimer)
+      writeTimer = null
+    }
+    if (pendingWrite) {
+      await pendingWrite
+      pendingWrite = null
+    }
+    try {
+      await fsp.rm(getStorePath(), { force: true })
+      cache = null
+      return true
+    } catch (error) {
+      onPersistError(error)
+      return false
+    }
+  }
+
+  return { load, persistDebounced, flushPending, clear }
 }
 
 export function createAsyncJsonFileStore({

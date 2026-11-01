@@ -25,19 +25,12 @@ import { routeDelivery } from '../../shared/proactiveDelivery.js'
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveMessage} ProactiveMessage */
 /** @typedef {import('../../shared/proactiveDelivery.js').DeliveryContext} DeliveryContext */
 /** @typedef {import('../../shared/proactiveDelivery.js').DeliveryDecision} DeliveryDecision */
-/** @typedef {import('../../shared/proactiveDelivery.js').ProactiveInboxEntry} ProactiveInboxEntry */
+/** @typedef {import('../../shared/proactiveDelivery.js').DeliveryState} DeliveryState */
 /** @typedef {import('../logger.js').Logger} Logger */
 
 /**
- * Mutable per-delivery record shared between outlets: `inbox` fills it in and
+ * The delivery state is shared between outlets: `inbox` fills it in and
  * `badge` publishes it, so both read one snapshot instead of racing the store.
- *
- * @typedef {object} DeliveryState
- * @property {number} unreadCount
- * @property {ProactiveInboxEntry[]} entries
- * @property {string[]} removedIds
- * @property {boolean} changed
- * @property {boolean} published
  */
 
 /** @typedef {(message: ProactiveMessage, state: DeliveryState) => void | Promise<void>} OutletHandler */

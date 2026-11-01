@@ -36,6 +36,11 @@ export const PROACTIVE_ACTIONS = Object.freeze(['done', 'snooze', 'open', 'reply
 /** Priorities usable by the badge rule (`high` counts without actions). */
 export const PROACTIVE_PRIORITIES = Object.freeze(['high', 'normal', 'low'])
 
+/** Inbox statuses; the load validator and the IPC schema share this list. */
+export const PROACTIVE_INBOX_STATUSES = Object.freeze(['unread', 'done', 'dismissed'])
+
+/** @typedef {import('./proactiveDelivery.js').DeliverySurface} DeliverySurface */
+
 /**
  * Pick the primary delivery surface for one message.
  *
@@ -61,7 +66,7 @@ export const PROACTIVE_PRIORITIES = Object.freeze(['high', 'normal', 'low'])
  *   awayNotificationsEnabled: boolean,
  *   stripEnabled: boolean,
  * }} context
- * @returns {{ rule: 1 | 2 | 3 | 4 | 5 | 6, outlets: string[] }}
+ * @returns {{ rule: 1 | 2 | 3 | 4 | 5 | 6, outlets: DeliverySurface[] }}
  */
 export function routeDelivery(message, context) {
   const actions = Array.isArray(message?.actions) ? message.actions : []

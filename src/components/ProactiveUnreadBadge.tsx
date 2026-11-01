@@ -6,7 +6,10 @@
  * branching worth testing. It renders nothing when the count is zero.
  */
 
-import { formatProactiveUnreadBadge } from '../features/proactive/proactiveUnreadBadge.ts'
+import {
+  formatProactiveUnreadBadge,
+  proactiveUnreadBadgeLabelKey,
+} from '../features/proactive/proactiveUnreadBadge.ts'
 import { pickTranslatedUiText } from '../lib/uiLanguage.ts'
 import type { UiLanguage } from '../types/index.ts'
 
@@ -20,7 +23,9 @@ export function ProactiveUnreadBadge({
   const badge = formatProactiveUnreadBadge(unreadCount)
   if (!badge) return null
 
-  const label = pickTranslatedUiText(uiLanguage, 'pet.proactive.unread_badge', { count: badge })
+  const label = pickTranslatedUiText(uiLanguage, proactiveUnreadBadgeLabelKey(unreadCount), {
+    count: badge,
+  })
   return (
     <span
       className="pet-window__proactive-badge"

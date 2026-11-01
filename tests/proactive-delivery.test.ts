@@ -7,6 +7,7 @@ import { test, type TestContext } from 'node:test'
 import {
   routeDelivery,
   type DeliveryContext,
+  type DeliveryState,
   type ProactiveMessage,
 } from '../shared/proactiveDelivery.js'
 import {
@@ -291,6 +292,34 @@ test('re-delivering the same id updates in place without growing the inbox', asy
   assert.equal(snapshot.entries[0]?.title, 'second title')
   assert.equal(snapshot.unreadCount, 1)
   assert.equal(mutation.entries.length, 1)
+})
+
+test('re-delivering a done entry keeps it done and leaves the unread count alone', async (t) => {
+  const { store } = createInbox(t)
+
+  store.upsert(makeMessage())
+  assert.equal(store.setStatus('msg-1', 'done').unreadCount, 0)
+
+  const mutation = store.upsert(makeMessage({ title: 're-delivered' }))
+
+  assert.equal(mutation.entries[0]?.status, 'done')
+  assert.equal(mutation.entries[0]?.title, 're-delivered')
+  assert.equal(mutation.unreadCount, 0)
+  assert.equal(store.list().entries[0]?.status, 'done')
+})
+
+test('re-delivering a dismissed entry keeps it dismissed and leaves the unread count alone', async (t) => {
+  const { store } = createInbox(t)
+
+  store.upsert(makeMessage())
+  assert.equal(store.setStatus('msg-1', 'dismissed').unreadCount, 0)
+
+  const mutation = store.upsert(makeMessage({ title: 're-delivered' }))
+
+  assert.equal(mutation.entries[0]?.status, 'dismissed')
+  assert.equal(mutation.entries[0]?.title, 're-delivered')
+  assert.equal(mutation.unreadCount, 0)
+  assert.equal(store.list().entries[0]?.status, 'dismissed')
 })
 
 // ── Badge count ─────────────────────────────────────────────────────────────

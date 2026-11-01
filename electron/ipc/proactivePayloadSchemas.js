@@ -12,6 +12,7 @@
 import {
   PROACTIVE_ACTIONS,
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_INBOX_STATUSES,
   PROACTIVE_PRIORITIES,
   PROACTIVE_SOURCES,
   PROACTIVE_TITLE_MAX_LENGTH,
@@ -87,7 +88,7 @@ const inboxUpdateSchema = {
   unknown: 'reject',
   fields: {
     id: { type: 'string', maxLength: MESSAGE_ID_MAX_LENGTH, trim: true, allowEmpty: false },
-    status: { type: 'enum', values: ['unread', 'done', 'dismissed'] },
+    status: { type: 'enum', values: PROACTIVE_INBOX_STATUSES },
   },
 }
 

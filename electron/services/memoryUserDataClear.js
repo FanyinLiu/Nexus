@@ -17,6 +17,7 @@ import * as memoryVectorStore from './memoryVectorStore.js'
  *   userDataPath?: string,
  *   needles?: readonly string[],
  *   flushStorage?: () => Promise<unknown> | unknown,
+ *   clearProactiveInbox?: () => Promise<unknown> | unknown,
  * }} [options]
  * @returns {Promise<{
  *   ok: true,
@@ -24,6 +25,7 @@ import * as memoryVectorStore from './memoryVectorStore.js'
  *   localDataCleared: boolean,
  *   storageFilesRewritten: number,
  *   snapshotMemoryFilesRemoved: number,
+ *   proactiveInboxCleared: boolean,
  * }>}
  */
 export async function clearMemoryUserData(options = {}) {
@@ -59,11 +61,20 @@ export async function clearMemoryUserData(options = {}) {
     }
   }
 
+  // The proactive inbox quotes reminder and letter text, so clear-all must
+  // remove it too. The clear function is injected: services must not import
+  // the IPC module that owns the store.
+  const clearProactiveInbox = options.clearProactiveInbox
+  if (typeof clearProactiveInbox === 'function') {
+    await clearProactiveInbox()
+  }
+
   return {
     ok: true,
     removed,
     localDataCleared: localData.ok === true,
     storageFilesRewritten,
     snapshotMemoryFilesRemoved,
+    proactiveInboxCleared: typeof clearProactiveInbox === 'function',
   }
 }
