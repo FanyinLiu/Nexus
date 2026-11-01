@@ -9,6 +9,7 @@ import {
   getRedactedLogErrorMessage,
   redactSensitiveLogText,
 } from '../src/lib/logRedaction.ts'
+import { REQUIRED_PHRASES } from '../scripts/error-redaction-audit-phrases.mjs'
 import { buildErrorRedactionReport } from '../scripts/error-redaction-audit.mjs'
 
 test('main-process error redaction strips common API secrets', () => {
@@ -357,6 +358,16 @@ test('error redaction audit covers settings export and locale support logs', () 
   assert.ok(report.checkedFiles.includes('src/features/settingsV3/LettersSectionV3.tsx'))
   assert.ok(report.checkedFiles.includes('src/components/SettingsDrawer.tsx'))
   assert.ok(report.checkedFiles.includes('src/app/providers/I18nProvider.tsx'))
+})
+
+test('error redaction audit required phrases stay single-line', () => {
+  // A CRLF checkout never contains a bare \n inside a line, so any phrase with
+  // an embedded line break silently fails on windows-latest.
+  for (const item of REQUIRED_PHRASES) {
+    for (const phrase of item.phrases) {
+      assert.doesNotMatch(phrase, /[\r\n]/, `${item.file}: ${item.id}`)
+    }
+  }
 })
 
 test('error redaction audit keeps local runtime logs out of version control', () => {
