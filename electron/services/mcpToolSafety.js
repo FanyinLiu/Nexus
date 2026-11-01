@@ -39,6 +39,10 @@ const NETWORK_SEND_PATTERN = new RegExp(
  * }} McpToolMetadata
  */
 
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
 function matchesSideEffectWording(value) {
   const text = typeof value === 'string' ? value : ''
   if (!text) return false

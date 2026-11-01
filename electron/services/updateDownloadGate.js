@@ -43,6 +43,7 @@ export function createVerifiedUpdateGate(deps) {
   }
   const platform = typeof deps.platform === 'string' ? deps.platform : process.platform
   const arch = typeof deps.arch === 'string' ? deps.arch : process.arch
+  /** @type {string | null} */
   let verifiedVersion = null
   let generation = 0
 

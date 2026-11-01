@@ -21,6 +21,12 @@ import { isSideEffectingMcpTool } from './mcpToolSafety.js'
 const MAX_ARGUMENTS_CHARS = 2_000
 const require = createRequire(import.meta.url)
 
+/**
+ * @type {{
+ *   getParentWindow: () => unknown,
+ *   showMessageBox: (parent: any, options: any) => Promise<{ response?: number }>,
+ * } | null}
+ */
 let defaultDialogDeps = null
 
 function getDefaultDialogDeps() {
@@ -28,6 +34,10 @@ function getDefaultDialogDeps() {
   const { BrowserWindow, dialog } = require('electron')
   defaultDialogDeps = {
     getParentWindow: () => BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null,
+    /**
+     * @param {any} parent
+     * @param {any} options
+     */
     showMessageBox: (parent, options) => dialog.showMessageBox(parent, options),
   }
   return defaultDialogDeps
@@ -192,9 +202,9 @@ export async function runConfirmedMcpToolCall(options) {
       showMessageBox: options.showMessageBox,
     })
     if (!allowed) {
-      const error = new Error(
+      const error = /** @type {Error & { code?: string }} */ (new Error(
         `${MCP_TOOL_NOT_ALLOWED_CODE}: MCP tool [${options.serverId}/${options.toolName}] call was not allowed by the user`,
-      )
+      ))
       error.code = MCP_TOOL_NOT_ALLOWED_CODE
       throw error
     }
