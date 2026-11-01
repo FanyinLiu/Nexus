@@ -6,7 +6,9 @@ import { afterEach, beforeEach, test } from 'node:test'
 
 import {
   resetKeyVaultStateForTests,
+  setKeyVaultRuntimeForTests,
   vaultDelete,
+  vaultIsAvailable,
   vaultListSlots,
   vaultRetrieve,
   vaultStore,
@@ -28,8 +30,18 @@ beforeEach(async () => {
 afterEach(async () => {
   resetKeyVaultStateForTests()
   delete process.env.NEXUS_VAULT_USER_DATA_DIR
+  delete process.env.SMOKE_TEST
   await fs.rm(userDataDir, { recursive: true, force: true })
 })
+
+function fakeSafeStorage(backend: string) {
+  return {
+    isEncryptionAvailable: () => true,
+    encryptString: (value: string) => Buffer.from(`enc:${value}`, 'utf8'),
+    decryptString: (value: Buffer) => value.toString('utf8').replace(/^enc:/, ''),
+    getSelectedStorageBackend: () => backend,
+  } as never
+}
 
 test('corrupted vault file is backed up and writes are refused without touching the original', async () => {
   // A crash mid-write leaves vault.json as truncated JSON holding live keys.
@@ -111,4 +123,71 @@ test('storing an empty value deletes the slot and persists', async () => {
   await vaultStore('settings:apiKey', '')
   assert.equal(await vaultRetrieve('settings:apiKey'), '')
   assert.deepEqual(JSON.parse(await fs.readFile(vaultPath(), 'utf8')), {})
+})
+
+test('SMOKE_TEST cannot enable plaintext storage in a packaged build', async () => {
+  process.env.SMOKE_TEST = '1'
+  setKeyVaultRuntimeForTests({
+    app: { isPackaged: true } as never,
+    safeStorage: fakeSafeStorage('gnome_libsecret'),
+    platform: 'darwin',
+    smokeBuild: false,
+  })
+
+  await vaultStore('settings:apiKey', 'sk-live-secret')
+  assert.equal(vaultIsAvailable(), true)
+
+  const stored = JSON.parse(await fs.readFile(vaultPath(), 'utf8'))
+  assert.equal(stored['settings:apiKey'].v, 1, 'packaged write must be encrypted, not plaintext')
+  assert.equal(typeof stored['settings:apiKey'].e, 'string')
+  assert.equal(stored['settings:apiKey'].p, undefined)
+})
+
+test('the baked smoke build flag still allows plaintext for the local packaged smoke', async () => {
+  process.env.SMOKE_TEST = '1'
+  setKeyVaultRuntimeForTests({
+    app: { isPackaged: true } as never,
+    safeStorage: fakeSafeStorage('gnome_libsecret'),
+    platform: 'linux',
+    smokeBuild: true,
+  })
+
+  await vaultStore('settings:apiKey', 'sk-smoke-key')
+  assert.deepEqual(JSON.parse(await fs.readFile(vaultPath(), 'utf8')), {
+    'settings:apiKey': { p: 'sk-smoke-key', v: 0 },
+  })
+})
+
+test('packaged Linux refuses writes when safeStorage falls back to basic_text', async () => {
+  setKeyVaultRuntimeForTests({
+    app: { isPackaged: true } as never,
+    safeStorage: fakeSafeStorage('basic_text'),
+    platform: 'linux',
+    smokeBuild: false,
+  })
+
+  assert.equal(vaultIsAvailable(), false)
+  await assert.rejects(
+    vaultStore('settings:apiKey', 'sk-live-secret'),
+    (error: NodeJS.ErrnoException) => error?.code === 'VAULT_ENCRYPTION_UNAVAILABLE',
+  )
+  await assert.rejects(
+    vaultStoreMany({ 'settings:apiKey': 'sk-live-secret' }),
+    (error: NodeJS.ErrnoException) => error?.code === 'VAULT_ENCRYPTION_UNAVAILABLE',
+  )
+  await assert.rejects(fs.readFile(vaultPath(), 'utf8'))
+})
+
+test('existing encrypted secrets stay readable on basic_text if they still decrypt', async () => {
+  setKeyVaultRuntimeForTests({
+    app: { isPackaged: true } as never,
+    safeStorage: fakeSafeStorage('basic_text'),
+    platform: 'linux',
+    smokeBuild: false,
+  })
+  await fs.writeFile(vaultPath(), JSON.stringify({
+    'settings:apiKey': { e: Buffer.from('enc:sk-existing').toString('base64'), v: 1 },
+  }), 'utf8')
+
+  assert.equal(await vaultRetrieve('settings:apiKey'), 'sk-existing')
 })

@@ -8,6 +8,13 @@ module.exports = {
   appId: 'ai.factory.desktoppet.smoke',
   productName: 'Nexus Smoke',
   forceCodeSigning: false,
+  // Baked into the packaged app's own package.json. keyVault.js only allows
+  // plaintext smoke storage when this flag is present, so SMOKE_TEST in a real
+  // install can never disable safeStorage.
+  extraMetadata: {
+    ...(build.extraMetadata || {}),
+    nexusSmokeBuild: true,
+  },
   electronDist: path.join(__dirname, '..', 'node_modules', 'electron', 'dist'),
   directories: {
     ...(build.directories || {}),

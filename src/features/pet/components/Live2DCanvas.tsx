@@ -479,6 +479,7 @@ export function Live2DCanvas({
               autoInteract?: boolean
               autoUpdate?: boolean
               motionPreload?: MotionPreloadValue
+              checkMocConsistency?: boolean
             },
           ) => Promise<Live2DModelType>
         },
@@ -516,6 +517,9 @@ export function Live2DCanvas({
                 autoInteract: false,
                 autoUpdate: false,
                 motionPreload: window.PIXI?.live2d?.MotionPreloadStrategy?.NONE ?? 'NONE',
+                // Reject a malformed .moc3 in Cubism Core instead of loading a
+                // model that would fail later during rendering.
+                checkMocConsistency: true,
               }),
               shouldDiscard: () => shouldDestroyLateLive2DModel({
                 disposed: isDisposed(),

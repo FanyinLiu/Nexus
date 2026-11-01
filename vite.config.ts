@@ -7,12 +7,13 @@ import tailwindcss from '@tailwindcss/vite'
  * statically via `new URL('ort-wasm-simd-threaded.asyncify.wasm', import.meta.url)`,
  * which otherwise makes Vite copy it into dist/assets.
  *
- * Safe because transformers.js replaces `env.wasm.wasmPaths` with the jsdelivr
- * CDN before creating any session, so this emitted file is never fetched — it
- * is ~24 MB of dead weight. The browser VAD / main-process Smart Turn runtimes
- * use the separately vendored public/vendor/ort files, which this must not
- * touch. If transformers is ever pointed at local WASM, it must use vendor/ort
- * instead of this bundle-emitted asset.
+ * Safe because the renderer points transformers.js at the vendored
+ * public/vendor/ort asyncify files (see src/features/memory/vectorSearchRuntime.ts)
+ * before creating any session, so this bundle-emitted file is never fetched —
+ * it is ~24 MB of dead weight. The browser VAD / main-process Smart Turn
+ * runtimes use the separately vendored public/vendor/ort files, which this must
+ * not touch. transformers.js therefore must keep using vendor/ort instead of
+ * this bundle-emitted asset.
  */
 function dropUnusedOrtAsyncify(): Plugin {
   return {

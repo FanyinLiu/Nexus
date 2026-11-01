@@ -217,8 +217,17 @@ export async function ensureRendererServer() {
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
             // PixiJS fetches a tiny data URL once to detect ImageBitmap
-            // support before choosing its texture upload path.
-            "connect-src 'self' data: https:",
+            // support before choosing its texture upload path. Everything else
+            // is an explicit allowlist: user-configured LLM/speech/Ollama
+            // endpoints are proxied through main-process IPC, while the
+            // renderer itself only reaches loopback services and Hugging Face
+            // model files fetched by transformers.js. The plain-browser
+            // preview fallback in src/features/memory/ollamaEmbedding.ts can
+            // still fetch a configured Ollama URL directly when the desktop
+            // bridge is absent; packaged Electron always uses IPC. Follow-up:
+            // move that fallback behind IPC or generate connect-src from the
+            // saved endpoints. Keep this in sync with index.html.
+            "connect-src 'self' data: blob: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* https://huggingface.co https://*.huggingface.co https://hf.co https://*.hf.co",
             "media-src 'self' blob:",
             "worker-src 'self' blob:",
             "object-src 'none'",
