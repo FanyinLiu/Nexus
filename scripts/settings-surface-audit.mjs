@@ -129,20 +129,27 @@ const REQUIRED_CONTRACTS = [
   },
   {
     id: 'settings-home-viewmodel-wiring',
-    file: 'src/components/SettingsDrawer.tsx',
-    description: 'The drawer builds settings home rows as trust-boundary view models before handing rendering to the home component.',
+    file: 'src/components/settingsDrawer/useSettingsDrawerViewModel.ts',
+    description: 'The drawer view model builds settings home rows as trust-boundary view models before handing rendering to the home component.',
     patterns: [
       'settingsHomeGroups',
       'getSettingsTrustSurfaceGroupId(section.id)',
       'trustGroup: getSettingsTrustSurfaceGroupId(section.id)',
+    ],
+  },
+  {
+    id: 'settings-home-view-wiring',
+    file: 'src/components/settingsDrawer/SettingsDrawerHomePage.tsx',
+    description: 'The settings home page renders the home view with the prepared groups and action handler.',
+    patterns: [
       '<SettingsHomeView',
-      'groups={settingsHomeGroups}',
-      'onOpenHomeAction={handleOpenSettingsHomeAction}',
+      'groups={groups}',
+      'onOpenHomeAction={onOpenHomeAction}',
     ],
   },
   {
     id: 'settings-theme-section-scope-classes',
-    file: 'src/components/SettingsDrawer.tsx',
+    file: 'src/components/settingsDrawer/useSettingsDrawerViewModel.ts',
     description: 'The drawer exposes short section-scoped theme classes so large settings CSS layers do not need long repeated page selectors.',
     patterns: [
       'settings-drawer--light-section',

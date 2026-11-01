@@ -44,7 +44,7 @@
 - [P1] Image4 signal generation is now componentized without visual drift.
   Location: `src/app/views/Image4Signal.tsx`, `src/app/views/PanelView.tsx`.
   Evidence: to keep future UI tuning from pushing `PanelView.tsx` over the source-size guardrail, the 64-bar signal generation was extracted into `Image4Signal`. Browser verification on `/tmp/nexus-image4-signal-component-split.png` read `barCount: 64`, `signalClass: companion-presence__signal is-idle`, first bar class `companion-presence__signal-bar is-steady`, first bar variables `--image4-signal-bar-color: rgba(255, 214, 146, 0.62)`, `--image4-signal-bar-delay: 0ms`, `--image4-signal-bar-height: 7px`, and `animationName: none`. The same check read panel `343px x 803px`, chat `293px x 747px`, and `gridRowCount: 5`.
-  Impact: this is a code-health slice, not a visual restyle. It preserves the existing CSS/DOM contract while reducing `PanelView.tsx` from the previous 1181-line pressure point to 1148/1200 in `source-size:audit`.
+  Impact: this is a code-health slice, not a visual restyle. It preserves the existing CSS/DOM contract while reducing `PanelView.tsx` from the previous 1181-line pressure point to 1148/1200 at the time (the default budget is now 800) in `source-size:audit`.
   Fix: no visual follow-up needed from this refactor; future signal tuning should happen inside `Image4Signal.tsx` plus the scoped CSS file.
 
 - [P2] Top presence copy remains, but the source's leading orb is intentionally removed.
@@ -138,7 +138,7 @@
 - Boosted the realtime wave energy after source comparison so right-side peaks are visible without returning to the wall-like version.
 - Asked Pro specifically about the user's `感觉独立出去了` feedback; reduced the poster-like root/card treatment and added a subtle system edge anchor.
 - After direct user feedback, removed the leading round orb and the dial's right-side dot.
-- Split the Image4 UI CSS into shell/layout/chat/motion files to avoid the 1200-line file limit blocking further UI work.
+- Split the Image4 UI CSS into shell/layout/chat/motion files to avoid the then-1200-line file limit blocking further UI work.
 - Aligned the composer mic and send controls to the textarea center line.
 - Softened the realtime signal's scan glow so the white light no longer sits apart from the background.
 - Reduced the dial's rotating tick/arc layers so the halo no longer reads as oversized.

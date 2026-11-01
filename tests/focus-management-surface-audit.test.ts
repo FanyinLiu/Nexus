@@ -51,6 +51,16 @@ export function SettingsDrawer() {
   )
 }
 `,
+  'src/components/settingsDrawer/SettingsDrawerHeader.tsx': `
+export function SettingsDrawerHeader() {
+  return <button type="button" role="menuitemradio" aria-checked={isActive} tabIndex={isActive ? 0 : -1} />
+}
+`,
+  'src/components/settingsDrawer/SettingsDrawerHomePage.tsx': `
+export function SettingsDrawerHomePage() {
+  return <SettingsHomeView />
+}
+`,
   'src/components/SettingsDrawerV2.tsx': `
 export function SettingsDrawerV2() {
   onReturnToSettingsHome(false)

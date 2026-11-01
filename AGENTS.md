@@ -59,7 +59,7 @@ Verified against the tree at v0.4.8 (2026-10). Canonical gate: `npm run verify:p
   components PascalCase (`SettingsDrawer.tsx`), scripts kebab-case
   (`source-size-audit.mjs`).
 - **FILE-2** A source file MUST NOT exceed its `source-size:audit` budget (default
-  1200 lines). Files SHOULD be split once past ~600 lines.
+  800 lines). Files SHOULD be split once past ~600 lines.
 - **FILE-3** Complex assemblies MUST be built as one exported factory
   `createXxx(deps)` with an explicit dependency bag. Hidden closure capture across
   module boundaries is prohibited. *Exemplar: `src/hooks/chat/sendMessage.ts`.*

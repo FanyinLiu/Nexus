@@ -1,29 +1,20 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useModalFocusTrap } from '../hooks/useModalFocusTrap.ts'
 import {
-  getMemorySearchModeOptions,
-  getSettingsThemeTone,
-  getSettingsSectionOptions,
   normalizeSettingsSectionId,
-  SETTINGS_APPEARANCE_OPTIONS,
-  type ConnectionResult,
   type SettingsSectionId,
 } from './settingsDrawerSupport.ts'
 import {
   switchSpeechOutputProvider,
   switchTextProvider,
-  UI_LANGUAGE_OPTIONS,
 } from '../lib/index.ts'
 import {
   getDefaultCompanionName,
   getDefaultUserName,
   isLocaleDefaultCompanionName,
   isLocaleDefaultUserName,
-  pickTranslatedUiText,
 } from '../lib/uiLanguage.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
-import type { PetModelDefinition } from '../features/pet/index.ts'
-import type { ReminderTaskDraftInput } from '../features/reminders/index.ts'
 import { useTheme } from '../features/themes/index.ts'
 import { syncWakeWordWithCompanionNameChange } from '../features/hearing/companionWakeWordSync.ts'
 import { voiceFieldsFollowingUiLanguage } from '../features/voiceProfile/voiceLanguages.ts'
@@ -35,8 +26,10 @@ import {
 } from '../features/voice/voiceCaptureAttempt.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from './SettingsDrawerActiveSection.tsx'
 import { SettingsSimplePages } from './settingsSimple/SettingsSimplePages.tsx'
-import { SettingsHomeView } from './SettingsHomeView.tsx'
-import type { ChatMemoryTraceFocusTarget } from '../features/memory/traceDetails.ts'
+import { SettingsDrawerHeader } from './settingsDrawer/SettingsDrawerHeader.tsx'
+import { useSettingsDrawerViewModel } from './settingsDrawer/useSettingsDrawerViewModel.ts'
+import { SettingsDrawerHomePage } from './settingsDrawer/SettingsDrawerHomePage.tsx'
+import { SettingsDrawerSectionPage } from './settingsDrawer/SettingsDrawerSectionPage.tsx'
 import {
   useConnectionTests,
   useSpeechVoiceManagement,
@@ -49,18 +42,8 @@ import {
 } from './settingsDrawerHooks/index.ts'
 import { ConfirmDialog } from './ConfirmDialog.tsx'
 import { useConfirm } from './useConfirm.ts'
-import { PetControlIcon } from './PetControlIcon.tsx'
-import { renderSettingsCardIcon } from './settingsDrawerIcons.tsx'
 import { SettingsActionBar } from './settingsFields.tsx'
-import {
-  buildSettingsSectionMeta,
-  getSettingsTrustSurfaceGroupId,
-} from './settingsDrawerMetadata.ts'
-import {
-  compareSettingsHomeSections,
-  SETTINGS_HOME_GROUPS,
-  type SettingsHomeActionEntry,
-} from './settingsHomeArchitecture.ts'
+import type { SettingsHomeActionEntry } from './settingsHomeArchitecture.ts'
 import { applyConnectionTestRepairDraft } from '../features/models/connectionRepair.ts'
 import {
   clearRecentCompanionCheckInDecision,
@@ -69,117 +52,10 @@ import {
 import { buildSettingsSavePayload } from './settingsDrawerHooks/settingsDraftModel.ts'
 import { commitSettingsDraft } from './settingsSaveEffects.ts'
 import { SettingsDrawerV2 } from './SettingsDrawerV2.tsx'
-import type {
-  AppSettings,
-  DailyMemoryEntry,
-  DebugConsoleEvent,
-  MemoryItem,
-  PlatformProfile,
-  ReminderTask,
-  ServiceConnectionCapability,
-  SpeechLevelSource,
-  SpeechVoiceListResponse,
-  VoicePipelineState,
-  VoiceState,
-  VoiceTraceEntry,
-} from '../types/index.ts'
+import type { SettingsDrawerProps } from './settingsDrawer/settingsDrawerProps.ts'
+import type { AppSettings } from '../types/index.ts'
 
-export type SettingsDrawerProps = {
-  open: boolean
-  preferredSectionId?: SettingsSectionId | null
-  memoryFocus?: ChatMemoryTraceFocusTarget | null
-  settings: AppSettings
-  platformProfile: PlatformProfile
-  chatMessageCount: number
-  chatBusy: boolean
-  currentChatSessionId?: string
-  memories: MemoryItem[]
-  dailyMemoryEntries: DailyMemoryEntry[]
-  petModelPresets: PetModelDefinition[]
-  petModelPresetsReady: boolean
-  reminderTasks: ReminderTask[]
-  voiceState: VoiceState
-  continuousVoiceActive: boolean
-  liveTranscript: string
-  speechLevelSource: SpeechLevelSource
-  voicePipeline: VoicePipelineState
-  voiceTrace: VoiceTraceEntry[]
-  debugConsoleEvents: DebugConsoleEvent[]
-  onClose: () => void
-  onStartVoiceConversation: () => void
-  onStopVoiceConversation: () => void
-  onCancelVoiceTurn: () => void
-  onSave: (
-    settings: AppSettings,
-    baseline: AppSettings,
-    options?: { closeSettings?: boolean; vaultFree?: boolean },
-  ) => Promise<AppSettings>
-  onExportChatHistory: () => Promise<{
-    canceled: boolean
-    filePath?: string
-    message: string
-  }>
-  onImportChatHistory: () => Promise<{
-    canceled: boolean
-    filePath?: string
-    message: string
-  }>
-  onClearChatHistory: () => Promise<{
-    canceled: boolean
-    message: string
-  }>
-  onExportMemoryArchive: () => Promise<{
-    canceled: boolean
-    filePath?: string
-    message: string
-  }>
-  onImportMemoryArchive: () => Promise<{
-    canceled: boolean
-    filePath?: string
-    message: string
-  }>
-  onClearMemoryArchive: () => Promise<{
-    canceled: boolean
-    message: string
-  }>
-  onAddManualMemory: (content: string) => void
-  onUpdateMemory: (id: string, content: string) => void
-  onPatchMemory?: (
-    id: string,
-    patch: Partial<Pick<import('../types').MemoryItem, 'content' | 'loopStatus' | 'loopDueAt' | 'loopDueText' | 'loopSnoozeUntil' | 'pinned' | 'userEdited' | 'importance'>>,
-  ) => void
-  onSetMemoryEnabled: (id: string, enabled: boolean) => void
-  onCommitMemoryPaused: (paused: boolean) => void
-  onRemoveMemory: (id: string) => void
-  onClearDailyMemory: () => void
-  onUpdateDailyEntry?: (id: string, day: string, content: string) => void
-  onRemoveDailyEntry?: (id: string, day: string) => void
-  onAddReminderTask: (input: ReminderTaskDraftInput) => void
-  onUpdateReminderTask: (
-    id: string,
-    updates: Partial<Omit<ReminderTask, 'id' | 'createdAt'>>,
-  ) => void
-  onRemoveReminderTask: (id: string) => void
-  onImportPetModel: () => Promise<import('../features/pet').PetModelImportResult | null>
-  onSelectImportedPetModel?: (petModelId: string) => Promise<void> | void
-  onTestConnection: (
-    capability: ServiceConnectionCapability,
-    settings: AppSettings,
-  ) => Promise<ConnectionResult>
-  onLoadSpeechVoices: (settings: AppSettings) => Promise<SpeechVoiceListResponse>
-  onPreviewSpeech: (settings: AppSettings, text: string) => Promise<{
-    message: string
-  }>
-  onRunAudioSmokeTest: (settings: AppSettings) => Promise<ConnectionResult>
-  onClearDebugConsole: () => void
-  onOpenOnboardingGuide: () => void
-  // Notification channels (optional — only present when autonomy is wired)
-  notificationChannels?: import('../types').NotificationChannel[]
-  notificationChannelsLoading?: boolean
-  onAddNotificationChannel?: (draft: Omit<import('../types').NotificationChannel, 'id'>) => Promise<void>
-  onUpdateNotificationChannel?: (id: string, patch: Partial<import('../types').NotificationChannel>) => Promise<void>
-  onRemoveNotificationChannel?: (id: string) => Promise<void>
-}
+export type { SettingsDrawerProps } from './settingsDrawer/settingsDrawerProps.ts'
 
 export function SettingsDrawer({
   open,
@@ -259,7 +135,6 @@ export function SettingsDrawer({
   const themePreview = useTheme()
   const settingsDialogRef = useRef<HTMLElement | null>(null)
   const settingsOpenerRef = useRef<HTMLElement | null>(null)
-  const appearanceOptionRefs = useRef<Array<HTMLButtonElement | null>>([])
   const settingsHomeCardRefs = useRef<Partial<Record<SettingsSectionId, HTMLButtonElement | null>>>({})
   const drawerBodyRef = useRef<HTMLDivElement | null>(null)
   const settingsSectionsRef = useRef<HTMLDivElement | null>(null)
@@ -292,19 +167,7 @@ export function SettingsDrawer({
       console.error('[settings] Failed to load locale:', locale, getRedactedLogErrorMessage(error))
     },
   })
-  const {
-    languageMenuOpen,
-    selectedLanguageIndex,
-    languageMenuId,
-    languageButtonRef,
-    languageMenuRef,
-    languageOptionRefs,
-    openLanguageMenuAt,
-    closeLanguageMenuAndRestoreFocus,
-    handleLanguageButtonKeyDown,
-    handleLanguageMenuItemKeyDown,
-    handleSelectLanguage,
-  } = languageControl
+  const { handleSelectLanguage } = languageControl
 
   function restoreSettingsOpenerFocus(afterFocus?: () => void) {
     const opener = settingsOpenerRef.current
@@ -383,105 +246,33 @@ export function SettingsDrawer({
     setDraft,
   })
 
-  const petModel = petModelPresets.find((preset) => preset.id === draft.petModelId) ?? petModelPresets[0]
-
-  const uiLanguage = draft.uiLanguage
-  const ti = useCallback((
-    key: Parameters<typeof pickTranslatedUiText>[1],
-    params?: Parameters<typeof pickTranslatedUiText>[2],
-  ) => pickTranslatedUiText(uiLanguage, key, params), [uiLanguage])
-  const memorySearchModeOptions = useMemo(
-    () => getMemorySearchModeOptions(uiLanguage),
-    [uiLanguage],
-  )
-  const settingsSectionOptions = useMemo(
-    () => getSettingsSectionOptions(uiLanguage),
-    [uiLanguage],
-  )
-  const selectedMemorySearchMode = useMemo(
-    () => memorySearchModeOptions.find((option) => option.value === draft.memorySearchMode)
-      ?? memorySearchModeOptions[1],
-    [draft.memorySearchMode, memorySearchModeOptions],
-  )
-  const activeSectionLabel = settingsSectionOptions.find((section) => section.id === activeSectionId)?.label
-    ?? settingsSectionOptions.find((section) => section.id === normalizeSettingsSectionId(activeSectionId))?.label
-    ?? settingsSectionOptions[0].label
-  const { meta: settingsSectionMetaById } = useMemo(() => buildSettingsSectionMeta({
+  const {
+    activeSectionDescription,
+    activeSectionLabel,
+    activeSectionMeta,
+    memorySearchModeOptions,
+    petModel,
+    selectedMemorySearchMode,
+    settingsBackdropClassName,
+    settingsDrawerClassName,
+    settingsHomeGroups,
+    settingsSectionMetaById,
+    settingsSectionOptions,
     ti,
     uiLanguage,
-    draft,
-    petModel,
-    memories,
-    dailyMemoryEntries,
+  } = useSettingsDrawerViewModel({
+    activeSectionId,
     chatMessageCount,
-    liveTranscript,
-    debugConsoleEvents,
-    continuousVoiceActive,
     clickThroughEnabled: windowState.petWindowState.clickThrough,
-  }), [
-    chatMessageCount,
     continuousVoiceActive,
     dailyMemoryEntries,
     debugConsoleEvents,
     draft,
     liveTranscript,
     memories,
-    petModel,
-    ti,
-    uiLanguage,
-    windowState.petWindowState.clickThrough,
-  ])
-  const settingsHomeCards = useMemo(() => settingsSectionOptions.map((section) => {
-    const sectionMeta = settingsSectionMetaById[section.id]
-
-    return {
-      key: section.id,
-      sectionId: section.id,
-      title: section.label,
-      eyebrow: sectionMeta.eyebrow,
-      description: sectionMeta.description,
-      glyph: sectionMeta.glyph,
-      preview: sectionMeta.preview,
-      trustGroup: getSettingsTrustSurfaceGroupId(section.id),
-    }
-  }), [settingsSectionMetaById, settingsSectionOptions])
-  const settingsHomeCardsBySectionId = useMemo(
-    () => new Map(settingsHomeCards.map((card) => [card.sectionId, card])),
-    [settingsHomeCards],
-  )
-  const settingsHomeGroups = useMemo(() => SETTINGS_HOME_GROUPS.map((group) => ({
-    ...group,
-    cards: group.sectionIds
-      .map((sectionId) => settingsHomeCardsBySectionId.get(sectionId))
-      .filter((card): card is (typeof settingsHomeCards)[number] => Boolean(card))
-      .sort((first, second) => compareSettingsHomeSections(group.sectionIds, first, second)),
-  })).filter((group) => group.cards.length || group.actions?.length), [settingsHomeCardsBySectionId])
-  const activeSectionMeta = settingsSectionMetaById[activeSectionId]
-  const activeSectionDescription = activeSectionMeta.description
-  const settingsThemeTone = getSettingsThemeTone(draft.themeId, draft.themeColorScheme)
-  const selectedAppearanceIndex = Math.max(
-    0,
-    SETTINGS_APPEARANCE_OPTIONS.findIndex((option) => option.id === draft.themeId),
-  )
-  const settingsUsesDarkChrome = settingsThemeTone === 'black' || settingsThemeTone === 'night'
-  const settingsBackdropClassName = [
-    'settings-backdrop sb',
-    settingsUsesDarkChrome ? 'settings-backdrop--night sb-night' : 'settings-backdrop--day sb-day',
-    settingsThemeTone === 'black' ? 'settings-backdrop--black sb-black' : '',
-    settingsUsesDarkChrome ? '' : 'settings-backdrop--light sb-light',
-    settingsThemeTone === 'warm-day' ? 'settings-backdrop--warm-day sb-warm' : '',
-  ].filter(Boolean).join(' ')
-  const settingsDrawerClassName = [
-    'settings-drawer sd',
-    settingsView === 'home' ? 'settings-drawer--home sd-home' : 'settings-drawer--section sd-section',
-    settingsUsesDarkChrome ? 'settings-drawer--night sd-night' : 'settings-drawer--day sd-day',
-    settingsThemeTone === 'black' ? 'settings-drawer--black sd-black' : '',
-    settingsUsesDarkChrome ? '' : 'settings-drawer--light sd-light',
-    !settingsUsesDarkChrome && settingsView !== 'home' ? 'settings-drawer--light-section sd-light-section' : '',
-    settingsThemeTone === 'warm-day' ? 'settings-drawer--warm-day sd-warm' : '',
-    settingsThemeTone === 'warm-day' && settingsView !== 'home' ? 'settings-drawer--warm-section sd-warm-section' : '',
-    settingsThemeTone === 'day' && settingsView !== 'home' ? 'settings-drawer--day-section sd-day-section' : '',
-  ].filter(Boolean).join(' ')
+    petModelPresets,
+    settingsView,
+  })
   // Adjust-on-transition (React docs pattern) replacing effect-body setState:
   // when the drawer toggles or the preferred section changes while open,
   // derive the view/section state during render. Ref writes and external
@@ -566,53 +357,6 @@ export function SettingsDrawer({
       return switchSpeechOutputProvider(prev, providerId)
     })
     speechVoices.applySpeechOutputPreset(providerId)
-  }
-
-  function focusAppearanceOption(index: number) {
-    window.requestAnimationFrame(() => {
-      appearanceOptionRefs.current[index]?.focus()
-    })
-  }
-
-  function selectAppearanceOption(index: number) {
-    const option = SETTINGS_APPEARANCE_OPTIONS[index]
-    if (!option) return
-
-    setDraft((prev) => ({
-      ...prev,
-      themeId: option.id,
-    }))
-    themePreview.previewTheme(option.id)
-  }
-
-  function handleAppearanceOptionKeyDown(
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) {
-    let nextIndex: number
-
-    switch (event.key) {
-      case 'ArrowRight':
-      case 'ArrowDown':
-        nextIndex = (index + 1) % SETTINGS_APPEARANCE_OPTIONS.length
-        break
-      case 'ArrowLeft':
-      case 'ArrowUp':
-        nextIndex = (index - 1 + SETTINGS_APPEARANCE_OPTIONS.length) % SETTINGS_APPEARANCE_OPTIONS.length
-        break
-      case 'Home':
-        nextIndex = 0
-        break
-      case 'End':
-        nextIndex = SETTINGS_APPEARANCE_OPTIONS.length - 1
-        break
-      default:
-        return
-    }
-
-    event.preventDefault()
-    selectAppearanceOption(nextIndex)
-    focusAppearanceOption(nextIndex)
   }
 
   async function handleDismiss() {
@@ -877,33 +621,6 @@ export function SettingsDrawer({
     )
   }
 
-  function renderSettingsSectionNav() {
-    return (
-      <nav className="settings-section-nav" aria-label={ti('settings.title')}>
-        {settingsSectionOptions.map((section) => {
-          const isActive = section.id === activeSectionId
-          const sectionMeta = settingsSectionMetaById[section.id]
-
-          return (
-            <button
-              key={section.id}
-              type="button"
-              className={`settings-section-nav__button ${isActive ? 'is-active' : ''}`}
-              data-section={section.id}
-              aria-current={isActive ? 'page' : undefined}
-              onClick={() => handleOpenSettingsSection(section.id)}
-            >
-              <span className="settings-section-nav__marker" aria-hidden="true">
-                {renderSettingsCardIcon(sectionMeta.glyph)}
-              </span>
-              <span className="settings-section-nav__label">{section.label}</span>
-            </button>
-          )
-        })}
-      </nav>
-    )
-  }
-
   if (!open) return null
 
   if (new URLSearchParams(window.location.search).get('uiV2') !== '0') {
@@ -953,173 +670,49 @@ export function SettingsDrawer({
         onKeyDown={handleSettingsDialogKeyDown}
         onClick={(event) => event.stopPropagation()}
       >
-        <div
-          className="settings-drawer__header sdh"
-          // Body and header share z-index:1; later body paints over the absolute
-          // language menu. Elevate only while the menu is open so menuitemradio
-          // clicks hit the options instead of settings-home-presence.
-          style={languageMenuOpen ? { zIndex: 5 } : undefined}
-        >
-          <div className="settings-drawer__header-main sdhm">
-            <div className="settings-drawer__title-stack sdt">
-              <h3 className="settings-drawer__window-title">
-                <span className="settings-drawer__window-title-name">
-                  {ti('settings.title')}
-                </span>
-                <span className="settings-drawer__window-title-label">
-                  {settingsView === 'home' ? draft.companionName : activeSectionLabel}
-                </span>
-              </h3>
-            </div>
-
-            <div className="settings-drawer__toolbar sdtb">
-              <div className="settings-drawer__language-control" ref={languageMenuRef}>
-                <button
-                  ref={languageButtonRef}
-                  type="button"
-                  className="settings-drawer__language-button"
-                  aria-haspopup="menu"
-                  aria-expanded={languageMenuOpen}
-                  aria-controls={languageMenuId}
-                  aria-label={ti('settings.language_menu.aria_label')}
-                  title={ti('settings.language_menu.aria_label')}
-                  onClick={() => {
-                    if (languageMenuOpen) {
-                      closeLanguageMenuAndRestoreFocus()
-                      return
-                    }
-                    openLanguageMenuAt(selectedLanguageIndex)
-                  }}
-                  onKeyDown={handleLanguageButtonKeyDown}
-                >
-                  <svg
-                    className="settings-drawer__language-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M3 12h18" />
-                    <path d="M12 3c2.8 3.2 4.2 6.2 4.2 9s-1.4 5.8-4.2 9c-2.8-3.2-4.2-6.2-4.2-9S9.2 6.2 12 3z" />
-                  </svg>
-                </button>
-                {languageMenuOpen ? (
-                  <ul
-                    id={languageMenuId}
-                    className="settings-drawer__language-menu"
-                    role="menu"
-                    aria-label={ti('settings.language_menu.aria_label')}
-                  >
-                    {UI_LANGUAGE_OPTIONS.map((option, optionIndex) => {
-                      const isActive = option.value === draft.uiLanguage
-                      return (
-                        <li key={option.value} role="none">
-                          <button
-                            ref={(node) => {
-                              languageOptionRefs.current[optionIndex] = node
-                            }}
-                            type="button"
-                            role="menuitemradio"
-                            aria-checked={isActive}
-                            tabIndex={isActive ? 0 : -1}
-                            className={
-                              'settings-drawer__language-menu-item'
-                              + (isActive ? ' settings-drawer__language-menu-item--active' : '')
-                            }
-                            onClick={() => {
-                              handleSelectLanguage(option.value)
-                            }}
-                            onKeyDown={(event) => handleLanguageMenuItemKeyDown(event, optionIndex)}
-                          >
-                            <span className="settings-drawer__language-menu-native">
-                              {option.nativeLabel}
-                            </span>
-                            {option.nativeLabel !== option.englishLabel ? (
-                              <span className="settings-drawer__language-menu-meta">
-                                {option.englishLabel}
-                              </span>
-                            ) : null}
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                className="settings-drawer__icon-button settings-drawer__icon-button--danger"
-                onClick={handleDismiss}
-                aria-label={ti('common.close')}
-                title={ti('common.close')}
-              >
-                <PetControlIcon name="close" />
-              </button>
-            </div>
-          </div>
-        </div>
+        <SettingsDrawerHeader
+          activeSectionLabel={activeSectionLabel}
+          companionName={draft.companionName}
+          language={draft.uiLanguage}
+          languageControl={languageControl}
+          settingsView={settingsView}
+          ti={ti}
+          onDismiss={handleDismiss}
+        />
 
         <div className="settings-drawer__body sdb" ref={drawerBodyRef}>
           {settingsView === 'home' ? (
-            <SettingsHomeView
-              appearanceOptionRefs={appearanceOptionRefs}
+            <SettingsDrawerHomePage
               groups={settingsHomeGroups}
               presence={{
                 badge: ti('settings.home.presence.badge'),
                 title: ti('settings.home.presence.title'),
                 body: ti('settings.home.presence.body'),
               }}
-              selectedAppearanceIndex={selectedAppearanceIndex}
               settingsHomeCardRefs={settingsHomeCardRefs}
+              themeId={draft.themeId}
               ti={ti}
-              onAppearanceOptionKeyDown={handleAppearanceOptionKeyDown}
               onOpenHomeAction={handleOpenSettingsHomeAction}
               onOpenSettingsSection={handleOpenSettingsSection}
-              onSelectAppearanceOption={selectAppearanceOption}
+              onPreviewTheme={themePreview.previewTheme}
+              setDraft={setDraft}
             />
           ) : (
-            <div className="settings-page sp" data-section={activeSectionId}>
-              <div className="settings-page__layout">
-                {renderSettingsSectionNav()}
-
-                <div className="settings-page__main">
-                  <div className="settings-page__header sphd">
-                    <button
-                      type="button"
-                      className="settings-page__back"
-                      onClick={() => handleReturnToSettingsHome()}
-                      aria-label={ti('settings.page.back')}
-                      title={ti('settings.page.back')}
-                    >
-                      <PetControlIcon name="back" />
-                      <span>{ti('settings.page.back')}</span>
-                    </button>
-
-                    <div className="settings-page__headline sph">
-                      {activeSectionMeta.eyebrow && activeSectionMeta.eyebrow !== activeSectionLabel ? (
-                        <p className="eyebrow">{activeSectionMeta.eyebrow}</p>
-                      ) : null}
-                      <h4 ref={activeSectionHeadingRef} tabIndex={-1}>{activeSectionLabel}</h4>
-                      {activeSectionDescription ? (
-                        <p className="settings-section__note">{activeSectionDescription}</p>
-                      ) : null}
-                    </div>
-
-                    <span className="settings-page__mark" aria-hidden="true">
-                      {renderSettingsCardIcon(activeSectionMeta.glyph)}
-                    </span>
-                  </div>
-
-                  <div className="settings-drawer__content sdc settings-drawer__sections" ref={settingsSectionsRef}>
-                    {renderActiveSettingsSection()}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SettingsDrawerSectionPage
+              activeSectionDescription={activeSectionDescription}
+              activeSectionHeadingRef={activeSectionHeadingRef}
+              activeSectionId={activeSectionId}
+              activeSectionLabel={activeSectionLabel}
+              activeSectionMeta={activeSectionMeta}
+              onBack={() => handleReturnToSettingsHome()}
+              onOpenSettingsSection={handleOpenSettingsSection}
+              options={settingsSectionOptions}
+              sectionMetaById={settingsSectionMetaById}
+              sectionsRef={settingsSectionsRef}
+              ti={ti}
+            >
+              {renderActiveSettingsSection()}
+            </SettingsDrawerSectionPage>
           )}
         </div>
 

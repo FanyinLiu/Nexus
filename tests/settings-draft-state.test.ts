@@ -81,13 +81,17 @@ test('SettingsDrawer delegates draft normalization to useSettingsDraftState', as
     new URL('../src/components/settingsDrawerHooks/useSettingsDraftState.ts', import.meta.url),
     'utf8',
   )
+  const drawerPropsSource = await readFile(
+    new URL('../src/components/settingsDrawer/settingsDrawerProps.ts', import.meta.url),
+    'utf8',
+  )
 
   assert.match(drawerSource, /useSettingsDraftState\(settings\)/)
   assert.match(drawerSource, /createSavePayload/)
   assert.match(drawerSource, /mergeHydratedSecrets\(settings\)/)
   assert.match(drawerSource, /ensurePetModelPreset\(petModelPresets\)/)
   assert.match(draftStateSource, /return \{[\s\S]*baseline,/)
-  assert.match(drawerSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean; vaultFree\?: boolean \},\s*\) => Promise<AppSettings>/)
+  assert.match(drawerPropsSource, /onSave: \(\s*settings: AppSettings,\s*baseline: AppSettings,\s*options\?: \{ closeSettings\?: boolean; vaultFree\?: boolean \},\s*\) => Promise<AppSettings>/)
   assert.match(drawerSource, /committed: baselineAtSave,[\s\S]*onSave: async \(nextDraft\) => \{[\s\S]*onSave\(nextDraft, baselineAtSave, options\)[\s\S]*rememberSavedSettings\(persisted, nextDraft\)/)
   assert.equal(drawerSource.includes('clampPresenceIntervalMinutes'), false)
 })
