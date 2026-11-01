@@ -3,3 +3,9 @@
 # (Windows core.autocrlf=true) would make the seed disagree with the bundled
 # copy, so pin the seed text to LF on every platform.
 src/features/autonomy/v2/personas/** text eol=lf
+
+# src/types/generated/desktopPetBridge.generated.ts is compared byte-for-byte
+# against generator output. A CRLF checkout (Windows core.autocrlf=true) would
+# make the checked-in copy disagree with the LF generator output, so pin the
+# generated types to LF on every platform.
+src/types/generated/** text eol=lf
