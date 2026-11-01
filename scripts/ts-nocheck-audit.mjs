@@ -2,11 +2,13 @@
 
 // Baseline gate for main-process JavaScript opt-outs. Every electron/**/*.js
 // file is type-checked by tsconfig.electron.json; a file may only escape that
-// check through an explicit `// @ts-nocheck` recorded here. The list may shrink
-// but never grow: a new opt-out or an increased count fails the audit.
+// check through an explicit `// @ts-nocheck` recorded here. The baseline must
+// match the actual opt-outs exactly: a new opt-out (a file opting out without
+// an entry) fails, and a stale entry (an entry whose file no longer opts out)
+// fails too, with the exact entries to remove and the resulting count.
 //
-// Equal-or-fewer is the rule, so deleting an entry is a separate manual step
-// once the file is fixed. The audit prints a hint when that cleanup is due.
+// Both directions are enforced, so fixing a file and removing its entry belong
+// to the same change; the list is the measured debt, never a parking lot.
 
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -37,7 +39,6 @@ export const TS_NOCHECK_BASELINE = [
   'electron/petLocomotion.js',
   'electron/petWindowInstances.js',
   'electron/platformProfile.js',
-  'electron/preload.js',
   'electron/rendererServer.js',
   'electron/runtimeLogSanitizer.js',
   'electron/searchContentExtract.js',
@@ -164,8 +165,9 @@ export function hasTsNocheckDirective(source) {
 
 /**
  * Compare the electron files that currently carry `// @ts-nocheck` against the
- * hardcoded baseline. Passing requires no new opt-out and a count no higher
- * than the baseline. Fixing a file produces a hint, not a failure.
+ * hardcoded baseline. Passing requires an exact match: an opt-out missing from
+ * the baseline and a baseline entry whose file no longer opts out both fail,
+ * each with its own error list.
  * @param {string} [root]
  * @param {{ baseline?: readonly string[] }} [options]
  * @returns {object}
@@ -183,10 +185,7 @@ export function buildTsNocheckReport(root = ROOT, { baseline = TS_NOCHECK_BASELI
     ? [{ current: currentFiles.length, baseline: baselineFiles.length }]
     : []
 
-  const errors = { unexpectedOptOuts, baselineExceeded }
-  const hints = staleBaselineEntries.map(
-    (file) => `${file} no longer has ${DIRECTIVE}; remove it from TS_NOCHECK_BASELINE.`,
-  )
+  const errors = { unexpectedOptOuts, baselineExceeded, staleBaselineEntries }
 
   return {
     checkedFiles: files.length,
@@ -200,7 +199,6 @@ export function buildTsNocheckReport(root = ROOT, { baseline = TS_NOCHECK_BASELI
     },
     unexpectedOptOuts,
     staleBaselineEntries,
-    hints,
     errors,
     summary: {
       ...buildSummary(errors),
@@ -233,11 +231,13 @@ function formatHumanReport(report) {
     if (name === 'baselineExceeded' && items.length) {
       lines.push(`  current=${items[0].current} baseline=${items[0].baseline}`)
     }
-  }
-  if (report.hints.length) {
-    lines.push('')
-    lines.push(`HINT ${report.hints.length} fixed file(s) still in the baseline:`)
-    lines.push(`  ${report.hints.slice(0, 8).join('\n  ')}`)
+    if (name === 'staleBaselineEntries' && items.length) {
+      const target = report.baseline.count - items.length
+      const noun = items.length === 1 ? 'entry' : 'entries'
+      lines.push(
+        `  remove ${items.length} stale ${noun} from TS_NOCHECK_BASELINE so the baseline drops to ${target}: ${items.slice(0, 8).join(', ')}`,
+      )
+    }
   }
   lines.push('')
   lines.push(`Summary: ok=${report.summary.ok} errors=${report.summary.errors}`)
