@@ -19,6 +19,7 @@ import {
   serializeRuntimeLogEntry,
 } from './runtimeLogSanitizer.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
+import { mainT } from './mainMessages.js'
 import {
   applyPetWindowInstances,
   configurePetWindowInstances,
@@ -344,19 +345,19 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
 
   const menu = Menu.buildFromTemplate([
     {
-      label: '对话',
+      label: mainT('menu.chat'),
       click: () => {
         showPanelWindow('chat')
       },
     },
     {
-      label: '设置',
+      label: mainT('menu.settings'),
       click: () => {
         showPanelWindow('settings', { settingsReturnTarget: 'pet' })
       },
     },
     {
-      label: '重置位置',
+      label: mainT('menu.resetPosition'),
       click: () => {
         if (!mainWindow || mainWindow.isDestroyed()) return
         const { workArea } = screen.getPrimaryDisplay()
@@ -370,13 +371,13 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
       type: 'separator',
     },
     {
-      label: '隐藏桌宠',
+      label: mainT('menu.hidePet'),
       click: () => {
         mainWindow?.hide()
       },
     },
     {
-      label: '退出',
+      label: mainT('menu.quit'),
       click: () => {
         app.quit()
       },
@@ -392,25 +393,25 @@ export function createApplicationMenu() {
       {
         label: app.name,
         submenu: [
-          { label: `关于 ${app.name}`, role: 'about' },
+          { label: mainT('menu.about', { appName: app.name }), role: 'about' },
           { type: 'separator' },
-          { label: '隐藏', role: 'hide' },
-          { label: '隐藏其他', role: 'hideOthers' },
-          { label: '显示全部', role: 'unhide' },
+          { label: mainT('menu.hide'), role: 'hide' },
+          { label: mainT('menu.hideOthers'), role: 'hideOthers' },
+          { label: mainT('menu.unhide'), role: 'unhide' },
           { type: 'separator' },
-          { label: '退出', role: 'quit' },
+          { label: mainT('menu.quit'), role: 'quit' },
         ],
       },
       {
-        label: '编辑',
+        label: mainT('menu.edit'),
         submenu: [
-          { label: '撤销', role: 'undo' },
-          { label: '重做', role: 'redo' },
+          { label: mainT('menu.undo'), role: 'undo' },
+          { label: mainT('menu.redo'), role: 'redo' },
           { type: 'separator' },
-          { label: '剪切', role: 'cut' },
-          { label: '复制', role: 'copy' },
-          { label: '粘贴', role: 'paste' },
-          { label: '全选', role: 'selectAll' },
+          { label: mainT('menu.cut'), role: 'cut' },
+          { label: mainT('menu.copy'), role: 'copy' },
+          { label: mainT('menu.paste'), role: 'paste' },
+          { label: mainT('menu.selectAll'), role: 'selectAll' },
         ],
       },
     ]
@@ -423,7 +424,7 @@ export function createApplicationMenu() {
       label: 'Nexus',
       submenu: [
         {
-          label: '显示桌宠',
+          label: mainT('menu.showPet'),
           click: () => {
             if (panelWindow && !panelWindow.isDestroyed()) panelWindow.hide()
             if (!mainWindow || mainWindow.isDestroyed()) {
@@ -436,19 +437,19 @@ export function createApplicationMenu() {
           },
         },
         {
-          label: '打开面板',
+          label: mainT('menu.openPanel'),
           click: () => {
             showPanelWindow('chat')
           },
         },
         {
-          label: '设置',
+          label: mainT('menu.settings'),
           click: () => {
             showPanelWindow('settings')
           },
         },
         { type: 'separator' },
-        { label: '退出', role: 'quit' },
+        { label: mainT('menu.quit'), role: 'quit' },
       ],
     },
     { role: 'editMenu' },
@@ -523,26 +524,26 @@ export function createTray() {
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '显示桌宠',
+      label: mainT('menu.showPet'),
       click: () => {
         mainWindow?.show()
         mainWindow?.moveTop()
       },
     },
     {
-      label: '打开面板',
+      label: mainT('menu.openPanel'),
       click: () => {
         showPanelWindow('chat')
       },
     },
     {
-      label: '设置',
+      label: mainT('menu.settings'),
       click: () => {
         showPanelWindow('settings')
       },
     },
     {
-      label: '退出',
+      label: mainT('menu.quit'),
       click: () => {
         app.quit()
       },

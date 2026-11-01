@@ -110,8 +110,11 @@ export function isFailoverEligibleError(error: unknown) {
     return false
   }
 
+  // Configuration errors are permanent for the configured provider, so the
+  // localized equivalents must disqualify failover in every locale the main
+  // process speaks; otherwise a translated config error rotates providers.
   return !(
-    /请先填写|未连接桌面客户端|没有可播报的文本|没有可用的音频轨道|关键词不能为空|模型名|API Key|模型返回了空内容|状态码：(?:400|404)/u.test(message)
+    /请先填写|未连接桌面客户端|没有可播报的文本|没有可用的音频轨道|关键词不能为空|模型名|API Key|API Base URL|voice_id|模型返回了空内容|状态码：(?:400|404)|沒有可朗讀的文字內容。|There is no text to speak\.|読み上げるテキストがありません。|읽어 줄 텍스트가 없어요\./u.test(message)
   )
 }
 

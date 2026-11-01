@@ -1,6 +1,7 @@
 import { dialog, shell, systemPreferences } from 'electron'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { mainT } from '../mainMessages.js'
 
 const SETTINGS_URLS = {
   microphone: 'ms-settings:privacy-microphone',
@@ -17,7 +18,7 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }) {
     title,
     message,
     detail,
-    buttons: ['打开系统设置', '稍后'],
+    buttons: [mainT('permission.openSettings'), mainT('permission.later')],
     defaultId: 0,
     cancelId: 1,
     noLink: true,
@@ -41,16 +42,16 @@ async function ensureWindowsMediaPermission(kind) {
     if (status === 'denied' || status === 'restricted') {
       if (kind === 'microphone') {
         await promptOpenSettings({
-          title: 'Nexus 需要麦克风权限',
-          message: 'Windows 的麦克风访问当前被禁用。',
-          detail: '请在 Windows 设置 → 隐私和安全性 → 麦克风 中允许桌面应用访问麦克风，然后重启 Nexus。',
+          title: mainT('permission.microphoneTitle'),
+          message: mainT('permission.windows.microphoneMessage'),
+          detail: mainT('permission.windows.microphoneDetail'),
           settingsUrl: SETTINGS_URLS.microphone,
         })
       } else if (kind === 'camera') {
         await promptOpenSettings({
-          title: 'Nexus 需要摄像头权限',
-          message: 'Windows 的摄像头访问当前被禁用。',
-          detail: '请在 Windows 设置 → 隐私和安全性 → 摄像头 中允许桌面应用访问摄像头，然后重启 Nexus。',
+          title: mainT('permission.cameraTitle'),
+          message: mainT('permission.windows.cameraMessage'),
+          detail: mainT('permission.windows.cameraDetail'),
           settingsUrl: SETTINGS_URLS.camera,
         })
       }

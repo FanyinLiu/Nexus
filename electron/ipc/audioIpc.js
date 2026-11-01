@@ -45,6 +45,7 @@ import { encodeWavFromFloat32 } from '../services/audioEncoding.js'
 import { getRedactedErrorMessage, redactSensitiveErrorText } from '../services/errorRedaction.js'
 import { extractSpeechInputText } from '../services/speechConnectionProof.js'
 import { requireTrustedSender, requireString } from './validate.js'
+import { mainT } from '../mainMessages.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
 import {
   validateAudioSynthesisPayload,
@@ -85,7 +86,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {
-      throw new Error('请先填写语音输出 API Base URL。')
+      throw new Error(mainT('audio.outputBaseUrlMissing'))
     }
 
     if (
@@ -95,7 +96,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     ) {
       return {
         voices: [],
-        message: '当前语音提供商暂未内置音色列表接口。',
+        message: mainT('audio.voiceListUnsupported'),
       }
     }
     assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
@@ -141,7 +142,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
-      throw new Error(`音色列表没能拉到，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
+      throw new Error(mainT('audio.voiceListFetchFailed', { reason }), { cause: error })
     }
 
     const data = await readJsonSafe(response)
@@ -149,7 +150,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     if (!response.ok) {
       throw new Error(
         redactSensitiveErrorText(data?.error?.message ?? data?.detail?.message ?? data?.message)
-          || `音色列表那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
+          || mainT('audio.voiceListStatus', { status: response.status }),
       )
     }
 
@@ -157,7 +158,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       if (Number(data?.base_resp?.status_code ?? 0) !== 0) {
         throw new Error(
           redactSensitiveErrorText(data?.base_resp?.status_msg ?? data?.message)
-            || 'MiniMax 音色接口返回了异常状态。',
+            || mainT('audio.minimaxVoiceListError'),
         )
       }
 
@@ -165,8 +166,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       return {
         voices,
         message: voices.length
-          ? `已拉取 ${voices.length} 个 MiniMax 音色。`
-          : 'MiniMax 音色接口已响应，但当前没有返回可选音色。',
+          ? mainT('audio.minimaxVoicesFetched', { count: voices.length })
+          : mainT('audio.minimaxVoiceListEmpty'),
       }
     }
 
@@ -179,8 +180,8 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     return {
       voices,
       message: voices.length
-        ? `已拉取 ${voices.length} 个可选音色。`
-        : '音色接口已响应，但当前没有返回可选音色。',
+        ? mainT('audio.voicesFetched', { count: voices.length })
+        : mainT('audio.voiceListEmpty'),
     }
   })
 
@@ -197,11 +198,11 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     const baseUrl = normalizeBaseUrl(payload.baseUrl)
 
     if (!baseUrl) {
-      throw new Error('请先填写语音输入 API Base URL。')
+      throw new Error(mainT('audio.inputBaseUrlMissing'))
     }
 
     if (!payload.audioBase64) {
-      throw new Error('没有收到可识别的录音数据。')
+      throw new Error(mainT('audio.transcribeAudioMissing'))
     }
 
     console.info('[audio:transcribe] request', {
@@ -219,7 +220,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     if (isVolcengineSpeechInputProvider(payload.providerId)) {
       const credentials = parseVolcengineSpeechCredentials(payload.apiKey)
       if (!credentials.appId || !credentials.accessToken) {
-        throw new Error('火山语音识别请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。')
+        throw new Error(mainT('audio.volcengineInputCredentials'))
       }
 
       endpoint = `${baseUrl}/recognize/flash`
@@ -312,7 +313,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
           }
         }
       } else {
-        throw new Error('当前语音输入提供商暂未接通。')
+        throw new Error(mainT('audio.inputProviderUnsupported'))
       }
 
       const multipart = buildMultipartBody(multipartParts)
@@ -345,7 +346,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         model: payload.model,
         reason,
       })
-      throw new Error(`没能连上语音识别接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
+      throw new Error(mainT('audio.transcribeFetchFailed', { reason }), { cause: error })
     }
 
     const data = await readJsonSafe(response)
@@ -354,12 +355,12 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       const volcStatus = getVolcengineStatus(response, data)
       if (volcStatus.code && volcStatus.code !== '20000000') {
         if (volcStatus.code === '20000003') {
-          throw new Error('这次没有听到清晰的人声，可以再说一遍。')
+          throw new Error(mainT('audio.transcribeNoSpeechDetected'))
         }
 
         throw new Error(
           redactSensitiveErrorText(volcStatus.message)
-            || `火山语音识别那边回了个状态码 ${volcStatus.code}，不太确定哪里出了问题。`,
+            || mainT('audio.volcengineTranscribeStatus', { status: volcStatus.code }),
         )
       }
     }
@@ -367,7 +368,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     if (!response.ok) {
       throw new Error(
         redactSensitiveErrorText(data?.error?.message ?? data?.detail?.message ?? data?.message)
-          || `语音识别那边回了个状态码 ${response.status}，不太确定哪里出了问题。`,
+          || mainT('audio.transcribeStatus', { status: response.status }),
       )
     }
 
@@ -376,7 +377,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     const text = extractSpeechInputText(data)
 
     if (!text) {
-      throw new Error('语音识别回来了但是没听到什么内容，可以再说一遍试试。')
+      throw new Error(mainT('audio.transcribeEmpty'))
     }
 
     console.info('[audio:transcribe] success', {
@@ -396,7 +397,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     const content = String(payload.text ?? '').trim()
 
     if (!content) {
-      throw new Error('没有可播报的文本内容。')
+      throw new Error(mainT('audio.emptyText'))
     }
 
     // Local sherpa VITS: no base URL, no credentials; WAV out.
@@ -418,7 +419,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     const volume = Number.isFinite(payload.volume) ? payload.volume : 1
 
     if (!baseUrl) {
-      throw new Error('请先填写语音输出 API Base URL。')
+      throw new Error(mainT('audio.outputBaseUrlMissing'))
     }
     assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
@@ -428,7 +429,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
 
     if (payload.providerId === 'elevenlabs-tts') {
       if (!payload.voice) {
-        throw new Error('请先填写 ElevenLabs 的 voice_id，或先完成语音克隆。')
+        throw new Error(mainT('audio.elevenLabsVoiceMissing'))
       }
 
       endpoint = `${baseUrl}/text-to-speech/${encodeURIComponent(payload.voice)}`
@@ -471,7 +472,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
     } else if (isVolcengineSpeechOutputProvider(payload.providerId)) {
       const credentials = parseVolcengineSpeechCredentials(payload.apiKey)
       if (!credentials.appId || !credentials.accessToken) {
-        throw new Error('火山语音合成请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。')
+        throw new Error(mainT('audio.volcengineOutputCredentials'))
       }
 
       /** @type {VolcengineSynthResult} */
@@ -492,7 +493,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         })
       } catch (error) {
         const reason = getRedactedErrorMessage(error)
-        throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
+        throw new Error(mainT('audio.speechFetchFailed', { reason }), { cause: error })
       }
 
       if (!result.ok) {
@@ -538,7 +539,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         ...buildAuthorizationHeaders(payload.providerId, payload.apiKey),
       }
     } else {
-      throw new Error('当前语音输出提供商暂未接通。')
+      throw new Error(mainT('audio.outputProviderUnsupported'))
     }
 
     let response
@@ -554,12 +555,12 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       })
     } catch (error) {
       const reason = getRedactedErrorMessage(error)
-      throw new Error(`没能连上语音播报接口，看看地址和网络对不对？具体原因：${reason}`, { cause: error })
+      throw new Error(mainT('audio.speechFetchFailed', { reason }), { cause: error })
     }
 
     if (!response.ok) {
       throw new Error(
-        await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'),
+        await extractResponseErrorMessage(response, mainT('audio.speechStatus', { status: response.status })),
       )
     }
 
@@ -569,13 +570,13 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       if (Number(data?.base_resp?.status_code ?? 0) !== 0) {
         throw new Error(
           redactSensitiveErrorText(data?.base_resp?.status_msg ?? data?.message)
-            || 'MiniMax 语音接口返回了异常状态。',
+            || mainT('audio.minimaxSpeechError'),
         )
       }
 
       const audioHex = String(data?.data?.audio ?? '').trim()
       if (!audioHex) {
-        throw new Error('MiniMax 语音接口没有返回可播放音频。')
+        throw new Error(mainT('audio.minimaxNoAudio'))
       }
 
       return {
@@ -589,7 +590,7 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
       const audioUrl = String(data?.output?.audio?.url ?? data?.output?.audio_url ?? '').trim()
 
       if (!audioUrl) {
-        throw new Error('百炼语音接口没有返回音频地址。')
+        throw new Error(mainT('audio.dashscopeNoAudioUrl'))
       }
 
       let audioResponse
@@ -602,12 +603,12 @@ export function register({ AUDIO_TRANSCRIBE_TIMEOUT_MS, AUDIO_VOICE_LIST_TIMEOUT
         })
       } catch (error) {
         const reason = getRedactedErrorMessage(error)
-        throw new Error(`百炼音频文件没下下来，具体原因：${reason}`, { cause: error })
+        throw new Error(mainT('audio.dashscopeDownloadFailed', { reason }), { cause: error })
       }
 
       if (!audioResponse.ok) {
         throw new Error(
-          await extractResponseErrorMessage(audioResponse, '百炼音频那边回了个状态码 ' + audioResponse.status + '，不太确定哪里出了问题。'),
+          await extractResponseErrorMessage(audioResponse, mainT('audio.dashscopeStatus', { status: audioResponse.status })),
         )
       }
 

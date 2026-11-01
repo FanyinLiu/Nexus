@@ -58,6 +58,7 @@ import {
   mapLanguageToXaiStt,
 } from './xaiSpeech.js'
 import { float32ToInt16PcmBuffer } from './audioEncoding.js'
+import { mainT } from '../mainMessages.js'
 
 function logTtsRetry({ attempt, reason, url, error }) {
   const host = (() => {
@@ -126,7 +127,7 @@ export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
       maxAttempts: 4,
     })
     if (!health.ok) {
-      throw new Error(`本地 Qwen3 语音服务还没准备好（${health.status}）。`)
+      throw new Error(mainT('tts.qwen3NotReady', { status: health.status }))
     }
     const status = await readJsonSafe(health)
     // The C server loads the checkpoint before it starts listening and has no
@@ -143,7 +144,7 @@ export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
       maxAttempts: 1,
     })
     if (!warm.ok) {
-      throw new Error(`本地 Qwen3 语音模型没能加载（${warm.status}）。`)
+      throw new Error(mainT('tts.qwen3LoadFailed', { status: warm.status }))
     }
     return readJsonSafe(warm)
   })().catch((error) => {
@@ -182,7 +183,7 @@ export async function warmupRemoteTtsSession(sessionPayload, signal) {
 async function synthesizeRemoteTts(sessionPayload, text, signal) {
   const payload = { ...sessionPayload, text }
   const content = text.trim()
-  if (!content) throw new Error('没有可播报的文本内容。')
+  if (!content) throw new Error(mainT('audio.emptyText'))
 
   // Local sherpa VITS: no base URL, no credentials, returns PCM directly.
   if (payload.providerId === 'local-tts') {
@@ -199,7 +200,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
   const pitch = Number.isFinite(payload.pitch) ? payload.pitch : 1
   const volume = Number.isFinite(payload.volume) ? payload.volume : 1
 
-  if (!baseUrl) throw new Error('请先填写语音输出 API Base URL。')
+  if (!baseUrl) throw new Error(mainT('audio.outputBaseUrlMissing'))
   assertSpeechOutputCredentials(payload.providerId, payload.apiKey)
 
   // Local Qwen3-TTS: the server streams 16-bit PCM while it generates, so
@@ -245,11 +246,11 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     if (!response.ok) {
       throw new Error(await extractResponseErrorMessage(
         response,
-        '本地 Qwen3 语音服务返回了状态码 ' + response.status + '。',
+        mainT('tts.qwen3Status', { status: response.status }),
       ))
     }
     if (!response.body) {
-      throw new Error('本地 Qwen3 语音服务没有返回音频流。')
+      throw new Error(mainT('tts.qwen3NoStream'))
     }
     // The stream cannot carry a rate, so the sentence's tempo travels with
     // the result and is applied to the decoded PCM by the stream service.
@@ -300,16 +301,16 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
+      throw new Error(await extractResponseErrorMessage(response, mainT('audio.speechStatus', { status: response.status })))
     }
 
-    const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
+    const pcmBuffer = await readResponseBufferWithLimit(response, { label: mainT('tts.audioLabel') })
     return { pcmBuffer, pcmSampleRate: 24000 }
   }
 
   // ElevenLabs: request pcm_16000 for streaming
   if (payload.providerId === 'elevenlabs-tts') {
-    if (!payload.voice) throw new Error('请先填写 ElevenLabs 的 voice_id。')
+    if (!payload.voice) throw new Error(mainT('tts.elevenLabsVoiceMissing'))
 
     const endpoint = `${baseUrl}/text-to-speech/${encodeURIComponent(payload.voice)}?output_format=pcm_16000`
     const requestBody = JSON.stringify({
@@ -335,10 +336,10 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
+      throw new Error(await extractResponseErrorMessage(response, mainT('audio.speechStatus', { status: response.status })))
     }
 
-    const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
+    const pcmBuffer = await readResponseBufferWithLimit(response, { label: mainT('tts.audioLabel') })
     return { pcmBuffer, pcmSampleRate: 16000 }
   }
 
@@ -365,10 +366,10 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
+      throw new Error(await extractResponseErrorMessage(response, mainT('audio.speechStatus', { status: response.status })))
     }
 
-    const pcmBuffer = await readResponseBufferWithLimit(response, { label: '语音音频' })
+    const pcmBuffer = await readResponseBufferWithLimit(response, { label: mainT('tts.audioLabel') })
     return { pcmBuffer, pcmSampleRate: 24000 }
   }
 
@@ -376,7 +377,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
   if (isVolcengineSpeechOutputProvider(payload.providerId)) {
     const credentials = parseVolcengineSpeechCredentials(payload.apiKey)
     if (!credentials.appId || !credentials.accessToken) {
-      throw new Error('火山语音合成请在 API Key 一栏填写 APP_ID:ACCESS_TOKEN。')
+      throw new Error(mainT('audio.volcengineOutputCredentials'))
     }
 
     const result = await synthesizeVolcengineSpeechOutputWithFallback({
@@ -444,15 +445,15 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
+      throw new Error(await extractResponseErrorMessage(response, mainT('audio.speechStatus', { status: response.status })))
     }
 
     const data = await readJsonSafe(response)
     if (Number(data?.base_resp?.status_code ?? 0) !== 0) {
-      throw new Error(data?.base_resp?.status_msg ?? data?.message ?? 'MiniMax 语音接口返回了异常状态。')
+      throw new Error(data?.base_resp?.status_msg ?? data?.message ?? mainT('audio.minimaxSpeechError'))
     }
     const audioHex = String(data?.data?.audio ?? '').trim()
-    if (!audioHex) throw new Error('MiniMax 语音接口没有返回可播放音频。')
+    if (!audioHex) throw new Error(mainT('audio.minimaxNoAudio'))
 
     return {
       audioBase64: Buffer.from(audioHex, 'hex').toString('base64'),
@@ -487,12 +488,12 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
 
     if (!response.ok) {
-      throw new Error(await extractResponseErrorMessage(response, '语音播报那边回了个状态码 ' + response.status + '，不太确定哪里出了问题。'))
+      throw new Error(await extractResponseErrorMessage(response, mainT('audio.speechStatus', { status: response.status })))
     }
 
     const data = await readJsonSafe(response)
     const audioUrl = String(data?.output?.audio?.url ?? data?.output?.audio_url ?? '').trim()
-    if (!audioUrl) throw new Error('百炼语音接口没有返回音频地址。')
+    if (!audioUrl) throw new Error(mainT('audio.dashscopeNoAudioUrl'))
 
     const audioResponse = await performNetworkRequestWithRetry(audioUrl, {
       method: 'GET',
@@ -503,7 +504,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
 
     if (!audioResponse.ok) {
-      throw new Error(await extractResponseErrorMessage(audioResponse, '百炼音频那边回了个状态码 ' + audioResponse.status + '，不太确定哪里出了问题。'))
+      throw new Error(await extractResponseErrorMessage(audioResponse, mainT('audio.dashscopeStatus', { status: audioResponse.status })))
     }
 
     return {
@@ -528,7 +529,7 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     })
   }
 
-  throw new Error('当前语音输出提供商暂未接通流式播放。')
+  throw new Error(mainT('tts.outputProviderUnsupportedStream'))
 }
 
 export {
