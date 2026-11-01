@@ -19,6 +19,7 @@ import type {
 } from '../../features/voice/sessionMachine.ts'
 import { clamp } from '../../lib/common.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
+import { createLogger } from '../../lib/logger.ts'
 import { createId } from '../../lib/index.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
 import type {
@@ -51,6 +52,8 @@ type ShowPetStatus = (
 ) => void
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.asr')
 
 export type ParaformerConversationState = {
   noSpeechTimer: number | null
@@ -393,7 +396,7 @@ export async function startParaformerConversation(
     // already started, the detector's mic + AudioContext would leak
     // because the ref assignment hadn't happened yet.
     if (vadDetector) {
-      void vadDetector.destroy().catch(() => undefined)
+      void vadDetector.destroy().catch(() => { log.debug('VAD detector teardown failed after start error', { errorPresent: true }) })
       vadDetector = null
     }
     if (isVoiceCaptureCancelled(error)) return

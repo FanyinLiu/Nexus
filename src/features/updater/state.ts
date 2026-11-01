@@ -1,7 +1,9 @@
 import type { UpdaterEvent } from './types.ts'
 import { normalizeText } from '../../lib/normalize.ts'
 import { NEXUS_GITHUB_RELEASES_URL } from '../../../shared/updates.js'
+import { createLogger } from '../../lib/logger.ts'
 
+const log = createLogger('updater')
 const INVALID_UPDATER_EVENT_MESSAGE = 'Invalid updater event'
 const MAX_VERSION_CHARS = 80
 const MAX_RELEASE_NOTES_CHARS = 20_000
@@ -65,6 +67,7 @@ function normalizeUrl(value: unknown): string | null {
     if (url.protocol !== 'https:') return null
     return url.toString()
   } catch {
+    log.debug('update URL rejected as unparseable', { errorPresent: true })
     return null
   }
 }

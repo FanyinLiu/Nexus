@@ -14,6 +14,7 @@ import {
 } from '../../lib/audioProviders.ts'
 import { checkSenseVoiceAvailability } from '../../features/hearing/localSenseVoice.ts'
 import { humanizeError, humanizeMicPermissionError } from '../../lib/humanizeError.ts'
+import { createLogger } from '../../lib/logger.ts'
 import {
   buildSpeechRecognitionProbe,
   classifyRecognitionProbe,
@@ -28,6 +29,8 @@ import type {
 } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.diagnostics')
 
 export type VoiceDiagnosticResult = ServiceConnectionResponse
 
@@ -265,7 +268,7 @@ async function runParaformerRecognitionProbe(
       result,
     )
   } catch (error) {
-    try { await api.paraformerAbort?.() } catch { /* the session is already closed */ }
+    try { await api.paraformerAbort?.() } catch { log.debug('diagnostic paraformer abort failed', { errorPresent: true }) }
     return {
       ok: false,
       message: humanizeError(error, 'stt', { ti: options.ti }),

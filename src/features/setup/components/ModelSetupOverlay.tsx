@@ -22,6 +22,9 @@ import {
   subscribeModelSetupRequests,
 } from '../modelSetupRequests.ts'
 import { declineModelSetup } from '../../../lib/modelSetupBridge.ts'
+import { createLogger } from '../../../lib/logger.ts'
+
+const log = createLogger('models.setup')
 
 type Props = {
   /** Hide the overlay while another modal owns the screen (settings, onboarding guide). */
@@ -35,7 +38,7 @@ type Props = {
 }
 
 function readModelSetupDismissed(): boolean {
-  try { return sessionStorage.getItem(MODEL_SETUP_DISMISSED_STORAGE_KEY) === '1' } catch { return false }
+  try { return sessionStorage.getItem(MODEL_SETUP_DISMISSED_STORAGE_KEY) === '1' } catch { /* silent-catch-ok: sandboxed renderers have no sessionStorage, which means not dismissed */ return false }
 }
 
 function formatBytes(bytes: number): string {
@@ -100,7 +103,7 @@ export function ModelSetupOverlay({
     void fetchInventory().then((inv) => {
       if (inv) setInventory(inv)
     })
-    window.desktopPet?.modelsNetworkProbe?.().then(setNetworkProbe).catch(() => {})
+    window.desktopPet?.modelsNetworkProbe?.().then(setNetworkProbe).catch(() => { log.debug('model network probe failed', { errorPresent: true }) })
   }, [fetchInventory])
 
   useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
@@ -114,7 +117,7 @@ export function ModelSetupOverlay({
     if (!claim) return undefined
     void claim({ peek: true }).then((state) => {
       if (!cancelled && state?.declined === true) setDismissed(true)
-    }).catch(() => undefined)
+    }).catch(() => { log.debug('model setup reminder peek failed', { errorPresent: true }) })
     return () => { cancelled = true }
   }, [])
 
@@ -163,7 +166,7 @@ export function ModelSetupOverlay({
     // The refusal retracts it, closes the box, and keeps the installer from
     // being offered again in this session.
     declineModelSetup()
-    try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* no session storage (sandboxed) */ }
+    try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* silent-catch-ok: sandboxed renderers have no sessionStorage; dismissal still applies for this session */ }
     setDismissed(true)
   }, [])
 

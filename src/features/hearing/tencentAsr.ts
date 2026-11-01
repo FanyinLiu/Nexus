@@ -8,9 +8,12 @@
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { isVaultRefString } from '../../lib/keyVaultBridge.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.asr')
 
 const SAMPLE_RATE = 16000
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 1024
@@ -113,7 +116,7 @@ export async function startTencentAsrStream(
   }
 
   const audioContext = createInputAudioContext(SAMPLE_RATE)
-  await audioContext.resume().catch(() => undefined)
+  await audioContext.resume().catch(() => { log.debug('audio context resume failed', { errorPresent: true }) })
 
   const sourceNode = audioContext.createMediaStreamSource(stream)
   const processorNode = audioContext.createScriptProcessor(SCRIPT_PROCESSOR_BUFFER_SIZE, 1, 1)
@@ -148,11 +151,11 @@ export async function startTencentAsrStream(
     if (audioDisposed) return
     audioDisposed = true
     processorNode.onaudioprocess = null
-    try { sourceNode.disconnect() } catch { /* ignore */ }
-    try { processorNode.disconnect() } catch { /* ignore */ }
-    try { outputNode.disconnect() } catch { /* ignore */ }
+    try { sourceNode.disconnect() } catch { log.debug('source node disconnect failed', { errorPresent: true }) }
+    try { processorNode.disconnect() } catch { log.debug('processor node disconnect failed', { errorPresent: true }) }
+    try { outputNode.disconnect() } catch { log.debug('output node disconnect failed', { errorPresent: true }) }
     stream.getTracks().forEach((track) => track.stop())
-    void audioContext.close().catch(() => undefined)
+    void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
   }
 
   function fail(error: unknown) {
@@ -161,7 +164,7 @@ export async function startTencentAsrStream(
     finalizing = true
     teardownAudioGraph()
     unsubscribeResults()
-    api.tencentAsrAbort().catch(() => undefined)
+    api.tencentAsrAbort().catch(() => { log.debug('tencent ASR abort failed', { errorPresent: true }) })
     callbacks.onError?.(humanizeVoiceError(error, { ti }))
   }
 
@@ -223,14 +226,15 @@ export async function startTencentAsrStream(
 
       finalizing = true
       teardownAudioGraph()
-      await pushChain.catch(() => undefined)
+      await pushChain.catch(() => undefined) // silent-catch-ok: pending feed failures are already reported by fail()
 
       try {
         const result = await api.tencentAsrFinish()
         const finalText = (result.text ?? '').trim()
         if (finalText) lastFinalText = finalText
       } catch {
-        // fall back to accumulated text
+        // Fall back to accumulated text, but leave a diagnostic trail.
+        log.warn('tencent ASR finish failed', { errorPresent: true })
       } finally {
         destroyed = true
         unsubscribeResults()
@@ -249,7 +253,7 @@ export async function startTencentAsrStream(
       finalizing = true
       teardownAudioGraph()
       unsubscribeResults()
-      api.tencentAsrAbort().catch(() => undefined)
+      api.tencentAsrAbort().catch(() => { log.debug('tencent ASR abort failed', { errorPresent: true }) })
     },
   }
 }

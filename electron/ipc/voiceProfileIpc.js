@@ -42,7 +42,7 @@ async function readUserDataDisk() {
 
 async function readGpu() {
   const info = await Promise.race([
-    app.getGPUInfo('complete').catch(() => null),
+    app.getGPUInfo('complete').catch(() => null), // silent-catch-ok: GPU info is an optional probe; failure means unknown hardware
     new Promise((resolve) => setTimeout(() => resolve(null), 800)),
   ])
   const device = info?.gpuDevice?.[0]
@@ -57,12 +57,13 @@ export function register() {
     const wantBenchmark = parsed?.benchmark === true
     try {
       const hardwareBudget = await collectHardwareFacts({
-        readDisk: () => readUserDataDisk().catch(() => null),
-        readGpu: () => readGpu().catch(() => null),
+        readDisk: () => readUserDataDisk().catch(() => null), // silent-catch-ok: disk probe is optional; unknown free space falls back to null
+        readGpu: () => readGpu().catch(() => null), // silent-catch-ok: GPU probe is optional; unknown hardware falls back to null
         readBattery: async () => {
           try {
             return powerMonitor.isOnBatteryPower()
           } catch {
+            // silent-catch-ok: battery probe is optional; unknown power state falls back to null
             return null
           }
         },

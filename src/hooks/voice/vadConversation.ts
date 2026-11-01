@@ -28,6 +28,7 @@ import type {
 } from '../../features/voice/sessionMachine.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import { blobToBase64 } from '../../lib/common.ts'
+import { createLogger } from '../../lib/logger.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { createId } from '../../lib/index.ts'
 import { recordSttUsage } from '../../features/metering/speechCost.ts'
@@ -58,6 +59,8 @@ type ShowPetStatus = (
 ) => void
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.vad')
 
 export type StartVadConversationOptions = {
   transcribeMode: 'api' | 'local'
@@ -312,7 +315,7 @@ export async function startVadConversation(
         // path still holds the raw 16kHz samples, so hand them straight to the
         // one-shot local transcribe (which lazy-loads the model on first use).
         const status = params.currentSettings.speechInputFailoverEnabled
-          ? await checkSenseVoiceAvailability().catch(() => null)
+          ? await checkSenseVoiceAvailability().catch(() => null) // silent-catch-ok: availability probe failure keeps the cloud error as the fallback signal
           : null
         if (!status?.installed || !status.modelFound || !window.desktopPet?.sensevoiceTranscribe) {
           throw cloudError
@@ -325,7 +328,7 @@ export async function startVadConversation(
         transcript = (local.text ?? '').trim()
       }
 
-      await session.tearDown().catch(() => undefined)
+      await session.tearDown().catch(() => { log.debug('VAD session teardown failed', { errorPresent: true }) })
 
       if (!transcript) {
         params.handleVoiceListeningFailure(mapSpeechError('no-speech'), 'no-speech')
@@ -346,7 +349,7 @@ export async function startVadConversation(
       )
       await params.handleRecognizedVoiceTranscript(transcript, { traceId })
     } catch (error) {
-      await session.tearDown().catch(() => undefined)
+      await session.tearDown().catch(() => { log.debug('VAD session teardown failed', { errorPresent: true }) })
 
       params.handleVoiceListeningFailure(
         humanizeVoiceError(error, { ti: params.ti }),
@@ -391,8 +394,8 @@ export async function startVadConversation(
         frameDriver: mainVad,
         unsubscribeFrames: unsubscribe,
         async tearDown() {
-          try { unsubscribe() } catch { /* no-op */ }
-          await mainVad.destroy().catch(() => undefined)
+          try { unsubscribe() } catch { /* silent-catch-ok: the frame subscription may already be detached during teardown */ }
+          await mainVad.destroy().catch(() => { log.debug('main-process VAD destroy failed', { errorPresent: true }) })
         },
         noSpeechTimer: null,
         maxDurationTimer: null,
@@ -417,7 +420,7 @@ export async function startVadConversation(
         frameDriver: null,
         unsubscribeFrames: null,
         async tearDown() {
-          await detector.destroy().catch(() => undefined)
+          await detector.destroy().catch(() => { log.debug('browser VAD destroy failed', { errorPresent: true }) })
         },
         noSpeechTimer: null,
         maxDurationTimer: null,
@@ -445,7 +448,7 @@ export async function startVadConversation(
         // VAD flushes its segment, MicVAD uses pause() with
         // submitUserSpeechOnPause. The normal speech-end path does the rest.
         if (session.detector) {
-          void session.detector.pause().catch(() => undefined)
+          void session.detector.pause().catch(() => { log.debug('VAD pause failed', { errorPresent: true }) })
         } else {
           void session.frameDriver?.flush()
         }
@@ -527,7 +530,7 @@ export async function startVadConversation(
       // segment over IPC — route that through the normal speech-end path
       // (transcribe + tear down) instead of dropping a long utterance.
       if (session.detector) {
-        void session.detector.pause().catch(() => undefined)
+        void session.detector.pause().catch(() => { log.debug('VAD pause failed', { errorPresent: true }) })
       } else if (session.frameDriver) {
         void session.frameDriver.flush().then((flushed) => {
           if (
@@ -567,7 +570,7 @@ export async function startVadConversation(
         window.clearTimeout(session.maxDurationTimer)
         session.maxDurationTimer = null
       }
-      try { await session.tearDown() } catch { /* best-effort */ }
+      try { await session.tearDown() } catch { /* silent-catch-ok: VAD teardown is best-effort after the session was cancelled */ }
       if (params.vadSessionRef.current === session) {
         params.vadSessionRef.current = null
       }

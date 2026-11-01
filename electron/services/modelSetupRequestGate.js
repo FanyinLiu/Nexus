@@ -59,7 +59,7 @@ export function createModelSetupRequestGate(dependencies = {}) {
   const persist = () => {
     const snapshot = { declined, reminded }
     persistTail = persistTail
-      .catch(() => undefined)
+      .catch(() => undefined) // silent-catch-ok: resets the serialized write chain after a previously handled save failure
       .then(() => saveDeferral(snapshot))
       .then(() => undefined, () => undefined)
     return persistTail

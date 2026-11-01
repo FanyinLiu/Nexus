@@ -80,7 +80,7 @@ function replaceFile(tempPath, destPath) {
     if (hadDestination) rmSync(backupPath, { force: true })
   } catch (error) {
     if (!existsSync(destPath) && hadDestination && existsSync(backupPath)) {
-      try { renameSync(backupPath, destPath) } catch {}
+      try { renameSync(backupPath, destPath) } catch { /* silent-catch-ok: backup restore is best-effort; the original error is rethrown */ }
     }
     throw error
   }
@@ -176,6 +176,7 @@ export function modelDownloadCanResume(model, modelsRoot) {
     try {
       return readdirSync(join(modelsRoot, model.directory)).some((name) => name.endsWith('.partial'))
     } catch {
+      // silent-catch-ok: a missing model directory is the normal first-download state
       return false
     }
   }
@@ -183,7 +184,7 @@ export function modelDownloadCanResume(model, modelsRoot) {
   if (!partial) return false
   try {
     if (statSync(partial).size > 0) return true
-  } catch { /* no partial sibling */ }
+  } catch { /* silent-catch-ok: no partial sibling means there is no resumable download */ }
   // The archive can finish downloading and still be unextracted when the
   // process is killed. That staged file is the resume point.
   if (model?.kind !== 'archive') return false
@@ -192,6 +193,7 @@ export function modelDownloadCanResume(model, modelsRoot) {
   try {
     return statSync(staged).size === expected
   } catch {
+    // silent-catch-ok: absent or unstattable staged archive means no resumable download
     return false
   }
 }
@@ -220,6 +222,7 @@ export function readModelDownloadFreeBytes(directory) {
   try {
     return readAvailableDiskBytes(directory)
   } catch {
+    // silent-catch-ok: free-space probe is advisory; unknown capacity falls back to null
     return null
   }
 }
@@ -265,7 +268,7 @@ function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5, op
       const ranged = resumeOffset > 0 && res.statusCode === 206
       if (res.statusCode === 416 && keepPartial) {
         req.destroy()
-        try { rmSync(destPath, { force: true }) } catch {}
+        try { rmSync(destPath, { force: true }) } catch { /* silent-catch-ok: partial cleanup is best-effort before rejecting */ }
         return reject(new Error('Model download failed with HTTP 416'))
       }
       if (!ranged && res.statusCode !== 200) {
@@ -293,7 +296,7 @@ function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5, op
           res.destroy()
           file.destroy()
           if (!keepPartial || discardPartial) {
-            try { rmSync(tempPath, { force: true }) } catch {}
+            try { rmSync(tempPath, { force: true }) } catch { /* silent-catch-ok: temp cleanup is best-effort while failing the download */ }
           }
           reject(error)
         }
@@ -313,7 +316,7 @@ function downloadFile(url, destPath, onProgress, integrity, maxRedirects = 5, op
           if (typeof onProgress === 'function') {
             try {
               onProgress({ downloaded: offset + downloaded, total: expected.sizeBytes })
-            } catch { /* swallow — downloader must not die from callback errors */ }
+            } catch { /* silent-catch-ok: progress callback is observability only; a listener must not fail the download */ }
           }
         })
 
@@ -404,7 +407,7 @@ function replaceDirectory(sourceDir, destDir) {
     if (hadDestination) rmSync(backupDir, { recursive: true, force: true })
   } catch (error) {
     if (!existsSync(destDir) && hadDestination && existsSync(backupDir)) {
-      try { renameSync(backupDir, destDir) } catch {}
+      try { renameSync(backupDir, destDir) } catch { /* silent-catch-ok: backup restore is best-effort; the original error is rethrown */ }
     }
     throw error
   }
@@ -438,7 +441,7 @@ async function downloadAndExtractArchive(model, parentDir, onProgress) {
     replaceDirectory(extractedDir, join(parentDir, model.directory))
     rmSync(archivePath, { force: true })
   } finally {
-    try { rmSync(installRoot, { recursive: true, force: true }) } catch {}
+    try { rmSync(installRoot, { recursive: true, force: true }) } catch { /* silent-catch-ok: install temp cleanup is best-effort in a finally block */ }
   }
 }
 
@@ -577,7 +580,7 @@ export async function downloadModel(model, opts) {
 
   const emit = (payload) => {
     if (typeof onProgress === 'function') {
-      try { onProgress({ modelId: model.id, ...payload }) } catch {}
+      try { onProgress({ modelId: model.id, ...payload }) } catch { /* silent-catch-ok: progress callback is observability only; a listener must not fail the download */ }
     }
   }
 
@@ -648,7 +651,11 @@ export function checkModelPresence(model, roots) {
     }
     if (existsSync(candidate)) {
       let sizeBytes = null
-      try { sizeBytes = statSync(candidate).size } catch {}
+      try {
+        sizeBytes = statSync(candidate).size
+      } catch (error) {
+        console.warn('[ModelDownloader] failed to stat model file:', getRedactedErrorMessage(error))
+      }
       let verified = false
       try {
         const receiptDir = model.kind === 'standalone' ? dirname(candidate) : join(root, model.directory)
@@ -656,7 +663,9 @@ export function checkModelPresence(model, roots) {
         verified = receipt?.schemaVersion === 1
           && receipt?.modelId === model.id
           && receipt?.checkFileSize === sizeBytes
-      } catch {}
+      } catch {
+        // silent-catch-ok: a missing or corrupt receipt is expected for legacy installs and means unverified
+      }
       return { present: true, verified, location: root, sizeBytes }
     }
   }

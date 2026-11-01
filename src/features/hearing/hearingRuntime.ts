@@ -1,9 +1,12 @@
 import { clamp } from '../../lib/common.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { ParaformerStreamSession } from './localParaformer.ts'
 import type { SenseVoiceStreamSession } from './localSenseVoice.ts'
 import type { TencentAsrStreamSession } from './tencentAsr.ts'
 import type { WakewordRuntimeController } from './wakewordRuntime.ts'
 import type { VoiceActivityDetector } from './browserVad.ts'
+
+const log = createLogger('voice.runtime')
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -108,7 +111,12 @@ export class HearingRuntime {
     this._updatedAt = Date.now()
     this._snapshot = null
     for (const listener of this._listeners) {
-      try { listener() } catch { /* subscriber errors must not break the runtime */ }
+      try {
+        listener()
+      } catch {
+        // Subscriber errors must not break the runtime.
+        log.warn('voice runtime listener failed', { errorPresent: true })
+      }
     }
   }
 
@@ -196,7 +204,7 @@ export class HearingRuntime {
     this._paraformerSession = null
     this._tencentAsrSession?.abort()
     this._tencentAsrSession = null
-    this._vadDetector?.destroy().catch(() => undefined)
+    this._vadDetector?.destroy().catch(() => { log.debug('VAD detector teardown failed', { errorPresent: true }) })
     this._vadDetector = null
     this._wakewordController?.destroy()
     this._wakewordController = null

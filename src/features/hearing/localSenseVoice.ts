@@ -10,9 +10,12 @@
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { TranslationKey, TranslationParams, VoiceEmotionLabel } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.asr')
 
 const SAMPLE_RATE = 16000
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 1024
@@ -87,7 +90,7 @@ export async function startSenseVoiceStream(
   const stream = microphone.stream
 
   const audioContext = createInputAudioContext(SAMPLE_RATE)
-  await audioContext.resume().catch(() => undefined)
+  await audioContext.resume().catch(() => { log.debug('audio context resume failed', { errorPresent: true }) })
 
   const sourceNode = audioContext.createMediaStreamSource(stream)
   const processorNode = audioContext.createScriptProcessor(SCRIPT_PROCESSOR_BUFFER_SIZE, 1, 1)
@@ -123,11 +126,11 @@ export async function startSenseVoiceStream(
     await api.sensevoiceStart()
   } catch (error) {
     processorNode.onaudioprocess = null
-    try { sourceNode.disconnect() } catch { /* */ }
-    try { processorNode.disconnect() } catch { /* */ }
-    try { outputNode.disconnect() } catch { /* */ }
+    try { sourceNode.disconnect() } catch { log.debug('source node disconnect failed', { errorPresent: true }) }
+    try { processorNode.disconnect() } catch { log.debug('processor node disconnect failed', { errorPresent: true }) }
+    try { outputNode.disconnect() } catch { log.debug('output node disconnect failed', { errorPresent: true }) }
     stream.getTracks().forEach((track) => track.stop())
-    void audioContext.close().catch(() => undefined)
+    void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
     throw error
   }
 
@@ -170,11 +173,11 @@ export async function startSenseVoiceStream(
     if (audioDisposed) return
     audioDisposed = true
     processorNode.onaudioprocess = null
-    try { sourceNode.disconnect() } catch { /* */ }
-    try { processorNode.disconnect() } catch { /* */ }
-    try { outputNode.disconnect() } catch { /* */ }
+    try { sourceNode.disconnect() } catch { log.debug('source node disconnect failed', { errorPresent: true }) }
+    try { processorNode.disconnect() } catch { log.debug('processor node disconnect failed', { errorPresent: true }) }
+    try { outputNode.disconnect() } catch { log.debug('output node disconnect failed', { errorPresent: true }) }
     stream.getTracks().forEach((track) => track.stop())
-    void audioContext.close().catch(() => undefined)
+    void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
   }
 
   function fail(error: unknown) {
@@ -182,7 +185,7 @@ export async function startSenseVoiceStream(
     destroyed = true
     finalizing = true
     teardownAudioGraph()
-    api.sensevoiceAbort().catch(() => undefined)
+    api.sensevoiceAbort().catch(() => { log.debug('sensevoice abort failed', { errorPresent: true }) })
     callbacks.onError?.(humanizeVoiceError(error, { ti }))
   }
 
@@ -200,7 +203,7 @@ export async function startSenseVoiceStream(
     for (const sample of samples) energy += sample * sample
     callbacks.onActivity?.(Math.sqrt(energy / samples.length))
 
-    pushChain = pushChain.catch(() => undefined).then(async () => {
+    pushChain = pushChain.catch(() => undefined).then(async () => { // silent-catch-ok: feed failures are reported by fail(); this keeps the chain alive
       if (destroyed || finalizing) return
       try {
         await api.sensevoiceFeed({ samples })
@@ -243,7 +246,7 @@ export async function startSenseVoiceStream(
 
       finalizing = true
       teardownAudioGraph()
-      await pushChain.catch(() => undefined)
+      await pushChain.catch(() => undefined) // silent-catch-ok: pending feed failures are already reported by fail()
 
       let text = reuse?.text ?? ''
       let voiceEmotion = reuse?.voiceEmotion ?? null
@@ -251,14 +254,15 @@ export async function startSenseVoiceStream(
         if (reuse) {
           // The speculative decode already covered this utterance; drop the
           // streaming buffer instead of running recognition after stop.
-          await api.sensevoiceAbort().catch(() => undefined)
+          await api.sensevoiceAbort().catch(() => { log.debug('sensevoice abort failed', { errorPresent: true }) })
         } else {
           const result = await api.sensevoiceFinish()
           text = (result.text || '').trim()
           voiceEmotion = result.voiceEmotion ?? null
         }
       } catch {
-        // fall through with empty text
+        // Fall through with empty text, but leave a diagnostic trail.
+        log.warn('sensevoice finish failed', { errorPresent: true })
       } finally {
         destroyed = true
       }
@@ -276,7 +280,7 @@ export async function startSenseVoiceStream(
       destroyed = true
       finalizing = true
       teardownAudioGraph()
-      api.sensevoiceAbort().catch(() => undefined)
+      api.sensevoiceAbort().catch(() => { log.debug('sensevoice abort failed', { errorPresent: true }) })
     },
 
     snapshotAudio,

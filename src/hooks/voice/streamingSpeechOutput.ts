@@ -1,6 +1,7 @@
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import type { StreamAudioPlayer } from '../../features/voice/streamAudioPlayer.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
+import { createLogger } from '../../lib/logger.ts'
 import { prepareTextForTts } from '../../features/voice/text.ts'
 import { VoiceReasonCodes } from '../../features/voice/voiceReasonCodes.ts'
 import {
@@ -29,6 +30,8 @@ import type {
 } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.tts')
 import {
   getMaxRequestCharsForProvider,
   getMaxSegmentCharsForProvider,
@@ -530,7 +533,7 @@ export function createStreamingSpeechOutputController(
       // latency, and the main process bounds it on its own. Re-arm once the
       // stream start settles instead of failing a cold local provider.
       if (!streamStarted && startPromise) {
-        void startPromise.then(() => armFirstAudioWatchdog()).catch(() => undefined)
+        void startPromise.then(() => armFirstAudioWatchdog()).catch(() => { log.debug('first-audio watchdog re-arm failed', { errorPresent: true }) })
         return
       }
       fail(new Error(options?.ti?.('voice.streaming_tts.first_audio_timeout') ?? 'Streaming TTS did not produce audio within 6 seconds.'))
@@ -808,7 +811,7 @@ export function createStreamingSpeechOutputController(
         // inside ttsStreamStart. Kick it off on the first delta so the model
         // loads while the LLM is still generating instead of after finish().
         if (!startPromise) {
-          void ensureStarted().catch(() => undefined)
+          void ensureStarted().catch(() => { log.debug('whole-reply TTS warm-up failed', { errorPresent: true }) })
         }
         wholeReplyBuffer += delta
         return
@@ -853,8 +856,12 @@ export function createStreamingSpeechOutputController(
       if (!streamStarted && pendingSegments === 0) {
         if (startPromise) {
           startPromise.then(() => {
-            window.desktopPet?.ttsStreamAbort?.({ requestId })?.catch(() => {})
-          }).catch(() => {})
+            window.desktopPet?.ttsStreamAbort?.({ requestId })?.catch(() => {
+              log.debug('TTS stream abort failed before first audio', { errorPresent: true })
+            })
+          }).catch(() => {
+            log.debug('TTS stream start failed before first audio', { errorPresent: true })
+          })
         }
         settled = true
         cleanup()
@@ -920,7 +927,7 @@ export function createStreamingSpeechOutputController(
       if (startPromise) {
         void startPromise
           .then(() => window.desktopPet!.ttsStreamAbort({ requestId }))
-          .catch(() => undefined)
+          .catch(() => { log.debug('TTS stream abort failed during interruption', { errorPresent: true }) })
       }
     },
   }

@@ -120,8 +120,9 @@ async function readHealthJson(url) {
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(1_500) })
     if (!response.ok) return null
-    return await response.json().catch(() => null)
+    return await response.json().catch(() => null) // silent-catch-ok: health probe response body is optional
   } catch {
+    // silent-catch-ok: sidecar health probe failure is the expected unavailable signal
     return null
   }
 }

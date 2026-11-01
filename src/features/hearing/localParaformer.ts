@@ -9,9 +9,12 @@
 
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { TranslationKey, TranslationParams } from '../../types'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.asr')
 
 const SAMPLE_RATE = 16000
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 1024
@@ -64,7 +67,7 @@ export async function startParaformerStream(
   const stream = microphone.stream
 
   const audioContext = createInputAudioContext(SAMPLE_RATE)
-  await audioContext.resume().catch(() => undefined)
+  await audioContext.resume().catch(() => { log.debug('audio context resume failed', { errorPresent: true }) })
 
   const sourceNode = audioContext.createMediaStreamSource(stream)
   const processorNode = audioContext.createScriptProcessor(SCRIPT_PROCESSOR_BUFFER_SIZE, 1, 1)
@@ -100,11 +103,11 @@ export async function startParaformerStream(
     await api.paraformerStart()
   } catch (error) {
     processorNode.onaudioprocess = null
-    try { sourceNode.disconnect() } catch { /* */ }
-    try { processorNode.disconnect() } catch { /* */ }
-    try { outputNode.disconnect() } catch { /* */ }
+    try { sourceNode.disconnect() } catch { log.debug('source node disconnect failed', { errorPresent: true }) }
+    try { processorNode.disconnect() } catch { log.debug('processor node disconnect failed', { errorPresent: true }) }
+    try { outputNode.disconnect() } catch { log.debug('output node disconnect failed', { errorPresent: true }) }
     stream.getTracks().forEach((track) => track.stop())
-    void audioContext.close().catch(() => undefined)
+    void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
     throw error
   }
 
@@ -149,11 +152,11 @@ export async function startParaformerStream(
     if (audioDisposed) return
     audioDisposed = true
     processorNode.onaudioprocess = null
-    try { sourceNode.disconnect() } catch { /* */ }
-    try { processorNode.disconnect() } catch { /* */ }
-    try { outputNode.disconnect() } catch { /* */ }
+    try { sourceNode.disconnect() } catch { log.debug('source node disconnect failed', { errorPresent: true }) }
+    try { processorNode.disconnect() } catch { log.debug('processor node disconnect failed', { errorPresent: true }) }
+    try { outputNode.disconnect() } catch { log.debug('output node disconnect failed', { errorPresent: true }) }
     stream.getTracks().forEach((track) => track.stop())
-    void audioContext.close().catch(() => undefined)
+    void audioContext.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
   }
 
   function fail(error: unknown) {
@@ -161,7 +164,7 @@ export async function startParaformerStream(
     destroyed = true
     finalizing = true
     teardownAudioGraph()
-    api.paraformerAbort().catch(() => undefined)
+    api.paraformerAbort().catch(() => { log.debug('paraformer abort failed', { errorPresent: true }) })
     callbacks.onError?.(humanizeVoiceError(error, { ti }))
   }
 
@@ -177,7 +180,7 @@ export async function startParaformerStream(
     for (const sample of samples) energy += sample * sample
     callbacks.onActivity?.(Math.sqrt(energy / samples.length))
 
-    pushChain = pushChain.catch(() => undefined).then(() => feedAndReport(samples))
+    pushChain = pushChain.catch(() => undefined).then(() => feedAndReport(samples)) // silent-catch-ok: feed failures are reported by fail(); this keeps the chain alive
   }
 
   return {
@@ -188,14 +191,15 @@ export async function startParaformerStream(
 
       finalizing = true
       teardownAudioGraph()
-      await pushChain.catch(() => undefined)
+      await pushChain.catch(() => undefined) // silent-catch-ok: pending feed failures are already reported by fail()
 
       let remainingText = ''
       try {
         const result = await api.paraformerFinish()
         remainingText = (result.text || '').trim()
       } catch {
-        // fall through
+        // Fall through with an empty remainder, but leave a diagnostic trail.
+        log.warn('paraformer finish failed', { errorPresent: true })
       } finally {
         destroyed = true
       }
@@ -209,7 +213,7 @@ export async function startParaformerStream(
       destroyed = true
       finalizing = true
       teardownAudioGraph()
-      api.paraformerAbort().catch(() => undefined)
+      api.paraformerAbort().catch(() => { log.debug('paraformer abort failed', { errorPresent: true }) })
     },
   }
 }

@@ -1,6 +1,9 @@
 import { clamp } from '../../lib/common.ts'
 import { t } from '../../i18n/runtime.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.playback')
 
 type StreamAudioPlayerOptions = {
   initialBufferSeconds?: number
@@ -210,7 +213,7 @@ export class StreamAudioPlayer {
       }
 
       source.start(startAt)
-      void context.resume().catch(() => undefined)
+      void context.resume().catch(() => { log.debug('audio context resume failed', { errorPresent: true }) })
       return Promise.resolve({
         startedAtMs: performanceNowMs() + Math.max(0, startAt - context.currentTime) * 1000,
         durationMs: buffer.duration * 1000,
@@ -255,11 +258,12 @@ export class StreamAudioPlayer {
         this.backchannelSources.delete(source)
       }
       source.start(context.currentTime + 0.005)
-      void context.resume().catch(() => undefined)
+      void context.resume().catch(() => { log.debug('audio context resume failed', { errorPresent: true }) })
       return buffer.duration * 1000
     } catch {
       // A backchannel is best-effort; a failed acknowledgement must never
       // surface as a playback error or stop the user's turn.
+      log.debug('backchannel playback failed', { errorPresent: true })
       return 0
     }
   }
@@ -316,7 +320,8 @@ export class StreamAudioPlayer {
         source.onended = null
         source.stop()
       } catch {
-        // no-op
+        // Source teardown is best-effort; the node may already have ended.
+        log.debug('audio source stop failed', { errorPresent: true })
       }
     })
 
@@ -327,20 +332,22 @@ export class StreamAudioPlayer {
         source.onended = null
         source.stop()
       } catch {
-        // no-op
+        // Source teardown is best-effort; the node may already have ended.
+        log.debug('backchannel source stop failed', { errorPresent: true })
       }
     })
 
-    try { this.keepaliveOsc?.stop() } catch { /* no-op */ }
+    try { this.keepaliveOsc?.stop() } catch { /* silent-catch-ok: keepalive oscillator teardown is best-effort */ }
     this.keepaliveOsc = null
 
     const context = this.audioContext
     // Close the context first, then clear the references
     if (context) {
       try {
-        void context.close().catch(() => undefined)
+        void context.close().catch(() => { log.debug('audio context close failed', { errorPresent: true }) })
       } catch {
-        // no-op
+        // Audio context teardown is best-effort after the pipeline stopped.
+        log.debug('audio context close threw during teardown', { errorPresent: true })
       }
     }
     this.audioContext = null

@@ -15,8 +15,11 @@ import { stopSpeaking as stopBrowserSpeaking } from '../../lib/voice.ts'
 import { createId } from '../../lib/index.ts'
 import type { VoiceBusEvent } from '../../features/voice/busEvents.ts'
 import type { TranslationKey, TranslationParams, VoiceState } from '../../types/index.ts'
+import { createLogger } from '../../lib/logger.ts'
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.runtime')
 import { cleanupApiRecordingSession } from './recordingSession.ts'
 import type { ParaformerConversationState } from './paraformerConversation.ts'
 import type { SenseVoiceConversationState } from './sensevoiceConversation.ts'
@@ -322,7 +325,7 @@ export async function destroyVadSessionRuntime(
     options.vadSessionRef.current = null
   }
 
-  await options.session.tearDown().catch(() => undefined)
+  await options.session.tearDown().catch(() => { log.debug('speech session teardown failed', { errorPresent: true }) })
   options.setSpeechLevelValue(0)
 }
 
@@ -353,7 +356,7 @@ export function clearParaformerConversationStateRuntime(
   }
 
   if (session.vadDetector) {
-    session.vadDetector.destroy().catch(() => undefined)
+    session.vadDetector.destroy().catch(() => { log.debug('VAD detector teardown failed', { errorPresent: true }) })
   }
 
   options.paraformerConversationRef.current = null

@@ -17,6 +17,7 @@ import type {
 } from '../../features/voice/sessionMachine.ts'
 import { clamp } from '../../lib/common.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
+import { createLogger } from '../../lib/logger.ts'
 import { createId } from '../../lib/index.ts'
 import { mapSpeechError } from '../../lib/voice.ts'
 import type {
@@ -52,6 +53,8 @@ type ShowPetStatus = (
 ) => void
 
 type Translator = (key: TranslationKey, params?: TranslationParams) => string
+
+const log = createLogger('voice.asr')
 
 export type SenseVoiceConversationState = {
   noSpeechTimer: number | null
@@ -288,6 +291,7 @@ export async function startSenseVoiceConversation(
               )
               return result.text ? result : null
             } catch {
+              log.debug('speculative sensevoice transcription failed', { errorPresent: true })
               return null
             }
           })
@@ -366,7 +370,7 @@ export async function startSenseVoiceConversation(
     // while we were awaiting startSenseVoiceStream, the in-flight one
     // wins. Abort our just-started session rather than clobber.
     if (params.sensevoiceSessionRef.current !== refBeforeAwait) {
-      try { session.abort() } catch { /* best-effort */ }
+      try { session.abort() } catch { /* silent-catch-ok: the superseded session is being abandoned; abort is best-effort */ }
       return
     }
 

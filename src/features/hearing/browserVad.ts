@@ -1,5 +1,8 @@
 import type { VadSensitivity } from '../../types'
 import { requestVoiceInputStream } from '../voice/runtimeSupport.ts'
+import { createLogger } from '../../lib/logger.ts'
+
+const log = createLogger('voice.vad')
 
 type VadModule = typeof import('@ricky0123/vad-web')
 type MicVadInstance = Awaited<ReturnType<VadModule['MicVAD']['new']>>
@@ -258,6 +261,7 @@ export async function createVoiceActivityDetector(
         await pendingStart
       } catch {
         // Lifecycle calls must still reach whichever detector remains current.
+        log.debug('pending VAD start did not settle cleanly', { errorPresent: true })
       }
     }
 
