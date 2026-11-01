@@ -18,6 +18,7 @@ import {
   resolveQwen3CportConfig,
 } from '../electron/services/qwen3CportService.js'
 import { buildQwen3CportRequestPayload } from '../electron/services/qwen3TtsPayload.js'
+import { getSidecarToken } from '../electron/services/localServiceSecurity.js'
 import { resolveQwen3TtsSeed } from '../electron/services/ttsSeed.js'
 
 const HOME = '/Users/tester'
@@ -97,6 +98,7 @@ test('C launch uses the fast Metal int4 resident-server recipe on loopback', () 
     '--seed', '42',
   ])
   assert.equal(buildQwen3CportEnv({ PATH: '/bin' }).QWEN_METAL_FUSED_TALKER, '1')
+  assert.equal(buildQwen3CportEnv({ PATH: '/bin' }).NEXUS_SIDECAR_TOKEN, getSidecarToken())
   assert.equal(buildQwen3CportBaseUrl(8003), 'http://127.0.0.1:8003/v1')
 })
 
