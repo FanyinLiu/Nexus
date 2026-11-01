@@ -55,7 +55,11 @@ export function createPairingManager(options = {}) {
       return { kind: 'created', code }
     },
 
-    /** Remove a request after the desktop approved or dismissed it. */
+    /**
+     * Remove a request after the desktop approved or dismissed it.
+     * @param {string} senderId
+     * @returns {boolean}
+     */
     resolve(senderId) {
       return pending.delete(String(senderId))
     },

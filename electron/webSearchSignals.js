@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { normalizeWhitespace, normalizeSearchableText } from './textNormalize.js'
 
 function normalizeFacet(value) {

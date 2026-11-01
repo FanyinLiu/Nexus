@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const MEMORY_MIGRATION_PACKAGE_SCHEMA_VERSION = 1
 
 const MAX_LONG_TERM_MEMORIES = 500

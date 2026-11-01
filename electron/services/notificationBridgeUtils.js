@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { timingSafeEqual } from 'node:crypto'
 
 import { checkUrlSafety } from './urlSafety.js'

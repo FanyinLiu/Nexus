@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Companion presence tracker — turns the main-process chat request lifecycle
  * (electron/ipc/chatIpc.js) into the `companionPresence` runtime-state field

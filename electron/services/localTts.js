@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Local offline TTS via sherpa-onnx VITS (MeloTTS zh_en).
  *

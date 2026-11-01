@@ -20,8 +20,13 @@ export const SIDECAR_TOKEN_BYTES = 32
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])
 
+/** @type {string | null} */
 let launchToken = null
 
+/**
+ * @param {unknown} hostname
+ * @returns {string}
+ */
 function normalizeHostname(hostname) {
   const value = String(hostname ?? '').trim().toLowerCase()
   if (value.startsWith('[') && value.endsWith(']')) return value.slice(1, -1)
@@ -189,11 +194,12 @@ export function withSidecarAuth(url, headers = {}, token = getSidecarToken()) {
  */
 export function classifySidecarHealthResponse(status, body, kind = 'python', expectedService = '') {
   if (status !== 200 || !body || typeof body !== 'object') return 'foreign'
-  if (expectedService && body.service !== expectedService) return 'foreign'
+  const health = /** @type {{ service?: unknown, status?: unknown, loaded?: unknown }} */ (body)
+  if (expectedService && health.service !== expectedService) return 'foreign'
   if (kind === 'qwen3-cport') {
-    return body.status === 'ok' ? 'ours' : 'foreign'
+    return health.status === 'ok' ? 'ours' : 'foreign'
   }
-  return body.status === 'ok' || typeof body.loaded === 'boolean' ? 'ours' : 'foreign'
+  return health.status === 'ok' || typeof health.loaded === 'boolean' ? 'ours' : 'foreign'
 }
 
 /**

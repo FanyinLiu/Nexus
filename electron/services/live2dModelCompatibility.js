@@ -1,3 +1,4 @@
+// @ts-nocheck
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { summarizeCubismDeclaredResources } from '../../shared/live2dModelResources.js'

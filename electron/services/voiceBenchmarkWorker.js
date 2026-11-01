@@ -13,10 +13,17 @@ export const VOICE_BENCHMARK_WORKER_READY = true
 
 const SAMPLE_RATE = 16_000
 
+/**
+ * @param {unknown} message
+ */
 function post(message) {
   parentPort?.postMessage(message)
 }
 
+/**
+ * @param {string | undefined} modelPath
+ * @param {string | undefined} tokensPath
+ */
 function measure(modelPath, tokensPath) {
   if (!modelPath || !tokensPath || !existsSync(modelPath) || !existsSync(tokensPath)) {
     post({ status: 'skipped', reason: 'model-missing' })

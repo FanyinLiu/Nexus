@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Local-service TCP probe for doctor / settings (loopback only).
  * Extracted from windowManager to keep window lifecycle code focused.

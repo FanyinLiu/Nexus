@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure-C Qwen3-TTS server: discovery, launch spec, and parent-death guard.
  *

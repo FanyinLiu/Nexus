@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Production wiring for the on-demand voice sidecar supervisor.
  *

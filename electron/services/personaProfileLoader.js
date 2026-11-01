@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from 'node:path'
 import { acceptPersonaSoulContent, PERSONA_SOUL_MAX_CHARS } from '../../shared/personaSoul.js'
 import { normalizePersonaSpeechStyle } from '../../shared/speechStyle.js'

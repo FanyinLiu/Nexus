@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Chat-domain local-data operations (migration, compare, runtime mirror).
  * Extracted from localDataStore so the SQLite foundation stays separate.

@@ -14,6 +14,8 @@ const CJK_RANGE = /[\u2E80-\u9FFF\uF900-\uFAFF]/u
  * Tokenize text into an array of lowercase tokens.
  * CJK characters become individual tokens plus adjacent bigrams; Latin/digit
  * words are split on non-alphanumeric.
+ * @param {unknown} text
+ * @returns {string[]}
  */
 export function tokenize(text) {
   if (!text) return []
@@ -52,6 +54,8 @@ export function tokenize(text) {
 
 /**
  * Build a term-frequency map from a token array.
+ * @param {string[]} tokens
+ * @returns {Map<string, number>}
  */
 function termFrequencies(tokens) {
   const tf = new Map()

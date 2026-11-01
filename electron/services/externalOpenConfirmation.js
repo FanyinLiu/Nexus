@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Panel-saved choice for opening a link the window did not already trust.
  * Missing or unreadable state asks before opening. The pet window cannot

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NEXUS_GITHUB_RELEASES_URL } from '../../shared/updates.js'
 
 export const GITHUB_RELEASES_URL = NEXUS_GITHUB_RELEASES_URL

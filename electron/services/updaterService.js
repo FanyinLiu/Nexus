@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Auto-update integration via electron-updater + GitHub Releases.
 //
 // Lifecycle:

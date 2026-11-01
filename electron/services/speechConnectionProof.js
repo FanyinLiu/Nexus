@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Offline-classifiable speech connection proof helpers.
  *

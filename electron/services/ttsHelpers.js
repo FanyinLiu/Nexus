@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
 import { normalizeBaseUrl, normalizeLanguageCode } from '../net.js'
 import {

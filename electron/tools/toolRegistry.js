@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BrowserWindow, dialog, shell } from 'electron'
 import { searchWeb } from './webSearch.js'
 import { lookupWeatherByLocation } from './weatherTool.js'

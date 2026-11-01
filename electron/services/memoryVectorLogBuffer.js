@@ -2,6 +2,15 @@ export const MEMORY_VECTOR_LOG_FLUSH_INTERVAL_MS = 75
 export const MEMORY_VECTOR_LOG_FLUSH_BATCH_SIZE = 32
 
 export class MemoryVectorLogAppendBuffer {
+  /**
+   * @param {{
+   *   append: (chunk: string) => unknown,
+   *   schedule?: typeof setTimeout,
+   *   cancel?: typeof clearTimeout,
+   *   intervalMs?: number,
+   *   batchSize?: number,
+   * }} options
+   */
   constructor({
     append,
     schedule = setTimeout,
@@ -18,13 +27,19 @@ export class MemoryVectorLogAppendBuffer {
     this.cancel = cancel
     this.intervalMs = intervalMs
     this.batchSize = batchSize
+    /** @type {string[]} */
     this.lines = []
+    /** @type {Array<{ resolve: (value?: void) => void, reject: (error: unknown) => void }>} */
     this.waiters = []
     this.timer = null
     this.flushing = false
     this.activeFlushPromise = null
   }
 
+  /**
+   * @param {unknown} line
+   * @returns {Promise<void>}
+   */
   enqueue(line) {
     const promise = new Promise((resolve, reject) => {
       this.lines.push(String(line))

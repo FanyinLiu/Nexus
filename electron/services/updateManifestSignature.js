@@ -163,6 +163,7 @@ export function parseUpdateManifest(text) {
   }
   const seen = new Set()
   let inFiles = false
+  /** @type {{ url: string | null, sha512: string | null } | null} */
   let currentFile = null
 
   for (const rawLine of text.split(/\r?\n/)) {
@@ -199,7 +200,7 @@ export function parseUpdateManifest(text) {
     if (!inFiles) continue
     if (content.startsWith('-')) {
       if (indent < 2) return null
-      currentFile = { url: null, sha512: null }
+      currentFile = { url: /** @type {string | null} */ (null), sha512: /** @type {string | null} */ (null) }
       manifest.files.push(currentFile)
       const rest = content.slice(1).trim()
       if (!rest) continue
@@ -226,7 +227,7 @@ export function parseUpdateManifest(text) {
  */
 function readContentLength(response) {
   const headers = response && typeof response === 'object'
-    ? /** @type {{ get?: (name: string) => unknown }} */ (response).headers
+    ? /** @type {{ headers?: { get?: (name: string) => unknown } }} */ (response).headers
     : null
   if (!headers || typeof headers.get !== 'function') return null
   const raw = headers.get('content-length')
@@ -240,7 +241,7 @@ function readContentLength(response) {
  * is converted to a stable reason instead of throwing.
  * @param {string} url
  * @param {{
- *   fetchImpl: (url: string, init: { signal: AbortSignal }) => Promise<any>,
+ *   fetchImpl: ((url: string, init: { signal: AbortSignal }) => Promise<any>) | null,
  *   timeoutMs: number,
  *   maxBytes: number,
  *   notFoundReason: string,

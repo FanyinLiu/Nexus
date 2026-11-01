@@ -15,8 +15,12 @@ import { createSyncJsonFileStore } from './jsonFileStore.js'
 /** File name under userData. The request gate is the only reader. */
 export const MODEL_SETUP_DEFERRAL_FILE_NAME = 'model-setup-deferral.json'
 
+/**
+ * @param {unknown} parsed
+ * @returns {{ declined: boolean, reminded: boolean }}
+ */
 function normalize(parsed) {
-  const record = parsed && typeof parsed === 'object' ? parsed : {}
+  const record = /** @type {Record<string, unknown>} */ (parsed && typeof parsed === 'object' ? parsed : {})
   return {
     declined: record.declined === true,
     reminded: record.reminded === true,
@@ -30,7 +34,7 @@ export function createModelSetupDeferralStore({ getStorePath }) {
   const store = createSyncJsonFileStore({
     getStorePath,
     normalize,
-    onPersistError: (error) => {
+    onPersistError: (/** @type {unknown} */ error = undefined) => {
       console.warn('[modelSetupDeferral] persist failed:', getRedactedErrorMessage(error))
     },
   })

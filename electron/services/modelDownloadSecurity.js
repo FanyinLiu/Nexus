@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { posix } from 'node:path'
 
 const EXACT_ALLOWED_HOSTS = new Set([

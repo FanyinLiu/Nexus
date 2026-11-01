@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { promises as fsp } from 'node:fs'
 import { app, BrowserWindow, Menu, nativeImage, screen, Tray } from 'electron'
 import path from 'node:path'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Canonical long-term memory store for the main process.
 //
 // Long-term memory used to live in Chromium's localStorage. Deleting a key

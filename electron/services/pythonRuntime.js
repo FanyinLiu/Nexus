@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Python runtime detection for optional AI services (OmniVoice TTS,
  * Qwen3-TTS, GLM-ASR).

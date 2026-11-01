@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Loudness matching and look-ahead limiting for client-stretched speech.
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
 import { Readable } from 'node:stream'
 import {

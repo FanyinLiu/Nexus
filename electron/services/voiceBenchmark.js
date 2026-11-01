@@ -22,14 +22,14 @@ function runWorkerBenchmark(signal, modelDir) {
   }
   return new Promise((resolve) => {
     let settled = false
-    const worker = new Worker(new URL('./voiceBenchmarkWorker.js', import.meta.url), {
+    const worker = new Worker(new URL('./voiceBenchmarkWorker.js', import.meta.url), /** @type {import('node:worker_threads').WorkerOptions} */ ({
       type: 'module',
       workerData: {
         modelPath: path.join(modelDir, 'model.int8.onnx'),
         tokensPath: path.join(modelDir, 'tokens.txt'),
       },
-    })
-    const finish = (result) => {
+    }))
+    const finish = (/** @type {unknown} */ result) => {
       if (settled) return
       settled = true
       signal.removeEventListener('abort', onAbort)

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { app } from 'electron'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { synthesizeRemoteTts, warmupRemoteTtsSession } from './services/ttsService.js'

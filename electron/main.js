@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { app, BrowserWindow, dialog, session } from 'electron'
 
 import { initPetModelService } from './services/petModelService.js'

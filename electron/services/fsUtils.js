@@ -4,6 +4,10 @@
 
 import fs from 'node:fs/promises'
 
+/**
+ * @param {import('node:fs').PathLike} targetPath
+ * @returns {Promise<boolean>}
+ */
 export async function pathExists(targetPath) {
   try {
     await fs.access(targetPath)
@@ -13,6 +17,10 @@ export async function pathExists(targetPath) {
   }
 }
 
+/**
+ * @param {import('node:fs').PathLike} filePath
+ * @returns {Promise<unknown>}
+ */
 export async function readJsonFile(filePath) {
   const rawFile = await fs.readFile(filePath, 'utf8')
   return JSON.parse(rawFile.replace(/^\uFEFF/, ''))

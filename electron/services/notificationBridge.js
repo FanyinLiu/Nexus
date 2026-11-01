@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Notification bridge service — RSS polling + webhook HTTP server.
  *

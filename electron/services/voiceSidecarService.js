@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * On-demand lifecycle for the optional Python speech sidecars.
  *

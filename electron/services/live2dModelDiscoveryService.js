@@ -1,3 +1,4 @@
+// @ts-nocheck
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { inspectLive2dModelFile } from './live2dModelCompatibility.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { performNetworkRequest, readJsonSafe } from '../net.js'
 import {
   formatWeatherContentForLocale,

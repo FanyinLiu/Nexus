@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sherpa-onnx Silero VAD service (main process).
  *
