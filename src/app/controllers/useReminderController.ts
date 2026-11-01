@@ -17,6 +17,10 @@ import { shouldRunReminderScheduler } from '../../features/reminders'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { createLogger } from '../../lib/logger.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+
+const reminderStripLog = createLogger('reminders.strip')
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
@@ -63,6 +67,28 @@ export function useReminderController({
   reminderTaskStore,
 }: UseReminderControllerOptions) {
   const { t, locale } = useTranslation()
+  const showReminderStrip = useCallback(async (task: ReminderTask, body: string) => {
+    const bridge = window.desktopPet?.showReminderStrip
+    if (!bridge) return
+    try {
+      await bridge({
+        id: task.id,
+        title: task.title,
+        body,
+        labels: {
+          done: t('chat.reminder_strip.done'),
+          snooze: t('chat.reminder_strip.snooze'),
+          open: t('chat.reminder_strip.open'),
+        },
+      })
+    } catch (error) {
+      // The pet bubble and chat line already carry the reminder; the strip
+      // is an extra surface, so a failure here is logged and not escalated.
+      reminderStripLog.warn('reminder strip unavailable', {
+        error: getRedactedLogErrorMessage(error),
+      })
+    }
+  }, [t])
   const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
     const displayText = task.prompt.trim()
     const action = task.action
@@ -85,6 +111,7 @@ export function useReminderController({
           speechContent: defaultSpeechText,
           autoHideMs: 16_000,
         })
+        await showReminderStrip(task, displayText)
         const broadcastResults = await broadcastToChannels(
           `${task.title}\n${displayText}`,
           settingsRef.current,
@@ -208,7 +235,7 @@ export function useReminderController({
         relatedTaskId: task.id,
       })
     }
-  }, [chat, debugConsole, pet, settingsRef, t])
+  }, [chat, debugConsole, pet, settingsRef, showReminderStrip, t])
 
   useReminderScheduler({
     enabled: shouldRunReminderScheduler(view, runtimeSnapshot),
