@@ -36,6 +36,14 @@ function createTempDir(t: TestContext): string {
   return directory
 }
 
+/** A non-empty directory at the store path makes `rm` refuse without recursive. */
+function makeInboxUndeletable(directory: string): void {
+  const target = path.join(directory, FILE_NAME)
+  fs.rmSync(target, { force: true })
+  fs.mkdirSync(target)
+  fs.writeFileSync(path.join(target, 'keep.txt'), 'keep')
+}
+
 function createFakeLogger(): Logger {
   const logger: Logger = {
     debug: () => {},
@@ -144,6 +152,7 @@ function createHarness(t: TestContext) {
   t.after(() => ipc.stopPrune())
 
   return {
+    directory,
     store,
     sent,
     fakeStrip,
@@ -246,4 +255,24 @@ test('clear-all withdraws every strip item and publishes a zero count', async (t
     changes: [],
     removedIds: [],
   })
+})
+
+test('a failed inbox delete keeps the strip and publishes no zero count', async (t) => {
+  const harness = createHarness(t)
+  harness.store.upsert(makeMessage())
+  await harness.store.flush()
+  makeInboxUndeletable(harness.directory)
+
+  await assert.rejects(
+    () => harness.ipc.clearInbox(),
+    /NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED/,
+  )
+
+  // The file still holds the reminder, so the strip and the badge must stay
+  // consistent with disk instead of showing an empty inbox.
+  assert.equal(harness.fakeStrip.withdrawAllCount(), 0)
+  assert.deepEqual(harness.fakeStrip.withdrawn, [])
+  assert.deepEqual(harness.changes(), [])
+  assert.equal(harness.store.list().unreadCount, 1)
+  assert.equal(fs.existsSync(path.join(harness.directory, FILE_NAME)), true)
 })

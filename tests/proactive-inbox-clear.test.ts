@@ -227,6 +227,23 @@ test('the exported clearProactiveInbox wrapper propagates the delete failure', a
     ipcMain: { handle: () => {} },
     getAllWindows: () => [],
     requireTrustedSender: () => {},
+    isPanelFocused: () => false,
+    getDeliveryContext: async () => ({
+      panelFocused: false,
+      fullscreen: false,
+      focusState: 'active',
+      inQuietHours: false,
+      systemDnd: null,
+      awayNotificationsEnabled: false,
+      stripEnabled: true,
+    }),
+    setDeliveryPreferences: () => {},
+    strip: {
+      show: () => true,
+      withdraw: () => true,
+      withdrawAll: () => {},
+    },
+    showOsNotification: () => {},
   })
   t.after(() => stopProactiveInboxPrune())
 
