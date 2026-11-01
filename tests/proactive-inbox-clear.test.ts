@@ -139,6 +139,28 @@ test('a debounced write scheduled before clear cannot recreate the file', async 
   assert.equal(fs.existsSync(inboxPath(directory)), false)
 })
 
+test('a clear during an in-flight persist leaves no file and a restarted store empty', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const directory = createTempDir(t)
+  const store = storeAt(directory)
+
+  store.upsert(makeMessage())
+  // Start the debounced persist, then clear while the atomic write is in
+  // flight. The store must wait for it and delete the file afterwards.
+  t.mock.timers.tick(400)
+  const clearing = store.clear()
+  await clearing
+  await store.flush()
+  t.mock.timers.tick(1_000)
+
+  assert.equal(fs.existsSync(inboxPath(directory)), false)
+  assert.deepEqual(store.list().entries, [])
+
+  const restarted = storeAt(directory)
+  assert.deepEqual(restarted.list().entries, [])
+  assert.equal(restarted.list().unreadCount, 0)
+})
+
 test('clear-all runs the injected inbox clear through the real flow', async (t) => {
   const directory = createTempDir(t)
   ;(globalThis as { __nexusMemoryVectorUserData?: string }).__nexusMemoryVectorUserData = directory
@@ -167,4 +189,55 @@ test('clear-all runs the injected inbox clear through the real flow', async (t) 
   assert.equal(result.proactiveInboxCleared, true)
   assert.equal(fs.existsSync(inboxPath(directory)), false)
   assert.deepEqual(store.list().entries, [])
+})
+
+test('a vector clear failure still clears the inbox and rethrows the original error', async (t) => {
+  const directory = createTempDir(t)
+  // A directory where the snapshot temp file must be written makes the vector
+  // snapshot compaction fail, which is the throw the inbox clear must survive.
+  fs.mkdirSync(path.join(directory, 'memory-vectors.json.tmp'))
+  ;(globalThis as { __nexusMemoryVectorUserData?: string }).__nexusMemoryVectorUserData = directory
+  t.after(() => {
+    delete (globalThis as { __nexusMemoryVectorUserData?: string }).__nexusMemoryVectorUserData
+  })
+
+  const { clearMemoryUserData } = await import('../electron/services/memoryUserDataClear.js')
+  let inboxClears = 0
+  let caught: unknown
+  try {
+    await clearMemoryUserData({
+      clearProactiveInbox: async () => {
+        inboxClears += 1
+        throw new Error('secondary inbox failure')
+      },
+    })
+  } catch (error) {
+    caught = error
+  }
+
+  assert.equal(inboxClears, 1)
+  assert.ok(caught instanceof Error)
+  const message = caught instanceof Error ? caught.message : ''
+  assert.notEqual(message, 'secondary inbox failure')
+})
+
+test('an inbox failure after a successful clear propagates', async (t) => {
+  const directory = createTempDir(t)
+  ;(globalThis as { __nexusMemoryVectorUserData?: string }).__nexusMemoryVectorUserData = directory
+  t.after(() => {
+    delete (globalThis as { __nexusMemoryVectorUserData?: string }).__nexusMemoryVectorUserData
+  })
+
+  const { clearMemoryUserData } = await import('../electron/services/memoryUserDataClear.js')
+  let inboxClears = 0
+  await assert.rejects(
+    () => clearMemoryUserData({
+      clearProactiveInbox: async () => {
+        inboxClears += 1
+        throw new Error('inbox clear failed')
+      },
+    }),
+    /inbox clear failed/,
+  )
+  assert.equal(inboxClears, 1)
 })

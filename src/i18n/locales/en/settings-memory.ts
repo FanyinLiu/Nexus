@@ -201,7 +201,7 @@ export const enSettingsMemory = {
   'settings.memory.import_error': 'Couldn\'t import memory archive — try again in a moment?',
   'settings.memory.clear_error': 'Couldn\'t clear memory archive — try again in a moment?',
   'settings.memory.import_confirm': 'Importing will replace the current long-term memory and daily notes. Continue?',
-  'settings.memory.nothing_to_clear': 'There is no memory content to clear.',
+  'settings.memory.clear_empty_hint': 'Nothing to clear',
   'settings.memory.clear_confirm': 'Clear the current long-term memory and daily notes?',
   'settings.memory.loops.title': 'Open loops',
   'settings.memory.loops.note': 'Commitments noticed in conversation. Edit them, mark them done, or stop reminders.',
