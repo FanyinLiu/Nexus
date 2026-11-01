@@ -45,4 +45,18 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Source must log through the structured logger. Scripts and tests are
+    // excluded on purpose: CLI output and test diagnostics use console directly.
+    files: ['src/**/*.{ts,tsx,js,mjs,cjs}', 'electron/**/*.{js,mjs,cjs}'],
+    rules: {
+      'no-console': 'warn',
+    },
+  },
+  {
+    files: ['src/lib/logger.ts', 'electron/logger.js'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ])
