@@ -10,6 +10,9 @@
  * Each call to the factory returns a fresh independent lock; callers that
  * want a shared lock keep one module-level reference.
  */
+/**
+ * @returns {<T>(fn: () => T | Promise<T>) => Promise<T>}
+ */
 export function createAsyncLock() {
   let pending = null
   return async function withLock(fn) {

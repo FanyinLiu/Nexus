@@ -177,6 +177,13 @@ function buildChatModelResponseEvidence({
   })
 }
 
+/**
+ * @param {Object} [options]
+ * @param {string} [options.providerId]
+ * @param {string} [options.modelId]
+ * @param {unknown} [options.data]
+ * @param {boolean} [options.usedFallback]
+ */
 export function classifyChatMessageProbeIdentity({
   providerId,
   modelId,

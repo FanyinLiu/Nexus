@@ -1,3 +1,4 @@
+// @ts-check
 import { createRequire } from 'node:module'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -9,7 +10,9 @@ import { getRedactedErrorMessage } from './errorRedaction.js'
 // the API). This is what makes the vault loadable in tests — they point
 // NEXUS_VAULT_USER_DATA_DIR at a temp dir instead.
 const require = createRequire(import.meta.url)
+/** @type {import('electron').App | null} */
 let electronApp = null
+/** @type {import('electron').SafeStorage | null} */
 let safeStorage = null
 try {
   const electron = require('electron')
@@ -23,8 +26,14 @@ try {
 
 const VAULT_FILE_NAME = 'vault.json'
 
+/** @typedef {{ p?: string, e?: string, v: number }} VaultEntry */
+/** @typedef {Record<string, VaultEntry>} Vault */
+/** @typedef {{ slot: string, delete: true } | { slot: string, delete?: false, entry: VaultEntry, plaintext: string }} VaultStoreOperation */
+
+/** @type {Vault | null} */
 let vaultCache = null
 const withVaultLock = createAsyncLock()
+/** @type {Map<string, string>} */
 const decryptedVaultCache = new Map()
 let safeStorageAccessBlocked = false
 let safeStorageFailureLogged = false
@@ -33,6 +42,7 @@ let safeStorageFailureLogged = false
 // empty-cache-plus-one-entry vault.
 let vaultWriteBlocked = false
 
+/** @returns {string} */
 function getVaultPath() {
   const userDataDirOverride = process.env.NEXUS_VAULT_USER_DATA_DIR
   if (userDataDirOverride) return path.join(userDataDirOverride, VAULT_FILE_NAME)
@@ -44,19 +54,26 @@ function getVaultPath() {
 // dev binaries and local packaged smoke do not trigger a Keychain password
 // prompt. SMOKE_TEST is set only by the local smoke harness; production
 // packaged installers still require safeStorage and never fall through here.
+/** @returns {boolean} */
 function isDevPlaintextMode() {
   return !electronApp?.isPackaged || process.env.SMOKE_TEST === '1'
 }
 
+/** @returns {boolean} */
 function isEncryptionAvailable() {
   if (isDevPlaintextMode()) return true
   try {
-    return safeStorage.isEncryptionAvailable()
+    return /** @type {import('electron').SafeStorage} */ (safeStorage).isEncryptionAvailable()
   } catch {
     return false
   }
 }
 
+/**
+ * @param {unknown} error
+ * @param {string} operation
+ * @returns {void}
+ */
 function markSafeStorageAccessBlocked(error, operation) {
   safeStorageAccessBlocked = true
   if (safeStorageFailureLogged) return
@@ -73,26 +90,29 @@ function assertSafeStorageAccessAllowed() {
   }
 }
 
+/** @param {string} value @returns {Buffer} */
 function encryptWithSafeStorage(value) {
   assertSafeStorageAccessAllowed()
   try {
-    return safeStorage.encryptString(value)
+    return /** @type {import('electron').SafeStorage} */ (safeStorage).encryptString(value)
   } catch (error) {
     markSafeStorageAccessBlocked(error, 'encryption')
     throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。', { cause: error })
   }
 }
 
+/** @param {Buffer} value @returns {string} */
 function decryptWithSafeStorage(value) {
   if (safeStorageAccessBlocked) return ''
   try {
-    return safeStorage.decryptString(value)
+    return /** @type {import('electron').SafeStorage} */ (safeStorage).decryptString(value)
   } catch (error) {
     markSafeStorageAccessBlocked(error, 'decryption')
     return ''
   }
 }
 
+/** @returns {Promise<Vault>} */
 async function loadVault() {
   if (vaultCache) return vaultCache
 
@@ -100,7 +120,7 @@ async function loadVault() {
   try {
     raw = await fs.readFile(getVaultPath(), 'utf8')
   } catch (error) {
-    if (error?.code !== 'ENOENT') {
+    if (/** @type {NodeJS.ErrnoException} */ (error)?.code !== 'ENOENT') {
       console.warn('[KeyVault] Failed to read vault file:', getRedactedErrorMessage(error))
     }
     vaultCache = {}
@@ -108,7 +128,7 @@ async function loadVault() {
   }
 
   try {
-    vaultCache = JSON.parse(raw)
+    vaultCache = /** @type {Vault} */ (JSON.parse(raw))
   } catch (error) {
     await quarantineCorruptVaultFile(error)
     vaultCache = {}
@@ -121,6 +141,7 @@ async function loadVault() {
 // empty vault would let the next persist overwrite the file with
 // empty-cache-plus-one-entry and silently destroy every stored key, so
 // preserve a timestamped backup and refuse all writes for this process.
+/** @param {unknown} parseError @returns {Promise<void>} */
 async function quarantineCorruptVaultFile(parseError) {
   vaultWriteBlocked = true
   const backupPath = `${getVaultPath()}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`
@@ -138,11 +159,12 @@ async function quarantineCorruptVaultFile(parseError) {
   }
 }
 
+/** @returns {Promise<void>} */
 async function persistVault() {
   if (vaultWriteBlocked) {
-    const error = new Error(
+    const error = /** @type {Error & { code?: string }} */ (new Error(
       '密钥库文件已损坏，为保护已存密钥，本次启动已禁止写入。请重启应用后重新设置密钥。',
-    )
+    ))
     error.code = 'VAULT_CORRUPT_WRITE_BLOCKED'
     throw error
   }
@@ -152,10 +174,20 @@ async function persistVault() {
   await fs.rename(tempPath, vaultPath)
 }
 
+/**
+ * @param {string} slot
+ * @param {string} plaintext
+ * @returns {Promise<void>}
+ */
 export function vaultStore(slot, plaintext) {
   return withVaultLock(() => _vaultStore(slot, plaintext))
 }
 
+/**
+ * @param {string} slot
+ * @param {string} plaintext
+ * @returns {Promise<void>}
+ */
 async function _vaultStore(slot, plaintext) {
   const value = String(plaintext ?? '')
   const slotName = String(slot ?? '')
@@ -189,14 +221,19 @@ async function _vaultStore(slot, plaintext) {
   await persistVault()
 }
 
+/**
+ * @param {string} slot
+ * @returns {Promise<string>}
+ */
 export function vaultRetrieve(slot) {
   return withVaultLock(() => _vaultRetrieve(slot))
 }
 
+/** @param {string} slot @returns {Promise<string>} */
 async function _vaultRetrieve(slot) {
   const slotName = String(slot ?? '')
   if (decryptedVaultCache.has(slotName)) {
-    return decryptedVaultCache.get(slotName)
+    return /** @type {string} */ (decryptedVaultCache.get(slotName))
   }
 
   const vault = await loadVault()
@@ -231,10 +268,12 @@ async function _vaultRetrieve(slot) {
   return ''
 }
 
+/** @param {string} slot @returns {Promise<void>} */
 export function vaultDelete(slot) {
   return withVaultLock(() => _vaultDelete(slot))
 }
 
+/** @param {string} slot @returns {Promise<void>} */
 async function _vaultDelete(slot) {
   const vault = await loadVault()
 
@@ -245,19 +284,26 @@ async function _vaultDelete(slot) {
   await persistVault()
 }
 
+/** @returns {Promise<string[]>} */
 export async function vaultListSlots() {
   const vault = await loadVault()
   return Object.keys(vault)
 }
 
+/**
+ * @param {Record<string, string>} entries
+ * @returns {Promise<void>}
+ */
 export function vaultStoreMany(entries) {
   return withVaultLock(() => _vaultStoreMany(entries))
 }
 
+/** @param {Record<string, string>} entries @returns {Promise<void>} */
 async function _vaultStoreMany(entries) {
   if (!entries || typeof entries !== 'object') return
 
   // Phase 1: encrypt all values upfront (may throw — no cache mutation yet)
+  /** @type {VaultStoreOperation[]} */
   const operations = []
   for (const [slot, value] of Object.entries(entries)) {
     const plaintext = String(value ?? '')
@@ -297,7 +343,9 @@ async function _vaultStoreMany(entries) {
   await persistVault()
 }
 
+/** @param {string[]} slots @returns {Promise<Record<string, string>>} */
 export async function vaultRetrieveMany(slots) {
+  /** @type {Record<string, string>} */
   const result = {}
 
   for (const slot of slots) {
@@ -307,11 +355,15 @@ export async function vaultRetrieveMany(slots) {
   return result
 }
 
+/** @returns {boolean} */
 export function vaultIsAvailable() {
   return isEncryptionAvailable()
 }
 
-/** @internal Test-only: reset in-memory vault state between test cases. */
+/**
+ * @internal Test-only: reset in-memory vault state between test cases.
+ * @returns {void}
+ */
 export function resetKeyVaultStateForTests() {
   vaultCache = null
   decryptedVaultCache.clear()
