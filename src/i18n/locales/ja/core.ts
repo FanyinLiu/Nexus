@@ -384,6 +384,8 @@ export const jaCore = {
   'updater.error.install_prep_failed_rec': 'このバージョンのままにして、あとでもう一度「再起動してインストール」を押してください。',
   'updater.error.snapshot_failed': 'インストール前にデータをバックアップできなかったので、更新を中止しました。',
   'updater.error.snapshot_failed_rec': '今のデータはそのままです。あとでもう一度「再起動してインストール」を押してください。',
+  'updater.error.unverified_update': 'この更新が安全か確認できなかったため、インストールしませんでした。',
+  'updater.error.unverified_update_rec': '新しいバージョンはリリースページからダウンロードできます。',
   'failover.error.all_failed': '{domain} のリクエストがすべて失敗しました。',
   'file.error.record_read_failed': '録音ファイルを読み込めませんでした。',
   'file.error.not_supported': '現在の環境はテキストファイル操作をサポートしていません。',
