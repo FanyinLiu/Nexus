@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { before, beforeEach, test } from 'node:test'
+import { afterEach, before, beforeEach, test } from 'node:test'
 
 import { createAssistantReplyRunner } from '../src/hooks/chat/assistantReply.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
+import { subscribePetNotify } from '../src/lib/petNotifyBus.ts'
 import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings } from '../src/types/app.ts'
 import type { ChatMessage } from '../src/types/chat.ts'
@@ -61,8 +62,17 @@ beforeEach(() => {
 
 type SpeechPath = 'off' | 'direct' | 'streaming'
 
+const petNotifyCleanups: Array<() => void> = []
+
+afterEach(() => {
+  while (petNotifyCleanups.length) petNotifyCleanups.pop()?.()
+})
+
 function createRunner(replyContent: string, speech: SpeechPath = 'off') {
   const moods: string[] = []
+  petNotifyCleanups.push(subscribePetNotify((event) => {
+    if (event.type === 'mood') moods.push(event.mood)
+  }))
   let resolveStream = () => {}
   const streamDone = new Promise<void>((resolve) => { resolveStream = resolve })
   let streamStarted = false
@@ -83,16 +93,13 @@ function createRunner(replyContent: string, speech: SpeechPath = 'off') {
     loadDesktopContextSnapshot: async () => null,
     suppressVoiceReplyRef: { current: false },
     beginStreamingSpeechReply: () => (speech === 'streaming' ? streamingController : null),
-    setMood: (mood: string) => { moods.push(mood) },
     busEmit: () => {},
     updateVoicePipeline: () => {},
     appendVoiceTrace: () => {},
     clearPendingVoiceRestart: () => {},
     resetNoSpeechRestartCount: () => {},
-    updatePetStatus: () => {},
     appendDailyMemoryEntries: () => {},
     appendDebugConsoleEvent: () => {},
-    queuePetPerformanceCue: () => {},
     onAssistantReplyDelivered: () => {},
     settingsRef: { current: null },
     setSettings: () => {},

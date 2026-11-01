@@ -3,6 +3,7 @@ import {
   createId,
   shorten,
 } from '../lib/index.ts'
+import { emitPetNotify } from '../lib/petNotifyBus.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import {
   markRecalled,
@@ -340,9 +341,9 @@ export function useChat(ctx: UseChatContext) {
       onCancel: () => {
         const currentCtx = ctxRef.current
         hidePetDialogBubble()
-        currentCtx.clearPetPerformanceCue()
+        emitPetNotify({ type: 'performance_cue_clear' })
         currentCtx.setLiveTranscript('')
-        currentCtx.setMood('idle')
+        emitPetNotify({ type: 'mood', mood: 'idle' })
         if (currentCtx.voiceStateRef.current !== 'processing') return
         currentCtx.setVoiceState('idle')
         currentCtx.busEmit({

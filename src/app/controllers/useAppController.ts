@@ -33,6 +33,7 @@ import { useSettingsSubscription } from './useSettingsSubscription.ts'
 import { useMcpServerSync } from '../../hooks/useMcpServerSync.ts'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
 import { pruneLegacyStorageKeys } from '../../lib/storage.ts'
+import { subscribePetNotify } from '../../lib/petNotifyBus.ts'
 import { useAppViewModels } from './useAppViewModels.ts'
 import { useAutonomyAwareSendMessage } from './useAutonomyAwareSendMessage.ts'
 import { useAutonomyGoals } from './useAutonomyGoals.ts'
@@ -168,11 +169,6 @@ export function useAppController() {
     dailyMemoriesRef: memory.dailyMemoriesRef,
     setMemories: memory.setMemories,
     appendDailyMemoryEntries: memory.appendDailyMemoryEntries,
-    setMood: pet.setMood,
-    updatePetStatus: pet.updatePetStatus,
-    clearPetPerformanceCue: pet.clearPetPerformanceCue,
-    queuePetPerformanceCue: pet.queuePetPerformanceCue,
-    markPresenceActivity: pet.markPresenceActivity,
     voiceStateRef: voice.voiceStateRef,
     suppressVoiceReplyRef: voice.suppressVoiceReplyRef,
     setVoiceState: voice.setVoiceState,
@@ -198,6 +194,43 @@ export function useAppController() {
     removeReminderTask: (id) => removeReminderTaskFnRef.current?.(id) ?? null,
     appendDebugConsoleEvent: debugConsole.appendDebugConsoleEvent,
   })
+
+  // Chat emits pet notifications on a sync bus instead of receiving the pet
+  // callbacks directly. The effect cleanup makes StrictMode's double mount
+  // deliver to exactly one listener; event order is unchanged because emit is
+  // synchronous inside the chat turn.
+  const {
+    setMood: applyPetMood,
+    updatePetStatus: applyPetStatus,
+    queuePetPerformanceCue: queuePetCue,
+    clearPetPerformanceCue: clearPetCue,
+    markPresenceActivity: markPetPresence,
+  } = pet
+  useEffect(() => subscribePetNotify((event) => {
+    switch (event.type) {
+      case 'mood':
+        applyPetMood(event.mood)
+        break
+      case 'status':
+        applyPetStatus(event.text, event.duration)
+        break
+      case 'performance_cue_queue':
+        queuePetCue(event.cues)
+        break
+      case 'performance_cue_clear':
+        clearPetCue()
+        break
+      case 'presence_activity':
+        markPetPresence(event.options)
+        break
+    }
+  }), [
+    applyPetMood,
+    applyPetStatus,
+    queuePetCue,
+    clearPetCue,
+    markPetPresence,
+  ])
 
   useControllerRefSync({
     addReminderTaskFnRef,

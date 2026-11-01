@@ -1,14 +1,14 @@
 import { useCallback, useRef } from 'react'
 import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
+import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
 import { getSpeechOutputErrorMessage } from './support.ts'
-import type { ChatPetDeps, ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
+import type { ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
 
 type CompanionNoticeDependencies = {
-  ctx: Pick<ChatPetDeps, 'markPresenceActivity' | 'setMood'>
-    & Pick<ChatVoiceDeps, 'speakAssistantReply' | 'voiceStateRef'>
+  ctx: Pick<ChatVoiceDeps, 'speakAssistantReply' | 'voiceStateRef'>
   t: Translator
   busyRef: { current: boolean }
   appendChatMessage: (message: ChatMessage) => void
@@ -91,8 +91,8 @@ export function useCompanionNotices({
       )
     }
 
-    ctx.markPresenceActivity()
-    ctx.setMood('happy')
+    emitPetNotify({ type: 'presence_activity' })
+    emitPetNotify({ type: 'mood', mood: 'happy' })
 
     if (!speechContent) {
       return

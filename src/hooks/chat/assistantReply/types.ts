@@ -59,14 +59,11 @@ export type AssistantReplyRunnerDependencies = {
     | 'onAssistantReplyDelivered'
     | 'onAssistantReplyFailed'
     | 'onUserMoodSignal'
-    | 'queuePetPerformanceCue'
     | 'resetNoSpeechRestartCount'
-    | 'setMood'
     | 'setSettings'
     | 'settingsRef'
     | 'speakAssistantReply'
     | 'suppressVoiceReplyRef'
-    | 'updatePetStatus'
     | 'updateVoicePipeline'
   >
   appendChatMessage: (message: ChatMessage) => void
