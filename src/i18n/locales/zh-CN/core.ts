@@ -209,6 +209,7 @@ export const zhCNCore = {
   'pet.status.continuous_voice_hint': '连续语音已开启，你停一下我就会接着回应。',
   'pet.status.default_hint': '左键拖动，右键菜单，展开按钮可以打开聊天或设置。',
   'pet.notification.unread_badge': '{count} 条未读',
+  'pet.proactive.unread_badge': '{count} 条未读消息',
   'pet.button.settings': '设置',
   'pet.button.chat': '对话',
   'pet.voice.continuous_on': '连续对话已开启',

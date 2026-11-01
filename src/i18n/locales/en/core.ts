@@ -211,6 +211,7 @@ export const enCore = {
   'pet.status.continuous_voice_hint': 'Continuous voice is on — pause for a moment and I’ll pick it up.',
   'pet.status.default_hint': 'Left-click to drag, right-click for the menu, expand for chat or settings.',
   'pet.notification.unread_badge': '{count} unread',
+  'pet.proactive.unread_badge': '{count} unread messages',
   'pet.button.settings': 'Settings',
   'pet.button.chat': 'Chat',
   'pet.voice.continuous_on': 'Continuous conversation is on',

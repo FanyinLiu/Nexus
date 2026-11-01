@@ -1,10 +1,16 @@
 // ── Autonomy phase & focus ────────────────────────────────────────────────────
 
+import type { FocusState } from '../../shared/proactiveDelivery.js'
+
 /** The companion's current lifecycle phase. */
 export type AutonomyPhase = 'awake' | 'drowsy' | 'sleeping' | 'dreaming'
 
-/** Desktop focus state derived from system idle time + power events. */
-export type FocusState = 'active' | 'idle' | 'away' | 'locked'
+/**
+ * Desktop focus state derived from system idle time + power events.
+ * Single-sourced in shared/proactiveDelivery.js: the delivery router needs the
+ * same union in the main process, and two copies would drift.
+ */
+export type { FocusState }
 
 /**
  * OS power event kinds from Electron's powerMonitor — values single-sourced

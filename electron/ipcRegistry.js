@@ -22,6 +22,7 @@ import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
+import * as proactiveIpc from './ipc/proactiveIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -110,6 +111,7 @@ export function registerIpc(options = {}) {
   voiceProfileIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
+  proactiveIpc.register()
   mcpIpc.register()
   externalActionPolicyIpc.register()
   voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
@@ -130,6 +132,8 @@ export function registerIpc(options = {}) {
 
   app.once('before-quit', async () => {
     desktopPresenceIpc.stop()
+    proactiveIpc.stopProactiveInboxPrune()
+    await proactiveIpc.flushProactiveInbox()
     const [mcpHost, memoryVectorStore, minecraftGateway, factorioRcon, telegramGateway, discordGateway, notificationBridge] = await Promise.all([
       import('./services/mcpHost.js').catch(() => null),
       import('./services/memoryVectorStore.js').catch(() => null),

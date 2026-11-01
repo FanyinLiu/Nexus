@@ -211,6 +211,7 @@ export const zhTWCore = {
   'pet.status.continuous_voice_hint': '連續語音已開啟，你停一下我就會接著回應。',
   'pet.status.default_hint': '左鍵拖曳，右鍵選單，展開按鈕可以打開聊天或設定。',
   'pet.notification.unread_badge': '未讀 {count}',
+  'pet.proactive.unread_badge': '{count} 則未讀訊息',
   'pet.button.settings': '設定',
   'pet.button.chat': '對話',
   'pet.voice.continuous_on': '連續對話已開啟',

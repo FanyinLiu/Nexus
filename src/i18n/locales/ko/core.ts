@@ -211,6 +211,7 @@ export const koCore = {
   'pet.status.continuous_voice_hint': '연속 음성 켜짐. 잠깐 멈추면 바로 이어서 대답할게.',
   'pet.status.default_hint': '왼쪽 클릭으로 끌기, 오른쪽 클릭은 메뉴, 펼치기 버튼에서 채팅이나 설정을 열 수 있어요.',
   'pet.notification.unread_badge': '안 읽음 {count}',
+  'pet.proactive.unread_badge': '읽지 않은 메시지 {count}개',
   'pet.button.settings': '설정',
   'pet.button.chat': '대화',
   'pet.voice.continuous_on': '연속 대화 켜짐',

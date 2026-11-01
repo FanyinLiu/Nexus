@@ -211,6 +211,7 @@ export const jaCore = {
   'pet.status.continuous_voice_hint': '連続音声オン。少し止まればすぐ続きを返すよ。',
   'pet.status.default_hint': '左クリックでドラッグ、右クリックでメニュー、展開ボタンからチャットや設定を開けます。',
   'pet.notification.unread_badge': '未読{count}',
+  'pet.proactive.unread_badge': '未読メッセージ {count} 件',
   'pet.button.settings': '設定',
   'pet.button.chat': 'チャット',
   'pet.voice.continuous_on': '連続会話オン',
