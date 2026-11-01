@@ -56,9 +56,10 @@ type ChatBridge = {
     chatContent: string
     bubbleContent: string
     speechContent: string
-    autoHideMs: number
+    autoHideMs?: number
     dedupeKey?: string
     toolResult?: ReturnType<typeof toChatToolResult>
+    proactiveTitle?: string
   }) => Promise<void>
   appendSystemMessage: (content: string, tone?: ChatMessageTone) => void
   sendMessage: (text: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification' }) => Promise<unknown>
@@ -166,12 +167,15 @@ export function useReminderController({
           })
         } else {
           // Legacy path: a reminder must never be lost when routing is
-          // unavailable, so fall back to chat line + bubble + speech.
+          // unavailable, so fall back to chat line + bubble + speech. Marking
+          // the bubble with the router title puts it under the same shared
+          // collapse policy (12 s, hover pauses, 5 s after leave) as the
+          // routed bubble instead of the plain notice timer.
           await chat.pushCompanionNotice({
             chatContent: t('chat.prefix.reminder_task', { title: task.title, content: displayText }),
             bubbleContent: displayText,
             speechContent: defaultSpeechText,
-            autoHideMs: PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
+            proactiveTitle: message.title,
           })
         }
 
@@ -308,4 +312,6 @@ export function useReminderController({
     onTrigger: handleReminderTaskTrigger,
     onEvent: debugConsole.appendDebugConsoleEvent,
   })
+
+  return { handleReminderTaskTrigger }
 }

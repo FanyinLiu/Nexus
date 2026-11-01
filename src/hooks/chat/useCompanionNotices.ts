@@ -39,6 +39,7 @@ export function useCompanionNotices({
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
     const chatContent = options.chatContent.trim()
     const bubbleContent = (options.bubbleContent ?? chatContent).trim()
+    const proactiveTitle = options.proactiveTitle?.trim() ?? ''
     const speechContent = options.speechContent?.trim() ?? ''
     const createdAt = new Date().toISOString()
 
@@ -86,8 +87,13 @@ export function useCompanionNotices({
           ...(options.loopOffer ? { loopOffer: options.loopOffer } : {}),
           ...(options.loopCheck ? { loopCheck: options.loopCheck } : {}),
           ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
+          ...(proactiveTitle ? { proactiveTitle } : {}),
         },
-        { autoHideMs: options.autoHideMs ?? COMPANION_NOTICE_AUTO_HIDE_MS },
+        // A proactive notice is timed by the shared collapse scheduler on the
+        // surface, never by the plain notice auto-hide.
+        proactiveTitle
+          ? undefined
+          : { autoHideMs: options.autoHideMs ?? COMPANION_NOTICE_AUTO_HIDE_MS },
       )
     }
 

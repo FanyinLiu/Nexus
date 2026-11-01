@@ -11,6 +11,7 @@ import {
 } from '../src/features/reminders/proactiveMessage.ts'
 import { resolveProactivePresentation } from '../src/features/proactive/proactivePresentation.ts'
 import {
+  PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS,
   PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
   useReadableCaption,
 } from '../src/features/uiV2/caption.ts'
@@ -234,14 +235,14 @@ test('with the strip disabled the reminder bubble collapses at 12 s and hover pa
   }
 
   // Second sub-scenario: hovering must hold the bubble past the 12 s mark and
-  // only start a fresh 12 s countdown once the pointer leaves.
+  // only start the fixed 5 s leave window once the pointer leaves.
   const hovered = createCaption()
   try {
     assert.equal(hovered.render({ text, phase: 'idle', paused: true, proactive: true }), 'Stand up')
     clock.tick(20_000)
     assert.equal(hovered.render({ text, phase: 'idle', paused: true, proactive: true }), 'Stand up')
     assert.equal(hovered.render({ text, phase: 'idle', proactive: true }), 'Stand up')
-    clock.tick(11_900)
+    clock.tick(PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS - 100)
     assert.equal(hovered.render({ text, phase: 'idle', proactive: true }), 'Stand up')
     clock.tick(100)
     assert.equal(hovered.render({ text, phase: 'idle', proactive: true }), '')

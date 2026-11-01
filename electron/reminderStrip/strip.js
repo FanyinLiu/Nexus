@@ -19,6 +19,11 @@
  */
 
 ;(() => {
+  // These two windows mirror PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS and
+  // PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS in
+  // src/features/proactive/proactiveCollapse.ts. This sandboxed page cannot
+  // import the TS scheduler, so the collapse tests pin both numbers to the TS
+  // constants.
   const AUTO_COLLAPSE_MS = 12_000
   const RESUME_AFTER_HOVER_MS = 5_000
 
