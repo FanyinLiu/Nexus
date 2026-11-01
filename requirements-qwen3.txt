@@ -11,3 +11,4 @@
 torch
 numpy
 qwen-tts==0.1.1
+Pillow>=13

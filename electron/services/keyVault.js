@@ -4,6 +4,8 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createAsyncLock } from './asyncLock.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { isEncryptionWritable, isPlaintextModeAllowed } from './keyVaultPolicy.js'
+import { mainT } from '../mainMessages.js'
 
 // Electron's app/safeStorage when running inside the app; absent under plain
 // node:test (requiring 'electron' there yields the binary path string, not
@@ -23,6 +25,16 @@ try {
 } catch {
   // plain node — fall through; getVaultPath uses NEXUS_VAULT_USER_DATA_DIR
 }
+
+let packagedSmokeBuild = false
+try {
+  packagedSmokeBuild = require('../../package.json')?.nexusSmokeBuild === true
+} catch {
+  // Missing/unreadable package metadata cannot grant plaintext storage.
+}
+
+/** @type {{ app?: import('electron').App, safeStorage?: import('electron').SafeStorage, platform?: string, smokeBuild?: boolean } | null} */
+let runtimeOverrides = null
 
 const VAULT_FILE_NAME = 'vault.json'
 
@@ -46,27 +58,84 @@ let vaultWriteBlocked = false
 function getVaultPath() {
   const userDataDirOverride = process.env.NEXUS_VAULT_USER_DATA_DIR
   if (userDataDirOverride) return path.join(userDataDirOverride, VAULT_FILE_NAME)
-  if (!electronApp) throw new Error('Electron app path API is unavailable')
-  return path.join(electronApp.getPath('userData'), VAULT_FILE_NAME)
+  const app = getElectronApp()
+  if (!app) throw new Error('Electron app path API is unavailable')
+  return path.join(app.getPath('userData'), VAULT_FILE_NAME)
 }
 
-// Dev-mode and smoke-only plaintext path: skip safeStorage entirely so unsigned
-// dev binaries and local packaged smoke do not trigger a Keychain password
-// prompt. SMOKE_TEST is set only by the local smoke harness; production
-// packaged installers still require safeStorage and never fall through here.
+/** @returns {import('electron').App | null} */
+function getElectronApp() {
+  return runtimeOverrides?.app ?? electronApp
+}
+
+/** @returns {import('electron').SafeStorage | null} */
+function getSafeStorageApi() {
+  return runtimeOverrides?.safeStorage ?? safeStorage
+}
+
+/** @returns {string} */
+function getPlatform() {
+  return runtimeOverrides?.platform ?? process.platform
+}
+
+/** @returns {boolean} */
+function isPackagedSmokeBuild() {
+  return runtimeOverrides?.smokeBuild ?? packagedSmokeBuild
+}
+
+// Plaintext is allowed only for unpackaged development or a packaged build
+// that baked the smoke flag into its own package.json. SMOKE_TEST is
+// deliberately ignored here: a real install must never store keys as plaintext
+// just because an environment variable is set.
 /** @returns {boolean} */
 function isDevPlaintextMode() {
-  return !electronApp?.isPackaged || process.env.SMOKE_TEST === '1'
+  return isPlaintextModeAllowed({
+    isPackaged: getElectronApp()?.isPackaged === true,
+    smokeBuild: isPackagedSmokeBuild(),
+  })
+}
+
+/** @returns {string} */
+function getLinuxStorageBackend() {
+  if (getPlatform() !== 'linux') return ''
+  try {
+    const api = getSafeStorageApi()
+    return typeof api?.getSelectedStorageBackend === 'function'
+      ? String(api.getSelectedStorageBackend())
+      : 'unknown'
+  } catch {
+    return 'unknown'
+  }
 }
 
 /** @returns {boolean} */
-function isEncryptionAvailable() {
-  if (isDevPlaintextMode()) return true
+function isSafeStorageAvailable() {
   try {
-    return /** @type {import('electron').SafeStorage} */ (safeStorage).isEncryptionAvailable()
+    return Boolean(/** @type {import('electron').SafeStorage} */ (getSafeStorageApi()).isEncryptionAvailable())
   } catch {
     return false
   }
+}
+
+// Writes use the strict policy; reads below use isSafeStorageAvailable() only,
+// so secrets already encrypted with a still-working backend stay readable.
+/** @returns {boolean} */
+function isEncryptionAvailable() {
+  return isEncryptionWritable({
+    plaintextMode: isDevPlaintextMode(),
+    platform: getPlatform(),
+    storageBackend: getLinuxStorageBackend(),
+    encryptionAvailable: isSafeStorageAvailable(),
+  })
+}
+
+/** @returns {Error & { code: string }} */
+function encryptionUnavailableError() {
+  const error = /** @type {Error & { code: string }} */ (
+    new Error(mainT('vault.encryptionUnavailable'))
+  )
+  error.code = 'VAULT_ENCRYPTION_UNAVAILABLE'
+  return error
 }
 
 /**
@@ -94,7 +163,7 @@ function assertSafeStorageAccessAllowed() {
 function encryptWithSafeStorage(value) {
   assertSafeStorageAccessAllowed()
   try {
-    return /** @type {import('electron').SafeStorage} */ (safeStorage).encryptString(value)
+    return /** @type {import('electron').SafeStorage} */ (getSafeStorageApi()).encryptString(value)
   } catch (error) {
     markSafeStorageAccessBlocked(error, 'encryption')
     throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。', { cause: error })
@@ -105,7 +174,7 @@ function encryptWithSafeStorage(value) {
 function decryptWithSafeStorage(value) {
   if (safeStorageAccessBlocked) return ''
   try {
-    return /** @type {import('electron').SafeStorage} */ (safeStorage).decryptString(value)
+    return /** @type {import('electron').SafeStorage} */ (getSafeStorageApi()).decryptString(value)
   } catch (error) {
     markSafeStorageAccessBlocked(error, 'decryption')
     return ''
@@ -208,10 +277,7 @@ async function _vaultStore(slot, plaintext) {
   }
 
   if (!isEncryptionAvailable()) {
-    throw new Error(
-      '系统加密服务好像不可用，密钥没法安全存储。'
-      + '在 Linux 下试试安装 gnome-keyring 或 kwallet 再重试？',
-    )
+    throw encryptionUnavailableError()
   }
 
   const encrypted = encryptWithSafeStorage(value)
@@ -249,7 +315,7 @@ async function _vaultRetrieve(slot) {
       return ''
     }
 
-    if (!isEncryptionAvailable()) {
+    if (!isSafeStorageAvailable()) {
       console.warn('[KeyVault] Encryption unavailable; encrypted vault entries are unavailable')
       return ''
     }
@@ -318,10 +384,7 @@ async function _vaultStoreMany(entries) {
     }
 
     if (!isEncryptionAvailable()) {
-      throw new Error(
-        '系统加密服务好像不可用，密钥没法安全存储。'
-        + '在 Linux 下试试安装 gnome-keyring 或 kwallet 再重试？',
-      )
+      throw encryptionUnavailableError()
     }
 
     const encrypted = encryptWithSafeStorage(plaintext)
@@ -361,6 +424,15 @@ export function vaultIsAvailable() {
 }
 
 /**
+ * @internal Test-only: emulate packaged/platform/safeStorage conditions.
+ * @param {{ app?: import('electron').App, safeStorage?: import('electron').SafeStorage, platform?: string, smokeBuild?: boolean } | null} overrides
+ * @returns {void}
+ */
+export function setKeyVaultRuntimeForTests(overrides) {
+  runtimeOverrides = overrides ?? null
+}
+
+/**
  * @internal Test-only: reset in-memory vault state between test cases.
  * @returns {void}
  */
@@ -370,4 +442,5 @@ export function resetKeyVaultStateForTests() {
   vaultWriteBlocked = false
   safeStorageAccessBlocked = false
   safeStorageFailureLogged = false
+  runtimeOverrides = null
 }

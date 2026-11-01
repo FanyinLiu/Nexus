@@ -25,6 +25,7 @@ import logging
 import os
 import tempfile
 import threading
+from pathlib import Path
 
 import torch
 import uvicorn
@@ -38,6 +39,13 @@ from nexus_sidecar_guard import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Full commit SHA for zai-org/GLM-ASR-Nano-2512. Local ModelScope/Hugging Face
+# directories are loaded offline instead; a Hub id must never fall back to the
+# floating main branch. Override with --model-revision or
+# NEXUS_GLM_ASR_MODEL_REVISION.
+GLM_ASR_DEFAULT_REVISION = "61ba4e0b3309b6656edea3e93e419f7bd5c61957"
+GLM_ASR_REVISION_ENV = "NEXUS_GLM_ASR_MODEL_REVISION"
 
 app = FastAPI(title="GLM-ASR-Nano STT Server")
 model = None
@@ -61,6 +69,41 @@ async def nexus_sidecar_guard(request, call_next):
     return await call_next(request)
 
 
+def hf_cache_snapshot(model_id, revision=None):
+    """Return a cached Hugging Face snapshot directory for `model_id`."""
+    cache_root = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache" / "huggingface")) / "hub"
+    snapshots = cache_root / ("models--" + str(model_id).replace("/", "--")) / "snapshots"
+    if revision:
+        candidate = snapshots / str(revision)
+        if candidate.is_dir():
+            return candidate
+    try:
+        candidates = sorted(
+            (entry for entry in snapshots.iterdir() if entry.is_dir()),
+            key=lambda entry: entry.name,
+            reverse=True,
+        )
+    except OSError:
+        candidates = []
+    return candidates[0] if candidates else None
+
+
+def resolve_pretrained_source(model_id, revision):
+    """Return (source, kwargs) for a pinned, offline-first from_pretrained call."""
+    expanded = Path(str(model_id)).expanduser()
+    if expanded.is_dir():
+        return str(expanded), {"local_files_only": True}
+    snapshot = hf_cache_snapshot(model_id, revision)
+    if snapshot is not None:
+        return str(snapshot), {"local_files_only": True}
+    if not revision:
+        raise RuntimeError(
+            f"{model_id} is not cached locally and no pinned revision is configured; "
+            f"set {GLM_ASR_REVISION_ENV} or --model-revision to a full commit SHA."
+        )
+    return str(model_id), {"revision": str(revision), "local_files_only": False}
+
+
 def get_best_device():
     if torch.cuda.is_available():
         return "cuda"
@@ -73,16 +116,18 @@ def get_best_dtype(device):
     return torch.float16
 
 
-def load_model(model_id, device, dtype):
+def load_model(model_id, device, dtype, revision=None):
     global model, processor
     from transformers import AutoModelForSeq2SeqLM, AutoProcessor
 
-    logger.info("Loading processor from %s ...", model_id)
-    processor = AutoProcessor.from_pretrained(model_id)
+    source, load_kwargs = resolve_pretrained_source(model_id, revision)
 
-    logger.info("Loading model from %s on %s (%s) ...", model_id, device, dtype)
+    logger.info("Loading processor from %s ...", source)
+    processor = AutoProcessor.from_pretrained(source, **load_kwargs)
+
+    logger.info("Loading model from %s on %s (%s) ...", source, device, dtype)
     model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_id, torch_dtype=dtype, device_map=device,
+        source, torch_dtype=dtype, device_map=device, **load_kwargs,
     )
     logger.info("Model loaded successfully.")
 
@@ -144,6 +189,10 @@ def main():
     ms_cache = os.path.expanduser("~/.cache/modelscope/hub/ZhipuAI/GLM-ASR-Nano-2512")
     default_model = ms_cache if os.path.isdir(ms_cache) else "zai-org/GLM-ASR-Nano-2512"
     parser.add_argument("--model", default=default_model)
+    parser.add_argument(
+        "--model-revision",
+        default=os.environ.get(GLM_ASR_REVISION_ENV) or GLM_ASR_DEFAULT_REVISION,
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -155,7 +204,7 @@ def main():
 
     device = get_best_device()
     dtype = get_best_dtype(device)
-    load_model(args.model, device, dtype)
+    load_model(args.model, device, dtype, args.model_revision)
 
     logger.info("Starting server on %s:%d", args.host, args.port)
     uvicorn.run(app, host=args.host, port=args.port)
