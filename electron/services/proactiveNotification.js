@@ -2,6 +2,19 @@ import { Notification } from 'electron'
 import { panelWindow, mainWindow, createPanelWindow, getPetIconPath } from '../windowManager.js'
 
 /**
+ * Bring the companion panel forward (creating it if needed) and keep the pet
+ * above it. Shared by the OS notification click and the reminder strip.
+ */
+export function focusCompanionPanel() {
+  const win = panelWindow && !panelWindow.isDestroyed() ? panelWindow : createPanelWindow()
+  if (!win || win.isDestroyed()) return
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.moveTop()
+}
+
+/**
  * Fire an OS-level notification with title + body. Clicking it focuses the
  * panel window (creating it if needed). Returns false when the platform has
  * no Notification support (rare on Linux without notify-send).
@@ -21,14 +34,7 @@ export function showProactiveNotification({ title, body }) {
     icon: getPetIconPath(),
   })
 
-  notification.on('click', () => {
-    const win = panelWindow && !panelWindow.isDestroyed() ? panelWindow : createPanelWindow()
-    if (!win || win.isDestroyed()) return
-    if (win.isMinimized()) win.restore()
-    win.show()
-    win.focus()
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.moveTop()
-  })
+  notification.on('click', focusCompanionPanel)
 
   notification.show()
   return true

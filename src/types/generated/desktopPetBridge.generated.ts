@@ -156,6 +156,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   setSystemVibrancy: { conditional: false, invoke: ['window:set-system-vibrancy'], events: [] },
   showConfirmDialog: { conditional: false, invoke: ['dialog:confirm'], events: [] },
   showProactiveNotification: { conditional: false, invoke: ['proactive:show-notification'], events: [] },
+  showReminderStrip: { conditional: false, invoke: ['reminder-strip:show'], events: [] },
   skillGet: { conditional: false, invoke: ['skill:get'], events: [] },
   skillList: { conditional: false, invoke: ['skill:list'], events: [] },
   skillMarkUsed: { conditional: false, invoke: ['skill:mark-used'], events: [] },
@@ -386,6 +387,7 @@ export type DesktopPetInvokeChannel =
   | 'plugin:stop'
   | 'proactive:deliver'
   | 'proactive:show-notification'
+  | 'reminder-strip:show'
   | 'runtime-state:get'
   | 'runtime-state:heartbeat'
   | 'runtime-state:update'

@@ -1055,6 +1055,7 @@ declare global {
 
       // Proactive OS-level notification ("[name] 在想你")
       showProactiveNotification: (payload: { title: string; body: string }) => Promise<{ ok: boolean }>
+      showReminderStrip: (payload: { id: string; title: string; body: string; labels: { done: string; snooze: string; open: string } }) => Promise<{ ok: boolean }>
 
       // Key vault (safeStorage encryption). Retrieval returns opaque
       // nexus-vault-ref tokens; plaintext is resolved only in the main process.

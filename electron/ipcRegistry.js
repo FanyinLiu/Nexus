@@ -23,6 +23,7 @@ import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as proactiveIpc from './ipc/proactiveIpc.js'
+import * as reminderStripIpc from './ipc/reminderStripIpc.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -112,6 +113,7 @@ export function registerIpc(options = {}) {
   notificationIpc.register()
   proactiveNotificationIpc.register()
   proactiveIpc.register()
+  reminderStripIpc.register()
   mcpIpc.register()
   externalActionPolicyIpc.register()
   voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
@@ -152,6 +154,7 @@ export function registerIpc(options = {}) {
       discordGateway?.disconnect().catch(() => {}),
       notificationBridge?.stop(),
       import('./services/vtsBridge.js').then((vtsBridge) => vtsBridge.shutdownVtsBridge()).catch(() => {}),
+      import('./services/reminderStrip.js').then((reminderStrip) => reminderStrip.destroyReminderStrip()).catch(() => {}),
     ])
   })
 }
