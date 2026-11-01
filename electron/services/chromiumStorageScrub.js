@@ -80,7 +80,7 @@ export function encodeLevelDbLog(payloads) {
   /** @type {Buffer[]} */
   const pieces = []
   let cursor = 0
-  const append = (buf) => {
+  const append = (/** @type {Buffer} */ buf) => {
     pieces.push(buf)
     cursor += buf.length
   }

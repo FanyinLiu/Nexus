@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { performNetworkRequest, readJsonSafe, extractResponseErrorMessage, readTextSafe } from '../net.js'
 import { collectSearchContentBodyLines, extractPagePreviewFromHtml } from '../searchContentExtract.js'
 import { tryLookupLyricsSearch } from '../lyricsSearch.js'

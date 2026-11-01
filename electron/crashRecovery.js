@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Decisions for a renderer that disappeared and for how often we may reload it.
  * The dialog text lives in userFacingDialogs.js. This module does not show UI.

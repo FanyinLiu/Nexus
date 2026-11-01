@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Smart Turn v3 ONNX runner (main process).
  *

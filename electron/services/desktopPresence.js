@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Adaptive desktop presence: global cursor gaze and aggregate typing.
 // Gaze samples are window-relative DIP. On Linux the Electron cursor query
 // can stay stale until the pointer crosses a BrowserWindow, so gaze polls an

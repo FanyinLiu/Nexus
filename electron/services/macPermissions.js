@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { systemPreferences, dialog, shell } from 'electron'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'

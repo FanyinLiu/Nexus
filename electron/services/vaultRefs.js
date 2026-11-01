@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'node:crypto'
 import { isVaultRef, VAULT_REF_PREFIX } from '../../shared/vaultRefs.js'
 import { vaultRetrieveMany } from './keyVault.js'

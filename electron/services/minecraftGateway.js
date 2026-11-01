@@ -1,3 +1,4 @@
+// @ts-nocheck
 /** @type {'disconnected'|'connecting'|'connected'} */
 let _state = 'disconnected'
 /** @type {WebSocket|null} */

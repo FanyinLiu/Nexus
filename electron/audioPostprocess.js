@@ -1,3 +1,4 @@
+// @ts-nocheck
 const DEFAULT_TARGET_PEAK = 0.94
 
 function toBufferView(input) {

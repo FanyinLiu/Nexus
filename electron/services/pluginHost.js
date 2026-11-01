@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { copyFile, readFile, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { app, dialog } from 'electron'

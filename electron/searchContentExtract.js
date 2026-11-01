@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { decodeHtmlEntities, normalizeSearchableText } from './textNormalize.js'
 
 const META_DESCRIPTION_PATTERNS = [

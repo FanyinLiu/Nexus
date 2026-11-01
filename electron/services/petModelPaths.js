@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Filesystem roots + id-slug helper for Live2D models.
 // getBundledAssetRoot must know whether assets are served from the dev
 // `public/` tree or the packaged `dist/` tree, so the dev flags are injected

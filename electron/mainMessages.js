@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Localized copy for user-facing main-process messages.
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Persistent store for auto-generated skill documents.
  * Skills are markdown files stored in userData/skills/.

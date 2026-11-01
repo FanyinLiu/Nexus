@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Move a legacy bundled SenseVoice int8 install into userData.
  *

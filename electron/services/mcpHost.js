@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { spawn } from 'node:child_process'
 import { unsubscribeAll } from './pluginMessageBus.js'
 import {

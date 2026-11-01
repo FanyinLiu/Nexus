@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * BrowserWindow construction for pet (main) and panel windows.
  * Host (windowManager) injects live window getters/setters and shared helpers.

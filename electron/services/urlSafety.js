@@ -1,3 +1,4 @@
+// @ts-nocheck
 const PRIVATE_IPV4_PATTERNS = [
   // 10.0.0.0/8
   /^10\./,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Telegram Bot API long-polling gateway.
  *

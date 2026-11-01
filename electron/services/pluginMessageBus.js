@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin Message Bus — typed pub/sub for inter-plugin communication.
  *

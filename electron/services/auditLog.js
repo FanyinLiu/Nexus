@@ -6,6 +6,7 @@ import { getRedactedErrorMessage } from './errorRedaction.js'
 const MAX_LOG_SIZE = 2 * 1024 * 1024 // 2 MB
 const MAX_ROTATED_FILES = 3
 
+/** @type {import('node:fs').WriteStream | null} */
 let logStream = null
 let logFilePath = ''
 // Tracked-in-memory file size — avoids the per-write statSync that was the

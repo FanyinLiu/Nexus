@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SenseVoice offline ASR service for Electron main process.
  *

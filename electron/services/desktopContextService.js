@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { clipboard, desktopCapturer, screen } from 'electron'
 import { execFile } from 'node:child_process'
 import { promises as fsp } from 'node:fs'

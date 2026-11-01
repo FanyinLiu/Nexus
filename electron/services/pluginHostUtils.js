@@ -3,6 +3,9 @@ import { createHash } from 'node:crypto'
 /**
  * Hash a plugin command + args into a short hex digest.
  * Used to detect command changes since the user last approved a plugin.
+ * @param {unknown} command
+ * @param {unknown[]} [args]
+ * @returns {string}
  */
 export function hashCommand(command, args = []) {
   return createHash('sha256')
@@ -23,6 +26,10 @@ export function isPluginCommandTrusted(plugin, approvedPlugins) {
   return storedHash === hashCommand(plugin.command, plugin.args)
 }
 
+/**
+ * @param {{ id?: unknown, name?: unknown, version?: unknown }} plugin
+ * @returns {string}
+ */
 export function formatPluginLogLabel(plugin) {
   return [
     `idLength=${String(plugin?.id ?? '').length}`,
@@ -31,6 +38,10 @@ export function formatPluginLogLabel(plugin) {
   ].join(' ')
 }
 
+/**
+ * @param {unknown} entry
+ * @returns {string}
+ */
 export function formatPluginDirectoryEntryLogLabel(entry) {
   return `entryLength=${String(entry ?? '').length}`
 }

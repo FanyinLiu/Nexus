@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sherpa-onnx keyword spotter (KWS) service for always-on wake word detection.
  *

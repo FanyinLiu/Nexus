@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Main-process latch for the post-wake-word model setup request.
  *

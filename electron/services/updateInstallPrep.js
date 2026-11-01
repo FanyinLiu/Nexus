@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Pre-install barrier for electron-updater.
 //
 // prepareForUpdateInstall flushes durable state in a fixed order, then

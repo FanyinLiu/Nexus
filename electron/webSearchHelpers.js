@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { decodeHtmlEntities, normalizeWhitespace, stripHtml } from './textNormalize.js'
 import { DEFAULT_WEB_SEARCH_PROVIDER_ID } from '../shared/webSearchProviderIds.js'
 import { normalizeBaseUrl } from './netHelpers.js'

@@ -24,6 +24,10 @@ const EXTRACTED_CODEX_APP_ASSET_PATTERNS = [
   /^use-avatar-options[-_.]/iu,
 ]
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function normalizePolicyPath(value) {
   return String(value ?? '').replaceAll('\\', '/')
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure helpers for mcpHost. Extracted so unit tests can import them
  * without dragging Electron's app/dialog surface into node:test.

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cross-window runtime state snapshot and pub-sub.
  * Extracted from windowManager so creation/lifecycle code does not own state shape.

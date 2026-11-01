@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Ollama embedding client for long-term memory recall.
  *

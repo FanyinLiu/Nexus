@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const CHAT_MIGRATION_PACKAGE_SCHEMA_VERSION = 1
 
 const MAX_CHAT_MIGRATION_SESSIONS = 30

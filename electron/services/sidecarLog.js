@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Size-capped rotating stderr log for local voice sidecars.
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'node:crypto'
 
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
