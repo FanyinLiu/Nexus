@@ -11,21 +11,23 @@ import fs from 'node:fs'
 import { app } from 'electron'
 import { createRequire } from 'node:module'
 import { findModelDir, getPrimaryModelsDir } from './services/modelPaths.js'
+import { createLogger } from './logger.js'
 
 const require = createRequire(import.meta.url)
+const log = createLogger('SherpaKWS')
 
 let sherpa = null
 try {
   sherpa = require('sherpa-onnx-node')
 } catch {
-  console.warn('[SherpaKWS] sherpa-onnx-node is not installed or failed to load.')
+  log.warn('sherpa-onnx-node is not installed or failed to load.')
 }
 
 let toPinyin = null
 try {
   ;({ pinyin: toPinyin } = require('pinyin-pro'))
 } catch {
-  console.warn('[SherpaKWS] pinyin-pro is not installed or failed to load.')
+  log.warn('pinyin-pro is not installed or failed to load.')
 }
 
 const SAMPLE_RATE = 16000
