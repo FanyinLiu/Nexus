@@ -55,14 +55,6 @@ const MONTHS_11 = {
   ko: '11개월 전',
 } as const satisfies Record<Locale, string>
 
-const MONTHS_12 = {
-  'zh-CN': '12个月前',
-  'zh-TW': '12個月前',
-  'en-US': '12 months ago',
-  ja: '12か月前',
-  ko: '12개월 전',
-} as const satisfies Record<Locale, string>
-
 const ONE_YEAR = {
   'zh-CN': '一年前',
   'zh-TW': '一年前',
@@ -93,7 +85,7 @@ const FLOOR_CASES: Array<{ input: number; expected: Record<Locale, string>; labe
   { input: 60.9, expected: MONTHS_2, label: '60.9 days → 2 months, not 60/61 days' },
   { input: 89.9, expected: MONTHS_2, label: '89.9 days → 2 months' },
   { input: 359.5, expected: MONTHS_11, label: '359.5 days → 11 months' },
-  { input: 364.9, expected: MONTHS_12, label: '364.9 days → 12 months, not one year' },
+  { input: 364.9, expected: MONTHS_11, label: '364.9 days → 11 months (capped), not one year' },
   { input: 729.9, expected: ONE_YEAR, label: '729.9 days → one year, not 2 years' },
   { input: 730, expected: YEARS_2, label: '730 days → 2 years' },
   { input: 1094.9, expected: YEARS_2, label: '1094.9 days → 2 years' },
@@ -110,6 +102,23 @@ for (const floorCase of FLOOR_CASES) {
     }
   })
 }
+
+test('the month band is capped at 11 months', () => {
+  for (const locale of LOCALES) {
+    for (const days of [330, 359, 360, 362, 364]) {
+      assert.equal(formatCapsuleAge(days, locale), MONTHS_11[locale], `${locale}:${days}`)
+    }
+    assert.equal(formatCapsuleAge(365, locale), ONE_YEAR[locale], `${locale}:365`)
+    assert.equal(formatCapsuleAge(364.999, locale), MONTHS_11[locale], `${locale}:364.999`)
+    for (let days = 300; days <= 364; days += 1) {
+      assert.doesNotMatch(
+        formatCapsuleAge(days, locale),
+        /12/,
+        `${locale}:${days} must never render 12 months`,
+      )
+    }
+  }
+})
 
 const baseCapsule: FutureCapsuleRecord = {
   id: 'age-boundary',
@@ -168,6 +177,20 @@ const CALENDAR_CASES: Array<{
     now: () => new Date(2026, 2, 2, 1, 0),
     days: 60,
     age: MONTHS_2,
+  },
+  {
+    label: '364 calendar days apart stays at 11 months, not one year',
+    written: () => new Date(2025, 0, 1, 10, 0),
+    now: () => new Date(2025, 11, 31, 9, 0),
+    days: 364,
+    age: MONTHS_11,
+  },
+  {
+    label: '365 calendar days apart is one year',
+    written: () => new Date(2025, 0, 1, 10, 0),
+    now: () => new Date(2026, 0, 1, 9, 0),
+    days: 365,
+    age: ONE_YEAR,
   },
 ]
 
