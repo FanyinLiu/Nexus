@@ -4,11 +4,13 @@ import os from 'node:os'
 import path from 'node:path'
 import test, { type TestContext } from 'node:test'
 
-import { routeDelivery } from '../shared/proactiveDelivery.js'
+import { PROACTIVE_FULL_BODY_MAX_LENGTH, routeDelivery } from '../shared/proactiveDelivery.js'
 import type { DeliveryContext, ProactiveMessage } from '../shared/proactiveDelivery.js'
 import { createProactiveInboxStore } from '../electron/services/proactiveInboxStore.js'
+import { validateProactiveDeliveryPayload } from '../electron/ipc/proactivePayloadSchemas.js'
 import {
   buildCapsuleProactiveMessage,
+  clipFullBody,
   deliverDueCapsule,
   planCapsulePresentation,
 } from '../src/features/futureCapsule/capsuleProactiveMessage.ts'
@@ -19,6 +21,7 @@ import type {
 } from '../src/features/futureCapsule/capsuleProactiveMessage.ts'
 import type { FutureCapsuleRecord } from '../src/features/futureCapsule/futureCapsuleStore.ts'
 import { PROACTIVE_LEGACY_PATH } from '../src/features/proactive/legacyPaths.ts'
+import { formatProactiveUnreadBadge } from '../src/features/proactive/proactiveUnreadBadge.ts'
 
 const NOW = 1_700_000_000_000
 
@@ -81,6 +84,19 @@ function createInbox(t: TestContext) {
     fs.rmSync(directory, { recursive: true, force: true })
   })
   return store
+}
+
+/** A capsule copy far beyond the 10k storage budget. */
+function buildOversizedCapsule() {
+  const originalMessage = `first line\n\n  ${'x'.repeat(25_000)} the end`
+  const capsule: FutureCapsuleRecord = { ...CAPSULE, message: originalMessage }
+  const delivery = buildFutureCapsuleDelivery({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    capsule,
+    now: new Date('2026-02-01T12:00:00.000Z'),
+  })
+  return { capsule, delivery, originalMessage }
 }
 
 // ── Message shape ───────────────────────────────────────────────────────────
@@ -159,6 +175,77 @@ test('a short capsule omits the redundant fullBody', () => {
   assert.equal('fullBody' in message, false)
 })
 
+test('clipFullBody leaves short text verbatim and caps long text at the budget', () => {
+  const short = 'line one\nline two'
+  assert.equal(clipFullBody(short), short)
+
+  const exactly = 'e'.repeat(PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.equal(clipFullBody(exactly), exactly)
+
+  const clipped = clipFullBody('c'.repeat(PROACTIVE_FULL_BODY_MAX_LENGTH + 1))
+  assert.equal(clipped.length, PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.ok(clipped.endsWith('…'))
+})
+
+test('a capsule far over 10k gets a schema-valid clipped fullBody', () => {
+  const { capsule, delivery } = buildOversizedCapsule()
+  const message = buildCapsuleProactiveMessage(capsule, delivery, NOW)
+
+  assert.ok(delivery.fullBody.length > PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.equal(message.fullBody?.length, PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.ok(message.fullBody?.endsWith('…'))
+  // Verbatim prefix, including the authored line breaks and indentation.
+  assert.equal(
+    message.fullBody?.slice(0, -1),
+    delivery.fullBody.slice(0, PROACTIVE_FULL_BODY_MAX_LENGTH - 1),
+  )
+  assert.ok(message.fullBody?.includes('first line\n\n  x'))
+
+  // The real IPC payload validator accepts the capped copy and still rejects
+  // the raw oversized one, so clipping is the only thing keeping delivery on
+  // the router path.
+  const payload = { message, context: makeContext() }
+  assert.equal(
+    validateProactiveDeliveryPayload(payload).message.fullBody,
+    message.fullBody,
+  )
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...payload,
+    message: { ...message, fullBody: delivery.fullBody },
+  }), /fullBody must be at most 10000 characters/)
+})
+
+test('a 25k capsule reaches the router with one capped chat line and no OS fallback', async () => {
+  const { capsule, delivery } = buildOversizedCapsule()
+  const notifications: CapsuleDeliveryText[] = []
+  const chatLines: string[] = []
+  const delivered: string[] = []
+  let deliveredMessage: ProactiveMessage | undefined
+
+  const result = await deliverDueCapsule(makeDeps({
+    capsule,
+    delivery,
+    buildContext: () => makeContext({ fullscreen: true }),
+    deliver: async (payload) => {
+      // Same validator the main-process proactive:deliver handler runs.
+      const validated = validateProactiveDeliveryPayload(payload)
+      deliveredMessage = validated.message
+      return routeDelivery(validated.message, validated.context)
+    },
+    showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (text) => { chatLines.push(text) },
+    markDelivered: (id) => { delivered.push(id) },
+  }))
+
+  assert.deepEqual(result, { path: 'router', rule: 1 })
+  assert.deepEqual(notifications, [], 'an oversized line must never fall back to the OS toast')
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0]?.length, PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.equal(chatLines[0], deliveredMessage?.fullBody)
+  assert.ok(chatLines[0]?.endsWith('…'))
+  assert.deepEqual(delivered, [capsule.id])
+})
+
 // ── Old vs new table ────────────────────────────────────────────────────────
 
 const OLD_CAPSULE_PATH = Object.freeze({ surface: 'os_notification', chatLine: false })
@@ -235,6 +322,9 @@ test('the badge counts the capsule even though it has no actions', async (t) => 
 
 const QUIET_CONDITIONS: ReadonlyArray<{ name: string; context: DeliveryContext }> = [
   { name: 'fullscreen', context: makeContext({ fullscreen: true }) },
+  // router rule 1 also covers a locked screen, not just the desktop-visible
+  // fullscreen/quiet-hours/DND signals.
+  { name: 'locked screen', context: makeContext({ focusState: 'locked' }) },
   { name: 'quiet hours', context: makeContext({ inQuietHours: true }) },
   { name: 'system DND', context: makeContext({ systemDnd: true }) },
 ]
@@ -254,6 +344,7 @@ for (const quiet of QUIET_CONDITIONS) {
 
     assert.equal(mutation.unreadCount, 1)
     assert.equal(snapshot.unreadCount, 1, 'the badge count is the inbox unread count')
+    assert.equal(formatProactiveUnreadBadge(snapshot.unreadCount), '1')
     assert.equal(stored?.priority, 'high')
 
     // The capsule has no actions, so only 'high' keeps the dot lit.
@@ -304,6 +395,50 @@ test('a missing router bridge falls back to the legacy notification', async () =
   assert.deepEqual(result, { path: 'legacy' })
   assert.deepEqual(notifications, [DELIVERY])
   assert.deepEqual(delivered, [CAPSULE.id])
+})
+
+test('the legacy toggle sends only title and body for a long capsule', async () => {
+  const { capsule, delivery } = buildOversizedCapsule()
+  const notifications: CapsuleDeliveryText[] = []
+
+  const result = await deliverDueCapsule(makeDeps({
+    capsule,
+    delivery,
+    useLegacyPath: true,
+    showNotification: async (payload) => { notifications.push(payload) },
+  }))
+
+  assert.deepEqual(result, { path: 'legacy' })
+  assert.equal(notifications.length, 1)
+  const notification = notifications[0]!
+  assert.deepEqual(Object.keys(notification).sort(), ['body', 'title'])
+  assert.equal('fullBody' in notification, false)
+  assert.equal(notification.title, delivery.title)
+  // The OS toast keeps the clipped display copy, never the 25k source text.
+  assert.equal(notification.body, delivery.body)
+  assert.ok(notification.body.length < delivery.fullBody.length)
+})
+
+test('the router-throws fallback sends only title and body for a long capsule', async () => {
+  const { capsule, delivery } = buildOversizedCapsule()
+  const notifications: CapsuleDeliveryText[] = []
+  const chatLines: string[] = []
+
+  const result = await deliverDueCapsule(makeDeps({
+    capsule,
+    delivery,
+    deliver: async () => { throw new Error('bridge down') },
+    showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (text) => { chatLines.push(text) },
+  }))
+
+  assert.deepEqual(result, { path: 'fallback' })
+  assert.equal(notifications.length, 1)
+  const notification = notifications[0]!
+  assert.deepEqual(Object.keys(notification).sort(), ['body', 'title'])
+  assert.equal('fullBody' in notification, false)
+  assert.equal(notification.body, delivery.body)
+  assert.deepEqual(chatLines, [], 'the fallback OS toast carries no chat line')
 })
 
 test('a throwing router call falls back to exactly one notification and still marks delivered', async () => {
@@ -389,13 +524,13 @@ test('a fullscreen capsule writes one chat line with the full untruncated text',
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
-// The hook wraps this push as a chat-only notice (`bubbleContent: ''`,
-// `dedupeKey: capsule:<id>`), so the injected pushChatLine below is the same
-// call deliverDueCapsule makes. That payload shape lives inside a React hook
-// and is not reachable without rendering it.
+// The scheduler hands this push a chat-only notice (`bubbleContent: ''`,
+// `dedupeKey: capsule:<id>`); the real hook form of that payload is exercised
+// further down in the silent-line tests.
 const ONE_CHAT_LINE_CASES = [
   { name: 'quiet hours', rule: 1, context: makeContext({ inQuietHours: true }) },
   { name: 'system DND', rule: 1, context: makeContext({ systemDnd: true }) },
+  { name: 'locked screen', rule: 1, context: makeContext({ focusState: 'locked' }) },
   { name: 'rule 4 bubble', rule: 4, context: makeContext({ stripEnabled: false }) },
   {
     name: 'rule 5 OS notification',
@@ -551,7 +686,7 @@ test('router and notification failures together leave the capsule undelivered', 
   assert.deepEqual(delivered, [])
 })
 
-test('the chat line carries the untruncated full body for any routed rule', async () => {
+test('the chat line carries the expanded full body for any routed rule', async () => {
   const chatLines: string[] = []
   const delivery: CapsuleDeliveryText = {
     ...DELIVERY,

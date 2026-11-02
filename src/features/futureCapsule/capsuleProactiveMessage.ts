@@ -31,8 +31,24 @@ export type CapsuleProactiveMessage = Omit<SharedProactiveMessage, 'kind'> & {
 export interface CapsuleDeliveryText {
   title: string
   body: string
-  /** Untruncated copy when the message needed clipping; display stays on body. */
+  /**
+   * Expanded copy when the message needed clipping; display stays on body.
+   * `buildCapsuleProactiveMessage` clips it to the IPC storage budget.
+   */
   fullBody?: string
+}
+
+/**
+ * Clip an expanded body to the storage budget without touching its inner text.
+ *
+ * `clipText` collapses all whitespace, which would silently rewrite a capsule
+ * the user authored verbatim (line breaks, indentation). Here only the tail is
+ * replaced by an ellipsis, so the visible prefix is byte-for-byte the source
+ * copy and the result is always a valid IPC payload.
+ */
+export function clipFullBody(text: string): string {
+  if (text.length <= PROACTIVE_FULL_BODY_MAX_LENGTH) return text
+  return `${text.slice(0, PROACTIVE_FULL_BODY_MAX_LENGTH - 1)}…`
 }
 
 /**
@@ -50,7 +66,7 @@ export function buildCapsuleProactiveMessage(
   // Only carry the expanded copy when it actually adds text; an identical
   // fullBody would duplicate the payload for every ordinary capsule.
   const fullBody = delivery.fullBody && delivery.fullBody !== body
-    ? delivery.fullBody.slice(0, PROACTIVE_FULL_BODY_MAX_LENGTH)
+    ? clipFullBody(delivery.fullBody)
     : undefined
   return {
     id: `capsule:${capsule.id}`,
@@ -94,7 +110,9 @@ export type CapsuleDeliverBridge = (payload: {
 }) => Promise<DeliveryDecision>
 
 /** Bridge function shape for the legacy OS notification. */
-export type CapsuleNotificationBridge = (payload: CapsuleDeliveryText) => Promise<unknown>
+export type CapsuleNotificationBridge = (
+  payload: Pick<CapsuleDeliveryText, 'title' | 'body'>,
+) => Promise<unknown>
 
 export interface DeliverDueCapsuleDeps {
   capsule: FutureCapsuleRecord
@@ -127,9 +145,10 @@ export interface DeliverDueCapsuleResult {
  * Success is settled before any chat push: once the router or the fallback
  * notification resolves, the capsule is marked delivered even when the
  * scheduler stopped in the meantime. Every routed rule then gets the same
- * single chat line carrying the untruncated copy — the routed outlet itself
- * only shows the clipped body — and a chat push may still fail; that error
- * reaches the caller's log instead of re-delivering the capsule on every tick.
+ * single chat line carrying the expanded copy clipped to the storage budget —
+ * the routed outlet itself only shows the 160-character body — and a chat push
+ * may still fail; that error reaches the caller's log instead of re-delivering
+ * the capsule on every tick.
  */
 export async function deliverDueCapsule(
   deps: DeliverDueCapsuleDeps,
@@ -153,8 +172,11 @@ export async function deliverDueCapsule(
 
   deps.markDelivered(deps.capsule.id)
   if (planCapsulePresentation(decision).chatLine && deps.pushChatLine && !deps.isStopped()) {
-    // One call for every rule, so a capsule can never get two lines.
-    await deps.pushChatLine(deps.delivery.fullBody ?? deps.delivery.body)
+    // One call for every rule, so a capsule can never get two lines. Use the
+    // message's own fullBody so a capsule over the storage budget cannot
+    // reintroduce an oversized line that was clipped for the inbox.
+    const chatText = message.fullBody ?? deps.delivery.body
+    await deps.pushChatLine(chatText)
   }
   return { path: 'router', rule: decision.rule }
 }
@@ -163,8 +185,11 @@ export async function deliverDueCapsule(
  * Pre-M1.1 surfacing: one OS notification, then mark the capsule delivered.
  * The mark does not depend on the scheduler being live: the notification
  * already reached the user.
+ *
+ * Only the short display copy leaves the renderer: `fullBody` is an inbox
+ * expansion and the OS notification bridge has no such field.
  */
 async function deliverLegacy(deps: DeliverDueCapsuleDeps): Promise<void> {
-  await deps.showNotification?.(deps.delivery)
+  await deps.showNotification?.({ title: deps.delivery.title, body: deps.delivery.body })
   deps.markDelivered(deps.capsule.id)
 }
