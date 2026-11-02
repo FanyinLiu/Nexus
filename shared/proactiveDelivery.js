@@ -34,6 +34,12 @@ export const PROACTIVE_STRIP_ENABLED = true
  */
 export const PROACTIVE_FULL_BODY_MAX_LENGTH = 10000
 
+/*
+ * Away-summary messages (`source: 'away'`) may carry `summaryCount`, the
+ * number of items noted while the user was away. Only the OS notification
+ * renders it, as a count; the inbox does not persist it.
+ */
+
 /** Every proactive source the router can carry. Order is not contractual. */
 export const PROACTIVE_SOURCES = Object.freeze([
   'reminder',

@@ -5,8 +5,9 @@
  * `proactive:deliver` routes a message and always writes the inbox. Outlets
  * decide what else happens: `badge` refreshes the red dot, `bubble` pushes a
  * presentation to the pet, `strip` queues the reminder on the strip window in
- * this process, and `os_notification` raises a native notification whose click
- * applies the shared read rule as a `notification_click`.
+ * this process, and `os_notification` raises a native notification with the
+ * entry title (plus an away-summary count) whose click applies the shared read
+ * rule as a `notification_click`.
  *
  * `inbox:changed` is a metadata push only: the unread count, the ids/statuses
  * that changed, and the ids that were removed. It goes only to the windows
@@ -25,6 +26,8 @@ import path from 'node:path'
 import { PROACTIVE_STRIP_ENABLED, routeDelivery } from '../../shared/proactiveDelivery.js'
 import { inboxStatusAfterInteraction } from '../../shared/proactiveInboxReadRule.js'
 import { createLogger } from '../logger.js'
+import { readMainUiLocale } from '../mainMessages.js'
+import { buildProactiveNotificationCopy } from '../proactiveNotificationCopy.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
 import { buildReminderStripLabels } from '../reminderStripLabels.js'
@@ -109,7 +112,7 @@ const STRIP_HANDLED_ACTIONS = new Set(['done', 'open', 'reply'])
  * @property {IntervalClearer} clearInterval
  * @property {ProactiveStripDependencies} strip
  * @property {() => ReminderStripLabels} getStripLabels
- * @property {(payload: { title: string, body: string, onClick?: () => void }) => unknown} showOsNotification
+ * @property {(payload: { title: string, body?: string, onClick?: () => void }) => unknown} showOsNotification
  * @property {() => boolean} isPanelFocused
  * @property {() => Promise<DeliveryContext>} [getDeliveryContext]
  * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
@@ -189,17 +192,15 @@ export function createProactiveIpc({
   }
 
   /**
-   * The OS toast shows the same public pair as the bubble. It is the most
-   * exposed surface (lock screen, bystanders), so it never receives `fullBody`.
+   * The OS toast is the most exposed surface (lock screen, bystanders), so it
+   * shows the entry title only; an away summary adds its item count, and a
+   * capsule keeps its public title + opener pair. It never receives the entry
+   * body or `fullBody`.
    * @param {ProactiveMessage} message
-   * @returns {{ title: string, body: string }}
+   * @returns {{ title: string, body?: string }}
    */
   function toNotificationCopy(message) {
-    const copy = message.publicCopy
-    return {
-      title: copy?.title ?? message.title,
-      body: copy?.body ?? message.body,
-    }
+    return buildProactiveNotificationCopy(message, readMainUiLocale())
   }
 
   /** @param {InboxMutation} mutation */

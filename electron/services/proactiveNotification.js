@@ -15,10 +15,11 @@ export function focusCompanionPanel() {
 }
 
 /**
- * Fire an OS-level notification with title + body. Clicking it focuses the
- * panel window (creating it if needed) and then runs the optional `onClick`
- * hand-off from the proactive router. Returns false when the platform has no
- * Notification support (rare on Linux without notify-send).
+ * Fire an OS-level notification with a required title and an optional body.
+ * A title-only notice is valid (the routed inbox toast uses it). Clicking it
+ * focuses the panel window (creating it if needed) and then runs the optional
+ * `onClick` hand-off from the proactive router. Returns false when the platform
+ * has no Notification support (rare on Linux without notify-send).
  *
  * @param {{ title?: unknown, body?: unknown, onClick?: unknown }} notification
  * @returns {boolean}
@@ -26,11 +27,11 @@ export function focusCompanionPanel() {
 export function showProactiveNotification({ title, body, onClick }) {
   if (!Notification.isSupported()) return false
   if (typeof title !== 'string' || !title.trim()) return false
-  if (typeof body !== 'string' || !body.trim()) return false
 
+  const trimmedBody = typeof body === 'string' ? body.trim() : ''
   const notification = new Notification({
     title: title.trim(),
-    body: body.trim(),
+    ...(trimmedBody ? { body: trimmedBody } : {}),
     silent: false,
     icon: getPetIconPath(),
   })

@@ -118,7 +118,7 @@ test('an unsupported platform returns false without creating a notification', as
   assert.equal(runtime().shown, 0)
 })
 
-test('empty or non-string copy returns false without creating a notification', async () => {
+test('an empty or non-string title returns false without creating a notification', async () => {
   resetProactiveNotificationState()
   const show = await loadShowNotification()
 
@@ -126,9 +126,6 @@ test('empty or non-string copy returns false without creating a notification', a
     { title: '', body: 'Body' },
     { title: '   ', body: 'Body' },
     { title: 42, body: 'Body' },
-    { title: 'Title', body: '' },
-    { title: 'Title', body: '   ' },
-    { title: 'Title', body: null },
     { body: 'Body' },
   ]
 
@@ -137,4 +134,27 @@ test('empty or non-string copy returns false without creating a notification', a
   }
   assert.equal(runtime().instances.length, 0)
   assert.equal(runtime().shown, 0)
+})
+
+test('a title-only notification omits empty, missing or non-string body text', async () => {
+  const inputs: Array<{ title?: unknown, body?: unknown }> = [
+    { title: 'Title' },
+    { title: 'Title', body: '' },
+    { title: 'Title', body: '   ' },
+    { title: 'Title', body: null },
+    { title: 'Title', body: 42 },
+  ]
+
+  for (const input of inputs) {
+    resetProactiveNotificationState()
+    const show = await loadShowNotification()
+
+    assert.equal(show(input), true, `expected true for ${JSON.stringify(input)}`)
+    assert.equal(runtime().instances.length, 1)
+    const notification = runtime().instances[0]!
+    assert.equal(notification.options.title, 'Title')
+    assert.equal('body' in notification.options, false)
+    assert.equal(notification.shown, true)
+    assert.equal(clickHandlers(notification).length, 1)
+  }
 })

@@ -48,7 +48,11 @@ export interface ProactiveMessage {
   kind: string
   priority: ProactivePriority
   title: string
-  /** Short display copy; every bubble, strip and OS notification renders this. */
+  /**
+   * Short display copy for the bubble and strip. The OS notification shows the
+   * title only (plus an away-summary count); a capsule's `publicCopy` supplies
+   * the pair the bubble and toast render instead.
+   */
   body: string
   /**
    * Optional untruncated body for an expanded inbox view. Display outlets
@@ -66,6 +70,12 @@ export interface ProactiveMessage {
     title: string
     body: string
   }
+  /**
+   * Number of items noted while the user was away (a non-negative integer).
+   * Used only for the OS notification count on an away summary; the inbox
+   * store does not persist it.
+   */
+  summaryCount?: number
   /** Spoken text; nothing is spoken when absent. */
   speech?: string
   /** Empty array marks a companionship line the red dot ignores. */
