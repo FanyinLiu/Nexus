@@ -34,6 +34,12 @@ export async function load(url, context, nextLoad) {
   if (url.endsWith('.css')) {
     return { format: 'module', shortCircuit: true, source: 'export default {}\n' }
   }
+  // Scene art is imported as a Vite asset URL. Node has no loader for image
+  // bytes, and behavior tests only inspect the rendered element tree, so an
+  // empty source string stands in for the hashed asset URL.
+  if (/\.(avif|gif|jpe?g|png|svg|webp)(\?.*)?$/.test(url)) {
+    return { format: 'module', shortCircuit: true, source: 'export default ""\n' }
+  }
   if (!url.endsWith('.tsx')) return nextLoad(url, context)
 
   const source = await readFile(new URL(url), 'utf8')

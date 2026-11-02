@@ -710,9 +710,23 @@ window titles, screenshots, clipboard contents, or precise timers.
 hooks/useReminderScheduler
   -> features/reminders schedule logic
   -> app controller trigger handling
+  -> features/reminders proactiveMessage (ProactiveMessage + DeliveryContext)
+  -> proactive:deliver router (one primary surface: strip, bubble,
+     os_notification or inbox-only)
   -> features/tools or chat notice execution
   -> persisted task state update
 ```
+
+A `notice` reminder builds a high-priority proactive message and hands it to
+the main-process router; on the active-focus rule the reminder strip shows it
+and the pet speaks without a bubble. Weather, web search and chat-action
+reminder tasks keep their existing execution path.
+
+When a snoozed strip item comes back, main rebuilds the current delivery
+context and re-runs `routeDelivery` for the stored inbox message. It reappears
+only when the decision still includes the strip; otherwise it is dropped there
+and the unread inbox entry is left untouched, with no bubble, speech or OS
+notification.
 
 ## Feature Notes
 

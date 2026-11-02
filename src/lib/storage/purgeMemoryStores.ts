@@ -9,6 +9,7 @@
  */
 
 import { formatMemoriesForPersonaFile } from '../../features/memory/memoryPersistence.ts'
+import { createLogger } from '../logger.ts'
 import { scrubPendingGreetingResidue } from './pendingGreeting.ts'
 import { scrubPresenceMemoryResidue } from './presence.ts'
 import { ARCHIVE_STORAGE_KEY } from '../../features/memory/coldArchive.ts'
@@ -60,6 +61,8 @@ export const MEMORY_PLAINTEXT_PURGED_EVENT = 'nexus:memory-plaintext-purged'
 
 /** The portrait re-reads the op log after a redacted delete row is written. */
 export const MEMORY_OP_LOG_CHANGED_EVENT = 'nexus:memory-op-log-changed'
+
+const log = createLogger('storage.memoryPurge')
 
 const FILE_TO_KEY: Record<string, string> = {
   [MEMORY_DATA_FILES.daily]: DAILY_MEMORY_STORAGE_KEY,
@@ -218,10 +221,28 @@ function requestVectorPurge(
   if (clearAll && typeof pet.memoryVectorClear === 'function') {
     // The main process rewrites Chromium's storage logs. Without the
     // needles it can empty the live rows and still leave the text on disk.
-    return pet.memoryVectorClear({ needles: [...needles] }).catch(() => undefined)
+    // A failed clear must reach the settings caller: reporting success while
+    // the vector snapshot still holds memory text is a privacy defect.
+    return pet.memoryVectorClear({ needles: [...needles] }).catch((error: unknown) => {
+      log.warn('memory vector clear failed', {
+        source: 'memory-vector-clear',
+        count: ids.length,
+        success: false,
+      })
+      throw error
+    })
   }
   if (ids.length && pet.memoryVectorRemove) {
-    return pet.memoryVectorRemove({ ids: [...ids] }).catch(() => undefined)
+    // A single delete is best-effort: log the failure and leave the session
+    // usable. The caller has no await point for this background purge.
+    return pet.memoryVectorRemove({ ids: [...ids] }).catch(() => {
+      log.warn('memory vector remove failed', {
+        source: 'memory-vector-remove',
+        count: ids.length,
+        success: false,
+      })
+      return undefined
+    })
   }
   return undefined
 }

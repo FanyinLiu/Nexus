@@ -37,6 +37,21 @@ contextBridge.exposeInMainWorld('desktopPet', {
     },
   } : {}),
   getPanelSection: () => ipcRenderer.invoke('window:get-panel-section'),
+  // Proactive delivery and the inbox. Shared by pet and panel: the pet shows
+  // the red dot, the panel will own the inbox list.
+  deliverProactiveMessage: (payload) => ipcRenderer.invoke('proactive:deliver', payload),
+  listProactiveInbox: () => ipcRenderer.invoke('inbox:list'),
+  updateProactiveInboxEntry: (payload) => ipcRenderer.invoke('inbox:update', payload),
+  subscribeProactiveInbox: (listener) => {
+    const handler = (_event, payload) => listener(payload)
+    ipcRenderer.on('inbox:changed', handler)
+    return () => ipcRenderer.removeListener('inbox:changed', handler)
+  },
+  subscribeProactivePresentation: (listener) => {
+    const handler = (_event, payload) => listener(payload)
+    ipcRenderer.on('proactive:present', handler)
+    return () => ipcRenderer.removeListener('proactive:present', handler)
+  },
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
   closePanel: () => ipcRenderer.invoke('window:close-panel'),
   closeSettings: () => ipcRenderer.invoke('window:close-settings'),
