@@ -13,7 +13,7 @@ import {
   getChatAssistantMessageKey,
   shouldAnnounceChatAssistantReply,
 } from './chatSheetAnnouncements.ts'
-import { getChatSheetScrollDecision, isChatSheetNearBottom } from './chatSheetScroll.ts'
+import { getChatHistoryScrollTop, getChatSheetScrollDecision, isChatSheetNearBottom } from './chatSheetScroll.ts'
 import './chat-sheet-v2.css'
 
 export type ChatSheetV2MessageRole = 'user' | 'assistant'
@@ -110,6 +110,7 @@ export function ChatSheetV2({
   const historyRef = useRef<HTMLDivElement>(null)
   const initialScrollCompleteRef = useRef(false)
   const previousMessagesRef = useRef<readonly ChatSheetV2Message[]>(messages)
+  const messagesRef = useRef<readonly ChatSheetV2Message[]>(messages)
   const shouldFollowLatestRef = useRef(true)
   const [hasNewMessages, setHasNewMessages] = useState(false)
   const previousBusyRef = useRef(busy)
@@ -143,7 +144,7 @@ export function ChatSheetV2({
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches
       ? 'auto'
       : requestedBehavior
-    history.scrollTo({ top: history.scrollHeight, behavior })
+    history.scrollTo({ top: getChatHistoryScrollTop(history, messagesRef.current), behavior })
   }, [])
 
   useEffect(() => {
@@ -175,6 +176,7 @@ export function ChatSheetV2({
   useEffect(() => {
     const previousMessages = previousMessagesRef.current
     previousMessagesRef.current = messages
+    messagesRef.current = messages
     const decision = getChatSheetScrollDecision(
       previousMessages,
       messages,
@@ -347,6 +349,7 @@ export function ChatSheetV2({
                   key={message.id}
                   className={card ? 'chat-sheet-v2__turn chat-sheet-v2__turn--card' : 'chat-sheet-v2__turn'}
                   data-role={message.role}
+                  data-message-id={message.id}
                 >
                   {card ? (
                     <LoopOutreachNote

@@ -181,7 +181,7 @@ export const MessageBubble = memo(function MessageBubble({
   const contentToDisplay = displayMessageContent(message)
 
   return (
-    <article className={bubbleClassName} data-chat-surface-state={chatSurfaceState}>
+    <article className={bubbleClassName} data-chat-surface-state={chatSurfaceState} data-message-id={message.id}>
       <div className="message-bubble__label">
         <span>{speakerLabel}</span>
         <span className="message-bubble__label-meta">
