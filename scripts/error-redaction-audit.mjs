@@ -8,8 +8,14 @@ import { CHECKED_FILES, UNSAFE_PATTERNS } from './error-redaction-audit-rules.mj
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
+function normalizeLineEndings(text) {
+  return text.replace(/\r\n/g, '\n')
+}
+
 function readText(root, path) {
-  return readFileSync(join(root, path), 'utf8')
+  // Windows checkouts use CRLF; a multi-line required phrase must match there
+  // too, so normalize both sides to bare \n before comparing.
+  return normalizeLineEndings(readFileSync(join(root, path), 'utf8'))
 }
 
 export function buildErrorRedactionReport(root = ROOT) {
@@ -43,7 +49,7 @@ export function buildErrorRedactionReport(root = ROOT) {
     const source = sourceByFile.get(item.file)
     if (!source) continue
     for (const phrase of item.phrases) {
-      if (!source.includes(phrase)) {
+      if (!source.includes(normalizeLineEndings(phrase))) {
         missingRequiredPhrases.push({ id: item.id, file: item.file, phrase })
       }
     }

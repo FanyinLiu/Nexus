@@ -234,6 +234,12 @@ export type CompanionNoticePayload = {
   speechContent?: string
   dedupeKey?: string
   autoHideMs?: number
+  /**
+   * Marks the notice bubble as router-driven. The bubble then joins the shared
+   * proactive collapse policy (caption / legacy dialog layer) instead of the
+   * plain notice auto-hide timer, so hover pauses it like any other reminder.
+   */
+  proactiveTitle?: string
   toolResult?: ChatToolResult
   shouldResumeContinuousVoice?: boolean
   loopOffer?: ChatMessage['loopOffer']

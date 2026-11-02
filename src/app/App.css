@@ -2346,6 +2346,41 @@
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.28);
 }
 
+/* ── Proactive unread badge (top-right red dot) ── */
+.pet-window__proactive-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #ffffff;
+  background: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
+  cursor: pointer;
+  appearance: none;
+  pointer-events: auto;
+}
+
+.pet-window__proactive-badge:hover {
+  background: #dc2626;
+}
+
+.pet-window__proactive-badge:focus-visible {
+  outline: 2px solid rgba(239, 68, 68, 0.55);
+  outline-offset: 2px;
+}
+
 @keyframes status-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }

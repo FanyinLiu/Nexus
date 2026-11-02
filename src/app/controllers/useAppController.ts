@@ -117,7 +117,7 @@ export function useAppController() {
   })
 
   const {
-    closePanel, openPetMenu, panelCollapsed, toggleClickThrough,
+    closePanel, openPetMenu, panelCollapsed, registerInboxOverlayOpen, toggleClickThrough,
     toggleContinuousVoiceMode, togglePanelCollapse, togglePinned,
   } = useWindowChromeActions({
     applyPanelWindowState, closePanelFallback, panelWindowState, setClickThrough,
@@ -296,16 +296,6 @@ export function useAppController() {
     )
   }, [petRuntimeContinuousVoiceActive, view, voice.continuousVoiceActive])
 
-  useReminderController({
-    view,
-    settingsRef,
-    runtimeSnapshot,
-    chat,
-    pet,
-    debugConsole,
-    reminderTaskStore,
-  })
-
   // ── Autonomy subsystem ──────────────────────────────────────────────────────
 
   const autonomy = useAutonomyController({
@@ -335,6 +325,19 @@ export function useAppController() {
         stageDirection: `(autonomy:idle_motion:${gestureName})`,
       }])
     },
+  })
+
+  // Reminder delivery needs the shared focus state, so it runs after the
+  // autonomy controller that owns focus awareness.
+  useReminderController({
+    view,
+    settingsRef,
+    runtimeSnapshot,
+    focusState: autonomy.focusAwareness.focusState,
+    chat,
+    pet,
+    debugConsole,
+    reminderTaskStore,
   })
 
   useBackgroundSchedulers({
@@ -368,9 +371,10 @@ export function useAppController() {
     openSettingsSection, panelCollapsed, pet, petModel, petModelPresets,
     petModelPresetsReady, petModelSelectionResolved, petRuntimeContinuousVoiceActive,
     platformProfile, preferredMemoryFocus, preferredSettingsSectionId,
-    remotePanelSettingsOpen, reminderTaskStore, runtimeSnapshot, setSettings,
-    setSettingsOpen, settings, settingsRef, settingsOpen, toggleClickThrough,
-    toggleContinuousVoiceMode, togglePanelCollapse, togglePinned, view, voice,
+    registerInboxOverlayOpen, remotePanelSettingsOpen, reminderTaskStore,
+    runtimeSnapshot, setSettings, setSettingsOpen, settings, settingsRef,
+    settingsOpen, toggleClickThrough, toggleContinuousVoiceMode,
+    togglePanelCollapse, togglePinned, view, voice,
   })
 
   return {

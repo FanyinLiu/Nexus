@@ -1,0 +1,239 @@
+/*
+ * Proactive inbox popover (pet window).
+ *
+ * Anchored to the top-right corner, opening downward and leftward so it always
+ * stays inside the pet window even when the red dot is absent (the context
+ * menu can open it at unread count 0). The card follows the design tokens in
+ * §5.3: a light translucent glass card, a near-black dark variant, 13px text,
+ * and a soft blue primary action. Five collapsed rows are visible; older rows
+ * scroll inside the list while the window itself never grows. Read rows are
+ * dimmed but still expandable. Pointer events stay on because the pet window
+ * ignores them entirely when click-through is enabled (that mode is
+ * intentional and untouched).
+ */
+
+.proactive-inbox {
+  --proactive-inbox-visible-rows: 5;
+  --proactive-inbox-row-block-size: 98px;
+  --pi-bg: rgba(255, 255, 255, 0.82);
+  --pi-ink: #1D1D1F;
+  --pi-muted: rgba(29, 29, 31, 0.66);
+  --pi-strong: rgba(29, 29, 31, 0.82);
+  --pi-row-border: rgba(0, 0, 0, 0.07);
+  --pi-action-border: rgba(0, 0, 0, 0.1);
+  --pi-hover: rgba(0, 0, 0, 0.05);
+  --pi-close-hover: rgba(0, 0, 0, 0.06);
+
+  position: absolute;
+  top: 38px;
+  right: 12px;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  width: min(300px, calc(100vw - 24px));
+  max-height: calc(100vh - 56px);
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  background: var(--pi-bg);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+  color: var(--pi-ink);
+  font-size: 13px;
+  line-height: 1.42;
+  pointer-events: auto;
+  animation: proactive-inbox-enter 0.14s ease-out;
+}
+
+html[data-color-scheme='dark'] .proactive-inbox,
+html[data-theme='system-dark'] .proactive-inbox,
+html[data-theme='system-black'] .proactive-inbox {
+  --pi-bg: rgba(44, 44, 46, 0.86);
+  --pi-ink: #F5F5F7;
+  --pi-muted: rgba(245, 245, 247, 0.68);
+  --pi-strong: rgba(245, 245, 247, 0.88);
+  --pi-row-border: rgba(255, 255, 255, 0.1);
+  --pi-action-border: rgba(255, 255, 255, 0.16);
+  --pi-hover: rgba(255, 255, 255, 0.08);
+  --pi-close-hover: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+@keyframes proactive-inbox-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.proactive-inbox__header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.proactive-inbox__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.proactive-inbox__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.62;
+}
+
+.proactive-inbox__close:hover {
+  background: var(--pi-close-hover);
+  opacity: 1;
+}
+
+.proactive-inbox__empty {
+  margin: 6px 0 2px;
+  color: var(--pi-muted);
+  font-size: 13px;
+}
+
+.proactive-inbox__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  max-height: calc(
+    var(--proactive-inbox-visible-rows, 5) * (var(--proactive-inbox-row-block-size, 98px) + 10px) - 10px
+  );
+  margin: 0;
+  padding: 0 2px 2px 0;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.proactive-inbox__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--pi-row-border);
+}
+
+.proactive-inbox__row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* Read/done rows stay available for context but recede behind unread rows. */
+.proactive-inbox__row--read {
+  opacity: 0.68;
+}
+
+.proactive-inbox__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proactive-inbox__summary:focus-visible,
+.proactive-inbox__action:focus-visible,
+.proactive-inbox__close:focus-visible {
+  outline: 2px solid #2F5BD3;
+  outline-offset: 2px;
+}
+
+.proactive-inbox__row-title {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proactive-inbox__row-body {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--pi-muted);
+  font-size: 13px;
+  line-height: 1.42;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.proactive-inbox__full {
+  display: block;
+  margin-top: 2px;
+  color: var(--pi-strong);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.proactive-inbox__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.proactive-inbox__action {
+  min-height: 26px;
+  padding: 3px 10px;
+  border: 1px solid var(--pi-action-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.proactive-inbox__action:hover {
+  background: var(--pi-hover);
+}
+
+.proactive-inbox__action--primary,
+.proactive-inbox__action--primary:hover {
+  border-color: transparent;
+  background: #E8EFFF;
+  color: #2F5BD3;
+}
+
+.proactive-inbox__action--primary:hover {
+  background: #DCE7FF;
+}

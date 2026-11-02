@@ -11,7 +11,6 @@ import {
 import { pickHoverReaction } from '../appSupport.ts'
 import { MusicPopupCard } from '../../components/MusicPopupCard.tsx'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
-import { PetDialogBubble } from '../../components/PetDialogBubble.tsx'
 import { PetThoughtBubble } from '../../components/PetThoughtBubble.tsx'
 import {
   classifyWeatherCondition,
@@ -22,6 +21,7 @@ import {
   SunlightTint,
   WeatherAmbient,
 } from '../../features/panelScene'
+import { LegacyPetDialogLayer } from './LegacyPetDialogLayer.tsx'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { useSpeechLevelSnapshot } from '../../hooks/voice/speechLevelPublishing.ts'
 import { clamp } from '../../lib'
@@ -38,7 +38,7 @@ const Live2DCanvas = lazy(async () => {
   return { default: module.Live2DCanvas }
 })
 
-type LegacyPetViewProps = UseAppControllerResult['petView'] & {
+type LegacyPetViewProps = Omit<UseAppControllerResult['petView'], 'registerInboxOverlayOpen'> & {
   modalOpen: boolean
 }
 
@@ -402,6 +402,8 @@ export function LegacyPetView({
     }
   }, [])
 
+  const hidePetDialogBubble = chat.hidePetDialogBubble
+
   return (
       <section
         className="pet-window"
@@ -449,12 +451,11 @@ export function LegacyPetView({
             ) : null}
 
             {chat.petDialogBubble ? (
-              <div className="pet-window__dialog-layer">
-                <PetDialogBubble
-                  bubble={chat.petDialogBubble}
-                  assistantName={settings.companionName}
-                />
-              </div>
+              <LegacyPetDialogLayer
+                bubble={chat.petDialogBubble}
+                assistantName={settings.companionName}
+                onCollapse={hidePetDialogBubble}
+              />
             ) : null}
 
             {chat.petThoughtBubble && !chat.petDialogBubble ? (
