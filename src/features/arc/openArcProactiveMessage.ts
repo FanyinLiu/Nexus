@@ -23,6 +23,8 @@ import type {
 import { clipText } from '../reminders/proactiveMessage.ts'
 import { deliverThroughRouter } from '../proactive/routedDelivery.ts'
 import type { DeliverThroughRouterResult } from '../proactive/routedDelivery.ts'
+import { openArcFallbackNotificationBody } from '../proactive/directNotificationCopy.ts'
+import type { UiLanguage } from '../../types'
 import type { OpenArcRecord } from './openArcStore.ts'
 
 /** The actions an open-arc check-in offers; the single place to change them. */
@@ -111,6 +113,8 @@ export type OpenArcNotificationBridge = (payload: OpenArcDeliveryText) => Promis
 export interface DeliverDueOpenArcDeps {
   arc: OpenArcRecord
   delivery: OpenArcDeliveryText
+  /** Reader language for the fixed fallback OS body. */
+  uiLanguage: UiLanguage
   milestoneDay: number
   now: number
   /** One-version rollback: when true the pre-M1.1 notification path runs. */
@@ -161,7 +165,15 @@ export async function deliverDueOpenArc(
   })
 }
 
-/** Pre-M1.1 surfacing: the single OS notification, without bookkeeping. */
+/**
+ * Pre-M1.1 surfacing: the single OS notification, without bookkeeping.
+ *
+ * The toast keeps the delivery title but replaces the body with the fixed
+ * open-arc line; the arc theme stays in the router message and the chat line.
+ */
 async function deliverLegacy(deps: DeliverDueOpenArcDeps): Promise<void> {
-  await deps.showNotification?.(deps.delivery)
+  await deps.showNotification?.({
+    title: deps.delivery.title,
+    body: openArcFallbackNotificationBody(deps.uiLanguage),
+  })
 }

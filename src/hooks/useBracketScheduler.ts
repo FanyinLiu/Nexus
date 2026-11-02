@@ -14,6 +14,10 @@ import {
 } from '../features/proactive/bracketScheduler.ts'
 import { buildBracketMessage } from '../features/proactive/bracketCopy.ts'
 import {
+  bracketNotificationBody,
+  bracketNotificationKind,
+} from '../features/proactive/directNotificationCopy.ts'
+import {
   latestTomorrowTopic,
   morningCallbackTopic,
 } from '../features/proactive/bracketTopic.ts'
@@ -218,6 +222,11 @@ export function useBracketScheduler({
         }
       }
 
+      // The OS toast never carries the topic, the errand prompt/result or the
+      // bracket question. Only the chat/bubble `body` keeps the real copy.
+      const notificationKind = bracketNotificationKind({ errandDelivered: deliveredErrandId !== null, callback: result.callback })
+      const notificationBody = bracketNotificationBody(s.uiLanguage, notificationKind, result.body)
+
       const admission = admitProactiveMessage({
         nowMs,
         kind: decision.bracket === 'morning' && deliveredErrandId ? 'errand' : 'bracket',
@@ -253,7 +262,7 @@ export function useBracketScheduler({
         try {
           await window.desktopPet?.showProactiveNotification?.({
             title: result.title,
-            body,
+            body: notificationBody,
           })
         } catch {
           // The chat/bubble copy already landed; a missing OS toast is not fatal.
