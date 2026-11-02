@@ -106,9 +106,17 @@ function assertNoLoneSurrogate(s: string) {
   assert.ok(!LONE_SURROGATE.test(s), `lone surrogate in ${JSON.stringify(s)}`)
 }
 
+const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+function graphemeCount(s: string): number {
+  return Array.from(GRAPHEME_SEGMENTER.segment(s)).length
+}
+
+// U+1F468 ZWJ U+1F469 ZWJ U+1F467 — one grapheme cluster, five code points.
+const FAMILY = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'
+
 // ── truncateAgendaWhat ─────────────────────────────────────────────────────
 
-test('truncateAgendaWhat keeps exactly the 20-code-point budget', () => {
+test('truncateAgendaWhat keeps exactly the 20-grapheme budget', () => {
   assert.equal(AGENDA_NOTIFICATION_WHAT_MAX, 20)
 
   const exactly = 'a'.repeat(20)
@@ -118,31 +126,31 @@ test('truncateAgendaWhat keeps exactly the 20-code-point budget', () => {
   assert.equal(truncateAgendaWhat(over), `${'a'.repeat(20)}…`)
 })
 
-test('truncateAgendaWhat counts CJK code points, not UTF-16 units', () => {
+test('truncateAgendaWhat counts CJK graphemes, not UTF-16 units', () => {
   const exactly = '记'.repeat(20)
   assert.equal(truncateAgendaWhat(exactly), exactly)
 
   const over = '记'.repeat(21)
   const result = truncateAgendaWhat(over)
   assert.equal(result, `${'记'.repeat(20)}…`)
-  assert.equal(Array.from(result).length, 21)
+  assert.equal(graphemeCount(result), 21)
 })
 
-test('truncateAgendaWhat never splits an astral character', () => {
+test('truncateAgendaWhat keeps astral characters whole, one grapheme each', () => {
   const exactly = '😀'.repeat(20)
   assert.equal(truncateAgendaWhat(exactly), exactly)
 
   const over = '😀'.repeat(21)
   const result = truncateAgendaWhat(over)
   assert.equal(result, `${'😀'.repeat(20)}…`)
-  assert.equal(Array.from(result).length, 21)
+  assert.equal(graphemeCount(result), 21)
   assert.equal(result.slice(0, 40), '😀'.repeat(20))
   assert.equal(hasLoneSurrogate(result), false)
 
   const mixed = `${'记'.repeat(10)}${'😀'.repeat(11)}`
   const mixedResult = truncateAgendaWhat(mixed)
   assert.equal(mixedResult, `${'记'.repeat(10)}${'😀'.repeat(10)}…`)
-  assert.equal(Array.from(mixedResult).length, 21)
+  assert.equal(graphemeCount(mixedResult), 21)
   assert.equal(hasLoneSurrogate(mixedResult), false)
 })
 
@@ -151,14 +159,14 @@ test('truncateAgendaWhat trims leading and trailing whitespace before counting',
   assert.equal(truncateAgendaWhat(`${'  '}${'a'.repeat(21)}  `), `${'a'.repeat(20)}…`)
 })
 
-test('agenda emoji: 19 CJK + one 😀 is exactly 20 code points, no ellipsis, emoji intact', () => {
+test('agenda emoji: 19 CJK + one 😀 is exactly 20 graphemes, no ellipsis, emoji intact', () => {
   const input = `${'记'.repeat(19)}😀`
-  // 19 BMP characters + one astral emoji = 21 UTF-16 units but 20 code points.
+  // 19 BMP characters + one astral emoji = 21 UTF-16 units but 20 graphemes.
   assert.equal(input.length, 21)
   const output = truncateAgendaWhat(input)
   assertNoLoneSurrogate(output)
   assert.equal(output, input)
-  assert.equal(Array.from(output).length, 20)
+  assert.equal(graphemeCount(output), 20)
   assert.equal(output.endsWith('😀'), true)
   assert.equal(output.includes('…'), false)
 })
@@ -170,13 +178,13 @@ test('agenda emoji: 20 CJK + 😀 clips to the first 20 + …, emoji dropped who
   assert.equal(output.includes('\uD83D'), false)
 })
 
-test('agenda emoji: emoji at code point 20 is kept, ellipsis after it', () => {
+test('agenda emoji: emoji at grapheme 20 is kept, ellipsis after it', () => {
   const output = truncateAgendaWhat(`${'记'.repeat(19)}😀尾巴`)
   assertNoLoneSurrogate(output)
   assert.equal(output, `${'记'.repeat(19)}😀…`)
 })
 
-test('agenda emoji: emoji at code point 21 is dropped whole', () => {
+test('agenda emoji: emoji at grapheme 21 is dropped whole', () => {
   const output = truncateAgendaWhat(`${'记'.repeat(20)}😀尾`)
   assertNoLoneSurrogate(output)
   assert.equal(output, `${'记'.repeat(20)}…`)
@@ -186,13 +194,59 @@ test('agenda emoji: 25 😀 clip to 20 😀 + …', () => {
   const output = truncateAgendaWhat('😀'.repeat(25))
   assertNoLoneSurrogate(output)
   assert.equal(output, `${'😀'.repeat(20)}…`)
-  assert.equal(Array.from(output).length, 21)
+  assert.equal(graphemeCount(output), 21)
 })
 
-test('agenda emoji: buildAgendaNotification body clips emoji by code point', () => {
+test('agenda emoji: buildAgendaNotification body clips emoji by grapheme', () => {
   const result = buildAgendaNotification({ title: 'T', what: `${'记'.repeat(19)}😀尾巴` })
   assertNoLoneSurrogate(result.body)
   assert.equal(result.body, `${'记'.repeat(19)}😀…`)
+  assert.equal(result.title, 'T')
+})
+
+test('agenda emoji: 👨‍👩‍👧 at grapheme 20 is kept whole, no ellipsis', () => {
+  const input = `${'记'.repeat(19)}${FAMILY}`
+  // 20 graphemes but 24 code points: the family is one unit.
+  assert.equal(graphemeCount(input), 20)
+  assert.equal(Array.from(input).length, 24)
+  const output = truncateAgendaWhat(input)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, input)
+  assert.equal(graphemeCount(output), 20)
+  assert.equal(output.endsWith(FAMILY), true)
+  assert.equal(output.includes('…'), false)
+})
+
+test('agenda emoji: 👨‍👩‍👧 at grapheme 20 kept whole before the ellipsis', () => {
+  const output = truncateAgendaWhat(`${'记'.repeat(19)}${FAMILY}尾巴`)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${'记'.repeat(19)}${FAMILY}…`)
+})
+
+test('agenda emoji: 👨‍👩‍👧 at grapheme 21 is dropped whole', () => {
+  const output = truncateAgendaWhat(`${FAMILY}${'记'.repeat(19)}${FAMILY}尾`)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${FAMILY}${'记'.repeat(19)}…`)
+  // No ZWJ from the dropped family survives past the 20th grapheme.
+  assert.equal(output.endsWith('记…'), true)
+  assert.equal(output.split(FAMILY).length - 1, 1)
+  assert.equal(graphemeCount(output), 21)
+})
+
+test('agenda emoji: 25 👨‍👩‍👧 clip to 20 whole families + …', () => {
+  const output = truncateAgendaWhat(FAMILY.repeat(25))
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${FAMILY.repeat(20)}…`)
+  assert.equal(graphemeCount(output), 21)
+})
+
+test('agenda emoji: buildAgendaNotification body clips 👨‍👩‍👧 by grapheme', () => {
+  const result = buildAgendaNotification({
+    title: 'T',
+    what: `${'记'.repeat(19)}${FAMILY}尾巴`,
+  })
+  assertNoLoneSurrogate(result.body)
+  assert.equal(result.body, `${'记'.repeat(19)}${FAMILY}…`)
   assert.equal(result.title, 'T')
 })
 

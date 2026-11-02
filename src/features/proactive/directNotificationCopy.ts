@@ -15,21 +15,25 @@ import { normalizeLocale, t } from '../../i18n/runtime.ts'
 import type { TranslationKey, UiLanguage } from '../../types'
 import type { BracketCallback } from './bracketCopy.ts'
 
-/** Longest agenda `what` the OS body may carry, counted in code points. */
+/** Longest agenda `what` the OS body may carry, counted in grapheme clusters. */
 export const AGENDA_NOTIFICATION_WHAT_MAX = 20
+
+/** Grapheme segmentation shared by every clip; the locale only affects word breaks. */
+const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
 /**
  * Clip an agenda reminder's `what` for the OS body.
  *
  * Trimming happens first so trailing whitespace never counts toward the
- * budget. The cut is by Unicode code point, not UTF-16 unit, so an emoji or
- * any other astral character is never split into a lone surrogate.
+ * budget. The cut is by grapheme cluster, not UTF-16 unit or code point, so a
+ * user-perceived character — an emoji ZWJ sequence, a flag, or a base letter
+ * plus its combining mark — is one unit and is never cut.
  */
 export function truncateAgendaWhat(what: string): string {
   const trimmed = what.trim()
-  const codePoints = Array.from(trimmed)
-  if (codePoints.length <= AGENDA_NOTIFICATION_WHAT_MAX) return trimmed
-  return `${codePoints.slice(0, AGENDA_NOTIFICATION_WHAT_MAX).join('')}…`
+  const graphemes = Array.from(GRAPHEME_SEGMENTER.segment(trimmed), (part) => part.segment)
+  if (graphemes.length <= AGENDA_NOTIFICATION_WHAT_MAX) return trimmed
+  return `${graphemes.slice(0, AGENDA_NOTIFICATION_WHAT_MAX).join('')}…`
 }
 
 export interface AgendaNotification {
