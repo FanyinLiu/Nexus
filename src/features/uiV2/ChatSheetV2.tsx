@@ -13,7 +13,7 @@ import {
   getChatAssistantMessageKey,
   shouldAnnounceChatAssistantReply,
 } from './chatSheetAnnouncements.ts'
-import { getChatSheetScrollDecision, isChatSheetNearBottom } from './chatSheetScroll.ts'
+import { useChatSheetScroll } from './useChatSheetScroll.ts'
 import './chat-sheet-v2.css'
 
 export type ChatSheetV2MessageRole = 'user' | 'assistant'
@@ -107,11 +107,6 @@ export function ChatSheetV2({
   const collapsedComposerRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
-  const historyRef = useRef<HTMLDivElement>(null)
-  const initialScrollCompleteRef = useRef(false)
-  const previousMessagesRef = useRef<readonly ChatSheetV2Message[]>(messages)
-  const shouldFollowLatestRef = useRef(true)
-  const [hasNewMessages, setHasNewMessages] = useState(false)
   const previousBusyRef = useRef(busy)
   const busyStartAssistantKeyRef = useRef<string | null>(busy ? latestAssistantKey : null)
   const announcedReplyKeyRef = useRef('')
@@ -134,18 +129,6 @@ export function ChatSheetV2({
 
   useEffect(() => cancelScheduledFrames, [cancelScheduledFrames])
 
-  const scrollToLatest = useCallback((requestedBehavior: ScrollBehavior = 'auto') => {
-    const history = historyRef.current
-    if (!history) return
-    const behavior = requestedBehavior === 'smooth'
-      && typeof window !== 'undefined'
-      && typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 'auto'
-      : requestedBehavior
-    history.scrollTo({ top: history.scrollHeight, behavior })
-  }, [])
-
   useEffect(() => {
     if (initiallyEmptyRef.current) inputRef.current?.focus({ preventScroll: true, focusVisible: false })
     else backButtonRef.current?.focus({ preventScroll: true, focusVisible: false })
@@ -162,38 +145,12 @@ export function ChatSheetV2({
     })
   }, [focusComposerRequestId, scheduleFrame])
 
-  useEffect(() => {
-    if (initialScrollCompleteRef.current) return
-    initialScrollCompleteRef.current = true
-    if (messages.length > 0) {
-      scheduleFrame(() => {
-        if (shouldFollowLatestRef.current) scrollToLatest('auto')
-      })
-    }
-  }, [messages.length, scheduleFrame, scrollToLatest])
-
-  useEffect(() => {
-    const previousMessages = previousMessagesRef.current
-    previousMessagesRef.current = messages
-    const decision = getChatSheetScrollDecision(
-      previousMessages,
-      messages,
-      shouldFollowLatestRef.current,
-    )
-    if (decision === 'follow') {
-      shouldFollowLatestRef.current = true
-      scheduleFrame(() => {
-        if (!shouldFollowLatestRef.current) return
-        setHasNewMessages(false)
-        scrollToLatest('smooth')
-      })
-    } else if (decision === 'announce') {
-      scheduleFrame(() => {
-        if (shouldFollowLatestRef.current) return
-        setHasNewMessages(true)
-      })
-    }
-  }, [messages, scheduleFrame, scrollToLatest])
+  const {
+    historyRef,
+    hasNewMessages,
+    handleHistoryScroll,
+    handleViewNewMessages,
+  } = useChatSheetScroll({ messages, scheduleFrame })
 
   useEffect(() => {
     const wasBusy = previousBusyRef.current
@@ -230,20 +187,6 @@ export function ChatSheetV2({
     }
     setComposerExpanded(true)
     scheduleFrame(() => inputRef.current?.focus())
-  }
-
-  const handleHistoryScroll = () => {
-    const history = historyRef.current
-    if (!history) return
-    const nearBottom = isChatSheetNearBottom(history.scrollHeight, history.scrollTop, history.clientHeight)
-    shouldFollowLatestRef.current = nearBottom
-    if (nearBottom) setHasNewMessages(false)
-  }
-
-  const handleViewNewMessages = () => {
-    shouldFollowLatestRef.current = true
-    setHasNewMessages(false)
-    scrollToLatest('smooth')
   }
 
   const collapseComposer = () => {
@@ -347,6 +290,7 @@ export function ChatSheetV2({
                   key={message.id}
                   className={card ? 'chat-sheet-v2__turn chat-sheet-v2__turn--card' : 'chat-sheet-v2__turn'}
                   data-role={message.role}
+                  data-message-id={message.id}
                 >
                   {card ? (
                     <LoopOutreachNote

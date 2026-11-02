@@ -12,6 +12,7 @@ const framelessPath = new URL('../src/features/uiV2/FramelessCompanionSurface.ts
 const petPath = new URL('../src/app/views/PetView.tsx', import.meta.url)
 const legacyPanelPath = new URL('../src/app/views/LegacyPanelView.tsx', import.meta.url)
 const sheetPath = new URL('../src/features/uiV2/ChatSheetV2.tsx', import.meta.url)
+const scrollHookPath = new URL('../src/features/uiV2/useChatSheetScroll.ts', import.meta.url)
 const sheetStylesPath = new URL('../src/features/uiV2/chat-sheet-v2.css', import.meta.url)
 const panelStylesPath = new URL('../src/features/uiV2/panel-v2.css', import.meta.url)
 const companionStylesPath = new URL('../src/features/uiV2/companion-v2.css', import.meta.url)
@@ -85,7 +86,10 @@ test('companion identity copy stays separate from the advanced system prompt', a
 })
 
 test('V2 chat sheet keeps history and input in one dialog', async () => {
-  const source = await readFile(sheetPath, 'utf8')
+  const [source, scrollHookSource] = await Promise.all([
+    readFile(sheetPath, 'utf8'),
+    readFile(scrollHookPath, 'utf8'),
+  ])
 
   assert.match(source, /useState\(\(\) => messages\.length === 0\)/)
   assert.match(source, /data-empty=\{messages\.length === 0 \? 'true' : 'false'\}/)
@@ -107,14 +111,38 @@ test('V2 chat sheet keeps history and input in one dialog', async () => {
   assert.match(source, /PetControlIcon name="close"/)
   assert.match(source, /aria-label=\{labels\.cancel\}/)
   assert.match(source, /onClick=\{onCancel\}/)
-  assert.match(source, /getChatSheetScrollDecision/)
-  assert.match(source, /setHasNewMessages\(true\)/)
+  assert.match(source, /useChatSheetScroll\(\{ messages, scheduleFrame \}\)/)
+
+  const historyElementTag = source.match(
+    /<div(?=[^>]*className="chat-sheet-v2__history")[^>]*>/,
+  )?.[0]
+  assert.ok(historyElementTag, 'the chat history element should stay explicit')
+  assert.match(historyElementTag, /ref=\{historyRef\}/)
+  assert.match(historyElementTag, /onScroll=\{handleHistoryScroll\}/)
+
+  const viewNewMessagesButton = source.match(
+    /<button\b[^>]*className="chat-sheet-v2__new-messages"[^>]*>[\s\S]*?<\/button>/,
+  )?.[0]
+  assert.ok(viewNewMessagesButton, 'the view-new-messages button should stay explicit')
+  assert.match(viewNewMessagesButton, /labels\.viewNewMessages/)
+  assert.match(viewNewMessagesButton, /\bonClick=\{handleViewNewMessages\}/)
+  assert.equal(
+    (viewNewMessagesButton.match(/\bonClick=/g) ?? []).length,
+    1,
+    'the view-new-messages button should own exactly one click handler',
+  )
+
+  assert.doesNotMatch(source, /scrollHeight/, 'history scrolling belongs to the scroll hook')
+  assert.doesNotMatch(source, /\.scrollTo\(/, 'history scrolling belongs to the scroll hook')
+
+  assert.match(scrollHookSource, /getChatSheetScrollDecision/)
+  assert.match(scrollHookSource, /setHasNewMessages\(true\)/)
   assert.match(source, /labels\.viewNewMessages/)
   assert.match(source, /completedReplyAnnouncement/)
   assert.match(source, /busyStartAssistantKeyRef/)
   assert.match(source, /shouldAnnounceChatAssistantReply/)
   assert.match(source, /scheduledFrameIdsRef/)
-  assert.match(source, /if \(!shouldFollowLatestRef\.current\) return/)
+  assert.match(scrollHookSource, /if \(!shouldFollowLatestRef\.current\) return/)
   assert.doesNotMatch(source, /initialComposerExpanded/)
 })
 
