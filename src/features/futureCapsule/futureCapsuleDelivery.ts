@@ -27,11 +27,13 @@ const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
  * Age bands: days below 60, whole months below 365, one year below 730,
- * then whole years.
+ * then whole years. The month band is capped at 11 so 330-364 days never
+ * speak "12 months" right before the one-year band starts.
  */
 const MONTH_THRESHOLD_DAYS = 60
 const YEAR_THRESHOLD_DAYS = DAYS_PER_YEAR
 const TWO_YEAR_THRESHOLD_DAYS = 2 * DAYS_PER_YEAR
+const MAX_MONTHS = 11
 
 export interface BuildDeliveryBodyInput {
   uiLanguage: UiLanguage
@@ -72,8 +74,9 @@ export function daysBetween(fromIso: string, now: Date): number {
 
 /**
  * Render the capsule age the way the opener speaks it: days under two months,
- * whole months under a year, then whole years. Exact dates belong to the card.
- * The count is floored, so a same-day capsule still reads as one day old.
+ * whole months under a year (capped at 11 months), then whole years. Exact
+ * dates belong to the card. The count is floored, so a same-day capsule still
+ * reads as one day old.
  */
 export function formatCapsuleAge(daysAgo: number, locale: UiLanguage): string {
   const days = Math.max(1, Math.floor(daysAgo))
@@ -84,7 +87,11 @@ export function formatCapsuleAge(daysAgo: number, locale: UiLanguage): string {
     return t('chat.capsule.age.one_year', undefined, locale)
   }
   if (days >= MONTH_THRESHOLD_DAYS) {
-    return t('chat.capsule.age.months', { m: Math.floor(days / 30) }, locale)
+    return t(
+      'chat.capsule.age.months',
+      { m: Math.min(Math.floor(days / 30), MAX_MONTHS) },
+      locale,
+    )
   }
   if (days === 1) {
     return t('chat.capsule.age.one_day', undefined, locale)

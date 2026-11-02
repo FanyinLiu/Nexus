@@ -117,13 +117,13 @@ const AGE_CASES: Array<{
   },
   {
     days: 360,
-    label: '360 days (12 months)',
-    expected: { 'zh-CN': '12个月前', 'zh-TW': '12個月前', 'en-US': '12 months ago', ja: '12か月前', ko: '12개월 전' },
+    label: '360 days (11 months)',
+    expected: { 'zh-CN': '11个月前', 'zh-TW': '11個月前', 'en-US': '11 months ago', ja: '11か月前', ko: '11개월 전' },
   },
   {
     days: 364,
-    label: '364 days (12 months)',
-    expected: { 'zh-CN': '12个月前', 'zh-TW': '12個月前', 'en-US': '12 months ago', ja: '12か月前', ko: '12개월 전' },
+    label: '364 days (11 months)',
+    expected: { 'zh-CN': '11个月前', 'zh-TW': '11個月前', 'en-US': '11 months ago', ja: '11か月前', ko: '11개월 전' },
   },
   {
     days: 365,
