@@ -125,6 +125,7 @@ function createHarness(t: TestContext) {
   const handlers = new Map<string, Handler>()
   const sent: SentMessage[] = []
   const panelSent: SentMessage[] = []
+  const notifications: Array<{ title: string, body: string, onClick?: () => void }> = []
   const fakeStrip = createFakeStrip()
   const windows = [
     createFakeWindow('pet', sent),
@@ -146,7 +147,10 @@ function createHarness(t: TestContext) {
     clearInterval: () => {},
     strip: fakeStrip.strip,
     getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
-    showOsNotification: () => {},
+    showOsNotification: (payload) => {
+      notifications.push(payload)
+      return true
+    },
     isPanelFocused: () => false,
   })
   t.after(() => ipc.stopPrune())
@@ -156,6 +160,7 @@ function createHarness(t: TestContext) {
     store,
     sent,
     fakeStrip,
+    notifications,
     ipc,
     invoke: async (channel: string, payload?: unknown) => {
       const handler = handlers.get(channel)
@@ -188,6 +193,7 @@ test('strip Done marks the inbox entry done and publishes the lower unread count
     removedIds: [],
   })
   assert.deepEqual(harness.panelChanges(), [])
+  assert.deepEqual(harness.fakeStrip.withdrawn, [message.id])
 })
 
 test('inbox:update to dismissed publishes ids and status only, to the pet window only', async (t) => {
@@ -261,6 +267,70 @@ test('strip expire and snooze leave the inbox entry unread and the count unchang
   assert.equal(harness.store.list().unreadCount, 1)
   assert.deepEqual(harness.changes(), [])
   assert.deepEqual(harness.fakeStrip.withdrawn, [])
+})
+
+test('clicking a routed OS notification marks an actionable entry read', async (t) => {
+  const harness = createHarness(t)
+  const message = makeMessage({ id: 'os-id' })
+  const context = {
+    panelFocused: false,
+    fullscreen: false,
+    focusState: 'idle' as const,
+    inQuietHours: false,
+    systemDnd: null,
+    awayNotificationsEnabled: true,
+    stripEnabled: true,
+  }
+
+  await harness.invoke('proactive:deliver', { message, context })
+  assert.equal(harness.notifications.length, 1)
+  assert.equal(harness.store.list().unreadCount, 1)
+
+  harness.notifications[0].onClick?.()
+
+  assert.equal(inboxStatus(harness.store, message.id), 'read')
+  assert.equal(harness.store.list().unreadCount, 0)
+  assert.deepEqual(harness.changes().at(-1), {
+    unreadCount: 0,
+    changes: [{ id: message.id, status: 'read' }],
+    removedIds: [],
+  })
+  assert.deepEqual(harness.fakeStrip.withdrawn, [])
+})
+
+test('clicking a routed OS notification marks a no-button normal entry done', async (t) => {
+  const harness = createHarness(t)
+  // A no-button normal entry never reaches the strip, so an idle focus state
+  // with away notifications enabled is the route that raises its notification.
+  const message = makeMessage({
+    id: 'os-no-button-id',
+    priority: 'normal',
+    actions: [],
+  })
+  const context = {
+    panelFocused: false,
+    fullscreen: false,
+    focusState: 'idle' as const,
+    inQuietHours: false,
+    systemDnd: null,
+    awayNotificationsEnabled: true,
+    stripEnabled: true,
+  }
+
+  await harness.invoke('proactive:deliver', { message, context })
+  assert.equal(harness.notifications.length, 1)
+  assert.equal(inboxStatus(harness.store, message.id), 'unread')
+
+  harness.notifications[0].onClick?.()
+
+  assert.equal(inboxStatus(harness.store, message.id), 'done')
+  assert.equal(harness.store.list().unreadCount, 0)
+  assert.deepEqual(harness.changes().at(-1), {
+    unreadCount: 0,
+    changes: [{ id: message.id, status: 'done' }],
+    removedIds: [],
+  })
+  assert.deepEqual(harness.fakeStrip.withdrawn, [message.id])
 })
 
 test('clear-all withdraws every strip item and publishes a zero count', async (t) => {

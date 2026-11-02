@@ -5,7 +5,10 @@
  * `proactive:deliver` routes a message and always writes the inbox. Outlets
  * decide what else happens: `badge` refreshes the red dot, `bubble` pushes a
  * presentation to the pet, `strip` queues the reminder on the strip window in
- * this process, and `os_notification` raises a native notification.
+ * this process, and `os_notification` raises a native notification with the
+ * entry title (plus an away-summary count) whose click applies the shared read
+ * rule as a `notification_click`. An away summary with zero noted items raises
+ * no notification at all — the inbox entry alone is the record.
  *
  * `inbox:changed` is a metadata push only: the unread count, the ids/statuses
  * that changed, and the ids that were removed. It goes only to the windows
@@ -22,7 +25,10 @@
 import path from 'node:path'
 
 import { PROACTIVE_STRIP_ENABLED, routeDelivery } from '../../shared/proactiveDelivery.js'
+import { inboxStatusAfterInteraction } from '../../shared/proactiveInboxReadRule.js'
 import { createLogger } from '../logger.js'
+import { readMainUiLocale } from '../mainMessages.js'
+import { buildProactiveNotificationCopy } from '../proactiveNotificationCopy.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
 import { buildReminderStripLabels } from '../reminderStripLabels.js'
@@ -53,14 +59,17 @@ const PROACTIVE_INBOX_PRUNE_INTERVAL_MS = 60 * 60 * 1000
 const INBOX_CHANGE_CONSUMERS = Object.freeze(['pet'])
 
 /**
- * Strip controls that end the reminder from the user's point of view. They all
- * land on the same `done` status; only the side effect on the panel differs.
- * @type {ReadonlySet<string>}
+ * Stable failure token: the inbox file survived a clear-all delete.
  */
-const INBOX_HANDLED_STRIP_ACTIONS = Object.freeze(new Set(['done', 'open', 'reply']))
-
-/** Stable failure token: the inbox file survived a clear-all delete. */
 const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
+
+/**
+ * Strip controls that mean "the user dealt with this reminder". The strip
+ * session drops the row before this hand-off, so the row is withdrawn
+ * unconditionally: a copy re-queued while the click was in flight must not
+ * survive it, even when the inbox entry is already final or gone.
+ */
+const STRIP_HANDLED_ACTIONS = new Set(['done', 'open', 'reply'])
 
 /** @typedef {object} ProactiveIpcWebContents
  * @property {() => boolean} isDestroyed
@@ -104,7 +113,7 @@ const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
  * @property {IntervalClearer} clearInterval
  * @property {ProactiveStripDependencies} strip
  * @property {() => ReminderStripLabels} getStripLabels
- * @property {(payload: { title: string, body: string }) => unknown} showOsNotification
+ * @property {(payload: { title: string, body?: string, onClick?: () => void }) => unknown} showOsNotification
  * @property {() => boolean} isPanelFocused
  * @property {() => Promise<DeliveryContext>} [getDeliveryContext]
  * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
@@ -184,17 +193,15 @@ export function createProactiveIpc({
   }
 
   /**
-   * The OS toast shows the same public pair as the bubble. It is the most
-   * exposed surface (lock screen, bystanders), so it never receives `fullBody`.
+   * The OS toast is the most exposed surface (lock screen, bystanders), so it
+   * shows the entry title only; an away summary adds its item count, and a
+   * capsule keeps its public title + opener pair. It never receives the entry
+   * body or `fullBody`. A `null` copy means this entry raises no toast.
    * @param {ProactiveMessage} message
-   * @returns {{ title: string, body: string }}
+   * @returns {{ title: string, body?: string } | null}
    */
   function toNotificationCopy(message) {
-    const copy = message.publicCopy
-    return {
-      title: copy?.title ?? message.title,
-      body: copy?.body ?? message.body,
-    }
+    return buildProactiveNotificationCopy(message, readMainUiLocale())
   }
 
   /** @param {InboxMutation} mutation */
@@ -238,22 +245,47 @@ export function createProactiveIpc({
   }
 
   /**
+   * Apply the shared read rule to one stored entry and announce a real status
+   * change. Every main-process surface that can "read" an entry (strip,
+   * notification click) goes through here so the renderer sees one push shape.
+   * Handled entries are final: `done`/`dismissed` never downgrade, while
+   * `read` can still become `done`. A `read` -> `read` result is a no-op, so
+   * it neither mutates nor publishes.
+   *
+   * Withdrawing is independent of the status change: a strip `done`/`open`/
+   * `reply` always drops the row, and a notification click drops it when the
+   * click completes a no-button entry. A `read` or capsule click keeps it.
+   * @param {string} id
+   * @param {string} interaction
+   * @param {{ withdraw?: boolean }} [options]
+   */
+  function applyInboxInteraction(id, interaction, { withdraw = false } = {}) {
+    if (withdraw && STRIP_HANDLED_ACTIONS.has(interaction)) strip.withdraw(id)
+
+    const entry = inbox.list().entries.find((item) => item.id === id)
+    if (!entry) return
+    if (entry.status === 'done' || entry.status === 'dismissed') return
+    const nextStatus = inboxStatusAfterInteraction(entry, interaction)
+    if (nextStatus === null || nextStatus === entry.status) return
+    if (interaction === 'notification_click' && nextStatus === 'done') strip.withdraw(id)
+    announceMutation(inbox.setStatus(id, nextStatus))
+  }
+
+  /**
    * Strip-side action hand-off. Every control that means "the user dealt with
    * this reminder" — `done`, and the panel-opening `open`/`reply` — resolves
-   * the inbox entry as `done`; the panel itself is opened by the strip module
-   * before this hand-off. `snooze` and the strip's own `expire` collapse timer
-   * must keep the entry unread.
+   * the inbox entry as `done` through the shared rule and drops the strip row;
+   * the panel itself is opened by the strip module before this hand-off.
+   * `snooze` and the strip's own `expire` collapse timer keep the entry unread
+   * and leave the strip untouched.
    * @param {string} action
    * @param {string} id
    */
   function handleStripAction(action, id) {
-    if (!INBOX_HANDLED_STRIP_ACTIONS.has(action)) return
-    const mutation = inbox.setStatus(id, 'done')
     // The strip session drops the item before this hand-off; withdrawing here
     // as well matches the overlay's done/dismissed path and covers an item
     // that was re-queued while the click was in flight.
-    strip.withdraw(id)
-    announceMutation(mutation)
+    applyInboxInteraction(id, action, { withdraw: true })
   }
 
   strip.configure?.({
@@ -306,7 +338,13 @@ export function createProactiveIpc({
   })
 
   outlets.register('os_notification', async (message) => {
-    await showOsNotification(toNotificationCopy(message))
+    const copy = toNotificationCopy(message)
+    // Nothing to announce (zero noted items) must not become a "0 things" toast.
+    if (!copy) return
+    await showOsNotification({
+      ...copy,
+      onClick: () => applyInboxInteraction(message.id, 'notification_click'),
+    })
   })
 
   const router = createProactiveRouter({ outlets })

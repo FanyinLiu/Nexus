@@ -53,6 +53,8 @@ const proactiveMessageSchema = {
         body: { type: 'string', maxLength: PROACTIVE_BODY_MAX_LENGTH },
       },
     },
+    // Away-summary item count; only the OS notification renders it.
+    summaryCount: { type: 'number', optional: true, integer: true, min: 0, max: 999 },
     speech: { type: 'string', optional: true, maxLength: SPEECH_MAX_LENGTH },
     actions: {
       type: 'array',

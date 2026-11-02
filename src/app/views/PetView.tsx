@@ -1,9 +1,9 @@
-import { Suspense, lazy, useMemo, type ReactNode } from 'react'
-import { ProactiveUnreadBadge } from '../../components/ProactiveUnreadBadge.tsx'
+import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react'
+import { ProactiveInboxHost } from '../../components/ProactiveInboxHost.tsx'
 import { resolveCharacterPreset } from '../../features/character/presets.ts'
 import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface.tsx'
+import { useProactiveInboxOverlay } from '../../hooks/useProactiveInboxOverlay.ts'
 import { useProactivePresentation } from '../../hooks/useProactivePresentation.ts'
-import { useProactiveUnreadCount } from '../../hooks/useProactiveUnreadCount.ts'
 import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const LegacyPetView = lazy(() => import('./LegacyPetView'))
@@ -33,6 +33,7 @@ export function PetView({
   openSettingsPanel,
   openChatPanelForVoice,
   openPetMenu,
+  registerInboxOverlayOpen,
   togglePinned,
   toggleClickThrough,
   toggleContinuousVoiceMode,
@@ -43,8 +44,17 @@ export function PetView({
   onboardingGuide,
 }: PetViewProps) {
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
-  const proactiveUnreadCount = useProactiveUnreadCount()
   useProactivePresentation(chat.presentPetDialogBubble)
+  // One controller per pet window, shared by the badge and the context menu.
+  const inboxOverlay = useProactiveInboxOverlay({
+    settings,
+    focusState,
+    openConversation: openChatPanelForVoice,
+  })
+  useEffect(() => {
+    registerInboxOverlayOpen(inboxOverlay.open)
+    return () => registerInboxOverlayOpen(null)
+  }, [inboxOverlay.open, registerInboxOverlayOpen])
 
   const hasModalOverlay = Boolean(settingsDrawer) || Boolean(onboardingGuide)
   const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
@@ -55,7 +65,14 @@ export function PetView({
   return (
     <div className={`desktop-pet-root desktop-pet-root--pet ${useCompanionV2 ? 'nexus-ui-v2' : ''} ${characterPreset.themeClassName} ${hasModalOverlay ? 'desktop-pet-root--pet-modal-open' : ''}`}>
       <div aria-hidden={hasModalOverlay ? true : undefined} inert={hasModalOverlay ? true : undefined}>
-        <ProactiveUnreadBadge unreadCount={proactiveUnreadCount} uiLanguage={settings.uiLanguage} />
+        <ProactiveInboxHost
+          settings={settings}
+          view={inboxOverlay.view}
+          onToggle={inboxOverlay.toggle}
+          onClose={inboxOverlay.close}
+          onToggleRow={inboxOverlay.toggleRow}
+          onAction={inboxOverlay.runAction}
+        />
         {!petModelSelectionResolved ? null : useCompanionV2 ? (
           <FramelessCompanionSurface
             settings={settings}
@@ -68,6 +85,7 @@ export function PetView({
             runtimeSnapshot={runtimeSnapshot}
             openSettingsPanel={openSettingsPanel}
             openChatPanelForVoice={openChatPanelForVoice}
+            openPetMenu={openPetMenu}
             togglePinned={togglePinned}
             toggleClickThrough={toggleClickThrough}
             paused={hasModalOverlay}

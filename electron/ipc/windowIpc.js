@@ -293,7 +293,7 @@ export function register() {
   ipcMain.handle('window:open-pet-menu', (event) => {
     requireTrustedSender(event)
     const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
-    showPetContextMenu(sourceWindow)
+    return showPetContextMenu(sourceWindow)
   })
 
   ipcMain.handle('window:close-panel', (event) => {
