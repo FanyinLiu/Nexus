@@ -3,9 +3,9 @@
  *
  * A lock screen is not a private surface: an OS toast must never carry memory
  * text, the user's own words, an errand prompt/result, or letter content. The
- * only exception is the agenda reminder, whose body is the reminder's `what`
- * clipped to a short budget. In-app chat and bubbles keep their own copy and
- * do not go through this module.
+ * only exception is the agenda reminder, whose body is the first non-blank
+ * line of the reminder's `what`, clipped to a short budget. In-app chat and
+ * bubbles keep their own copy and do not go through this module.
  *
  * Every string here is a fixed localized line, resolved through the runtime
  * `t()` so non-hook code can build the same body the renderer would.
@@ -24,16 +24,30 @@ const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'graphem
 /**
  * Clip an agenda reminder's `what` for the OS body.
  *
- * Trimming happens first so trailing whitespace never counts toward the
- * budget. The cut is by grapheme cluster, not UTF-16 unit or code point, so a
- * user-perceived character — an emoji ZWJ sequence, a flag, or a base letter
- * plus its combining mark — is one unit and is never cut.
+ * Only the first non-blank line is eligible, so a multi-line memory can never
+ * smuggle a later line onto the lock screen. Leading blank lines are skipped;
+ * an all-blank value becomes an empty body. The line is trimmed before
+ * counting so trailing whitespace never spends the budget. The cut is by
+ * grapheme cluster, not UTF-16 unit or code point, so a user-perceived
+ * character — an emoji ZWJ sequence, a flag, or a base letter plus its
+ * combining mark — is one unit and is never cut. A single ellipsis marks
+ * either a clipped line or any later non-blank line.
  */
 export function truncateAgendaWhat(what: string): string {
-  const trimmed = what.trim()
-  const graphemes = Array.from(GRAPHEME_SEGMENTER.segment(trimmed), (part) => part.segment)
-  if (graphemes.length <= AGENDA_NOTIFICATION_WHAT_MAX) return trimmed
-  return `${graphemes.slice(0, AGENDA_NOTIFICATION_WHAT_MAX).join('')}…`
+  const lines = what.split(/\r\n|\n|\r/)
+  const firstLineIndex = lines.findIndex((line) => line.trim().length > 0)
+  if (firstLineIndex === -1) return ''
+  const firstLine = lines[firstLineIndex].trim()
+  const graphemes = Array.from(GRAPHEME_SEGMENTER.segment(firstLine), (part) => part.segment)
+  const clipped = graphemes.length > AGENDA_NOTIFICATION_WHAT_MAX
+    ? graphemes.slice(0, AGENDA_NOTIFICATION_WHAT_MAX).join('')
+    : firstLine
+  const hasFollowingLine = lines
+    .slice(firstLineIndex + 1)
+    .some((line) => line.trim().length > 0)
+  return graphemes.length > AGENDA_NOTIFICATION_WHAT_MAX || hasFollowingLine
+    ? `${clipped}…`
+    : clipped
 }
 
 export interface AgendaNotification {
@@ -43,7 +57,8 @@ export interface AgendaNotification {
 
 /**
  * The agenda reminder's OS payload: the unchanged title plus only the clipped
- * `what`. Place, time and outreach templates stay out of the toast.
+ * first line of `what`. Place, time, later lines and outreach templates stay
+ * out of the toast.
  */
 export function buildAgendaNotification(input: { title: string; what: string }): AgendaNotification {
   return { title: input.title, body: truncateAgendaWhat(input.what) }

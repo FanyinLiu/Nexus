@@ -222,8 +222,10 @@ export function useBracketScheduler({
         }
       }
 
-      // The OS toast never carries the topic, the errand prompt/result or the
-      // bracket question. Only the chat/bubble `body` keeps the real copy.
+      // The OS toast never carries the topic or the errand prompt/result. A
+      // callback or errand gets a fixed line; otherwise (kind null) it keeps
+      // result.body — the greeting plus a fixed bracket question with no user
+      // content. Only the chat/bubble `body` keeps the full copy.
       const notificationKind = bracketNotificationKind({ errandDelivered: deliveredErrandId !== null, callback: result.callback })
       const notificationBody = bracketNotificationBody(s.uiLanguage, notificationKind, result.body)
 

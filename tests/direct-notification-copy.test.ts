@@ -250,6 +250,66 @@ test('agenda emoji: buildAgendaNotification body clips 👨‍👩‍👧 by gra
   assert.equal(result.title, 'T')
 })
 
+// ── Agenda first line ──────────────────────────────────────────────────────
+
+test('agenda first line: only the first non-blank line reaches the OS body', () => {
+  const input = '买牛奶\n顺便取快递\n密码 1234'
+  const output = truncateAgendaWhat(input)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, '买牛奶…')
+
+  const built = buildAgendaNotification({ title: 'T', what: input })
+  assertNoLoneSurrogate(built.body)
+  assert.equal(built.body, '买牛奶…')
+  assert.equal(built.title, 'T')
+})
+
+test('agenda first line: leading blank lines are skipped', () => {
+  const output = truncateAgendaWhat('\n  \n买牛奶\n顺便取快递')
+  assertNoLoneSurrogate(output)
+  assert.equal(output, '买牛奶…')
+})
+
+test('agenda first line: exactly 20 graphemes with nothing after it keeps no ellipsis', () => {
+  const line = '记'.repeat(20)
+  const output = truncateAgendaWhat(line)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, line)
+  assert.equal(output.includes('…'), false)
+
+  const trailingBlank = truncateAgendaWhat(`${line}\n  \n`)
+  assertNoLoneSurrogate(trailingBlank)
+  assert.equal(trailingBlank, line)
+  assert.equal(trailingBlank.includes('…'), false)
+})
+
+test('agenda first line: a clipped first line with more lines keeps exactly one ellipsis', () => {
+  const output = truncateAgendaWhat(`${'记'.repeat(25)}\n第二行`)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${'记'.repeat(20)}…`)
+  assert.equal(output.split('…').length, 2)
+})
+
+test('agenda first line: CRLF and lone CR separators are handled', () => {
+  const crlf = truncateAgendaWhat('买牛奶\r\n顺便取快递')
+  assertNoLoneSurrogate(crlf)
+  assert.equal(crlf, '买牛奶…')
+  assert.equal(crlf.includes('\r'), false)
+
+  const cr = truncateAgendaWhat('买牛奶\r顺便取快递')
+  assertNoLoneSurrogate(cr)
+  assert.equal(cr, '买牛奶…')
+  assert.equal(cr.includes('\r'), false)
+})
+
+test('agenda first line: all-blank input becomes an empty body', () => {
+  for (const input of ['', '   ', '\n \r\n\t', '\r\n']) {
+    const output = truncateAgendaWhat(input)
+    assertNoLoneSurrogate(output)
+    assert.equal(output, '')
+  }
+})
+
 // ── Agenda notification ────────────────────────────────────────────────────
 
 test('buildAgendaNotification body is the reminder what and nothing else', async () => {
