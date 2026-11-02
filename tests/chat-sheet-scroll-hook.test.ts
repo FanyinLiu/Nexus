@@ -258,3 +258,33 @@ test('following a new capsule letter lands on the new letter start, not the prev
   assert.deepEqual(history.calls, [{ top: 620, behavior: 'smooth' }])
   sheet.unmount()
 })
+
+test('following a plain assistant message still lands on the bottom', () => {
+  const history = createHistory({ scrollHeight: 1200 })
+  history.addArticle('u1', 100)
+  history.addArticle('a1', 300)
+  const first = [userMessage('u1'), assistantMessage('a1')]
+  const sheet = createSheet(first, history)
+  sheet.render()
+  history.calls.length = 0
+
+  // The user is already at the bottom, so the incoming message is followed.
+  history.scrollTop = history.scrollHeight - history.clientHeight
+  sheet.controls.handleHistoryScroll()
+
+  // The new bubble grows the history; following must land on the new bottom.
+  history.scrollHeight = 1600
+  history.addArticle('a2', 1500)
+  const callsBefore = history.calls.length
+  sheet.update([...first, assistantMessage('a2')])
+
+  assert.ok(
+    history.calls.length > callsBefore,
+    'an arriving plain message must schedule a new scrollTo',
+  )
+  const last = history.calls[history.calls.length - 1]
+  assert.deepEqual(last, { top: 1600, behavior: 'smooth' })
+  assert.equal(last.top, history.scrollHeight)
+  assert.equal(sheet.render().hasNewMessages, false)
+  sheet.unmount()
+})
