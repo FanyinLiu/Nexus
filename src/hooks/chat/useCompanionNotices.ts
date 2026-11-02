@@ -97,8 +97,12 @@ export function useCompanionNotices({
       )
     }
 
-    emitPetNotify({ type: 'presence_activity' })
-    emitPetNotify({ type: 'mood', mood: 'happy' })
+    // History-only notices opt out: a line the router kept quiet must not move
+    // the pet's presence or expression behind the user's back.
+    if (options.petReaction !== false) {
+      emitPetNotify({ type: 'presence_activity' })
+      emitPetNotify({ type: 'mood', mood: 'happy' })
+    }
 
     if (!speechContent) {
       return
