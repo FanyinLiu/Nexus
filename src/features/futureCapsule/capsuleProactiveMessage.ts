@@ -70,9 +70,10 @@ export function buildCapsuleProactiveMessage(
 /** The renderer-side surfaces a capsule still owns after main routes it. */
 export interface CapsulePresentationPlan {
   /**
-   * Rule 2 (panel focused) has no panel outlet in main, so the chat line is
-   * its panel surface. Rules 4 and 5 are covered by the bubble and
-   * os_notification outlets; 1, 3 and 6 are inbox(+badge) only.
+   * The chat line is chat-history only: it never draws a bubble, strip, popup
+   * or OS toast. Every routed rule plans it because no routed outlet shows the
+   * full text — 1, 3 and 6 are inbox(+badge) only, 4 and 5 carry the clipped
+   * body in a bubble or notification, and rule 2 has no panel outlet in main.
    */
   chatLine: boolean
 }
@@ -81,7 +82,9 @@ export interface CapsulePresentationPlan {
 export function planCapsulePresentation(
   decision: Pick<DeliveryDecision, 'rule'>,
 ): CapsulePresentationPlan {
-  return { chatLine: decision.rule === 2 }
+  // The router only returns rules 1-6 and every one of them needs the line, so
+  // the route itself is the only thing this plan can branch on today.
+  return { chatLine: decision.rule >= 1 }
 }
 
 /** Bridge function shape for the router call. */
@@ -124,9 +127,10 @@ export interface DeliverDueCapsuleResult {
  *
  * Success is settled before any chat push: once the router or the fallback
  * notification resolves, the capsule is marked delivered even when the
- * scheduler stopped in the meantime. A chat push runs afterwards and may still
- * fail; that error reaches the caller's log instead of re-delivering the
- * capsule on every tick.
+ * scheduler stopped in the meantime. Every routed rule then gets the same
+ * single chat line carrying the untruncated copy — the routed outlet itself
+ * only shows the clipped body — and a chat push may still fail; that error
+ * reaches the caller's log instead of re-delivering the capsule on every tick.
  */
 export async function deliverDueCapsule(
   deps: DeliverDueCapsuleDeps,
@@ -140,7 +144,7 @@ export async function deliverDueCapsule(
     ...(deps.pushChatLine ? { pushChatLine: deps.pushChatLine } : {}),
     planChatLine: (decision) => ({
       chatLine: planCapsulePresentation(decision).chatLine,
-      // Rule 2 is the panel surface, so the line carries the untruncated copy.
+      // One chat-history line for every routed rule, carrying the untruncated copy.
       text: deps.delivery.fullBody ?? deps.delivery.body,
     }),
     onDelivered: () => deps.markDelivered(deps.capsule.id),
