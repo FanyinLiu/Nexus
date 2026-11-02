@@ -3,12 +3,17 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import {
+  companionStageGestures,
   createStageDragState,
   STAGE_TAP_RELEASE_DELAY_MS,
   stagePointerDown,
   stagePointerMove,
   stagePointerRelease,
 } from '../src/features/uiV2/companionStageGestures.ts'
+import {
+  createSingleClickGate,
+  PROACTIVE_NOTE_SINGLE_CLICK_DELAY_MS,
+} from '../src/features/proactive/proactiveNote.ts'
 import type { PetTouchZone } from '../src/types/index.ts'
 
 function createHarness() {
@@ -81,6 +86,7 @@ test('a left press starts the drag and consecutive moves send incremental deltas
     { x: 10, y: 30 },
     { x: 5, y: -10 },
   ])
+  assert.equal(harness.state.dragged, true)
 })
 
 test('a move without a distance never calls dragBy', () => {
@@ -96,6 +102,7 @@ test('a move without a distance never calls dragBy', () => {
     harness.effects,
   )
   assert.deepEqual(harness.drags, [])
+  assert.equal(harness.state.dragged, false)
 })
 
 test('m1: a right or middle press never starts a drag', () => {
@@ -218,6 +225,184 @@ test('press feedback keeps the 280ms tap release and replaces the prior timer', 
   assert.deepEqual(harness.zones, ['face', 'face', null])
 })
 
+test('a fresh press clears the dragged flag left by the previous drag', () => {
+  const harness = createHarness()
+  stagePointerDown(
+    { button: 0, screenX: 10, screenY: 10 },
+    harness.state,
+    harness.effects,
+  )
+  stagePointerMove(
+    { buttons: 1, screenX: 30, screenY: 40 },
+    harness.state,
+    harness.effects,
+  )
+  assert.equal(harness.state.dragged, true)
+
+  stagePointerRelease(harness.state, harness.effects)
+  assert.equal(harness.state.dragged, true, 'release keeps the drag for the click that follows')
+
+  stagePointerDown(
+    { button: 0, screenX: 50, screenY: 60 },
+    harness.state,
+    harness.effects,
+  )
+  assert.equal(harness.state.dragged, false)
+})
+
+function createFakeTimers() {
+  let nextId = 1
+  const pending = new Map<number, { run: () => void; delayMs: number }>()
+
+  return {
+    setTimeout(run: () => void, delayMs: number): number {
+      const id = nextId
+      nextId += 1
+      pending.set(id, { run, delayMs })
+      return id
+    },
+    clearTimeout(handle: number): void {
+      pending.delete(handle)
+    },
+    runAll(): void {
+      const tasks = [...pending.values()]
+      pending.clear()
+      for (const task of tasks) task.run()
+    },
+    delays(): number[] {
+      return [...pending.values()].map((task) => task.delayMs)
+    },
+  }
+}
+
+test('a left single click with a note opens the notebook after the gate delay', () => {
+  const timers = createFakeTimers()
+  const gate = createSingleClickGate(timers)
+  let opens = 0
+
+  companionStageGestures.click(
+    { button: 0, detail: 1 },
+    {
+      noteState: 'one',
+      dragged: false,
+      gate,
+      toggleNotebook: () => {
+        opens += 1
+      },
+    },
+  )
+
+  assert.equal(opens, 0)
+  assert.deepEqual(timers.delays(), [PROACTIVE_NOTE_SINGLE_CLICK_DELAY_MS])
+
+  timers.runAll()
+  assert.equal(opens, 1)
+})
+
+test('a left single click without a note does nothing', () => {
+  const timers = createFakeTimers()
+  const gate = createSingleClickGate(timers)
+  let opens = 0
+
+  companionStageGestures.click(
+    { button: 0, detail: 1 },
+    {
+      noteState: 'none',
+      dragged: false,
+      gate,
+      toggleNotebook: () => {
+        opens += 1
+      },
+    },
+  )
+
+  assert.deepEqual(timers.delays(), [])
+  timers.runAll()
+  assert.equal(opens, 0)
+})
+
+test('a click after the stage dragged never opens the notebook', () => {
+  const harness = createHarness()
+  stagePointerDown(
+    { button: 0, screenX: 100, screenY: 100 },
+    harness.state,
+    harness.effects,
+  )
+  stagePointerMove(
+    { buttons: 1, screenX: 160, screenY: 130 },
+    harness.state,
+    harness.effects,
+  )
+
+  const timers = createFakeTimers()
+  const gate = createSingleClickGate(timers)
+  let opens = 0
+  companionStageGestures.click(
+    { button: 0, detail: 1 },
+    {
+      noteState: 'important',
+      dragged: harness.state.dragged,
+      gate,
+      toggleNotebook: () => {
+        opens += 1
+      },
+    },
+  )
+
+  assert.deepEqual(timers.delays(), [])
+  timers.runAll()
+  assert.equal(opens, 0)
+})
+
+test('a right click never opens the notebook', () => {
+  const timers = createFakeTimers()
+  const gate = createSingleClickGate(timers)
+  let opens = 0
+
+  companionStageGestures.click(
+    { button: 2, detail: 1 },
+    {
+      noteState: 'stack',
+      dragged: false,
+      gate,
+      toggleNotebook: () => {
+        opens += 1
+      },
+    },
+  )
+
+  assert.deepEqual(timers.delays(), [])
+  timers.runAll()
+  assert.equal(opens, 0)
+})
+
+test('a double click toggles voice and never opens the notebook', () => {
+  const timers = createFakeTimers()
+  const gate = createSingleClickGate(timers)
+  let opens = 0
+  let toggles = 0
+
+  companionStageGestures.click(
+    { button: 0, detail: 1 },
+    {
+      noteState: 'one',
+      dragged: false,
+      gate,
+      toggleNotebook: () => {
+        opens += 1
+      },
+    },
+  )
+  companionStageGestures.doubleClick(() => {
+    toggles += 1
+  }, gate)
+
+  assert.deepEqual(timers.delays(), [])
+  timers.runAll()
+  assert.equal(toggles, 1)
+  assert.equal(opens, 0)
+})
+
 function sliceHandler(source: string, name: string): string {
   const start = source.indexOf(`function ${name}`)
   assert.ok(start >= 0, `${name} must exist`)
@@ -244,6 +429,11 @@ test('the companion surface delegates pointer handling to the stage gesture modu
 
   const release = sliceHandler(surface, 'releaseCharacterPointer')
   assert.match(release, /stagePointerRelease\(\s*dragStateRef\.current,/)
+
+  const click = sliceHandler(surface, 'handleCharacterClick')
+  assert.match(click, /companionStageGestures\.click\(event,/)
+  assert.match(click, /dragged:\s*dragStateRef\.current\.dragged/)
+  assert.match(surface, /companionStageGestures\.doubleClick\(\s*voice\.toggleVoiceConversation,\s*singleClickGateRef\.current/)
 
   // The component must not keep a second copy of the drag decision logic.
   assert.doesNotMatch(surface, /dragPointRef/)

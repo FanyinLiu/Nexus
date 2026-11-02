@@ -1,9 +1,14 @@
 import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react'
 import { ProactiveInboxHost } from '../../components/ProactiveInboxHost.tsx'
 import { resolveCharacterPreset } from '../../features/character/presets.ts'
+import type { ProactiveNoteStageBinding } from '../../features/proactive/proactiveNote.ts'
 import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface.tsx'
 import { useProactiveInboxOverlay } from '../../hooks/useProactiveInboxOverlay.ts'
+import { useProactiveNoteContext } from '../../hooks/useProactiveNoteContext.ts'
+import { useProactiveNoteMotion } from '../../hooks/useProactiveNoteMotion.ts'
+import { useProactiveNotebookNarration } from '../../hooks/useProactiveNotebookNarration.ts'
 import { useProactivePresentation } from '../../hooks/useProactivePresentation.ts'
+import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const LegacyPetView = lazy(() => import('./LegacyPetView'))
@@ -56,6 +61,39 @@ export function PetView({
     return () => registerInboxOverlayOpen(null)
   }, [inboxOverlay.open, registerInboxOverlayOpen])
 
+  const view = inboxOverlay.view
+  // The note and the open notebook both need the environment: motion while
+  // the note is drawn, speech rules while the notebook is open.
+  const noteContext = useProactiveNoteContext({
+    settings,
+    focusState,
+    active: view.note.state !== 'none' || view.open,
+  })
+  const noteMotion = useProactiveNoteMotion({ view: view.note, context: noteContext })
+  const narration = useProactiveNotebookNarration({
+    open: view.open,
+    rows: view.rows,
+    openingUnseenIds: view.openingUnseenIds,
+    openingText: pickTranslatedUiText(settings.uiLanguage, view.openingKey),
+    letterText: pickTranslatedUiText(settings.uiLanguage, 'pet.proactive.notebook_letter'),
+    restText: pickTranslatedUiText(settings.uiLanguage, 'pet.proactive.notebook_rest'),
+    settings,
+    context: noteContext,
+    speak: (text) => voice.speakAssistantReply(text, false),
+    stop: voice.stopActiveSpeechOutput,
+    setSpeakingId: inboxOverlay.setSpeakingId,
+  })
+  const note: ProactiveNoteStageBinding = {
+    view: view.note,
+    motion: noteMotion.motion,
+    label: pickTranslatedUiText(settings.uiLanguage, 'pet.proactive.note_label'),
+    onApproach: noteMotion.onApproach,
+    onToggleNotebook: () => {
+      narration.interrupt()
+      inboxOverlay.toggle()
+    },
+  }
+
   const hasModalOverlay = Boolean(settingsDrawer) || Boolean(onboardingGuide)
   const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
     && petModelSelectionResolved
@@ -68,10 +106,14 @@ export function PetView({
         <ProactiveInboxHost
           settings={settings}
           view={inboxOverlay.view}
-          onToggle={inboxOverlay.toggle}
-          onClose={inboxOverlay.close}
+          onClose={() => {
+            narration.interrupt()
+            inboxOverlay.close()
+          }}
           onToggleRow={inboxOverlay.toggleRow}
           onAction={inboxOverlay.runAction}
+          onSeen={inboxOverlay.markSeen}
+          onInteract={narration.interrupt}
         />
         {!petModelSelectionResolved ? null : useCompanionV2 ? (
           <FramelessCompanionSurface
@@ -80,6 +122,7 @@ export function PetView({
             pet={pet}
             voice={voice}
             chat={chat}
+            note={note}
             isPinned={isPinned}
             clickThrough={clickThrough}
             runtimeSnapshot={runtimeSnapshot}
@@ -99,6 +142,7 @@ export function PetView({
               pet={pet}
               voice={voice}
               chat={chat}
+              note={note}
               isPinned={isPinned}
               clickThrough={clickThrough}
               mediaSession={mediaSession}

@@ -39,11 +39,11 @@ function noopHandlers() {
 
 test('the main messages table has menu.messages in all five locales', () => {
   const expected: Record<string, string> = {
-    'zh-CN': '消息',
-    'zh-TW': '訊息',
-    'en-US': 'Messages',
-    ja: 'メッセージ',
-    ko: '메시지',
+    'zh-CN': '小本子',
+    'zh-TW': '小本子',
+    'en-US': 'Notebook',
+    ja: 'メモ帳',
+    ko: '수첩',
   }
 
   assert.deepEqual([...MAIN_MESSAGE_LOCALES], Object.keys(expected))
@@ -52,7 +52,7 @@ test('the main messages table has menu.messages in all five locales', () => {
   }
 })
 
-test('the pet menu template puts Messages first and keeps the other items', () => {
+test('the pet menu template puts Notebook first and keeps the other items', () => {
   const calls: string[] = []
   const template = buildPetContextMenuTemplate({
     messages: () => calls.push('messages'),
@@ -64,7 +64,7 @@ test('the pet menu template puts Messages first and keeps the other items', () =
   })
 
   assert.equal(template[0].label, mainT('menu.messages'))
-  assert.equal(template[0].label, 'Messages')
+  assert.equal(template[0].label, 'Notebook')
   assert.equal(template[1].label, mainT('menu.chat'))
   assert.equal(template[2].label, mainT('menu.settings'))
   assert.equal(template[4].type, 'separator')
@@ -73,7 +73,7 @@ test('the pet menu template puts Messages first and keeps the other items', () =
   assert.deepEqual(calls, ['messages'])
 })
 
-test('choosing Messages resolves the menu promise to messages', async () => {
+test('choosing Notebook resolves the menu promise to messages', async () => {
   let template: PetMenuTemplate | null = null
   let onClose: (() => void) | null = null
 
@@ -244,7 +244,7 @@ async function flushAsync(): Promise<void> {
   for (let index = 0; index < 8; index += 1) await Promise.resolve()
 }
 
-test('a left click or double click on the pet never opens the inbox overlay', async () => {
+test('a left click or double click without a visible note never opens the inbox overlay', async () => {
   let overlayOpens = 0
   let menuCalls = 0
   const pointerDowns: number[] = []
@@ -305,7 +305,7 @@ test('a left click or double click on the pet never opens the inbox overlay', as
   assert.equal(nullOverlayOpens, 0)
 })
 
-test('the companion surface wires its three stage gestures through the gesture module', () => {
+test('the companion surface wires its stage gestures through the gesture module', () => {
   const surface = readFileSync(
     new URL('../src/features/uiV2/FramelessCompanionSurface.tsx', import.meta.url),
     'utf8',
@@ -317,20 +317,21 @@ test('the companion surface wires its three stage gestures through the gesture m
     stage,
     /onPointerDown=\{\(event\) => companionStageGestures\.pointerDown\(event, handleCharacterPointerDown\)\}/,
   )
+  assert.match(stage, /onClick=\{handleCharacterClick\}/)
   assert.match(
     stage,
     /onContextMenu=\{\(event\) => companionStageGestures\.contextMenu\(event, openPetMenu\)\}/,
   )
   assert.match(
     stage,
-    /onDoubleClick=\{\(\) => companionStageGestures\.doubleClick\(voice\.toggleVoiceConversation\)\}/,
+    /onDoubleClick=\{\(\) => companionStageGestures\.doubleClick\(\s*voice\.toggleVoiceConversation,\s*singleClickGateRef\.current/,
   )
-  // Exactly the three gesture props, and no click handler on the stage.
+  // The three inline gesture props route through the module; the click
+  // handler does the same and is asserted in the gesture test.
   assert.equal(
     (stage.match(/companionStageGestures\.(pointerDown|contextMenu|doubleClick)\(/g) ?? []).length,
     3,
   )
-  assert.doesNotMatch(stage, /\bonClick=/)
   // `openPetMenu` reaches JSX only as the context-menu argument.
   assert.equal((stage.match(/openPetMenu/g) ?? []).length, 1)
 

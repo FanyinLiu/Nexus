@@ -75,7 +75,7 @@ async function flushAsync(): Promise<void> {
 
 function createHarness(initialEntries: ProactiveInboxEntryView[]) {
   let entries = initialEntries.map((item) => ({ ...item }))
-  const updates: Array<{ id: string, status: 'done' }> = []
+  const updates: Array<{ id: string, status: 'done' | 'read' }> = []
   const deliveries: ProactiveDeliveryPayload[] = []
   let openedConversation = 0
   const clock = createFakeClock()
@@ -302,12 +302,11 @@ test('badge 0 still lists unread and read entries for the menu-opened overlay', 
   assert.deepEqual(expanded.rows.map((row) => row.id), ['companionship', 'already-done'])
   assert.equal(expanded.rows[0].read, true)
 
-  // Collapsing releases the slot; the row now sorts among the read rows by
-  // createdAt (newest first), so the newer read row moves ahead of it.
+  // Collapsing keeps the order frozen at open; only a fresh open re-sorts.
   await harness.controller.toggleRow('companionship')
   const collapsed = harness.controller.getSnapshot()
   assert.equal(collapsed.expandedId, null)
-  assert.deepEqual(collapsed.rows.map((row) => row.id), ['already-done', 'companionship'])
+  assert.deepEqual(collapsed.rows.map((row) => row.id), ['companionship', 'already-done'])
   assert.deepEqual(collapsed.rows.map((row) => row.read), [true, true])
 })
 
@@ -341,25 +340,26 @@ test('an expanded row keeps its index until collapse and then falls into the rea
   await harness.controller.refresh()
   assert.deepEqual(ids(), ['target', 'read-d', 'read-a', 'read-b', 'read-c'])
 
-  // Collapsing releases the slot and re-sorts into the read section.
+  // Collapsing keeps the frozen slot: the row does not jump into the read
+  // section while the notebook stays open.
   await harness.controller.toggleRow('target')
   assert.equal(harness.controller.getSnapshot().expandedId, null)
-  assert.deepEqual(ids(), ['read-d', 'read-a', 'read-b', 'read-c', 'target'])
+  assert.deepEqual(ids(), ['read-d', 'target', 'read-a', 'read-b', 'read-c'])
 
-  // Closing while expanded also releases it, so reopening shows the read order.
+  // Closing drops the frozen order, so reopening shows the read order.
   await harness.controller.toggleRow('target')
   harness.controller.close()
   await harness.controller.open()
   assert.deepEqual(ids(), ['read-d', 'read-a', 'read-b', 'read-c', 'target'])
 })
 
-test('the injected clock drops entries older than 30 days', async () => {
+test('the injected clock drops entries older than 15 days', async () => {
   const day = 24 * 60 * 60 * 1000
   const harness = createHarness([
-    entry({ id: 'boundary', createdAt: 30 * day }),
-    entry({ id: 'too-old', createdAt: 30 * day - 1 }),
+    entry({ id: 'boundary', createdAt: 15 * day }),
+    entry({ id: 'too-old', createdAt: 15 * day - 1 }),
   ])
-  harness.clock.advance(60 * day)
+  harness.clock.advance(30 * day)
 
   await harness.controller.open()
 
@@ -388,4 +388,189 @@ test('refresh reflects changes made by the strip or another window', async () =>
 
   assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.id), ['from-strip'])
   assert.equal(harness.controller.getSnapshot().unreadCount, 1)
+})
+
+test('the note view follows unseen entries and ignores snoozed rows', async () => {
+  const harness = createHarness([])
+  await harness.controller.open()
+  assert.equal(harness.controller.getSnapshot().note.state, 'none')
+
+  harness.setEntries([entry({ id: 'one', actions: [], priority: 'normal' })])
+  await harness.controller.refresh()
+  assert.equal(harness.controller.getSnapshot().note.state, 'one')
+
+  harness.setEntries([
+    entry({ id: 'stack-1', actions: [], priority: 'normal', createdAt: 3 }),
+    entry({ id: 'stack-2', actions: [], priority: 'normal', createdAt: 2 }),
+    entry({ id: 'stack-3', actions: [], priority: 'normal', createdAt: 1 }),
+  ])
+  await harness.controller.refresh()
+  assert.equal(harness.controller.getSnapshot().note.state, 'stack')
+
+  harness.setEntries([entry({ id: 'important', actions: ['done'], priority: 'normal' })])
+  await harness.controller.refresh()
+  assert.equal(harness.controller.getSnapshot().note.state, 'important')
+
+  // A snoozed entry keeps its unread status but contributes no sheet.
+  await harness.controller.runAction('important', 'snooze')
+  assert.equal(harness.controller.getSnapshot().note.state, 'none')
+  assert.equal(harness.entries()[0].status, 'unread')
+})
+
+test('markSeen writes done for plain lines and read for actionable and letter rows', async () => {
+  const harness = createHarness([
+    entry({ id: 'plain-1', actions: [], priority: 'normal', createdAt: 7 }),
+    entry({ id: 'plain-2', actions: [], priority: 'normal', createdAt: 6 }),
+    entry({ id: 'actionable', actions: ['done'], createdAt: 5 }),
+    entry({ id: 'letter', source: 'letter', actions: [], priority: 'normal', createdAt: 4 }),
+    entry({ id: 'already-read', actions: [], status: 'read', createdAt: 3 }),
+    entry({ id: 'already-done', actions: [], status: 'done', createdAt: 2 }),
+  ])
+  await harness.controller.open()
+  assert.deepEqual(
+    harness.controller.getSnapshot().openingUnseenIds,
+    ['actionable', 'plain-1', 'plain-2', 'letter'],
+  )
+
+  await harness.controller.markSeen([
+    'plain-1',
+    'plain-2',
+    'actionable',
+    'letter',
+    'already-read',
+    'already-done',
+    'plain-1',
+  ])
+
+  assert.deepEqual(harness.updates, [
+    { id: 'plain-1', status: 'done' },
+    { id: 'plain-2', status: 'done' },
+    { id: 'actionable', status: 'read' },
+    { id: 'letter', status: 'read' },
+  ])
+  assert.equal(harness.controller.getSnapshot().unreadCount, 0)
+})
+
+test('markSeen does nothing while the notebook is closed and never double-writes', async () => {
+  const harness = createHarness([entry({ id: 'a', actions: [], priority: 'normal' })])
+  await harness.controller.markSeen(['a'])
+  assert.deepEqual(harness.updates, [])
+
+  await harness.controller.open()
+  await Promise.all([
+    harness.controller.markSeen(['a']),
+    harness.controller.markSeen(['a']),
+  ])
+  assert.deepEqual(harness.updates, [{ id: 'a', status: 'done' }])
+})
+
+test('the notebook keeps its opening order after markSeen and re-sorts on reopen', async () => {
+  const harness = createHarness([
+    entry({ id: 'unseen-1', actions: [], priority: 'normal', createdAt: 2 }),
+    entry({ id: 'unseen-2', actions: [], priority: 'normal', createdAt: 1 }),
+    entry({ id: 'old-done', actions: ['done'], status: 'done', createdAt: 10 }),
+  ])
+  const ids = () => harness.controller.getSnapshot().rows.map((row) => row.id)
+
+  await harness.controller.open()
+  assert.deepEqual(ids(), ['unseen-1', 'unseen-2', 'old-done'])
+  assert.equal(harness.controller.getSnapshot().dividerBeforeId, 'old-done')
+
+  await harness.controller.markSeen(['unseen-1', 'unseen-2'])
+  // Both rows are handled now, but the opening order still holds.
+  assert.deepEqual(ids(), ['unseen-1', 'unseen-2', 'old-done'])
+
+  harness.controller.close()
+  await harness.controller.open()
+  // A new opening sorts all handled rows newest first.
+  assert.deepEqual(ids(), ['old-done', 'unseen-1', 'unseen-2'])
+})
+
+test('the opening line covers empty, seen-only, one, reason and generic cases', async () => {
+  const empty = createHarness([])
+  await empty.controller.open()
+  assert.equal(
+    empty.controller.getSnapshot().openingKey,
+    'pet.proactive.notebook_opening_empty',
+  )
+
+  const seenOnly = createHarness([entry({ id: 'seen', actions: [], status: 'read' })])
+  await seenOnly.controller.open()
+  assert.equal(
+    seenOnly.controller.getSnapshot().openingKey,
+    'pet.proactive.notebook_opening_seen_only',
+  )
+
+  const one = createHarness([entry({ id: 'one', actions: [], priority: 'normal' })])
+  await one.controller.open()
+  assert.equal(one.controller.getSnapshot().openingKey, 'pet.proactive.notebook_opening_one')
+
+  const twoUnseen = () => [
+    entry({ id: 'first', actions: [], priority: 'normal', createdAt: 2 }),
+    entry({ id: 'second', actions: [], priority: 'normal', createdAt: 1 }),
+  ]
+  const away = createHarness(twoUnseen())
+  await away.controller.open({ reason: 'away' })
+  assert.equal(away.controller.getSnapshot().openingKey, 'pet.proactive.notebook_opening_away')
+
+  const busy = createHarness(twoUnseen())
+  await busy.controller.open({ reason: 'busy' })
+  assert.equal(busy.controller.getSnapshot().openingKey, 'pet.proactive.notebook_opening_busy')
+
+  const generic = createHarness(twoUnseen())
+  await generic.controller.open()
+  assert.equal(
+    generic.controller.getSnapshot().openingKey,
+    'pet.proactive.notebook_opening_generic',
+  )
+})
+
+test('the divider appears before the first handled row only below an unhandled row', async () => {
+  const mixed = createHarness([
+    entry({ id: 'unhandled', actions: [], priority: 'normal', createdAt: 1 }),
+    entry({ id: 'handled', actions: ['done'], status: 'done', createdAt: 2 }),
+  ])
+  await mixed.controller.open()
+  assert.equal(mixed.controller.getSnapshot().dividerBeforeId, 'handled')
+
+  const allHandled = createHarness([
+    entry({ id: 'done-a', actions: ['done'], status: 'done', createdAt: 2 }),
+    entry({ id: 'done-b', actions: ['done'], status: 'done', createdAt: 1 }),
+  ])
+  await allHandled.controller.open()
+  assert.equal(allHandled.controller.getSnapshot().dividerBeforeId, null)
+
+  const allUnhandled = createHarness([
+    entry({ id: 'unhandled-a', actions: [], priority: 'normal', createdAt: 2 }),
+    entry({ id: 'unhandled-b', actions: [], priority: 'normal', createdAt: 1 }),
+  ])
+  await allUnhandled.controller.open()
+  assert.equal(allUnhandled.controller.getSnapshot().dividerBeforeId, null)
+})
+
+test('snoozing an actionable entry keeps it unseen and returns it on top', async () => {
+  const harness = createHarness([
+    entry({ id: 'actionable', actions: ['done', 'snooze'], createdAt: 2 }),
+    entry({ id: 'plain', actions: [], priority: 'normal', createdAt: 1 }),
+  ])
+  const ids = () => harness.controller.getSnapshot().rows.map((row) => row.id)
+  await harness.controller.open()
+  assert.deepEqual(ids(), ['actionable', 'plain'])
+  assert.equal(harness.controller.getSnapshot().note.state, 'important')
+
+  await harness.controller.runAction('actionable', 'snooze')
+  assert.deepEqual(harness.updates, [])
+  assert.deepEqual(ids(), ['plain'])
+  assert.equal(harness.controller.getSnapshot().note.state, 'one')
+  assert.equal(harness.entries()[0].status, 'unread')
+
+  harness.clock.advance(PROACTIVE_INBOX_SNOOZE_MS - 1)
+  await flushAsync()
+  assert.deepEqual(ids(), ['plain'])
+
+  harness.clock.advance(1)
+  await flushAsync()
+  assert.equal(harness.deliveries.length, 1)
+  assert.deepEqual(ids(), ['actionable', 'plain'])
+  assert.equal(harness.controller.getSnapshot().note.state, 'important')
 })

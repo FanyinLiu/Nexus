@@ -7,9 +7,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { MAIN_MESSAGES } from '../electron/mainMessagesTable.js'
 import {
+  formatProactiveNotebookTime,
   PROACTIVE_INBOX_OVERLAY_MAX_ROWS,
   type ProactiveInboxRow,
 } from '../src/features/proactive/proactiveInboxOverlay.ts'
+import type { ProactiveNoteView } from '../src/features/proactive/proactiveNote.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
@@ -18,7 +20,16 @@ import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 
 register(new URL('./helpers/tsx-test-loader.mjs', import.meta.url))
 const { ProactiveInboxPopover } = await import('../src/components/ProactiveInboxPopover.tsx')
-const { ProactiveUnreadBadge } = await import('../src/components/ProactiveUnreadBadge.tsx')
+const { ProactiveNote } = await import('../src/components/ProactiveNote.tsx')
+
+const NOTE_CSS = readFileSync(
+  new URL('../src/components/proactiveNote.css', import.meta.url),
+  'utf8',
+)
+const NOTEBOOK_CSS = readFileSync(
+  new URL('../src/components/proactiveInboxOverlay.css', import.meta.url),
+  'utf8',
+)
 
 const NEW_KEYS = [
   'pet.proactive.inbox_title',
@@ -48,7 +59,10 @@ function row(overrides: Partial<ProactiveInboxRow> & { id: string }): ProactiveI
     priority: 'normal',
     createdAt: 1,
     status: 'unread',
+    unseen: true,
+    handled: false,
     read: false,
+    letter: false,
     ...overrides,
   }
 }
@@ -59,47 +73,149 @@ function renderPopover(overrides: Partial<React.ComponentProps<typeof ProactiveI
     uiLanguage: 'zh-CN',
     rows: [row({ id: 'a' })],
     expandedId: null,
+    openingText: '我记了几件事。',
+    dividerBeforeId: null,
+    speakingId: null,
+    nowMs: 1,
+    yesterdayLabel: '昨天',
+    earlierLabel: '之前记的',
     onClose: () => {},
     onToggleRow: () => {},
     onAction: () => {},
+    onSeen: () => {},
+    onInteract: () => {},
     ...overrides,
   }))
 }
 
-test('the badge is a real button with the existing label and expansion state', () => {
-  const closed = renderToStaticMarkup(React.createElement(ProactiveUnreadBadge, {
-    unreadCount: 2,
-    uiLanguage: 'zh-CN',
-  }))
-  assert.match(closed, /<button/)
-  assert.match(closed, /type="button"/)
-  assert.match(closed, /aria-label="2 条未读"/)
-  assert.match(closed, /aria-expanded="false"/)
-  assert.match(closed, /aria-haspopup="dialog"/)
+const ONE_SHEET: ProactiveNoteView = { state: 'one', sheets: 1, animated: true }
 
-  const open = renderToStaticMarkup(React.createElement(ProactiveUnreadBadge, {
-    unreadCount: 2,
-    uiLanguage: 'zh-CN',
-    expanded: true,
+function renderNote(overrides: Partial<React.ComponentProps<typeof ProactiveNote>> = {}) {
+  return renderToStaticMarkup(React.createElement(ProactiveNote, {
+    view: ONE_SHEET,
+    motion: null,
+    label: '她记了几件事',
+    anchor: { x: 0.5, y: 0.4 },
+    onActivate: () => {},
+    ...overrides,
   }))
-  assert.match(open, /aria-expanded="true"/)
+}
 
-  assert.equal(renderToStaticMarkup(React.createElement(ProactiveUnreadBadge, {
-    unreadCount: 0,
-    uiLanguage: 'zh-CN',
-  })), '')
+function sheetCount(html: string): number {
+  return (html.match(/class="proactive-note__sheet"/g) ?? []).length
+}
+
+function cssDurations(css: string): number[] {
+  const durations: number[] = []
+  for (const match of css.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)) {
+    const value = Number(match[1])
+    durations.push(match[2] === 's' ? value * 1000 : value)
+  }
+  return durations
+}
+
+test('the paper note renders nothing when there is no unseen line', () => {
+  assert.equal(renderNote({ view: { state: 'none', sheets: 0, animated: true } }), '')
 })
 
-test('the popover is a labelled dialog with row and action buttons', () => {
+test('the paper note exposes each state and exactly its sheet count', () => {
+  const cases: Array<{ view: ProactiveNoteView; sheets: number }> = [
+    { view: { state: 'one', sheets: 1, animated: true }, sheets: 1 },
+    { view: { state: 'stack', sheets: 3, animated: true }, sheets: 3 },
+    { view: { state: 'important', sheets: 2, animated: true }, sheets: 2 },
+  ]
+
+  for (const { view, sheets } of cases) {
+    const html = renderNote({ view })
+    assert.match(html, new RegExp(`data-note-state="${view.state}"`))
+    assert.match(html, new RegExp(`data-note-sheets="${view.sheets}"`))
+    assert.equal(sheetCount(html), sheets, view.state)
+  }
+
+  // Even an out-of-range count can never draw more than the three-sheet stack.
+  const many = renderNote({
+    view: { state: 'stack', sheets: 10 } as unknown as ProactiveNoteView,
+  })
+  assert.equal(sheetCount(many), 3)
+})
+
+test('the paper note is text-free, labelled and carries no count or red', () => {
+  const html = renderNote()
+  assert.match(html, /<button/)
+  assert.match(html, /type="button"/)
+  assert.match(html, /aria-label="她记了几件事"/)
+  assert.match(html, /title="她记了几件事"/)
+  assert.match(html, /--note-x:50%/)
+  assert.match(html, /--note-y:40%/)
+  assert.equal(/\d/.test(html.replace(/<[^>]*>/g, '')), false)
+  assert.equal(html.toLowerCase().includes('red'), false)
+  assert.equal(html.includes('#f00'), false)
+  assert.equal(html.toLowerCase().includes('#ff0000'), false)
+  assert.equal(html.includes('rgb(255, 0, 0)'), false)
+})
+
+test('the paper note CSS keeps the visual budget and has no red or badge rules', () => {
+  assert.doesNotMatch(NOTE_CSS, /\bred\b/i)
+  assert.doesNotMatch(NOTE_CSS, /#f00\b/i)
+  assert.doesNotMatch(NOTE_CSS, /#ff0000/i)
+  assert.doesNotMatch(NOTE_CSS, /rgb\(\s*255\s*,\s*0\s*,\s*0\s*\)/i)
+  assert.doesNotMatch(NOTE_CSS, /badge/i)
+
+  assert.match(NOTE_CSS, /left:\s*var\(--note-x\)/)
+  assert.match(NOTE_CSS, /top:\s*var\(--note-y\)/)
+  assert.match(NOTE_CSS, /width:\s*clamp\(22px, 8%, 34px\)/)
+  assert.match(NOTE_CSS, /aspect-ratio:\s*4 \/ 5/)
+  assert.match(NOTE_CSS, /prefers-reduced-motion:\s*reduce/)
+  assert.match(NOTE_CSS, /#F6F0E6/)
+  assert.match(NOTE_CSS, /#2C2824/)
+})
+
+test('every note and notebook motion stays short except the one-shot glance and wiggle', () => {
+  const durations = [...cssDurations(NOTE_CSS), ...cssDurations(NOTEBOOK_CSS)]
+  assert.ok(durations.includes(700), 'the glance lasts 700ms')
+  assert.ok(durations.includes(900), 'the wiggle stays under one second')
+
+  for (const duration of durations) {
+    assert.ok(
+      duration <= 180 || duration === 700 || (duration >= 900 && duration <= 1000),
+      `unexpected motion duration ${duration}ms`,
+    )
+  }
+
+  assert.match(NOTE_CSS, /animation:\s*proactive-note-glance 700ms/)
+  assert.match(NOTE_CSS, /animation:\s*proactive-note-wiggle 900ms/)
+  assert.match(NOTE_CSS, /data-note-motion='glance'/)
+  assert.match(NOTE_CSS, /data-note-motion='wiggle'/)
+})
+
+test('the notebook uses paper colours, a 16px radius and faint ruled lines', () => {
+  assert.match(NOTEBOOK_CSS, /#F6F0E6/)
+  assert.match(NOTEBOOK_CSS, /#2C2824/)
+  assert.match(NOTEBOOK_CSS, /border-radius:\s*16px/)
+  assert.match(NOTEBOOK_CSS, /repeating-linear-gradient/)
+  assert.doesNotMatch(NOTEBOOK_CSS, /\bred\b/i)
+  assert.doesNotMatch(NOTEBOOK_CSS, /#f00\b/i)
+  assert.doesNotMatch(NOTEBOOK_CSS, /#ff0000/i)
+  assert.doesNotMatch(NOTEBOOK_CSS, /rgb\(\s*255\s*,\s*0\s*,\s*0\s*\)/i)
+  assert.doesNotMatch(NOTEBOOK_CSS, /badge/i)
+  assert.match(NOTEBOOK_CSS, /--pi-rule:\s*rgba\([^)]*0\.0\d+\)/)
+})
+
+test('the notebook is a labelled dialog with an opening line and no title heading', () => {
   const html = renderPopover({
     rows: [
       row({ id: 'a', actions: ['done', 'snooze', 'open'] }),
       row({ id: 'b', actions: [] }),
     ],
+    openingText: '刚才你在忙，我记了几件事。',
   })
 
   assert.match(html, /role="dialog"/)
-  assert.match(html, /aria-label="消息"/)
+  assert.match(html, /aria-label="小本子"/)
+  assert.match(html, /proactive-inbox__opening/)
+  assert.match(html, /刚才你在忙，我记了几件事。/)
+  assert.doesNotMatch(html, /<h2/)
+  assert.doesNotMatch(html, /proactive-inbox__title/)
   assert.match(html, /Title a/)
   assert.match(html, /Title b/)
   assert.match(html, />完成</)
@@ -108,8 +224,89 @@ test('the popover is a labelled dialog with row and action buttons', () => {
   assert.equal((html.match(/proactive-inbox__summary/g) ?? []).length, 2)
 })
 
+test('the summary puts the bold title and the light body on one line before the time', () => {
+  const html = renderPopover({ rows: [row({ id: 'line', title: '标题', body: '正文' })] })
+
+  const title = html.indexOf('proactive-inbox__row-title')
+  const body = html.indexOf('proactive-inbox__row-body')
+  const time = html.indexOf('proactive-inbox__time')
+  assert.ok(title >= 0 && body > title && time > body)
+  assert.match(html, /proactive-inbox__row-title">标题<\/span>/)
+  assert.match(html, /proactive-inbox__row-body">正文<\/span>/)
+})
+
+test('unseen rows carry a warm dot and handled rows do not', () => {
+  const unseen = renderPopover({ rows: [row({ id: 'new', unseen: true })] })
+  assert.equal((unseen.match(/proactive-inbox__dot/g) ?? []).length, 1)
+  assert.match(unseen, /data-unseen="true"/)
+  assert.match(unseen, /data-handled="false"/)
+
+  const handled = renderPopover({
+    rows: [row({
+      id: 'old',
+      status: 'done',
+      unseen: false,
+      handled: true,
+      read: true,
+      actions: [],
+    })],
+  })
+  assert.doesNotMatch(handled, /proactive-inbox__dot/)
+  assert.match(handled, /data-unseen="false"/)
+  assert.match(handled, /data-handled="true"/)
+})
+
+test('the earlier divider renders before dividerBeforeId and dims handled rows', () => {
+  const rows = [
+    row({ id: 'new' }),
+    row({ id: 'old', status: 'done', unseen: false, handled: true, read: true, actions: [] }),
+  ]
+  const html = renderPopover({
+    rows,
+    dividerBeforeId: 'old',
+    earlierLabel: '之前记的',
+  })
+
+  const divider = html.indexOf('proactive-inbox__divider')
+  const oldRow = html.indexOf('data-row-id="old"')
+  assert.ok(divider >= 0 && divider < oldRow)
+  assert.match(html, /之前记的/)
+  assert.match(html, /proactive-inbox__row--read/)
+
+  const withoutDivider = renderPopover({ rows, dividerBeforeId: null })
+  assert.doesNotMatch(withoutDivider, /proactive-inbox__divider/)
+})
+
+test('the speaking row gets the soft highlight modifier', () => {
+  const html = renderPopover({
+    rows: [row({ id: 'a' }), row({ id: 'b' })],
+    speakingId: 'b',
+  })
+
+  assert.equal((html.match(/proactive-inbox__row--speaking/g) ?? []).length, 1)
+  assert.equal((html.match(/data-speaking="true"/g) ?? []).length, 1)
+  assert.equal((html.match(/data-speaking="false"/g) ?? []).length, 1)
+})
+
+test('each row shows its notebook time label', () => {
+  const nowMs = 1_700_000_000_000
+  const expected = formatProactiveNotebookTime(nowMs, nowMs, '昨天')
+  const html = renderPopover({ rows: [row({ id: 'timed', createdAt: nowMs })], nowMs })
+
+  assert.ok(expected.length > 0)
+  assert.match(html, /proactive-inbox__time/)
+  assert.ok(html.includes(`>${expected}</span>`))
+})
+
 test('read rows are dimmed, stay expandable and lose Done/Snooze', () => {
-  const readRow = row({ id: 'read', read: true, actions: ['done', 'snooze', 'open'] })
+  const readRow = row({
+    id: 'read',
+    status: 'done',
+    unseen: false,
+    handled: true,
+    read: true,
+    actions: ['done', 'snooze', 'open'],
+  })
   const html = renderPopover({ rows: [readRow] })
 
   assert.match(html, /proactive-inbox__row--read/)
@@ -122,17 +319,20 @@ test('read rows are dimmed, stay expandable and lose Done/Snooze', () => {
   assert.doesNotMatch(unread, /proactive-inbox__row--read/)
 })
 
-test('a read entry has no unread marker and keeps every action button', () => {
-  const readRow = row({
+test('a seen entry has no unread dot and keeps every action button', () => {
+  const seenRow = row({
     id: 'seen',
     status: 'read',
+    unseen: false,
+    handled: false,
     read: false,
     actions: ['done', 'snooze', 'open'],
   })
-  const html = renderPopover({ rows: [readRow] })
+  const html = renderPopover({ rows: [seenRow] })
 
   assert.match(html, /data-status="read"/)
   assert.doesNotMatch(html, /data-status="unread"/)
+  assert.doesNotMatch(html, /proactive-inbox__dot/)
   assert.doesNotMatch(html, /proactive-inbox__row--read/)
   assert.match(html, />完成</)
   assert.match(html, />稍后 10 分钟</)
@@ -156,17 +356,13 @@ test('more than five rows render in the scroll list, oldest last', () => {
 })
 
 test('the list CSS scrolls and its height budget fits five rows in the default pet window', () => {
-  const css = readFileSync(
-    new URL('../src/components/proactiveInboxOverlay.css', import.meta.url),
-    'utf8',
-  )
   const windowCreation = readFileSync(
     new URL('../electron/windowCreation.js', import.meta.url),
     'utf8',
   )
 
   const variables: Record<string, string> = {}
-  for (const match of css.matchAll(/(--proactive-inbox-[a-z-]+):\s*([^;]+);/g)) {
+  for (const match of NOTEBOOK_CSS.matchAll(/(--proactive-inbox-[a-z-]+):\s*([^;]+);/g)) {
     variables[match[1]] = match[2].trim()
   }
   const px = (name: string) => {
@@ -202,9 +398,9 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   assert.equal(list, 360)
   assert.ok(list <= available, `list ${list} must fit in ${available}`)
 
-  const popoverRule = css.slice(
-    css.indexOf('.proactive-inbox {'),
-    css.indexOf('\n}', css.indexOf('.proactive-inbox {')),
+  const popoverRule = NOTEBOOK_CSS.slice(
+    NOTEBOOK_CSS.indexOf('.proactive-inbox {'),
+    NOTEBOOK_CSS.indexOf('\n}', NOTEBOOK_CSS.indexOf('.proactive-inbox {')),
   )
   assert.match(popoverRule, /top:\s*var\(--proactive-inbox-top\)/)
   assert.match(popoverRule, /padding:\s*var\(--proactive-inbox-padding\)/)
@@ -213,13 +409,14 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
     /max-height:\s*calc\(\s*100vh - var\(--proactive-inbox-top\) - var\(--proactive-inbox-bottom-gap\)\s*\)/,
   )
   assert.match(popoverRule, /box-sizing:\s*border-box/)
+  assert.match(popoverRule, /border-radius:\s*16px/)
   // The 300px card plus its 12px insets is wider than 320px, so the min()
   // expression must stay to shrink it inside the default pet window.
   assert.match(popoverRule, /width:\s*min\(300px, calc\(100vw - 24px\)\)/)
 
-  const listRule = css.slice(
-    css.indexOf('.proactive-inbox__list {'),
-    css.indexOf('\n}', css.indexOf('.proactive-inbox__list {')),
+  const listRule = NOTEBOOK_CSS.slice(
+    NOTEBOOK_CSS.indexOf('.proactive-inbox__list {'),
+    NOTEBOOK_CSS.indexOf('\n}', NOTEBOOK_CSS.indexOf('.proactive-inbox__list {')),
   )
   assert.match(listRule, /overflow-y:\s*auto/)
   assert.match(listRule, /gap:\s*var\(--proactive-inbox-row-gap\)/)
@@ -228,10 +425,24 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   assert.match(listRule, /--proactive-inbox-row-block-size/)
   assert.match(listRule, /--proactive-inbox-row-gap/)
 
+  const closeRule = NOTEBOOK_CSS.slice(
+    NOTEBOOK_CSS.indexOf('.proactive-inbox__close {'),
+    NOTEBOOK_CSS.indexOf('\n}', NOTEBOOK_CSS.indexOf('.proactive-inbox__close {')),
+  )
+  assert.match(closeRule, /width:\s*28px/)
+  assert.match(closeRule, /height:\s*28px/)
+
+  const actionRule = NOTEBOOK_CSS.slice(
+    NOTEBOOK_CSS.indexOf('.proactive-inbox__action {'),
+    NOTEBOOK_CSS.indexOf('\n}', NOTEBOOK_CSS.indexOf('.proactive-inbox__action {')),
+  )
+  assert.match(actionRule, /min-height:\s*28px/)
+  assert.match(actionRule, /font-size:\s*12px/)
+
   // Only the expanded row may exceed the block size the budget assumes.
-  const collapsedRule = css.slice(
-    css.indexOf('.proactive-inbox__row:not(.proactive-inbox__row--expanded) {'),
-    css.indexOf('\n}', css.indexOf('.proactive-inbox__row:not(.proactive-inbox__row--expanded) {')),
+  const collapsedRule = NOTEBOOK_CSS.slice(
+    NOTEBOOK_CSS.indexOf('.proactive-inbox__row:not(.proactive-inbox__row--expanded) {'),
+    NOTEBOOK_CSS.indexOf('\n}', NOTEBOOK_CSS.indexOf('.proactive-inbox__row:not(.proactive-inbox__row--expanded) {')),
   )
   assert.match(collapsedRule, /max-height:\s*var\(--proactive-inbox-row-block-size\)/)
   assert.match(collapsedRule, /overflow:\s*hidden/)
@@ -263,18 +474,22 @@ test('only the expanded row renders the full text', () => {
   assert.match(expanded, /aria-expanded="true"/)
 })
 
-test('the empty state renders when there are no badge-worthy rows', () => {
-  const html = renderPopover({ rows: [] })
-  assert.match(html, /最近 30 天没有消息/)
+test('the empty state is the opening line once, with no second paragraph', () => {
+  const html = renderPopover({ rows: [], openingText: '最近 15 天没记什么。' })
+  assert.equal((html.match(/最近 15 天没记什么。/g) ?? []).length, 1)
+  assert.match(html, /role="status"/)
+  assert.equal((html.match(/<p/g) ?? []).length, 1)
+  assert.doesNotMatch(html, /proactive-inbox__empty/)
+  assert.doesNotMatch(html, /proactive-inbox__list/)
 })
 
 test('the empty-state copy and the ko collapse label are pinned exactly', () => {
   const expectedEmpty: Record<string, string> = {
-    'zh-CN': '最近 30 天没有消息',
-    'zh-TW': '最近 30 天沒有訊息',
-    'en-US': 'No messages in the last 30 days',
-    ja: '過去 30 日間のメッセージはありません',
-    ko: '최근 30일 동안 받은 메시지가 없어요',
+    'zh-CN': '最近 15 天没记什么。',
+    'zh-TW': '最近 15 天沒記什麼。',
+    'en-US': 'Nothing noted in the last 15 days.',
+    ja: 'ここ 15 日間、メモはないよ。',
+    ko: '최근 15일 동안 적어 둔 게 없어.',
   }
 
   for (const { language, messages } of LOCALES) {

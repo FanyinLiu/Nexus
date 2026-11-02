@@ -1,23 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import type { DeliveryContext } from '../../shared/proactiveDelivery.js'
 import { buildReminderDeliveryContext, buildReminderDeliveryPreferences } from '../features/reminders/proactiveMessage.ts'
 import {
   createProactiveInboxOverlayController,
   type ProactiveInboxOverlayController,
   type ProactiveInboxOverlayView,
+  type ProactiveNotebookOpenOptions,
 } from '../features/proactive/proactiveInboxOverlayController.ts'
 import type { ProactiveInboxRowAction } from '../features/proactive/proactiveInboxOverlay.ts'
+import type { ProactiveNoteView } from '../features/proactive/proactiveNote.ts'
+import { createProactiveNotebookReturnTracker } from '../features/proactive/proactiveNotebookSpeech.ts'
 import { createLogger } from '../lib/logger.ts'
 import type { AppSettings, FocusState } from '../types/index.ts'
 import { readProactiveDesktopContext } from './readProactiveDesktopContext.ts'
+import { useProactiveNoteContext } from './useProactiveNoteContext.ts'
 
 const log = createLogger('proactive.inbox.overlay')
+
+const EMPTY_NOTE: ProactiveNoteView = { state: 'none', sheets: 0, animated: true }
 
 const EMPTY_VIEW: ProactiveInboxOverlayView = Object.freeze({
   open: false,
   unreadCount: 0,
   rows: [],
   expandedId: null,
+  note: EMPTY_NOTE,
+  openingKey: 'pet.proactive.notebook_opening_empty',
+  openingUnseenIds: [],
+  dividerBeforeId: null,
+  speakingId: null,
 })
 
 export type UseProactiveInboxOverlayOptions = {
@@ -29,22 +41,29 @@ export type UseProactiveInboxOverlayOptions = {
 
 export type UseProactiveInboxOverlayResult = {
   view: ProactiveInboxOverlayView
+  /** Shared note environment; the motion and narration hooks consume this. */
+  noteContext: DeliveryContext | null
   /** Open from an external trigger (the pet context menu), not just the badge. */
-  open: () => void
-  toggle: () => void
+  open: (options?: ProactiveNotebookOpenOptions) => void
+  toggle: (options?: ProactiveNotebookOpenOptions) => void
   close: () => void
   toggleRow: (id: string) => void
+  markSeen: (ids: readonly string[]) => void
+  setSpeakingId: (id: string | null) => void
   runAction: (id: string, action: ProactiveInboxRowAction) => void
 }
 
 /**
- * Bridge the inbox overlay controller to React.
+ * Bridge the notebook controller to React.
  *
  * The controller is created inside the effect (never during render) so the
  * render path stays pure. Lifecycle only: initial read, refresh on every
- * `inbox:changed`, and timer cleanup. Opening the overlay, snooze timers and
- * read-rule decisions live in
+ * `inbox:changed`, and timer cleanup. Opening the notebook, the order freeze,
+ * seen updates, snooze timers and read-rule decisions live in
  * `features/proactive/proactiveInboxOverlayController.ts`.
+ *
+ * The return tracker observes the note context so opening can say why the
+ * user was away; the tracker is read once and reset when opening.
  */
 export function useProactiveInboxOverlay({
   settings,
@@ -55,7 +74,16 @@ export function useProactiveInboxOverlay({
   const focusStateRef = useRef(focusState)
   const openConversationRef = useRef(openConversation)
   const controllerRef = useRef<ProactiveInboxOverlayController | null>(null)
+  const returnTrackerRef = useRef<ReturnType<typeof createProactiveNotebookReturnTracker> | null>(null)
+  if (returnTrackerRef.current === null) {
+    returnTrackerRef.current = createProactiveNotebookReturnTracker()
+  }
   const [view, setView] = useState<ProactiveInboxOverlayView>(EMPTY_VIEW)
+  const noteContext = useProactiveNoteContext({
+    settings,
+    focusState,
+    active: view.note.state !== 'none',
+  })
 
   useEffect(() => {
     settingsRef.current = settings
@@ -68,6 +96,14 @@ export function useProactiveInboxOverlay({
   useEffect(() => {
     openConversationRef.current = openConversation
   }, [openConversation])
+
+  useEffect(() => {
+    returnTrackerRef.current?.observe({
+      fullscreen: noteContext?.fullscreen ?? false,
+      focusState: noteContext?.focusState ?? focusState,
+      hasUnseen: view.note.state !== 'none',
+    })
+  }, [focusState, noteContext, view.note.state])
 
   useEffect(() => {
     const controller = createProactiveInboxOverlayController({
@@ -131,20 +167,35 @@ export function useProactiveInboxOverlay({
     }
   }, [])
 
-  const open = useCallback(() => {
-    void controllerRef.current?.open()
+  const open = useCallback((options?: ProactiveNotebookOpenOptions) => {
+    const reason = options?.reason ?? returnTrackerRef.current?.reason() ?? null
+    void controllerRef.current?.open({ reason })
+    returnTrackerRef.current?.reset()
   }, [])
+
+  const toggle = useCallback((options?: ProactiveNotebookOpenOptions) => {
+    const controller = controllerRef.current
+    if (!controller) return
+    if (controller.getSnapshot().open) {
+      controller.close()
+      return
+    }
+    open(options)
+  }, [open])
 
   return {
     view,
+    noteContext,
     open,
-    toggle: () => {
-      void controllerRef.current?.toggle()
-    },
+    toggle,
     close: () => controllerRef.current?.close(),
     toggleRow: (id) => {
       void controllerRef.current?.toggleRow(id)
     },
+    markSeen: (ids) => {
+      void controllerRef.current?.markSeen(ids)
+    },
+    setSpeakingId: (id) => controllerRef.current?.setSpeakingId(id),
     runAction: (id, action) => {
       void controllerRef.current?.runAction(id, action)
     },

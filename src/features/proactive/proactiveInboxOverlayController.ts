@@ -1,19 +1,24 @@
 /**
- * State machine behind the pet's inbox overlay.
+ * State machine behind the pet's notebook (the former inbox overlay).
  *
  * The controller is a tiny external store: the React hook only subscribes and
  * renders, while every interaction goes through the shared read rule so the
- * overlay, the reminder strip and an OS-notification click agree on the unread
- * count. It is intentionally free of React, `window` and real timers; the
- * bridge and the clock are injected, which is what makes the done/snooze/open
- * behaviour testable without a DOM.
+ * notebook, the reminder strip and an OS-notification click agree on what is
+ * unseen and what is handled. It is intentionally free of React, `window` and
+ * real timers; the bridge and the clock are injected, which is what makes the
+ * seen/handled/snooze/open behaviour testable without a DOM.
  *
- * The overlay shows every entry from the last 30 days, including read/done
- * rows, and the injected clock owns that boundary. Opening it refreshes the
- * list but never changes a status; an action-less row expanded to "done" stays
- * expanded until collapse/close and keeps the row index it had when it
- * expanded, so the read rule never makes it jump under the pointer. Snooze
- * keeps the entry unread and hides it only for this app session.
+ * The notebook shows every entry from the last 15 days, including read/done
+ * rows, and the injected clock owns that boundary. Opening refreshes the list
+ * and freezes the display order: rows that become seen or handled while it
+ * stays open keep their slot, and entries that arrive later go on top. Seen
+ * (`read`/`done`/`dismissed`) and handled (`done`/`dismissed`) are separate
+ * layers, so a letter can be seen without being opened. Snooze keeps the entry
+ * unread and hides it only for this app session.
+ *
+ * The note indicator reads the same snapshot through
+ * `resolveProactiveNoteView`, while the opening line and the frozen unseen ids
+ * feed the notebook's speech rules.
  */
 
 import type {
@@ -22,31 +27,62 @@ import type {
   ProactiveMessage,
 } from '../../../shared/proactiveDelivery.js'
 import { inboxStatusAfterInteraction } from '../../../shared/proactiveInboxReadRule.js'
+import type { TranslationKey } from '../../types/i18n.ts'
 import type { Logger } from '../../lib/logger.ts'
 import { normalizeNonNegativeInteger } from '../../lib/normalize.ts'
 import {
   proactiveMessageFromInboxEntry,
   selectProactiveInboxEntries,
   toProactiveInboxRow,
+  proactiveNotebookDividerIndex,
   type ProactiveInboxEntryView,
   type ProactiveInboxRow,
   type ProactiveInboxRowAction,
 } from './proactiveInboxOverlay.ts'
 import {
+  resolveProactiveNoteView,
+  type ProactiveNoteView,
+} from './proactiveNote.ts'
+import {
   createProactiveInboxSnoozeScheduler,
   type ProactiveInboxSnoozeDependencies,
 } from './proactiveInboxSnooze.ts'
+import {
+  selectProactiveNotebookOpeningKey,
+  type ProactiveNotebookReturnReason,
+} from './proactiveNotebookSpeech.ts'
+
+/** Statuses the notebook can write through the bridge. */
+export type ProactiveInboxUpdateStatus = 'done' | 'read'
 
 export type ProactiveInboxOverlayView = {
   open: boolean
   unreadCount: number
   rows: ProactiveInboxRow[]
   expandedId: string | null
+  /** Paper-note state derived from the same entries; snoozed rows are hidden. */
+  note: ProactiveNoteView
+  /** Opening line for the notebook; computed once per opening. */
+  openingKey: TranslationKey
+  /** Ids that were unseen when the notebook opened, in display order. */
+  openingUnseenIds: string[]
+  /** First handled row at open time when an unhandled row sits above it. */
+  dividerBeforeId: string | null
+  /** Row currently being narrated, or null when speech is idle. */
+  speakingId: string | null
+}
+
+/** Why the notebook was opened; feeds the opening line only. */
+export type ProactiveNotebookOpenOptions = {
+  reason?: ProactiveNotebookReturnReason
 }
 
 export type ProactiveInboxOverlayBridge = {
   list: () => Promise<ProactiveInboxSnapshot>
-  update: (id: string, status: 'done') => Promise<{ updated: boolean; unreadCount: number }>
+  update: (
+    id: string,
+    status: ProactiveInboxUpdateStatus,
+  ) => Promise<{ updated: boolean; unreadCount: number }>
   deliver: (payload: ProactiveDeliveryPayload) => Promise<unknown>
   openConversation: () => void | Promise<void>
 }
@@ -57,11 +93,23 @@ export type ProactiveInboxOverlayDependencies = {
   logger: Pick<Logger, 'warn'>
   setTimeout: ProactiveInboxSnoozeDependencies['setTimeout']
   clearTimeout: ProactiveInboxSnoozeDependencies['clearTimeout']
-  /** Injectable clock for the 30-day window; defaults to `Date.now`. */
+  /** Injectable clock for the 15-day window and the note; defaults to `Date.now`. */
   nowMs?: () => number
   /** Safety bound on rendered rows; defaults to the store's own maximum. */
   maxRows?: number
 }
+
+const EMPTY_NOTE: ProactiveNoteView = Object.freeze({
+  state: 'none',
+  sheets: 0,
+  animated: true,
+})
+
+const EMPTY_OPENING_KEY = selectProactiveNotebookOpeningKey({
+  unseenCount: 0,
+  totalCount: 0,
+  reason: null,
+})
 
 /**
  * Create one controller per mounted pet window. Call `dispose` on unmount so
@@ -84,13 +132,26 @@ export function createProactiveInboxOverlayController({
   let expandedIndex: number | null = null
   /** Expanded action-less row that the read rule just marked done. */
   let pinnedReadId: string | null = null
+  /** Display order frozen when the notebook opened; new ids go on top. */
+  let frozenOrder: string[] | null = null
+  let openingKey: TranslationKey = EMPTY_OPENING_KEY
+  let openingUnseenIds: string[] = []
+  let dividerBeforeId: string | null = null
+  let speakingId: string | null = null
   let disposed = false
   let refreshSequence = 0
+  /** In-flight `notebook_seen` writes, so duplicate reports cannot double-write. */
+  const seenRequests = new Set<string>()
   let snapshot: ProactiveInboxOverlayView = {
     open: false,
     unreadCount: 0,
     rows: [],
     expandedId: null,
+    note: EMPTY_NOTE,
+    openingKey: EMPTY_OPENING_KEY,
+    openingUnseenIds: [],
+    dividerBeforeId: null,
+    speakingId: null,
   }
 
   const listeners = new Set<() => void>()
@@ -103,7 +164,7 @@ export function createProactiveInboxOverlayController({
     },
   })
 
-  /** Rows in the overlay's normal selection order, without the expansion pin. */
+  /** Rows in the notebook's selection order, before the frozen order is applied. */
   function baseRows(): ProactiveInboxRow[] {
     return selectProactiveInboxEntries(entries, {
       hiddenIds: snooze.snoozedIds(),
@@ -112,8 +173,28 @@ export function createProactiveInboxOverlayController({
     }).map(toProactiveInboxRow)
   }
 
+  /**
+   * Keep the order captured at open time. Ids the notebook has never shown
+   * (entries delivered while it is open) lead the list; frozen rows follow in
+   * their opening order even after they become seen or handled.
+   */
+  function applyFrozenOrder(rows: ProactiveInboxRow[]): ProactiveInboxRow[] {
+    if (!frozenOrder) return rows
+    const rank = new Map(frozenOrder.map((id, index) => [id, index]))
+    const fresh: ProactiveInboxRow[] = []
+    const frozen: ProactiveInboxRow[] = []
+    for (const row of rows) {
+      if (rank.has(row.id)) frozen.push(row)
+      else fresh.push(row)
+    }
+    frozen.sort((left, right) => (
+      (rank.get(left.id) ?? 0) - (rank.get(right.id) ?? 0)
+    ))
+    return [...fresh, ...frozen]
+  }
+
   function buildView(): ProactiveInboxOverlayView {
-    const rows = baseRows()
+    const rows = applyFrozenOrder(baseRows())
     if (expandedId && expandedIndex !== null) {
       // Reading a row must not move it under the pointer: keep it where it was
       // when it expanded, and let it fall back into the normal order on collapse.
@@ -129,6 +210,14 @@ export function createProactiveInboxOverlayController({
       unreadCount,
       rows,
       expandedId,
+      note: resolveProactiveNoteView(entries, {
+        hiddenIds: snooze.snoozedIds(),
+        nowMs: nowMs(),
+      }),
+      openingKey,
+      openingUnseenIds: [...openingUnseenIds],
+      dividerBeforeId,
+      speakingId,
     }
   }
 
@@ -198,6 +287,27 @@ export function createProactiveInboxOverlayController({
     }
   }
 
+  /**
+   * Write one `notebook_seen` status without emitting. The caller emits once
+   * after the whole batch settles; a failure keeps the stored status untouched.
+   */
+  async function markEntrySeen(
+    entry: ProactiveInboxEntryView,
+    status: ProactiveInboxUpdateStatus,
+  ): Promise<void> {
+    try {
+      const result = await bridge.update(entry.id, status)
+      if (result.updated) {
+        entries = entries.map((item) => (
+          item.id === entry.id ? { ...item, status } : item
+        ))
+        unreadCount = normalizeNonNegativeInteger(result.unreadCount)
+      }
+    } catch {
+      logger.warn('proactive notebook seen update failed', { errorPresent: true })
+    }
+  }
+
   async function deliverSnoozed(entry: ProactiveInboxEntryView): Promise<void> {
     // The scheduler dropped the timer first, so this also unhides the row.
     emit()
@@ -217,28 +327,52 @@ export function createProactiveInboxOverlayController({
     if (pinnedReadId === id) pinnedReadId = null
   }
 
-  async function open(): Promise<void> {
+  /**
+   * Open the notebook, refresh it and freeze the order the user is about to
+   * read. The opening line, unseen ids and divider are captured here so later
+   * `markSeen` calls cannot change what this opening offered.
+   */
+  async function open(options: ProactiveNotebookOpenOptions = {}): Promise<void> {
     if (disposed) return
+    // A new open is a new reading session; freeze again from the refreshed order.
+    frozenOrder = null
     isOpen = true
     emit()
     await refresh()
+    if (disposed || !isOpen) return
+
+    const rows = applyFrozenOrder(baseRows())
+    frozenOrder = rows.map((row) => row.id)
+    openingUnseenIds = rows.filter((row) => row.unseen).map((row) => row.id)
+    openingKey = selectProactiveNotebookOpeningKey({
+      unseenCount: openingUnseenIds.length,
+      totalCount: rows.length,
+      reason: options.reason ?? null,
+    })
+    const dividerIndex = proactiveNotebookDividerIndex(rows)
+    dividerBeforeId = dividerIndex >= 0 ? rows[dividerIndex].id : null
+    emit()
   }
 
   function close(): void {
     if (!isOpen) return
     isOpen = false
+    frozenOrder = null
+    openingUnseenIds = []
+    dividerBeforeId = null
+    speakingId = null
     expandedId = null
     expandedIndex = null
     pinnedReadId = null
     emit()
   }
 
-  async function toggle(): Promise<void> {
+  async function toggle(options?: ProactiveNotebookOpenOptions): Promise<void> {
     if (isOpen) {
       close()
       return
     }
-    await open()
+    await open(options)
   }
 
   async function toggleRow(id: string): Promise<void> {
@@ -255,7 +389,7 @@ export function createProactiveInboxOverlayController({
 
     // Remember the slot before the read rule can move the row into the read
     // section, so an expanded row never jumps while the user is reading it.
-    const index = baseRows().findIndex((row) => row.id === id)
+    const index = applyFrozenOrder(baseRows()).findIndex((row) => row.id === id)
     expandedId = id
     expandedIndex = index >= 0 ? index : null
     pinnedReadId = null
@@ -265,13 +399,49 @@ export function createProactiveInboxOverlayController({
     if (inboxStatusAfterInteraction(entry, 'expand') !== 'done') return
 
     // Keep the row visible while the user reads the text that just marked it
-    // read; collapse or overlay close releases the pin.
+    // read; collapse or notebook close releases the pin.
     pinnedReadId = id
     const updated = await setEntryDone(entry)
     if (!updated && pinnedReadId === id) {
       pinnedReadId = null
       emit()
     }
+  }
+
+  /**
+   * Mark visible rows seen through the shared rule. Only an unread entry can
+   * move, and each id is written at most once per batch (or while an earlier
+   * write is still in flight). One emit follows every settled update.
+   */
+  async function markSeen(ids: readonly string[]): Promise<void> {
+    if (!isOpen || disposed) return
+
+    const requested = new Set<string>()
+    const pending: Promise<void>[] = []
+    for (const id of ids) {
+      if (requested.has(id) || seenRequests.has(id)) continue
+      requested.add(id)
+      const entry = entries.find((item) => item.id === id)
+      if (!entry || entry.status !== 'unread') continue
+      const next = inboxStatusAfterInteraction(entry, 'notebook_seen')
+      if (!next) continue
+      seenRequests.add(id)
+      pending.push(
+        markEntrySeen(entry, next).finally(() => {
+          seenRequests.delete(id)
+        }),
+      )
+    }
+
+    if (pending.length === 0) return
+    await Promise.all(pending)
+    emit()
+  }
+
+  function setSpeakingId(id: string | null): void {
+    if (speakingId === id) return
+    speakingId = id
+    emit()
   }
 
   async function runAction(id: string, action: ProactiveInboxRowAction): Promise<void> {
@@ -315,6 +485,8 @@ export function createProactiveInboxOverlayController({
 
   function dispose(): void {
     disposed = true
+    frozenOrder = null
+    seenRequests.clear()
     snooze.dispose()
     listeners.clear()
   }
@@ -327,6 +499,8 @@ export function createProactiveInboxOverlayController({
     close,
     toggle,
     toggleRow,
+    markSeen,
+    setSpeakingId,
     runAction,
     dispose,
   }

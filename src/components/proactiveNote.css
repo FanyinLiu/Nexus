@@ -1,0 +1,171 @@
+/*
+ * Paper note for the companion stage.
+ *
+ * Drawn as a DOM overlay anchored to whichever model is loaded; this file
+ * never changes Live2D artwork. Sheets are plain spans, so the note carries no
+ * text or count. Motions are one-shot and every duration stays short; reduced
+ * motion turns them all off.
+ */
+
+.proactive-note {
+  --note-x: 50%;
+  --note-y: 50%;
+
+  position: absolute;
+  left: var(--note-x);
+  top: var(--note-y);
+  z-index: 6;
+  box-sizing: border-box;
+  width: clamp(22px, 8%, 34px);
+  aspect-ratio: 4 / 5;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: proactive-note-fade-in 160ms ease-out;
+  transition: opacity 160ms ease-out;
+}
+
+.proactive-note:focus-visible {
+  outline: 2px solid rgba(176, 122, 60, 0.55);
+  outline-offset: 3px;
+}
+
+.proactive-note__sheet {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(120, 90, 55, 0.16);
+  border-radius: 3px;
+  background: #F6F0E6;
+  box-shadow: 0 6px 14px rgba(60, 40, 20, 0.12);
+}
+
+.proactive-note__sheet:nth-child(1) {
+  z-index: 3;
+  transform: rotate(-2deg);
+}
+
+.proactive-note__sheet:nth-child(2) {
+  z-index: 2;
+  background: #F1E8DA;
+  transform: translate(1px, -1px) rotate(2deg);
+}
+
+.proactive-note__sheet:nth-child(3) {
+  z-index: 1;
+  background: #ECE1D0;
+  transform: translate(-1px, -2px) rotate(-4deg);
+}
+
+/* A short stack reads as several sheets without any count. */
+.proactive-note[data-note-state='stack'] .proactive-note__sheet:nth-child(2) {
+  transform: translate(2px, -2px) rotate(3deg);
+}
+
+.proactive-note[data-note-state='stack'] .proactive-note__sheet:nth-child(3) {
+  transform: translate(-2px, -4px) rotate(-5deg);
+}
+
+/* Important: the top sheet lifts a little and gets a soft tape mark. */
+.proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1) {
+  transform: translateY(-3px) rotate(-1deg);
+  box-shadow: 0 10px 22px rgba(60, 40, 20, 0.2);
+}
+
+.proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1)::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 10px;
+  height: 5px;
+  border-radius: 1px;
+  background: #D9A066;
+  opacity: 0.8;
+  transform: translateX(-50%) rotate(-3deg);
+}
+
+/* Dark scheme: same #2C2824 paper as the notebook, with a lighter edge and a
+ * deeper shadow so the stack still separates from the dark stage. */
+html[data-color-scheme='dark'] .proactive-note__sheet,
+html[data-theme='system-dark'] .proactive-note__sheet,
+html[data-theme='system-black'] .proactive-note__sheet {
+  border-color: rgba(246, 240, 230, 0.14);
+  background: #2C2824;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.42);
+}
+
+html[data-color-scheme='dark'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1),
+html[data-theme='system-dark'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1),
+html[data-theme='system-black'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1) {
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.52);
+}
+
+.proactive-note[data-note-motion='glance'] {
+  animation: proactive-note-glance 700ms ease-in-out;
+}
+
+.proactive-note[data-note-motion='wiggle'] {
+  animation: proactive-note-wiggle 900ms ease-in-out;
+}
+
+@keyframes proactive-note-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes proactive-note-glance {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+
+  40% {
+    translate: -3px 1px;
+    rotate: -5deg;
+  }
+
+  70% {
+    translate: 1px -1px;
+    rotate: 2deg;
+  }
+}
+
+@keyframes proactive-note-wiggle {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+
+  25% {
+    rotate: -3deg;
+  }
+
+  55% {
+    rotate: 3deg;
+  }
+
+  80% {
+    rotate: -1.5deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proactive-note,
+  .proactive-note[data-note-motion='glance'],
+  .proactive-note[data-note-motion='wiggle'] {
+    animation: none;
+    transition: none;
+  }
+}
