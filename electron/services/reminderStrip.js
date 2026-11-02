@@ -119,9 +119,10 @@ function ensureSession() {
     snoozeMs: REMINDER_STRIP_SNOOZE_MS,
     onQueueChange: handleQueueChange,
     onAction: (action, item) => {
-      // Opening the panel is a strip-only concern; everything else (inbox
-      // status changes) is owned by the proactive IPC wiring.
-      if (action === 'open') {
+      // Opening the panel is a strip-only concern; `reply` shares that surface
+      // and leaves the inbox entry unread. Everything else (inbox status
+      // changes) is owned by the proactive IPC wiring.
+      if (action === 'open' || action === 'reply') {
         focusCompanionPanel()
         return
       }
@@ -211,7 +212,7 @@ export function configureReminderStrip(dependencies) {
 /**
  * Queue a due reminder on the strip. Returns false when the payload carries
  * nothing to show.
- * @param {{ id: string, title: string, body: string, labels: ReminderStripLabels }} payload
+ * @param {{ id: string, title: string, body: string, labels: ReminderStripLabels, actions: string[] }} payload
  * @returns {boolean}
  */
 export function showReminderStrip(payload) {

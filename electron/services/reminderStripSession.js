@@ -39,7 +39,15 @@ import {
  * @returns {{ items: ReminderStripItem[] }}
  */
 function snapshotOf(items) {
-  return { items: items.map(({ id, title, body, labels }) => ({ id, title, body, labels })) }
+  return {
+    items: items.map(({ id, title, body, labels, actions }) => ({
+      id,
+      title,
+      body,
+      labels,
+      actions: [...actions],
+    })),
+  }
 }
 
 /**
@@ -144,6 +152,12 @@ export function createReminderStripSession({
     if (!request) return { ok: false }
     const { items, removed } = removeReminderStripItem(queue, request.id)
     if (!removed) return { ok: false }
+    // The page renders one control per offered action, but a stale click can
+    // still arrive after the item changed. `expire` is the collapse timer and
+    // is always allowed; everything else must be listed by the item.
+    if (request.action !== 'expire' && !removed.actions.includes(request.action)) {
+      return { ok: false }
+    }
     queue = items
     if (request.action === 'snooze') scheduleSnooze(removed)
     else clearSnooze(removed.id)

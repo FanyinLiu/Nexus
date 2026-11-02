@@ -9,7 +9,7 @@
 
 /**
  * @typedef {{ done: string, snooze: string, open: string }} StripLabels
- * @typedef {{ id: string, title: string, body: string, labels: StripLabels }} StripItem
+ * @typedef {{ id: string, title: string, body: string, labels: StripLabels, actions: string[] }} StripItem
  * @typedef {{ items: StripItem[] }} StripSnapshot
  * @typedef {{
  *   ready: () => Promise<StripSnapshot>,
@@ -26,6 +26,8 @@
   // constants.
   const AUTO_COLLAPSE_MS = 12_000
   const RESUME_AFTER_HOVER_MS = 5_000
+  // Older main builds may omit `actions`; keep the reminder layout then.
+  const DEFAULT_ITEM_ACTIONS = ['done', 'snooze', 'open']
 
   /** @type {ReminderStripBridge | undefined} */
   const bridge = /** @type {{ reminderStrip?: ReminderStripBridge }} */ (
@@ -45,13 +47,16 @@
   if (!bridge) return
   const stripBridge = bridge
   const strip = requiredElement('strip')
-  const text = requiredElement('strip-text')
+  const text = /** @type {HTMLButtonElement} */ (requiredElement('strip-text'))
   const count = requiredElement('strip-count')
   const done = requiredElement('strip-done')
   const snooze = requiredElement('strip-snooze')
 
   /** @type {StripItem | null} */
   let current = null
+  /** The action the text button sends, or null when the item offers neither. */
+  /** @type {string | null} */
+  let currentTextAction = null
   /** @type {ReturnType<typeof setTimeout> | null} */
   let collapseTimer = null
   let hovering = false
@@ -68,6 +73,7 @@
   // (the main process always sends the queue again) draws a fresh row.
   function resetRenderState() {
     current = null
+    currentTextAction = null
     hovering = false
     clearCollapse()
     strip.hidden = true
@@ -108,11 +114,26 @@
     }
     const changed = !current || current.id !== head.id
     current = head
+    const actions = Array.isArray(head.actions) ? head.actions : DEFAULT_ITEM_ACTIONS
+    /**
+     * @param {string} action
+     * @returns {boolean}
+     */
+    const offers = (action) => actions.includes(action)
+    // The text control is the open/reply surface; it stays readable but
+    // non-interactive when the item offers neither.
+    currentTextAction = offers('open') ? 'open' : offers('reply') ? 'reply' : null
     const line = head.title && head.body ? `${head.title} · ${head.body}` : head.title || head.body
     text.textContent = line
     text.title = line
-    text.setAttribute('aria-label', `${line} · ${head.labels.open}`)
+    text.disabled = currentTextAction === null
+    text.setAttribute(
+      'aria-label',
+      currentTextAction === null ? line : `${line} · ${head.labels.open}`,
+    )
+    done.hidden = !offers('done')
     done.textContent = head.labels.done
+    snooze.hidden = !offers('snooze')
     snooze.textContent = head.labels.snooze
     count.hidden = items.length < 2
     count.textContent = items.length > 1 ? `+${items.length - 1}` : ''
@@ -122,7 +143,10 @@
 
   done.addEventListener('click', () => current && act(current.id, 'done'))
   snooze.addEventListener('click', () => current && act(current.id, 'snooze'))
-  text.addEventListener('click', () => current && act(current.id, 'open'))
+  text.addEventListener('click', () => {
+    if (!current || currentTextAction === null) return
+    act(current.id, currentTextAction)
+  })
   strip.addEventListener('mouseenter', () => {
     hovering = true
     clearCollapse()

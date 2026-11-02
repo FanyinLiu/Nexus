@@ -16,6 +16,7 @@
 /** @typedef {import('../../shared/proactiveDelivery.js').FocusState} FocusState */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveDeliveryPreferences} ProactiveDeliveryPreferences */
 
+import { PROACTIVE_STRIP_ENABLED } from '../../shared/proactiveDelivery.js'
 import { isLikelyFullscreenSurface, isQuietHour } from '../../shared/proactiveSignals.js'
 
 /**
@@ -63,7 +64,7 @@ export function createProactiveDeliveryContextProvider({
         : false,
       systemDnd: null,
       awayNotificationsEnabled: preferences?.awayNotificationsEnabled === true,
-      stripEnabled: true,
+      stripEnabled: PROACTIVE_STRIP_ENABLED,
     }
   }
 

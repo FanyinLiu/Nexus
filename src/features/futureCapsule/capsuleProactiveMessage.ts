@@ -20,6 +20,7 @@ import type {
   ProactiveMessage as SharedProactiveMessage,
 } from '../../../shared/proactiveDelivery.js'
 import { clipText } from '../reminders/proactiveMessage.ts'
+import { deliverThroughRouter } from '../proactive/routedDelivery.ts'
 import type { FutureCapsuleRecord } from './futureCapsuleStore.ts'
 
 /** A capsule message with its `kind` narrowed for the renderer bridge. */
@@ -130,37 +131,25 @@ export interface DeliverDueCapsuleResult {
 export async function deliverDueCapsule(
   deps: DeliverDueCapsuleDeps,
 ): Promise<DeliverDueCapsuleResult> {
-  if (deps.useLegacyPath || !deps.deliver) {
-    await deliverLegacy(deps)
-    return { path: 'legacy' }
-  }
-
-  const message = buildCapsuleProactiveMessage(deps.capsule, deps.delivery, deps.now)
-  let decision: DeliveryDecision
-  try {
-    const context = await deps.buildContext()
-    decision = await deps.deliver({ message, context, preferences: deps.preferences })
-  } catch {
-    // A throwing notification propagates before the mark, so a total bridge
-    // failure stays retryable instead of silently consuming the capsule.
-    await deliverLegacy(deps)
-    return { path: 'fallback' }
-  }
-
-  deps.markDelivered(deps.capsule.id)
-  if (planCapsulePresentation(decision).chatLine && deps.pushChatLine && !deps.isStopped()) {
-    // Rule 2 is the panel surface, so the line carries the untruncated copy.
-    await deps.pushChatLine(deps.delivery.fullBody ?? deps.delivery.body)
-  }
-  return { path: 'router', rule: decision.rule }
+  return deliverThroughRouter<CapsuleProactiveMessage>({
+    buildMessage: () => buildCapsuleProactiveMessage(deps.capsule, deps.delivery, deps.now),
+    useLegacyPath: deps.useLegacyPath,
+    deliver: deps.deliver,
+    buildContext: deps.buildContext,
+    preferences: deps.preferences,
+    ...(deps.pushChatLine ? { pushChatLine: deps.pushChatLine } : {}),
+    planChatLine: (decision) => ({
+      chatLine: planCapsulePresentation(decision).chatLine,
+      // Rule 2 is the panel surface, so the line carries the untruncated copy.
+      text: deps.delivery.fullBody ?? deps.delivery.body,
+    }),
+    onDelivered: () => deps.markDelivered(deps.capsule.id),
+    isStopped: deps.isStopped,
+    runLegacy: () => deliverLegacy(deps),
+  })
 }
 
-/**
- * Pre-M1.1 surfacing: one OS notification, then mark the capsule delivered.
- * The mark does not depend on the scheduler being live: the notification
- * already reached the user.
- */
+/** Pre-M1.1 surfacing: the single OS notification, without bookkeeping. */
 async function deliverLegacy(deps: DeliverDueCapsuleDeps): Promise<void> {
   await deps.showNotification?.(deps.delivery)
-  deps.markDelivered(deps.capsule.id)
 }

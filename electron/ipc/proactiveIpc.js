@@ -21,7 +21,7 @@
 
 import path from 'node:path'
 
-import { routeDelivery } from '../../shared/proactiveDelivery.js'
+import { PROACTIVE_STRIP_ENABLED, routeDelivery } from '../../shared/proactiveDelivery.js'
 import { createLogger } from '../logger.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
@@ -73,7 +73,7 @@ const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
  * bag directly instead of pushing a presentation to a renderer.
  *
  * @typedef {object} ProactiveStripDependencies
- * @property {(payload: { id: string, title: string, body: string, labels: ReminderStripLabels }) => unknown} show
+ * @property {(payload: { id: string, title: string, body: string, labels: ReminderStripLabels, actions: string[] }) => unknown} show
  * @property {(id: string) => unknown} withdraw
  * @property {() => unknown} withdrawAll
  * @property {(dependencies: {
@@ -126,7 +126,7 @@ export function createProactiveIpc({
     inQuietHours: false,
     systemDnd: null,
     awayNotificationsEnabled: false,
-    stripEnabled: true,
+    stripEnabled: PROACTIVE_STRIP_ENABLED,
   }),
   setDeliveryPreferences = () => {},
 }) {
@@ -210,8 +210,8 @@ export function createProactiveIpc({
   }
 
   /**
-   * Strip-side action hand-off. `open` is handled by the strip module itself;
-   * `done` is the only action that changes the inbox.
+   * Strip-side action hand-off. `open` and `reply` are handled by the strip
+   * module itself; `done` is the only action that changes the inbox.
    * @param {string} action
    * @param {string} id
    */
@@ -266,6 +266,7 @@ export function createProactiveIpc({
       title: message.title,
       body: message.body,
       labels: getStripLabels(),
+      actions: message.actions,
     })
   })
 
