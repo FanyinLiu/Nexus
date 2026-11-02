@@ -52,6 +52,13 @@ const PROACTIVE_INBOX_PRUNE_INTERVAL_MS = 60 * 60 * 1000
  */
 const INBOX_CHANGE_CONSUMERS = Object.freeze(['pet'])
 
+/**
+ * Strip controls that end the reminder from the user's point of view. They all
+ * land on the same `done` status; only the side effect on the panel differs.
+ * @type {ReadonlySet<string>}
+ */
+const INBOX_HANDLED_STRIP_ACTIONS = Object.freeze(new Set(['done', 'open', 'reply']))
+
 /** Stable failure token: the inbox file survived a clear-all delete. */
 const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
 
@@ -231,14 +238,21 @@ export function createProactiveIpc({
   }
 
   /**
-   * Strip-side action hand-off. `open` and `reply` are handled by the strip
-   * module itself; `done` is the only action that changes the inbox.
+   * Strip-side action hand-off. Every control that means "the user dealt with
+   * this reminder" — `done`, and the panel-opening `open`/`reply` — resolves
+   * the inbox entry as `done`; the panel itself is opened by the strip module
+   * before this hand-off. `snooze` and the strip's own `expire` collapse timer
+   * must keep the entry unread.
    * @param {string} action
    * @param {string} id
    */
   function handleStripAction(action, id) {
-    if (action !== 'done') return
+    if (!INBOX_HANDLED_STRIP_ACTIONS.has(action)) return
     const mutation = inbox.setStatus(id, 'done')
+    // The strip session drops the item before this hand-off; withdrawing here
+    // as well matches the overlay's done/dismissed path and covers an item
+    // that was re-queued while the click was in flight.
+    strip.withdraw(id)
     announceMutation(mutation)
   }
 

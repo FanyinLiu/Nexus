@@ -119,13 +119,10 @@ function ensureSession() {
     snoozeMs: REMINDER_STRIP_SNOOZE_MS,
     onQueueChange: handleQueueChange,
     onAction: (action, item) => {
-      // Opening the panel is a strip-only concern; `reply` shares that surface
-      // and leaves the inbox entry unread. Everything else (inbox status
-      // changes) is owned by the proactive IPC wiring.
-      if (action === 'open' || action === 'reply') {
-        focusCompanionPanel()
-        return
-      }
+      // The panel is the strip's own surface, so it is opened here and before
+      // the hand-off. The hand-off still sees `open`/`reply` so the inbox can
+      // resolve the entry the same way `done` does.
+      if (action === 'open' || action === 'reply') focusCompanionPanel()
       actionDeps.onAction(action, item.id)
     },
     canReshow: (id) => actionDeps.canReshow(id),
