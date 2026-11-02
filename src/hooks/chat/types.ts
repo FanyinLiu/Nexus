@@ -240,6 +240,15 @@ export type CompanionNoticePayload = {
    * plain notice auto-hide timer, so hover pauses it like any other reminder.
    */
   proactiveTitle?: string
+  /**
+   * Whether the notice wakes the pet's presence/expression at all. Defaults to
+   * `true` — every ordinary notice is the companion reacting. Set `false` for
+   * history-only lines (for example a capsule the router kept in the inbox
+   * because the user is fullscreen or in quiet hours): the chat entry is
+   * appended, but no `presence_activity` or `mood` event reaches the pet, so
+   * nothing on screen contradicts the quiet delivery.
+   */
+  petReaction?: boolean
   toolResult?: ChatToolResult
   shouldResumeContinuousVoice?: boolean
   loopOffer?: ChatMessage['loopOffer']
