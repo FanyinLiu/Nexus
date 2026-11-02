@@ -6,10 +6,12 @@
  * quiet hours, focus/typing, a "leave me alone" span, growing backoff after
  * being ignored, a shared daily budget, and a term-weighted repeat check.
  *
- * All proactive hosts (agenda, autonomy, away, bracket, letter, capsule,
- * open arc, dream diary, ambient presence) call `admitProactiveMessage`.
- * Admission records the delivery in one shared ledger, so unrelated
- * schedulers cannot each spend their own generous cap on the same afternoon.
+ * All proactive hosts (agenda, autonomy, away, bracket, letter, open arc,
+ * dream diary, ambient presence) call `admitProactiveMessage`. User-scheduled
+ * future capsules are the deliberate exception: the user picked the date, so
+ * they bypass this gate and only the router decides their surface.
+ * Admission records the delivery in one shared ledger, so unrelated schedulers
+ * cannot each spend their own generous cap on the same afternoon.
  */
 
 import { localDayKey } from '../../lib/localDate.ts'

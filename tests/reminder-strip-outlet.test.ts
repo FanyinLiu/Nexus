@@ -22,6 +22,7 @@ type StripPayload = {
   title: string
   body: string
   labels: { done: string; snooze: string; open: string }
+  actions: string[]
 }
 
 function makeMessage(overrides: Partial<ProactiveMessage> = {}): ProactiveMessage {
@@ -129,6 +130,7 @@ for (const locale of Object.keys(EXPECTED_LABELS)) {
       title: message.title,
       body: message.body,
       labels: EXPECTED_LABELS[locale],
+      actions: message.actions,
     })
     assert.match(harness.shown[0]!.labels.snooze, /10/u)
   })

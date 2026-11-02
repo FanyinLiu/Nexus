@@ -261,7 +261,7 @@ export function createProactiveInboxOverlayController({
     pinnedReadId = null
     emit()
 
-    if (entry.status !== 'unread') return
+    if (entry.status === 'done' || entry.status === 'dismissed') return
     if (inboxStatusAfterInteraction(entry, 'expand') !== 'done') return
 
     // Keep the row visible while the user reads the text that just marked it
@@ -294,8 +294,9 @@ export function createProactiveInboxOverlayController({
       }
     }
 
-    // A read row keeps its Open button, but its status is already final.
-    if (entry.status !== 'unread') return
+    // Done/dismissed rows keep their Open button, but their status is final.
+    // A `read` row is seen, not handled, so done/open/reply can still finish it.
+    if (entry.status === 'done' || entry.status === 'dismissed') return
     if (inboxStatusAfterInteraction(entry, action) !== 'done') return
     clearRowState(id)
     await setEntryDone(entry)

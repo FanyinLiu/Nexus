@@ -45,7 +45,7 @@ export type ProactiveInboxRow = {
   actions: ProactiveInboxRowAction[]
   priority: ProactivePriority
   createdAt: number
-  /** Read/done rows render dimmed and hide their Done/Snooze buttons. */
+  /** Done/dismissed rows render dimmed and hide their Done/Snooze buttons. */
   read: boolean
 }
 
@@ -158,13 +158,15 @@ export function toProactiveInboxRow(entry: ProactiveInboxEntryView): ProactiveIn
     actions: proactiveInboxRowActions(entry),
     priority: entry.priority,
     createdAt: entry.createdAt,
-    read: entry.status !== 'unread',
+    // `read` is seen but not handled: it still shows every button, so it can
+    // become done. Only done/dismissed rows are dimmed and lose buttons.
+    read: entry.status === 'done' || entry.status === 'dismissed',
   }
 }
 
 /**
- * Buttons a row may show. Read rows keep the conversation opener but cannot be
- * completed or snoozed again.
+ * Buttons a row may show. Done/dismissed rows keep the conversation opener but
+ * cannot be completed or snoozed again.
  */
 export function proactiveInboxVisibleRowActions(row: Pick<ProactiveInboxRow, 'actions' | 'read'>): ProactiveInboxRowAction[] {
   if (!row.read) return row.actions

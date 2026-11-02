@@ -40,6 +40,16 @@ test('only unread badge-worthy entries qualify: actions or high priority', () =>
   assert.equal(isProactiveInboxEntryBadgeWorthy(entry({ id: 'b', actions: [], priority: 'high' })), true)
   assert.equal(isProactiveInboxEntryBadgeWorthy(entry({ id: 'c', actions: ['done'] })), true)
   assert.equal(isProactiveInboxEntryBadgeWorthy(entry({ id: 'd', status: 'done', priority: 'high' })), false)
+  assert.equal(isProactiveInboxEntryBadgeWorthy(entry({ id: 'e', status: 'read', actions: ['done'] })), false)
+})
+
+test('a read entry is listed as not handled and keeps its action buttons', () => {
+  const read = toProactiveInboxRow(entry({ id: 'read', status: 'read', actions: ['done', 'snooze', 'open'] }))
+  assert.equal(read.read, false)
+  assert.deepEqual(read.actions, ['done', 'snooze', 'open'])
+
+  const done = toProactiveInboxRow(entry({ id: 'done', status: 'done', actions: ['done', 'snooze', 'open'] }))
+  assert.equal(done.read, true)
 })
 
 test('the overlay lists unread first (high priority first) then read newest first', () => {

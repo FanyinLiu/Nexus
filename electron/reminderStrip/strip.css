@@ -85,6 +85,15 @@ body {
   cursor: pointer;
 }
 
+.strip__text:disabled {
+  cursor: default;
+}
+
+.strip__button[hidden],
+.strip__text[hidden] {
+  display: none;
+}
+
 .strip__count {
   flex: none;
   color: var(--strip-muted);

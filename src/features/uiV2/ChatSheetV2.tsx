@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
+import { CapsuleLetterCard } from '../../components/CapsuleLetterCard.tsx'
 import { LoopOutreachNote } from '../../components/LoopOutreachNote.tsx'
 import { loopNoteProps } from '../../components/loopNoteProps.ts'
 import { MemoryTraceDisclosure } from '../../components/MemoryTraceDisclosure.tsx'
@@ -26,6 +27,7 @@ export interface ChatSheetV2Message {
   loopOffer?: ChatMessage['loopOffer']
   loopCheck?: ChatMessage['loopCheck']
   proactiveWhy?: ChatMessage['proactiveWhy']
+  capsuleLetter?: ChatMessage['capsuleLetter']
 }
 
 export interface ChatSheetV2Labels {
@@ -368,6 +370,9 @@ export function ChatSheetV2({
                       </div>
                     </>
                   )}
+                  {message.capsuleLetter ? (
+                    <CapsuleLetterCard letter={message.capsuleLetter} />
+                  ) : null}
                 </article>
               )
             })

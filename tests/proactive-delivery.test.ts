@@ -5,6 +5,7 @@ import path from 'node:path'
 import { test, type TestContext } from 'node:test'
 
 import {
+  PROACTIVE_FULL_BODY_MAX_LENGTH,
   routeDelivery,
   type DeliveryContext,
   type DeliveryState,
@@ -548,6 +549,23 @@ test('delivery payload schema enforces the 80/160 character budgets', () => {
     ...base,
     message: { ...base.message, body: 'b'.repeat(161) },
   }))
+})
+
+test('delivery payload schema accepts an optional fullBody up to the storage budget', () => {
+  const base = { message: makeMessage(), context: makeContext() }
+  assert.equal('fullBody' in validateProactiveDeliveryPayload(base).message, false)
+
+  const fullBody = 'f'.repeat(PROACTIVE_FULL_BODY_MAX_LENGTH)
+  const accepted = validateProactiveDeliveryPayload({
+    ...base,
+    message: { ...base.message, fullBody },
+  })
+  assert.equal(accepted.message.fullBody, fullBody)
+
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    message: { ...base.message, fullBody: `${fullBody}f` },
+  }), /payload\.message\.fullBody must be at most 10000 characters/)
 })
 
 test('delivery payload schema keeps a null system DND reading null', () => {

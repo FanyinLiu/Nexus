@@ -154,6 +154,31 @@ test('opening the overlay changes nothing, closing clears its expansion', async 
   assert.equal(harness.controller.getSnapshot().expandedId, null)
 })
 
+test('a read entry is not counted as unread and its Done/Open still complete it', async () => {
+  const harness = createHarness([
+    entry({ id: 'read-done', status: 'read', actions: ['done'], createdAt: 1 }),
+    entry({ id: 'read-open', status: 'read', actions: ['open'], createdAt: 2 }),
+  ])
+  await harness.controller.open()
+
+  const opened = harness.controller.getSnapshot()
+  assert.equal(opened.unreadCount, 0)
+  assert.equal(opened.rows.length, 2)
+  // `read` is seen, not handled: the row keeps working controls.
+  assert.deepEqual(opened.rows.map((row) => row.read), [false, false])
+
+  await harness.controller.runAction('read-done', 'done')
+  await harness.controller.runAction('read-open', 'open')
+
+  assert.equal(harness.openedConversation(), 1)
+  assert.deepEqual(harness.updates, [
+    { id: 'read-done', status: 'done' },
+    { id: 'read-open', status: 'done' },
+  ])
+  assert.equal(harness.controller.getSnapshot().unreadCount, 0)
+  assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.read), [true, true])
+})
+
 test('Done marks the entry done, keeps it as a read row and drops the count', async () => {
   const harness = createHarness([entry({ id: 'a' }), entry({ id: 'b', createdAt: 2 })])
   await harness.controller.open()

@@ -193,6 +193,7 @@ test('strip Done marks the inbox entry done and publishes the lower unread count
     removedIds: [],
   })
   assert.deepEqual(harness.panelChanges(), [])
+  assert.deepEqual(harness.fakeStrip.withdrawn, [message.id])
 })
 
 test('inbox:update to dismissed publishes ids and status only, to the pet window only', async (t) => {
@@ -233,41 +234,42 @@ test('inbox:update to done or dismissed withdraws the id from the strip', async 
   assert.equal(harness.store.list().unreadCount, 0)
 })
 
-test('strip snooze and expire leave the inbox entry unread and the count unchanged', (t) => {
+test('strip open and reply mark the inbox entry done, drop the count and withdraw the item', (t) => {
+  for (const action of ['open', 'reply'] as const) {
+    const harness = createHarness(t)
+    const message = makeMessage()
+    harness.store.upsert(message)
+    assert.equal(harness.store.list().unreadCount, 1)
+
+    harness.fakeStrip.configured().onAction(action, message.id)
+
+    assert.equal(inboxStatus(harness.store, message.id), 'done')
+    assert.equal(harness.store.list().unreadCount, 0)
+    assert.deepEqual(harness.changes(), [{
+      unreadCount: 0,
+      changes: [{ id: message.id, status: 'done' }],
+      removedIds: [],
+    }])
+    assert.deepEqual(harness.fakeStrip.withdrawn, [message.id])
+    assert.deepEqual(harness.panelChanges(), [])
+  }
+})
+
+test('strip expire and snooze leave the inbox entry unread and the count unchanged', (t) => {
   const harness = createHarness(t)
   const message = makeMessage()
   harness.store.upsert(message)
 
-  harness.fakeStrip.configured().onAction('snooze', message.id)
   harness.fakeStrip.configured().onAction('expire', message.id)
+  harness.fakeStrip.configured().onAction('snooze', message.id)
 
   assert.equal(inboxStatus(harness.store, message.id), 'unread')
   assert.equal(harness.store.list().unreadCount, 1)
   assert.deepEqual(harness.changes(), [])
+  assert.deepEqual(harness.fakeStrip.withdrawn, [])
 })
 
-test('strip open and reply mark the entry done through the shared read rule', (t) => {
-  const harness = createHarness(t)
-  const openMessage = makeMessage({ id: 'open-id' })
-  const replyMessage = makeMessage({ id: 'reply-id', actions: ['done', 'reply'] })
-  harness.store.upsert(openMessage)
-  harness.store.upsert(replyMessage)
-  assert.equal(harness.store.list().unreadCount, 2)
-
-  harness.fakeStrip.configured().onAction('open', openMessage.id)
-  harness.fakeStrip.configured().onAction('reply', replyMessage.id)
-
-  assert.equal(inboxStatus(harness.store, openMessage.id), 'done')
-  assert.equal(inboxStatus(harness.store, replyMessage.id), 'done')
-  assert.equal(harness.store.list().unreadCount, 0)
-  assert.deepEqual(harness.changes().at(-1), {
-    unreadCount: 0,
-    changes: [{ id: replyMessage.id, status: 'done' }],
-    removedIds: [],
-  })
-})
-
-test('clicking a routed OS notification marks its entry done', async (t) => {
+test('clicking a routed OS notification marks an actionable entry read', async (t) => {
   const harness = createHarness(t)
   const message = makeMessage({ id: 'os-id' })
   const context = {
@@ -286,13 +288,14 @@ test('clicking a routed OS notification marks its entry done', async (t) => {
 
   harness.notifications[0].onClick?.()
 
-  assert.equal(inboxStatus(harness.store, message.id), 'done')
+  assert.equal(inboxStatus(harness.store, message.id), 'read')
   assert.equal(harness.store.list().unreadCount, 0)
   assert.deepEqual(harness.changes().at(-1), {
     unreadCount: 0,
-    changes: [{ id: message.id, status: 'done' }],
+    changes: [{ id: message.id, status: 'read' }],
     removedIds: [],
   })
+  assert.deepEqual(harness.fakeStrip.withdrawn, [])
 })
 
 test('clicking a routed OS notification marks a no-button normal entry done', async (t) => {
@@ -327,6 +330,7 @@ test('clicking a routed OS notification marks a no-button normal entry done', as
     changes: [{ id: message.id, status: 'done' }],
     removedIds: [],
   })
+  assert.deepEqual(harness.fakeStrip.withdrawn, [message.id])
 })
 
 test('clear-all withdraws every strip item and publishes a zero count', async (t) => {

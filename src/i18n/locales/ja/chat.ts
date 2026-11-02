@@ -165,4 +165,12 @@ export const jaChat = {
   'chat.letter.card_title': '彼女から手紙が届いています',
   'chat.letter.card_open': '読んでみる',
   'chat.dream.line': 'ゆうべ、夢を見たよ。{dream}',
+  'chat.capsule.opener': '{time}のあなたから、今日のあなたへの手紙が届きました。',
+  'chat.capsule.header.default': '今日のあなたへ',
+  'chat.capsule.written': '{date}に書いた手紙',
+  'chat.capsule.age.days': '{n}日前',
+  'chat.capsule.age.one_day': '1日前',
+  'chat.capsule.age.months': '{m}か月前',
+  'chat.capsule.age.one_year': '1年前',
+  'chat.capsule.age.years': '{y}年前',
 } as const satisfies Partial<TranslationDictionary>

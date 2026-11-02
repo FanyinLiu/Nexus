@@ -20,11 +20,11 @@ import {
   buildReminderDeliveryPreferences,
   buildReminderProactiveMessage,
   planReminderPresentation,
+  readProactiveDesktopContext,
   shouldRunReminderScheduler,
 } from '../../features/reminders'
 import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../../features/uiV2/caption.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
-import { readProactiveDesktopContext } from '../../hooks/readProactiveDesktopContext.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { createLogger } from '../../lib/logger.ts'

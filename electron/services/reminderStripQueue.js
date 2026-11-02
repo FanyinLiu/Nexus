@@ -21,12 +21,24 @@ const BODY_MAX_LENGTH = 160
 const LABEL_MAX_LENGTH = 24
 const ID_MAX_LENGTH = 128
 
-/** @type {ReadonlySet<string>} */
-export const REMINDER_STRIP_ACTIONS = Object.freeze(new Set(['done', 'snooze', 'open', 'expire']))
+/**
+ * Every action the strip page may send. `expire` is the collapse timer, not an
+ * item control, so it is accepted by the session but never offered by an item.
+ * @type {ReadonlySet<string>}
+ */
+export const REMINDER_STRIP_ACTIONS = Object.freeze(
+  new Set(['done', 'snooze', 'open', 'reply', 'expire']),
+)
+
+/** Actions an item may offer, in the order the payload listed them. */
+const REMINDER_STRIP_ITEM_ACTIONS = Object.freeze(new Set(['done', 'snooze', 'open', 'reply']))
+
+/** Legacy payloads without `actions` keep the original three controls. */
+const DEFAULT_STRIP_ACTIONS = Object.freeze(['done', 'snooze', 'open'])
 
 /**
  * @typedef {{ done: string, snooze: string, open: string }} ReminderStripLabels
- * @typedef {{ id: string, title: string, body: string, labels: ReminderStripLabels }} ReminderStripItem
+ * @typedef {{ id: string, title: string, body: string, labels: ReminderStripLabels, actions: string[] }} ReminderStripItem
  * @typedef {{ x: number, y: number, width: number, height: number }} Rect
  */
 
@@ -61,6 +73,29 @@ function normalizeLabels(value) {
 }
 
 /**
+ * Keep only item actions the page can render, in payload order and without
+ * duplicates. Only a payload with no `actions` field at all keeps the legacy
+ * reminder layout; an explicitly empty or malformed list means "no controls".
+ * @param {unknown} value
+ * @param {boolean} hasActions
+ * @returns {string[]}
+ */
+function normalizeActions(value, hasActions) {
+  if (!hasActions) return [...DEFAULT_STRIP_ACTIONS]
+  if (!Array.isArray(value)) return []
+  const seen = new Set()
+  const actions = []
+  for (const action of value) {
+    if (typeof action !== 'string') continue
+    if (!REMINDER_STRIP_ITEM_ACTIONS.has(action)) continue
+    if (seen.has(action)) continue
+    seen.add(action)
+    actions.push(action)
+  }
+  return actions
+}
+
+/**
  * Turn an untrusted renderer payload into a strip item, or null when it
  * carries nothing worth showing.
  * @param {unknown} payload
@@ -73,7 +108,16 @@ export function normalizeReminderStripPayload(payload) {
   const title = cleanText(source.title, TITLE_MAX_LENGTH)
   const body = cleanText(source.body, BODY_MAX_LENGTH)
   if (!id || (!title && !body)) return null
-  return { id, title, body, labels: normalizeLabels(source.labels) }
+  return {
+    id,
+    title,
+    body,
+    labels: normalizeLabels(source.labels),
+    actions: normalizeActions(
+      source.actions,
+      Object.prototype.hasOwnProperty.call(source, 'actions'),
+    ),
+  }
 }
 
 /**

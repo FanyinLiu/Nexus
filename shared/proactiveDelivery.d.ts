@@ -6,6 +6,13 @@
 
 export const PROACTIVE_TITLE_MAX_LENGTH: 80
 export const PROACTIVE_BODY_MAX_LENGTH: 160
+export const PROACTIVE_FULL_BODY_MAX_LENGTH: 10000
+
+/**
+ * Code constant, not a setting: the settings schema stays at 25 and a
+ * user-facing toggle is still undecided.
+ */
+export const PROACTIVE_STRIP_ENABLED: true
 
 export type ProactiveSource =
   | 'reminder'
@@ -25,7 +32,8 @@ export type ProactivePriority = 'high' | 'normal' | 'low'
 
 export type FocusState = 'active' | 'idle' | 'away' | 'locked'
 
-export type ProactiveInboxStatus = 'unread' | 'done' | 'dismissed'
+/** `read` means seen but not handled; it never counts toward the red dot. */
+export type ProactiveInboxStatus = 'unread' | 'read' | 'done' | 'dismissed'
 
 export const PROACTIVE_SOURCES: readonly ProactiveSource[]
 export const PROACTIVE_ACTIONS: readonly ProactiveAction[]
@@ -40,7 +48,24 @@ export interface ProactiveMessage {
   kind: string
   priority: ProactivePriority
   title: string
+  /** Short display copy; every bubble, strip and OS notification renders this. */
   body: string
+  /**
+   * Optional untruncated body for an expanded inbox view. Display outlets
+   * never receive it; it exists only to preserve the source text.
+   */
+  fullBody?: string
+  /**
+   * Outlet-only copy for a message whose inbox row and visible surfaces carry
+   * different text (a future-self capsule: the inbox shows the letter, the
+   * bubble and OS toast may only show the opener). `bubble` and
+   * `os_notification` render this pair when present and still receive no
+   * `fullBody`, so the long form never leaves the inbox.
+   */
+  publicCopy?: {
+    title: string
+    body: string
+  }
   /** Spoken text; nothing is spoken when absent. */
   speech?: string
   /** Empty array marks a companionship line the red dot ignores. */

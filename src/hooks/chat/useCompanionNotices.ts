@@ -74,6 +74,9 @@ export function useCompanionNotices({
         ...(options.loopOffer ? { loopOffer: options.loopOffer } : {}),
         ...(options.loopCheck ? { loopCheck: options.loopCheck } : {}),
         ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
+        // The letter card belongs to the chat history only; the bubble below
+        // stays empty for a capsule, so the letter never leaves this message.
+        ...(options.capsuleLetter ? { capsuleLetter: options.capsuleLetter } : {}),
       })
     }
 
@@ -97,8 +100,12 @@ export function useCompanionNotices({
       )
     }
 
-    emitPetNotify({ type: 'presence_activity' })
-    emitPetNotify({ type: 'mood', mood: 'happy' })
+    // History-only notices opt out: a line the router kept quiet must not move
+    // the pet's presence or expression behind the user's back.
+    if (options.petReaction !== false) {
+      emitPetNotify({ type: 'presence_activity' })
+      emitPetNotify({ type: 'mood', mood: 'happy' })
+    }
 
     if (!speechContent) {
       return

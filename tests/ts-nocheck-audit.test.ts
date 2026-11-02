@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 
-import { buildTsNocheckReport } from '../scripts/ts-nocheck-audit.mjs'
+import {
+  buildTsNocheckReport,
+  hasTsNocheckDirective,
+  TS_NOCHECK_BASELINE,
+} from '../scripts/ts-nocheck-audit.mjs'
 
 function withElectronFixture<T>(files: Record<string, string>, callback: (root: string) => T): T {
   const root = mkdtempSync(join(tmpdir(), 'nexus-ts-nocheck-audit-'))
@@ -40,6 +44,7 @@ test('ts-nocheck audit passes when the opt-out set matches the baseline', () => 
     assert.equal(report.current.count, 2)
     assert.equal(report.checkedFiles, 3)
     assert.deepEqual(report.unexpectedOptOuts, [])
+    assert.deepEqual(report.errors.staleBaselineEntries, [])
   })
 })
 
@@ -59,7 +64,7 @@ test('ts-nocheck audit fails on a new opt-out file', () => {
   })
 })
 
-test('ts-nocheck audit passes when a baselined file is fixed', () => {
+test('ts-nocheck audit fails when a baselined file is fixed but not removed', () => {
   withElectronFixture({
     'electron/services/fixed.js': CHECKED,
     'electron/services/still-opt-out.js': NO_CHECK,
@@ -68,10 +73,34 @@ test('ts-nocheck audit passes when a baselined file is fixed', () => {
       baseline: ['electron/services/fixed.js', 'electron/services/still-opt-out.js'],
     })
 
-    assert.equal(report.summary.ok, true)
-    assert.deepEqual(report.staleBaselineEntries, ['electron/services/fixed.js'])
-    assert.equal(report.hints.length, 1)
-    assert.match(report.hints[0] ?? '', /remove it from TS_NOCHECK_BASELINE/)
+    assert.equal(report.summary.ok, false)
+    assert.equal(report.summary.errors, 1)
+    assert.deepEqual(report.errors.staleBaselineEntries, ['electron/services/fixed.js'])
+  })
+})
+
+test('ts-nocheck audit reports every stale baseline entry as an error', () => {
+  withElectronFixture({
+    'electron/services/current.js': NO_CHECK,
+    'electron/services/fixed-a.js': CHECKED,
+    'electron/services/fixed-b.js': CHECKED,
+  }, (root) => {
+    const report = buildTsNocheckReport(root, {
+      baseline: [
+        'electron/services/current.js',
+        'electron/services/fixed-a.js',
+        'electron/services/fixed-b.js',
+      ],
+    })
+
+    assert.equal(report.summary.ok, false)
+    assert.equal(report.summary.errors, 2)
+    assert.deepEqual(report.errors.staleBaselineEntries, [
+      'electron/services/fixed-a.js',
+      'electron/services/fixed-b.js',
+    ])
+    assert.equal(report.summary.baselineCount, 3)
+    assert.equal(report.summary.currentCount, 1)
   })
 })
 
@@ -84,4 +113,11 @@ test('ts-nocheck audit reads the directive after a shebang', () => {
     assert.equal(report.summary.ok, true)
     assert.deepEqual(report.current.files, ['electron/worker.js'])
   })
+})
+
+test('preload bridge is type-checked instead of opted out', () => {
+  const source = readFileSync(join(import.meta.dirname, '..', 'electron', 'preload.js'), 'utf8')
+
+  assert.equal(hasTsNocheckDirective(source), false)
+  assert.equal(TS_NOCHECK_BASELINE.includes('electron/preload.js'), false)
 })

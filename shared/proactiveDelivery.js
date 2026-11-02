@@ -18,6 +18,22 @@ export const PROACTIVE_TITLE_MAX_LENGTH = 80
 /** Body budget from the message contract; the IPC schema enforces it. */
 export const PROACTIVE_BODY_MAX_LENGTH = 160
 
+/**
+ * Whether the strip outlet takes part in proactive routing.
+ *
+ * This is a code constant, not a setting: the settings schema stays at 25 and
+ * a user-facing strip toggle is still undecided. Deleting the strip outlet is
+ * one constant flip, not a migration.
+ */
+export const PROACTIVE_STRIP_ENABLED = true
+
+/**
+ * Storage budget for the optional untruncated body. `body` stays the short
+ * display copy every outlet renders; `fullBody` preserves the source text for
+ * an expanded inbox view and is never pushed to a presentation surface.
+ */
+export const PROACTIVE_FULL_BODY_MAX_LENGTH = 10000
+
 /** Every proactive source the router can carry. Order is not contractual. */
 export const PROACTIVE_SOURCES = Object.freeze([
   'reminder',
@@ -36,8 +52,12 @@ export const PROACTIVE_ACTIONS = Object.freeze(['done', 'snooze', 'open', 'reply
 /** Priorities usable by the badge rule (`high` counts without actions). */
 export const PROACTIVE_PRIORITIES = Object.freeze(['high', 'normal', 'low'])
 
-/** Inbox statuses; the load validator and the IPC schema share this list. */
-export const PROACTIVE_INBOX_STATUSES = Object.freeze(['unread', 'done', 'dismissed'])
+/**
+ * Inbox statuses; the load validator and the IPC schema share this list.
+ * `read` means seen but not handled: it never lights the dot and still keeps
+ * its done/open/reply controls.
+ */
+export const PROACTIVE_INBOX_STATUSES = Object.freeze(['unread', 'read', 'done', 'dismissed'])
 
 /** @typedef {import('./proactiveDelivery.js').DeliverySurface} DeliverySurface */
 

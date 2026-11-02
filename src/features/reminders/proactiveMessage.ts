@@ -9,6 +9,7 @@
 
 import {
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_STRIP_ENABLED,
   PROACTIVE_TITLE_MAX_LENGTH,
 } from '../../../shared/proactiveDelivery.js'
 import type {
@@ -21,7 +22,7 @@ import type {
 } from '../../../shared/proactiveDelivery.js'
 import { isQuietHour, isLikelyFullscreenSurface } from '../autonomy/proactiveBudget.ts'
 import type { ProactiveMessageKind } from '../autonomy/proactiveEtiquette.ts'
-import type { AppSettings, ReminderTask } from '../../types/index.ts'
+import type { AppSettings, DesktopContextSnapshot, ReminderTask } from '../../types/index.ts'
 
 /** A reminder message whose `kind` is already narrowed for the renderer bridge. */
 export type ReminderProactiveMessage = Omit<SharedProactiveMessage, 'kind'> & {
@@ -37,9 +38,9 @@ const REMINDER_ACTIONS: readonly ProactiveAction[] = Object.freeze([
 /**
  * Collapse whitespace and clip to a contract budget. A clipped value ends with
  * an ellipsis so the truncation stays visible instead of silently changing the
- * wording.
+ * wording. Shared by every source that maps onto the 80/160 message contract.
  */
-function clipText(value: string, maxLength: number): string {
+export function clipText(value: string, maxLength: number): string {
   const singleLine = value.replace(/\s+/g, ' ').trim()
   if (singleLine.length <= maxLength) return singleLine
   return `${singleLine.slice(0, maxLength - 1)}…`
@@ -100,12 +101,35 @@ export function buildReminderDeliveryContext(
     inQuietHours: isQuietHour(hour, signals.quietStart, signals.quietEnd),
     systemDnd: null,
     awayNotificationsEnabled: signals.awayNotificationsEnabled,
-    stripEnabled: true,
+    stripEnabled: PROACTIVE_STRIP_ENABLED,
   }
 }
 
 function isLikelyFullscreenSurfaceFromSignals(signals: ReminderContextSignals): boolean {
   return isLikelyFullscreenSurface(signals.activeWindowTitle, signals.activeWindowAppName)
+}
+
+/**
+ * Read the active-window snapshot only when the user's settings allow desktop
+ * awareness. Anything unreadable counts as "not fullscreen": a proactive
+ * message must still be delivered when context collection is unavailable.
+ */
+export async function readProactiveDesktopContext(
+  settings: AppSettings,
+): Promise<DesktopContextSnapshot | null> {
+  if (
+    !settings.contextAwarenessEnabled
+    || !settings.activeWindowContextEnabled
+    || settings.companionAwarenessPaused
+  ) {
+    return null
+  }
+  try {
+    return await window.desktopPet?.getDesktopContext?.({ includeActiveWindow: true }) ?? null
+  } catch {
+    // Best-effort only: a failed read relaxes routing, it never blocks delivery.
+    return null
+  }
 }
 
 /** The settings subset the delivery-preference snapshot needs. */
@@ -122,7 +146,7 @@ export type ReminderPreferenceSettings = Pick<
 /**
  * Snapshot the delivery preferences main keeps for a snooze re-route.
  *
- * Desktop awareness mirrors `readReminderDesktopContext`: when it is off or
+ * Desktop awareness mirrors `readProactiveDesktopContext`: when it is off or
  * paused the active-window snapshot is not read, so fullscreen must stay false.
  */
 export function buildReminderDeliveryPreferences(

@@ -107,6 +107,18 @@ export interface ChatMessage {
     place?: string
     dueText?: string
   }
+  /**
+   * A future-self capsule attached to its opener message. The opener is
+   * `content`; this carries the authored letter so the chat card can render it
+   * verbatim. `title` is the capsule's own title (absent means the card shows
+   * the localized default header), and `writtenAt` is the ISO instant it was
+   * written, not the delivery instant.
+   */
+  capsuleLetter?: {
+    title?: string
+    body: string
+    writtenAt: string
+  }
 }
 
 export interface PetDialogBubbleState {

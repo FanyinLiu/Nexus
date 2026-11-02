@@ -13,6 +13,7 @@ export type ProactiveInboxInteraction =
   | 'reply'
   | 'snooze'
   | 'notification_click'
+  | 'expire'
 
 export const PROACTIVE_INBOX_INTERACTIONS: readonly ProactiveInboxInteraction[]
 
@@ -20,6 +21,6 @@ export const PROACTIVE_INBOX_INTERACTIONS: readonly ProactiveInboxInteraction[]
  * Next status after one interaction, or `null` when nothing should change.
  */
 export function inboxStatusAfterInteraction(
-  entry: { actions?: readonly string[] } | null | undefined,
+  entry: { actions?: readonly string[], kind?: string } | null | undefined,
   interaction: ProactiveInboxInteraction | string,
-): 'done' | null
+): 'done' | 'read' | null
