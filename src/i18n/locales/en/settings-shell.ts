@@ -30,7 +30,7 @@ export const enSettingsShell = {
   'settings.preview.metrics.messages': 'messages',
   'settings.preview.history.actions': 'Import / Export / Clear',
   'settings.preview.metrics.memories': 'memories',
-  'settings.preview.metrics.daily_notes': 'daily notes',
+  'settings.preview.metrics.daily_notes': 'daily logs',
   'settings.preview.voice.continuous_on': 'On',
   'settings.preview.voice.continuous_off': 'Off',
   'settings.preview.voice.live_session': 'Live session running',

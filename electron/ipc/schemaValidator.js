@@ -6,6 +6,7 @@
  * @typedef {Object} IpcFieldSchema
  * @property {string} [type]
  * @property {boolean} [optional]
+ * @property {boolean} [nullable]
  * @property {unknown} [default]
  * @property {boolean} [trim]
  * @property {boolean} [allowEmpty]
@@ -187,7 +188,16 @@ function validateSchemaValue(value, schema, path) {
     throw new Error('IPC schema descriptor missing')
   }
 
-  if (value === undefined || value === null) {
+  if (value === undefined) {
+    if (schema.optional) return defaultFor(schema)
+    throw schemaError(path, 'is required')
+  }
+
+  // `nullable` exists for tri-state signals (a DND flag that is null when the
+  // platform cannot report it). Without the flag, null keeps the historical
+  // meaning: an omitted optional field, or a missing required one.
+  if (value === null) {
+    if (schema.nullable) return null
     if (schema.optional) return defaultFor(schema)
     throw schemaError(path, 'is required')
   }

@@ -271,6 +271,7 @@ export function SettingsDrawerActiveSection({
           clearingMemoryArchive={memoryArchive.clearingMemoryArchive}
           chatBusy={chatBusy}
           memoryArchiveStatus={memoryArchive.memoryArchiveStatus}
+          memoryClearStatus={memoryArchive.memoryClearStatus}
           onExportMemoryArchive={() => void memoryArchive.handleExportMemoryArchive()}
           onImportMemoryArchive={() => void memoryArchive.handleImportMemoryArchive()}
           onClearMemoryArchive={() => void memoryArchive.handleClearMemoryArchive()}

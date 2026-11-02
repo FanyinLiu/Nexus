@@ -13,6 +13,18 @@ import {
 import type { QuietObservationSummary } from '../context/companionAwareness.ts'
 import type { CompanionCheckInDecision } from '../context/companionCheckInPolicy.ts'
 
+/**
+ * Presentation tone for the memory-archive clear line. A failed clear is an
+ * error, but the "nothing to clear" hint is a neutral notice — both carry
+ * `ok: false`, so the tone travels with the status instead of being derived
+ * from `ok` or matched from the localized copy.
+ */
+export type MemoryClearStatusView = {
+  ok: boolean
+  message: string
+  tone: 'info' | 'success' | 'error'
+}
+
 export type MemoryKindCounts = Record<MemoryKind, number>
 
 export type MemorySettingsSummary = {

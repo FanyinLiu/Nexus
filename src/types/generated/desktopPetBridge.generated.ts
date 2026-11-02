@@ -9,6 +9,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   consumeModelSetupRequest: { conditional: true, invoke: ['window:consume-model-setup-request'], events: [] },
   controlSystemMediaSession: { conditional: false, invoke: ['media-session:control'], events: [] },
   declineModelSetup: { conditional: true, invoke: ['window:decline-model-setup'], events: [] },
+  deliverProactiveMessage: { conditional: false, invoke: ['proactive:deliver'], events: [] },
   discordConnect: { conditional: false, invoke: ['discord:connect'], events: [] },
   discordDisconnect: { conditional: false, invoke: ['discord:disconnect'], events: [] },
   discordPairingList: { conditional: false, invoke: ['discord:pairing-list'], events: [] },
@@ -47,6 +48,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   kwsStop: { conditional: false, invoke: ['kws:stop'], events: [] },
   listChatModels: { conditional: false, invoke: ['chat:list-models'], events: [] },
   listPetModels: { conditional: false, invoke: ['pet-model:list'], events: [] },
+  listProactiveInbox: { conditional: false, invoke: ['inbox:list'], events: [] },
   listSpeechVoices: { conditional: false, invoke: ['audio:list-voices'], events: [] },
   localDataApplyChatMigration: { conditional: false, invoke: ['local-data:chat-migration-apply'], events: [] },
   localDataApplyCompanionMigration: { conditional: false, invoke: ['local-data:companion-migration-apply'], events: [] },
@@ -177,6 +179,8 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   subscribePetModelLibraryChanged: { conditional: false, invoke: [], events: ['pet-model:library-changed'] },
   subscribePetWindowState: { conditional: false, invoke: [], events: ['pet-window:state-changed'] },
   subscribePowerEvents: { conditional: false, invoke: [], events: ['app:power-event'] },
+  subscribeProactiveInbox: { conditional: false, invoke: [], events: ['inbox:changed'] },
+  subscribeProactivePresentation: { conditional: false, invoke: [], events: ['proactive:present'] },
   subscribeRuntimeState: { conditional: false, invoke: [], events: ['runtime-state:changed'] },
   subscribeSettingsReturnFocus: { conditional: false, invoke: [], events: ['settings:return-focus'] },
   subscribeTelegramMessage: { conditional: false, invoke: [], events: ['telegram:message'] },
@@ -210,6 +214,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   turnEndStart: { conditional: false, invoke: ['voice-turn:start'], events: [] },
   turnEndStop: { conditional: false, invoke: ['voice-turn:stop'], events: [] },
   updatePetWindowState: { conditional: false, invoke: ['pet-window:update-state'], events: [] },
+  updateProactiveInboxEntry: { conditional: false, invoke: ['inbox:update'], events: [] },
   updateRuntimeState: { conditional: false, invoke: ['runtime-state:update'], events: [] },
   updaterCheck: { conditional: false, invoke: ['updater:check'], events: [] },
   updaterInstall: { conditional: false, invoke: ['updater:install'], events: [] },
@@ -277,6 +282,8 @@ export type DesktopPetInvokeChannel =
   | 'factorio:status'
   | 'file:open-text'
   | 'file:save-text'
+  | 'inbox:list'
+  | 'inbox:update'
   | 'integrations:inspect'
   | 'kws:feed'
   | 'kws:start'
@@ -377,6 +384,7 @@ export type DesktopPetInvokeChannel =
   | 'plugin:start'
   | 'plugin:status'
   | 'plugin:stop'
+  | 'proactive:deliver'
   | 'proactive:show-notification'
   | 'runtime-state:get'
   | 'runtime-state:heartbeat'
@@ -461,6 +469,7 @@ export type DesktopPetEventChannel =
   | 'desktop-presence:typing-status'
   | 'discord:message'
   | 'discord:pairing-request'
+  | 'inbox:changed'
   | 'memory:flush-request'
   | 'models:download-progress'
   | 'models:setup-requested'
@@ -470,6 +479,7 @@ export type DesktopPetEventChannel =
   | 'panel-window:state-changed'
   | 'pet-model:library-changed'
   | 'pet-window:state-changed'
+  | 'proactive:present'
   | 'runtime-state:changed'
   | 'settings:return-focus'
   | 'telegram:message'
@@ -488,6 +498,7 @@ export interface DesktopPetBridgeMethodArguments {
   consumeModelSetupRequest: readonly []
   controlSystemMediaSession: readonly [payload: { action: 'play' | 'pause' | 'toggle' | 'next' | 'previous' }]
   declineModelSetup: readonly []
+  deliverProactiveMessage: unknown
   discordConnect: unknown
   discordDisconnect: readonly []
   discordPairingList: readonly []
@@ -526,6 +537,7 @@ export interface DesktopPetBridgeMethodArguments {
   kwsStop: readonly []
   listChatModels: readonly [payload: { providerId?: string; baseUrl: string; apiKey: string; model?: string }]
   listPetModels: readonly []
+  listProactiveInbox: readonly []
   listSpeechVoices: readonly [payload: { providerId: string; baseUrl: string; apiKey: string }]
   localDataApplyChatMigration: unknown
   localDataApplyCompanionMigration: unknown
@@ -656,6 +668,8 @@ export interface DesktopPetBridgeMethodArguments {
   subscribePetModelLibraryChanged: unknown
   subscribePetWindowState: unknown
   subscribePowerEvents: unknown
+  subscribeProactiveInbox: unknown
+  subscribeProactivePresentation: unknown
   subscribeRuntimeState: unknown
   subscribeSettingsReturnFocus: unknown
   subscribeTelegramMessage: unknown
@@ -689,6 +703,7 @@ export interface DesktopPetBridgeMethodArguments {
   turnEndStart: readonly []
   turnEndStop: readonly [payload?: { sessionId?: number }]
   updatePetWindowState: readonly [state?: { isPinned?: boolean; clickThrough?: boolean; petHotspotActive?: boolean; roamCapable?: boolean }]
+  updateProactiveInboxEntry: readonly [payload: { id: string; status: 'done' | 'unread' | 'dismissed' }]
   updateRuntimeState: unknown
   updaterCheck: readonly []
   updaterInstall: readonly []
@@ -723,6 +738,7 @@ export interface DesktopPetBridgeMethodResults {
   consumeModelSetupRequest: boolean
   controlSystemMediaSession: { ok: boolean; hasSession: boolean; action: string; message: undefined | string }
   declineModelSetup: void
+  deliverProactiveMessage: { rule: 1 | 2 | 4 | 3 | 5 | 6; outlets: Array<'panel' | 'inbox' | 'badge' | 'strip' | 'bubble' | 'os_notification'> }
   discordConnect: { state: 'error' | 'disconnected' | 'connecting' | 'connected'; botUsername: null | string; allowedChannelIds: Array<string>; lastError: null | string }
   discordDisconnect: { ok: boolean }
   discordPairingList: Array<{ senderId: string; name: string; code: string; createdAt: number }>
@@ -761,6 +777,7 @@ export interface DesktopPetBridgeMethodResults {
   kwsStop: { ok: boolean }
   listChatModels: unknown
   listPetModels: unknown
+  listProactiveInbox: { entries: Array<{ status: 'done' | 'unread' | 'dismissed'; updatedAt: number; id: string; source: 'reminder' | 'agenda' | 'bracket' | 'letter' | 'capsule' | 'open_arc' | 'away' | 'dream'; kind: string; priority: 'high' | 'normal' | 'low'; title: string; body: string; speech?: string; actions: Array<'done' | 'snooze' | 'open' | 'reply'>; createdAt: number; expiresAt?: number; origin?: { taskId?: string; letterId?: string; capsuleId?: string; arcId?: string } }>; unreadCount: number; removedIds: Array<string> }
   listSpeechVoices: unknown
   localDataApplyChatMigration: unknown
   localDataApplyCompanionMigration: unknown
@@ -891,6 +908,8 @@ export interface DesktopPetBridgeMethodResults {
   subscribePetModelLibraryChanged: unknown
   subscribePetWindowState: unknown
   subscribePowerEvents: unknown
+  subscribeProactiveInbox: unknown
+  subscribeProactivePresentation: unknown
   subscribeRuntimeState: unknown
   subscribeSettingsReturnFocus: unknown
   subscribeTelegramMessage: unknown
@@ -924,6 +943,7 @@ export interface DesktopPetBridgeMethodResults {
   turnEndStart: { ok: boolean; sessionId: number }
   turnEndStop: { ok: boolean; stale?: boolean }
   updatePetWindowState: unknown
+  updateProactiveInboxEntry: { updated: boolean; unreadCount: number }
   updateRuntimeState: void
   updaterCheck: unknown
   updaterInstall: boolean
@@ -976,6 +996,7 @@ export interface DesktopPetGeneratedBridge {
   kwsStart: (...args: DesktopPetBridgeMethodArguments['kwsStart']) => Promise<DesktopPetBridgeMethodResults['kwsStart']>
   kwsStatus: (...args: DesktopPetBridgeMethodArguments['kwsStatus']) => Promise<DesktopPetBridgeMethodResults['kwsStatus']>
   kwsStop: (...args: DesktopPetBridgeMethodArguments['kwsStop']) => Promise<DesktopPetBridgeMethodResults['kwsStop']>
+  listProactiveInbox: (...args: DesktopPetBridgeMethodArguments['listProactiveInbox']) => Promise<DesktopPetBridgeMethodResults['listProactiveInbox']>
   localDataStatus: (...args: DesktopPetBridgeMethodArguments['localDataStatus']) => Promise<DesktopPetBridgeMethodResults['localDataStatus']>
   memoryClearUserData: (...args: DesktopPetBridgeMethodArguments['memoryClearUserData']) => Promise<DesktopPetBridgeMethodResults['memoryClearUserData']>
   memoryFlushComplete: (...args: DesktopPetBridgeMethodArguments['memoryFlushComplete']) => Promise<DesktopPetBridgeMethodResults['memoryFlushComplete']>
@@ -1030,6 +1051,7 @@ export interface DesktopPetGeneratedBridge {
   turnEndProbe: (...args: DesktopPetBridgeMethodArguments['turnEndProbe']) => Promise<DesktopPetBridgeMethodResults['turnEndProbe']>
   turnEndStart: (...args: DesktopPetBridgeMethodArguments['turnEndStart']) => Promise<DesktopPetBridgeMethodResults['turnEndStart']>
   turnEndStop: (...args: DesktopPetBridgeMethodArguments['turnEndStop']) => Promise<DesktopPetBridgeMethodResults['turnEndStop']>
+  updateProactiveInboxEntry: (...args: DesktopPetBridgeMethodArguments['updateProactiveInboxEntry']) => Promise<DesktopPetBridgeMethodResults['updateProactiveInboxEntry']>
   updaterInstall: (...args: DesktopPetBridgeMethodArguments['updaterInstall']) => Promise<DesktopPetBridgeMethodResults['updaterInstall']>
   updaterStatus: (...args: DesktopPetBridgeMethodArguments['updaterStatus']) => Promise<DesktopPetBridgeMethodResults['updaterStatus']>
   vadStart: (...args: DesktopPetBridgeMethodArguments['vadStart']) => Promise<DesktopPetBridgeMethodResults['vadStart']>

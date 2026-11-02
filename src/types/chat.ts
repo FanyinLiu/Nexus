@@ -122,6 +122,12 @@ export interface PetDialogBubbleState {
    * and the generic recovery caption.
    */
   replacesSurfaceError?: boolean
+  /**
+   * Marks a router-driven proactive bubble and carries the title the v2 pet
+   * shows on an idle/done surface. Absent on chat replies and companion
+   * notices, which keep their existing caption behaviour.
+   */
+  proactiveTitle?: string
 }
 
 /** Options for a short companion line shown in the pet bubble. */

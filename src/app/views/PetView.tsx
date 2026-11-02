@@ -1,6 +1,9 @@
 import { Suspense, lazy, useMemo, type ReactNode } from 'react'
+import { ProactiveUnreadBadge } from '../../components/ProactiveUnreadBadge.tsx'
 import { resolveCharacterPreset } from '../../features/character/presets.ts'
 import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface.tsx'
+import { useProactivePresentation } from '../../hooks/useProactivePresentation.ts'
+import { useProactiveUnreadCount } from '../../hooks/useProactiveUnreadCount.ts'
 import type { UseAppControllerResult } from '../controllers/useAppController.ts'
 
 const LegacyPetView = lazy(() => import('./LegacyPetView'))
@@ -40,6 +43,8 @@ export function PetView({
   onboardingGuide,
 }: PetViewProps) {
   const characterPreset = useMemo(() => resolveCharacterPreset(), [])
+  const proactiveUnreadCount = useProactiveUnreadCount()
+  useProactivePresentation(chat.presentPetDialogBubble)
 
   const hasModalOverlay = Boolean(settingsDrawer) || Boolean(onboardingGuide)
   const useCompanionV2 = new URLSearchParams(window.location.search).get('uiV2') !== '0'
@@ -50,6 +55,7 @@ export function PetView({
   return (
     <div className={`desktop-pet-root desktop-pet-root--pet ${useCompanionV2 ? 'nexus-ui-v2' : ''} ${characterPreset.themeClassName} ${hasModalOverlay ? 'desktop-pet-root--pet-modal-open' : ''}`}>
       <div aria-hidden={hasModalOverlay ? true : undefined} inert={hasModalOverlay ? true : undefined}>
+        <ProactiveUnreadBadge unreadCount={proactiveUnreadCount} uiLanguage={settings.uiLanguage} />
         {!petModelSelectionResolved ? null : useCompanionV2 ? (
           <FramelessCompanionSurface
             settings={settings}

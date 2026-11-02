@@ -1,9 +1,34 @@
 import { useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { createLogger } from '../../lib/logger.ts'
 import type { ConfirmFn } from '../useConfirm.ts'
 import type { ConnectionResult } from '../settingsDrawerSupport.ts'
+import type { MemoryClearStatusView } from '../../features/memory/memorySettingsView.ts'
 import type { DailyMemoryEntry, MemoryItem } from '../../types'
+
+const log = createLogger('settings.memoryArchive')
+
+/**
+ * The proactive inbox quotes the same memory text the clear is about to wipe,
+ * so an empty archive on screen is not proof that nothing needs clearing. A
+ * failed read is treated as "may have content": skipping the clear would leave
+ * the inbox behind, which is the exact defect this guard prevents.
+ */
+async function proactiveInboxMayHaveContent(): Promise<boolean> {
+  const bridge = typeof window === 'undefined' ? undefined : window.desktopPet
+  if (!bridge?.listProactiveInbox) return true
+  try {
+    const inbox = await bridge.listProactiveInbox()
+    return inbox.entries.length > 0
+  } catch (error) {
+    log.warn('proactive inbox read failed before memory clear', {
+      source: 'proactive-inbox',
+      error: getRedactedLogErrorMessage(error),
+    })
+    return true
+  }
+}
 
 export type UseMemoryArchiveActionsOptions = {
   memories: MemoryItem[]
@@ -35,6 +60,7 @@ export function useMemoryArchiveActions({
 }: UseMemoryArchiveActionsOptions) {
   const { t } = useTranslation()
   const [memoryArchiveStatus, setMemoryArchiveStatus] = useState<ConnectionResult | null>(null)
+  const [memoryClearStatus, setMemoryClearStatus] = useState<MemoryClearStatusView | null>(null)
   const [exportingMemoryArchive, setExportingMemoryArchive] = useState(false)
   const [importingMemoryArchive, setImportingMemoryArchive] = useState(false)
   const [clearingMemoryArchive, setClearingMemoryArchive] = useState(false)
@@ -95,10 +121,14 @@ export function useMemoryArchiveActions({
   }
 
   async function handleClearMemoryArchive() {
-    if (!memories.length && !dailyMemoryEntries.length) {
-      setMemoryArchiveStatus({
+    const inboxHasContent = (!memories.length && !dailyMemoryEntries.length)
+      ? await proactiveInboxMayHaveContent()
+      : false
+    if (!memories.length && !dailyMemoryEntries.length && !inboxHasContent) {
+      setMemoryClearStatus({
         ok: false,
-        message: t('settings.memory.nothing_to_clear'),
+        message: t('settings.memory.clear_empty_hint'),
+        tone: 'info',
       })
       return
     }
@@ -109,7 +139,7 @@ export function useMemoryArchiveActions({
     }
 
     setClearingMemoryArchive(true)
-    setMemoryArchiveStatus(null)
+    setMemoryClearStatus(null)
 
     try {
       const result = await onClearMemoryArchive()
@@ -117,14 +147,22 @@ export function useMemoryArchiveActions({
         return
       }
 
-      setMemoryArchiveStatus({
+      setMemoryClearStatus({
         ok: true,
         message: result.message,
+        tone: 'success',
       })
     } catch (error) {
-      setMemoryArchiveStatus({
+      // A clear failure can quote paths and archive text; the status is
+      // localized copy only, the redacted detail stays in the log.
+      log.warn('memory archive clear failed', {
+        source: 'memory-clear',
+        error: getRedactedLogErrorMessage(error),
+      })
+      setMemoryClearStatus({
         ok: false,
-        message: getRedactedLogErrorMessage(error) || t('settings.memory.clear_error'),
+        message: t('settings.memory.clear_error'),
+        tone: 'error',
       })
     } finally {
       setClearingMemoryArchive(false)
@@ -133,6 +171,7 @@ export function useMemoryArchiveActions({
 
   function resetMemoryArchive() {
     setMemoryArchiveStatus(null)
+    setMemoryClearStatus(null)
     setExportingMemoryArchive(false)
     setImportingMemoryArchive(false)
     setClearingMemoryArchive(false)
@@ -140,6 +179,7 @@ export function useMemoryArchiveActions({
 
   return {
     memoryArchiveStatus,
+    memoryClearStatus,
     exportingMemoryArchive,
     importingMemoryArchive,
     clearingMemoryArchive,
