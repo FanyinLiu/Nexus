@@ -20,6 +20,8 @@ export const jaOnboarding = {
   'model_setup.model.smart-turn-v3.purpose': '文の終わり方を聞いて、話し終わったらすぐにお返事します。字幕がなくても大丈夫です。',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 中英の声',
   'model_setup.model.tts-melo-zh-en.purpose': '音声で返事できるようになります。中国語と英語に対応。このパソコンの中で動作し、無料で、オフラインでも使えます。「話し方」で選ぶと使えます。',
+  'model_setup.model.voxlock.name': 'あなたの声だけを聞く',
+  'model_setup.model.voxlock.purpose': 'あなたの声を録音すると、テレビや周りの人、私自身の反響をあなたの声と取り違えなくなります。このパソコンの中で動作し、オフラインでも使えます。',
   'model_setup.dismiss': 'あとで',
   'model_setup.dismiss_hint': '今はスキップしても大丈夫です —— 次に話したくなったら一度だけ声をかけます。',
   'model_setup.deferred_reminder': '音声がまだインストールされていません。「{settings} → {voice} → {advanced}」からダウンロードしてください。',

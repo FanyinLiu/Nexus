@@ -20,6 +20,7 @@ import * as personaIpc from './ipc/personaIpc.js'
 import * as updaterIpc from './ipc/updaterIpc.js'
 import * as sherpaIpc from './ipc/sherpaIpc.js'
 import * as voiceProfileIpc from './ipc/voiceProfileIpc.js'
+import * as ownerVoiceIpc from './ipc/ownerVoiceIpc.js'
 import * as notificationIpc from './ipc/notificationIpc.js'
 import * as proactiveNotificationIpc from './ipc/proactiveNotificationIpc.js'
 import * as proactiveIpc from './ipc/proactiveIpc.js'
@@ -116,6 +117,7 @@ export function registerIpc(options = {}) {
   updaterIpc.register()
   sherpaIpc.register()
   voiceProfileIpc.register()
+  ownerVoiceIpc.register()
   notificationIpc.register()
   proactiveNotificationIpc.register()
   const isPanelFocused = () => {

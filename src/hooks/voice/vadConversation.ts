@@ -300,9 +300,11 @@ export async function startVadConversation(
         // held for its silence window, so the raw frame energy is the only
         // signal that can tell us the user paused 250 ms ago.
         if (!session || session.cancelled) return
+        // With the owner voice lock on, a TV or another voice must not keep
+        // the clock in "speech"; use the owner's level from the last frame.
         let energy = 0
         for (let i = 0; i < samples.length; i += 1) energy += samples[i] * samples[i]
-        const rms = Math.sqrt(energy / samples.length)
+        const rms = mainVad.ownerRms() ?? Math.sqrt(energy / samples.length)
         const now = performance.now()
         if (clock.isSpeech(rms)) {
           clock.markSpeech(now)

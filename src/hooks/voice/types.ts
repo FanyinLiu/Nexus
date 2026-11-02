@@ -10,6 +10,7 @@ import type {
 } from '../../types'
 import type { VoiceActivityDetector } from '../../features/hearing/browserVad.ts'
 import type { MainProcessVadController } from '../../features/hearing/mainProcessVad.ts'
+import type { OwnerVoiceLevelProbe } from '../../features/voice/ownerVoiceLevel.ts'
 import type { EmotionState } from '../../features/autonomy/emotionModel.ts'
 import type { PersonaSpeechStyle } from '../../features/autonomy/v2/personaTypes.ts'
 import type { HeardSpeechSnapshot } from '../../features/voice/heardSpeech.ts'
@@ -60,6 +61,9 @@ export type SpeechInterruptMonitorSession = {
   // macOS sometimes contends with the KWS listener). When active, the
   // subscribe callback keeps `currentRms` fresh; the raf tick reads it.
   unsubscribeFrames: (() => void) | null
+  // Owner voice lock: frames go to the main-process isolator and
+  // `currentRms` is the owner's level only, on both capture paths.
+  ownerProbe?: OwnerVoiceLevelProbe | null
   currentRms: number
   animationFrameId: number | null
   startedAt: number

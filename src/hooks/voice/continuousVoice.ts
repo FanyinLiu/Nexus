@@ -9,6 +9,10 @@ import {
   type InterruptMicTurnSource,
 } from '../../features/voice/autoRestartPolicy.ts'
 import { calculateAudioRms, requestVoiceInputStream } from '../../features/voice/runtimeSupport.ts'
+import {
+  createOwnerVoiceLevelProbe,
+  type OwnerVoiceLevelApi,
+} from '../../features/voice/ownerVoiceLevel.ts'
 import { voiceDebug } from '../../features/voice/voiceDebugLog.ts'
 import { createLogger } from '../../lib/logger.ts'
 import type { WakewordRuntimeController } from '../../features/hearing/wakewordRuntime.ts'
@@ -98,6 +102,16 @@ type StartSpeechInterruptMonitorOptions = {
   ti: Translator
 }
 
+/** Owner-lock level API when the switch is on and the bridge exposes it. */
+function ownerVoiceLevelApi(settings: AppSettings): OwnerVoiceLevelApi | null {
+  if (settings.ownerVoiceLockEnabled !== true) return null
+  return window.desktopPet?.ownerVoiceLevel ?? null
+}
+
+/** The isolator works on 16 kHz mono, the same rate the KWS frames use. */
+const OWNER_VOICE_CAPTURE_SAMPLE_RATE = 16_000
+const OWNER_VOICE_CAPTURE_BUFFER_SIZE = 2048
+
 function destroySpeechInterruptMonitor(
   speechInterruptMonitorRef: MutableRefObject<SpeechInterruptMonitorSession | null>,
   session: SpeechInterruptMonitorSession | null,
@@ -105,6 +119,9 @@ function destroySpeechInterruptMonitor(
   if (!session) {
     return
   }
+
+  session.ownerProbe?.dispose()
+  session.ownerProbe = null
 
   if (session.animationFrameId) {
     window.cancelAnimationFrame(session.animationFrameId)
@@ -310,18 +327,35 @@ export async function startSpeechInterruptMonitor(
 
     options.speechInterruptMonitorRef.current = session
 
+    const levelApi = ownerVoiceLevelApi(options.settingsRef.current)
+    const frameSession = session
+    frameSession.ownerProbe = levelApi
+      ? createOwnerVoiceLevelProbe(levelApi, (rms) => {
+          if (options.speechInterruptMonitorRef.current === frameSession) frameSession.currentRms = rms
+        })
+      : null
+
     session.unsubscribeFrames = wakewordRuntime!.subscribeMicFrames((samples) => {
       // Only update if this is still the active session — avoid a stale
       // callback mutating a session we've already torn down.
-      if (options.speechInterruptMonitorRef.current !== session) return
-      session.currentRms = calculateAudioRms(samples)
+      if (options.speechInterruptMonitorRef.current !== frameSession) return
+      if (frameSession.ownerProbe) {
+        frameSession.ownerProbe.push(samples)
+        return
+      }
+      frameSession.currentRms = calculateAudioRms(samples)
     })
   } else {
     let stream: MediaStream | null = null
     let audioContext: AudioContext | null = null
+    const levelApi = ownerVoiceLevelApi(options.settingsRef.current)
     try {
       stream = (await requestVoiceInputStream({ purpose: 'interrupt' })).stream
-      audioContext = new AudioContext()
+      // The owner lock needs 16 kHz frames; the plain analyser path keeps the
+      // device's default rate as before.
+      audioContext = levelApi
+        ? new AudioContext({ sampleRate: OWNER_VOICE_CAPTURE_SAMPLE_RATE })
+        : new AudioContext()
 
       if (audioContext.state === 'suspended') {
         await audioContext.resume().catch(() => { log.debug('interrupt monitor audio context resume failed', { errorPresent: true }) })
@@ -343,6 +377,26 @@ export async function startSpeechInterruptMonitor(
       const source = audioContext.createMediaStreamSource(stream)
       source.connect(analyser)
 
+      let ownerProbe: SpeechInterruptMonitorSession['ownerProbe'] = null
+      if (levelApi) {
+        // Frames for the main-process isolator. The muted gain keeps the
+        // processor pulling audio without playing the mic back.
+        const processor = audioContext.createScriptProcessor(OWNER_VOICE_CAPTURE_BUFFER_SIZE, 1, 1)
+        const mute = audioContext.createGain()
+        mute.gain.value = 0
+        source.connect(processor)
+        processor.connect(mute)
+        mute.connect(audioContext.destination)
+        const probe = createOwnerVoiceLevelProbe(levelApi, (rms) => {
+          const current = options.speechInterruptMonitorRef.current
+          if (current?.ownerProbe === probe) current.currentRms = rms
+        })
+        processor.onaudioprocess = (event) => {
+          probe.push(new Float32Array(event.inputBuffer.getChannelData(0)))
+        }
+        ownerProbe = probe
+      }
+
       session = {
         stream,
         audioContext,
@@ -350,6 +404,7 @@ export async function startSpeechInterruptMonitor(
         source,
         dataArray: new Float32Array(analyser.fftSize) as Float32Array<ArrayBuffer>,
         unsubscribeFrames: null,
+        ownerProbe,
         currentRms: 0,
         animationFrameId: null,
         startedAt: performance.now(),
@@ -368,6 +423,8 @@ export async function startSpeechInterruptMonitor(
   }
 
   const readRms = (): number => {
+    // Owner lock: the probe keeps `currentRms` at the owner's level only.
+    if (session.ownerProbe) return session.currentRms
     if (session.analyser && session.dataArray.length > 0) {
       session.analyser.getFloatTimeDomainData(session.dataArray)
       return calculateAudioRms(session.dataArray)

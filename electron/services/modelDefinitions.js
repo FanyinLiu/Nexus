@@ -179,4 +179,23 @@ export const MODEL_CATALOG = [
     },
     purpose: '免费离线语音合成（语音输出选「本地 TTS」时使用），无需 API Key',
   },
+  {
+    id: 'voxlock',
+    label: '只听你的声音（VoxLock，可选）',
+    // Target-speaker isolation (sherpa-onnx >= 2.0.1, Apache-2.0). Only the
+    // owner voice lock uses it; nothing downloads it until the user asks.
+    sizeLabel: '~73 MB',
+    required: false,
+    kind: 'archive',
+    directory: 'sherpa-onnx-voxlock-int8',
+    checkFile: 'chunk_int8.onnx',
+    githubArchive: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models/sherpa-onnx-voxlock-int8.tar.bz2',
+    integrity: {
+      archive: {
+        sizeBytes: 72508647,
+        sha256: 'bcb947f9e8676d3e963f6048b0088505c84f0843bfdc88cb26dde3264d81570b',
+      },
+    },
+    purpose: '录一段你的声音后，电视、旁人和她自己的回声都不会被当成你在说话',
+  },
 ]

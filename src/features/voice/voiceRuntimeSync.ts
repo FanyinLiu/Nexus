@@ -1,7 +1,8 @@
 /**
  * Renderer → main sync for the on-demand voice sidecars.
  *
- * Sends only the selected engine ids and the two voice switches. The main
+ * Sends only the selected engine ids, the two voice switches and the owner
+ * voice lock switch. The main
  * process owns the Python probe/spawn lifecycle; keeping this payload free of
  * keys and user text also keeps it safe to send from the pet window, which is
  * the only renderer guaranteed to load at launch.
@@ -15,18 +16,19 @@ export type VoiceRuntimeSyncPayload = {
   speechInputProviderId: string
   speechOutputEnabled: boolean
   speechOutputProviderId: string
+  ownerVoiceLockEnabled: boolean
 }
 
 /**
  * Build the compact payload the main-process sidecar supervisor consumes.
  *
- * @param {Pick<AppSettings, 'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' | 'speechOutputProviderId'>} settings
+ * @param {Pick<AppSettings, 'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' | 'speechOutputProviderId' | 'ownerVoiceLockEnabled'>} settings
  * @returns {VoiceRuntimeSyncPayload}
  */
 export function buildVoiceRuntimeSyncPayload(
   settings: Pick<
     AppSettings,
-    'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' | 'speechOutputProviderId'
+    'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' | 'speechOutputProviderId' | 'ownerVoiceLockEnabled'
   >,
 ): VoiceRuntimeSyncPayload {
   return {
@@ -34,6 +36,7 @@ export function buildVoiceRuntimeSyncPayload(
     speechInputProviderId: String(settings.speechInputProviderId ?? ''),
     speechOutputEnabled: settings.speechOutputEnabled === true,
     speechOutputProviderId: String(settings.speechOutputProviderId ?? ''),
+    ownerVoiceLockEnabled: settings.ownerVoiceLockEnabled === true,
   }
 }
 

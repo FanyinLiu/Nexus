@@ -20,6 +20,8 @@ export const koOnboarding = {
   'model_setup.model.smart-turn-v3.purpose': '문장이 어떻게 끝나는지 듣고, 말을 마치면 바로 대답해요. 자막이 없어도 괜찮아요.',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 중영 목소리',
   'model_setup.model.tts-melo-zh-en.purpose': '제가 목소리로 대답할 수 있어요. 중국어와 영어를 지원하고, 이 컴퓨터에서 무료로, 인터넷 없이도 돌아가요. ‘말하는 방법’에서 골라야 써요.',
+  'model_setup.model.voxlock.name': '내 목소리만 듣기',
+  'model_setup.model.voxlock.purpose': '목소리를 녹음하면 TV, 다른 사람, 제 반향을 당신 목소리로 착각하지 않아요. 이 컴퓨터에서 돌아가고 인터넷 없이도 돼요.',
   'model_setup.dismiss': '나중에',
   'model_setup.dismiss_hint': '지금은 넘어가도 돼요 — 다음에 이야기하고 싶을 때 한 번만 알려드릴게요.',
   'model_setup.deferred_reminder': '음성이 아직 준비되지 않았어요. 「{settings} → {voice} → {advanced}」에서 다운로드해 주세요.',
