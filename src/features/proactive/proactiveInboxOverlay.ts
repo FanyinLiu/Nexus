@@ -17,6 +17,7 @@
 import type {
   ProactiveAction,
   ProactiveInboxEntry,
+  ProactiveInboxStatus,
   ProactiveMessage,
   ProactivePriority,
 } from '../../../shared/proactiveDelivery.js'
@@ -45,6 +46,8 @@ export type ProactiveInboxRow = {
   actions: ProactiveInboxRowAction[]
   priority: ProactivePriority
   createdAt: number
+  /** Stored status, so the row can expose it without inventing an unread marker. */
+  status: ProactiveInboxStatus
   /** Done/dismissed rows render dimmed and hide their Done/Snooze buttons. */
   read: boolean
 }
@@ -158,6 +161,7 @@ export function toProactiveInboxRow(entry: ProactiveInboxEntryView): ProactiveIn
     actions: proactiveInboxRowActions(entry),
     priority: entry.priority,
     createdAt: entry.createdAt,
+    status: entry.status,
     // `read` is seen but not handled: it still shows every button, so it can
     // become done. Only done/dismissed rows are dimmed and lose buttons.
     read: entry.status === 'done' || entry.status === 'dismissed',

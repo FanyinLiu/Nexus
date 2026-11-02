@@ -6,6 +6,7 @@ import {
   isProactiveInboxEntryBadgeWorthy,
   proactiveInboxFullText,
   proactiveInboxRowActions,
+  proactiveInboxVisibleRowActions,
   proactiveMessageFromInboxEntry,
   selectProactiveInboxEntries,
   toProactiveInboxRow,
@@ -46,10 +47,47 @@ test('only unread badge-worthy entries qualify: actions or high priority', () =>
 test('a read entry is listed as not handled and keeps its action buttons', () => {
   const read = toProactiveInboxRow(entry({ id: 'read', status: 'read', actions: ['done', 'snooze', 'open'] }))
   assert.equal(read.read, false)
+  assert.equal(read.status, 'read')
   assert.deepEqual(read.actions, ['done', 'snooze', 'open'])
 
   const done = toProactiveInboxRow(entry({ id: 'done', status: 'done', actions: ['done', 'snooze', 'open'] }))
   assert.equal(done.read, true)
+})
+
+test('read entries sort after every unread entry and keep their own actions', () => {
+  const entries = [
+    entry({
+      id: 'read-high-new',
+      status: 'read',
+      priority: 'high',
+      createdAt: 900,
+      actions: ['done', 'snooze', 'open'],
+    }),
+    entry({ id: 'unread-old', priority: 'low', createdAt: 10, actions: ['done'] }),
+    entry({ id: 'unread-high', priority: 'high', createdAt: 20, actions: [] }),
+    entry({ id: 'read-old', status: 'read', createdAt: 30, actions: ['done'] }),
+    entry({ id: 'done-newest', status: 'done', priority: 'high', createdAt: 1000, actions: ['done'] }),
+    entry({ id: 'dismissed-mid', status: 'dismissed', createdAt: 500, actions: ['done'] }),
+  ]
+
+  const rows = selectProactiveInboxEntries(entries, { nowMs: 2000 })
+
+  assert.deepEqual(rows.map((row) => row.id), [
+    'unread-high',
+    'unread-old',
+    'done-newest',
+    'read-high-new',
+    'dismissed-mid',
+    'read-old',
+  ])
+  const firstNonUnread = rows.findIndex((row) => row.status !== 'unread')
+  assert.ok(firstNonUnread > 0)
+  assert.ok(rows.slice(firstNonUnread).every((row) => row.status !== 'unread'))
+
+  const readRow = toProactiveInboxRow(entries[0])
+  assert.equal(readRow.status, 'read')
+  assert.equal(readRow.read, false)
+  assert.deepEqual(proactiveInboxVisibleRowActions(readRow), ['done', 'snooze', 'open'])
 })
 
 test('the overlay lists unread first (high priority first) then read newest first', () => {

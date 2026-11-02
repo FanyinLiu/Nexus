@@ -133,6 +133,7 @@ export function ProactiveInboxPopover({
             return (
               <li
                 key={row.id}
+                data-status={row.status}
                 className={`proactive-inbox__row${row.read ? ' proactive-inbox__row--read' : ''}${expanded ? ' proactive-inbox__row--expanded' : ''}`}
               >
                 <button

@@ -7,6 +7,7 @@ import { test, type TestContext } from 'node:test'
 import { createProactiveIpc } from '../electron/ipc/proactiveIpc.js'
 import { createProactiveInboxStore } from '../electron/services/proactiveInboxStore.js'
 import type { Logger } from '../electron/logger.js'
+import { inboxStatusAfterInteraction } from '../shared/proactiveInboxReadRule.js'
 import type {
   DeliveryContext,
   ProactiveMessage,
@@ -355,4 +356,60 @@ test('a done entry is never downgraded by a later notification click', async (t)
   assert.equal(harness.store.list().unreadCount, 0)
   assert.equal(harness.changes().length, changesAfterDelivery)
   assert.deepEqual(harness.withdrawn, [])
+})
+
+for (const status of ['done', 'dismissed'] as const) {
+  test(`a ${status} entry is terminal for every strip action and a notification click`, async (t) => {
+    const stripActions = ['done', 'open', 'reply', 'snooze'] as const
+    for (const action of stripActions) {
+      const harness = createHarness(t)
+      const message = makeMessage({ id: `${status}-strip-${action}` })
+      harness.store.upsert(message)
+      harness.store.setStatus(message.id, status)
+      const changesAfterStatus = harness.changes().length
+
+      harness.configured().onAction(action, message.id)
+
+      assert.equal(inboxStatus(harness.store, message.id), status, `${action} downgraded ${status}`)
+      assert.equal(harness.store.list().unreadCount, 0)
+      assert.equal(harness.changes().length, changesAfterStatus, `${action} published a mutation`)
+      const expectedWithdrawn = action === 'snooze' ? [] : [message.id]
+      assert.deepEqual(harness.withdrawn, expectedWithdrawn, `${action} withdraw mismatch`)
+    }
+
+    const harness = createHarness(t)
+    const message = makeMessage({ id: `${status}-notification-click` })
+    await harness.deliver(message)
+    harness.store.setStatus(message.id, status)
+    const changesAfterStatus = harness.changes().length
+
+    lastNotification(harness).onClick?.()
+
+    assert.equal(inboxStatus(harness.store, message.id), status, 'the click downgraded a final entry')
+    assert.equal(harness.store.list().unreadCount, 0)
+    assert.equal(harness.changes().length, changesAfterStatus, 'the click published a mutation')
+    assert.deepEqual(harness.withdrawn, [])
+  })
+}
+
+test('the notification click applies the shared read rule for every entry shape', async (t) => {
+  const cases: Array<{ id: string, overrides: Partial<ProactiveMessage> }> = [
+    { id: 'rule-actionable', overrides: {} },
+    { id: 'rule-no-button', overrides: { actions: [] } },
+    {
+      id: 'rule-capsule',
+      overrides: { source: 'capsule', kind: 'capsule', actions: ['done', 'open'] },
+    },
+  ]
+
+  for (const { id, overrides } of cases) {
+    const harness = createHarness(t)
+    const message = makeMessage({ id, ...overrides })
+    await harness.deliver(message)
+
+    const expected = inboxStatusAfterInteraction(message, 'notification_click') ?? 'unread'
+    lastNotification(harness).onClick?.()
+
+    assert.equal(inboxStatus(harness.store, message.id), expected, id)
+  }
 })

@@ -47,6 +47,7 @@ function row(overrides: Partial<ProactiveInboxRow> & { id: string }): ProactiveI
     actions: ['done'],
     priority: 'normal',
     createdAt: 1,
+    status: 'unread',
     read: false,
     ...overrides,
   }
@@ -118,6 +119,27 @@ test('read rows are dimmed, stay expandable and lose Done/Snooze', () => {
   assert.doesNotMatch(html, />稍后 10 分钟</)
 
   const unread = renderPopover({ rows: [row({ id: 'unread', read: false })] })
+  assert.doesNotMatch(unread, /proactive-inbox__row--read/)
+})
+
+test('a read entry has no unread marker and keeps every action button', () => {
+  const readRow = row({
+    id: 'seen',
+    status: 'read',
+    read: false,
+    actions: ['done', 'snooze', 'open'],
+  })
+  const html = renderPopover({ rows: [readRow] })
+
+  assert.match(html, /data-status="read"/)
+  assert.doesNotMatch(html, /data-status="unread"/)
+  assert.doesNotMatch(html, /proactive-inbox__row--read/)
+  assert.match(html, />完成</)
+  assert.match(html, />稍后 10 分钟</)
+  assert.match(html, />打开对话</)
+
+  const unread = renderPopover({ rows: [row({ id: 'new', status: 'unread' })] })
+  assert.match(unread, /data-status="unread"/)
   assert.doesNotMatch(unread, /proactive-inbox__row--read/)
 })
 
