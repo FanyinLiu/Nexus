@@ -1,0 +1,142 @@
+:root {
+  color-scheme: light dark;
+  --strip-bg: rgba(255, 255, 255, 0.82);
+  --strip-fg: #1d1d1f;
+  --strip-muted: rgba(60, 60, 67, 0.6);
+  --strip-border: rgba(0, 0, 0, 0.08);
+  --strip-button: rgba(118, 118, 128, 0.12);
+  --strip-primary: #e8efff;
+  --strip-primary-fg: #2f5bd3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --strip-bg: rgba(44, 44, 46, 0.86);
+    --strip-fg: #f5f5f7;
+    --strip-muted: rgba(235, 235, 245, 0.6);
+    --strip-border: rgba(255, 255, 255, 0.1);
+    --strip-button: rgba(118, 118, 128, 0.28);
+    --strip-primary: rgba(90, 130, 255, 0.28);
+    --strip-primary-fg: #b9cbff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font: 13px/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  user-select: none;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+}
+
+.strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 52px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--strip-border);
+  border-radius: 14px;
+  background: var(--strip-bg);
+  color: var(--strip-fg);
+  backdrop-filter: blur(18px) saturate(1.4);
+  animation: strip-in 180ms ease-out;
+}
+
+.strip[hidden] {
+  display: none;
+}
+
+.strip__icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--strip-muted);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.strip__text {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.strip__text:disabled {
+  cursor: default;
+}
+
+.strip__button[hidden],
+.strip__text[hidden] {
+  display: none;
+}
+
+.strip__count {
+  flex: none;
+  color: var(--strip-muted);
+  font-size: 12px;
+}
+
+.strip__button {
+  flex: none;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--strip-button);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.strip__button--primary {
+  background: var(--strip-primary);
+  color: var(--strip-primary-fg);
+}
+
+.strip__button:focus-visible,
+.strip__text:focus-visible {
+  outline: 2px solid var(--strip-primary-fg);
+  outline-offset: 2px;
+}
+
+@keyframes strip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip {
+    animation: none;
+  }
+}

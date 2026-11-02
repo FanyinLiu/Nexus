@@ -39,6 +39,7 @@ export function useCompanionNotices({
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
     const chatContent = options.chatContent.trim()
     const bubbleContent = (options.bubbleContent ?? chatContent).trim()
+    const proactiveTitle = options.proactiveTitle?.trim() ?? ''
     const speechContent = options.speechContent?.trim() ?? ''
     const createdAt = new Date().toISOString()
 
@@ -86,13 +87,22 @@ export function useCompanionNotices({
           ...(options.loopOffer ? { loopOffer: options.loopOffer } : {}),
           ...(options.loopCheck ? { loopCheck: options.loopCheck } : {}),
           ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
+          ...(proactiveTitle ? { proactiveTitle } : {}),
         },
-        { autoHideMs: options.autoHideMs ?? COMPANION_NOTICE_AUTO_HIDE_MS },
+        // A proactive notice is timed by the shared collapse scheduler on the
+        // surface, never by the plain notice auto-hide.
+        proactiveTitle
+          ? undefined
+          : { autoHideMs: options.autoHideMs ?? COMPANION_NOTICE_AUTO_HIDE_MS },
       )
     }
 
-    emitPetNotify({ type: 'presence_activity' })
-    emitPetNotify({ type: 'mood', mood: 'happy' })
+    // History-only notices opt out: a line the router kept quiet must not move
+    // the pet's presence or expression behind the user's back.
+    if (options.petReaction !== false) {
+      emitPetNotify({ type: 'presence_activity' })
+      emitPetNotify({ type: 'mood', mood: 'happy' })
+    }
 
     if (!speechContent) {
       return
