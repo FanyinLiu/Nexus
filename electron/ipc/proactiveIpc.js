@@ -22,6 +22,7 @@
 import path from 'node:path'
 
 import { routeDelivery } from '../../shared/proactiveDelivery.js'
+import { inboxStatusAfterInteraction } from '../../shared/proactiveInboxReadRule.js'
 import { createLogger } from '../logger.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
@@ -96,7 +97,7 @@ const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
  * @property {IntervalClearer} clearInterval
  * @property {ProactiveStripDependencies} strip
  * @property {() => ReminderStripLabels} getStripLabels
- * @property {(payload: { title: string, body: string }) => unknown} showOsNotification
+ * @property {(payload: { title: string, body: string, onClick?: () => void }) => unknown} showOsNotification
  * @property {() => boolean} isPanelFocused
  * @property {() => Promise<DeliveryContext>} [getDeliveryContext]
  * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
@@ -196,15 +197,29 @@ export function createProactiveIpc({
   }
 
   /**
-   * Strip-side action hand-off. `open` is handled by the strip module itself;
-   * `done` is the only action that changes the inbox.
+   * Apply the shared read rule to one stored entry and announce a real status
+   * change. Every main-process surface that can "read" an entry (strip,
+   * notification click) goes through here so the renderer sees one push shape.
+   * @param {string} id
+   * @param {string} interaction
+   */
+  function applyInboxInteraction(id, interaction) {
+    const entry = inbox.list().entries.find((item) => item.id === id)
+    if (!entry) return
+    const nextStatus = inboxStatusAfterInteraction(entry, interaction)
+    if (nextStatus !== 'done') return
+    announceMutation(inbox.setStatus(id, nextStatus))
+  }
+
+  /**
+   * Strip-side action hand-off. The strip itself owns the keyboard focus and
+   * the native window; `done`, `open` and `reply` change the inbox through the
+   * shared rule, while `snooze` and `expire` leave the entry unread.
    * @param {string} action
    * @param {string} id
    */
   function handleStripAction(action, id) {
-    if (action !== 'done') return
-    const mutation = inbox.setStatus(id, 'done')
-    announceMutation(mutation)
+    applyInboxInteraction(id, action)
   }
 
   strip.configure?.({
@@ -256,7 +271,11 @@ export function createProactiveIpc({
   })
 
   outlets.register('os_notification', async (message) => {
-    await showOsNotification({ title: message.title, body: message.body })
+    await showOsNotification({
+      title: message.title,
+      body: message.body,
+      onClick: () => applyInboxInteraction(message.id, 'open'),
+    })
   })
 
   const router = createProactiveRouter({ outlets })

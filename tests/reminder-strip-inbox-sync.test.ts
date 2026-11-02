@@ -125,6 +125,7 @@ function createHarness(t: TestContext) {
   const handlers = new Map<string, Handler>()
   const sent: SentMessage[] = []
   const panelSent: SentMessage[] = []
+  const notifications: Array<{ title: string, body: string, onClick?: () => void }> = []
   const fakeStrip = createFakeStrip()
   const windows = [
     createFakeWindow('pet', sent),
@@ -146,7 +147,10 @@ function createHarness(t: TestContext) {
     clearInterval: () => {},
     strip: fakeStrip.strip,
     getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
-    showOsNotification: () => {},
+    showOsNotification: (payload) => {
+      notifications.push(payload)
+      return true
+    },
     isPanelFocused: () => false,
   })
   t.after(() => ipc.stopPrune())
@@ -156,6 +160,7 @@ function createHarness(t: TestContext) {
     store,
     sent,
     fakeStrip,
+    notifications,
     ipc,
     invoke: async (channel: string, payload?: unknown) => {
       const handler = handlers.get(channel)
@@ -228,17 +233,66 @@ test('inbox:update to done or dismissed withdraws the id from the strip', async 
   assert.equal(harness.store.list().unreadCount, 0)
 })
 
-test('strip open and expire leave the inbox entry unread and the count unchanged', (t) => {
+test('strip snooze and expire leave the inbox entry unread and the count unchanged', (t) => {
   const harness = createHarness(t)
   const message = makeMessage()
   harness.store.upsert(message)
 
-  harness.fakeStrip.configured().onAction('open', message.id)
+  harness.fakeStrip.configured().onAction('snooze', message.id)
   harness.fakeStrip.configured().onAction('expire', message.id)
 
   assert.equal(inboxStatus(harness.store, message.id), 'unread')
   assert.equal(harness.store.list().unreadCount, 1)
   assert.deepEqual(harness.changes(), [])
+})
+
+test('strip open and reply mark the entry done through the shared read rule', (t) => {
+  const harness = createHarness(t)
+  const openMessage = makeMessage({ id: 'open-id' })
+  const replyMessage = makeMessage({ id: 'reply-id', actions: ['done', 'reply'] })
+  harness.store.upsert(openMessage)
+  harness.store.upsert(replyMessage)
+  assert.equal(harness.store.list().unreadCount, 2)
+
+  harness.fakeStrip.configured().onAction('open', openMessage.id)
+  harness.fakeStrip.configured().onAction('reply', replyMessage.id)
+
+  assert.equal(inboxStatus(harness.store, openMessage.id), 'done')
+  assert.equal(inboxStatus(harness.store, replyMessage.id), 'done')
+  assert.equal(harness.store.list().unreadCount, 0)
+  assert.deepEqual(harness.changes().at(-1), {
+    unreadCount: 0,
+    changes: [{ id: replyMessage.id, status: 'done' }],
+    removedIds: [],
+  })
+})
+
+test('clicking a routed OS notification marks its entry done', async (t) => {
+  const harness = createHarness(t)
+  const message = makeMessage({ id: 'os-id' })
+  const context = {
+    panelFocused: false,
+    fullscreen: false,
+    focusState: 'idle' as const,
+    inQuietHours: false,
+    systemDnd: null,
+    awayNotificationsEnabled: true,
+    stripEnabled: true,
+  }
+
+  await harness.invoke('proactive:deliver', { message, context })
+  assert.equal(harness.notifications.length, 1)
+  assert.equal(harness.store.list().unreadCount, 1)
+
+  harness.notifications[0].onClick?.()
+
+  assert.equal(inboxStatus(harness.store, message.id), 'done')
+  assert.equal(harness.store.list().unreadCount, 0)
+  assert.deepEqual(harness.changes().at(-1), {
+    unreadCount: 0,
+    changes: [{ id: message.id, status: 'done' }],
+    removedIds: [],
+  })
 })
 
 test('clear-all withdraws every strip item and publishes a zero count', async (t) => {

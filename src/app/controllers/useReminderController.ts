@@ -24,32 +24,13 @@ import {
 } from '../../features/reminders'
 import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../../features/uiV2/caption.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
+import { readProactiveDesktopContext } from '../../hooks/readProactiveDesktopContext.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
 import { createLogger } from '../../lib/logger.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 
 const reminderLog = createLogger('reminders.notice')
-
-/**
- * Read the active-window snapshot only when the user's settings allow desktop
- * awareness. Anything unreadable counts as "not fullscreen": a reminder must
- * still be delivered when context collection is unavailable.
- */
-async function readReminderDesktopContext(settings: AppSettings) {
-  if (
-    !settings.contextAwarenessEnabled
-    || !settings.activeWindowContextEnabled
-    || settings.companionAwarenessPaused
-  ) {
-    return null
-  }
-  try {
-    return await window.desktopPet?.getDesktopContext?.({ includeActiveWindow: true }) ?? null
-  } catch {
-    return null
-  }
-}
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
@@ -123,7 +104,7 @@ export function useReminderController({
           speech: defaultSpeechText,
           now,
         })
-        const desktopContext = await readReminderDesktopContext(currentSettings)
+        const desktopContext = await readProactiveDesktopContext(currentSettings)
         const context = buildReminderDeliveryContext({
           focusState,
           activeWindowTitle: desktopContext?.activeWindowTitle,

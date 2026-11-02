@@ -16,13 +16,14 @@ export function focusCompanionPanel() {
 
 /**
  * Fire an OS-level notification with title + body. Clicking it focuses the
- * panel window (creating it if needed). Returns false when the platform has
- * no Notification support (rare on Linux without notify-send).
+ * panel window (creating it if needed) and then runs the optional `onClick`
+ * hand-off from the proactive router. Returns false when the platform has no
+ * Notification support (rare on Linux without notify-send).
  *
- * @param {{ title?: unknown, body?: unknown }} notification
+ * @param {{ title?: unknown, body?: unknown, onClick?: unknown }} notification
  * @returns {boolean}
  */
-export function showProactiveNotification({ title, body }) {
+export function showProactiveNotification({ title, body, onClick }) {
   if (!Notification.isSupported()) return false
   if (typeof title !== 'string' || !title.trim()) return false
   if (typeof body !== 'string' || !body.trim()) return false
@@ -34,7 +35,10 @@ export function showProactiveNotification({ title, body }) {
     icon: getPetIconPath(),
   })
 
-  notification.on('click', focusCompanionPanel)
+  notification.on('click', () => {
+    focusCompanionPanel()
+    if (typeof onClick === 'function') onClick()
+  })
 
   notification.show()
   return true

@@ -2358,14 +2358,27 @@
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
+  border: 0;
   border-radius: 999px;
+  font-family: inherit;
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
   color: #ffffff;
   background: #ef4444;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
-  pointer-events: none;
+  cursor: pointer;
+  appearance: none;
+  pointer-events: auto;
+}
+
+.pet-window__proactive-badge:hover {
+  background: #dc2626;
+}
+
+.pet-window__proactive-badge:focus-visible {
+  outline: 2px solid rgba(239, 68, 68, 0.55);
+  outline-offset: 2px;
 }
 
 @keyframes status-pulse {
