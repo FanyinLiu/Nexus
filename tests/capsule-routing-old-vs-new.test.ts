@@ -169,7 +169,7 @@ const CASES = [
     context: makeContext({ fullscreen: true }),
     rule: 1,
     outlets: ['inbox', 'badge'],
-    chatLine: false,
+    chatLine: true,
   },
   {
     name: 'rule 2: panel focused',
@@ -183,28 +183,28 @@ const CASES = [
     context: makeContext(),
     rule: 4,
     outlets: ['inbox', 'bubble'],
-    chatLine: false,
+    chatLine: true,
   },
   {
     name: 'rule 4: active focus without the strip',
     context: makeContext({ stripEnabled: false }),
     rule: 4,
     outlets: ['inbox', 'bubble'],
-    chatLine: false,
+    chatLine: true,
   },
   {
     name: 'rule 5: idle with away notifications',
     context: makeContext({ focusState: 'idle', awayNotificationsEnabled: true }),
     rule: 5,
     outlets: ['inbox', 'os_notification'],
-    chatLine: false,
+    chatLine: true,
   },
   {
     name: 'rule 6: idle without away notifications',
     context: makeContext({ focusState: 'idle' }),
     rule: 6,
     outlets: ['inbox', 'badge'],
-    chatLine: false,
+    chatLine: true,
   },
 ] as const
 
@@ -216,8 +216,9 @@ for (const testCase of CASES) {
     assert.deepEqual(decision.outlets, testCase.outlets)
     // The pre-M1.1 path always raised an OS notification, whatever the focus.
     assert.deepEqual(OLD_CAPSULE_PATH, { surface: 'os_notification', chatLine: false })
-    // The new plan adds a chat line only for rule 2: main has no panel outlet,
-    // so the panel-focused case needs a renderer-side surface.
+    // The new plan adds the chat-only line for every routed rule: no routed
+    // outlet shows the full text (inbox-only rules, clipped bubble/toast, and
+    // rule 2 without a renderer panel).
     assert.deepEqual(planCapsulePresentation(decision), { chatLine: testCase.chatLine })
     assert.notEqual(decision.rule, 3, 'a capsule has no actions, so rule 3 never matches')
   })
@@ -307,16 +308,19 @@ test('a missing router bridge falls back to the legacy notification', async () =
 
 test('a throwing router call falls back to exactly one notification and still marks delivered', async () => {
   const notifications: CapsuleDeliveryText[] = []
+  const chatLines: string[] = []
   const delivered: string[] = []
 
   const result = await deliverDueCapsule(makeDeps({
     deliver: async () => { throw new Error('bridge down') },
     showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (text) => { chatLines.push(text) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'fallback' })
   assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(chatLines, [], 'the fallback OS toast carries no chat line')
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
@@ -343,13 +347,28 @@ test('router success on rule 2 pushes one chat line with the delivery body', asy
   assert.equal(deliveredMessages[0]?.id, 'capsule:capsule-1')
 })
 
-test('router success on an inbox-only rule stays quiet and marks delivered', async () => {
+test('a fullscreen capsule writes one chat line with the full untruncated text', async () => {
+  const originalMessage = `first line\n\n${'x'.repeat(300)} the end`
+  const capsule: FutureCapsuleRecord = { ...CAPSULE, message: originalMessage }
+  const delivery = buildFutureCapsuleDelivery({
+    uiLanguage: 'en-US',
+    companionName: 'Nexus',
+    capsule,
+    now: new Date('2026-02-01T12:00:00.000Z'),
+  })
   const notifications: CapsuleDeliveryText[] = []
   const chatLines: string[] = []
   const delivered: string[] = []
+  const deliveredMessages: ProactiveMessage[] = []
 
   const result = await deliverDueCapsule(makeDeps({
-    deliver: async () => ({ rule: 1, outlets: ['inbox', 'badge'] }),
+    capsule,
+    delivery,
+    buildContext: () => makeContext({ fullscreen: true }),
+    deliver: async ({ message, context }) => {
+      deliveredMessages.push(message)
+      return routeDelivery(message, context)
+    },
     showNotification: async (payload) => { notifications.push(payload) },
     pushChatLine: async (text) => { chatLines.push(text) },
     markDelivered: (id) => { delivered.push(id) },
@@ -357,27 +376,135 @@ test('router success on an inbox-only rule stays quiet and marks delivered', asy
 
   assert.deepEqual(result, { path: 'router', rule: 1 })
   assert.deepEqual(notifications, [])
-  assert.deepEqual(chatLines, [])
+  assert.ok(delivery.fullBody && delivery.fullBody.length > 160)
+
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0], delivery.fullBody)
+  assert.ok(chatLines[0]?.includes(originalMessage), 'the line keeps the capsule message verbatim')
+
+  // The inbox entry and the routed outlet keep the clipped body; only the chat
+  // line carries the whole message.
+  assert.equal(deliveredMessages[0]?.body.length, 160)
+  assert.ok(deliveredMessages[0]?.body.endsWith('…'))
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
-test('a stopped scheduler tick still marks the capsule delivered but sends no chat line', async () => {
-  const notifications: CapsuleDeliveryText[] = []
+// The hook wraps this push as a chat-only notice (`bubbleContent: ''`,
+// `dedupeKey: capsule:<id>`), so the injected pushChatLine below is the same
+// call deliverDueCapsule makes. That payload shape lives inside a React hook
+// and is not reachable without rendering it.
+const ONE_CHAT_LINE_CASES = [
+  { name: 'quiet hours', rule: 1, context: makeContext({ inQuietHours: true }) },
+  { name: 'system DND', rule: 1, context: makeContext({ systemDnd: true }) },
+  { name: 'rule 4 bubble', rule: 4, context: makeContext({ stripEnabled: false }) },
+  {
+    name: 'rule 5 OS notification',
+    rule: 5,
+    context: makeContext({ focusState: 'idle', awayNotificationsEnabled: true }),
+  },
+  { name: 'rule 6 badge', rule: 6, context: makeContext({ focusState: 'idle' }) },
+] as const
+
+for (const testCase of ONE_CHAT_LINE_CASES) {
+  test(`${testCase.name} still writes exactly one chat line and no notification`, async () => {
+    const notifications: CapsuleDeliveryText[] = []
+    const chatLines: string[] = []
+    const delivered: string[] = []
+
+    const result = await deliverDueCapsule(makeDeps({
+      buildContext: () => testCase.context,
+      deliver: async ({ message, context }) => routeDelivery(message, context),
+      showNotification: async (payload) => { notifications.push(payload) },
+      pushChatLine: async (text) => { chatLines.push(text) },
+      markDelivered: (id) => { delivered.push(id) },
+    }))
+
+    assert.deepEqual(result, { path: 'router', rule: testCase.rule })
+    assert.deepEqual(notifications, [])
+    assert.deepEqual(chatLines, [DELIVERY.body])
+    assert.deepEqual(delivered, [CAPSULE.id])
+  })
+}
+
+test('rule 2 writes one line and a second tick for the same capsule writes nothing', async () => {
   const chatLines: string[] = []
   const delivered: string[] = []
+  let deliveryCalls = 0
+  // Stands in for `findDueCapsule`: the store stops reporting the capsule once
+  // it is marked delivered, so the poller never calls the router again.
+  let due = true
 
-  const result = await deliverDueCapsule(makeDeps({
-    deliver: async () => ({ rule: 2, outlets: ['inbox', 'panel'] }),
-    showNotification: async (payload) => { notifications.push(payload) },
+  const deps = makeDeps({
+    deliver: async () => {
+      deliveryCalls += 1
+      return { rule: 2, outlets: ['inbox', 'panel'] }
+    },
     pushChatLine: async (text) => { chatLines.push(text) },
-    markDelivered: (id) => { delivered.push(id) },
-    isStopped: () => true,
-  }))
+    markDelivered: (id) => {
+      delivered.push(id)
+      due = false
+    },
+  })
 
-  assert.deepEqual(result, { path: 'router', rule: 2 })
-  assert.deepEqual(notifications, [])
-  assert.deepEqual(chatLines, [])
+  if (due) await deliverDueCapsule(deps)
+  assert.deepEqual(chatLines, [DELIVERY.body], 'a rule-2 delivery gets one line, not two')
+
+  if (due) await deliverDueCapsule(deps)
+  assert.equal(deliveryCalls, 1)
+  assert.equal(chatLines.length, 1)
   assert.deepEqual(delivered, [CAPSULE.id])
+})
+
+test('a throwing chat push on a rule-1 delivery marks once and never re-delivers', async () => {
+  const chatLines: string[] = []
+  const delivered: string[] = []
+  let deliveryCalls = 0
+  let due = true
+
+  const deps = makeDeps({
+    deliver: async () => {
+      deliveryCalls += 1
+      return { rule: 1, outlets: ['inbox', 'badge'] }
+    },
+    pushChatLine: async (text) => {
+      chatLines.push(text)
+      throw new Error('chat push failed')
+    },
+    markDelivered: (id) => {
+      delivered.push(id)
+      due = false
+    },
+  })
+
+  await assert.rejects(() => deliverDueCapsule(deps), /chat push failed/)
+
+  assert.deepEqual(delivered, [CAPSULE.id])
+  assert.equal(deliveryCalls, 1)
+
+  if (due) await deliverDueCapsule(deps)
+  assert.equal(deliveryCalls, 1)
+  assert.equal(chatLines.length, 1)
+})
+
+test('a stopped scheduler still marks the capsule delivered but sends no chat line', async () => {
+  for (const rule of [1, 2] as const) {
+    const notifications: CapsuleDeliveryText[] = []
+    const chatLines: string[] = []
+    const delivered: string[] = []
+
+    const result = await deliverDueCapsule(makeDeps({
+      deliver: async () => ({ rule, outlets: rule === 2 ? ['inbox', 'panel'] : ['inbox', 'badge'] }),
+      showNotification: async (payload) => { notifications.push(payload) },
+      pushChatLine: async (text) => { chatLines.push(text) },
+      markDelivered: (id) => { delivered.push(id) },
+      isStopped: () => true,
+    }))
+
+    assert.deepEqual(result, { path: 'router', rule })
+    assert.deepEqual(notifications, [])
+    assert.deepEqual(chatLines, [])
+    assert.deepEqual(delivered, [CAPSULE.id])
+  }
 })
 
 test('a stopped scheduler tick on the fallback path marks the capsule once', async () => {
@@ -424,7 +551,7 @@ test('router and notification failures together leave the capsule undelivered', 
   assert.deepEqual(delivered, [])
 })
 
-test('the rule-2 chat line carries the untruncated full body', async () => {
+test('the chat line carries the untruncated full body for any routed rule', async () => {
   const chatLines: string[] = []
   const delivery: CapsuleDeliveryText = {
     ...DELIVERY,
@@ -434,7 +561,8 @@ test('the rule-2 chat line carries the untruncated full body', async () => {
 
   await deliverDueCapsule(makeDeps({
     delivery,
-    deliver: async () => ({ rule: 2, outlets: ['inbox', 'panel'] }),
+    buildContext: () => makeContext({ fullscreen: true }),
+    deliver: async ({ message, context }) => routeDelivery(message, context),
     pushChatLine: async (text) => { chatLines.push(text) },
   }))
 

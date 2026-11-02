@@ -24,7 +24,7 @@ interface UseFutureCapsuleSchedulerOptions {
   enabled?: boolean
   /** Pet-window view of the user's focus; main adds the panel signal itself. */
   focusState?: FocusState
-  /** Shared chat path for a rule-2 capsule line; absent keeps the inbox only. */
+  /** Shared chat path for the capsule chat line; absent keeps the inbox only. */
   pushCompanionNotice?: (payload: CompanionNoticePayload) => Promise<void>
 }
 
@@ -104,7 +104,10 @@ export function useFutureCapsuleScheduler({
             ? {
                 pushChatLine: (text: string) => push({
                   chatContent: text,
-                  // Rule 2 is panel-only: an empty bubble suppresses the pet bubble that would otherwise default to chatContent.
+                  // The line is history only for every rule: an empty bubble
+                  // suppresses the pet bubble that would otherwise default to
+                  // chatContent (no strip, popup or OS toast either), while the
+                  // dedupe key keeps this capsule on a single chat entry.
                   bubbleContent: '',
                   dedupeKey: `capsule:${due.id}`,
                 }),
