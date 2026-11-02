@@ -259,3 +259,30 @@ test('an unknown status is still rejected on load', (t) => {
   assert.deepEqual(snapshot.entries.map((entry) => entry.id), ['valid'])
   assert.equal(snapshot.unreadCount, 1)
 })
+
+test('upsert never persists summaryCount and does not mutate the caller message', async (t) => {
+  const directory = createTempDir(t)
+  const store = storeAt(directory)
+  const message = makeMessage({
+    id: 'away-two',
+    source: 'away',
+    kind: 'away',
+    title: '你不在的时候',
+    body: '快递放在门口了；妈妈打电话说周末回家吃饭。',
+    actions: [],
+    summaryCount: 2,
+  })
+
+  store.upsert(message)
+
+  const entry = store.list().entries.find((item) => item.id === 'away-two')
+  assert.ok(entry)
+  assert.equal(Object.hasOwn(entry, 'summaryCount'), false)
+
+  assert.equal(await store.flush(), true)
+  const persisted = fs.readFileSync(path.join(directory, FILE_NAME), 'utf8')
+  assert.equal(persisted.includes('summaryCount'), false)
+  assert.equal(persisted.includes('away-two'), true)
+
+  assert.equal(message.summaryCount, 2, 'the caller keeps its count for the toast')
+})

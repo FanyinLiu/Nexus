@@ -15,11 +15,23 @@ import { translateMainMessage } from './mainMessages.js'
 /** @typedef {import('../shared/proactiveDelivery.js').ProactiveMessage} ProactiveMessage */
 
 /**
+ * Upper bound mirrors the `summaryCount` range in the delivery IPC schema
+ * (`electron/ipc/proactivePayloadSchemas.js`) so this layer never renders a
+ * count the message contract rejects.
+ */
+const SUMMARY_COUNT_MAX = 999
+
+/**
  * @param {unknown} value
  * @returns {number | null}
  */
 function validSummaryCount(value) {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= 0
+    && value <= SUMMARY_COUNT_MAX
+    ? value
+    : null
 }
 
 /**

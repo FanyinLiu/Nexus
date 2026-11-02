@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import { register } from 'node:module'
+import os from 'node:os'
+import path from 'node:path'
 import { test, type TestContext } from 'node:test'
 
 import { createProactiveIpc } from '../electron/ipc/proactiveIpc.js'
 import { MAIN_MESSAGE_LOCALES, MAIN_MESSAGES } from '../electron/mainMessagesTable.js'
 import { validateProactiveDeliveryPayload } from '../electron/ipc/proactivePayloadSchemas.js'
 import { buildProactiveNotificationCopy } from '../electron/proactiveNotificationCopy.js'
+import {
+  createProactiveInboxStore,
+  PROACTIVE_INBOX_FILE_NAME,
+} from '../electron/services/proactiveInboxStore.js'
 import type { Logger } from '../electron/logger.js'
 import {
   PROACTIVE_SOURCES,
@@ -160,9 +167,18 @@ function captureConsole(t: TestContext): string[] {
   return output
 }
 
+function createTempDir(t: TestContext): string {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-proactive-notification-'))
+  t.after(() => {
+    fs.rmSync(directory, { recursive: true, force: true })
+  })
+  return directory
+}
+
 function createHarness(options: {
   loggerCalls?: LogCall[]
   notificationError?: Error
+  inbox?: ReturnType<typeof createProactiveInboxStore>
 } = {}) {
   const notifications: Notification[] = []
   const inboxEntries: ProactiveMessage[] = []
@@ -184,7 +200,7 @@ function createHarness(options: {
     getAllWindows: () => [],
     getWindowCapability: () => 'unknown',
     requireTrustedSender: () => {},
-    inbox: {
+    inbox: options.inbox ?? {
       list: () => ({ entries: [...inboxEntries], unreadCount: inboxEntries.length, removedIds: [] }),
       prune: () => emptyMutation(),
       upsert: (message: ProactiveMessage) => {
@@ -216,6 +232,7 @@ function createHarness(options: {
     notifications,
     loggerCalls,
     inboxEntries,
+    store: options.inbox ?? null,
     async deliver(message: ProactiveMessage) {
       const handler = handlers.get('proactive:deliver')
       assert.ok(handler, 'missing proactive:deliver handler')
@@ -379,7 +396,12 @@ test('a zero-count away summary raises no OS notification but still lands in the
   const secrets = [seed.title, seed.body, seed.fullBody, seed.fragment, '0 things', '0 件事']
   const consoleOutput = captureConsole(t)
   const loggerCalls: LogCall[] = []
-  const harness = createHarness({ loggerCalls })
+  const directory = createTempDir(t)
+  const store = createProactiveInboxStore({
+    getStorePath: () => path.join(directory, PROACTIVE_INBOX_FILE_NAME),
+    now: () => NOW,
+  })
+  const harness = createHarness({ loggerCalls, inbox: store })
   const message = awayMessage({ summaryCount: 0 })
 
   const decision = await harness.deliver(message)
@@ -387,13 +409,51 @@ test('a zero-count away summary raises no OS notification but still lands in the
 
   assert.deepEqual(decision, { rule: 5, outlets: ['inbox', 'os_notification'] })
   assert.equal(harness.notifications.length, 0, 'zero-count away raises no toast')
-  assert.equal(harness.inboxEntries.length, 1, 'the inbox still holds the entry')
-  assert.equal(harness.inboxEntries[0]?.id, message.id)
-  assert.equal(harness.inboxEntries[0]?.summaryCount, 0)
+  const stored = store.list().entries
+  assert.equal(stored.length, 1, 'the inbox still holds the entry')
+  assert.equal(stored[0]?.id, message.id)
+  assert.equal(Object.hasOwn(stored[0]!, 'summaryCount'), false, 'the store drops summaryCount')
+  assert.equal(await store.flush(), true)
 
   const logged = logText(loggerCalls)
   assertNoText(logged, secrets, 'zero-count logs')
   assertNoText(consoleOutput.join('\n'), secrets, 'zero-count console')
+})
+
+test('an away summary count reaches the toast but never reaches the stored inbox', async (t) => {
+  const seed = SOURCE_SEEDS.away
+  const directory = createTempDir(t)
+  const store = createProactiveInboxStore({
+    getStorePath: () => path.join(directory, PROACTIVE_INBOX_FILE_NAME),
+    now: () => NOW,
+  })
+  const harness = createHarness({ inbox: store })
+  const three = awayMessage({ id: 'away-three', summaryCount: 3, createdAt: NOW + 1 })
+  const zero = awayMessage({ id: 'away-zero', summaryCount: 0, createdAt: NOW })
+
+  const threeDecision = await harness.deliver(three)
+  const zeroDecision = await harness.deliver(zero)
+  harness.stop()
+
+  assert.deepEqual(threeDecision, { rule: 5, outlets: ['inbox', 'os_notification'] })
+  assert.deepEqual(zeroDecision, { rule: 5, outlets: ['inbox', 'os_notification'] })
+
+  const stored = store.list().entries
+  assert.deepEqual(stored.map((entry) => entry.id).sort(), ['away-three', 'away-zero'])
+  for (const entry of stored) {
+    assert.equal(Object.hasOwn(entry, 'summaryCount'), false, `${entry.id} stored entry`)
+  }
+
+  assert.equal(harness.notifications.length, 1, 'only the n=3 away summary raises a toast')
+  assert.equal(harness.notifications[0]?.title, seed.title)
+  assert.equal(harness.notifications[0]?.body, 'While you were away, she noted 3 things.')
+
+  assert.equal(await store.flush(), true)
+  const persisted = fs.readFileSync(path.join(directory, PROACTIVE_INBOX_FILE_NAME), 'utf8')
+  assert.equal(persisted.includes('summaryCount'), false, 'the file never contains summaryCount')
+  for (const id of ['away-three', 'away-zero']) {
+    assert.equal(persisted.includes(id), true, `${id} persisted`)
+  }
 })
 
 test('an away entry without a valid summaryCount falls back to the title only', () => {
@@ -407,6 +467,29 @@ test('an away entry without a valid summaryCount falls back to the title only', 
     )
     assert.deepEqual(copy, { title: message.title }, String(summaryCount))
   }
+})
+
+test('the copy layer enforces the 0-999 summary count bound in every locale', () => {
+  const title = SOURCE_SEEDS.away.title
+  const invalid = [1000, -1, 2.5, '3', Number.NaN, Number.POSITIVE_INFINITY] as const
+
+  for (const locale of MAIN_MESSAGE_LOCALES) {
+    for (const summaryCount of invalid) {
+      const copy = buildProactiveNotificationCopy(
+        awayMessage({ summaryCount: summaryCount as unknown as number }),
+        locale,
+      )
+      assert.deepEqual(copy, { title }, `${locale}/${String(summaryCount)}`)
+    }
+
+    const max = buildProactiveNotificationCopy(awayMessage({ summaryCount: 999 }), locale)
+    assert.ok(max, `${locale}/999 copy`)
+    assert.equal(max.title, title, `${locale}/999 title`)
+    assert.equal(typeof max.body, 'string', `${locale}/999 body`)
+  }
+
+  const maxEn = buildProactiveNotificationCopy(awayMessage({ summaryCount: 999 }), 'en-US')
+  assert.equal(maxEn?.body, 'While you were away, she noted 999 things.')
 })
 
 test('the proactive:deliver validator accepts 0/1/2 and rejects invalid summary counts', () => {
