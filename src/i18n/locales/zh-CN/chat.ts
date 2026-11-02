@@ -163,4 +163,12 @@ export const zhCNChat = {
   'chat.letter.card_title': '她给你写了一封信',
   'chat.letter.card_open': '读这封信',
   'chat.dream.line': '我昨晚梦到{dream}',
+  'chat.capsule.opener': '你{time}写给今天的信，到了。',
+  'chat.capsule.header.default': '给今天的你',
+  'chat.capsule.written': '写于 {date}',
+  'chat.capsule.age.days': '{n} 天前',
+  'chat.capsule.age.one_day': '1 天前',
+  'chat.capsule.age.months': '{m} 个月前',
+  'chat.capsule.age.one_year': '一年前',
+  'chat.capsule.age.years': '{y} 年前',
 } as const satisfies Record<string, string>

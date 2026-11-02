@@ -22,6 +22,7 @@ import { buildCapsuleProactiveMessage } from '../src/features/futureCapsule/caps
 import { buildFutureCapsuleDelivery } from '../src/features/futureCapsule/futureCapsuleDelivery.ts'
 import { findDueCapsule } from '../src/features/futureCapsule/futureCapsuleStore.ts'
 import type { FutureCapsuleRecord } from '../src/features/futureCapsule/futureCapsuleStore.ts'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import { useCompanionNotices } from '../src/hooks/chat/useCompanionNotices.ts'
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
 import { runFutureCapsuleTick } from '../src/hooks/useFutureCapsuleScheduler.ts'
@@ -31,6 +32,10 @@ import type { PetNotifyEvent } from '../src/lib/petNotifyBus.ts'
 import { FUTURE_CAPSULE_STORE_STORAGE_KEY } from '../src/lib/storage/core.ts'
 import type { AppSettings, ChatMessage, FocusState, PetDialogBubbleState } from '../src/types/index.ts'
 import type { Translator } from '../src/types/i18n.ts'
+
+// The capsule opener is built through the real i18n runtime, which only knows
+// a locale once it has been loaded.
+await ensureLocaleLoaded('en-US')
 
 const NOW = new Date(2026, 4, 1, 12, 0, 0).getTime()
 const QUIET_NOW = new Date(2026, 4, 1, 2, 0, 0).getTime()
@@ -214,18 +219,16 @@ function installTickEnvironment(
   }
 }
 
-/** Expected chat text for a capsule: the verbatim copy, not the display clip. */
+/** Expected chat text for a capsule: the opener, never the letter. */
 function expectedChatText(capsule: FutureCapsuleRecord, now: number): string {
-  const delivery = buildFutureCapsuleDelivery({
+  return buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule,
     now: new Date(now),
-  })
-  return delivery.fullBody
+  }).opener
 }
 
-test('the real tick sends one history-only payload with the full capsule text', async (t) => {
+test('the real tick sends one history-only payload with the opener and a letter card', async (t) => {
   const capsule: FutureCapsuleRecord = {
     ...CAPSULE,
     message: 'Remember to breathe\nand to rest',
@@ -238,7 +241,13 @@ test('the real tick sends one history-only payload with the full capsule text', 
   const payload = env.payloads[0]
   assert.ok(payload)
   assert.equal(payload.chatContent, expectedChatText(capsule, NOW))
-  assert.equal(payload.chatContent.includes('\n'), true, 'the line keeps the authored text')
+  assert.doesNotMatch(payload.chatContent, /Remember to breathe/, 'the line is the opener only')
+  assert.equal(payload.capsuleLetter?.body, capsule.message, 'the card keeps the authored text')
+  assert.equal(
+    payload.capsuleLetter?.body.includes('\n'),
+    true,
+    'the card body keeps the authored line break',
+  )
   assert.equal(payload.bubbleContent, '', 'an empty bubble suppresses the pet bubble')
   assert.equal(payload.dedupeKey, `capsule:${capsule.id}`)
   assert.equal(payload.petReaction, false, 'the line is history only, the pet must not react')
@@ -259,6 +268,8 @@ test('pushCompanionNotice with the real capsule dedupe key appends one chat line
   assert.equal(chatMessages.length, 1, 'the dedupe key keeps a capsule on one entry')
   assert.equal(chatMessages[0]?.role, 'assistant')
   assert.equal(chatMessages[0]?.content, payload.chatContent)
+  assert.deepEqual(chatMessages[0]?.capsuleLetter, payload.capsuleLetter,
+    'the letter rides the chat message as card data')
   assert.equal(bubbles.length, 0)
   assert.equal(speech.length, 0)
 })
@@ -316,7 +327,7 @@ for (const scenario of [
     // example `openPanel`); the payload carries the chat line and nothing else.
     assert.deepEqual(
       Object.keys(payload).sort(),
-      ['bubbleContent', 'chatContent', 'dedupeKey', 'petReaction'],
+      ['bubbleContent', 'capsuleLetter', 'chatContent', 'dedupeKey', 'petReaction'],
     )
 
     const { api, chatMessages, bubbles, speech } = createCompanionNoticeSpies()
@@ -367,7 +378,6 @@ test('the silent chat line leaves the inbox unread count and status untouched', 
   const store = createInbox(t)
   const delivery = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule: CAPSULE,
     now: new Date(NOW),
   })
@@ -379,7 +389,7 @@ test('the silent chat line leaves the inbox unread count and status untouched', 
 
   const payload = env.payloads[0]
   assert.ok(payload)
-  assert.equal(payload.chatContent, message.fullBody ?? delivery.body)
+  assert.equal(payload.chatContent, delivery.opener)
   const { api, chatMessages } = createCompanionNoticeSpies()
   await api.pushCompanionNotice(payload)
   const after = store.list()

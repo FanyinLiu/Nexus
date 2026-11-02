@@ -5,6 +5,7 @@ import {
   buildFutureCapsuleDelivery,
   daysBetween,
 } from '../src/features/futureCapsule/futureCapsuleDelivery.ts'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import {
   enqueueFutureCapsule,
   loadFutureCapsules,
@@ -69,114 +70,87 @@ const baseCapsule = {
   status: 'pending' as const,
 }
 
-test('buildFutureCapsuleDelivery: zh-CN includes the message and days-ago', () => {
+test('buildFutureCapsuleDelivery: zh-CN opener counts the days and keeps the letter out of it', async () => {
+  await ensureLocaleLoaded('zh-CN')
   const result = buildFutureCapsuleDelivery({
     uiLanguage: 'zh-CN',
-    companionName: '星',
     capsule: { ...baseCapsule, message: '记得善待自己' },
     now: new Date('2026-04-30T12:00:00Z'),
   })
-  assert.match(result.body, /30 天前/)
-  assert.match(result.body, /记得善待自己/)
+  assert.equal(result.opener, '你30 天前写给今天的信，到了。')
+  assert.equal(result.header, '给今天的你')
+  assert.equal(result.letterBody, '记得善待自己')
+  assert.equal(result.writtenAt, '2026-03-31T12:00:00.000Z')
+  assert.doesNotMatch(result.opener, /记得善待自己/, 'the opener never carries the letter')
 })
 
-test('buildFutureCapsuleDelivery: titled vs untitled produce different copy', () => {
+test('buildFutureCapsuleDelivery: a title becomes the card header, not the notification title', async () => {
+  await ensureLocaleLoaded('en-US')
   const now = new Date('2026-04-30T12:00:00Z')
   const untitled = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule: baseCapsule,
     now,
   })
   const titled = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
-    capsule: { ...baseCapsule, title: 'after the album' },
+    capsule: { ...baseCapsule, title: '  after the album  ' },
     now,
   })
-  assert.notEqual(untitled.body, titled.body)
-  assert.match(titled.body, /after the album/)
+  assert.equal(untitled.header, 'To you, today')
+  assert.equal(titled.header, 'after the album')
+  assert.equal(untitled.notificationTitle, titled.notificationTitle)
+  assert.equal(titled.notificationTitle, 'A note from your past self')
 })
 
-test('buildFutureCapsuleDelivery: trims very long message', () => {
-  const longMsg = 'x'.repeat(500)
-  const result = buildFutureCapsuleDelivery({
-    uiLanguage: 'en-US',
-    companionName: 'Nexus',
-    capsule: { ...baseCapsule, message: longMsg },
-    now: new Date('2026-04-30T12:00:00Z'),
-  })
-  assert.ok(!result.body.includes('x'.repeat(200)), 'expected the message to be trimmed')
-  assert.match(result.body, /…/)
-})
-
-test('buildFutureCapsuleDelivery: fullBody keeps the original message verbatim', () => {
+test('buildFutureCapsuleDelivery: the letter body is verbatim, never trimmed or quoted', async () => {
+  await ensureLocaleLoaded('en-US')
   const original = `line one\n\n${'y'.repeat(300)} end`
   const result = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule: { ...baseCapsule, message: original },
     now: new Date('2026-04-30T12:00:00Z'),
   })
-  assert.ok(result.body.length < result.fullBody.length)
-  assert.ok(result.fullBody.includes(original))
-  assert.ok(result.fullBody.includes('\n\n'), 'fullBody must not collapse whitespace')
+  assert.equal(result.letterBody, original)
+  assert.ok(result.letterBody.includes('\n\n'), 'the letter keeps its authored line breaks')
 })
 
-test('buildFutureCapsuleDelivery: short messages make fullBody equal body', () => {
+test('buildFutureCapsuleDelivery: the opener never names the companion', async () => {
+  await ensureLocaleLoaded('en-US')
   const result = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule: baseCapsule,
     now: new Date('2026-04-30T12:00:00Z'),
   })
-  assert.equal(result.fullBody, result.body)
+  assert.doesNotMatch(result.opener, /Nexus|Companion/)
+  assert.match(result.opener, /The letter you wrote .* for today is here\./)
 })
 
-test('buildFutureCapsuleDelivery: unknown locale falls back to en-US', () => {
-  const result = buildFutureCapsuleDelivery({
-    uiLanguage: 'eo' as never,
-    companionName: 'Nexus',
-    capsule: baseCapsule,
-    now: new Date('2026-04-30T12:00:00Z'),
-  })
-  assert.match(result.body, /you wrote/)
-})
-
-test('buildFutureCapsuleDelivery: empty companion name falls back to "Nexus"', () => {
-  const result = buildFutureCapsuleDelivery({
-    uiLanguage: 'en-US',
-    companionName: '',
-    capsule: baseCapsule,
-    now: new Date('2026-04-30T12:00:00Z'),
-  })
-  assert.match(result.body, /Nexus/)
-})
-
-test('buildFutureCapsuleDelivery: each of the 5 locales returns non-empty distinct body', () => {
+test('buildFutureCapsuleDelivery: each of the 5 locales returns a non-empty distinct opener', async () => {
   const locales = ['en-US', 'zh-CN', 'zh-TW', 'ja', 'ko'] as const
-  const bodies = locales.map((l) =>
-    buildFutureCapsuleDelivery({
-      uiLanguage: l,
-      companionName: 'Nexus',
+  const openers = []
+  for (const locale of locales) {
+    await ensureLocaleLoaded(locale)
+    openers.push(buildFutureCapsuleDelivery({
+      uiLanguage: locale,
       capsule: baseCapsule,
       now: new Date('2026-04-30T12:00:00Z'),
-    }).body,
-  )
-  for (const body of bodies) {
-    assert.ok(body.length > 0, 'expected non-empty body')
+    }).opener)
   }
-  assert.equal(new Set(bodies).size, locales.length, 'each locale should produce a distinct copy')
+  for (const opener of openers) {
+    assert.ok(opener.length > 0, 'expected non-empty opener')
+  }
+  assert.equal(new Set(openers).size, locales.length, 'each locale should produce a distinct copy')
 })
 
-test('buildFutureCapsuleDelivery: returns a localized title label', () => {
+test('buildFutureCapsuleDelivery: returns the unchanged routing title', async () => {
+  await ensureLocaleLoaded('zh-CN')
   const result = buildFutureCapsuleDelivery({
     uiLanguage: 'zh-CN',
-    companionName: '星',
     capsule: baseCapsule,
     now: new Date('2026-04-30T12:00:00Z'),
   })
-  assert.match(result.title, /过去的你/)
+  assert.equal(result.notificationTitle, '过去的你给现在的你')
 })
 
 // ── future capsule store ────────────────────────────────────────────────────

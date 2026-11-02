@@ -254,4 +254,6 @@ export type CompanionNoticePayload = {
   loopOffer?: ChatMessage['loopOffer']
   loopCheck?: ChatMessage['loopCheck']
   proactiveWhy?: ChatMessage['proactiveWhy']
+  /** Future-self capsule letter shown as a card under the opener message. */
+  capsuleLetter?: ChatMessage['capsuleLetter']
 }

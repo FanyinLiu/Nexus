@@ -48,6 +48,17 @@ export interface ProactiveMessage {
    * never receive it; it exists only to preserve the source text.
    */
   fullBody?: string
+  /**
+   * Outlet-only copy for a message whose inbox row and visible surfaces carry
+   * different text (a future-self capsule: the inbox shows the letter, the
+   * bubble and OS toast may only show the opener). `bubble` and
+   * `os_notification` render this pair when present and still receive no
+   * `fullBody`, so the long form never leaves the inbox.
+   */
+  publicCopy?: {
+    title: string
+    body: string
+  }
   /** Spoken text; nothing is spoken when absent. */
   speech?: string
   /** Empty array marks a companionship line the red dot ignores. */

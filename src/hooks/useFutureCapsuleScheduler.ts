@@ -4,6 +4,7 @@ import {
 } from '../features/futureCapsule/futureCapsuleStore.ts'
 import { buildFutureCapsuleDelivery } from '../features/futureCapsule/futureCapsuleDelivery.ts'
 import { deliverDueCapsule } from '../features/futureCapsule/capsuleProactiveMessage.ts'
+import type { CapsuleChatLine } from '../features/futureCapsule/capsuleProactiveMessage.ts'
 import { waitForCapsuleTypingPause } from '../features/futureCapsule/capsuleTypingWait.ts'
 import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import {
@@ -103,7 +104,6 @@ export async function runFutureCapsuleTick({
     const deliverAt = wait.waited ? waitClock() : now
     const delivery = buildFutureCapsuleDelivery({
       uiLanguage: settings.uiLanguage,
-      companionName: settings.companionName,
       capsule: due,
       now: new Date(deliverAt),
     })
@@ -130,8 +130,11 @@ export async function runFutureCapsuleTick({
       preferences: buildReminderDeliveryPreferences(settings),
       ...(pushCompanionNotice
         ? {
-            pushChatLine: (text: string) => pushCompanionNotice({
-              chatContent: text,
+            pushChatLine: (line: CapsuleChatLine) => pushCompanionNotice({
+              chatContent: line.content,
+              // The card is the letter itself; it rides the chat history so
+              // every outlet that renders a capsule line can show it.
+              capsuleLetter: line.capsuleLetter,
               // The line is history only for every rule: an empty bubble
               // suppresses the pet bubble that would otherwise default to
               // chatContent (no strip, popup or OS toast either), while the

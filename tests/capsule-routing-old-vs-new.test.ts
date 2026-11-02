@@ -16,9 +16,11 @@ import {
 } from '../src/features/futureCapsule/capsuleProactiveMessage.ts'
 import { buildFutureCapsuleDelivery } from '../src/features/futureCapsule/futureCapsuleDelivery.ts'
 import type {
+  CapsuleChatLine,
   CapsuleDeliveryText,
   DeliverDueCapsuleDeps,
 } from '../src/features/futureCapsule/capsuleProactiveMessage.ts'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import type { FutureCapsuleRecord } from '../src/features/futureCapsule/futureCapsuleStore.ts'
 import { PROACTIVE_LEGACY_PATH } from '../src/features/proactive/legacyPaths.ts'
 import { formatProactiveUnreadBadge } from '../src/features/proactive/proactiveUnreadBadge.ts'
@@ -34,9 +36,15 @@ const CAPSULE: FutureCapsuleRecord = {
 }
 
 const DELIVERY: CapsuleDeliveryText = {
-  title: 'A note from your past self',
-  body: 'Nexus: 31 days ago you wrote a note for today. Reading it back: "Remember to breathe"',
+  notificationTitle: 'A note from your past self',
+  opener: 'The letter you wrote 31 days ago for today is here.',
+  header: 'To you, today',
+  letterBody: 'Remember to breathe',
+  writtenAt: '2026-01-01T08:00:00.000Z',
 }
+
+/** The only pair a legacy OS toast may receive. */
+const NOTIFICATION = { title: DELIVERY.notificationTitle, body: DELIVERY.opener }
 
 function makeContext(overrides: Partial<DeliveryContext> = {}): DeliveryContext {
   return {
@@ -92,7 +100,6 @@ function buildOversizedCapsule() {
   const capsule: FutureCapsuleRecord = { ...CAPSULE, message: originalMessage }
   const delivery = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule,
     now: new Date('2026-02-01T12:00:00.000Z'),
   })
@@ -117,12 +124,24 @@ test('a capsule message is deduped by capsule id, high priority and actionless',
   assert.deepEqual(first.origin, { capsuleId: 'capsule-1' })
   assert.equal(first.createdAt, NOW)
   assert.equal('speech' in first, false)
+  assert.deepEqual(first.publicCopy, {
+    title: DELIVERY.notificationTitle,
+    body: DELIVERY.opener,
+  })
+  assert.equal(first.title, DELIVERY.header)
+  assert.equal(first.body, DELIVERY.letterBody)
 })
 
 test('title and body are clipped to the 80/160 character contract', () => {
   const message = buildCapsuleProactiveMessage(
     CAPSULE,
-    { title: 't'.repeat(200), body: 'b'.repeat(400) },
+    {
+      notificationTitle: 'n'.repeat(200),
+      opener: 'o'.repeat(400),
+      header: 't'.repeat(200),
+      letterBody: 'b'.repeat(400),
+      writtenAt: DELIVERY.writtenAt,
+    },
     NOW,
   )
 
@@ -130,6 +149,8 @@ test('title and body are clipped to the 80/160 character contract', () => {
   assert.ok(message.title.endsWith('…'))
   assert.equal(message.body.length, 160)
   assert.ok(message.body.endsWith('…'))
+  assert.equal(message.publicCopy?.title.length, 80)
+  assert.equal(message.publicCopy?.body.length, 160)
 })
 
 test('a long capsule keeps a truncated body and the verbatim fullBody in the inbox', (t) => {
@@ -137,7 +158,6 @@ test('a long capsule keeps a truncated body and the verbatim fullBody in the inb
   const capsule: FutureCapsuleRecord = { ...CAPSULE, message: originalMessage }
   const delivery = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule,
     now: new Date('2026-02-01T12:00:00.000Z'),
   })
@@ -145,7 +165,8 @@ test('a long capsule keeps a truncated body and the verbatim fullBody in the inb
 
   assert.equal(message.body.length, 160)
   assert.ok(message.body.endsWith('…'))
-  assert.equal(message.fullBody, delivery.fullBody)
+  assert.equal(message.body, `${originalMessage.slice(0, 159)}…`)
+  assert.equal(message.fullBody, delivery.letterBody)
   assert.ok(message.fullBody?.includes(originalMessage))
 
   const store = createInbox(t)
@@ -155,7 +176,7 @@ test('a long capsule keeps a truncated body and the verbatim fullBody in the inb
   assert.ok(listed)
   assert.ok(listed.body.length <= 160)
   assert.ok(listed.body.endsWith('…'))
-  assert.equal(listed.fullBody, delivery.fullBody)
+  assert.equal(listed.fullBody, delivery.letterBody)
   assert.ok(listed.fullBody?.includes(originalMessage))
   assert.equal(listed.priority, 'high')
   assert.deepEqual(listed.actions, [])
@@ -171,7 +192,8 @@ test('a short capsule omits the redundant fullBody', () => {
   })
   const message = buildCapsuleProactiveMessage(CAPSULE, delivery, NOW)
 
-  assert.equal(delivery.fullBody, delivery.body)
+  assert.ok(delivery.letterBody.length <= 160)
+  assert.equal(message.body, delivery.letterBody)
   assert.equal('fullBody' in message, false)
 })
 
@@ -191,13 +213,13 @@ test('a capsule far over 10k gets a schema-valid clipped fullBody', () => {
   const { capsule, delivery } = buildOversizedCapsule()
   const message = buildCapsuleProactiveMessage(capsule, delivery, NOW)
 
-  assert.ok(delivery.fullBody.length > PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.ok(delivery.letterBody.length > PROACTIVE_FULL_BODY_MAX_LENGTH)
   assert.equal(message.fullBody?.length, PROACTIVE_FULL_BODY_MAX_LENGTH)
   assert.ok(message.fullBody?.endsWith('…'))
   // Verbatim prefix, including the authored line breaks and indentation.
   assert.equal(
     message.fullBody?.slice(0, -1),
-    delivery.fullBody.slice(0, PROACTIVE_FULL_BODY_MAX_LENGTH - 1),
+    delivery.letterBody.slice(0, PROACTIVE_FULL_BODY_MAX_LENGTH - 1),
   )
   assert.ok(message.fullBody?.includes('first line\n\n  x'))
 
@@ -211,14 +233,14 @@ test('a capsule far over 10k gets a schema-valid clipped fullBody', () => {
   )
   assert.throws(() => validateProactiveDeliveryPayload({
     ...payload,
-    message: { ...message, fullBody: delivery.fullBody },
+    message: { ...message, fullBody: delivery.letterBody },
   }), /fullBody must be at most 10000 characters/)
 })
 
 test('a 25k capsule reaches the router with one capped chat line and no OS fallback', async () => {
   const { capsule, delivery } = buildOversizedCapsule()
-  const notifications: CapsuleDeliveryText[] = []
-  const chatLines: string[] = []
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
   let deliveredMessage: ProactiveMessage | undefined
 
@@ -233,22 +255,23 @@ test('a 25k capsule reaches the router with one capped chat line and no OS fallb
       return routeDelivery(validated.message, validated.context)
     },
     showNotification: async (payload) => { notifications.push(payload) },
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'router', rule: 1 })
   assert.deepEqual(notifications, [], 'an oversized line must never fall back to the OS toast')
   assert.equal(chatLines.length, 1)
-  assert.equal(chatLines[0]?.length, PROACTIVE_FULL_BODY_MAX_LENGTH)
-  assert.equal(chatLines[0], deliveredMessage?.fullBody)
-  assert.ok(chatLines[0]?.endsWith('…'))
+  assert.equal(chatLines[0]?.content, delivery.opener)
+  assert.equal(chatLines[0]?.capsuleLetter.body.length, PROACTIVE_FULL_BODY_MAX_LENGTH)
+  assert.equal(chatLines[0]?.capsuleLetter.body, deliveredMessage?.fullBody)
+  assert.ok(chatLines[0]?.capsuleLetter.body.endsWith('…'))
   assert.deepEqual(delivered, [capsule.id])
 })
 
 // ── Old vs new table ────────────────────────────────────────────────────────
 
-const OLD_CAPSULE_PATH = Object.freeze({ surface: 'os_notification', chatLine: false })
+const OLD_CAPSULE_PATH = Object.freeze({ surface: 'os_notification', chatLine: true })
 
 const CASES = [
   {
@@ -301,8 +324,10 @@ for (const testCase of CASES) {
 
     assert.equal(decision.rule, testCase.rule)
     assert.deepEqual(decision.outlets, testCase.outlets)
-    // The pre-M1.1 path always raised an OS notification, whatever the focus.
-    assert.deepEqual(OLD_CAPSULE_PATH, { surface: 'os_notification', chatLine: false })
+    // The pre-M1.1 path always raised an OS notification, whatever the focus;
+    // it now hands the letter to the chat card as well, since a toast only
+    // carries the opener.
+    assert.deepEqual(OLD_CAPSULE_PATH, { surface: 'os_notification', chatLine: true })
     // The new plan adds the chat-only line for every routed rule: no routed
     // outlet shows the full text (inbox-only rules, clipped bubble/toast, and
     // rule 2 without a renderer panel).
@@ -361,8 +386,9 @@ test('the rollback switch defaults off and is frozen', () => {
   assert.equal(Object.isFrozen(PROACTIVE_LEGACY_PATH), true)
 })
 
-test('legacy toggle: one notification, no router call, capsule marked delivered', async () => {
-  const notifications: CapsuleDeliveryText[] = []
+test('legacy toggle: one notification, one chat line, no router call, marked delivered', async () => {
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const deliveries: unknown[] = []
   const delivered: string[] = []
 
@@ -373,33 +399,42 @@ test('legacy toggle: one notification, no router call, capsule marked delivered'
       return { rule: 6, outlets: ['inbox', 'badge'] }
     },
     showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'legacy' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0]?.content, DELIVERY.opener)
+  assert.equal(chatLines[0]?.capsuleLetter.body, DELIVERY.letterBody)
   assert.deepEqual(deliveries, [])
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
 test('a missing router bridge falls back to the legacy notification', async () => {
-  const notifications: CapsuleDeliveryText[] = []
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
 
   const result = await deliverDueCapsule(makeDeps({
     deliver: undefined,
     showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'legacy' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0]?.content, DELIVERY.opener)
+  assert.equal(chatLines[0]?.capsuleLetter.body, DELIVERY.letterBody)
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
 test('the legacy toggle sends only title and body for a long capsule', async () => {
   const { capsule, delivery } = buildOversizedCapsule()
-  const notifications: CapsuleDeliveryText[] = []
+  const notifications: Array<{ title: string; body: string }> = []
 
   const result = await deliverDueCapsule(makeDeps({
     capsule,
@@ -413,23 +448,23 @@ test('the legacy toggle sends only title and body for a long capsule', async () 
   const notification = notifications[0]!
   assert.deepEqual(Object.keys(notification).sort(), ['body', 'title'])
   assert.equal('fullBody' in notification, false)
-  assert.equal(notification.title, delivery.title)
-  // The OS toast keeps the clipped display copy, never the 25k source text.
-  assert.equal(notification.body, delivery.body)
-  assert.ok(notification.body.length < delivery.fullBody.length)
+  assert.equal(notification.title, delivery.notificationTitle)
+  // The OS toast keeps the opener, never the 25k source text.
+  assert.equal(notification.body, delivery.opener)
+  assert.ok(notification.body.length < delivery.letterBody.length)
 })
 
 test('the router-throws fallback sends only title and body for a long capsule', async () => {
   const { capsule, delivery } = buildOversizedCapsule()
-  const notifications: CapsuleDeliveryText[] = []
-  const chatLines: string[] = []
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
 
   const result = await deliverDueCapsule(makeDeps({
     capsule,
     delivery,
     deliver: async () => { throw new Error('bridge down') },
     showNotification: async (payload) => { notifications.push(payload) },
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
   }))
 
   assert.deepEqual(result, { path: 'fallback' })
@@ -437,31 +472,40 @@ test('the router-throws fallback sends only title and body for a long capsule', 
   const notification = notifications[0]!
   assert.deepEqual(Object.keys(notification).sort(), ['body', 'title'])
   assert.equal('fullBody' in notification, false)
-  assert.equal(notification.body, delivery.body)
-  assert.deepEqual(chatLines, [], 'the fallback OS toast carries no chat line')
+  assert.equal(notification.body, delivery.opener)
+  // The toast is opener-only, so the fallback must also hand over the card,
+  // capped at the storage budget rather than the 25k source.
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0]?.content, delivery.opener)
+  assert.equal(chatLines[0]?.capsuleLetter.body, clipFullBody(delivery.letterBody))
 })
 
-test('a throwing router call falls back to exactly one notification and still marks delivered', async () => {
-  const notifications: CapsuleDeliveryText[] = []
-  const chatLines: string[] = []
+test('a throwing router call falls back to one notification, one chat line and a mark', async () => {
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
 
   const result = await deliverDueCapsule(makeDeps({
     deliver: async () => { throw new Error('bridge down') },
     showNotification: async (payload) => { notifications.push(payload) },
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'fallback' })
-  assert.deepEqual(notifications, [DELIVERY])
-  assert.deepEqual(chatLines, [], 'the fallback OS toast carries no chat line')
+  assert.deepEqual(notifications, [NOTIFICATION])
+  assert.equal(chatLines.length, 1, 'the fallback still gets exactly one chat line')
+  assert.equal(chatLines[0]?.content, DELIVERY.opener)
+  assert.deepEqual(chatLines[0]?.capsuleLetter, {
+    body: DELIVERY.letterBody,
+    writtenAt: DELIVERY.writtenAt,
+  })
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
-test('router success on rule 2 pushes one chat line with the delivery body', async () => {
-  const notifications: CapsuleDeliveryText[] = []
-  const chatLines: string[] = []
+test('router success on rule 2 pushes one chat line with the opener and the card', async () => {
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
   const deliveredMessages: ProactiveMessage[] = []
 
@@ -471,28 +515,33 @@ test('router success on rule 2 pushes one chat line with the delivery body', asy
       return { rule: 2, outlets: ['inbox', 'panel'] }
     },
     showNotification: async (payload) => { notifications.push(payload) },
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'router', rule: 2 })
   assert.deepEqual(notifications, [])
-  assert.deepEqual(chatLines, [DELIVERY.body])
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0]?.content, DELIVERY.opener)
+  assert.deepEqual(chatLines[0]?.capsuleLetter, {
+    body: DELIVERY.letterBody,
+    writtenAt: DELIVERY.writtenAt,
+  })
   assert.deepEqual(delivered, [CAPSULE.id])
   assert.equal(deliveredMessages[0]?.id, 'capsule:capsule-1')
 })
 
 test('a fullscreen capsule writes one chat line with the full untruncated text', async () => {
+  await ensureLocaleLoaded('en-US')
   const originalMessage = `first line\n\n${'x'.repeat(300)} the end`
   const capsule: FutureCapsuleRecord = { ...CAPSULE, message: originalMessage }
   const delivery = buildFutureCapsuleDelivery({
     uiLanguage: 'en-US',
-    companionName: 'Nexus',
     capsule,
     now: new Date('2026-02-01T12:00:00.000Z'),
   })
-  const notifications: CapsuleDeliveryText[] = []
-  const chatLines: string[] = []
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
   const deliveredMessages: ProactiveMessage[] = []
 
@@ -505,20 +554,24 @@ test('a fullscreen capsule writes one chat line with the full untruncated text',
       return routeDelivery(message, context)
     },
     showNotification: async (payload) => { notifications.push(payload) },
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
   }))
 
   assert.deepEqual(result, { path: 'router', rule: 1 })
   assert.deepEqual(notifications, [])
-  assert.ok(delivery.fullBody && delivery.fullBody.length > 160)
+  assert.ok(delivery.letterBody.length > 160)
 
   assert.equal(chatLines.length, 1)
-  assert.equal(chatLines[0], delivery.fullBody)
-  assert.ok(chatLines[0]?.includes(originalMessage), 'the line keeps the capsule message verbatim')
+  assert.equal(chatLines[0]?.content, delivery.opener)
+  assert.equal(chatLines[0]?.capsuleLetter.body, delivery.letterBody)
+  assert.ok(
+    chatLines[0]?.capsuleLetter.body.includes(originalMessage),
+    'the card keeps the capsule message verbatim',
+  )
 
   // The inbox entry and the routed outlet keep the clipped body; only the chat
-  // line carries the whole message.
+  // card carries the whole message.
   assert.equal(deliveredMessages[0]?.body.length, 160)
   assert.ok(deliveredMessages[0]?.body.endsWith('…'))
   assert.deepEqual(delivered, [CAPSULE.id])
@@ -542,27 +595,28 @@ const ONE_CHAT_LINE_CASES = [
 
 for (const testCase of ONE_CHAT_LINE_CASES) {
   test(`${testCase.name} still writes exactly one chat line and no notification`, async () => {
-    const notifications: CapsuleDeliveryText[] = []
-    const chatLines: string[] = []
+    const notifications: Array<{ title: string; body: string }> = []
+    const chatLines: CapsuleChatLine[] = []
     const delivered: string[] = []
 
     const result = await deliverDueCapsule(makeDeps({
       buildContext: () => testCase.context,
       deliver: async ({ message, context }) => routeDelivery(message, context),
       showNotification: async (payload) => { notifications.push(payload) },
-      pushChatLine: async (text) => { chatLines.push(text) },
+      pushChatLine: async (line) => { chatLines.push(line) },
       markDelivered: (id) => { delivered.push(id) },
     }))
 
     assert.deepEqual(result, { path: 'router', rule: testCase.rule })
     assert.deepEqual(notifications, [])
-    assert.deepEqual(chatLines, [DELIVERY.body])
+    assert.equal(chatLines.length, 1)
+    assert.equal(chatLines[0]?.content, DELIVERY.opener)
     assert.deepEqual(delivered, [CAPSULE.id])
   })
 }
 
 test('rule 2 writes one line and a second tick for the same capsule writes nothing', async () => {
-  const chatLines: string[] = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
   let deliveryCalls = 0
   // Stands in for `findDueCapsule`: the store stops reporting the capsule once
@@ -574,7 +628,7 @@ test('rule 2 writes one line and a second tick for the same capsule writes nothi
       deliveryCalls += 1
       return { rule: 2, outlets: ['inbox', 'panel'] }
     },
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => {
       delivered.push(id)
       due = false
@@ -582,7 +636,8 @@ test('rule 2 writes one line and a second tick for the same capsule writes nothi
   })
 
   if (due) await deliverDueCapsule(deps)
-  assert.deepEqual(chatLines, [DELIVERY.body], 'a rule-2 delivery gets one line, not two')
+  assert.equal(chatLines.length, 1, 'a rule-2 delivery gets one line, not two')
+  assert.equal(chatLines[0]?.content, DELIVERY.opener)
 
   if (due) await deliverDueCapsule(deps)
   assert.equal(deliveryCalls, 1)
@@ -591,7 +646,7 @@ test('rule 2 writes one line and a second tick for the same capsule writes nothi
 })
 
 test('a throwing chat push on a rule-1 delivery marks once and never re-delivers', async () => {
-  const chatLines: string[] = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
   let deliveryCalls = 0
   let due = true
@@ -601,8 +656,8 @@ test('a throwing chat push on a rule-1 delivery marks once and never re-delivers
       deliveryCalls += 1
       return { rule: 1, outlets: ['inbox', 'badge'] }
     },
-    pushChatLine: async (text) => {
-      chatLines.push(text)
+    pushChatLine: async (line) => {
+      chatLines.push(line)
       throw new Error('chat push failed')
     },
     markDelivered: (id) => {
@@ -623,14 +678,14 @@ test('a throwing chat push on a rule-1 delivery marks once and never re-delivers
 
 test('a stopped scheduler still marks the capsule delivered but sends no chat line', async () => {
   for (const rule of [1, 2] as const) {
-    const notifications: CapsuleDeliveryText[] = []
-    const chatLines: string[] = []
+    const notifications: Array<{ title: string; body: string }> = []
+    const chatLines: CapsuleChatLine[] = []
     const delivered: string[] = []
 
     const result = await deliverDueCapsule(makeDeps({
       deliver: async () => ({ rule, outlets: rule === 2 ? ['inbox', 'panel'] : ['inbox', 'badge'] }),
       showNotification: async (payload) => { notifications.push(payload) },
-      pushChatLine: async (text) => { chatLines.push(text) },
+      pushChatLine: async (line) => { chatLines.push(line) },
       markDelivered: (id) => { delivered.push(id) },
       isStopped: () => true,
     }))
@@ -643,34 +698,40 @@ test('a stopped scheduler still marks the capsule delivered but sends no chat li
 })
 
 test('a stopped scheduler tick on the fallback path marks the capsule once', async () => {
-  const notifications: CapsuleDeliveryText[] = []
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
 
   const result = await deliverDueCapsule(makeDeps({
     deliver: async () => { throw new Error('bridge down') },
     showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
     isStopped: () => true,
   }))
 
   assert.deepEqual(result, { path: 'fallback' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
+  assert.deepEqual(chatLines, [], 'a stopped scheduler writes no chat line')
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
 test('a stopped scheduler tick on the legacy path marks the capsule once', async () => {
-  const notifications: CapsuleDeliveryText[] = []
+  const notifications: Array<{ title: string; body: string }> = []
+  const chatLines: CapsuleChatLine[] = []
   const delivered: string[] = []
 
   const result = await deliverDueCapsule(makeDeps({
     useLegacyPath: true,
     showNotification: async (payload) => { notifications.push(payload) },
+    pushChatLine: async (line) => { chatLines.push(line) },
     markDelivered: (id) => { delivered.push(id) },
     isStopped: () => true,
   }))
 
   assert.deepEqual(result, { path: 'legacy' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
+  assert.deepEqual(chatLines, [], 'a stopped scheduler writes no chat line')
   assert.deepEqual(delivered, [CAPSULE.id])
 })
 
@@ -686,20 +747,23 @@ test('router and notification failures together leave the capsule undelivered', 
   assert.deepEqual(delivered, [])
 })
 
-test('the chat line carries the expanded full body for any routed rule', async () => {
-  const chatLines: string[] = []
+test('the chat line always pairs the opener with the full letter', async () => {
+  const chatLines: CapsuleChatLine[] = []
   const delivery: CapsuleDeliveryText = {
     ...DELIVERY,
-    body: 'short body',
-    fullBody: 'the complete original message that keeps going',
+    opener: 'short opener',
+    letterBody: 'the complete original message that keeps going',
   }
 
   await deliverDueCapsule(makeDeps({
     delivery,
     buildContext: () => makeContext({ fullscreen: true }),
     deliver: async ({ message, context }) => routeDelivery(message, context),
-    pushChatLine: async (text) => { chatLines.push(text) },
+    pushChatLine: async (line) => { chatLines.push(line) },
   }))
 
-  assert.deepEqual(chatLines, [delivery.fullBody])
+  assert.equal(chatLines.length, 1)
+  assert.equal(chatLines[0]?.content, delivery.opener)
+  assert.equal(chatLines[0]?.capsuleLetter.body, delivery.letterBody)
+  assert.doesNotMatch(chatLines[0]?.content ?? '', /complete original message/)
 })

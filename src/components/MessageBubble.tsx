@@ -5,6 +5,7 @@ import { segmentStageDirections } from '../features/pet/performance.ts'
 import { describeChatMemoryTrace } from '../features/memory/memoryTraceLabel.ts'
 import type { ChatMemoryTraceDetails } from '../features/memory/traceDetails.ts'
 import type { ChatMessage } from '../types'
+import { CapsuleLetterCard } from './CapsuleLetterCard.tsx'
 import { LoopOutreachNote } from './LoopOutreachNote.tsx'
 import { loopNoteProps } from './loopNoteProps.ts'
 import { MemoryTraceDisclosure } from './MemoryTraceDisclosure.tsx'
@@ -221,6 +222,7 @@ export const MessageBubble = memo(function MessageBubble({
         ) : null}
         {message.toolResult ? <ToolResultCard toolResult={message.toolResult} /> : null}
         <LoopOutreachNote {...loopNoteProps(message)} />
+        {message.capsuleLetter ? <CapsuleLetterCard letter={message.capsuleLetter} /> : null}
         {memoryTraceLabel ? (
           <MemoryTraceDisclosure
             label={memoryTraceLabel}
