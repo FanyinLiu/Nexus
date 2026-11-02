@@ -165,6 +165,7 @@ function createHarness(options: {
   notificationError?: Error
 } = {}) {
   const notifications: Notification[] = []
+  const inboxEntries: ProactiveMessage[] = []
   const loggerCalls = options.loggerCalls ?? []
   const handlers = new Map<string, Handler>()
   const emptyMutation = () => ({
@@ -184,9 +185,12 @@ function createHarness(options: {
     getWindowCapability: () => 'unknown',
     requireTrustedSender: () => {},
     inbox: {
-      list: () => ({ entries: [], unreadCount: 0, removedIds: [] }),
+      list: () => ({ entries: [...inboxEntries], unreadCount: inboxEntries.length, removedIds: [] }),
       prune: () => emptyMutation(),
-      upsert: () => emptyMutation(),
+      upsert: (message: ProactiveMessage) => {
+        inboxEntries.push(message)
+        return emptyMutation()
+      },
       setStatus: () => emptyMutation(),
       flush: async () => true,
       clear: async () => true,
@@ -211,6 +215,7 @@ function createHarness(options: {
   return {
     notifications,
     loggerCalls,
+    inboxEntries,
     async deliver(message: ProactiveMessage) {
       const handler = handlers.get('proactive:deliver')
       assert.ok(handler, 'missing proactive:deliver handler')
@@ -314,22 +319,33 @@ function awayMessage(overrides: Partial<ProactiveMessage> = {}): ProactiveMessag
   })
 }
 
+test('an away summary with nothing noted produces no copy in any locale', () => {
+  for (const locale of MAIN_MESSAGE_LOCALES) {
+    assert.equal(
+      buildProactiveNotificationCopy(awayMessage({ summaryCount: 0 }), locale),
+      null,
+      locale,
+    )
+  }
+})
+
 test('away-summary copy matches every locale and uses the singular only for one', () => {
   for (const { locale, template } of AWAY_CONTEXTS) {
-    for (const n of [0, 1, 2, 3]) {
+    for (const n of [1, 2, 3]) {
       const copy = buildProactiveNotificationCopy(awayMessage({ summaryCount: n }), locale)
+      assert.ok(copy, `${locale}/${n} copy`)
       assert.equal(copy.title, SOURCE_SEEDS.away.title, `${locale}/${n} title`)
       assert.equal(copy.body, template.replace('{n}', String(n)), `${locale}/${n} body`)
     }
   }
 
   const one = buildProactiveNotificationCopy(awayMessage({ summaryCount: 1 }), 'en-US')
-  assert.equal(one.body, 'While you were away, she noted 1 thing.')
+  assert.equal(one?.body, 'While you were away, she noted 1 thing.')
 
-  for (const n of [0, 2, 3]) {
+  for (const n of [2, 3]) {
     const copy = buildProactiveNotificationCopy(awayMessage({ summaryCount: n }), 'en-US')
-    assert.equal(copy.body, `While you were away, she noted ${n} things.`, `en-US/${n}`)
-    assert.notEqual(copy.body, 'While you were away, she noted 1 thing.')
+    assert.equal(copy?.body, `While you were away, she noted ${n} things.`, `en-US/${n}`)
+    assert.notEqual(copy?.body, 'While you were away, she noted 1 thing.')
   }
 })
 
@@ -356,6 +372,28 @@ test('an away summary never carries the noted items into the toast or the logs',
   assertNoText(notification.body ?? '', secrets, 'outlet body')
   assertNoText(logText(loggerCalls), secrets, 'outlet logs')
   assertNoText(consoleOutput.join('\n'), secrets, 'outlet console')
+})
+
+test('a zero-count away summary raises no OS notification but still lands in the inbox', async (t) => {
+  const seed = SOURCE_SEEDS.away
+  const secrets = [seed.title, seed.body, seed.fullBody, seed.fragment, '0 things', '0 件事']
+  const consoleOutput = captureConsole(t)
+  const loggerCalls: LogCall[] = []
+  const harness = createHarness({ loggerCalls })
+  const message = awayMessage({ summaryCount: 0 })
+
+  const decision = await harness.deliver(message)
+  harness.stop()
+
+  assert.deepEqual(decision, { rule: 5, outlets: ['inbox', 'os_notification'] })
+  assert.equal(harness.notifications.length, 0, 'zero-count away raises no toast')
+  assert.equal(harness.inboxEntries.length, 1, 'the inbox still holds the entry')
+  assert.equal(harness.inboxEntries[0]?.id, message.id)
+  assert.equal(harness.inboxEntries[0]?.summaryCount, 0)
+
+  const logged = logText(loggerCalls)
+  assertNoText(logged, secrets, 'zero-count logs')
+  assertNoText(consoleOutput.join('\n'), secrets, 'zero-count console')
 })
 
 test('an away entry without a valid summaryCount falls back to the title only', () => {

@@ -7,7 +7,8 @@
  * presentation to the pet, `strip` queues the reminder on the strip window in
  * this process, and `os_notification` raises a native notification with the
  * entry title (plus an away-summary count) whose click applies the shared read
- * rule as a `notification_click`.
+ * rule as a `notification_click`. An away summary with zero noted items raises
+ * no notification at all — the inbox entry alone is the record.
  *
  * `inbox:changed` is a metadata push only: the unread count, the ids/statuses
  * that changed, and the ids that were removed. It goes only to the windows
@@ -195,9 +196,9 @@ export function createProactiveIpc({
    * The OS toast is the most exposed surface (lock screen, bystanders), so it
    * shows the entry title only; an away summary adds its item count, and a
    * capsule keeps its public title + opener pair. It never receives the entry
-   * body or `fullBody`.
+   * body or `fullBody`. A `null` copy means this entry raises no toast.
    * @param {ProactiveMessage} message
-   * @returns {{ title: string, body?: string }}
+   * @returns {{ title: string, body?: string } | null}
    */
   function toNotificationCopy(message) {
     return buildProactiveNotificationCopy(message, readMainUiLocale())
@@ -337,8 +338,11 @@ export function createProactiveIpc({
   })
 
   outlets.register('os_notification', async (message) => {
+    const copy = toNotificationCopy(message)
+    // Nothing to announce (zero noted items) must not become a "0 things" toast.
+    if (!copy) return
     await showOsNotification({
-      ...toNotificationCopy(message),
+      ...copy,
       onClick: () => applyInboxInteraction(message.id, 'notification_click'),
     })
   })
