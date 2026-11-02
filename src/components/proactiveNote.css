@@ -39,7 +39,7 @@
   position: absolute;
   inset: 0;
   box-sizing: border-box;
-  border: 1px solid rgba(120, 90, 60, 0.22);
+  border: 1px solid rgba(120, 90, 60, 0.25);
   border-radius: 3px;
   background: #F6F0E6;
   box-shadow: 0 8px 18px rgba(60, 40, 20, 0.16);
@@ -50,25 +50,17 @@
   transform: rotate(-3deg);
 }
 
+/* The back sheets fan out right and up so a stack never reads as one page. */
 .proactive-note__sheet:nth-child(2) {
   z-index: 2;
-  background: #F1E8DA;
-  transform: translate(2px, -2px) rotate(4deg);
+  background: #EFE6D8;
+  transform: translate(4px, -5px) rotate(7deg);
 }
 
 .proactive-note__sheet:nth-child(3) {
   z-index: 1;
-  background: #ECE1D0;
-  transform: translate(-2px, -4px) rotate(-6deg);
-}
-
-/* A short stack reads as several sheets without any count. */
-.proactive-note[data-note-state='stack'] .proactive-note__sheet:nth-child(2) {
-  transform: translate(3px, -3px) rotate(5deg);
-}
-
-.proactive-note[data-note-state='stack'] .proactive-note__sheet:nth-child(3) {
-  transform: translate(-3px, -5px) rotate(-6deg);
+  background: #EFE6D8;
+  transform: translate(5px, -9px) rotate(-7deg);
 }
 
 /* Important: the top sheet lifts a little and gets a soft tape mark. */
@@ -98,6 +90,11 @@ html[data-theme='system-black'] .proactive-note__sheet {
   border-color: rgba(246, 240, 230, 0.18);
   background: #2C2824;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.48);
+}
+
+html:is([data-color-scheme='dark'], [data-theme='system-dark'], [data-theme='system-black']) .proactive-note__sheet:not(:first-child) {
+  border-color: rgba(120, 90, 60, 0.25);
+  background: #36302A;
 }
 
 html[data-color-scheme='dark'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1),

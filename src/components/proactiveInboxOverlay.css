@@ -140,12 +140,18 @@ html[data-theme='system-black'] .proactive-inbox {
 }
 
 .proactive-inbox__row {
+  --pi-row-inset: 0px;
+
   display: flex;
   flex-direction: column;
   gap: 4px;
   box-sizing: border-box;
   padding: 0 4px;
   border-radius: 10px;
+}
+
+.proactive-inbox__row[data-unseen='true'] {
+  --pi-row-inset: 14px;
 }
 
 /* A collapsed row never exceeds the block size the five-row budget assumes. */
@@ -171,11 +177,6 @@ html[data-theme='system-black'] .proactive-inbox {
   min-height: var(--proactive-inbox-row-block-size);
 }
 
-.proactive-inbox__row--expanded .proactive-inbox__row-main {
-  align-items: flex-start;
-  padding-top: 10px;
-}
-
 .proactive-inbox__dot {
   flex: 0 0 auto;
   width: 6px;
@@ -198,11 +199,6 @@ html[data-theme='system-black'] .proactive-inbox {
   cursor: pointer;
 }
 
-.proactive-inbox__row--expanded .proactive-inbox__summary {
-  flex-direction: column;
-  gap: 4px;
-}
-
 .proactive-inbox__summary:focus-visible,
 .proactive-inbox__earlier-toggle:focus-visible,
 .proactive-inbox__action:focus-visible,
@@ -223,7 +219,7 @@ html[data-theme='system-black'] .proactive-inbox {
 }
 
 .proactive-inbox__row[data-unseen='true'] .proactive-inbox__row-title {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .proactive-inbox__time {
@@ -232,6 +228,10 @@ html[data-theme='system-black'] .proactive-inbox {
   font-size: 11px;
   line-height: 18px;
   white-space: nowrap;
+}
+
+.proactive-inbox__body {
+  padding-left: var(--pi-row-inset);
 }
 
 .proactive-inbox__full {
@@ -279,6 +279,7 @@ html[data-theme='system-black'] .proactive-inbox {
   display: flex;
   gap: 6px;
   margin-top: 2px;
+  padding-left: var(--pi-row-inset);
 }
 
 .proactive-inbox__action {

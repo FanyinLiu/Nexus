@@ -209,12 +209,14 @@ export function ProactiveInboxPopover({
             onClick={() => onToggleRow(row.id)}
           >
             <span className="proactive-inbox__row-title">{row.title}</span>
-            {expanded ? (
-              <span className="proactive-inbox__full">{row.fullText}</span>
-            ) : null}
           </button>
           <span className="proactive-inbox__time">{timeLabel}</span>
         </div>
+        {expanded ? (
+          <div className="proactive-inbox__body">
+            <span className="proactive-inbox__full">{row.fullText}</span>
+          </div>
+        ) : null}
         {expanded && visibleActions.length > 0 ? (
           <div className="proactive-inbox__actions">
             {visibleActions.map((action) => (

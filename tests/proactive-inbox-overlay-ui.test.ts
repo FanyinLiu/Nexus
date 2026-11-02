@@ -543,6 +543,39 @@ test('only the expanded row renders its full text and action buttons', () => {
   assert.ok(alpha >= 0 && title > alpha && full > title && beta > full)
 })
 
+test('an expanded row keeps the collapsed first line and puts its body below it', () => {
+  const rows = [row({
+    id: 'a',
+    title: 'Alpha',
+    fullText: 'Alpha full text',
+    actions: ['done', 'open'],
+  })]
+
+  for (const html of [renderPopover({ rows }), renderPopover({ rows, expandedId: 'a' })]) {
+    const mainStart = html.indexOf('proactive-inbox__row-main')
+    const main = html.slice(mainStart, html.indexOf('</div>', mainStart))
+    assert.ok(mainStart >= 0)
+    assert.match(main, /proactive-inbox__dot/)
+    assert.match(main, /proactive-inbox__summary/)
+    assert.match(main, /proactive-inbox__row-title">Alpha<\/span>/)
+    assert.match(main, /proactive-inbox__time/)
+    assert.ok(main.indexOf('proactive-inbox__dot') < main.indexOf('proactive-inbox__row-title'))
+    assert.ok(main.indexOf('proactive-inbox__row-title') < main.indexOf('proactive-inbox__time'))
+  }
+
+  const expanded = renderPopover({ rows, expandedId: 'a' })
+  const mainEnd = expanded.indexOf('</div>', expanded.indexOf('proactive-inbox__row-main'))
+  const summaryEnd = expanded.indexOf('</button>', expanded.indexOf('proactive-inbox__summary'))
+  const body = expanded.indexOf('proactive-inbox__body')
+  const full = expanded.indexOf('proactive-inbox__full')
+  const actions = expanded.indexOf('proactive-inbox__actions')
+
+  assert.ok(body > mainEnd, 'the body starts below the first line')
+  assert.ok(full > body, 'the full text sits in the body')
+  assert.ok(summaryEnd < full, 'the full text is outside the toggle button')
+  assert.ok(actions > full, 'the action buttons follow the full text')
+})
+
 test('the empty state is the opening line once, with no second paragraph', () => {
   const html = renderPopover({ rows: [], openingText: '最近 15 天没记什么。' })
   assert.equal((html.match(/最近 15 天没记什么。/g) ?? []).length, 1)
