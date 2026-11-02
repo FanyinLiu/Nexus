@@ -101,6 +101,11 @@ function hasLoneSurrogate(text: string): boolean {
   return false
 }
 
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+function assertNoLoneSurrogate(s: string) {
+  assert.ok(!LONE_SURROGATE.test(s), `lone surrogate in ${JSON.stringify(s)}`)
+}
+
 // ── truncateAgendaWhat ─────────────────────────────────────────────────────
 
 test('truncateAgendaWhat keeps exactly the 20-code-point budget', () => {
@@ -144,6 +149,51 @@ test('truncateAgendaWhat never splits an astral character', () => {
 test('truncateAgendaWhat trims leading and trailing whitespace before counting', () => {
   assert.equal(truncateAgendaWhat('  一件小事  '), '一件小事')
   assert.equal(truncateAgendaWhat(`${'  '}${'a'.repeat(21)}  `), `${'a'.repeat(20)}…`)
+})
+
+test('agenda emoji: 19 CJK + one 😀 is exactly 20 code points, no ellipsis, emoji intact', () => {
+  const input = `${'记'.repeat(19)}😀`
+  // 19 BMP characters + one astral emoji = 21 UTF-16 units but 20 code points.
+  assert.equal(input.length, 21)
+  const output = truncateAgendaWhat(input)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, input)
+  assert.equal(Array.from(output).length, 20)
+  assert.equal(output.endsWith('😀'), true)
+  assert.equal(output.includes('…'), false)
+})
+
+test('agenda emoji: 20 CJK + 😀 clips to the first 20 + …, emoji dropped whole', () => {
+  const output = truncateAgendaWhat(`${'记'.repeat(20)}😀`)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${'记'.repeat(20)}…`)
+  assert.equal(output.includes('\uD83D'), false)
+})
+
+test('agenda emoji: emoji at code point 20 is kept, ellipsis after it', () => {
+  const output = truncateAgendaWhat(`${'记'.repeat(19)}😀尾巴`)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${'记'.repeat(19)}😀…`)
+})
+
+test('agenda emoji: emoji at code point 21 is dropped whole', () => {
+  const output = truncateAgendaWhat(`${'记'.repeat(20)}😀尾`)
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${'记'.repeat(20)}…`)
+})
+
+test('agenda emoji: 25 😀 clip to 20 😀 + …', () => {
+  const output = truncateAgendaWhat('😀'.repeat(25))
+  assertNoLoneSurrogate(output)
+  assert.equal(output, `${'😀'.repeat(20)}…`)
+  assert.equal(Array.from(output).length, 21)
+})
+
+test('agenda emoji: buildAgendaNotification body clips emoji by code point', () => {
+  const result = buildAgendaNotification({ title: 'T', what: `${'记'.repeat(19)}😀尾巴` })
+  assertNoLoneSurrogate(result.body)
+  assert.equal(result.body, `${'记'.repeat(19)}😀…`)
+  assert.equal(result.title, 'T')
 })
 
 // ── Agenda notification ────────────────────────────────────────────────────
