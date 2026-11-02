@@ -188,17 +188,19 @@ test('every note and notebook motion stays short except the one-shot glance and 
   assert.match(NOTE_CSS, /data-note-motion='wiggle'/)
 })
 
-test('the notebook uses paper colours, a 16px radius and faint ruled lines', () => {
+test('the notebook uses plain paper colours, a 16px radius and no ruled lines', () => {
   assert.match(NOTEBOOK_CSS, /#F6F0E6/)
   assert.match(NOTEBOOK_CSS, /#2C2824/)
   assert.match(NOTEBOOK_CSS, /border-radius:\s*16px/)
-  assert.match(NOTEBOOK_CSS, /repeating-linear-gradient/)
+  assert.match(NOTEBOOK_CSS, /box-shadow:\s*0 8px 24px rgba\(60, 40, 20, 0\.12\)/)
+  assert.doesNotMatch(NOTEBOOK_CSS, /repeating-linear-gradient/)
+  assert.doesNotMatch(NOTEBOOK_CSS, /proactive-inbox__row-body/)
+  assert.doesNotMatch(NOTEBOOK_CSS, /proactive-inbox__divider/)
   assert.doesNotMatch(NOTEBOOK_CSS, /\bred\b/i)
   assert.doesNotMatch(NOTEBOOK_CSS, /#f00\b/i)
   assert.doesNotMatch(NOTEBOOK_CSS, /#ff0000/i)
   assert.doesNotMatch(NOTEBOOK_CSS, /rgb\(\s*255\s*,\s*0\s*,\s*0\s*\)/i)
   assert.doesNotMatch(NOTEBOOK_CSS, /badge/i)
-  assert.match(NOTEBOOK_CSS, /--pi-rule:\s*rgba\([^)]*0\.0\d+\)/)
 })
 
 test('the notebook is a labelled dialog with an opening line and no title heading', () => {
@@ -218,21 +220,22 @@ test('the notebook is a labelled dialog with an opening line and no title headin
   assert.doesNotMatch(html, /proactive-inbox__title/)
   assert.match(html, /Title a/)
   assert.match(html, /Title b/)
-  assert.match(html, />完成</)
-  assert.match(html, />稍后 10 分钟</)
-  assert.match(html, />打开对话</)
   assert.equal((html.match(/proactive-inbox__summary/g) ?? []).length, 2)
 })
 
-test('the summary puts the bold title and the light body on one line before the time', () => {
-  const html = renderPopover({ rows: [row({ id: 'line', title: '标题', body: '正文' })] })
+test('a collapsed row shows only its title, time and optional dot', () => {
+  const html = renderPopover({
+    rows: [row({ id: 'line', title: '标题', body: '正文', fullText: '完整正文' })],
+  })
 
   const title = html.indexOf('proactive-inbox__row-title')
-  const body = html.indexOf('proactive-inbox__row-body')
   const time = html.indexOf('proactive-inbox__time')
-  assert.ok(title >= 0 && body > title && time > body)
+  assert.ok(title >= 0 && time > title)
   assert.match(html, /proactive-inbox__row-title">标题<\/span>/)
-  assert.match(html, /proactive-inbox__row-body">正文<\/span>/)
+  assert.ok(html.includes('>正文<') === false)
+  assert.ok(html.includes('完整正文') === false)
+  assert.doesNotMatch(html, /proactive-inbox__row-body/)
+  assert.doesNotMatch(html, /proactive-inbox__actions/)
 })
 
 test('unseen rows carry a warm dot and handled rows do not', () => {
@@ -256,10 +259,18 @@ test('unseen rows carry a warm dot and handled rows do not', () => {
   assert.match(handled, /data-handled="true"/)
 })
 
-test('the earlier divider renders before dividerBeforeId and dims handled rows', () => {
+test('the earlier section is one folded toggle and hides handled rows by default', () => {
   const rows = [
-    row({ id: 'new' }),
-    row({ id: 'old', status: 'done', unseen: false, handled: true, read: true, actions: [] }),
+    row({ id: 'new', title: 'New line' }),
+    row({
+      id: 'old',
+      title: 'Old line',
+      status: 'done',
+      unseen: false,
+      handled: true,
+      read: true,
+      actions: [],
+    }),
   ]
   const html = renderPopover({
     rows,
@@ -267,14 +278,29 @@ test('the earlier divider renders before dividerBeforeId and dims handled rows',
     earlierLabel: '之前记的',
   })
 
-  const divider = html.indexOf('proactive-inbox__divider')
-  const oldRow = html.indexOf('data-row-id="old"')
-  assert.ok(divider >= 0 && divider < oldRow)
+  const toggle = html.indexOf('proactive-inbox__earlier-toggle')
+  assert.ok(toggle >= 0)
+  assert.match(html, /aria-expanded="false"/)
   assert.match(html, /之前记的/)
-  assert.match(html, /proactive-inbox__row--read/)
+  assert.ok(html.indexOf('data-row-id="new"') < toggle)
+  assert.doesNotMatch(html, /data-row-id="old"/)
+  assert.doesNotMatch(html, /Old line/)
+  assert.doesNotMatch(html, /proactive-inbox__divider/)
+  assert.doesNotMatch(html, /proactive-inbox__row--read/)
+
+  const unfolded = renderPopover({
+    rows,
+    dividerBeforeId: 'old',
+    earlierLabel: '之前记的',
+    initialEarlierExpanded: true,
+  })
+  assert.match(unfolded, /aria-expanded="true"/)
+  assert.ok(unfolded.indexOf('data-row-id="old"') > unfolded.indexOf('proactive-inbox__earlier-toggle'))
+  assert.match(unfolded, /Old line/)
+  assert.match(unfolded, /proactive-inbox__row--read/)
 
   const withoutDivider = renderPopover({ rows, dividerBeforeId: null })
-  assert.doesNotMatch(withoutDivider, /proactive-inbox__divider/)
+  assert.doesNotMatch(withoutDivider, /proactive-inbox__earlier/)
 })
 
 test('the speaking row gets the soft highlight modifier', () => {
@@ -307,19 +333,25 @@ test('read rows are dimmed, stay expandable and lose Done/Snooze', () => {
     read: true,
     actions: ['done', 'snooze', 'open'],
   })
-  const html = renderPopover({ rows: [readRow] })
+  const collapsed = renderPopover({ rows: [readRow] })
 
-  assert.match(html, /proactive-inbox__row--read/)
-  assert.match(html, /aria-expanded="false"/)
-  assert.match(html, />打开对话</)
-  assert.doesNotMatch(html, />完成</)
-  assert.doesNotMatch(html, />稍后 10 分钟</)
+  assert.match(collapsed, /proactive-inbox__row--read/)
+  assert.match(collapsed, /aria-expanded="false"/)
+  assert.doesNotMatch(collapsed, /proactive-inbox__actions/)
+  assert.doesNotMatch(collapsed, />完成</)
+  assert.doesNotMatch(collapsed, />稍后 10 分钟</)
+
+  const expanded = renderPopover({ rows: [readRow], expandedId: 'read' })
+  assert.match(expanded, /aria-expanded="true"/)
+  assert.match(expanded, />打开对话</)
+  assert.doesNotMatch(expanded, />完成</)
+  assert.doesNotMatch(expanded, />稍后 10 分钟</)
 
   const unread = renderPopover({ rows: [row({ id: 'unread', read: false })] })
   assert.doesNotMatch(unread, /proactive-inbox__row--read/)
 })
 
-test('a seen entry has no unread dot and keeps every action button', () => {
+test('a seen entry has no unread dot and shows every action once expanded', () => {
   const seenRow = row({
     id: 'seen',
     status: 'read',
@@ -328,15 +360,20 @@ test('a seen entry has no unread dot and keeps every action button', () => {
     read: false,
     actions: ['done', 'snooze', 'open'],
   })
-  const html = renderPopover({ rows: [seenRow] })
+  const collapsed = renderPopover({ rows: [seenRow] })
 
-  assert.match(html, /data-status="read"/)
-  assert.doesNotMatch(html, /data-status="unread"/)
-  assert.doesNotMatch(html, /proactive-inbox__dot/)
-  assert.doesNotMatch(html, /proactive-inbox__row--read/)
-  assert.match(html, />完成</)
-  assert.match(html, />稍后 10 分钟</)
-  assert.match(html, />打开对话</)
+  assert.match(collapsed, /data-status="read"/)
+  assert.doesNotMatch(collapsed, /data-status="unread"/)
+  assert.doesNotMatch(collapsed, /proactive-inbox__dot/)
+  assert.doesNotMatch(collapsed, /proactive-inbox__row--read/)
+  assert.doesNotMatch(collapsed, />完成</)
+  assert.doesNotMatch(collapsed, />稍后 10 分钟</)
+  assert.doesNotMatch(collapsed, />打开对话</)
+
+  const expanded = renderPopover({ rows: [seenRow], expandedId: 'seen' })
+  assert.match(expanded, />完成</)
+  assert.match(expanded, />稍后 10 分钟</)
+  assert.match(expanded, />打开对话</)
 
   const unread = renderPopover({ rows: [row({ id: 'new', status: 'unread' })] })
   assert.match(unread, /data-status="unread"/)
@@ -389,13 +426,14 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   const visibleRows = Number(variables['--proactive-inbox-visible-rows'])
 
   assert.equal(visibleRows, 5)
-  assert.equal(rowBlock, 68)
+  assert.equal(rowBlock, 40)
+  assert.equal(rowGap, 8)
   assert.equal(headerBlock, 28)
 
   // Popover chrome: the window minus its offset, padding, border and header.
   const available = defaultHeight - top - bottomGap - 2 * padding - 2 - headerBlock
   const list = visibleRows * rowBlock + (visibleRows - 1) * rowGap
-  assert.equal(list, 360)
+  assert.equal(list, 232)
   assert.ok(list <= available, `list ${list} must fit in ${available}`)
 
   const popoverRule = NOTEBOOK_CSS.slice(
@@ -461,17 +499,48 @@ test('only the expanded row carries the expanded modifier', () => {
   assert.match(expanded, /class="proactive-inbox__row proactive-inbox__row--expanded"/)
 })
 
-test('only the expanded row renders the full text', () => {
-  const fullText = `第一行\n第二行 ${'长'.repeat(180)}`
-  const rows = [row({ id: 'capsule', body: '短预览', fullText, actions: [], priority: 'high' })]
+test('only the expanded row renders its full text and action buttons', () => {
+  const rows = [
+    row({
+      id: 'a',
+      title: 'Alpha',
+      body: 'alpha preview',
+      fullText: 'Alpha full text',
+      actions: ['done', 'open'],
+    }),
+    row({
+      id: 'b',
+      title: 'Beta',
+      body: 'beta preview',
+      fullText: 'Beta full text',
+      actions: ['snooze', 'open'],
+    }),
+  ]
 
   const collapsed = renderPopover({ rows })
-  assert.equal(collapsed.includes(fullText), false)
-  assert.match(collapsed, /短预览/)
+  assert.equal(collapsed.includes('Alpha full text'), false)
+  assert.equal(collapsed.includes('Beta full text'), false)
+  assert.equal(collapsed.includes('alpha preview'), false)
+  assert.doesNotMatch(collapsed, /proactive-inbox__full/)
+  assert.doesNotMatch(collapsed, /proactive-inbox__actions/)
 
-  const expanded = renderPopover({ rows, expandedId: 'capsule' })
-  assert.equal(expanded.includes(fullText), true)
+  const expanded = renderPopover({ rows, expandedId: 'a' })
+  assert.equal(expanded.includes('Alpha full text'), true)
+  assert.equal(expanded.includes('Beta full text'), false)
+  assert.equal(expanded.includes('alpha preview'), false)
+  assert.equal((expanded.match(/proactive-inbox__full/g) ?? []).length, 1)
+  assert.equal((expanded.match(/proactive-inbox__actions/g) ?? []).length, 1)
+  assert.equal((expanded.match(/aria-expanded="true"/g) ?? []).length, 1)
   assert.match(expanded, /aria-expanded="true"/)
+  assert.match(expanded, />完成</)
+  assert.match(expanded, />打开对话</)
+  assert.doesNotMatch(expanded, />稍后 10 分钟</)
+
+  const alpha = expanded.indexOf('data-row-id="a"')
+  const beta = expanded.indexOf('data-row-id="b"')
+  const title = expanded.indexOf('Alpha')
+  const full = expanded.indexOf('Alpha full text')
+  assert.ok(alpha >= 0 && title > alpha && full > title && beta > full)
 })
 
 test('the empty state is the opening line once, with no second paragraph', () => {

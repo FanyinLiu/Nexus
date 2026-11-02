@@ -39,42 +39,42 @@
   position: absolute;
   inset: 0;
   box-sizing: border-box;
-  border: 1px solid rgba(120, 90, 55, 0.16);
+  border: 1px solid rgba(120, 90, 60, 0.22);
   border-radius: 3px;
   background: #F6F0E6;
-  box-shadow: 0 6px 14px rgba(60, 40, 20, 0.12);
+  box-shadow: 0 8px 18px rgba(60, 40, 20, 0.16);
 }
 
 .proactive-note__sheet:nth-child(1) {
   z-index: 3;
-  transform: rotate(-2deg);
+  transform: rotate(-3deg);
 }
 
 .proactive-note__sheet:nth-child(2) {
   z-index: 2;
   background: #F1E8DA;
-  transform: translate(1px, -1px) rotate(2deg);
+  transform: translate(2px, -2px) rotate(4deg);
 }
 
 .proactive-note__sheet:nth-child(3) {
   z-index: 1;
   background: #ECE1D0;
-  transform: translate(-1px, -2px) rotate(-4deg);
+  transform: translate(-2px, -4px) rotate(-6deg);
 }
 
 /* A short stack reads as several sheets without any count. */
 .proactive-note[data-note-state='stack'] .proactive-note__sheet:nth-child(2) {
-  transform: translate(2px, -2px) rotate(3deg);
+  transform: translate(3px, -3px) rotate(5deg);
 }
 
 .proactive-note[data-note-state='stack'] .proactive-note__sheet:nth-child(3) {
-  transform: translate(-2px, -4px) rotate(-5deg);
+  transform: translate(-3px, -5px) rotate(-6deg);
 }
 
 /* Important: the top sheet lifts a little and gets a soft tape mark. */
 .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1) {
-  transform: translateY(-3px) rotate(-1deg);
-  box-shadow: 0 10px 22px rgba(60, 40, 20, 0.2);
+  transform: translateY(-3px) rotate(-2deg);
+  box-shadow: 0 12px 26px rgba(60, 40, 20, 0.24);
 }
 
 .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1)::after {
@@ -95,15 +95,15 @@
 html[data-color-scheme='dark'] .proactive-note__sheet,
 html[data-theme='system-dark'] .proactive-note__sheet,
 html[data-theme='system-black'] .proactive-note__sheet {
-  border-color: rgba(246, 240, 230, 0.14);
+  border-color: rgba(246, 240, 230, 0.18);
   background: #2C2824;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.48);
 }
 
 html[data-color-scheme='dark'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1),
 html[data-theme='system-dark'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1),
 html[data-theme='system-black'] .proactive-note[data-note-state='important'] .proactive-note__sheet:nth-child(1) {
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.52);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.58);
 }
 
 .proactive-note[data-note-motion='glance'] {
