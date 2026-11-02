@@ -75,6 +75,19 @@ test('a restarted store reads the persisted entries and statuses back', async (t
   assert.equal(snapshot.unreadCount, 1)
 })
 
+test('a read status persists across a restart and never counts as unread', async (t) => {
+  const directory = createTempDir(t)
+  const first = storeAt(directory)
+
+  first.upsert(makeMessage({ id: 'seen' }))
+  first.setStatus('seen', 'read')
+  await first.flush()
+
+  const snapshot = storeAt(directory).list()
+  assert.equal(snapshot.entries[0]?.status, 'read')
+  assert.equal(snapshot.unreadCount, 0)
+})
+
 test('fullBody persists across a restart and an upsert of the same id replaces it', async (t) => {
   const directory = createTempDir(t)
   const first = storeAt(directory)
@@ -164,4 +177,112 @@ test('invalid records are dropped on load and valid records survive', (t) => {
   const snapshot = storeAt(directory).list()
 
   assert.deepEqual(snapshot.entries.map((entry) => entry.id), ['valid-two', 'valid-one'])
+})
+
+test('a file saved before read existed loads every status unchanged', (t) => {
+  const directory = createTempDir(t)
+  writeInbox(directory, {
+    entries: [
+      makeStoredEntry({ id: 'legacy-unread', status: 'unread', createdAt: NOW }),
+      makeStoredEntry({ id: 'legacy-done', status: 'done', createdAt: NOW + 1 }),
+      makeStoredEntry({ id: 'legacy-dismissed', status: 'dismissed', createdAt: NOW + 2 }),
+    ],
+  })
+
+  const snapshot = storeAt(directory).list()
+
+  assert.deepEqual(
+    snapshot.entries.map((entry) => ({ id: entry.id, status: entry.status })),
+    [
+      { id: 'legacy-dismissed', status: 'dismissed' },
+      { id: 'legacy-done', status: 'done' },
+      { id: 'legacy-unread', status: 'unread' },
+    ],
+  )
+  assert.equal(snapshot.unreadCount, 1)
+  assert.ok(snapshot.entries.every((entry) => entry.status !== 'read'))
+})
+
+test('read entries never count toward the unread badge', (t) => {
+  const directory = createTempDir(t)
+  writeInbox(directory, {
+    entries: [
+      makeStoredEntry({ id: 'unread', status: 'unread' }),
+      makeStoredEntry({ id: 'read', status: 'read', createdAt: NOW + 1 }),
+      makeStoredEntry({ id: 'done', status: 'done', createdAt: NOW + 2 }),
+      makeStoredEntry({ id: 'dismissed', status: 'dismissed', createdAt: NOW + 3 }),
+    ],
+  })
+
+  const snapshot = storeAt(directory).list()
+
+  assert.equal(snapshot.unreadCount, 1)
+  assert.equal(snapshot.entries.find((entry) => entry.id === 'read')?.status, 'read')
+})
+
+test('re-delivering an existing legacy entry keeps its status', async (t) => {
+  const directory = createTempDir(t)
+  writeInbox(directory, {
+    entries: [
+      makeStoredEntry({ id: 'legacy-unread', status: 'unread', createdAt: NOW }),
+      makeStoredEntry({ id: 'legacy-done', status: 'done', createdAt: NOW + 1 }),
+      makeStoredEntry({ id: 'legacy-dismissed', status: 'dismissed', createdAt: NOW + 2 }),
+    ],
+  })
+
+  const store = storeAt(directory)
+  for (const id of ['legacy-unread', 'legacy-done', 'legacy-dismissed']) {
+    store.upsert(makeMessage({ id, title: `Re-delivered ${id}` }))
+  }
+  await store.flush()
+
+  const snapshot = storeAt(directory).list()
+  const statusById = new Map(snapshot.entries.map((entry) => [entry.id, entry.status]))
+
+  assert.equal(statusById.get('legacy-unread'), 'unread')
+  assert.equal(statusById.get('legacy-done'), 'done')
+  assert.equal(statusById.get('legacy-dismissed'), 'dismissed')
+  assert.equal(snapshot.unreadCount, 1)
+})
+
+test('an unknown status is still rejected on load', (t) => {
+  const directory = createTempDir(t)
+  writeInbox(directory, {
+    entries: [
+      makeStoredEntry({ id: 'valid' }),
+      makeStoredEntry({ id: 'unknown', status: 'archived' as ProactiveInboxEntry['status'] }),
+    ],
+  })
+
+  const snapshot = storeAt(directory).list()
+
+  assert.deepEqual(snapshot.entries.map((entry) => entry.id), ['valid'])
+  assert.equal(snapshot.unreadCount, 1)
+})
+
+test('upsert never persists summaryCount and does not mutate the caller message', async (t) => {
+  const directory = createTempDir(t)
+  const store = storeAt(directory)
+  const message = makeMessage({
+    id: 'away-two',
+    source: 'away',
+    kind: 'away',
+    title: '你不在的时候',
+    body: '快递放在门口了；妈妈打电话说周末回家吃饭。',
+    actions: [],
+    summaryCount: 2,
+  })
+
+  store.upsert(message)
+
+  const entry = store.list().entries.find((item) => item.id === 'away-two')
+  assert.ok(entry)
+  assert.equal(Object.hasOwn(entry, 'summaryCount'), false)
+
+  assert.equal(await store.flush(), true)
+  const persisted = fs.readFileSync(path.join(directory, FILE_NAME), 'utf8')
+  assert.equal(persisted.includes('summaryCount'), false)
+  assert.equal(persisted.includes('away-two'), true)
+
+  assert.equal(message.summaryCount, 2, 'the caller keeps its count for the toast')
 })

@@ -283,7 +283,7 @@ type DeliverHandler = (event: unknown, payload?: unknown) => unknown
 /** Wire the real IPC module with fake windows so outlets can be observed. */
 function createProactiveHarness(options: { capability?: 'pet' | 'panel' } = {}) {
   const sent: Array<{ channel: string; payload: unknown }> = []
-  const notifications: Array<{ title: string; body: string }> = []
+  const notifications: Array<{ title: string; body: string; onClick?: () => void }> = []
   const webContents = {
     isDestroyed: () => false,
     send: (channel: string, payload: unknown) => { sent.push({ channel, payload }) },
@@ -372,10 +372,9 @@ test('the router OS notification carries the routing title and the opener only',
   assert.deepEqual(decision, { rule: 5, outlets: ['inbox', 'os_notification'] })
 
   assert.equal(harness.notifications.length, 1)
-  assert.deepEqual(harness.notifications[0], {
-    title: '过去的你给现在的你',
-    body: delivery.opener,
-  })
+  assert.equal(harness.notifications[0]?.title, '过去的你给现在的你')
+  assert.equal(harness.notifications[0]?.body, delivery.opener)
+  assert.equal(typeof harness.notifications[0]?.onClick, 'function')
   assertNoLetterText(JSON.stringify(harness.notifications), 'router OS notification')
 })
 

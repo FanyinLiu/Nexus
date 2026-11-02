@@ -217,8 +217,9 @@ function normalizeInbox(parsed, nowMs) {
 }
 
 /**
- * The count the pet's red dot shows. Companionship lines (no actions and not
- * high priority) stay in the inbox but never light the dot.
+ * The count the pet's red dot shows. Only `unread` entries count; `read`,
+ * `done` and `dismissed` never light the dot. Companionship lines (no actions
+ * and not high priority) stay in the inbox but never light the dot either.
  *
  * @param {ProactiveInboxEntry[]} entries
  * @returns {number}
@@ -300,7 +301,9 @@ export function createProactiveInboxStore({
   /**
    * Insert or update one message. Re-delivery keeps the existing status: the
    * id is the dedupe key, and resurrecting an entry the user already handled
-   * would defeat it.
+   * would defeat it. `summaryCount` exists only for the OS-notification copy
+   * at delivery time, so it is dropped from the stored entry: the store never
+   * persists it, and the caller keeps its own copy for the toast.
    * @param {ProactiveMessage} message
    * @returns {InboxMutation}
    */
@@ -314,6 +317,7 @@ export function createProactiveInboxStore({
       status: existing?.status ?? 'unread',
       updatedAt: nowMs,
     }
+    delete next.summaryCount
     const others = cache.entries.filter((entry) => entry.id !== message.id)
     const { kept, removed } = pruneEntries([next, ...others], nowMs)
     cache.entries = kept

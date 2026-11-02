@@ -38,7 +38,7 @@ const Live2DCanvas = lazy(async () => {
   return { default: module.Live2DCanvas }
 })
 
-type LegacyPetViewProps = UseAppControllerResult['petView'] & {
+type LegacyPetViewProps = Omit<UseAppControllerResult['petView'], 'registerInboxOverlayOpen'> & {
   modalOpen: boolean
 }
 

@@ -64,7 +64,7 @@ function createHarness(options: {
   isPanelFocused?: boolean
 }) {
   const shown: StripPayload[] = []
-  const notifications: Array<{ title: string; body: string }> = []
+  const notifications: Array<{ title: string; body?: string; onClick?: () => void }> = []
   type Handler = (event: unknown, payload?: unknown) => unknown
   const handlers = new Map<string, Handler>()
   const inbox = {
@@ -98,7 +98,7 @@ function createHarness(options: {
       withdrawAll: () => {},
     },
     getStripLabels: () => options.labels ?? EXPECTED_LABELS['en-US']!,
-    showOsNotification: (payload: { title: string; body: string }) => {
+    showOsNotification: (payload: { title: string; body?: string; onClick?: () => void }) => {
       notifications.push(payload)
     },
     isPanelFocused: () => options.isPanelFocused === true,
@@ -136,7 +136,7 @@ for (const locale of Object.keys(EXPECTED_LABELS)) {
   })
 }
 
-test('the os_notification outlet calls the notifier with title and body', async () => {
+test('the os_notification outlet calls the notifier with the title only', async () => {
   const harness = createHarness({})
   const message = makeMessage()
 
@@ -147,7 +147,10 @@ test('the os_notification outlet calls the notifier with title and body', async 
   harness.stop()
 
   assert.deepEqual(decision, { rule: 5, outlets: ['inbox', 'os_notification'] })
-  assert.deepEqual(harness.notifications, [{ title: message.title, body: message.body }])
+  assert.equal(harness.notifications.length, 1)
+  assert.equal(harness.notifications[0].title, message.title)
+  assert.equal('body' in harness.notifications[0], false)
+  assert.equal(typeof harness.notifications[0].onClick, 'function')
   assert.deepEqual(harness.shown, [])
 })
 

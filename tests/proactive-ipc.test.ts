@@ -250,7 +250,7 @@ function createHarness(options: {
   const windows = createWindows(options.capabilities ?? ['pet'])
   const clock = options.clock ?? createFakeClock()
   const fakeStrip = createFakeStrip()
-  const osNotifications: Array<{ title: string; body: string }> = []
+  const osNotifications: Array<{ title: string; body?: string }> = []
   const ipc = createProactiveIpc({
     ipcMain: fakeIpc.ipcMain,
     getAllWindows: windows.getAllWindows,
@@ -264,7 +264,7 @@ function createHarness(options: {
     clearInterval: clock.clearInterval,
     strip: fakeStrip.strip,
     getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
-    showOsNotification: (payload: { title: string; body: string }) => {
+    showOsNotification: (payload: { title: string; body?: string }) => {
       osNotifications.push(payload)
     },
     isPanelFocused: () => options.panelFocused === true,
@@ -393,7 +393,8 @@ test('display outlets never forward fullBody to the bubble, strip or OS notifica
   assert.equal('fullBody' in (harness.fakeStrip.shown[0] ?? {}), false)
 
   assert.equal(harness.osNotifications.length, 1)
-  assert.equal(harness.osNotifications[0]?.body, 'Short OS body')
+  assert.equal(harness.osNotifications[0]?.title, 'Stand up')
+  assert.equal('body' in (harness.osNotifications[0] ?? {}), false)
   assert.equal('fullBody' in (harness.osNotifications[0] ?? {}), false)
 })
 

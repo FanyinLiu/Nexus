@@ -16,6 +16,7 @@
     "tests/helpers/memory-vector-electron-hooks.mjs",
     "tests/helpers/memory-vector-electron-stub.mjs",
     "tests/helpers/persona-ipc-electron-stub.mjs",
+    "tests/helpers/proactive-notification-hooks.mjs",
     "tests/helpers/reminder-strip-runtime-hooks.mjs",
     "tests/helpers/tsx-test-loader.mjs",
     "tests/helpers/wakewordHarness.ts",

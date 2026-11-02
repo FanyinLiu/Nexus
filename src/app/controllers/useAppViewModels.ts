@@ -42,6 +42,7 @@ type UseAppViewModelsOptions = {
   platformProfile: DesktopBridgeController['platformProfile']
   preferredMemoryFocus: SettingsNavigation['preferredMemoryFocus']
   preferredSettingsSectionId: SettingsNavigation['preferredSettingsSectionId']
+  registerInboxOverlayOpen: WindowChromeActions['registerInboxOverlayOpen']
   remotePanelSettingsOpen: DesktopBridgeController['remotePanelSettingsOpen']
   reminderTaskStore: ReminderTaskStore
   runtimeSnapshot: DesktopBridgeController['runtimeSnapshot']
@@ -81,6 +82,7 @@ export function useAppViewModels({
   platformProfile,
   preferredMemoryFocus,
   preferredSettingsSectionId,
+  registerInboxOverlayOpen,
   remotePanelSettingsOpen,
   reminderTaskStore,
   runtimeSnapshot,
@@ -150,6 +152,7 @@ export function useAppViewModels({
     openSettingsPanel,
     openChatPanelForVoice,
     openPetMenu,
+    registerInboxOverlayOpen,
     togglePinned,
     toggleClickThrough,
     toggleContinuousVoiceMode,
@@ -178,6 +181,7 @@ export function useAppViewModels({
     openSettingsPanel,
     openChatPanelForVoice,
     openPetMenu,
+    registerInboxOverlayOpen,
     togglePinned,
     toggleClickThrough,
     toggleContinuousVoiceMode,

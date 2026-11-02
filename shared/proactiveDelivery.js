@@ -34,6 +34,12 @@ export const PROACTIVE_STRIP_ENABLED = true
  */
 export const PROACTIVE_FULL_BODY_MAX_LENGTH = 10000
 
+/*
+ * Away-summary messages (`source: 'away'`) may carry `summaryCount`, the
+ * number of items noted while the user was away. Only the OS notification
+ * renders it, as a count; the inbox does not persist it.
+ */
+
 /** Every proactive source the router can carry. Order is not contractual. */
 export const PROACTIVE_SOURCES = Object.freeze([
   'reminder',
@@ -52,8 +58,12 @@ export const PROACTIVE_ACTIONS = Object.freeze(['done', 'snooze', 'open', 'reply
 /** Priorities usable by the badge rule (`high` counts without actions). */
 export const PROACTIVE_PRIORITIES = Object.freeze(['high', 'normal', 'low'])
 
-/** Inbox statuses; the load validator and the IPC schema share this list. */
-export const PROACTIVE_INBOX_STATUSES = Object.freeze(['unread', 'done', 'dismissed'])
+/**
+ * Inbox statuses; the load validator and the IPC schema share this list.
+ * `read` means seen but not handled: it never lights the dot and still keeps
+ * its done/open/reply controls.
+ */
+export const PROACTIVE_INBOX_STATUSES = Object.freeze(['unread', 'read', 'done', 'dismissed'])
 
 /** @typedef {import('./proactiveDelivery.js').DeliverySurface} DeliverySurface */
 
