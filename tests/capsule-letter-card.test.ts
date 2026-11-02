@@ -103,7 +103,7 @@ test('V2 chat renders the opener bubble and then the letter card', () => {
   const messages: ChatSheetV2Message[] = [{
     id: 'msg-capsule',
     role: 'assistant',
-    content: '你300 天前写给今天的信，到了。',
+    content: '你300天前写给今天的信，到了。',
     capsuleLetter: {
       title: '给明年的自己',
       body: LETTER_BODY,
@@ -124,7 +124,7 @@ test('V2 chat renders the opener bubble and then the letter card', () => {
     onClose: () => undefined,
   }))
 
-  const openerIndex = html.indexOf('你300 天前写给今天的信，到了。')
+  const openerIndex = html.indexOf('你300天前写给今天的信，到了。')
   const cardIndex = html.indexOf('class="capsule-letter-card"')
   assert.ok(openerIndex >= 0, 'the opener is a normal chat message')
   assert.ok(cardIndex >= 0, 'the letter card follows it')
@@ -143,7 +143,7 @@ test('a capsule chat message without a card renders as the plain opener', () => 
     messages: [{
       id: 'msg-plain',
       role: 'assistant',
-      content: '你300 天前写给今天的信，到了。',
+      content: '你300天前写给今天的信，到了。',
     }],
     companionName: '星绘',
     inputValue: '',
@@ -156,7 +156,7 @@ test('a capsule chat message without a card renders as the plain opener', () => 
     onClose: () => undefined,
   }))
 
-  assert.match(html, /你300 天前写给今天的信，到了。/)
+  assert.match(html, /你300天前写给今天的信，到了。/)
   assert.doesNotMatch(html, /capsule-letter-card/)
 })
 
@@ -165,7 +165,7 @@ test('the legacy panel message bubble renders the same letter card', () => {
     message: {
       id: 'msg-capsule',
       role: 'assistant',
-      content: '你300 天前写给今天的信，到了。',
+      content: '你300天前写给今天的信，到了。',
       createdAt: WRITTEN_AT,
       capsuleLetter: {
         title: '给明年的自己',
@@ -176,7 +176,7 @@ test('the legacy panel message bubble renders the same letter card', () => {
     assistantName: '星绘',
   }))
 
-  assert.match(html, /你300 天前写给今天的信，到了。/)
+  assert.match(html, /你300天前写给今天的信，到了。/)
   assert.match(html, /class="capsule-letter-card"/)
   assert.match(html, /给明年的自己/)
   assert.match(html, /希望你还在坚持早上跑步。/)
@@ -203,9 +203,9 @@ test('the letter card stylesheet uses the paper-card spec values, light and dark
   assert.match(card, /padding:\s*16px 18px/)
   assert.match(card, /margin:\s*6px 0 12px/)
   assert.match(card, /width:\s*100%/)
-  assert.match(card, /border-radius:\s*var\(--nx-radius-card, 16px\)/)
-  assert.match(card, /border:\s*1px solid color-mix\(in srgb, var\(--capsule-letter-amber\) 28%, #e8dfd0\)/)
-  assert.match(card, /background:\s*color-mix\(in srgb, var\(--capsule-letter-amber\) 14%, #f7f2ea\)/)
+  assert.match(card, /border-radius:\s*16px/)
+  assert.match(card, /border:\s*1px solid #e5d9c8/i)
+  assert.match(card, /background:\s*#f6f0e6/i)
   assert.match(card, /box-shadow:\s*0 4px 18px rgba\(60, 40, 20, 0\.06\)/)
   assert.match(card, /animation:\s*capsule-letter-card-fade-in 180ms ease-out/)
   assert.doesNotMatch(card, /transform|scale/)
@@ -232,11 +232,15 @@ test('the letter card stylesheet uses the paper-card spec values, light and dark
   assert.match(css, /html\[data-color-scheme='dark'\] \.capsule-letter-card,/)
   assert.match(css, /html\[data-theme='system-dark'\] \.capsule-letter-card,/)
   assert.match(css, /html\[data-theme='system-black'\] \.capsule-letter-card \{[\s\S]*?border-color: rgba\(230, 210, 180, 0\.12\)/)
-  assert.match(css, /background: color-mix\(in srgb, var\(--capsule-letter-amber\) 10%, #26221e\)/)
+  assert.match(css, /background:\s*#2c2824/i)
   assert.match(css, /box-shadow: 0 4px 18px rgba\(0, 0, 0, 0\.22\)/)
   assert.match(css, /\.capsule-letter-card__title \{\s*color: #e8dfd4/)
   assert.match(css, /\.capsule-letter-card__body \{\s*color: #d8d0c6/)
   assert.match(css, /\.capsule-letter-card__date \{\s*color: #9a9084/)
+
+  // The card uses literal paper values, not a tinted shared accent or radius token.
+  assert.doesNotMatch(css, /color-mix/i)
+  assert.doesNotMatch(css, /--nx-radius-card/)
 
   // The fade-in is opacity-only and switched off under reduced motion.
   const keyframes = css.match(/@keyframes capsule-letter-card-fade-in \{([\s\S]*?)\n\}/)?.[1] ?? ''
@@ -244,4 +248,20 @@ test('the letter card stylesheet uses the paper-card spec values, light and dark
   assert.match(keyframes, /opacity:\s*1/)
   assert.doesNotMatch(keyframes, /transform|scale|bounce/)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\s*\.capsule-letter-card \{\s*animation: none/)
+})
+
+test('the letter card inherits the system UI font, never a serif family', async () => {
+  const css = await fs.promises.readFile(
+    new URL('../src/components/capsule-letter-card.css', import.meta.url),
+    'utf8',
+  )
+  const families = [...css.matchAll(/font-family\s*:\s*([^;]+);/gi)]
+    .map((match) => match[1] ?? '')
+  for (const family of families) {
+    assert.doesNotMatch(
+      family,
+      /(?<!sans-)\bserif\b|Georgia|Times|Songti|STSong|SimSun|Mincho|KaiTi|\bKai\b/i,
+      `a serif family must never reach the card: ${family}`,
+    )
+  }
 })

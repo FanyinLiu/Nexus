@@ -23,7 +23,12 @@ const TITLE_BY_LOCALE: Record<string, string> = {
 /** One year of days; a capsule keeps its age in prose, not exact days. */
 const DAYS_PER_YEAR = 365
 
-/** Below two years the age reads as a plain day/month count. */
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Age bands: days below 60, whole months below 365, one year below 730,
+ * then whole years.
+ */
 const MONTH_THRESHOLD_DAYS = 60
 const YEAR_THRESHOLD_DAYS = DAYS_PER_YEAR
 const TWO_YEAR_THRESHOLD_DAYS = 2 * DAYS_PER_YEAR
@@ -48,24 +53,30 @@ export interface FutureCapsuleDelivery {
 }
 
 /**
- * Whole days since the capsule was written. Same-instant and future stamps
- * collapse to zero, and anything below a day rounds up to one so a capsule is
- * never described as written "0 days ago".
+ * Whole calendar days between the writing instant and `now`, using the local
+ * date of each instant (the reader's time zone). A capsule written late at
+ * night and opened the next morning is one day old; a same-day capsule is
+ * zero. Future or unparseable stamps collapse to zero.
  */
 export function daysBetween(fromIso: string, now: Date): number {
   const fromMs = Date.parse(fromIso)
   if (!Number.isFinite(fromMs)) return 0
-  const diffMs = now.getTime() - fromMs
-  if (diffMs <= 0) return 0
-  return Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)))
+  const nowMs = now.getTime()
+  if (!Number.isFinite(nowMs) || nowMs <= fromMs) return 0
+  const fromDate = new Date(fromMs)
+  const nowDate = new Date(nowMs)
+  const fromMidnight = Date.UTC(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate())
+  const nowMidnight = Date.UTC(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate())
+  return Math.floor((nowMidnight - fromMidnight) / DAY_MS)
 }
 
 /**
  * Render the capsule age the way the opener speaks it: days under two months,
  * whole months under a year, then whole years. Exact dates belong to the card.
+ * The count is floored, so a same-day capsule still reads as one day old.
  */
 export function formatCapsuleAge(daysAgo: number, locale: UiLanguage): string {
-  const days = Math.max(1, Math.round(daysAgo))
+  const days = Math.max(1, Math.floor(daysAgo))
   if (days >= TWO_YEAR_THRESHOLD_DAYS) {
     return t('chat.capsule.age.years', { y: Math.floor(days / DAYS_PER_YEAR) }, locale)
   }

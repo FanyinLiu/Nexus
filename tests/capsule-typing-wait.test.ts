@@ -41,7 +41,7 @@ import type { AppSettings } from '../src/types/index.ts'
 const NOW = new Date(2026, 4, 1, 12, 0, 0).getTime()
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
-const MAX_WAIT = CAPSULE_TYPING_MAX_WAIT_MS
+const MAX_WAIT = 300_000
 
 function makeSettings(patch: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -244,6 +244,11 @@ function createWaitHarness(options: WaitHarnessOptions = {}): WaitHarness {
   })
   return { result, now: () => time, typingCalls, permissionCalls, sleeps }
 }
+
+test('the typing wait budget is locked at five minutes', () => {
+  assert.equal(CAPSULE_TYPING_MAX_WAIT_MS, 300_000)
+  assert.equal(MAX_WAIT, 300_000)
+})
 
 function captureConsole(t: TestContext): string[][] {
   const calls: string[][] = []

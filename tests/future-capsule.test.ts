@@ -10,6 +10,7 @@ import {
   enqueueFutureCapsule,
   loadFutureCapsules,
 } from '../src/features/futureCapsule/futureCapsuleStore.ts'
+import { normalizeChatMessage } from '../src/lib/storage/chat.ts'
 import { FUTURE_CAPSULE_STORE_STORAGE_KEY } from '../src/lib/storage/core.ts'
 
 function createLocalStorageMock(initial: Record<string, string> = {}) {
@@ -45,15 +46,17 @@ test('daysBetween: same instant returns 0', () => {
 })
 
 test('daysBetween: ~30 days ago returns 30', () => {
-  const now = new Date('2026-04-30T12:00:00Z')
-  const earlier = new Date('2026-03-31T12:00:00Z').toISOString()
+  const now = new Date(2026, 3, 30, 12, 0, 0)
+  const earlier = new Date(2026, 2, 31, 12, 0, 0).toISOString()
   assert.equal(daysBetween(earlier, now), 30)
 })
 
-test('daysBetween: less than a day rounds up to 1 (so the body never says "0 days")', () => {
-  const now = new Date()
-  const earlier = new Date(now.getTime() - 60 * 60 * 1000).toISOString()  // 1h ago
-  assert.equal(daysBetween(earlier, now), 1)
+test('daysBetween: counts calendar days, not elapsed hours', () => {
+  const sameDayNow = new Date(2026, 4, 1, 23, 0, 0)
+  assert.equal(daysBetween(new Date(2026, 4, 1, 22, 0, 0).toISOString(), sameDayNow), 0)
+
+  const nextDay = new Date(2026, 4, 2, 0, 0, 0)
+  assert.equal(daysBetween(new Date(2026, 4, 1, 23, 0, 0).toISOString(), nextDay), 1)
 })
 
 test('daysBetween: malformed ISO returns 0', () => {
@@ -77,7 +80,7 @@ test('buildFutureCapsuleDelivery: zh-CN opener counts the days and keeps the let
     capsule: { ...baseCapsule, message: '记得善待自己' },
     now: new Date('2026-04-30T12:00:00Z'),
   })
-  assert.equal(result.opener, '你30 天前写给今天的信，到了。')
+  assert.equal(result.opener, '你30天前写给今天的信，到了。')
   assert.equal(result.header, '给今天的你')
   assert.equal(result.letterBody, '记得善待自己')
   assert.equal(result.writtenAt, '2026-03-31T12:00:00.000Z')
@@ -113,6 +116,38 @@ test('buildFutureCapsuleDelivery: the letter body is verbatim, never trimmed or 
   })
   assert.equal(result.letterBody, original)
   assert.ok(result.letterBody.includes('\n\n'), 'the letter keeps its authored line breaks')
+})
+
+test('buildFutureCapsuleDelivery: keeps a 10000-character letter in full', async () => {
+  await ensureLocaleLoaded('en-US')
+  // 100 lines of 99 characters plus 99 line breaks and a final character: 10000.
+  const letterBody = `${Array.from({ length: 100 }, () => '字'.repeat(99)).join('\n')}末`
+  assert.equal(letterBody.length, 10_000)
+  assert.ok(letterBody.includes('\n'), 'the letter must contain line breaks')
+
+  const normalized = normalizeChatMessage({
+    id: 'msg-capsule-10000',
+    role: 'assistant',
+    content: 'The letter you wrote for today is here.',
+    createdAt: '2026-04-30T12:00:00.000Z',
+    capsuleLetter: {
+      title: 'launch week',
+      body: letterBody,
+      writtenAt: '2026-03-31T12:00:00.000Z',
+    },
+  }, 0)
+
+  assert.ok(normalized?.capsuleLetter, 'a 10000-character letter must survive storage')
+  assert.equal(normalized.capsuleLetter.body.length, 10_000)
+  assert.equal(normalized.capsuleLetter.body, letterBody)
+
+  const delivery = buildFutureCapsuleDelivery({
+    uiLanguage: 'en-US',
+    capsule: { ...baseCapsule, message: letterBody },
+    now: new Date('2026-04-30T12:00:00Z'),
+  })
+  assert.equal(delivery.letterBody.length, 10_000)
+  assert.equal(delivery.letterBody, letterBody)
 })
 
 test('buildFutureCapsuleDelivery: the opener never names the companion', async () => {
