@@ -83,7 +83,12 @@ export function useBackgroundSchedulers({
   })
 
   useErrandScheduler({ settings, enabled: schedulerEnabled })
-  useFutureCapsuleScheduler({ settings, enabled: schedulerEnabled })
+  useFutureCapsuleScheduler({
+    settings,
+    enabled: schedulerEnabled,
+    focusState,
+    ...(pushCompanionNotice ? { pushCompanionNotice } : {}),
+  })
   useOpenArcScheduler({ settings, enabled: schedulerEnabled })
   useGuidanceAnalysisScheduler({ enabled: schedulerEnabled })
 }

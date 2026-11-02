@@ -15,6 +15,7 @@
 import {
   PROACTIVE_ACTIONS,
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_FULL_BODY_MAX_LENGTH,
   PROACTIVE_INBOX_STATUSES,
   PROACTIVE_PRIORITIES,
   PROACTIVE_SOURCES,
@@ -85,6 +86,23 @@ function normalizeOrigin(value) {
 }
 
 /**
+ * Keep an outlet-only public copy only when both halves fit their display
+ * budgets. Anything malformed is dropped, never repaired: the inbox row still
+ * renders from `title`/`body`, so the entry survives without it.
+ * @param {unknown} value
+ * @returns {ProactiveMessage['publicCopy'] | undefined}
+ */
+function normalizePublicCopy(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = /** @type {Record<string, unknown>} */ (value)
+  const title = typeof record.title === 'string' ? record.title.trim() : ''
+  const body = typeof record.body === 'string' ? record.body : ''
+  if (!title || title.length > PROACTIVE_TITLE_MAX_LENGTH) return undefined
+  if (body.length > PROACTIVE_BODY_MAX_LENGTH) return undefined
+  return { title, body }
+}
+
+/**
  * Rebuild one entry from disk. Anything structurally unusable is dropped:
  * a corrupt record must not keep the dot alive or throw on startup.
  *
@@ -123,8 +141,16 @@ function normalizeEntry(value) {
     ? record.actions.filter((action) => typeof action === 'string' && VALID_ACTIONS.has(action))
     : []
   const speech = typeof record.speech === 'string' && record.speech.trim() ? record.speech : undefined
+  // fullBody is optional and display-only: a bad or oversized copy is dropped
+  // without invalidating the entry, whose short body is still renderable.
+  const fullBody = typeof record.fullBody === 'string'
+    && record.fullBody.length > 0
+    && record.fullBody.length <= PROACTIVE_FULL_BODY_MAX_LENGTH
+    ? record.fullBody
+    : undefined
   const expiresAt = finiteNumber(record.expiresAt)
   const origin = normalizeOrigin(record.origin)
+  const publicCopy = normalizePublicCopy(record.publicCopy)
 
   return {
     id,
@@ -133,6 +159,8 @@ function normalizeEntry(value) {
     priority,
     title,
     body,
+    ...(fullBody !== undefined ? { fullBody } : {}),
+    ...(publicCopy !== undefined ? { publicCopy } : {}),
     ...(speech !== undefined ? { speech } : {}),
     actions: /** @type {ProactiveInboxEntry['actions']} */ (actions),
     createdAt,

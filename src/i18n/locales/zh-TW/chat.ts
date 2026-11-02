@@ -165,4 +165,12 @@ export const zhTWChat = {
   'chat.letter.card_title': '她給你寫了一封信',
   'chat.letter.card_open': '讀這封信',
   'chat.dream.line': '我昨晚夢到{dream}',
+  'chat.capsule.opener': '你{time}寫給今天的信，到了。',
+  'chat.capsule.header.default': '給今天的你',
+  'chat.capsule.written': '寫於 {date}',
+  'chat.capsule.age.days': '{n}天前',
+  'chat.capsule.age.one_day': '1天前',
+  'chat.capsule.age.months': '{m}個月前',
+  'chat.capsule.age.one_year': '一年前',
+  'chat.capsule.age.years': '{y}年前',
 } as const satisfies Partial<TranslationDictionary>

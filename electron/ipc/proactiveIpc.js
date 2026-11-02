@@ -35,6 +35,7 @@ import {
 /** @typedef {import('../../shared/proactiveDelivery.js').DeliveryContext} DeliveryContext */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveDeliveryPreferences} ProactiveDeliveryPreferences */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveInboxChange} ProactiveInboxChange */
+/** @typedef {import('../../shared/proactiveDelivery.js').ProactiveMessage} ProactiveMessage */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactivePresentation} ProactivePresentation */
 /** @typedef {import('../services/proactiveInboxStore.js').InboxMutation} InboxMutation */
 /** @typedef {import('../services/reminderStripQueue.js').ReminderStripLabels} ReminderStripLabels */
@@ -155,6 +156,40 @@ export function createProactiveIpc({
     sendToWindows('proactive:present', presentation, ['pet'])
   }
 
+  /**
+   * Presentation surfaces render the short display copy. A message that
+   * separates its inbox row from its visible copy (a future-self capsule) is
+   * reduced to that public pair here; `fullBody` never travels with a bubble,
+   * so the long form cannot be read from the pet or a notification.
+   * @param {ProactiveMessage} message
+   * @returns {ProactiveMessage}
+   */
+  function toPresentationMessage(message) {
+    const copy = message.publicCopy
+    const display = { ...message }
+    delete display.fullBody
+    delete display.publicCopy
+    if (copy) {
+      display.title = copy.title
+      display.body = copy.body
+    }
+    return display
+  }
+
+  /**
+   * The OS toast shows the same public pair as the bubble. It is the most
+   * exposed surface (lock screen, bystanders), so it never receives `fullBody`.
+   * @param {ProactiveMessage} message
+   * @returns {{ title: string, body: string }}
+   */
+  function toNotificationCopy(message) {
+    const copy = message.publicCopy
+    return {
+      title: copy?.title ?? message.title,
+      body: copy?.body ?? message.body,
+    }
+  }
+
   /** @param {InboxMutation} mutation */
   function publishInboxChange(mutation) {
     /** @type {ProactiveInboxChange} */
@@ -240,7 +275,7 @@ export function createProactiveIpc({
   })
 
   outlets.register('bubble', (message) => {
-    presentToPet({ outlet: 'bubble', message })
+    presentToPet({ outlet: 'bubble', message: toPresentationMessage(message) })
   })
 
   // The strip window lives in this process, so the outlet queues the reminder
@@ -256,7 +291,7 @@ export function createProactiveIpc({
   })
 
   outlets.register('os_notification', async (message) => {
-    await showOsNotification({ title: message.title, body: message.body })
+    await showOsNotification(toNotificationCopy(message))
   })
 
   const router = createProactiveRouter({ outlets })

@@ -5,6 +5,7 @@ import path from 'node:path'
 import { test, type TestContext } from 'node:test'
 
 import { createProactiveInboxStore } from '../electron/services/proactiveInboxStore.js'
+import { PROACTIVE_FULL_BODY_MAX_LENGTH } from '../shared/proactiveDelivery.js'
 import type {
   ProactiveInboxEntry,
   ProactiveMessage,
@@ -72,6 +73,42 @@ test('a restarted store reads the persisted entries and statuses back', async (t
   assert.equal(snapshot.entries.find((entry) => entry.id === 'done')?.status, 'done')
   assert.equal(snapshot.entries.find((entry) => entry.id === 'todo')?.status, 'unread')
   assert.equal(snapshot.unreadCount, 1)
+})
+
+test('fullBody persists across a restart and an upsert of the same id replaces it', async (t) => {
+  const directory = createTempDir(t)
+  const first = storeAt(directory)
+
+  first.upsert(makeMessage({ id: 'full', fullBody: 'first expanded copy' }))
+  first.upsert(makeMessage({ id: 'full', fullBody: 'replacement expanded copy' }))
+  assert.equal(first.list().entries.length, 1)
+  await first.flush()
+
+  const restarted = storeAt(directory)
+  const entry = restarted.list().entries.find((item) => item.id === 'full')
+  assert.equal(entry?.fullBody, 'replacement expanded copy')
+})
+
+test('an entry without fullBody stays valid and an oversized copy is dropped', (t) => {
+  const directory = createTempDir(t)
+  writeInbox(directory, {
+    entries: [
+      makeStoredEntry({ id: 'plain' }),
+      makeStoredEntry({
+        id: 'oversized',
+        fullBody: 'x'.repeat(PROACTIVE_FULL_BODY_MAX_LENGTH + 1),
+      }),
+    ],
+  })
+
+  const entries = storeAt(directory).list().entries
+  const plain = entries.find((item) => item.id === 'plain')
+  const oversized = entries.find((item) => item.id === 'oversized')
+
+  assert.ok(plain)
+  assert.equal('fullBody' in plain, false)
+  assert.ok(oversized)
+  assert.equal('fullBody' in oversized, false)
 })
 
 test('entries past 30 days or past expiresAt are pruned on load', (t) => {
