@@ -5,7 +5,8 @@
  * `proactive:deliver` routes a message and always writes the inbox. Outlets
  * decide what else happens: `badge` refreshes the red dot, `bubble` pushes a
  * presentation to the pet, `strip` queues the reminder on the strip window in
- * this process, and `os_notification` raises a native notification.
+ * this process, and `os_notification` raises a native notification whose click
+ * applies the shared read rule as a `notification_click`.
  *
  * `inbox:changed` is a metadata push only: the unread count, the ids/statuses
  * that changed, and the ids that were removed. It goes only to the windows
@@ -274,7 +275,7 @@ export function createProactiveIpc({
     await showOsNotification({
       title: message.title,
       body: message.body,
-      onClick: () => applyInboxInteraction(message.id, 'open'),
+      onClick: () => applyInboxInteraction(message.id, 'notification_click'),
     })
   })
 

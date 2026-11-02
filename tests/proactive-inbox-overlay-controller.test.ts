@@ -257,8 +257,8 @@ test('expanding an entry with actions does not change its status', async () => {
 
 test('badge 0 still lists unread and read entries for the menu-opened overlay', async () => {
   const harness = createHarness([
-    entry({ id: 'companionship', actions: [], priority: 'normal' }),
-    entry({ id: 'already-done', actions: ['done'], status: 'done' }),
+    entry({ id: 'companionship', actions: [], priority: 'normal', createdAt: 1 }),
+    entry({ id: 'already-done', actions: ['done'], status: 'done', createdAt: 2 }),
   ])
   await harness.controller.open()
 
@@ -267,6 +267,65 @@ test('badge 0 still lists unread and read entries for the menu-opened overlay', 
   assert.deepEqual(snapshot.rows.map((row) => row.id), ['companionship', 'already-done'])
   assert.deepEqual(snapshot.rows.map((row) => row.read), [false, true])
   assert.deepEqual(harness.updates, [])
+
+  // Expanding the normal no-button entry marks it done but keeps its slot
+  // while the user reads the full text.
+  await harness.controller.toggleRow('companionship')
+  const expanded = harness.controller.getSnapshot()
+  assert.deepEqual(harness.updates, [{ id: 'companionship', status: 'done' }])
+  assert.equal(expanded.expandedId, 'companionship')
+  assert.deepEqual(expanded.rows.map((row) => row.id), ['companionship', 'already-done'])
+  assert.equal(expanded.rows[0].read, true)
+
+  // Collapsing releases the slot; the row now sorts among the read rows by
+  // createdAt (newest first), so the newer read row moves ahead of it.
+  await harness.controller.toggleRow('companionship')
+  const collapsed = harness.controller.getSnapshot()
+  assert.equal(collapsed.expandedId, null)
+  assert.deepEqual(collapsed.rows.map((row) => row.id), ['already-done', 'companionship'])
+  assert.deepEqual(collapsed.rows.map((row) => row.read), [true, true])
+})
+
+test('an expanded row keeps its index until collapse and then falls into the read section', async () => {
+  const harness = createHarness([
+    entry({ id: 'target', actions: [], priority: 'normal', createdAt: 1 }),
+    entry({ id: 'read-a', actions: ['done'], status: 'done', createdAt: 4 }),
+    entry({ id: 'read-b', actions: ['done'], status: 'done', createdAt: 3 }),
+    entry({ id: 'read-c', actions: ['done'], status: 'done', createdAt: 2 }),
+  ])
+  const ids = () => harness.controller.getSnapshot().rows.map((row) => row.id)
+
+  await harness.controller.open()
+  assert.deepEqual(ids(), ['target', 'read-a', 'read-b', 'read-c'])
+
+  // Expanding marks the row read; the read section would otherwise put it last.
+  await harness.controller.toggleRow('target')
+  assert.deepEqual(ids(), ['target', 'read-a', 'read-b', 'read-c'])
+  assert.equal(harness.controller.getSnapshot().rows[0].read, true)
+
+  // A store push / refresh keeps the expanded row at the same index.
+  await harness.controller.refresh()
+  assert.deepEqual(ids(), ['target', 'read-a', 'read-b', 'read-c'])
+
+  // A live inbox:changed push (a newer read row arriving) keeps the expanded
+  // row in place while the rest re-sorts around it.
+  harness.setEntries([
+    ...harness.entries(),
+    entry({ id: 'read-d', actions: ['done'], status: 'done', createdAt: 5 }),
+  ])
+  await harness.controller.refresh()
+  assert.deepEqual(ids(), ['target', 'read-d', 'read-a', 'read-b', 'read-c'])
+
+  // Collapsing releases the slot and re-sorts into the read section.
+  await harness.controller.toggleRow('target')
+  assert.equal(harness.controller.getSnapshot().expandedId, null)
+  assert.deepEqual(ids(), ['read-d', 'read-a', 'read-b', 'read-c', 'target'])
+
+  // Closing while expanded also releases it, so reopening shows the read order.
+  await harness.controller.toggleRow('target')
+  harness.controller.close()
+  await harness.controller.open()
+  assert.deepEqual(ids(), ['read-d', 'read-a', 'read-b', 'read-c', 'target'])
 })
 
 test('the injected clock drops entries older than 30 days', async () => {

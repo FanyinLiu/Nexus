@@ -11,8 +11,9 @@
  * The overlay shows every entry from the last 30 days, including read/done
  * rows, and the injected clock owns that boundary. Opening it refreshes the
  * list but never changes a status; an action-less row expanded to "done" stays
- * expanded until collapse/close; snooze keeps the entry unread and hides it
- * only for this app session.
+ * expanded until collapse/close and keeps the row index it had when it
+ * expanded, so the read rule never makes it jump under the pointer. Snooze
+ * keeps the entry unread and hides it only for this app session.
  */
 
 import type {
@@ -79,6 +80,8 @@ export function createProactiveInboxOverlayController({
   let unreadCount = 0
   let isOpen = false
   let expandedId: string | null = null
+  /** Row index the expanded row keeps until it collapses, so reading does not reorder it. */
+  let expandedIndex: number | null = null
   /** Expanded action-less row that the read rule just marked done. */
   let pinnedReadId: string | null = null
   let disposed = false
@@ -100,12 +103,27 @@ export function createProactiveInboxOverlayController({
     },
   })
 
-  function buildView(): ProactiveInboxOverlayView {
-    const rows = selectProactiveInboxEntries(entries, {
+  /** Rows in the overlay's normal selection order, without the expansion pin. */
+  function baseRows(): ProactiveInboxRow[] {
+    return selectProactiveInboxEntries(entries, {
       hiddenIds: snooze.snoozedIds(),
       nowMs: nowMs(),
       ...(maxRows !== undefined ? { limit: maxRows } : {}),
     }).map(toProactiveInboxRow)
+  }
+
+  function buildView(): ProactiveInboxOverlayView {
+    const rows = baseRows()
+    if (expandedId && expandedIndex !== null) {
+      // Reading a row must not move it under the pointer: keep it where it was
+      // when it expanded, and let it fall back into the normal order on collapse.
+      const current = rows.findIndex((row) => row.id === expandedId)
+      if (current >= 0) {
+        const [row] = rows.splice(current, 1)
+        const target = Math.min(Math.max(0, expandedIndex), rows.length)
+        rows.splice(target, 0, row)
+      }
+    }
     return {
       open: isOpen,
       unreadCount,
@@ -130,7 +148,10 @@ export function createProactiveInboxOverlayController({
     if (pinnedReadId) {
       const pinned = entries.find((entry) => entry.id === pinnedReadId)
       if (!pinned || pinned.status !== 'done') {
-        if (expandedId === pinnedReadId) expandedId = null
+        if (expandedId === pinnedReadId) {
+          expandedId = null
+          expandedIndex = null
+        }
         pinnedReadId = null
       }
     }
@@ -138,7 +159,10 @@ export function createProactiveInboxOverlayController({
     if (expandedId && expandedId !== pinnedReadId) {
       // Read rows can stay expanded too; only a removed entry collapses.
       const expanded = entries.find((entry) => entry.id === expandedId)
-      if (!expanded) expandedId = null
+      if (!expanded) {
+        expandedId = null
+        expandedIndex = null
+      }
     }
 
     emit()
@@ -186,7 +210,10 @@ export function createProactiveInboxOverlayController({
   }
 
   function clearRowState(id: string): void {
-    if (expandedId === id) expandedId = null
+    if (expandedId === id) {
+      expandedId = null
+      expandedIndex = null
+    }
     if (pinnedReadId === id) pinnedReadId = null
   }
 
@@ -201,6 +228,7 @@ export function createProactiveInboxOverlayController({
     if (!isOpen) return
     isOpen = false
     expandedId = null
+    expandedIndex = null
     pinnedReadId = null
     emit()
   }
@@ -219,12 +247,17 @@ export function createProactiveInboxOverlayController({
 
     if (expandedId === id) {
       expandedId = null
+      expandedIndex = null
       if (pinnedReadId === id) pinnedReadId = null
       emit()
       return
     }
 
+    // Remember the slot before the read rule can move the row into the read
+    // section, so an expanded row never jumps while the user is reading it.
+    const index = baseRows().findIndex((row) => row.id === id)
     expandedId = id
+    expandedIndex = index >= 0 ? index : null
     pinnedReadId = null
     emit()
 

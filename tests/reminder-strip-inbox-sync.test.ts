@@ -295,6 +295,40 @@ test('clicking a routed OS notification marks its entry done', async (t) => {
   })
 })
 
+test('clicking a routed OS notification marks a no-button normal entry done', async (t) => {
+  const harness = createHarness(t)
+  // A no-button normal entry never reaches the strip, so an idle focus state
+  // with away notifications enabled is the route that raises its notification.
+  const message = makeMessage({
+    id: 'os-no-button-id',
+    priority: 'normal',
+    actions: [],
+  })
+  const context = {
+    panelFocused: false,
+    fullscreen: false,
+    focusState: 'idle' as const,
+    inQuietHours: false,
+    systemDnd: null,
+    awayNotificationsEnabled: true,
+    stripEnabled: true,
+  }
+
+  await harness.invoke('proactive:deliver', { message, context })
+  assert.equal(harness.notifications.length, 1)
+  assert.equal(inboxStatus(harness.store, message.id), 'unread')
+
+  harness.notifications[0].onClick?.()
+
+  assert.equal(inboxStatus(harness.store, message.id), 'done')
+  assert.equal(harness.store.list().unreadCount, 0)
+  assert.deepEqual(harness.changes().at(-1), {
+    unreadCount: 0,
+    changes: [{ id: message.id, status: 'done' }],
+    removedIds: [],
+  })
+})
+
 test('clear-all withdraws every strip item and publishes a zero count', async (t) => {
   const harness = createHarness(t)
   harness.store.upsert(makeMessage())

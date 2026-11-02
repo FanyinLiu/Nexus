@@ -8,11 +8,13 @@ import {
 
 const WITH_ACTIONS = { actions: ['done', 'snooze', 'open'] }
 const WITHOUT_ACTIONS = { actions: [] }
+const NORMAL_NO_ACTIONS = { actions: [], priority: 'normal' }
 const HIGH_CAPSULE = { actions: [], priority: 'high' }
 
 test('opening the overlay never changes a status', () => {
   assert.equal(inboxStatusAfterInteraction(WITH_ACTIONS, 'overlay_open'), null)
   assert.equal(inboxStatusAfterInteraction(WITHOUT_ACTIONS, 'overlay_open'), null)
+  assert.equal(inboxStatusAfterInteraction(NORMAL_NO_ACTIONS, 'overlay_open'), null)
   assert.equal(inboxStatusAfterInteraction(HIGH_CAPSULE, 'overlay_open'), null)
   assert.equal(PROACTIVE_INBOX_INTERACTIONS.includes('overlay_open'), true)
 })
@@ -28,13 +30,22 @@ test('snooze and expand leave an actionable entry unread', () => {
   assert.equal(inboxStatusAfterInteraction(WITH_ACTIONS, 'expand'), null)
 })
 
-test('an action-less entry is read only by expanding its full text', () => {
-  assert.equal(inboxStatusAfterInteraction(WITHOUT_ACTIONS, 'expand'), 'done')
-  assert.equal(inboxStatusAfterInteraction(HIGH_CAPSULE, 'expand'), 'done')
-  for (const interaction of ['done', 'open', 'reply', 'snooze', 'overlay_open']) {
-    assert.equal(inboxStatusAfterInteraction(WITHOUT_ACTIONS, interaction), null, interaction)
-    assert.equal(inboxStatusAfterInteraction(HIGH_CAPSULE, interaction), null, interaction)
+test('an action-less entry is read by expanding its full text, at any priority', () => {
+  for (const entry of [WITHOUT_ACTIONS, NORMAL_NO_ACTIONS, HIGH_CAPSULE]) {
+    assert.equal(inboxStatusAfterInteraction(entry, 'expand'), 'done')
   }
+  for (const interaction of ['done', 'open', 'reply', 'snooze', 'overlay_open']) {
+    for (const entry of [WITHOUT_ACTIONS, NORMAL_NO_ACTIONS, HIGH_CAPSULE]) {
+      assert.equal(inboxStatusAfterInteraction(entry, interaction), null, interaction)
+    }
+  }
+})
+
+test('clicking the OS notification is read at any priority and with or without actions', () => {
+  assert.equal(PROACTIVE_INBOX_INTERACTIONS.includes('notification_click'), true)
+  assert.equal(inboxStatusAfterInteraction(WITH_ACTIONS, 'notification_click'), 'done')
+  assert.equal(inboxStatusAfterInteraction(NORMAL_NO_ACTIONS, 'notification_click'), 'done')
+  assert.equal(inboxStatusAfterInteraction(HIGH_CAPSULE, 'notification_click'), 'done')
 })
 
 test('unknown and missing entries are a no-op', () => {

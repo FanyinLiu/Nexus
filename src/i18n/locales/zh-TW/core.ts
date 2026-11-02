@@ -214,7 +214,7 @@ export const zhTWCore = {
   'pet.proactive.unread_badge': '{count} 則未讀',
   'pet.proactive.unread_badge_one': '{count} 則未讀',
   'pet.proactive.inbox_title': '訊息',
-  'pet.proactive.inbox_empty': '暫時沒有新訊息',
+  'pet.proactive.inbox_empty': '最近 30 天沒有訊息',
   'pet.proactive.inbox_done': '完成',
   'pet.proactive.inbox_snooze': '稍後 10 分鐘',
   'pet.proactive.inbox_open': '打開對話',

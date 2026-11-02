@@ -8,7 +8,8 @@
  * The component owns the browser edges the controller cannot test headlessly
  * — Escape, outside click, focus entry and focus return — while keeping every
  * row action a real button so the keyboard path is the same as the pointer
- * path.
+ * path. The expanded row carries `proactive-inbox__row--expanded` because only
+ * it may grow past the collapsed row block size the five-row budget assumes.
  */
 
 import { useEffect, useRef, type CSSProperties, type RefObject } from 'react'
@@ -132,7 +133,7 @@ export function ProactiveInboxPopover({
             return (
               <li
                 key={row.id}
-                className={`proactive-inbox__row${row.read ? ' proactive-inbox__row--read' : ''}`}
+                className={`proactive-inbox__row${row.read ? ' proactive-inbox__row--read' : ''}${expanded ? ' proactive-inbox__row--expanded' : ''}`}
               >
                 <button
                   type="button"

@@ -12,6 +12,7 @@ export type ProactiveInboxInteraction =
   | 'open'
   | 'reply'
   | 'snooze'
+  | 'notification_click'
 
 export const PROACTIVE_INBOX_INTERACTIONS: readonly ProactiveInboxInteraction[]
 

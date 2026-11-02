@@ -212,7 +212,7 @@ export const zhCNCore = {
   'pet.proactive.unread_badge': '{count} 条未读',
   'pet.proactive.unread_badge_one': '{count} 条未读',
   'pet.proactive.inbox_title': '消息',
-  'pet.proactive.inbox_empty': '暂时没有新消息',
+  'pet.proactive.inbox_empty': '最近 30 天没有消息',
   'pet.proactive.inbox_done': '完成',
   'pet.proactive.inbox_snooze': '稍后 10 分钟',
   'pet.proactive.inbox_open': '打开对话',

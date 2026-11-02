@@ -9,10 +9,12 @@
  *
  * Rules:
  * - opening the overlay never marks anything read (`overlay_open` -> null);
- * - an entry with actions is read by `done`, `open` or `reply`; `snooze` and
- *   `expand` leave it unread;
- * - an entry without actions (a companionship capsule, or a high-priority
- *   line with no buttons) is read only by expanding its full text.
+ * - an entry with actions is read by `done`, `open`, `reply` or
+ *   `notification_click`; `snooze` and `expand` leave it unread;
+ * - an entry without actions (a companionship capsule, or a line of ANY
+ *   priority with no buttons) is read by expanding its full text or by
+ *   clicking its OS notification (`expand`/`notification_click` -> `done`);
+ *   `open`, `reply` and `snooze` leave it unread.
  *
  * The function is pure and shared by main and renderer so a strip action and
  * an overlay click can never disagree about the unread count.
@@ -26,10 +28,11 @@ export const PROACTIVE_INBOX_INTERACTIONS = Object.freeze([
   'open',
   'reply',
   'snooze',
+  'notification_click',
 ])
 
 /**
- * @typedef {'overlay_open' | 'expand' | 'done' | 'open' | 'reply' | 'snooze'} ProactiveInboxInteraction
+ * @typedef {'overlay_open' | 'expand' | 'done' | 'open' | 'reply' | 'snooze' | 'notification_click'} ProactiveInboxInteraction
  */
 
 /**
@@ -45,10 +48,15 @@ export function inboxStatusAfterInteraction(entry, interaction) {
 
   const hasActions = Array.isArray(entry.actions) && entry.actions.length > 0
   if (hasActions) {
-    return interaction === 'done' || interaction === 'open' || interaction === 'reply'
+    return interaction === 'done'
+      || interaction === 'open'
+      || interaction === 'reply'
+      || interaction === 'notification_click'
       ? 'done'
       : null
   }
 
-  return interaction === 'expand' ? 'done' : null
+  return interaction === 'expand' || interaction === 'notification_click'
+    ? 'done'
+    : null
 }

@@ -214,7 +214,7 @@ export const enCore = {
   'pet.proactive.unread_badge': '{count} unread messages',
   'pet.proactive.unread_badge_one': '{count} unread message',
   'pet.proactive.inbox_title': 'Messages',
-  'pet.proactive.inbox_empty': 'No new messages',
+  'pet.proactive.inbox_empty': 'No messages in the last 30 days',
   'pet.proactive.inbox_done': 'Done',
   'pet.proactive.inbox_snooze': 'Snooze 10 min',
   'pet.proactive.inbox_open': 'Open chat',

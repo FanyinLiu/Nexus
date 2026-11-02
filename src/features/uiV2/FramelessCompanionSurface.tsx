@@ -24,6 +24,7 @@ import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import { proactiveBubbleIdentity } from '../proactive/proactivePresentation.ts'
 import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
+import { companionStageGestures } from './companionStageGestures.ts'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
 import {
@@ -430,15 +431,12 @@ export function FramelessCompanionSurface({
           if (settings.gazeFollowEnabled === false) pet.setGazeTarget({ x: 0, y: 0 })
           releaseCharacterPointer()
         }}
-        onPointerDown={handleCharacterPointerDown}
+        onPointerDown={(event) => companionStageGestures.pointerDown(event, handleCharacterPointerDown)}
         onPointerMove={handleCharacterPointerMove}
         onPointerUp={releaseCharacterPointer}
         onPointerCancel={releaseCharacterPointer}
-        onContextMenu={(event) => {
-          event.preventDefault()
-          openPetMenu()
-        }}
-        onDoubleClick={voice.toggleVoiceConversation}
+        onContextMenu={(event) => companionStageGestures.contextMenu(event, openPetMenu)}
+        onDoubleClick={() => companionStageGestures.doubleClick(voice.toggleVoiceConversation)}
       >
         <Suspense fallback={null}>
           <Live2DCanvas

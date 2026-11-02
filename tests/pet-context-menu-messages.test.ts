@@ -13,6 +13,7 @@ import {
 import type { ProactiveInboxEntryView } from '../src/features/proactive/proactiveInboxOverlay.ts'
 import { createProactiveInboxOverlayController } from '../src/features/proactive/proactiveInboxOverlayController.ts'
 import { createPetMenuOpenHandler } from '../src/features/proactive/petMenuOpen.ts'
+import { companionStageGestures } from '../src/features/uiV2/companionStageGestures.ts'
 
 type PetMenuTemplate = ReturnType<typeof buildPetContextMenuTemplate>
 
@@ -239,22 +240,99 @@ test('menu-open at unreadCount 0 opens the controller on its read entries', asyn
   controller.dispose()
 })
 
-test('only the v2 context-menu gesture calls openPetMenu, never click or pointer handlers', () => {
+async function flushAsync(): Promise<void> {
+  for (let index = 0; index < 8; index += 1) await Promise.resolve()
+}
+
+test('a left click or double click on the pet never opens the inbox overlay', async () => {
+  let overlayOpens = 0
+  let menuCalls = 0
+  const pointerDowns: number[] = []
+  let doubleClicks = 0
+
+  // The real renderer callback wired to a fake native menu that picked Messages.
+  const openPetMenu = createPetMenuOpenHandler({
+    openPetMenu: async () => {
+      menuCalls += 1
+      return 'messages'
+    },
+    openInboxOverlay: () => {
+      overlayOpens += 1
+    },
+  })
+
+  companionStageGestures.pointerDown({ button: 0 }, (event) => {
+    pointerDowns.push(event.button)
+  })
+  companionStageGestures.doubleClick(() => {
+    doubleClicks += 1
+  })
+  await flushAsync()
+
+  assert.deepEqual(pointerDowns, [0])
+  assert.equal(doubleClicks, 1)
+  assert.equal(menuCalls, 0)
+  assert.equal(overlayOpens, 0)
+
+  let prevented = 0
+  companionStageGestures.contextMenu(
+    {
+      preventDefault: () => {
+        prevented += 1
+      },
+    },
+    () => {
+      void openPetMenu()
+    },
+  )
+  assert.equal(prevented, 1)
+  assert.equal(menuCalls, 1)
+  await flushAsync()
+  assert.equal(overlayOpens, 1)
+
+  // A dismissed native menu resolves null and must not open the overlay.
+  let nullOverlayOpens = 0
+  const dismissedMenu = createPetMenuOpenHandler({
+    openPetMenu: async () => null,
+    openInboxOverlay: () => {
+      nullOverlayOpens += 1
+    },
+  })
+  companionStageGestures.contextMenu({ preventDefault: () => {} }, () => {
+    void dismissedMenu()
+  })
+  await flushAsync()
+  assert.equal(nullOverlayOpens, 0)
+})
+
+test('the companion surface wires its three stage gestures through the gesture module', () => {
   const surface = readFileSync(
     new URL('../src/features/uiV2/FramelessCompanionSurface.tsx', import.meta.url),
     'utf8',
   )
-  const occurrences = [...surface.matchAll(/openPetMenu\(\)/g)]
-  assert.equal(occurrences.length, 1)
+  const stage = surface.match(/className="nexus-companion-v2__character-hit[\s\S]*?\n {6}>/)?.[0]
+  assert.ok(stage, 'character stage element must exist')
 
-  const contextStart = surface.indexOf('onContextMenu={')
-  const contextEnd = surface.indexOf('onDoubleClick=', contextStart)
-  assert.ok(contextStart >= 0 && contextEnd > contextStart)
-  const contextHandler = surface.slice(contextStart, contextEnd)
-  assert.match(contextHandler, /event\.preventDefault\(\)/)
-  assert.match(contextHandler, /openPetMenu\(\)/)
-  assert.ok(occurrences[0].index > contextStart && occurrences[0].index < contextEnd)
-  assert.doesNotMatch(contextHandler, /onClick=|onPointerDown=/)
+  assert.match(
+    stage,
+    /onPointerDown=\{\(event\) => companionStageGestures\.pointerDown\(event, handleCharacterPointerDown\)\}/,
+  )
+  assert.match(
+    stage,
+    /onContextMenu=\{\(event\) => companionStageGestures\.contextMenu\(event, openPetMenu\)\}/,
+  )
+  assert.match(
+    stage,
+    /onDoubleClick=\{\(\) => companionStageGestures\.doubleClick\(voice\.toggleVoiceConversation\)\}/,
+  )
+  // Exactly the three gesture props, and no click handler on the stage.
+  assert.equal(
+    (stage.match(/companionStageGestures\.(pointerDown|contextMenu|doubleClick)\(/g) ?? []).length,
+    3,
+  )
+  assert.doesNotMatch(stage, /\bonClick=/)
+  // `openPetMenu` reaches JSX only as the context-menu argument.
+  assert.equal((stage.match(/openPetMenu/g) ?? []).length, 1)
 
   const petView = readFileSync(
     new URL('../src/app/views/PetView.tsx', import.meta.url),

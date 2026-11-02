@@ -214,7 +214,7 @@ export const jaCore = {
   'pet.proactive.unread_badge': '未読 {count} 件',
   'pet.proactive.unread_badge_one': '未読 {count} 件',
   'pet.proactive.inbox_title': 'メッセージ',
-  'pet.proactive.inbox_empty': '新しいメッセージはありません',
+  'pet.proactive.inbox_empty': '過去 30 日間のメッセージはありません',
   'pet.proactive.inbox_done': '完了',
   'pet.proactive.inbox_snooze': '10分後に',
   'pet.proactive.inbox_open': '会話を開く',

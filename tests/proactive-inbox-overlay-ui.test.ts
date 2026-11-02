@@ -133,19 +133,99 @@ test('more than five rows render in the scroll list, oldest last', () => {
   assert.match(html, /--proactive-inbox-visible-rows:\s*5/)
 })
 
-test('the list CSS scrolls and caps the height at five collapsed rows', () => {
+test('the list CSS scrolls and its height budget fits five rows in the default pet window', () => {
   const css = readFileSync(
     new URL('../src/components/proactiveInboxOverlay.css', import.meta.url),
     'utf8',
   )
-  const start = css.indexOf('.proactive-inbox__list {')
-  const end = css.indexOf('\n}', start)
-  const listRule = css.slice(start, end)
+  const windowCreation = readFileSync(
+    new URL('../electron/windowCreation.js', import.meta.url),
+    'utf8',
+  )
 
+  const variables: Record<string, string> = {}
+  for (const match of css.matchAll(/(--proactive-inbox-[a-z-]+):\s*([^;]+);/g)) {
+    variables[match[1]] = match[2].trim()
+  }
+  const px = (name: string) => {
+    const value = variables[name]
+    assert.match(value ?? '', /^\d+px$/, name)
+    return Number.parseInt(value, 10)
+  }
+
+  const defaultHeight = Number(
+    windowCreation.match(/const PET_WINDOW_DEFAULT_HEIGHT = (\d+)/)?.[1],
+  )
+  const defaultWidth = Number(
+    windowCreation.match(/const PET_WINDOW_DEFAULT_WIDTH = (\d+)/)?.[1],
+  )
+  assert.equal(defaultHeight, 460)
+  assert.equal(defaultWidth, 320)
+
+  const top = px('--proactive-inbox-top')
+  const bottomGap = px('--proactive-inbox-bottom-gap')
+  const padding = px('--proactive-inbox-padding')
+  const headerBlock = px('--proactive-inbox-header-block-size')
+  const rowBlock = px('--proactive-inbox-row-block-size')
+  const rowGap = px('--proactive-inbox-row-gap')
+  const visibleRows = Number(variables['--proactive-inbox-visible-rows'])
+
+  assert.equal(visibleRows, 5)
+  assert.equal(rowBlock, 68)
+  assert.equal(headerBlock, 28)
+
+  // Popover chrome: the window minus its offset, padding, border and header.
+  const available = defaultHeight - top - bottomGap - 2 * padding - 2 - headerBlock
+  const list = visibleRows * rowBlock + (visibleRows - 1) * rowGap
+  assert.equal(list, 360)
+  assert.ok(list <= available, `list ${list} must fit in ${available}`)
+
+  const popoverRule = css.slice(
+    css.indexOf('.proactive-inbox {'),
+    css.indexOf('\n}', css.indexOf('.proactive-inbox {')),
+  )
+  assert.match(popoverRule, /top:\s*var\(--proactive-inbox-top\)/)
+  assert.match(popoverRule, /padding:\s*var\(--proactive-inbox-padding\)/)
+  assert.match(
+    popoverRule,
+    /max-height:\s*calc\(\s*100vh - var\(--proactive-inbox-top\) - var\(--proactive-inbox-bottom-gap\)\s*\)/,
+  )
+  assert.match(popoverRule, /box-sizing:\s*border-box/)
+  // The 300px card plus its 12px insets is wider than 320px, so the min()
+  // expression must stay to shrink it inside the default pet window.
+  assert.match(popoverRule, /width:\s*min\(300px, calc\(100vw - 24px\)\)/)
+
+  const listRule = css.slice(
+    css.indexOf('.proactive-inbox__list {'),
+    css.indexOf('\n}', css.indexOf('.proactive-inbox__list {')),
+  )
   assert.match(listRule, /overflow-y:\s*auto/)
+  assert.match(listRule, /gap:\s*var\(--proactive-inbox-row-gap\)/)
   assert.match(listRule, /max-height:\s*calc\(/)
   assert.match(listRule, /--proactive-inbox-visible-rows/)
+  assert.match(listRule, /--proactive-inbox-row-block-size/)
+  assert.match(listRule, /--proactive-inbox-row-gap/)
+
+  // Only the expanded row may exceed the block size the budget assumes.
+  const collapsedRule = css.slice(
+    css.indexOf('.proactive-inbox__row:not(.proactive-inbox__row--expanded) {'),
+    css.indexOf('\n}', css.indexOf('.proactive-inbox__row:not(.proactive-inbox__row--expanded) {')),
+  )
+  assert.match(collapsedRule, /max-height:\s*var\(--proactive-inbox-row-block-size\)/)
+  assert.match(collapsedRule, /overflow:\s*hidden/)
+
   assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 5)
+})
+
+test('only the expanded row carries the expanded modifier', () => {
+  const rows = [row({ id: 'a', actions: ['done'] }), row({ id: 'b', actions: [] })]
+
+  const collapsed = renderPopover({ rows })
+  assert.doesNotMatch(collapsed, /proactive-inbox__row--expanded/)
+
+  const expanded = renderPopover({ rows, expandedId: 'a' })
+  assert.equal((expanded.match(/proactive-inbox__row--expanded/g) ?? []).length, 1)
+  assert.match(expanded, /class="proactive-inbox__row proactive-inbox__row--expanded"/)
 })
 
 test('only the expanded row renders the full text', () => {
@@ -163,7 +243,26 @@ test('only the expanded row renders the full text', () => {
 
 test('the empty state renders when there are no badge-worthy rows', () => {
   const html = renderPopover({ rows: [] })
-  assert.match(html, /暂时没有新消息/)
+  assert.match(html, /最近 30 天没有消息/)
+})
+
+test('the empty-state copy and the ko collapse label are pinned exactly', () => {
+  const expectedEmpty: Record<string, string> = {
+    'zh-CN': '最近 30 天没有消息',
+    'zh-TW': '最近 30 天沒有訊息',
+    'en-US': 'No messages in the last 30 days',
+    ja: '過去 30 日間のメッセージはありません',
+    ko: '최근 30일 동안 받은 메시지가 없어요',
+  }
+
+  for (const { language, messages } of LOCALES) {
+    const dictionary = messages as Record<string, string>
+    assert.equal(dictionary['pet.proactive.inbox_empty'], expectedEmpty[language], language)
+  }
+  assert.equal(
+    (koMessages as Record<string, string>)['pet.proactive.inbox_collapse'],
+    '간단히 보기',
+  )
 })
 
 test('every new overlay key exists and is non-empty in all five locales', () => {

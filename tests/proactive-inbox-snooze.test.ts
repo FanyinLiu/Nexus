@@ -6,6 +6,8 @@ import {
   PROACTIVE_INBOX_SNOOZE_MS,
 } from '../src/features/proactive/proactiveInboxSnooze.ts'
 import type { ProactiveInboxEntryView } from '../src/features/proactive/proactiveInboxOverlay.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
 
 function entry(id: string, overrides: Partial<ProactiveInboxEntryView> = {}): ProactiveInboxEntryView {
   return {
@@ -115,6 +117,29 @@ test('an entry removed from the inbox cancels its timer', () => {
   scheduler.reconcile([])
   clock.advance(PROACTIVE_INBOX_SNOOZE_MS)
   assert.equal(delivered.length, 0)
+})
+
+test('the snooze duration is pinned to ten minutes in the constant, timer and copy', () => {
+  assert.equal(PROACTIVE_INBOX_SNOOZE_MS, 10 * 60_000)
+  assert.equal(PROACTIVE_INBOX_SNOOZE_MS, 600000)
+
+  // A scheduler built without `snoozeMs` must ask the injected timer for
+  // exactly ten minutes; changing the constant alone would break this.
+  const delays: number[] = []
+  const scheduler = createProactiveInboxSnoozeScheduler({
+    setTimeout: (_callback, ms) => {
+      delays.push(ms)
+      return delays.length
+    },
+    clearTimeout: () => {},
+    onDeliver: () => {},
+  })
+  scheduler.snooze(entry('pinned'))
+  assert.deepEqual(delays, [600000])
+
+  // The visible label must agree with the constant; changing either alone fails.
+  assert.match((zhCNMessages as Record<string, string>)['pet.proactive.inbox_snooze'], /10/)
+  assert.match((enMessages as Record<string, string>)['pet.proactive.inbox_snooze'], /10/)
 })
 
 test('dispose clears every pending timer and snoozing again replaces one', () => {
