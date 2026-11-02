@@ -6,9 +6,17 @@
  */
 
 import { isSameLocalDay } from '../../lib/localDate.ts'
+import {
+  isLikelyFullscreenSurface,
+  isQuietHour,
+} from '../../../shared/proactiveSignals.js'
 import type { FocusState } from '../../types/autonomy.ts'
 import type { ProactiveFrequencyPreset } from '../../types/proactive.ts'
 import type { ChatMessage } from '../../types/chat.ts'
+
+// Main rebuilds the same two signals for a snoozed reminder, so the
+// implementations live in shared/ and are re-exported from this module.
+export { isLikelyFullscreenSurface, isQuietHour }
 
 export const PROACTIVE_HARD_CAP = 3
 export const PROACTIVE_MIN_GAP_MS = 90 * 60 * 1000
@@ -67,24 +75,6 @@ export function dismissalBackoffCap(
 export function proactiveDailyCap(preset: ProactiveFrequencyPreset): number {
   if (preset === 'low') return 1
   return PROACTIVE_HARD_CAP
-}
-
-/**
- * Quiet hours wrap midnight when start > end. 23→8 covers 23:00 through 07:59.
- * Equal bounds mean the window is off.
- */
-export function isQuietHour(hour: number, start: number, end: number): boolean {
-  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return false
-  if (start === end) return false
-  if (start > end) return hour >= start || hour < end
-  return hour >= start && hour < end
-}
-
-/** Title/app text that usually means the foreground app is fullscreen. */
-export function isLikelyFullscreenSurface(title?: string | null, appName?: string | null): boolean {
-  const text = `${title ?? ''} ${appName ?? ''}`.trim()
-  if (!text) return false
-  return /fullscreen|full screen|全屏|全螢幕|フルスクリーン|전체\s*화면/iu.test(text)
 }
 
 /**

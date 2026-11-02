@@ -97,9 +97,19 @@ export interface ProactiveInboxSnapshot {
   removedIds: string[]
 }
 
+export interface ProactiveInboxChangeItem {
+  id: string
+  status: ProactiveInboxStatus
+}
+
+/**
+ * Main -> renderer metadata push. Deliberately carries no title, body or
+ * speech; a window that needs the content reads it through `inbox:list`.
+ */
 export interface ProactiveInboxChange {
   unreadCount: number
-  entries: ProactiveInboxEntry[]
+  /** Only the entries whose status changed in this mutation. */
+  changes: ProactiveInboxChangeItem[]
   removedIds: string[]
 }
 
@@ -108,9 +118,25 @@ export interface ProactiveInboxUpdateResult {
   unreadCount: number
 }
 
+/**
+ * Renderer-supplied reminder delivery preferences. Main keeps only the latest
+ * valid copy in memory so a snoozed item can be re-routed with the same quiet
+ * window and desktop-awareness choice without persisting renderer settings.
+ */
+export interface ProactiveDeliveryPreferences {
+  /** Local hour the quiet window starts, 0-23. */
+  quietStart: number
+  /** Local hour the quiet window ends, 0-23. Equal bounds turn it off. */
+  quietEnd: number
+  /** False when desktop awareness is off or paused; fullscreen stays false. */
+  desktopAwarenessAllowed: boolean
+  awayNotificationsEnabled: boolean
+}
+
 export interface ProactiveDeliveryPayload {
   message: ProactiveMessage
   context: DeliveryContext
+  preferences?: ProactiveDeliveryPreferences
 }
 
 export interface ProactivePresentation {

@@ -296,16 +296,6 @@ export function useAppController() {
     )
   }, [petRuntimeContinuousVoiceActive, view, voice.continuousVoiceActive])
 
-  useReminderController({
-    view,
-    settingsRef,
-    runtimeSnapshot,
-    chat,
-    pet,
-    debugConsole,
-    reminderTaskStore,
-  })
-
   // ── Autonomy subsystem ──────────────────────────────────────────────────────
 
   const autonomy = useAutonomyController({
@@ -335,6 +325,19 @@ export function useAppController() {
         stageDirection: `(autonomy:idle_motion:${gestureName})`,
       }])
     },
+  })
+
+  // Reminder delivery needs the shared focus state, so it runs after the
+  // autonomy controller that owns focus awareness.
+  useReminderController({
+    view,
+    settingsRef,
+    runtimeSnapshot,
+    focusState: autonomy.focusAwareness.focusState,
+    chat,
+    pet,
+    debugConsole,
+    reminderTaskStore,
   })
 
   useBackgroundSchedulers({

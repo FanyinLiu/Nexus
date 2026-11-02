@@ -2,40 +2,54 @@
 /**
  * IPC surface for proactive delivery and the inbox.
  *
- * `proactive:deliver` routes a message and always writes the inbox; outlets
- * decide what else happens (`badge` pushes the unread count, `bubble`/`strip`
- * push one presentation event to the pet). `inbox:list` and `inbox:update`
- * are what the renderer uses for the red dot and status changes.
+ * `proactive:deliver` routes a message and always writes the inbox. Outlets
+ * decide what else happens: `badge` refreshes the red dot, `bubble` pushes a
+ * presentation to the pet, `strip` queues the reminder on the strip window in
+ * this process, and `os_notification` raises a native notification.
  *
- * `inbox:changed` is broadcast to trusted app windows and carries the mutated
- * entries (title and body included, because those windows render the inbox),
- * the removed ids and the fresh unread count. A periodic prune publishes the
- * same event when retention removes entries, so the dot never depends on the
- * user triggering an IPC call. Log lines never carry title, body or speech —
- * only message ids, sources, outlet ids and stable error codes.
+ * `inbox:changed` is a metadata push only: the unread count, the ids/statuses
+ * that changed, and the ids that were removed. It goes only to the windows
+ * that consume the badge (today the pet window, by creation-time capability),
+ * and never carries a title, body or speech. A window that needs the content
+ * reads it through `inbox:list`. Content stays out of logs for the same
+ * reason: log lines carry only ids, actions, outlet ids and stable error codes.
  *
- * The wiring lives in `createProactiveIpc` so it can be tested with fake IPC
- * and window dependencies; `register()` only adapts Electron into that bag.
+ * The wiring lives in `createProactiveIpc` so it can be tested with fake IPC,
+ * windows, strip and notification dependencies; `register()` only adapts
+ * Electron into that bag.
  */
 
 import path from 'node:path'
 
+import { routeDelivery } from '../../shared/proactiveDelivery.js'
 import { createLogger } from '../logger.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
+import { buildReminderStripLabels } from '../reminderStripLabels.js'
 import { getBoundWindowCapability } from './windowCapabilities.js'
 import {
   validateInboxUpdatePayload,
   validateProactiveDeliveryPayload,
 } from './proactivePayloadSchemas.js'
 
+/** @typedef {import('../../shared/proactiveDelivery.js').DeliveryContext} DeliveryContext */
+/** @typedef {import('../../shared/proactiveDelivery.js').ProactiveDeliveryPreferences} ProactiveDeliveryPreferences */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveInboxChange} ProactiveInboxChange */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactivePresentation} ProactivePresentation */
 /** @typedef {import('../services/proactiveInboxStore.js').InboxMutation} InboxMutation */
+/** @typedef {import('../services/reminderStripQueue.js').ReminderStripLabels} ReminderStripLabels */
 /** @typedef {import('../logger.js').Logger} Logger */
 
 /** Low-frequency retention sweep; the badge must refresh without user action. */
 const PROACTIVE_INBOX_PRUNE_INTERVAL_MS = 60 * 60 * 1000
+
+/**
+ * Windows that render the unread badge today. One explicit list keeps the
+ * targeting reviewable: a later milestone adds its window here on purpose
+ * instead of every renderer silently receiving inbox metadata.
+ * @type {ReadonlyArray<'pet' | 'panel'>}
+ */
+const INBOX_CHANGE_CONSUMERS = Object.freeze(['pet'])
 
 /** Stable failure token: the inbox file survived a clear-all delete. */
 const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
@@ -54,6 +68,20 @@ const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
 /** @typedef {(handle: { unref?: () => void }) => void} IntervalClearer */
 
 /**
+ * The reminder strip is wired in-process: the router's strip outlet calls this
+ * bag directly instead of pushing a presentation to a renderer.
+ *
+ * @typedef {object} ProactiveStripDependencies
+ * @property {(payload: { id: string, title: string, body: string, labels: ReminderStripLabels }) => unknown} show
+ * @property {(id: string) => unknown} withdraw
+ * @property {() => unknown} withdrawAll
+ * @property {(dependencies: {
+ *   onAction: (action: string, id: string) => void,
+ *   canReshow: (id: string) => boolean | Promise<boolean>,
+ * }) => void} [configure]
+ */
+
+/**
  * Everything the wiring needs from Electron and the host. An explicit bag
  * keeps the module importable under node:test without a live Electron app.
  *
@@ -66,6 +94,12 @@ const PROACTIVE_INBOX_CLEAR_FAILED = 'NEXUS_ERR_PROACTIVE_INBOX_CLEAR_FAILED'
  * @property {Logger} logger
  * @property {IntervalScheduler} setInterval
  * @property {IntervalClearer} clearInterval
+ * @property {ProactiveStripDependencies} strip
+ * @property {() => ReminderStripLabels} getStripLabels
+ * @property {(payload: { title: string, body: string }) => unknown} showOsNotification
+ * @property {() => boolean} isPanelFocused
+ * @property {() => Promise<DeliveryContext>} [getDeliveryContext]
+ * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
  */
 
 /**
@@ -80,6 +114,20 @@ export function createProactiveIpc({
   logger,
   setInterval,
   clearInterval,
+  strip,
+  getStripLabels,
+  showOsNotification,
+  isPanelFocused,
+  getDeliveryContext = async () => ({
+    panelFocused: false,
+    fullscreen: false,
+    focusState: 'active',
+    inQuietHours: false,
+    systemDnd: null,
+    awayNotificationsEnabled: false,
+    stripEnabled: true,
+  }),
+  setDeliveryPreferences = () => {},
 }) {
   /** @type {{ unref?: () => void } | null} */
   let pruneTimer = null
@@ -87,10 +135,12 @@ export function createProactiveIpc({
   /**
    * @param {string} channel
    * @param {unknown} payload
+   * @param {ReadonlyArray<'panel' | 'pet' | 'unknown'>} capabilities
    */
-  function broadcastToRenderers(channel, payload) {
+  function sendToWindows(channel, payload, capabilities) {
     for (const win of getAllWindows()) {
       if (win.isDestroyed() || win.webContents.isDestroyed()) continue
+      if (!capabilities.includes(getWindowCapability(win.webContents))) continue
       win.webContents.send(channel, payload)
     }
   }
@@ -102,11 +152,7 @@ export function createProactiveIpc({
    * @param {ProactivePresentation} presentation
    */
   function presentToPet(presentation) {
-    for (const win of getAllWindows()) {
-      if (win.isDestroyed() || win.webContents.isDestroyed()) continue
-      if (getWindowCapability(win.webContents) !== 'pet') continue
-      win.webContents.send('proactive:present', presentation)
-    }
+    sendToWindows('proactive:present', presentation, ['pet'])
   }
 
   /** @param {InboxMutation} mutation */
@@ -114,11 +160,57 @@ export function createProactiveIpc({
     /** @type {ProactiveInboxChange} */
     const change = {
       unreadCount: mutation.unreadCount,
-      entries: mutation.entries,
+      changes: mutation.entries.map((entry) => ({ id: entry.id, status: entry.status })),
       removedIds: mutation.removedIds,
     }
-    broadcastToRenderers('inbox:changed', change)
+    sendToWindows('inbox:changed', change, INBOX_CHANGE_CONSUMERS)
   }
+
+  /**
+   * Publish the metadata push and keep the strip in step with removals.
+   * @param {InboxMutation} mutation
+   */
+  function announceMutation(mutation) {
+    if (mutation.changed) publishInboxChange(mutation)
+    for (const id of mutation.removedIds) strip.withdraw(id)
+  }
+
+  /**
+   * Rebuild the current delivery context and ask the pure router whether the
+   * stored message may return on the strip. A failed context read keeps the
+   * entry in the inbox instead of risking a wrong surface.
+   * @param {string} id
+   * @returns {Promise<boolean>}
+   */
+  async function canReshowStripEntry(id) {
+    const entry = inbox.list().entries.find((item) => item.id === id && item.status === 'unread')
+    if (!entry) return false
+    let context
+    try {
+      context = await getDeliveryContext()
+    } catch {
+      logger.warn('proactive strip re-route context failed', { status: 'context-failed' })
+      return false
+    }
+    return routeDelivery(entry, context).outlets.includes('strip')
+  }
+
+  /**
+   * Strip-side action hand-off. `open` is handled by the strip module itself;
+   * `done` is the only action that changes the inbox.
+   * @param {string} action
+   * @param {string} id
+   */
+  function handleStripAction(action, id) {
+    if (action !== 'done') return
+    const mutation = inbox.setStatus(id, 'done')
+    announceMutation(mutation)
+  }
+
+  strip.configure?.({
+    onAction: handleStripAction,
+    canReshow: canReshowStripEntry,
+  })
 
   const outlets = createProactiveOutletRegistry({ logger })
 
@@ -129,7 +221,7 @@ export function createProactiveIpc({
     state.removedIds = mutation.removedIds
     state.changed = mutation.changed
     if (mutation.changed) {
-      publishInboxChange(mutation)
+      announceMutation(mutation)
       state.published = true
     }
   })
@@ -151,26 +243,41 @@ export function createProactiveIpc({
     presentToPet({ outlet: 'bubble', message })
   })
 
-  // No strip window exists in this milestone. The message stays in the inbox
-  // and the presentation event is still emitted for the strip renderer that
-  // arrives later; the pet must not fall back to a bubble for it.
+  // The strip window lives in this process, so the outlet queues the reminder
+  // directly. The pet never receives a strip presentation and therefore never
+  // falls back to a bubble for one.
   outlets.register('strip', (message) => {
-    presentToPet({ outlet: 'strip', message })
+    strip.show({
+      id: message.id,
+      title: message.title,
+      body: message.body,
+      labels: getStripLabels(),
+    })
+  })
+
+  outlets.register('os_notification', async (message) => {
+    await showOsNotification({ title: message.title, body: message.body })
   })
 
   const router = createProactiveRouter({ outlets })
 
   ipcMain.handle('proactive:deliver', async (event, payload) => {
     requireTrustedSender(event)
-    const { message, context } = validateProactiveDeliveryPayload(payload)
-    return router.deliver(message, context)
+    const { message, context, preferences } = validateProactiveDeliveryPayload(payload)
+    if (preferences) setDeliveryPreferences(preferences)
+    // The pet window cannot see whether the panel is focused, so main, which
+    // owns every window, adds that one signal before the pure router runs.
+    return router.deliver(message, {
+      ...context,
+      panelFocused: context.panelFocused || isPanelFocused(),
+    })
   })
 
   ipcMain.handle('inbox:list', (event) => {
     requireTrustedSender(event)
     const snapshot = inbox.list()
     if (snapshot.removedIds.length > 0) {
-      publishInboxChange({
+      announceMutation({
         changed: true,
         entries: [],
         removedIds: snapshot.removedIds,
@@ -184,9 +291,8 @@ export function createProactiveIpc({
     requireTrustedSender(event)
     const { id, status } = validateInboxUpdatePayload(payload)
     const mutation = inbox.setStatus(id, status)
-    if (mutation.changed) {
-      publishInboxChange(mutation)
-    }
+    if (status === 'done' || status === 'dismissed') strip.withdraw(id)
+    announceMutation(mutation)
     return { updated: mutation.changed, unreadCount: mutation.unreadCount }
   })
 
@@ -200,7 +306,7 @@ export function createProactiveIpc({
     stopPrune()
     pruneTimer = setInterval(() => {
       const mutation = inbox.prune()
-      if (mutation.changed) publishInboxChange(mutation)
+      announceMutation(mutation)
     }, PROACTIVE_INBOX_PRUNE_INTERVAL_MS)
     // A sweep timer must never be the reason the process stays alive.
     pruneTimer.unref?.()
@@ -212,10 +318,11 @@ export function createProactiveIpc({
   }
 
   /**
-   * Empty the inbox for clear-all and push the zero count so the pet badge
-   * disappears even when no `inbox:list` follows. A failed delete must not
-   * publish a zero count or empty entries: the file still holds the messages,
-   * so the badge has to stay and the failure must reach clear-all's caller.
+   * Empty the inbox for clear-all, drop every strip item and snooze timer, and
+   * push the zero count so the pet badge disappears even when no `inbox:list`
+   * follows. A failed delete must not publish a zero count, empty entries or
+   * withdraw the strip: the file still holds the messages, so the badge has to
+   * stay and the failure must reach clear-all's caller.
    * @returns {Promise<true>}
    */
   async function clearInbox() {
@@ -223,6 +330,7 @@ export function createProactiveIpc({
     if (!cleared) {
       throw new Error(PROACTIVE_INBOX_CLEAR_FAILED)
     }
+    strip.withdrawAll()
     publishInboxChange({
       changed: true,
       entries: [],
@@ -250,9 +358,24 @@ let activeIpc = null
  *   ipcMain: ProactiveIpcDependencies['ipcMain'],
  *   getAllWindows: ProactiveIpcDependencies['getAllWindows'],
  *   requireTrustedSender: ProactiveIpcDependencies['requireTrustedSender'],
+ *   isPanelFocused: ProactiveIpcDependencies['isPanelFocused'],
+ *   getDeliveryContext: ProactiveIpcDependencies['getDeliveryContext'],
+ *   setDeliveryPreferences: ProactiveIpcDependencies['setDeliveryPreferences'],
+ *   strip: ProactiveIpcDependencies['strip'],
+ *   showOsNotification: ProactiveIpcDependencies['showOsNotification'],
  * }} dependencies
  */
-export function register({ app, ipcMain, getAllWindows, requireTrustedSender }) {
+export function register({
+  app,
+  ipcMain,
+  getAllWindows,
+  requireTrustedSender,
+  isPanelFocused,
+  getDeliveryContext,
+  setDeliveryPreferences,
+  strip,
+  showOsNotification,
+}) {
   const logger = createLogger('proactive.router')
   const inbox = createProactiveInboxStore({
     getStorePath: () => path.join(app.getPath('userData'), PROACTIVE_INBOX_FILE_NAME),
@@ -273,6 +396,12 @@ export function register({ app, ipcMain, getAllWindows, requireTrustedSender }) 
     setInterval,
     // The bag uses a portable timer handle so tests can inject a fake clock.
     clearInterval: (handle) => clearInterval(/** @type {NodeJS.Timeout} */ (handle)),
+    strip,
+    getStripLabels: () => buildReminderStripLabels(),
+    showOsNotification,
+    isPanelFocused,
+    getDeliveryContext,
+    setDeliveryPreferences,
   })
 }
 

@@ -578,6 +578,37 @@ test('delivery payload schema rejects unknown fields and bad enums', () => {
   }))
 })
 
+test('delivery payload schema accepts optional preferences and rejects out-of-range hours', () => {
+  const base = { message: makeMessage(), context: makeContext() }
+  const preferences = {
+    quietStart: 23,
+    quietEnd: 8,
+    desktopAwarenessAllowed: true,
+    awayNotificationsEnabled: false,
+  }
+  assert.deepEqual(validateProactiveDeliveryPayload({ ...base, preferences }).preferences, preferences)
+
+  // Older renderers may omit the snapshot entirely.
+  assert.equal('preferences' in validateProactiveDeliveryPayload(base), false)
+
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    preferences: { ...preferences, quietStart: 24 },
+  }), /payload\.preferences\.quietStart must be <= 23/)
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    preferences: { ...preferences, quietEnd: -1 },
+  }), /payload\.preferences\.quietEnd must be >= 0/)
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    preferences: { ...preferences, quietStart: 1.5 },
+  }), /payload\.preferences\.quietStart must be an integer/)
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    preferences: { ...preferences, rogue: true },
+  }), /payload\.preferences\.rogue is not allowed/)
+})
+
 test('inbox update schema accepts only the three statuses', () => {
   assert.deepEqual(validateInboxUpdatePayload({ id: 'msg-1', status: 'done' }), {
     id: 'msg-1',

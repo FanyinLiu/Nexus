@@ -3,28 +3,63 @@ import type {
   AppSettings,
   ChatMessageTone,
   DebugConsoleEventDraft,
+  FocusState,
   ReminderTask,
   RuntimeStateSnapshot,
   WindowView,
 } from '../../types'
+import type { DeliveryDecision } from '../../../shared/proactiveDelivery.js'
 import {
   buildBuiltInToolSpeechSummary,
   executeBuiltInTool,
   resolveBuiltInToolPolicy,
   toChatToolResult,
 } from '../../features/tools'
-import { shouldRunReminderScheduler } from '../../features/reminders'
+import {
+  buildReminderDeliveryContext,
+  buildReminderDeliveryPreferences,
+  buildReminderProactiveMessage,
+  planReminderPresentation,
+  shouldRunReminderScheduler,
+} from '../../features/reminders'
+import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../../features/uiV2/caption.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { createLogger } from '../../lib/logger.ts'
+import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+
+const reminderLog = createLogger('reminders.notice')
+
+/**
+ * Read the active-window snapshot only when the user's settings allow desktop
+ * awareness. Anything unreadable counts as "not fullscreen": a reminder must
+ * still be delivered when context collection is unavailable.
+ */
+async function readReminderDesktopContext(settings: AppSettings) {
+  if (
+    !settings.contextAwarenessEnabled
+    || !settings.activeWindowContextEnabled
+    || settings.companionAwarenessPaused
+  ) {
+    return null
+  }
+  try {
+    return await window.desktopPet?.getDesktopContext?.({ includeActiveWindow: true }) ?? null
+  } catch {
+    return null
+  }
+}
 
 type ChatBridge = {
   pushCompanionNotice: (payload: {
     chatContent: string
     bubbleContent: string
     speechContent: string
-    autoHideMs: number
+    autoHideMs?: number
+    dedupeKey?: string
     toolResult?: ReturnType<typeof toChatToolResult>
+    proactiveTitle?: string
   }) => Promise<void>
   appendSystemMessage: (content: string, tone?: ChatMessageTone) => void
   sendMessage: (text: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification' }) => Promise<unknown>
@@ -47,6 +82,8 @@ export type UseReminderControllerOptions = {
   view: WindowView
   settingsRef: React.RefObject<AppSettings>
   runtimeSnapshot: RuntimeStateSnapshot
+  /** Pet-window view of the user's focus; main adds the panel signal itself. */
+  focusState: FocusState
   chat: ChatBridge
   pet: PetBridge
   debugConsole: DebugConsoleBridge
@@ -57,6 +94,7 @@ export function useReminderController({
   view,
   settingsRef,
   runtimeSnapshot,
+  focusState,
   chat,
   pet,
   debugConsole,
@@ -79,12 +117,68 @@ export function useReminderController({
 
     try {
       if (action.kind === 'notice') {
-        await chat.pushCompanionNotice({
-          chatContent: t('chat.prefix.reminder_task', { title: task.title, content: displayText }),
-          bubbleContent: displayText,
-          speechContent: defaultSpeechText,
-          autoHideMs: 16_000,
+        const now = Date.now()
+        const message = buildReminderProactiveMessage(task, {
+          displayText,
+          speech: defaultSpeechText,
+          now,
         })
+        const desktopContext = await readReminderDesktopContext(currentSettings)
+        const context = buildReminderDeliveryContext({
+          focusState,
+          activeWindowTitle: desktopContext?.activeWindowTitle,
+          activeWindowAppName: desktopContext?.activeWindowAppName,
+          quietStart: currentSettings.proactiveQuietHoursStart,
+          quietEnd: currentSettings.proactiveQuietHoursEnd,
+          awayNotificationsEnabled: currentSettings.proactiveAwayNotificationsEnabled,
+          now,
+        })
+
+        const preferences = buildReminderDeliveryPreferences(currentSettings)
+        let decision: DeliveryDecision | null = null
+        const deliver = window.desktopPet?.deliverProactiveMessage
+        if (deliver) {
+          try {
+            decision = await deliver({ message, context, preferences })
+          } catch (error) {
+            reminderLog.warn('reminder routing failed; using the legacy notice', {
+              error: getRedactedLogErrorMessage(error),
+            })
+          }
+        } else {
+          reminderLog.warn('reminder routing bridge unavailable; using the legacy notice', {
+            source: 'reminder',
+          })
+        }
+
+        if (decision) {
+          const plan = planReminderPresentation(decision)
+          await chat.pushCompanionNotice({
+            chatContent: plan.chatLine
+              ? t('chat.prefix.reminder_task', { title: task.title, content: displayText })
+              : '',
+            // The routed path never opens the controller bubble: rule 4's
+            // bubble is rendered by the M0 bubble outlet, and rule 3 must not
+            // add a second bubble next to the strip.
+            bubbleContent: plan.bubble ? displayText : '',
+            speechContent: plan.speech ? defaultSpeechText : '',
+            autoHideMs: PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
+            dedupeKey: message.id,
+          })
+        } else {
+          // Legacy path: a reminder must never be lost when routing is
+          // unavailable, so fall back to chat line + bubble + speech. Marking
+          // the bubble with the router title puts it under the same shared
+          // collapse policy (12 s, hover pauses, 5 s after leave) as the
+          // routed bubble instead of the plain notice timer.
+          await chat.pushCompanionNotice({
+            chatContent: t('chat.prefix.reminder_task', { title: task.title, content: displayText }),
+            bubbleContent: displayText,
+            speechContent: defaultSpeechText,
+            proactiveTitle: message.title,
+          })
+        }
+
         const broadcastResults = await broadcastToChannels(
           `${task.title}\n${displayText}`,
           settingsRef.current,
@@ -208,7 +302,7 @@ export function useReminderController({
         relatedTaskId: task.id,
       })
     }
-  }, [chat, debugConsole, pet, settingsRef, t])
+  }, [chat, debugConsole, focusState, pet, settingsRef, t])
 
   useReminderScheduler({
     enabled: shouldRunReminderScheduler(view, runtimeSnapshot),
@@ -218,4 +312,6 @@ export function useReminderController({
     onTrigger: handleReminderTaskTrigger,
     onEvent: debugConsole.appendDebugConsoleEvent,
   })
+
+  return { handleReminderTaskTrigger }
 }

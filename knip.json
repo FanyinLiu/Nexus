@@ -1,6 +1,8 @@
 {
   "entry": [
     "electron/preload.js",
+    "electron/reminderStrip/preload.js",
+    "electron/reminderStrip/strip.js",
     "scripts/**/*.mjs",
     "scripts/**/*.cjs",
     "src/types/desktopPetBridgeContract.ts",
@@ -19,6 +21,7 @@
     "tests/helpers/window-ipc-stub-hooks.mjs"
   ],
   "ignore": [
+    "electron/reminderStrip/strip.css",
     "shared/**/*.d.ts"
   ],
   "ignoreDependencies": [

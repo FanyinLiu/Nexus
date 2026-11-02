@@ -101,6 +101,14 @@ function createFakeIpc(inbox: ReturnType<typeof createProactiveInboxStore>) {
     logger: createFakeLogger(),
     setInterval: () => ({ unref: () => {} }),
     clearInterval: () => {},
+    strip: {
+      show: () => true,
+      withdraw: () => true,
+      withdrawAll: () => {},
+    },
+    getStripLabels: () => ({ done: 'Done', snooze: 'Snooze 10 min', open: 'Open chat' }),
+    showOsNotification: () => {},
+    isPanelFocused: () => false,
   })
 
   return { ipc, sent, handlers }
@@ -173,7 +181,7 @@ test('clearing the inbox publishes inbox:changed with a zero unread count', asyn
   assert.equal(changes.length, 1)
   assert.deepEqual(changes[0]?.payload, {
     unreadCount: 0,
-    entries: [],
+    changes: [],
     removedIds: [],
   })
   assert.equal(fs.existsSync(inboxPath(directory)), false)
@@ -219,6 +227,23 @@ test('the exported clearProactiveInbox wrapper propagates the delete failure', a
     ipcMain: { handle: () => {} },
     getAllWindows: () => [],
     requireTrustedSender: () => {},
+    isPanelFocused: () => false,
+    getDeliveryContext: async () => ({
+      panelFocused: false,
+      fullscreen: false,
+      focusState: 'active',
+      inQuietHours: false,
+      systemDnd: null,
+      awayNotificationsEnabled: false,
+      stripEnabled: true,
+    }),
+    setDeliveryPreferences: () => {},
+    strip: {
+      show: () => true,
+      withdraw: () => true,
+      withdrawAll: () => {},
+    },
+    showOsNotification: () => {},
   })
   t.after(() => stopProactiveInboxPrune())
 
