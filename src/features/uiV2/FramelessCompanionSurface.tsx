@@ -76,6 +76,8 @@ export type FramelessCompanionSurfaceProps = {
   runtimeSnapshot: RuntimeStateSnapshot
   openSettingsPanel: () => void
   openChatPanelForVoice: (intent?: 'text' | 'recent') => void
+  /** Native pet menu; only the context-menu gesture opens it, never a click. */
+  openPetMenu: () => void
   togglePinned: () => void
   toggleClickThrough: () => void
   className?: string
@@ -122,6 +124,7 @@ export function FramelessCompanionSurface({
   runtimeSnapshot,
   openSettingsPanel,
   openChatPanelForVoice,
+  openPetMenu,
   togglePinned,
   toggleClickThrough,
   className = '',
@@ -431,6 +434,10 @@ export function FramelessCompanionSurface({
         onPointerMove={handleCharacterPointerMove}
         onPointerUp={releaseCharacterPointer}
         onPointerCancel={releaseCharacterPointer}
+        onContextMenu={(event) => {
+          event.preventDefault()
+          openPetMenu()
+        }}
         onDoubleClick={voice.toggleVoiceConversation}
       >
         <Suspense fallback={null}>

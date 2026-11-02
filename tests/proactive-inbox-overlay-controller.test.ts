@@ -43,6 +43,7 @@ function createFakeClock() {
   const timers = new Map<number, { dueAt: number, callback: () => void }>()
 
   return {
+    now: () => now,
     setTimeout(callback: () => void, ms: number) {
       const handle = nextHandle++
       timers.set(handle, { dueAt: now + ms, callback })
@@ -112,6 +113,7 @@ function createHarness(initialEntries: ProactiveInboxEntryView[]) {
     logger: { warn: () => {} },
     setTimeout: clock.setTimeout,
     clearTimeout: clock.clearTimeout,
+    nowMs: clock.now,
   })
 
   return {
@@ -152,7 +154,7 @@ test('opening the overlay changes nothing, closing clears its expansion', async 
   assert.equal(harness.controller.getSnapshot().expandedId, null)
 })
 
-test('Done marks the entry done, removes the row and drops the count', async () => {
+test('Done marks the entry done, keeps it as a read row and drops the count', async () => {
   const harness = createHarness([entry({ id: 'a' }), entry({ id: 'b', createdAt: 2 })])
   await harness.controller.open()
 
@@ -160,7 +162,8 @@ test('Done marks the entry done, removes the row and drops the count', async () 
 
   assert.deepEqual(harness.updates, [{ id: 'a', status: 'done' }])
   assert.equal(harness.controller.getSnapshot().unreadCount, 1)
-  assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.id), ['b'])
+  assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.id), ['b', 'a'])
+  assert.equal(harness.controller.getSnapshot().rows[1].read, true)
 })
 
 test('Snooze keeps the count, hides the row, then re-delivers once after ten minutes', async () => {
@@ -210,7 +213,7 @@ test('Open chat calls the panel bridge and marks the entry done', async () => {
   assert.equal(harness.openedConversation(), 1)
   assert.deepEqual(harness.updates, [{ id: 'a', status: 'done' }])
   assert.equal(harness.controller.getSnapshot().unreadCount, 1)
-  assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.id), ['b'])
+  assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.id), ['b', 'a'])
 })
 
 test('expanding an action-less high entry shows its full text, marks it read and pins the row', async () => {
@@ -236,7 +239,8 @@ test('expanding an action-less high entry shows its full text, marks it read and
   await harness.controller.toggleRow('capsule')
   const collapsed = harness.controller.getSnapshot()
   assert.equal(collapsed.expandedId, null)
-  assert.deepEqual(collapsed.rows, [])
+  assert.deepEqual(collapsed.rows.map((row) => row.id), ['capsule'])
+  assert.equal(collapsed.rows[0].read, true)
 })
 
 test('expanding an entry with actions does not change its status', async () => {
@@ -251,15 +255,42 @@ test('expanding an entry with actions does not change its status', async () => {
   assert.deepEqual(harness.entries().map((item) => item.status), ['unread'])
 })
 
-test('the overlay is empty when there is no badge-worthy unread entry', async () => {
+test('badge 0 still lists unread and read entries for the menu-opened overlay', async () => {
   const harness = createHarness([
     entry({ id: 'companionship', actions: [], priority: 'normal' }),
     entry({ id: 'already-done', actions: ['done'], status: 'done' }),
   ])
   await harness.controller.open()
 
-  assert.deepEqual(harness.controller.getSnapshot().rows, [])
-  assert.equal(harness.controller.getSnapshot().unreadCount, 0)
+  const snapshot = harness.controller.getSnapshot()
+  assert.equal(snapshot.unreadCount, 0)
+  assert.deepEqual(snapshot.rows.map((row) => row.id), ['companionship', 'already-done'])
+  assert.deepEqual(snapshot.rows.map((row) => row.read), [false, true])
+  assert.deepEqual(harness.updates, [])
+})
+
+test('the injected clock drops entries older than 30 days', async () => {
+  const day = 24 * 60 * 60 * 1000
+  const harness = createHarness([
+    entry({ id: 'boundary', createdAt: 30 * day }),
+    entry({ id: 'too-old', createdAt: 30 * day - 1 }),
+  ])
+  harness.clock.advance(60 * day)
+
+  await harness.controller.open()
+
+  assert.deepEqual(harness.controller.getSnapshot().rows.map((row) => row.id), ['boundary'])
+})
+
+test('expanding an already-read row does not write its status again', async () => {
+  const harness = createHarness([
+    entry({ id: 'read', actions: [], status: 'done', fullBody: 'already read' }),
+  ])
+  await harness.controller.open()
+
+  await harness.controller.toggleRow('read')
+
+  assert.equal(harness.controller.getSnapshot().expandedId, 'read')
   assert.deepEqual(harness.updates, [])
 })
 

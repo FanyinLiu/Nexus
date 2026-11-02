@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { buildReminderDeliveryContext, buildReminderDeliveryPreferences } from '../features/reminders/proactiveMessage.ts'
 import {
@@ -29,6 +29,8 @@ export type UseProactiveInboxOverlayOptions = {
 
 export type UseProactiveInboxOverlayResult = {
   view: ProactiveInboxOverlayView
+  /** Open from an external trigger (the pet context menu), not just the badge. */
+  open: () => void
   toggle: () => void
   close: () => void
   toggleRow: (id: string) => void
@@ -129,8 +131,13 @@ export function useProactiveInboxOverlay({
     }
   }, [])
 
+  const open = useCallback(() => {
+    void controllerRef.current?.open()
+  }, [])
+
   return {
     view,
+    open,
     toggle: () => {
       void controllerRef.current?.toggle()
     },

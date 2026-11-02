@@ -42,7 +42,7 @@ test('only unread badge-worthy entries qualify: actions or high priority', () =>
   assert.equal(isProactiveInboxEntryBadgeWorthy(entry({ id: 'd', status: 'done', priority: 'high' })), false)
 })
 
-test('the overlay keeps at most five rows, high priority first then newest', () => {
+test('the overlay lists unread first (high priority first) then read newest first', () => {
   const entries = [
     entry({ id: 'normal-old', createdAt: 100 }),
     entry({ id: 'normal-extra', createdAt: 150 }),
@@ -53,40 +53,69 @@ test('the overlay keeps at most five rows, high priority first then newest', () 
     entry({ id: 'low', priority: 'low', createdAt: 500 }),
     entry({ id: 'plain-normal', actions: [], createdAt: 600 }),
     entry({ id: 'done-high', status: 'done', priority: 'high', createdAt: 700 }),
+    entry({ id: 'done-old', status: 'done', priority: 'normal', createdAt: 10 }),
   ]
 
-  const rows = selectProactiveInboxEntries(entries)
-  assert.equal(rows.length, PROACTIVE_INBOX_OVERLAY_MAX_ROWS)
+  const rows = selectProactiveInboxEntries(entries, { nowMs: 1000 })
+  assert.equal(rows.length, entries.length)
   assert.deepEqual(rows.map((row) => row.id), [
     'high-new',
     'high-old',
+    'plain-normal',
     'normal-new',
     'normal-mid',
     'normal-extra',
+    'normal-old',
+    'low',
+    'done-high',
+    'done-old',
   ])
+  assert.equal(rows.filter((row) => row.status === 'unread').length, 8)
 })
 
-test('hidden snoozed ids are excluded and an expanded read row can be pinned', () => {
+test('more than five entries stay selected for the scroll list', () => {
+  const entries = Array.from({ length: 8 }, (_, index) => entry({
+    id: `row-${index}`,
+    createdAt: index + 1,
+  }))
+
+  const rows = selectProactiveInboxEntries(entries, { nowMs: 100 })
+  assert.equal(rows.length, 8)
+  assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 5)
+  assert.equal(rows.at(-1)?.id, 'row-0')
+})
+
+test('the 30-day window includes the boundary and drops anything older', () => {
+  const nowMs = 40 * 24 * 60 * 60 * 1000
   const entries = [
-    entry({ id: 'hidden', createdAt: 400 }),
-    entry({ id: 'visible', createdAt: 300 }),
-    entry({ id: 'pinned-done', status: 'done', actions: [], priority: 'high', createdAt: 200 }),
+    entry({ id: 'boundary', createdAt: nowMs - 30 * 24 * 60 * 60 * 1000 }),
+    entry({ id: 'too-old', createdAt: nowMs - 30 * 24 * 60 * 60 * 1000 - 1 }),
+    entry({ id: 'recent', createdAt: nowMs - 1000 }),
   ]
 
   assert.deepEqual(
-    selectProactiveInboxEntries(entries, { hiddenIds: ['hidden'] }).map((row) => row.id),
-    ['visible'],
+    selectProactiveInboxEntries(entries, { nowMs }).map((row) => row.id),
+    ['recent', 'boundary'],
   )
+})
+
+test('hidden snoozed ids are excluded; read rows remain visible', () => {
+  const entries = [
+    entry({ id: 'hidden', createdAt: 400 }),
+    entry({ id: 'visible', createdAt: 300 }),
+    entry({ id: 'done', status: 'done', actions: [], priority: 'high', createdAt: 200 }),
+  ]
+
+  assert.deepEqual(
+    selectProactiveInboxEntries(entries, { hiddenIds: ['hidden'], nowMs: 1000 }).map((row) => row.id),
+    ['visible', 'done'],
+  )
+  // A snoozed row stays hidden even if it is also the expanded row.
   assert.deepEqual(
     selectProactiveInboxEntries(entries, {
-      hiddenIds: ['hidden'],
-      keepIds: ['pinned-done'],
+      hiddenIds: ['hidden', 'done'],
+      nowMs: 1000,
     }).map((row) => row.id),
-    ['pinned-done', 'visible'],
-  )
-  // A snoozed row stays hidden even if a stale expansion names it.
-  assert.deepEqual(
-    selectProactiveInboxEntries(entries, { hiddenIds: ['hidden'], keepIds: ['hidden'] }).map((row) => row.id),
     ['visible'],
   )
 })

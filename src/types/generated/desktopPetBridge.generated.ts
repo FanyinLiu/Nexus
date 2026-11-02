@@ -832,7 +832,7 @@ export interface DesktopPetBridgeMethodResults {
   openDesktopTypingPermission: { opened: boolean; messageKey: string; recommendationKey: string }
   openExternalLink: unknown
   openPanel: void
-  openPetMenu: void
+  openPetMenu: null | 'messages'
   openTextFile: unknown
   paraformerAbort: { ok: boolean }
   paraformerFeed: unknown

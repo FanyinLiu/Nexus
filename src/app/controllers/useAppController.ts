@@ -117,7 +117,7 @@ export function useAppController() {
   })
 
   const {
-    closePanel, openPetMenu, panelCollapsed, toggleClickThrough,
+    closePanel, openPetMenu, panelCollapsed, registerInboxOverlayOpen, toggleClickThrough,
     toggleContinuousVoiceMode, togglePanelCollapse, togglePinned,
   } = useWindowChromeActions({
     applyPanelWindowState, closePanelFallback, panelWindowState, setClickThrough,
@@ -371,9 +371,10 @@ export function useAppController() {
     openSettingsSection, panelCollapsed, pet, petModel, petModelPresets,
     petModelPresetsReady, petModelSelectionResolved, petRuntimeContinuousVoiceActive,
     platformProfile, preferredMemoryFocus, preferredSettingsSectionId,
-    remotePanelSettingsOpen, reminderTaskStore, runtimeSnapshot, setSettings,
-    setSettingsOpen, settings, settingsRef, settingsOpen, toggleClickThrough,
-    toggleContinuousVoiceMode, togglePanelCollapse, togglePinned, view, voice,
+    registerInboxOverlayOpen, remotePanelSettingsOpen, reminderTaskStore,
+    runtimeSnapshot, setSettings, setSettingsOpen, settings, settingsRef,
+    settingsOpen, toggleClickThrough, toggleContinuousVoiceMode,
+    togglePanelCollapse, togglePinned, view, voice,
   })
 
   return {

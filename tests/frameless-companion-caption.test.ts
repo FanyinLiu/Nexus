@@ -239,6 +239,7 @@ function surfaceProps(input: {
     } as RuntimeStateSnapshot,
     openSettingsPanel: () => {},
     openChatPanelForVoice: () => {},
+    openPetMenu: () => {},
     togglePinned: () => {},
     toggleClickThrough: () => {},
   }

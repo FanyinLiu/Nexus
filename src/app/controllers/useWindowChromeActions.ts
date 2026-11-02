@@ -1,8 +1,13 @@
 // Owns the panel/pet window chrome callbacks: collapse, close, pet menu,
 // pin/click-through toggles and continuous-voice mode. Callback-only (no
 // effects), extracted from useAppController without behavior change.
+//
+// The pet menu callback waits for the main-process choice and opens the inbox
+// overlay only for the Messages row. The overlay controller itself lives in
+// PetView (one per pet window); PetView registers its opener here.
 
-import { useCallback, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
+import { createPetMenuOpenHandler } from '../../features/proactive/petMenuOpen.ts'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
 import type { AppSettings, PanelWindowState } from '../../types'
 
@@ -28,6 +33,11 @@ export function useWindowChromeActions({
   settingsRef,
 }: UseWindowChromeActionsOptions) {
   const panelCollapsed = panelWindowState.collapsed
+  const inboxOverlayOpenRef = useRef<(() => void) | null>(null)
+
+  const registerInboxOverlayOpen = useCallback((open: (() => void) | null) => {
+    inboxOverlayOpenRef.current = open
+  }, [])
 
   const togglePanelCollapse = useCallback(() => {
     const nextCollapsed = !panelCollapsed
@@ -48,8 +58,10 @@ export function useWindowChromeActions({
   }, [closePanelFallback])
 
   const openPetMenu = useCallback(() => {
-    const pending = window.desktopPet?.openPetMenu?.()
-    pending?.catch(() => undefined)
+    void createPetMenuOpenHandler({
+      openPetMenu: () => window.desktopPet?.openPetMenu?.(),
+      openInboxOverlay: () => inboxOverlayOpenRef.current?.(),
+    })()
   }, [])
 
   const togglePinned = useCallback(() => {
@@ -77,6 +89,7 @@ export function useWindowChromeActions({
     closePanel,
     openPetMenu,
     panelCollapsed,
+    registerInboxOverlayOpen,
     toggleClickThrough,
     toggleContinuousVoiceMode,
     togglePanelCollapse,

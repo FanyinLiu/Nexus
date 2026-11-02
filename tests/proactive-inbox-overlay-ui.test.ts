@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { register } from 'node:module'
 import test from 'node:test'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { MAIN_MESSAGES } from '../electron/mainMessagesTable.js'
-import type { ProactiveInboxRow } from '../src/features/proactive/proactiveInboxOverlay.ts'
+import {
+  PROACTIVE_INBOX_OVERLAY_MAX_ROWS,
+  type ProactiveInboxRow,
+} from '../src/features/proactive/proactiveInboxOverlay.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
@@ -43,6 +47,7 @@ function row(overrides: Partial<ProactiveInboxRow> & { id: string }): ProactiveI
     actions: ['done'],
     priority: 'normal',
     createdAt: 1,
+    read: false,
     ...overrides,
   }
 }
@@ -100,6 +105,47 @@ test('the popover is a labelled dialog with row and action buttons', () => {
   assert.match(html, />稍后 10 分钟</)
   assert.match(html, />打开对话</)
   assert.equal((html.match(/proactive-inbox__summary/g) ?? []).length, 2)
+})
+
+test('read rows are dimmed, stay expandable and lose Done/Snooze', () => {
+  const readRow = row({ id: 'read', read: true, actions: ['done', 'snooze', 'open'] })
+  const html = renderPopover({ rows: [readRow] })
+
+  assert.match(html, /proactive-inbox__row--read/)
+  assert.match(html, /aria-expanded="false"/)
+  assert.match(html, />打开对话</)
+  assert.doesNotMatch(html, />完成</)
+  assert.doesNotMatch(html, />稍后 10 分钟</)
+
+  const unread = renderPopover({ rows: [row({ id: 'unread', read: false })] })
+  assert.doesNotMatch(unread, /proactive-inbox__row--read/)
+})
+
+test('more than five rows render in the scroll list, oldest last', () => {
+  const rows = Array.from({ length: 7 }, (_, index) => row({
+    id: `row-${index}`,
+    title: index === 0 ? 'Title newest' : index === 6 ? 'Title oldest' : `Title ${index}`,
+  }))
+  const html = renderPopover({ rows })
+
+  assert.equal((html.match(/proactive-inbox__summary/g) ?? []).length, 7)
+  assert.ok(html.indexOf('Title newest') < html.indexOf('Title oldest'))
+  assert.match(html, /--proactive-inbox-visible-rows:\s*5/)
+})
+
+test('the list CSS scrolls and caps the height at five collapsed rows', () => {
+  const css = readFileSync(
+    new URL('../src/components/proactiveInboxOverlay.css', import.meta.url),
+    'utf8',
+  )
+  const start = css.indexOf('.proactive-inbox__list {')
+  const end = css.indexOf('\n}', start)
+  const listRule = css.slice(start, end)
+
+  assert.match(listRule, /overflow-y:\s*auto/)
+  assert.match(listRule, /max-height:\s*calc\(/)
+  assert.match(listRule, /--proactive-inbox-visible-rows/)
+  assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 5)
 })
 
 test('only the expanded row renders the full text', () => {

@@ -8,10 +8,11 @@
  * bridge and the clock are injected, which is what makes the done/snooze/open
  * behaviour testable without a DOM.
  *
- * Semantic traps:
- * - opening the overlay refreshes the list but never changes a status;
- * - an action-less row expanded to "done" stays pinned until collapse/close;
- * - snooze keeps the entry unread and hides it only for this app session.
+ * The overlay shows every entry from the last 30 days, including read/done
+ * rows, and the injected clock owns that boundary. Opening it refreshes the
+ * list but never changes a status; an action-less row expanded to "done" stays
+ * expanded until collapse/close; snooze keeps the entry unread and hides it
+ * only for this app session.
  */
 
 import type {
@@ -23,7 +24,6 @@ import { inboxStatusAfterInteraction } from '../../../shared/proactiveInboxReadR
 import type { Logger } from '../../lib/logger.ts'
 import { normalizeNonNegativeInteger } from '../../lib/normalize.ts'
 import {
-  isProactiveInboxEntryBadgeWorthy,
   proactiveMessageFromInboxEntry,
   selectProactiveInboxEntries,
   toProactiveInboxRow,
@@ -56,6 +56,9 @@ export type ProactiveInboxOverlayDependencies = {
   logger: Pick<Logger, 'warn'>
   setTimeout: ProactiveInboxSnoozeDependencies['setTimeout']
   clearTimeout: ProactiveInboxSnoozeDependencies['clearTimeout']
+  /** Injectable clock for the 30-day window; defaults to `Date.now`. */
+  nowMs?: () => number
+  /** Safety bound on rendered rows; defaults to the store's own maximum. */
   maxRows?: number
 }
 
@@ -69,6 +72,7 @@ export function createProactiveInboxOverlayController({
   logger,
   setTimeout,
   clearTimeout,
+  nowMs = Date.now,
   maxRows,
 }: ProactiveInboxOverlayDependencies) {
   let entries: ProactiveInboxEntryView[] = []
@@ -99,7 +103,7 @@ export function createProactiveInboxOverlayController({
   function buildView(): ProactiveInboxOverlayView {
     const rows = selectProactiveInboxEntries(entries, {
       hiddenIds: snooze.snoozedIds(),
-      keepIds: pinnedReadId ? [pinnedReadId] : [],
+      nowMs: nowMs(),
       ...(maxRows !== undefined ? { limit: maxRows } : {}),
     }).map(toProactiveInboxRow)
     return {
@@ -132,10 +136,9 @@ export function createProactiveInboxOverlayController({
     }
 
     if (expandedId && expandedId !== pinnedReadId) {
+      // Read rows can stay expanded too; only a removed entry collapses.
       const expanded = entries.find((entry) => entry.id === expandedId)
-      if (!expanded || !isProactiveInboxEntryBadgeWorthy(expanded)) {
-        expandedId = null
-      }
+      if (!expanded) expandedId = null
     }
 
     emit()
@@ -225,6 +228,7 @@ export function createProactiveInboxOverlayController({
     pinnedReadId = null
     emit()
 
+    if (entry.status !== 'unread') return
     if (inboxStatusAfterInteraction(entry, 'expand') !== 'done') return
 
     // Keep the row visible while the user reads the text that just marked it
@@ -257,6 +261,8 @@ export function createProactiveInboxOverlayController({
       }
     }
 
+    // A read row keeps its Open button, but its status is already final.
+    if (entry.status !== 'unread') return
     if (inboxStatusAfterInteraction(entry, action) !== 'done') return
     clearRowState(id)
     await setEntryDone(entry)

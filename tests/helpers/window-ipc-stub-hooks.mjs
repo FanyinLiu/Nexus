@@ -85,7 +85,7 @@ export function showPanelWindow(section, options) {
 export function closeSettingsWindow() {}
 export function closePanelWindow() {}
 export function getPanelSectionSnapshot() { return { section: 'chat' } }
-export function showPetContextMenu() {}
+export function showPetContextMenu() { return Promise.resolve(null) }
 export function getLaunchOnStartupState() { return false }
 export function setLaunchOnStartupState() {}
 export function dragWindowBy() {}

@@ -27,6 +27,7 @@ import {
   getPetInstanceForWindow,
 } from './petWindowInstances.js'
 import { configurePanelWindowController } from './panelWindowController.js'
+import { popupPetContextMenu } from './petContextMenu.js'
 import {
   consumePanelSectionIntent,
   initialPanelSectionState,
@@ -340,26 +341,25 @@ export function closePanelWindow() {
   panelWindow?.hide()
 }
 
-/** @param {import('electron').BrowserWindow | null} [sourceWindow] */
+/**
+ * Open the pet context menu. Resolves `'messages'` when that item was chosen,
+ * otherwise `null` once the menu closes; the IPC handler forwards the result
+ * so the renderer can open the inbox overlay.
+ * @param {import('electron').BrowserWindow | null} [sourceWindow]
+ * @returns {Promise<'messages' | null>}
+ */
 export function showPetContextMenu(sourceWindow = mainWindow) {
-  if (!sourceWindow || sourceWindow.isDestroyed()) return
+  if (!sourceWindow || sourceWindow.isDestroyed()) return Promise.resolve(null)
 
-  const menu = Menu.buildFromTemplate([
-    {
-      label: mainT('menu.chat'),
-      click: () => {
+  return popupPetContextMenu({
+    handlers: {
+      chat: () => {
         showPanelWindow('chat')
       },
-    },
-    {
-      label: mainT('menu.settings'),
-      click: () => {
+      settings: () => {
         showPanelWindow('settings', { settingsReturnTarget: 'pet' })
       },
-    },
-    {
-      label: mainT('menu.resetPosition'),
-      click: () => {
+      resetPosition: () => {
         if (!mainWindow || mainWindow.isDestroyed()) return
         const { workArea } = screen.getPrimaryDisplay()
         const bounds = mainWindow.getBounds()
@@ -367,25 +367,17 @@ export function showPetContextMenu(sourceWindow = mainWindow) {
         const nextY = workArea.y + Math.round((workArea.height - bounds.height) / 2)
         mainWindow.setPosition(nextX, nextY)
       },
-    },
-    {
-      type: 'separator',
-    },
-    {
-      label: mainT('menu.hidePet'),
-      click: () => {
+      hidePet: () => {
         mainWindow?.hide()
       },
-    },
-    {
-      label: mainT('menu.quit'),
-      click: () => {
+      quit: () => {
         app.quit()
       },
     },
-  ])
-
-  menu.popup({ window: sourceWindow })
+    popup: (template, onClose) => {
+      Menu.buildFromTemplate(template).popup({ window: sourceWindow, callback: onClose })
+    },
+  })
 }
 
 export function createApplicationMenu() {

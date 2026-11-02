@@ -1,14 +1,17 @@
 /**
  * Pure view rules for the pet's inbox overlay.
  *
- * The overlay shows the same entries the red dot counts (status `unread` and
- * either actions or high priority), high priority first and then newest first.
- * A row that was expanded and marked read by the read rule is kept visible by
- * the controller through `keepIds`; hidden ids are snoozed rows that must not
- * reappear before their timer fires.
+ * The overlay lists every inbox entry created in the last 30 days, whether or
+ * not the red dot counts it. Unread entries come first (high priority first,
+ * then newest); read/done entries follow newest first. Snoozed ids are hidden
+ * until their timer fires, and rows stay in the DOM so the list can scroll.
+ *
+ * The visible window is `PROACTIVE_INBOX_OVERLAY_MAX_ROWS` rows tall, but the
+ * selection keeps the full (bounded) list. Badge count and badge-worthiness
+ * remain a separate, unchanged predicate.
  *
  * Nothing here touches React, the bridge or the clock, so every ordering,
- * clipping and action decision is testable without a window.
+ * windowing and action decision is testable without a window.
  */
 
 import type {
@@ -18,8 +21,14 @@ import type {
   ProactivePriority,
 } from '../../../shared/proactiveDelivery.js'
 
-/** Maximum rows in one overlay. A pinned expanded row still counts. */
+/** Rows visible without scrolling. The list itself keeps the full selection. */
 export const PROACTIVE_INBOX_OVERLAY_MAX_ROWS = 5
+
+/** Entries older than this are not part of the overlay. */
+export const PROACTIVE_INBOX_OVERLAY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
+
+/** Upper safety bound; the main-process inbox store only keeps this many. */
+export const PROACTIVE_INBOX_OVERLAY_SAFETY_LIMIT = 100
 
 /** Entries may carry `fullBody` on a later branch; read it defensively. */
 export type ProactiveInboxEntryView = ProactiveInboxEntry & { fullBody?: string }
@@ -36,12 +45,17 @@ export type ProactiveInboxRow = {
   actions: ProactiveInboxRowAction[]
   priority: ProactivePriority
   createdAt: number
+  /** Read/done rows render dimmed and hide their Done/Snooze buttons. */
+  read: boolean
 }
 
 export type ProactiveInboxSelectionOptions = {
   hiddenIds?: readonly string[]
-  /** Expanded entries stay visible even after the read rule marks them done. */
-  keepIds?: readonly string[]
+  /**
+   * Reference time for the 30-day window. The controller injects its clock so
+   * the boundary is testable; a missing value falls back to the real clock.
+   */
+  nowMs?: number
   limit?: number
 }
 
@@ -67,31 +81,38 @@ function priorityRank(priority: ProactivePriority): number {
 /**
  * Pick and order the rows the overlay renders.
  *
- * `hiddenIds` wins over `keepIds`: a snoozed row is hidden even if a stale
- * expansion still names it. Ties on `createdAt` fall back to id so the order
- * is deterministic in tests and in the window.
+ * Every entry inside the 30-day window is listed, not only the ones the badge
+ * counts. Unread rows come first with high priority ahead of normal/low, then
+ * newest first; read/done rows follow, newest first. `hiddenIds` always wins,
+ * including for a snoozed row that is still expanded. Ties on `createdAt` fall
+ * back to id so the order is deterministic in tests and in the window.
  */
 export function selectProactiveInboxEntries(
   entries: readonly ProactiveInboxEntryView[],
   {
     hiddenIds = [],
-    keepIds = [],
-    limit = PROACTIVE_INBOX_OVERLAY_MAX_ROWS,
+    nowMs = Date.now(),
+    limit = PROACTIVE_INBOX_OVERLAY_SAFETY_LIMIT,
   }: ProactiveInboxSelectionOptions = {},
 ): ProactiveInboxEntryView[] {
   const hidden = new Set(hiddenIds)
-  const keep = new Set(keepIds)
+  const oldestVisible = nowMs - PROACTIVE_INBOX_OVERLAY_WINDOW_MS
   return entries
     .filter((entry) => {
       if (hidden.has(entry.id)) return false
-      return keep.has(entry.id) || isProactiveInboxEntryBadgeWorthy(entry)
+      return entry.createdAt >= oldestVisible
     })
     .slice()
-    .sort((left, right) => (
-      priorityRank(left.priority) - priorityRank(right.priority)
-      || right.createdAt - left.createdAt
-      || left.id.localeCompare(right.id)
-    ))
+    .sort((left, right) => {
+      const leftUnread = left.status === 'unread'
+      const rightUnread = right.status === 'unread'
+      if (leftUnread !== rightUnread) return leftUnread ? -1 : 1
+      if (leftUnread) {
+        const rank = priorityRank(left.priority) - priorityRank(right.priority)
+        if (rank !== 0) return rank
+      }
+      return right.createdAt - left.createdAt || left.id.localeCompare(right.id)
+    })
     .slice(0, Math.max(0, limit))
 }
 
@@ -137,7 +158,17 @@ export function toProactiveInboxRow(entry: ProactiveInboxEntryView): ProactiveIn
     actions: proactiveInboxRowActions(entry),
     priority: entry.priority,
     createdAt: entry.createdAt,
+    read: entry.status !== 'unread',
   }
+}
+
+/**
+ * Buttons a row may show. Read rows keep the conversation opener but cannot be
+ * completed or snoozed again.
+ */
+export function proactiveInboxVisibleRowActions(row: Pick<ProactiveInboxRow, 'actions' | 'read'>): ProactiveInboxRowAction[] {
+  if (!row.read) return row.actions
+  return row.actions.filter((action) => action === 'open' || action === 'reply')
 }
 
 /**

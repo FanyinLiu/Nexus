@@ -1,17 +1,22 @@
 /**
- * Inbox popover anchored under the pet's red dot.
+ * Inbox popover anchored to the pet's top-right corner.
  *
- * Presentational only: rows are already selected/ordered and the controller
- * owns the read rule and snooze timers. The component owns the browser edges
- * the controller cannot test headlessly — Escape, outside click, focus entry
- * and focus return — while keeping every row action a real button so the
- * keyboard path is the same as the pointer path.
+ * It is normally opened by the red dot, but the pet context menu can open it
+ * while the badge is absent (unread count 0), so positioning and focus entry
+ * must not depend on the badge. Presentational only: rows are already
+ * selected/ordered and the controller owns the read rule and snooze timers.
+ * The component owns the browser edges the controller cannot test headlessly
+ * — Escape, outside click, focus entry and focus return — while keeping every
+ * row action a real button so the keyboard path is the same as the pointer
+ * path.
  */
 
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, useRef, type CSSProperties, type RefObject } from 'react'
 
 import {
   isProactiveInboxDismissKey,
+  proactiveInboxVisibleRowActions,
+  PROACTIVE_INBOX_OVERLAY_MAX_ROWS,
   type ProactiveInboxRow,
   type ProactiveInboxRowAction,
 } from '../features/proactive/proactiveInboxOverlay.ts'
@@ -111,15 +116,24 @@ export function ProactiveInboxPopover({
       {rows.length === 0 ? (
         <p className="proactive-inbox__empty" role="status">{emptyText}</p>
       ) : (
-        <ul className="proactive-inbox__list">
+        <ul
+          className="proactive-inbox__list"
+          style={{
+            '--proactive-inbox-visible-rows': PROACTIVE_INBOX_OVERLAY_MAX_ROWS,
+          } as CSSProperties}
+        >
           {rows.map((row) => {
             const expanded = expandedId === row.id
+            const visibleActions = proactiveInboxVisibleRowActions(row)
             const toggleLabel = pickTranslatedUiText(
               uiLanguage,
               expanded ? 'pet.proactive.inbox_collapse' : 'pet.proactive.inbox_expand',
             )
             return (
-              <li key={row.id} className="proactive-inbox__row">
+              <li
+                key={row.id}
+                className={`proactive-inbox__row${row.read ? ' proactive-inbox__row--read' : ''}`}
+              >
                 <button
                   type="button"
                   className="proactive-inbox__summary"
@@ -134,9 +148,9 @@ export function ProactiveInboxPopover({
                     <span className="proactive-inbox__row-body">{row.body}</span>
                   )}
                 </button>
-                {row.actions.length > 0 ? (
+                {visibleActions.length > 0 ? (
                   <div className="proactive-inbox__actions">
-                    {row.actions.map((action) => (
+                    {visibleActions.map((action) => (
                       <button
                         key={action}
                         type="button"

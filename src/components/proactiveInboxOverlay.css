@@ -1,15 +1,20 @@
 /*
  * Proactive inbox popover (pet window).
  *
- * Anchored under the red dot, opening downward and leftward so it always stays
- * inside the pet window. The card follows the design tokens in §5.3: a light
- * translucent glass card, a near-black dark variant, 13px text, and a soft
- * blue primary action. The list scrolls internally; the window itself never
- * grows. Pointer events stay on because the pet window ignores them entirely
- * when click-through is enabled (that mode is intentional and untouched).
+ * Anchored to the top-right corner, opening downward and leftward so it always
+ * stays inside the pet window even when the red dot is absent (the context
+ * menu can open it at unread count 0). The card follows the design tokens in
+ * §5.3: a light translucent glass card, a near-black dark variant, 13px text,
+ * and a soft blue primary action. Five collapsed rows are visible; older rows
+ * scroll inside the list while the window itself never grows. Read rows are
+ * dimmed but still expandable. Pointer events stay on because the pet window
+ * ignores them entirely when click-through is enabled (that mode is
+ * intentional and untouched).
  */
 
 .proactive-inbox {
+  --proactive-inbox-visible-rows: 5;
+  --proactive-inbox-row-block-size: 98px;
   --pi-bg: rgba(255, 255, 255, 0.82);
   --pi-ink: #1D1D1F;
   --pi-muted: rgba(29, 29, 31, 0.66);
@@ -116,6 +121,9 @@ html[data-theme='system-black'] .proactive-inbox {
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  max-height: calc(
+    var(--proactive-inbox-visible-rows, 5) * (var(--proactive-inbox-row-block-size, 98px) + 10px) - 10px
+  );
   margin: 0;
   padding: 0 2px 2px 0;
   overflow-y: auto;
@@ -135,6 +143,11 @@ html[data-theme='system-black'] .proactive-inbox {
 .proactive-inbox__row:last-child {
   padding-bottom: 0;
   border-bottom: 0;
+}
+
+/* Read/done rows stay available for context but recede behind unread rows. */
+.proactive-inbox__row--read {
+  opacity: 0.68;
 }
 
 .proactive-inbox__summary {
