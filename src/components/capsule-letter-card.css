@@ -1,0 +1,95 @@
+/*
+ * Future-self capsule letter card.
+ *
+ * Sits under the ordinary pet chat bubble, so it must read as a sheet of paper
+ * on the desk rather than a chat bubble: full chat width, softer padding, a
+ * low-contrast warm border and an almost invisible shadow. It shares the warm
+ * language of the Sunday-letter notice without a second palette, hence the
+ * amber token with a sheet-scope fallback for surfaces outside .chat-sheet-v2.
+ */
+
+.capsule-letter-card {
+  --capsule-letter-amber: var(--chat-sheet-v2-amber, var(--nx-v2-secondary, var(--color-accent-hover, #c9975b)));
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 6px 0 12px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--capsule-letter-amber) 28%, #e8dfd0);
+  border-radius: var(--nx-radius-card, 16px);
+  background: color-mix(in srgb, var(--capsule-letter-amber) 14%, #f7f2ea);
+  box-shadow: 0 4px 18px rgba(60, 40, 20, 0.06);
+  animation: capsule-letter-card-fade-in 180ms ease-out both;
+}
+
+.capsule-letter-card__title {
+  margin: 0;
+  color: #4a4035;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.capsule-letter-card__body {
+  margin: 0;
+  color: #3d3429;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.capsule-letter-card__date {
+  margin: 0;
+  color: #8a7e70;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: right;
+}
+
+/* Night and black: a warmer dark grey than the surrounding cool chrome, so the
+   card still reads as paper instead of another panel. */
+html[data-color-scheme='dark'] .capsule-letter-card,
+html[data-theme='system-dark'] .capsule-letter-card,
+html[data-theme='system-black'] .capsule-letter-card {
+  border-color: rgba(230, 210, 180, 0.12);
+  background: color-mix(in srgb, var(--capsule-letter-amber) 10%, #26221e);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+}
+
+html[data-color-scheme='dark'] .capsule-letter-card__title,
+html[data-theme='system-dark'] .capsule-letter-card__title,
+html[data-theme='system-black'] .capsule-letter-card__title {
+  color: #e8dfd4;
+}
+
+html[data-color-scheme='dark'] .capsule-letter-card__body,
+html[data-theme='system-dark'] .capsule-letter-card__body,
+html[data-theme='system-black'] .capsule-letter-card__body {
+  color: #d8d0c6;
+}
+
+html[data-color-scheme='dark'] .capsule-letter-card__date,
+html[data-theme='system-dark'] .capsule-letter-card__date,
+html[data-theme='system-black'] .capsule-letter-card__date {
+  color: #9a9084;
+}
+
+@keyframes capsule-letter-card-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capsule-letter-card {
+    animation: none;
+  }
+}

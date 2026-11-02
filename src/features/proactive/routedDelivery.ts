@@ -28,17 +28,18 @@ export type RoutedDeliverBridge<TMessage extends RoutedMessage> = (payload: {
 }) => Promise<DeliveryDecision>
 
 /** What the renderer still renders itself after main routes the message. */
-export interface RoutedChatLinePlan {
+export interface RoutedChatLinePlan<TLine> {
   chatLine: boolean
   /**
-   * The source's own text for the chat line. It is deliberately supplied by
+   * The source's own payload for the chat line. It is deliberately supplied by
    * the caller: a source may want the unclipped delivery copy rather than the
-   * message body that main validates.
+   * message body that main validates, and a source may carry structured data
+   * beside the text.
    */
-  text: string
+  line: TLine
 }
 
-export interface DeliverThroughRouterDeps<TMessage extends RoutedMessage> {
+export interface DeliverThroughRouterDeps<TMessage extends RoutedMessage, TLine = string> {
   /** Build the router message for this delivery. */
   buildMessage: () => TMessage
   /** One-version rollback: when true the pre-M1.1 path runs. */
@@ -46,8 +47,13 @@ export interface DeliverThroughRouterDeps<TMessage extends RoutedMessage> {
   deliver?: RoutedDeliverBridge<TMessage>
   buildContext: () => Promise<DeliveryContext> | DeliveryContext
   preferences: ProactiveDeliveryPreferences
-  pushChatLine?: (text: string) => Promise<void>
-  planChatLine: (decision: DeliveryDecision) => RoutedChatLinePlan
+  pushChatLine?: (line: TLine) => Promise<void>
+  planChatLine: (decision: DeliveryDecision) => RoutedChatLinePlan<TLine>
+  /**
+   * Optional chat line for the legacy and fallback paths. Sources that leave
+   * this unset keep the pre-M1.1 behaviour of surfacing without a chat line.
+   */
+  planLegacyChatLine?: () => TLine | null
   /**
    * Settle delivery exactly once, immediately after the router accepts the
    * message or the legacy surface resolves. It must not depend on the
@@ -81,12 +87,13 @@ export interface DeliverThroughRouterResult {
  * meantime. The chat push runs afterwards and may still fail; that error
  * reaches the caller's log instead of re-delivering on every tick.
  */
-export async function deliverThroughRouter<TMessage extends RoutedMessage>(
-  deps: DeliverThroughRouterDeps<TMessage>,
+export async function deliverThroughRouter<TMessage extends RoutedMessage, TLine = string>(
+  deps: DeliverThroughRouterDeps<TMessage, TLine>,
 ): Promise<DeliverThroughRouterResult> {
   if (deps.useLegacyPath || !deps.deliver) {
     await deps.runLegacy()
     deps.onDelivered()
+    await pushLegacyChatLine(deps)
     return { path: 'legacy' }
   }
 
@@ -100,13 +107,29 @@ export async function deliverThroughRouter<TMessage extends RoutedMessage>(
     // bridge failure stays retryable instead of silently consuming the message.
     await deps.runLegacy()
     deps.onDelivered()
+    await pushLegacyChatLine(deps)
     return { path: 'fallback' }
   }
 
   deps.onDelivered()
   const chatLine = deps.planChatLine(decision)
   if (chatLine.chatLine && deps.pushChatLine && !deps.isStopped()) {
-    await deps.pushChatLine(chatLine.text)
+    await deps.pushChatLine(chatLine.line)
   }
   return { path: 'router', rule: decision.rule }
+}
+
+/**
+ * Optional chat line after the legacy or fallback surface resolved.
+ *
+ * A source that plans none keeps the previous pipeline exactly. When it does,
+ * the line follows the same rules as a routed one: the delivery is already
+ * settled, and a stopped scheduler drops the line instead of the message.
+ */
+async function pushLegacyChatLine<TMessage extends RoutedMessage, TLine>(
+  deps: DeliverThroughRouterDeps<TMessage, TLine>,
+): Promise<void> {
+  if (!deps.planLegacyChatLine || !deps.pushChatLine || deps.isStopped()) return
+  const line = deps.planLegacyChatLine()
+  if (line !== null) await deps.pushChatLine(line)
 }

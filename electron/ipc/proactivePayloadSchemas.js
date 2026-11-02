@@ -42,6 +42,17 @@ const proactiveMessageSchema = {
     body: { type: 'string', maxLength: PROACTIVE_BODY_MAX_LENGTH },
     // Optional expanded copy; display outlets still render only `body`.
     fullBody: { type: 'string', optional: true, maxLength: PROACTIVE_FULL_BODY_MAX_LENGTH },
+    // Outlet-only copy for messages whose inbox row differs from the visible
+    // surfaces. Same budgets as title/body: a public copy is a display pair.
+    publicCopy: {
+      type: 'object',
+      optional: true,
+      unknown: 'reject',
+      fields: {
+        title: { type: 'string', maxLength: PROACTIVE_TITLE_MAX_LENGTH, allowEmpty: false },
+        body: { type: 'string', maxLength: PROACTIVE_BODY_MAX_LENGTH },
+      },
+    },
     speech: { type: 'string', optional: true, maxLength: SPEECH_MAX_LENGTH },
     actions: {
       type: 'array',

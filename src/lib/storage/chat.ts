@@ -215,6 +215,32 @@ function normalizeCreatedAt(value: unknown, index: number): string | null {
   return new Date(index).toISOString()
 }
 
+/** Persisted letter-body budget; mirrors the proactive fullBody storage cap. */
+const CAPSULE_LETTER_BODY_MAX_LENGTH = 10000
+const CAPSULE_LETTER_TITLE_MAX_LENGTH = 80
+
+/**
+ * Rebuild the future-capsule card payload. A malformed copy drops the card
+ * only — the opener message still renders as an ordinary chat line. The body
+ * is kept verbatim (line breaks and indentation are the user's), so only its
+ * emptiness and length are checked.
+ */
+function normalizeCapsuleLetter(value: unknown): ChatMessage['capsuleLetter'] {
+  if (!isObject(value)) return undefined
+  const body = typeof value.body === 'string' ? value.body : ''
+  if (!body.trim() || body.length > CAPSULE_LETTER_BODY_MAX_LENGTH) return undefined
+  const writtenAt = typeof value.writtenAt === 'string' && Number.isFinite(Date.parse(value.writtenAt))
+    ? new Date(value.writtenAt).toISOString()
+    : ''
+  if (!writtenAt) return undefined
+  const title = typeof value.title === 'string' ? value.title.trim() : ''
+  return {
+    ...(title ? { title: title.slice(0, CAPSULE_LETTER_TITLE_MAX_LENGTH) } : {}),
+    body,
+    writtenAt,
+  }
+}
+
 export function normalizeChatMessage(value: unknown, index: number): ChatMessage | null {
   if (!isObject(value) || !isValidRole(value.role) || typeof value.content !== 'string') {
     return null
@@ -237,6 +263,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
   const loopOffer = normalizeLoopOffer(value.loopOffer)
   const loopCheck = normalizeLoopCheck(value.loopCheck)
   const proactiveWhy = normalizeProactiveWhy(value.proactiveWhy)
+  const capsuleLetter = normalizeCapsuleLetter(value.capsuleLetter)
   const interrupted = normalizeChatInterruption(value.interrupted)
 
   return {
@@ -252,6 +279,7 @@ export function normalizeChatMessage(value: unknown, index: number): ChatMessage
     ...(loopOffer ? { loopOffer } : {}),
     ...(loopCheck ? { loopCheck } : {}),
     ...(proactiveWhy ? { proactiveWhy } : {}),
+    ...(capsuleLetter ? { capsuleLetter } : {}),
   }
 }
 

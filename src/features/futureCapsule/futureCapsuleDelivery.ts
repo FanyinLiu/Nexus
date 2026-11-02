@@ -1,83 +1,16 @@
 /**
- * Render a delivery notification body for a due future-self capsule.
+ * Localized pieces of one future-self capsule delivery.
  *
- * The companion's voice carries the message: she's not the author of
- * the words inside, but she's the one who held them and brings them
- * back. The framing is locale-specific; the user's verbatim message
- * stays inside quotes so the past-self voice and the present-companion
- * voice don't blur.
+ * A capsule is split into three audiences: the OS toast keeps its stable
+ * routing title and the opener only, the chat line is the opener plus a letter
+ * card, and the inbox row is the letter's header plus its opening characters.
+ * The letter text itself is never decorated here — the user authored it, so it
+ * stays verbatim (line breaks included) and is never wrapped in quotes.
  */
 
+import { t } from '../../i18n/runtime.ts'
 import type { UiLanguage } from '../../types'
 import type { FutureCapsuleRecord } from './futureCapsuleStore.ts'
-
-const MESSAGE_SNIPPET_MAX = 140
-
-interface LocaleCopy {
-  /**
-   * Format the OS notification body. Receives the days-elapsed integer,
-   * the trimmed user message, and the optional title (already trimmed
-   * by the caller; empty string when absent).
-   */
-  format: (params: {
-    companionName: string
-    daysAgo: number
-    message: string
-    title: string
-  }) => string
-}
-
-const COPY_BY_LOCALE: Record<string, LocaleCopy> = {
-  'en-US': {
-    format: ({ companionName, daysAgo, message, title }) =>
-      title
-        ? `${companionName}: ${daysAgo} days ago you wrote yourself a note titled "${title}". Reading it back: "${message}"`
-        : `${companionName}: ${daysAgo} days ago you wrote a note for today. Reading it back: "${message}"`,
-  },
-  'zh-CN': {
-    format: ({ daysAgo, message, title }) =>
-      title
-        ? `${daysAgo} 天前你给今天的自己写过一封信，叫《${title}》。让我念给你："${message}"`
-        : `${daysAgo} 天前你给今天的自己写过一封信。让我念给你："${message}"`,
-  },
-  'zh-TW': {
-    format: ({ daysAgo, message, title }) =>
-      title
-        ? `${daysAgo} 天前你給今天的自己寫過一封信，叫《${title}》。讓我念給你：「${message}」`
-        : `${daysAgo} 天前你給今天的自己寫過一封信。讓我念給你：「${message}」`,
-  },
-  'ja': {
-    format: ({ daysAgo, message, title }) =>
-      title
-        ? `${daysAgo} 日前のあなたが今日のあなたへ宛てた手紙「${title}」を預かっていました。読みあげますね：「${message}」`
-        : `${daysAgo} 日前のあなたが今日のあなたへ宛てた手紙を預かっていました。読みあげますね：「${message}」`,
-  },
-  'ko': {
-    format: ({ daysAgo, message, title }) =>
-      title
-        ? `${daysAgo}일 전 당신이 오늘의 당신에게 보낸 편지 "${title}"를 보관해두었어요. 읽어드릴게요: "${message}"`
-        : `${daysAgo}일 전 당신이 오늘의 당신에게 보낸 편지를 보관해두었어요. 읽어드릴게요: "${message}"`,
-  },
-}
-
-export interface BuildDeliveryBodyInput {
-  uiLanguage: UiLanguage
-  companionName: string
-  capsule: FutureCapsuleRecord
-  now?: Date
-}
-
-export interface BuildDeliveryBodyResult {
-  title: string
-  /** Display copy: the message snippet is collapsed and clipped. */
-  body: string
-  /**
-   * The same localized copy with the capsule message verbatim. It differs from
-   * `body` only when the message needed snippet collapsing or clipping, and is
-   * meant for the inbox's expanded view rather than any display outlet.
-   */
-  fullBody: string
-}
 
 const TITLE_BY_LOCALE: Record<string, string> = {
   'en-US': 'A note from your past self',
@@ -87,12 +20,38 @@ const TITLE_BY_LOCALE: Record<string, string> = {
   'ko': '과거의 당신이 오늘의 당신에게',
 }
 
-function trimMessage(text: string): string {
-  const single = text.replace(/\s+/g, ' ').trim()
-  if (single.length <= MESSAGE_SNIPPET_MAX) return single
-  return single.slice(0, MESSAGE_SNIPPET_MAX - 1) + '…'
+/** One year of days; a capsule keeps its age in prose, not exact days. */
+const DAYS_PER_YEAR = 365
+
+/** Below two years the age reads as a plain day/month count. */
+const MONTH_THRESHOLD_DAYS = 60
+const YEAR_THRESHOLD_DAYS = DAYS_PER_YEAR
+const TWO_YEAR_THRESHOLD_DAYS = 2 * DAYS_PER_YEAR
+
+export interface BuildDeliveryBodyInput {
+  uiLanguage: UiLanguage
+  capsule: FutureCapsuleRecord
+  now?: Date
 }
 
+export interface FutureCapsuleDelivery {
+  /** Stable routing title for the OS toast; never the letter header. */
+  notificationTitle: string
+  /** The pet's one chat line. Never the letter itself. */
+  opener: string
+  /** Letter-card header: the capsule title, or the localized default. */
+  header: string
+  /** The authored letter, verbatim. */
+  letterBody: string
+  /** ISO instant the capsule was written, for the card's bottom date line. */
+  writtenAt: string
+}
+
+/**
+ * Whole days since the capsule was written. Same-instant and future stamps
+ * collapse to zero, and anything below a day rounds up to one so a capsule is
+ * never described as written "0 days ago".
+ */
 export function daysBetween(fromIso: string, now: Date): number {
   const fromMs = Date.parse(fromIso)
   if (!Number.isFinite(fromMs)) return 0
@@ -101,22 +60,58 @@ export function daysBetween(fromIso: string, now: Date): number {
   return Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)))
 }
 
-export function buildFutureCapsuleDelivery(input: BuildDeliveryBodyInput): BuildDeliveryBodyResult {
-  const copy = COPY_BY_LOCALE[input.uiLanguage] ?? COPY_BY_LOCALE['en-US']
-  const titleLabel = TITLE_BY_LOCALE[input.uiLanguage] ?? TITLE_BY_LOCALE['en-US']
+/**
+ * Render the capsule age the way the opener speaks it: days under two months,
+ * whole months under a year, then whole years. Exact dates belong to the card.
+ */
+export function formatCapsuleAge(daysAgo: number, locale: UiLanguage): string {
+  const days = Math.max(1, Math.round(daysAgo))
+  if (days >= TWO_YEAR_THRESHOLD_DAYS) {
+    return t('chat.capsule.age.years', { y: Math.floor(days / DAYS_PER_YEAR) }, locale)
+  }
+  if (days >= YEAR_THRESHOLD_DAYS) {
+    return t('chat.capsule.age.one_year', undefined, locale)
+  }
+  if (days >= MONTH_THRESHOLD_DAYS) {
+    return t('chat.capsule.age.months', { m: Math.floor(days / 30) }, locale)
+  }
+  if (days === 1) {
+    return t('chat.capsule.age.one_day', undefined, locale)
+  }
+  return t('chat.capsule.age.days', { n: days }, locale)
+}
+
+/**
+ * The card's bottom-right date line, in the reader's local calendar format.
+ * An unparseable stamp renders no line at all instead of a bogus date.
+ */
+export function formatCapsuleWrittenLabel(writtenAt: string, locale: UiLanguage): string {
+  const writtenMs = Date.parse(writtenAt)
+  if (!Number.isFinite(writtenMs)) return ''
+  const date = new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: locale === 'en-US' ? 'short' : 'long',
+    day: 'numeric',
+  }).format(new Date(writtenMs))
+  return t('chat.capsule.written', { date }, locale)
+}
+
+/**
+ * Build every localized piece of one delivery in the reader's language.
+ * The caller decides which piece reaches which outlet; nothing here trims,
+ * quotes or abbreviates the letter.
+ */
+export function buildFutureCapsuleDelivery(input: BuildDeliveryBodyInput): FutureCapsuleDelivery {
+  const locale = input.uiLanguage
   const now = input.now ?? new Date()
   const daysAgo = daysBetween(input.capsule.createdAt, now)
-  const message = trimMessage(input.capsule.message)
   const title = (input.capsule.title ?? '').trim()
-  const companionName = input.companionName?.trim() || 'Nexus'
+  const writtenMs = Date.parse(input.capsule.createdAt)
   return {
-    title: titleLabel,
-    body: copy.format({ companionName, daysAgo, message, title }),
-    fullBody: copy.format({
-      companionName,
-      daysAgo,
-      message: input.capsule.message,
-      title,
-    }),
+    notificationTitle: TITLE_BY_LOCALE[locale] ?? TITLE_BY_LOCALE['en-US'],
+    opener: t('chat.capsule.opener', { time: formatCapsuleAge(daysAgo, locale) }, locale),
+    header: title || t('chat.capsule.header.default', undefined, locale),
+    letterBody: input.capsule.message,
+    writtenAt: Number.isFinite(writtenMs) ? new Date(writtenMs).toISOString() : '',
   }
 }

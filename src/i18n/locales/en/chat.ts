@@ -165,4 +165,12 @@ export const enChat = {
   'chat.letter.card_title': 'She wrote you a letter',
   'chat.letter.card_open': 'Read it',
   'chat.dream.line': 'I dreamed last night that {dream}',
+  'chat.capsule.opener': 'The letter you wrote {time} for today is here.',
+  'chat.capsule.header.default': 'To you, today',
+  'chat.capsule.written': 'Written {date}',
+  'chat.capsule.age.days': '{n} days ago',
+  'chat.capsule.age.one_day': 'a day ago',
+  'chat.capsule.age.months': '{m} months ago',
+  'chat.capsule.age.one_year': 'a year ago',
+  'chat.capsule.age.years': '{y} years ago',
 } as const satisfies Partial<TranslationDictionary>

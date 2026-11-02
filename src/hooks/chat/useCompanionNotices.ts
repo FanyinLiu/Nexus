@@ -74,6 +74,9 @@ export function useCompanionNotices({
         ...(options.loopOffer ? { loopOffer: options.loopOffer } : {}),
         ...(options.loopCheck ? { loopCheck: options.loopCheck } : {}),
         ...(options.proactiveWhy ? { proactiveWhy: options.proactiveWhy } : {}),
+        // The letter card belongs to the chat history only; the bubble below
+        // stays empty for a capsule, so the letter never leaves this message.
+        ...(options.capsuleLetter ? { capsuleLetter: options.capsuleLetter } : {}),
       })
     }
 

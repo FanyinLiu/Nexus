@@ -157,16 +157,37 @@ export function createProactiveIpc({
   }
 
   /**
-   * Presentation surfaces render the short `body`; the expanded copy belongs
-   * to `inbox:list` only, so it never travels with a bubble event.
+   * Presentation surfaces render the short display copy. A message that
+   * separates its inbox row from its visible copy (a future-self capsule) is
+   * reduced to that public pair here; `fullBody` never travels with a bubble,
+   * so the long form cannot be read from the pet or a notification.
    * @param {ProactiveMessage} message
    * @returns {ProactiveMessage}
    */
-  function withoutFullBody(message) {
-    if (message.fullBody === undefined) return message
+  function toPresentationMessage(message) {
+    const copy = message.publicCopy
     const display = { ...message }
     delete display.fullBody
+    delete display.publicCopy
+    if (copy) {
+      display.title = copy.title
+      display.body = copy.body
+    }
     return display
+  }
+
+  /**
+   * The OS toast shows the same public pair as the bubble. It is the most
+   * exposed surface (lock screen, bystanders), so it never receives `fullBody`.
+   * @param {ProactiveMessage} message
+   * @returns {{ title: string, body: string }}
+   */
+  function toNotificationCopy(message) {
+    const copy = message.publicCopy
+    return {
+      title: copy?.title ?? message.title,
+      body: copy?.body ?? message.body,
+    }
   }
 
   /** @param {InboxMutation} mutation */
@@ -254,7 +275,7 @@ export function createProactiveIpc({
   })
 
   outlets.register('bubble', (message) => {
-    presentToPet({ outlet: 'bubble', message: withoutFullBody(message) })
+    presentToPet({ outlet: 'bubble', message: toPresentationMessage(message) })
   })
 
   // The strip window lives in this process, so the outlet queues the reminder
@@ -271,7 +292,7 @@ export function createProactiveIpc({
   })
 
   outlets.register('os_notification', async (message) => {
-    await showOsNotification({ title: message.title, body: message.body })
+    await showOsNotification(toNotificationCopy(message))
   })
 
   const router = createProactiveRouter({ outlets })

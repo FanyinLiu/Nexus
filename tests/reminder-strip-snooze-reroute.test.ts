@@ -49,12 +49,8 @@ function makeContext(overrides: Partial<DeliveryContext> = {}): DeliveryContext 
   }
 }
 
-function createTempDir(t: TestContext): string {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-reminder-strip-reroute-'))
-  t.after(() => {
-    fs.rmSync(directory, { recursive: true, force: true })
-  })
-  return directory
+function createTempDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-reminder-strip-reroute-'))
 }
 
 type Warning = { message: string; meta?: Record<string, unknown> }
@@ -81,7 +77,7 @@ type SentMessage = { channel: string; payload: unknown }
 
 function createHarness(t: TestContext) {
   t.mock.timers.enable({ apis: ['setTimeout'] })
-  const directory = createTempDir(t)
+  const directory = createTempDir()
   const store = createProactiveInboxStore({
     getStorePath: () => path.join(directory, FILE_NAME),
     now: () => NOW,
@@ -154,7 +150,6 @@ function createHarness(t: TestContext) {
       return context
     },
   })
-  t.after(() => ipc.stopPrune())
 
   assert.ok(configured)
   const dependencies = configured
@@ -167,6 +162,17 @@ function createHarness(t: TestContext) {
     canReshow: (id) => dependencies.canReshow(id),
   })
   const activeSession = session
+
+  t.after(async () => {
+    ipc.stopPrune()
+    activeSession.destroy()
+    // A mock-timer tick only *starts* the debounced inbox write; the atomic
+    // write runs on the real event loop and can still be creating its temp
+    // file when the test returns. Drain it before the recursive delete, or
+    // the file can appear inside the directory mid-removal (ENOTEMPTY).
+    await store.flush()
+    fs.rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
+  })
 
   return {
     store,

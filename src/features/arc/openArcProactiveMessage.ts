@@ -153,7 +153,7 @@ export async function deliverDueOpenArc(
       chatLine: planOpenArcPresentation(decision).chatLine,
       // The arc body is not clipped for the chat line; it uses the original
       // delivery body rather than the router message's clipped copy.
-      text: deps.delivery.body,
+      line: deps.delivery.body,
     }),
     onDelivered: () => deps.recordCheckInFired(deps.arc.id),
     isStopped: deps.isStopped,

@@ -120,6 +120,7 @@ function toChatSheetMessages(
       ...(message.loopOffer ? { loopOffer: message.loopOffer } : {}),
       ...(message.loopCheck ? { loopCheck: message.loopCheck } : {}),
       ...(message.proactiveWhy ? { proactiveWhy: message.proactiveWhy } : {}),
+      ...(message.capsuleLetter ? { capsuleLetter: message.capsuleLetter } : {}),
     }]
   })
 }

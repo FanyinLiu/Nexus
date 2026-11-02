@@ -165,4 +165,12 @@ export const koChat = {
   'chat.letter.card_title': '그녀가 편지를 썼어요',
   'chat.letter.card_open': '읽어 보기',
   'chat.dream.line': '어젯밤 꿈을 꿨어. {dream}',
+  'chat.capsule.opener': '{time}의 당신이 오늘의 당신에게 쓴 편지가 도착했어요.',
+  'chat.capsule.header.default': '오늘의 당신에게',
+  'chat.capsule.written': '{date}에 쓴 편지',
+  'chat.capsule.age.days': '{n}일 전',
+  'chat.capsule.age.one_day': '1일 전',
+  'chat.capsule.age.months': '{m}개월 전',
+  'chat.capsule.age.one_year': '1년 전',
+  'chat.capsule.age.years': '{y}년 전',
 } as const satisfies Partial<TranslationDictionary>
