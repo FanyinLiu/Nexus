@@ -64,8 +64,8 @@ import {
   SunlightTint,
   WeatherAmbient,
 } from '../../features/panelScene'
-import { CrisisHotlinePanel, type CrisisSignal, useCrisisPanelState } from '../../features/safety'
-import { getChatHistoryScrollTop } from '../../features/uiV2/chatSheetScroll.ts'
+import { CrisisHotlinePanel, useCrisisPanelState } from '../../features/safety'
+import type { CrisisSignal } from '../../features/safety'
 import { useAmbientWeather } from '../../hooks/useAmbientWeather.ts'
 import { shorten } from '../../lib'
 import { modelSupportsVision } from '../../lib/modelCapabilities.ts'
@@ -579,7 +579,7 @@ export function LegacyPanelView({
       }
 
       messageList.scrollTo({
-        top: crisisBecameVisible ? 0 : getChatHistoryScrollTop(messageList, visibleMessages),
+        top: crisisBecameVisible ? 0 : messageList.scrollHeight,
         behavior: crisisBecameVisible ? 'auto' : 'smooth',
       })
     })

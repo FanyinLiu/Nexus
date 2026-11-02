@@ -10,8 +10,7 @@ import {
 } from '../src/features/uiV2/chatSheetScroll.ts'
 
 const sheetPath = new URL('../src/features/uiV2/ChatSheetV2.tsx', import.meta.url)
-const legacyPanelPath = new URL('../src/app/views/LegacyPanelView.tsx', import.meta.url)
-const messageBubblePath = new URL('../src/components/MessageBubble.tsx', import.meta.url)
+const scrollHookPath = new URL('../src/features/uiV2/useChatSheetScroll.ts', import.meta.url)
 
 function fakeArticle(
   id: string,
@@ -93,27 +92,18 @@ test('history scrollTop falls back to the bottom when the capsule article is mis
   assert.equal(getChatHistoryScrollTop(history, [{ id: 'a9', capsuleLetter: {} }]), 1200)
 })
 
-test('chat surfaces anchor capsule letters without scrolling past the opener', async () => {
-  const [sheetSource, legacyPanelSource, messageBubbleSource] = await Promise.all([
+test('the chat sheet delegates scroll anchoring to the capsule-aware hook', async () => {
+  const [sheetSource, scrollHookSource] = await Promise.all([
     readFile(sheetPath, 'utf8'),
-    readFile(legacyPanelPath, 'utf8'),
-    readFile(messageBubblePath, 'utf8'),
+    readFile(scrollHookPath, 'utf8'),
   ])
 
-  const scrollToLatestBlock = sheetSource.match(
+  const scrollToLatestBlock = scrollHookSource.match(
     /const scrollToLatest = useCallback\(\([\s\S]*?\n {2}\}, \[\]\)/,
   )?.[0] ?? ''
   assert.match(scrollToLatestBlock, /getChatHistoryScrollTop\(history, messagesRef\.current\)/)
   assert.doesNotMatch(scrollToLatestBlock, /top:\s*history\.scrollHeight/)
-  assert.doesNotMatch(sheetSource, /scrollIntoView/)
+  assert.doesNotMatch(scrollHookSource, /scrollIntoView/)
+  assert.match(sheetSource, /useChatSheetScroll\(\{ messages, scheduleFrame \}\)/)
   assert.match(sheetSource, /data-message-id=\{message\.id\}/)
-
-  assert.match(
-    legacyPanelSource,
-    /top:\s*crisisBecameVisible \? 0 : getChatHistoryScrollTop\(messageList, visibleMessages\)/,
-  )
-  assert.doesNotMatch(legacyPanelSource, /top:\s*crisisBecameVisible \? 0 : messageList\.scrollHeight/)
-  assert.doesNotMatch(legacyPanelSource, /scrollIntoView/)
-
-  assert.match(messageBubbleSource, /data-message-id=\{message\.id\}/)
 })
