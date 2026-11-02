@@ -89,6 +89,11 @@ export function useBackgroundSchedulers({
     focusState,
     ...(pushCompanionNotice ? { pushCompanionNotice } : {}),
   })
-  useOpenArcScheduler({ settings, enabled: schedulerEnabled })
+  useOpenArcScheduler({
+    settings,
+    enabled: schedulerEnabled,
+    focusState,
+    ...(pushCompanionNotice ? { pushCompanionNotice } : {}),
+  })
   useGuidanceAnalysisScheduler({ enabled: schedulerEnabled })
 }

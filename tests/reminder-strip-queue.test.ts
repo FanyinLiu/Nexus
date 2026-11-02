@@ -70,9 +70,9 @@ test('removing returns the removed item so snooze can bring it back', () => {
   assert.equal(removeReminderStripItem(items, 'missing').removed, null)
 })
 
-test('only the four strip actions are accepted', () => {
+test('all five strip actions are accepted', () => {
   assert.deepEqual(normalizeReminderStripAction({ id: 'a', action: 'snooze' }), { id: 'a', action: 'snooze' })
-  for (const action of ['done', 'open', 'expire']) {
+  for (const action of ['done', 'open', 'reply', 'expire']) {
     assert.ok(normalizeReminderStripAction({ id: 'a', action }))
   }
   assert.equal(normalizeReminderStripAction({ id: 'a', action: 'delete' }), null)

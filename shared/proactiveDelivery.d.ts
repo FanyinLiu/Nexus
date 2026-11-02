@@ -8,6 +8,12 @@ export const PROACTIVE_TITLE_MAX_LENGTH: 80
 export const PROACTIVE_BODY_MAX_LENGTH: 160
 export const PROACTIVE_FULL_BODY_MAX_LENGTH: 10000
 
+/**
+ * Code constant, not a setting: the settings schema stays at 25 and a
+ * user-facing toggle is still undecided.
+ */
+export const PROACTIVE_STRIP_ENABLED: true
+
 export type ProactiveSource =
   | 'reminder'
   | 'agenda'

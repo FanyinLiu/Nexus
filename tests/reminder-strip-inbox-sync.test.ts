@@ -228,17 +228,39 @@ test('inbox:update to done or dismissed withdraws the id from the strip', async 
   assert.equal(harness.store.list().unreadCount, 0)
 })
 
-test('strip open and expire leave the inbox entry unread and the count unchanged', (t) => {
+test('strip open and reply mark the inbox entry done, drop the count and withdraw the item', (t) => {
+  for (const action of ['open', 'reply'] as const) {
+    const harness = createHarness(t)
+    const message = makeMessage()
+    harness.store.upsert(message)
+    assert.equal(harness.store.list().unreadCount, 1)
+
+    harness.fakeStrip.configured().onAction(action, message.id)
+
+    assert.equal(inboxStatus(harness.store, message.id), 'done')
+    assert.equal(harness.store.list().unreadCount, 0)
+    assert.deepEqual(harness.changes(), [{
+      unreadCount: 0,
+      changes: [{ id: message.id, status: 'done' }],
+      removedIds: [],
+    }])
+    assert.deepEqual(harness.fakeStrip.withdrawn, [message.id])
+    assert.deepEqual(harness.panelChanges(), [])
+  }
+})
+
+test('strip expire and snooze leave the inbox entry unread and the count unchanged', (t) => {
   const harness = createHarness(t)
   const message = makeMessage()
   harness.store.upsert(message)
 
-  harness.fakeStrip.configured().onAction('open', message.id)
   harness.fakeStrip.configured().onAction('expire', message.id)
+  harness.fakeStrip.configured().onAction('snooze', message.id)
 
   assert.equal(inboxStatus(harness.store, message.id), 'unread')
   assert.equal(harness.store.list().unreadCount, 1)
   assert.deepEqual(harness.changes(), [])
+  assert.deepEqual(harness.fakeStrip.withdrawn, [])
 })
 
 test('clear-all withdraws every strip item and publishes a zero count', async (t) => {

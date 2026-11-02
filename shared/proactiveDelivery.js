@@ -19,6 +19,15 @@ export const PROACTIVE_TITLE_MAX_LENGTH = 80
 export const PROACTIVE_BODY_MAX_LENGTH = 160
 
 /**
+ * Whether the strip outlet takes part in proactive routing.
+ *
+ * This is a code constant, not a setting: the settings schema stays at 25 and
+ * a user-facing strip toggle is still undecided. Deleting the strip outlet is
+ * one constant flip, not a migration.
+ */
+export const PROACTIVE_STRIP_ENABLED = true
+
+/**
  * Storage budget for the optional untruncated body. `body` stays the short
  * display copy every outlet renders; `fullBody` preserves the source text for
  * an expanded inbox view and is never pushed to a presentation surface.

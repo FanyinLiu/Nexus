@@ -9,6 +9,7 @@
 
 import {
   PROACTIVE_BODY_MAX_LENGTH,
+  PROACTIVE_STRIP_ENABLED,
   PROACTIVE_TITLE_MAX_LENGTH,
 } from '../../../shared/proactiveDelivery.js'
 import type {
@@ -100,7 +101,7 @@ export function buildReminderDeliveryContext(
     inQuietHours: isQuietHour(hour, signals.quietStart, signals.quietEnd),
     systemDnd: null,
     awayNotificationsEnabled: signals.awayNotificationsEnabled,
-    stripEnabled: true,
+    stripEnabled: PROACTIVE_STRIP_ENABLED,
   }
 }
 

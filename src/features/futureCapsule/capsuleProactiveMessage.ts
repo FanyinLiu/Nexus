@@ -24,6 +24,7 @@ import type {
   ProactiveDeliveryPreferences,
   ProactiveMessage as SharedProactiveMessage,
 } from '../../../shared/proactiveDelivery.js'
+import { deliverThroughRouter } from '../proactive/routedDelivery.ts'
 import type { FutureCapsuleDelivery } from './futureCapsuleDelivery.ts'
 import type { FutureCapsuleRecord } from './futureCapsuleStore.ts'
 
@@ -196,39 +197,34 @@ export interface DeliverDueCapsuleResult {
 export async function deliverDueCapsule(
   deps: DeliverDueCapsuleDeps,
 ): Promise<DeliverDueCapsuleResult> {
-  if (deps.useLegacyPath || !deps.deliver) {
-    await deliverLegacy(deps)
-    return { path: 'legacy' }
-  }
-
   const message = buildCapsuleProactiveMessage(deps.capsule, deps.delivery, deps.now)
-  let decision: DeliveryDecision
-  try {
-    const context = await deps.buildContext()
-    decision = await deps.deliver({ message, context, preferences: deps.preferences })
-  } catch {
-    // A throwing notification propagates before the mark, so a total bridge
-    // failure stays retryable instead of silently consuming the capsule.
-    await deliverLegacy(deps)
-    return { path: 'fallback' }
-  }
-
-  deps.markDelivered(deps.capsule.id)
-  if (planCapsulePresentation(decision).chatLine && deps.pushChatLine && !deps.isStopped()) {
-    // One call for every rule, so a capsule can never get two lines.
-    await deps.pushChatLine(buildCapsuleChatLine(deps.capsule, deps.delivery))
-  }
-  return { path: 'router', rule: decision.rule }
+  return deliverThroughRouter<CapsuleProactiveMessage, CapsuleChatLine>({
+    buildMessage: () => message,
+    useLegacyPath: deps.useLegacyPath,
+    deliver: deps.deliver,
+    buildContext: deps.buildContext,
+    preferences: deps.preferences,
+    ...(deps.pushChatLine ? { pushChatLine: deps.pushChatLine } : {}),
+    planChatLine: (decision) => ({
+      chatLine: planCapsulePresentation(decision).chatLine,
+      // One call for every rule, so a capsule can never get two lines. The
+      // line is the opener plus the letter card, capped at the storage budget
+      // so an oversized capsule cannot break the chat contract.
+      line: buildCapsuleChatLine(deps.capsule, deps.delivery),
+    }),
+    planLegacyChatLine: () => buildCapsuleChatLine(deps.capsule, deps.delivery),
+    onDelivered: () => deps.markDelivered(deps.capsule.id),
+    isStopped: deps.isStopped,
+    runLegacy: () => deliverLegacy(deps),
+  })
 }
 
 /**
- * Pre-M1.1 surfacing: one OS notification, then mark the capsule delivered,
- * then the same chat line the router path writes.
+ * Pre-M1.1 surfacing: the single OS notification, without bookkeeping.
  *
- * The mark does not depend on the scheduler being live: the notification
- * already reached the user. The chat line does: a stopped scheduler drops it
- * the way the routed path does. A throwing notification propagates before the
- * mark and the push, so the capsule stays retryable with no half-delivery.
+ * The mark and the chat line belong to the shared pipeline, which runs them
+ * after this resolves so a throwing notification leaves the capsule pending
+ * with no half-delivery.
  *
  * The notification carries the routing title and the opener only. The letter
  * is bound for the chat card and the inbox; a lock screen is not the place for
@@ -239,9 +235,4 @@ async function deliverLegacy(deps: DeliverDueCapsuleDeps): Promise<void> {
     title: deps.delivery.notificationTitle,
     body: deps.delivery.opener,
   })
-  deps.markDelivered(deps.capsule.id)
-  if (deps.pushChatLine && !deps.isStopped()) {
-    // The only push on this path, so a legacy capsule still gets one line.
-    await deps.pushChatLine(buildCapsuleChatLine(deps.capsule, deps.delivery))
-  }
 }
