@@ -24,7 +24,14 @@ import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import { proactiveBubbleIdentity } from '../proactive/proactivePresentation.ts'
 import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
-import { companionStageGestures } from './companionStageGestures.ts'
+import {
+  companionStageGestures,
+  createStageDragState,
+  stagePointerDown,
+  stagePointerMove,
+  stagePointerRelease,
+  type StageDragState,
+} from './companionStageGestures.ts'
 import { useReadableCaption } from './caption.ts'
 import { buildMotionSafeModelDefinition } from './motionSafeModel.ts'
 import {
@@ -137,8 +144,7 @@ export function FramelessCompanionSurface({
   const utilityTriggerRef = useRef<HTMLButtonElement | null>(null)
   const utilityMenuRef = useRef<HTMLDivElement | null>(null)
   const characterRef = useRef<HTMLDivElement | null>(null)
-  const dragPointRef = useRef<{ x: number; y: number } | null>(null)
-  const touchTimeoutRef = useRef<number | null>(null)
+  const dragStateRef = useRef<StageDragState>(createStageDragState())
   const [utilityOpen, setUtilityOpen] = useState(false)
   const [captionPaused, setCaptionPaused] = useState(false)
   const [revealedStateLabel, setRevealedStateLabel] = useState<'listening' | 'thinking' | null>(null)
@@ -211,7 +217,11 @@ export function FramelessCompanionSurface({
   }, [utilityOpen])
 
   useEffect(() => () => {
-    if (touchTimeoutRef.current !== null) window.clearTimeout(touchTimeoutRef.current)
+    const state = dragStateRef.current
+    if (state.tapTimeout !== null) {
+      window.clearTimeout(state.tapTimeout)
+      state.tapTimeout = null
+    }
   }, [])
 
   const specificSurfaceError = Boolean(chat.error?.trim() || runtimeSnapshot.wakewordError?.trim())
@@ -360,35 +370,30 @@ export function FramelessCompanionSurface({
   }
 
   function handleCharacterPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) return
-    dragPointRef.current = { x: event.screenX, y: event.screenY }
-    pet.markPresenceActivity()
-    pet.setPetTapActive(true)
-    pet.setPetTouchZone(detectTouchZone(event))
-    if (touchTimeoutRef.current !== null) window.clearTimeout(touchTimeoutRef.current)
-    touchTimeoutRef.current = window.setTimeout(() => {
-      pet.setPetTapActive(false)
-      pet.setPetTouchZone(null)
-    }, 280)
+    stagePointerDown(event, dragStateRef.current, {
+      markPresenceActivity: pet.markPresenceActivity,
+      setTapActive: pet.setPetTapActive,
+      setTouchZone: pet.setPetTouchZone,
+      touchZoneFor: detectTouchZone,
+      setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs),
+      clearTimeout: (handle) => window.clearTimeout(handle),
+    })
   }
 
   function handleCharacterPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     updateGaze(event)
     pet.setPetTouchZone(detectTouchZone(event))
-    if (!dragPointRef.current || event.buttons !== 1) return
-    const delta = {
-      x: event.screenX - dragPointRef.current.x,
-      y: event.screenY - dragPointRef.current.y,
-    }
-    if (delta.x || delta.y) {
-      void window.desktopPet?.dragBy?.(delta)
-      dragPointRef.current = { x: event.screenX, y: event.screenY }
-    }
+    stagePointerMove(event, dragStateRef.current, {
+      dragBy: (delta) => {
+        void window.desktopPet?.dragBy?.(delta)
+      },
+    })
   }
 
   function releaseCharacterPointer() {
-    dragPointRef.current = null
-    pet.setPetTouchZone(null)
+    stagePointerRelease(dragStateRef.current, {
+      setTouchZone: pet.setPetTouchZone,
+    })
   }
 
   function handleInteractivePointerOut(event: ReactPointerEvent<HTMLElement>) {
