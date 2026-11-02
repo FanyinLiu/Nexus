@@ -3,22 +3,21 @@
  *
  * Sits under the ordinary pet chat bubble, so it must read as a sheet of paper
  * on the desk rather than a chat bubble: full chat width, softer padding, a
- * low-contrast warm border and an almost invisible shadow. It shares the warm
- * language of the Sunday-letter notice without a second palette, hence the
- * amber token with a sheet-scope fallback for surfaces outside .chat-sheet-v2.
+ * low-contrast warm border and an almost invisible shadow. The warm paper
+ * palette is written out literally so the card renders the same on every
+ * surface, inside or outside the chat sheet.
  */
 
 .capsule-letter-card {
-  --capsule-letter-amber: var(--chat-sheet-v2-amber, var(--nx-v2-secondary, var(--color-accent-hover, #c9975b)));
   display: grid;
   gap: 8px;
   width: 100%;
   min-width: 0;
   margin: 6px 0 12px;
   padding: 16px 18px;
-  border: 1px solid color-mix(in srgb, var(--capsule-letter-amber) 28%, #e8dfd0);
-  border-radius: var(--nx-radius-card, 16px);
-  background: color-mix(in srgb, var(--capsule-letter-amber) 14%, #f7f2ea);
+  border: 1px solid #e5d9c8;
+  border-radius: 16px;
+  background: #f6f0e6;
   box-shadow: 0 4px 18px rgba(60, 40, 20, 0.06);
   animation: capsule-letter-card-fade-in 180ms ease-out both;
 }
@@ -56,7 +55,7 @@ html[data-color-scheme='dark'] .capsule-letter-card,
 html[data-theme='system-dark'] .capsule-letter-card,
 html[data-theme='system-black'] .capsule-letter-card {
   border-color: rgba(230, 210, 180, 0.12);
-  background: color-mix(in srgb, var(--capsule-letter-amber) 10%, #26221e);
+  background: #2c2824;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
 }
 

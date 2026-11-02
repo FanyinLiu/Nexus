@@ -31,7 +31,7 @@ import {
 import type { FutureCapsuleRecord } from '../src/features/futureCapsule/futureCapsuleStore.ts'
 import { runFutureCapsuleTick } from '../src/hooks/useFutureCapsuleScheduler.ts'
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
-import { AVAILABLE_LOCALES, ensureLocaleLoaded } from '../src/i18n/runtime.ts'
+import { AVAILABLE_LOCALES, ensureLocaleLoaded, t } from '../src/i18n/runtime.ts'
 import { FUTURE_CAPSULE_STORE_STORAGE_KEY } from '../src/lib/storage/core.ts'
 import { normalizeChatMessage } from '../src/lib/storage/chat.ts'
 import type { AppSettings } from '../src/types/index.ts'
@@ -93,37 +93,37 @@ const AGE_CASES: Array<{
   {
     days: 1,
     label: '1 day',
-    expected: { 'zh-CN': '1 天前', 'zh-TW': '1 天前', 'en-US': 'a day ago', ja: '1日前', ko: '1일 전' },
+    expected: { 'zh-CN': '1天前', 'zh-TW': '1天前', 'en-US': 'a day ago', ja: '1日前', ko: '1일 전' },
   },
   {
     days: 59,
     label: '59 days',
-    expected: { 'zh-CN': '59 天前', 'zh-TW': '59 天前', 'en-US': '59 days ago', ja: '59日前', ko: '59일 전' },
+    expected: { 'zh-CN': '59天前', 'zh-TW': '59天前', 'en-US': '59 days ago', ja: '59日前', ko: '59일 전' },
   },
   {
     days: 60,
     label: '60 days (2 months)',
-    expected: { 'zh-CN': '2 个月前', 'zh-TW': '2 個月前', 'en-US': '2 months ago', ja: '2か月前', ko: '2개월 전' },
+    expected: { 'zh-CN': '2个月前', 'zh-TW': '2個月前', 'en-US': '2 months ago', ja: '2か月前', ko: '2개월 전' },
   },
   {
     days: 61,
     label: '61 days (2 months)',
-    expected: { 'zh-CN': '2 个月前', 'zh-TW': '2 個月前', 'en-US': '2 months ago', ja: '2か月前', ko: '2개월 전' },
+    expected: { 'zh-CN': '2个月前', 'zh-TW': '2個月前', 'en-US': '2 months ago', ja: '2か月前', ko: '2개월 전' },
   },
   {
     days: 359,
     label: '359 days (11 months)',
-    expected: { 'zh-CN': '11 个月前', 'zh-TW': '11 個月前', 'en-US': '11 months ago', ja: '11か月前', ko: '11개월 전' },
+    expected: { 'zh-CN': '11个月前', 'zh-TW': '11個月前', 'en-US': '11 months ago', ja: '11か月前', ko: '11개월 전' },
   },
   {
     days: 360,
     label: '360 days (12 months)',
-    expected: { 'zh-CN': '12 个月前', 'zh-TW': '12 個月前', 'en-US': '12 months ago', ja: '12か月前', ko: '12개월 전' },
+    expected: { 'zh-CN': '12个月前', 'zh-TW': '12個月前', 'en-US': '12 months ago', ja: '12か月前', ko: '12개월 전' },
   },
   {
     days: 364,
     label: '364 days (12 months)',
-    expected: { 'zh-CN': '12 个月前', 'zh-TW': '12 個月前', 'en-US': '12 months ago', ja: '12か月前', ko: '12개월 전' },
+    expected: { 'zh-CN': '12个月前', 'zh-TW': '12個月前', 'en-US': '12 months ago', ja: '12か月前', ko: '12개월 전' },
   },
   {
     days: 365,
@@ -138,7 +138,7 @@ const AGE_CASES: Array<{
   {
     days: 730,
     label: '730 days (2 years)',
-    expected: { 'zh-CN': '2 年前', 'zh-TW': '2 年前', 'en-US': '2 years ago', ja: '2年前', ko: '2년 전' },
+    expected: { 'zh-CN': '2年前', 'zh-TW': '2年前', 'en-US': '2 years ago', ja: '2年前', ko: '2년 전' },
   },
 ]
 
@@ -165,6 +165,21 @@ test('the opener is one normal sentence per locale and never quotes the letter',
     const oneYear = deliveryFor(locale, 400)
     assert.equal(oneYear.opener, OPENER_BY_LOCALE[locale](AGE_CASES[7]!.expected[locale]), locale)
   }
+})
+
+test('the zh capsule opener has no gap between the number and the time word', () => {
+  const expected = {
+    3: ['你3天前写给今天的信，到了。', '你3天前寫給今天的信，到了。'],
+    60: ['你2个月前写给今天的信，到了。', '你2個月前寫給今天的信，到了。'],
+    730: ['你2年前写给今天的信，到了。', '你2年前寫給今天的信，到了。'],
+  } as const
+  for (const [days, texts] of Object.entries(expected)) {
+    for (const [locale, text] of [['zh-CN', texts[0]], ['zh-TW', texts[1]]] as const) {
+      assert.doesNotMatch(deliveryFor(locale, Number(days)).opener, /\s/, `${locale}:${days}`)
+      assert.equal(deliveryFor(locale, Number(days)).opener, text, `${locale}:${days}`)
+    }
+  }
+  for (const locale of ['zh-CN', 'zh-TW'] as const) for (const key of ['chat.capsule.age.days', 'chat.capsule.age.one_day', 'chat.capsule.age.months', 'chat.capsule.age.one_year', 'chat.capsule.age.years'] as const) assert.doesNotMatch(t(key, { n: 3, m: 2, y: 2 }, locale), /\s/, `${locale}:${key}`)
 })
 
 test('no capsule copy asks to read the letter out loud or prefixes a companion name', () => {
@@ -735,7 +750,7 @@ test('chat history round-trips capsuleLetter and drops malformed values', () => 
   const base = {
     id: 'msg-capsule',
     role: 'assistant' as const,
-    content: '你300 天前写给今天的信，到了。',
+    content: '你300天前写给今天的信，到了。',
     createdAt: '2026-05-01T12:00:00.000Z',
   }
 
