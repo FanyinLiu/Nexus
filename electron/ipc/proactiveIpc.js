@@ -24,7 +24,7 @@
 
 import path from 'node:path'
 
-import { PROACTIVE_STRIP_ENABLED, routeDelivery } from '../../shared/proactiveDelivery.js'
+import { routeDelivery } from '../../shared/proactiveDelivery.js'
 import { inboxStatusAfterInteraction } from '../../shared/proactiveInboxReadRule.js'
 import { createLogger } from '../logger.js'
 import { readMainUiLocale } from '../mainMessages.js'
@@ -142,7 +142,9 @@ export function createProactiveIpc({
     inQuietHours: false,
     systemDnd: null,
     awayNotificationsEnabled: false,
-    stripEnabled: PROACTIVE_STRIP_ENABLED,
+    // No renderer preferences yet: keep the strip on, which is what the old
+    // code constant always chose.
+    stripEnabled: true,
   }),
   setDeliveryPreferences = () => {},
 }) {

@@ -65,6 +65,7 @@ test('the delivery context uses the focus, quiet-hours, fullscreen and away sign
     quietStart: 14,
     quietEnd: 15,
     awayNotificationsEnabled: true,
+    stripEnabled: true,
     now: NOW,
   })
 
@@ -85,6 +86,7 @@ test('the delivery context stays out of quiet hours outside the window', () => {
     quietStart: 9,
     quietEnd: 10,
     awayNotificationsEnabled: false,
+    stripEnabled: true,
     now: NOW,
   })
 

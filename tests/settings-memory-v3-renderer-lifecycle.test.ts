@@ -155,7 +155,7 @@ test('active Memory V3 preserves paused recent state and clears it explicitly', 
   assert.equal(await memorySwitch.isChecked(), false, 'memoryPaused=false should leave the pause switch off')
   const stablePauseCopy = await memoryStatusRow.textContent() ?? ''
   assert.match(stablePauseCopy, /暂停所有记忆/)
-  assert.match(stablePauseCopy, /打开后，聊天时不翻记忆、不写日记/)
+  assert.match(stablePauseCopy, /打开后，聊天时不翻记忆、不写每日记录/)
   assert.doesNotMatch(stablePauseCopy, /全部记忆已暂停/)
   await memorySwitch.press('Space')
   assert.equal(await memorySwitch.isChecked(), true, 'memoryPaused=true should turn the pause switch on')

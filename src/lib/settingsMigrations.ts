@@ -16,6 +16,7 @@
  * embedding model from the old local-hash default to `auto`. Version 24
  * drops the unused agent iteration cap and the legacy persona chat flag.
  * Version 25 adds the default-off backchannel acknowledgement switch.
+ * Version 26 adds the default-on reminder strip switch.
  */
 
 import type { UiLanguage } from '../types'
@@ -446,7 +447,7 @@ function migrateRetiredNonLive2dPetModels(raw: Record<string, unknown>) {
   return next
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 25
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 26
 
 function migrateVoiceLanguageFields(raw: Record<string, unknown>) {
   const next = { ...raw }
@@ -691,6 +692,17 @@ const migrations: SettingsMigration[] = [
       const next = { ...raw }
       if (typeof next.voiceBackchannelEnabled !== 'boolean') {
         next.voiceBackchannelEnabled = false
+      }
+      return next
+    },
+  },
+  {
+    toVersion: 26,
+    description: 'Default the reminder strip switch on for older stores',
+    migrate: (raw) => {
+      const next = { ...raw }
+      if (typeof next.proactiveReminderStripEnabled !== 'boolean') {
+        next.proactiveReminderStripEnabled = true
       }
       return next
     },

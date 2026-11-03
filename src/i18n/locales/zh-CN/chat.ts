@@ -14,7 +14,7 @@ export const zhCNChat = {
   'message_bubble.memory_trace.none': '记忆开着，但这次没有召回到内容。',
   'message_bubble.memory_trace.paused': '本条未使用记忆',
   'message_bubble.memory_trace.long_term': '长期记忆',
-  'message_bubble.memory_trace.daily': '日记记忆',
+  'message_bubble.memory_trace.daily': '每日记录',
   'message_bubble.memory_trace.semantic': '语义命中',
   'message_bubble.memory_trace.missing': '已不存在',
   'message_bubble.memory_trace.disabled': '这条已暂停',

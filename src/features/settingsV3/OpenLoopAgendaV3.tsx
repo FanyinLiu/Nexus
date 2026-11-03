@@ -159,6 +159,20 @@ export function OpenLoopAgendaV3({
         </SettingsV3Field>
       </div>
 
+      <SettingsV3Row
+        label={ti('settings.memory.proactive.reminder_strip')}
+        hint={ti('settings.memory.proactive.reminder_strip_hint')}
+      >
+        <SettingsV3Switch
+          label={ti('settings.memory.proactive.reminder_strip')}
+          checked={draft.proactiveReminderStripEnabled}
+          onChange={(enabled) => setDraft((previous) => ({
+            ...previous,
+            proactiveReminderStripEnabled: enabled,
+          }))}
+        />
+      </SettingsV3Row>
+
       {quietUntil ? (
         <SettingsV3Row
           label={ti('proactive.etiquette.settings_active', {

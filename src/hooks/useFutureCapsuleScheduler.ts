@@ -124,6 +124,7 @@ export async function runFutureCapsuleTick({
           quietStart: settings.proactiveQuietHoursStart,
           quietEnd: settings.proactiveQuietHoursEnd,
           awayNotificationsEnabled: settings.proactiveAwayNotificationsEnabled,
+          stripEnabled: settings.proactiveReminderStripEnabled,
           now: deliverAt,
         })
       },

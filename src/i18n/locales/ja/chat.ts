@@ -16,7 +16,7 @@ export const jaChat = {
   'message_bubble.memory_trace.none': '記憶はオンですが、この返信では呼び出されませんでした。',
   'message_bubble.memory_trace.paused': 'この返信は記憶を使っていません',
   'message_bubble.memory_trace.long_term': '長期記憶',
-  'message_bubble.memory_trace.daily': '日記',
+  'message_bubble.memory_trace.daily': '毎日の記録',
   'message_bubble.memory_trace.semantic': '意味ヒット',
   'message_bubble.memory_trace.missing': '見つかりません',
   'message_bubble.memory_trace.disabled': 'この記憶は停止中',

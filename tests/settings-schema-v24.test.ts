@@ -3,7 +3,7 @@ import test from 'node:test'
 import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
 
 test('schema 24 drops the unused agent iteration cap and persona chat flag', () => {
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 25)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 26)
   const next = migrateSettings({
     settingsSchemaVersion: 23,
     agentMaxIterations: 12,

@@ -163,6 +163,7 @@ const defaultSettings: AppSettings = {
   proactivePresenceIntervalMinutes: 25,
   proactiveAwayNotificationsEnabled: false,
   proactiveAwayNotificationThresholdMinutes: 240,
+  proactiveReminderStripEnabled: true,
   // A short hello at each end of the day is light enough to default on.
   // Existing stores keep whatever boolean they already saved.
   proactiveBracketEnabled: true,
@@ -668,6 +669,9 @@ export function loadSettings(): AppSettings {
     proactiveBracketEnabled: typeof stored.proactiveBracketEnabled === 'boolean'
       ? stored.proactiveBracketEnabled
       : defaultSettings.proactiveBracketEnabled,
+    // A saved false is a real choice; anything else (absent, corrupt, older
+    // store) keeps the strip on, which is the pre-setting behavior.
+    proactiveReminderStripEnabled: stored.proactiveReminderStripEnabled !== false,
     proactiveFrequency: stored.proactiveFrequency === 'low' || stored.proactiveFrequency === 'normal'
       ? stored.proactiveFrequency
       : defaultSettings.proactiveFrequency,

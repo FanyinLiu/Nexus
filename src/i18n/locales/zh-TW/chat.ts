@@ -16,7 +16,7 @@ export const zhTWChat = {
   'message_bubble.memory_trace.none': '記憶開著，但這次沒有召回到內容。',
   'message_bubble.memory_trace.paused': '本條未使用記憶',
   'message_bubble.memory_trace.long_term': '長期記憶',
-  'message_bubble.memory_trace.daily': '日記記憶',
+  'message_bubble.memory_trace.daily': '每日紀錄',
   'message_bubble.memory_trace.semantic': '語義命中',
   'message_bubble.memory_trace.missing': '已不存在',
   'message_bubble.memory_trace.disabled': '這條已暫停',

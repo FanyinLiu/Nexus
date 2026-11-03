@@ -99,6 +99,8 @@ const deliveryPreferencesSchema = {
     quietEnd: { type: 'number', integer: true, min: 0, max: 23 },
     desktopAwarenessAllowed: { type: 'boolean' },
     awayNotificationsEnabled: { type: 'boolean' },
+    // Optional: an older renderer omits it and main keeps the strip on.
+    stripEnabled: { type: 'boolean', optional: true },
   },
 }
 

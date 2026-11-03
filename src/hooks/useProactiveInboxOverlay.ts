@@ -103,6 +103,7 @@ export function useProactiveInboxOverlay({
           quietStart: currentSettings.proactiveQuietHoursStart,
           quietEnd: currentSettings.proactiveQuietHoursEnd,
           awayNotificationsEnabled: currentSettings.proactiveAwayNotificationsEnabled,
+          stripEnabled: currentSettings.proactiveReminderStripEnabled,
           now,
         })
         const preferences = buildReminderDeliveryPreferences(currentSettings)
