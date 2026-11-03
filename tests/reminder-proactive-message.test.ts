@@ -45,16 +45,25 @@ test('an empty speech signal leaves the message silent', () => {
   assert.equal('speech' in message, false)
 })
 
-test('title and body are clipped to the 80/160 character contract', () => {
+test('the title is the key point and the body keeps the 160 character contract', () => {
   const message = buildReminderProactiveMessage(
-    { id: 'task-2', title: 't'.repeat(120) },
+    { id: 'task-2', title: 't'.repeat(120), keyPoint: '取快递' },
     { displayText: 'b'.repeat(300), speech: 'spoken', now: NOW },
   )
 
-  assert.equal(message.title.length, 80)
-  assert.ok(message.title.endsWith('…'))
+  assert.equal(message.title, '取快递')
   assert.equal(message.body.length, 160)
   assert.ok(message.body.endsWith('…'))
+})
+
+test('a long reminder without a key point falls back to the clipped title', () => {
+  const message = buildReminderProactiveMessage(
+    { id: 'task-3', title: 't'.repeat(120) },
+    { displayText: 'body', speech: '', now: NOW },
+  )
+
+  assert.equal(message.title, `${'t'.repeat(20)}…`)
+  assert.ok(message.title.length <= 21)
 })
 
 test('the delivery context uses the focus, quiet-hours, fullscreen and away signals it is given', () => {

@@ -304,9 +304,10 @@ export function useProactiveAgenda(options: {
       const hidden = typeof document !== 'undefined' && (document.hidden || !document.hasFocus())
       if (hidden && settings.proactiveAwayNotificationsEnabled && outreach) {
         // A lock screen must not carry the outreach sentence, the place, the
-        // time or any template. Only the reminder's own `what`, clipped.
+        // time or any template. The title is the stored key point, or the
+        // clipped first line when generation has not landed yet.
         const notification = buildAgendaNotification({
-          title: current.t('proactive.loop.notify_title'),
+          keyPoint: memory?.loopKeyPoint,
           what: outreach.why.summary,
         })
         await window.desktopPet?.showProactiveNotification?.(notification)

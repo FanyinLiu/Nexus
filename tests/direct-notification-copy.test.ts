@@ -197,11 +197,11 @@ test('agenda emoji: 25 😀 clip to 20 😀 + …', () => {
   assert.equal(graphemeCount(output), 21)
 })
 
-test('agenda emoji: buildAgendaNotification body clips emoji by grapheme', () => {
-  const result = buildAgendaNotification({ title: 'T', what: `${'记'.repeat(19)}😀尾巴` })
-  assertNoLoneSurrogate(result.body)
-  assert.equal(result.body, `${'记'.repeat(19)}😀…`)
-  assert.equal(result.title, 'T')
+test('agenda emoji: buildAgendaNotification title clips emoji by grapheme', () => {
+  const result = buildAgendaNotification({ what: `${'记'.repeat(19)}😀尾巴` })
+  assertNoLoneSurrogate(result.title)
+  assert.equal(result.title, `${'记'.repeat(19)}😀…`)
+  assert.deepEqual(Object.keys(result), ['title'])
 })
 
 test('agenda emoji: 👨‍👩‍👧 at grapheme 20 is kept whole, no ellipsis', () => {
@@ -240,28 +240,27 @@ test('agenda emoji: 25 👨‍👩‍👧 clip to 20 whole families + …', () =
   assert.equal(graphemeCount(output), 21)
 })
 
-test('agenda emoji: buildAgendaNotification body clips 👨‍👩‍👧 by grapheme', () => {
+test('agenda emoji: buildAgendaNotification title clips 👨‍👩‍👧 by grapheme', () => {
   const result = buildAgendaNotification({
-    title: 'T',
     what: `${'记'.repeat(19)}${FAMILY}尾巴`,
   })
-  assertNoLoneSurrogate(result.body)
-  assert.equal(result.body, `${'记'.repeat(19)}${FAMILY}…`)
-  assert.equal(result.title, 'T')
+  assertNoLoneSurrogate(result.title)
+  assert.equal(result.title, `${'记'.repeat(19)}${FAMILY}…`)
+  assert.deepEqual(Object.keys(result), ['title'])
 })
 
 // ── Agenda first line ──────────────────────────────────────────────────────
 
-test('agenda first line: only the first non-blank line reaches the OS body', () => {
+test('agenda first line: only the first non-blank line reaches the OS title', () => {
   const input = '买牛奶\n顺便取快递\n密码 1234'
   const output = truncateAgendaWhat(input)
   assertNoLoneSurrogate(output)
   assert.equal(output, '买牛奶…')
 
-  const built = buildAgendaNotification({ title: 'T', what: input })
-  assertNoLoneSurrogate(built.body)
-  assert.equal(built.body, '买牛奶…')
-  assert.equal(built.title, 'T')
+  const built = buildAgendaNotification({ what: input })
+  assertNoLoneSurrogate(built.title)
+  assert.equal(built.title, '买牛奶…')
+  assert.deepEqual(Object.keys(built), ['title'])
 })
 
 test('agenda first line: leading blank lines are skipped', () => {
@@ -312,7 +311,7 @@ test('agenda first line: all-blank input becomes an empty body', () => {
 
 // ── Agenda notification ────────────────────────────────────────────────────
 
-test('buildAgendaNotification body is the reminder what and nothing else', async () => {
+test('buildAgendaNotification title is the stored key point and nothing else', async () => {
   await ensureLocaleLoaded('zh-CN')
   const memory: MemoryItem = {
     id: 'memory-quarterly',
@@ -320,6 +319,7 @@ test('buildAgendaNotification body is the reminder what and nothing else', async
     category: 'goal',
     source: 'chat',
     kind: 'open_loop',
+    loopKeyPoint: '季度方案',
     loopKind: 'commitment',
     loopDueAt: new Date(2026, 9, 22, 15, 0, 0, 0).toISOString(),
     loopDueText: '周四下午三点',
@@ -331,29 +331,24 @@ test('buildAgendaNotification body is the reminder what and nothing else', async
   assert.equal(outreach.why.summary, MEMORY_TEXT)
 
   const { result, output } = await captureConsole(async () => buildAgendaNotification({
-    title: t('proactive.loop.notify_title', undefined, 'zh-CN'),
+    keyPoint: memory.loopKeyPoint,
     what: outreach.why.summary,
   }))
 
-  assert.deepEqual(result, { title: '提醒', body: MEMORY_TEXT })
-  assert.equal(result.body, truncateAgendaWhat(outreach.why.summary))
-  // No template, place suffix or clock text is appended to the what.
-  assert.equal(result.body.includes('办好了吗'), false)
-  assert.equal(result.body.includes('要我前一晚提醒你吗'), false)
-  assert.equal(result.body.includes('，国贸'), false)
-  assert.equal(result.body.includes('10月22日'), false)
+  assert.deepEqual(result, { title: '季度方案' })
+  // No template, place suffix, clock text or body is part of the toast.
+  assert.equal(JSON.stringify(result).includes('办好了吗'), false)
+  assert.equal(JSON.stringify(result).includes('要我前一晚提醒你吗'), false)
+  assert.equal(JSON.stringify(result).includes('国贸'), false)
+  assert.equal(JSON.stringify(result).includes('10月22日'), false)
   assertNoSecret(output, MEMORY_TEXT, truncateAgendaWhat(MEMORY_TEXT))
 })
 
-test('buildAgendaNotification uses the English reminder title and clips long what', async () => {
+test('buildAgendaNotification falls back to a clipped what when no key point exists', async () => {
   await ensureLocaleLoaded('en-US')
   const longWhat = 'x'.repeat(30)
-  const result = buildAgendaNotification({
-    title: t('proactive.loop.notify_title', undefined, 'en-US'),
-    what: longWhat,
-  })
-  assert.equal(result.title, 'Reminder')
-  assert.equal(result.body, `${'x'.repeat(20)}…`)
+  const result = buildAgendaNotification({ what: longWhat })
+  assert.deepEqual(result, { title: `${'x'.repeat(20)}…` })
 })
 
 // ── Locale strings ─────────────────────────────────────────────────────────

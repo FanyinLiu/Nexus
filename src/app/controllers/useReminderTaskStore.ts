@@ -81,6 +81,14 @@ export function useReminderTaskStore() {
     return result.removedTask
   }, [])
 
+  const setReminderKeyPoint = useCallback((id: string, keyPoint: string) => {
+    const current = reminderTasksRef.current
+    if (!current.some((task) => task.id === id)) return
+    const next = current.map((task) => (task.id === id ? { ...task, keyPoint } : task))
+    reminderTasksRef.current = next
+    setReminderTasks(next)
+  }, [])
+
   return {
     reminderTasks,
     setReminderTasks,
@@ -88,5 +96,6 @@ export function useReminderTaskStore() {
     addReminderTask,
     updateReminderTask,
     removeReminderTask,
+    setReminderKeyPoint,
   }
 }

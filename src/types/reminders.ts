@@ -35,6 +35,8 @@ export interface ReminderTask {
   id: string
   title: string
   prompt: string
+  /** Short title a lock screen may show; absent on old rows (fallback applies). */
+  keyPoint?: string
   speechText?: string
   action: ReminderTaskAction
   enabled: boolean
