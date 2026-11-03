@@ -1,6 +1,8 @@
 export const TYPING_STUCK_KEY_MS: 8000
 export const TYPING_IDLE_STOP_MS: 450
 export const TYPING_RATE_WINDOW_MS: 1000
+/** How long quiet holds after the last typing activity, in both processes. */
+export const TYPING_QUIET_RESUME_MS: 5000
 
 export type TypingSignalPhase = 'start' | 'update' | 'stop' | 'idle'
 

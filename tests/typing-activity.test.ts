@@ -114,15 +114,18 @@ test('linux hook failures name Wayland or input-device permissions', () => {
   assert.equal(status.recommendationKey, 'settings.window.typing_linux_wayland_hint')
 })
 
-test('typing intensity and rig offsets scale and return to idle', () => {
+test('typing intensity keeps a still settle and never pulses the rig', () => {
   assert.equal(typingIntensityFromRate(0), 0)
   assert.equal(typingIntensityFromRate(8), 1)
   assert.equal(typingIntensityFromRate(20), 1)
-  const idle = typingPresenceOffset(0, 1)
+  const idle = typingPresenceOffset(0)
   assert.deepEqual(idle, { bodyAngleX: 0, angleZ: 0, mouthOpen: 0, gazeYBias: 0, breath: 0 })
-  const active = typingPresenceOffset(1, 0.2)
+  const active = typingPresenceOffset(1)
   assert.ok(active.gazeYBias > 0)
-  assert.ok(Math.abs(active.bodyAngleX) > 0)
+  assert.equal(active.bodyAngleX, 0)
+  assert.equal(active.angleZ, 0)
+  assert.equal(active.mouthOpen, 0)
+  assert.equal(active.breath, 0)
   assert.equal(shouldPublishTypingActivity(
     { active: true, keysPerSecond: 3.2 },
     { active: true, keysPerSecond: 3.4 },

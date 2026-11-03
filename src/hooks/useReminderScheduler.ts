@@ -14,7 +14,15 @@ type UseReminderSchedulerOptions = {
   locale: string
   onTrigger: (task: ReminderTask) => void | Promise<void>
   onEvent?: (event: DebugConsoleEventDraft) => void
+  /**
+   * When false the due task stays pending: it is neither marked triggered nor
+   * delivered, and the timer retries shortly. Typing quiet uses this so a
+   * reminder waits for the user to pause instead of being lost.
+   */
+  canTrigger?: () => boolean
 }
+
+const HOLD_RETRY_MS = 5_000
 
 function formatSchedulerTime(value: string | undefined, locale: string) {
   const timestamp = Date.parse(value ?? '')
@@ -37,10 +45,12 @@ export function useReminderScheduler({
   locale,
   onTrigger,
   onEvent,
+  canTrigger,
 }: UseReminderSchedulerOptions) {
   const timerRef = useRef<number | null>(null)
   const onTriggerRef = useRef(onTrigger)
   const onEventRef = useRef(onEvent)
+  const canTriggerRef = useRef(canTrigger)
   const scheduledTaskSignatureRef = useRef('')
 
   useEffect(() => {
@@ -50,6 +60,10 @@ export function useReminderScheduler({
   useEffect(() => {
     onEventRef.current = onEvent
   }, [onEvent])
+
+  useEffect(() => {
+    canTriggerRef.current = canTrigger
+  }, [canTrigger])
 
   useEffect(() => {
     if (!enabled) {
@@ -133,7 +147,13 @@ export function useReminderScheduler({
     }
 
     const delayMs = Math.max(200, nextTask.timestamp - Date.now())
-    timerRef.current = window.setTimeout(() => {
+    const fireWhenAllowed = () => {
+      if (canTriggerRef.current && !canTriggerRef.current()) {
+        // The task stays pending and is not marked triggered. The next retry
+        // re-reads the hold ref, so quiet ending mid-wait is picked up.
+        timerRef.current = window.setTimeout(fireWhenAllowed, HOLD_RETRY_MS)
+        return
+      }
       timerRef.current = null
       const now = new Date()
       const threshold = now.getTime() + 1_000
@@ -169,7 +189,8 @@ export function useReminderScheduler({
           })
         }
       }
-    }, delayMs)
+    }
+    timerRef.current = window.setTimeout(fireWhenAllowed, delayMs)
 
     return clearTimer
   }, [enabled, locale, setTasks, tasks])

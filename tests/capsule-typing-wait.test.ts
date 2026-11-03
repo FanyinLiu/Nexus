@@ -22,7 +22,8 @@ import {
   DEFAULT_PROACTIVE_QUIET_END,
   DEFAULT_PROACTIVE_QUIET_START,
 } from '../src/features/autonomy/proactiveBudget.ts'
-import { noteDesktopTyping, noteUserTyping } from '../src/features/autonomy/userTyping.ts'
+import { noteDesktopTyping, noteUserTyping, clearDesktopTyping } from '../src/features/autonomy/userTyping.ts'
+import { TYPING_QUIET_RESUME_MS } from '../shared/typingActivity.js'
 import {
   CAPSULE_TYPING_MAX_WAIT_MS,
   waitForCapsuleTypingPause,
@@ -161,7 +162,7 @@ function installEnvironment(t: TestContext, options: InstallOptions = {}): Envir
   const firstSleep = deferred()
   noteDesktopTyping(clock.typing, now)
   t.after(() => {
-    noteDesktopTyping(false, clock.time)
+    clearDesktopTyping()
     noteUserTyping(0)
     Reflect.deleteProperty(globalThis, 'window')
   })
@@ -303,8 +304,9 @@ test('a capsule is delivered right after typing stops', async (t) => {
 
   await env.runTick()
 
-  assert.deepEqual(env.deliveryTimes, [stopAt])
-  assert.equal(env.deliveries[0]?.message.createdAt, stopAt)
+  const graceEnd = stopAt + TYPING_QUIET_RESUME_MS
+  assert.deepEqual(env.deliveryTimes, [graceEnd])
+  assert.equal(env.deliveries[0]?.message.createdAt, graceEnd)
   assert.equal(loadFutureCapsules()[0]?.status, 'delivered')
 })
 
@@ -560,7 +562,7 @@ test('the typing wait does not re-enable the proactive pacing gate', async (t) =
 
   await env.runTick()
 
-  assert.deepEqual(env.deliveryTimes, [stopAt])
+  assert.deepEqual(env.deliveryTimes, [stopAt + TYPING_QUIET_RESUME_MS])
   assert.deepEqual(
     env.deliveries.map((delivery) => delivery.message.id),
     ['capsule:capsule-typing'],

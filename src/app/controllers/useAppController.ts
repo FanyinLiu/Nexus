@@ -108,12 +108,21 @@ export function useAppController() {
     view,
   })
   useDesktopPresence({
+    settingsRef,
     gazeFollowEnabled: settings.gazeFollowEnabled !== false,
     typingAwarenessEnabled: settings.typingAwarenessEnabled === true,
+    busyRef,
+    voiceStateRef,
+    continuousVoiceActiveRef,
+    mood: pet.mood,
+    motionActive: pet.petPerformanceCue != null,
+    petDraggingRef: pet.petDraggingRef,
     localHover: pet.mascotHovered,
     currentGaze: pet.gazeTarget,
     setGazeTarget: pet.setGazeTarget,
     setTypingActivity: pet.setTypingActivity,
+    getModelBounds: () => pet.modelBoundsRef.current,
+    triggerMouseGlance: pet.triggerMouseGlance,
   })
 
   const {

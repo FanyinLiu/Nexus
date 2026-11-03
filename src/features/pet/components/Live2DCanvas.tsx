@@ -9,10 +9,9 @@ import {
   type PetExpressionSlot,
 } from '../models.ts'
 import type { PetPerformanceCue } from '../performance.ts'
-import { createBlinkState, suspendCubismEyeBlink } from './live2d/blink.ts'
-import { createSaccadeState } from '../idleSaccades.ts'
+import { suspendCubismEyeBlink } from './live2d/blink.ts'
 import { createExpressionWriteQueue, type ExpressionWriteQueue, resolveExpressionSlot, resolveGestureGroup, resolveMotionGroup } from './live2d/expressions.ts'
-import { applyLive2DFrame, type FrameRenderState } from './live2d/frameRender.ts'
+import { applyLive2DFrame, createPetFrameState, type FrameRenderState } from './live2d/frameRender.ts'
 import { layoutLive2DModel, MIN_CANVAS_HEIGHT, MIN_CANVAS_WIDTH } from './live2d/layout.ts'
 import {
   createLive2DApplicationOptions,
@@ -21,7 +20,8 @@ import {
   resolveLive2DBootFrameWait,
 } from './live2d/rendering.ts'
 import { clamp } from '../../../lib/common.ts'
-import { typingIntensityFromRate } from '../../desktopPresence/typingPresence.ts'
+import type { MouseNearGlance, MouseNearRect } from '../../desktopPresence/mouseNear.ts'
+import { useLive2DExternalInputs } from '../../../hooks/useLive2DExternalInputs.ts'
 import { useTranslation } from '../../../i18n/index.ts'
 import {
   attachLive2DModelTicker,
@@ -46,15 +46,6 @@ const MODEL_LOAD_TIMEOUT_MS = 15_000
 const MODEL_LOAD_MAX_ATTEMPTS = 3
 const MOTION_TRIGGER_COOLDOWN_MS = 1500
 
-function createPetFrameState(): FrameRenderState {
-  return {
-    smoothedGaze: { x: 0, y: 0 },
-    smoothedSpeechLevel: 0,
-    blink: createBlinkState(),
-    saccade: createSaccadeState(),
-  }
-}
-
 type Live2DCanvasProps = {
   modelDefinition: PetModelDefinition
   mood: PetMood
@@ -65,6 +56,8 @@ type Live2DCanvasProps = {
   speechLevelSource?: SpeechLevelSource
   gazeTarget?: GazeTarget
   typingActivity?: { active: boolean; keysPerSecond: number }
+  mouseNearGlance?: MouseNearGlance | null
+  onModelBoundsChange?: (bounds: MouseNearRect | null) => void
   performanceCue?: PetPerformanceCue | null
   placement?: 'pet-stage' | 'panel-card'
   paused?: boolean
@@ -80,6 +73,8 @@ export function Live2DCanvas({
   speechLevelSource,
   gazeTarget = { x: 0, y: 0 },
   typingActivity,
+  mouseNearGlance = null,
+  onModelBoundsChange,
   performanceCue = null,
   placement = 'panel-card',
   paused = false,
@@ -107,8 +102,6 @@ export function Live2DCanvas({
     x: clamp(gazeTarget.x, -1, 1),
     y: clamp(gazeTarget.y, -1, 1),
   })
-  const typingIntensityRef = useRef(0)
-  const wasTypingRef = useRef(false)
   const frameStateRef = useRef<FrameRenderState>(createPetFrameState())
   const contextRecoveryAttemptsRef = useRef(0)
   const modelDefinitionRef = useRef(modelDefinition)
@@ -116,6 +109,21 @@ export function Live2DCanvas({
   const [error, setError] = useState<string | null>(null)
   const [modelReady, setModelReady] = useState(false)
   const [runtimeRevision, setRuntimeRevision] = useState(0)
+  const {
+    typingActive,
+    typingIntensity,
+    typingIntensityRef,
+    typingQuietRef,
+    mouseNearGlanceRef,
+    publishModelBounds,
+  } = useLive2DExternalInputs({
+    modelRef,
+    appRef,
+    containerRef,
+    typingActivity,
+    mouseNearGlance,
+    onModelBoundsChange,
+  })
 
   useEffect(() => {
     modelDefinitionRef.current = modelDefinition
@@ -175,6 +183,9 @@ export function Live2DCanvas({
   }, [])
 
   const triggerMotion = useCallback((expressionSlot: PetExpressionSlot, options?: { force?: boolean }) => {
+    // Quiet-while-typing means no motion start at all: the typing reaction,
+    // idle fidgets and performance cues all wait for the grace to end.
+    if (typingQuietRef.current) return
     const model = modelRef.current
     if (!model) return
 
@@ -203,7 +214,7 @@ export function Live2DCanvas({
         error: caught instanceof Error ? caught.message : String(caught),
       })
     })
-  }, [])
+  }, [typingQuietRef])
 
   const syncVisualState = useCallback((nextExpressionSlot: PetExpressionSlot) => {
     const previousExpressionSlot = currentExpressionSlotRef.current
@@ -239,6 +250,7 @@ export function Live2DCanvas({
         activeExpressionSlot: currentExpressionSlotRef.current,
         gazeTarget: gazeTargetRef.current,
         typingIntensity: typingIntensityRef.current,
+        mouseNearGlance: mouseNearGlanceRef.current,
         speechLevelTarget: isSpeakingRef.current
           ? (speechLevelSourceRef.current?.current ?? speechLevelTargetRef.current)
           : 0,
@@ -253,7 +265,7 @@ export function Live2DCanvas({
       internalModel.off?.('beforeModelUpdate', handleBeforeModelUpdate)
       internalModel.removeListener?.('beforeModelUpdate', handleBeforeModelUpdate)
     }
-  }, [])
+  }, [mouseNearGlanceRef, typingIntensityRef])
 
   useEffect(() => {
     activeModelDefinitionRef.current = buildRuntimePetModelDefinition(modelDefinition)
@@ -307,7 +319,7 @@ export function Live2DCanvas({
     // and fire it directly. Unknown gesture name → silent no-op so personas
     // targeting richer models don't break on gesture-poor models.
     const gestureName = performanceCue.gestureName
-    if (gestureName) {
+    if (gestureName && !typingQuietRef.current) {
       const model = modelRef.current
       const gestureGroup = resolveGestureGroup(activeModelDefinitionRef.current, gestureName)
       if (model && gestureGroup) {
@@ -327,7 +339,7 @@ export function Live2DCanvas({
     if (motionSlot && motionSlot !== performanceCue.expressionSlot) {
       triggerMotion(motionSlot, { force: true })
     }
-  }, [modelReady, performanceCue, triggerMotion])
+  }, [modelReady, performanceCue, triggerMotion, typingQuietRef])
 
   useEffect(() => {
     performanceCueRef.current = performanceCue
@@ -804,6 +816,7 @@ export function Live2DCanvas({
         })
         app.renderer.render(app.stage)
         layoutModel(model as Live2DModelHandle, app)
+        publishModelBounds()
         bindModelRuntime(model)
         app.renderer.render(app.stage)
         if (isDisposed() || appRef.current !== app) {
@@ -842,6 +855,7 @@ export function Live2DCanvas({
             Math.max(nextBounds.height, MIN_CANVAS_HEIGHT),
           )
           layoutModel(activeModel as Live2DModelHandle, activeApp)
+          publishModelBounds()
         })
 
         resizeObserverRef.current.observe(containerAfterModel)
@@ -906,6 +920,7 @@ export function Live2DCanvas({
   }, [
     bindModelRuntime,
     layoutModel,
+    publishModelBounds,
     resolvedModelPath,
     runtimeRevision,
   ])
@@ -920,21 +935,6 @@ export function Live2DCanvas({
       y: clamp(gazeTarget.y, -1, 1),
     }
   }, [gazeTarget.x, gazeTarget.y])
-
-  const typingActive = Boolean(typingActivity?.active)
-  const typingIntensity = typingActive
-    ? typingIntensityFromRate(typingActivity?.keysPerSecond ?? 0)
-    : 0
-
-  useEffect(() => {
-    typingIntensityRef.current = typingIntensity
-    // Fire once at the start of a typing burst. Parameter offsets carry the
-    // intensity after that; models without an interaction motion no-op.
-    if (typingActive && !wasTypingRef.current && modelReady) {
-      triggerMotion('touchBody')
-    }
-    if (modelReady || !typingActive) wasTypingRef.current = typingActive
-  }, [modelReady, triggerMotion, typingActive, typingIntensity])
 
   return (
     <div

@@ -24,6 +24,7 @@ import {
   shouldRunReminderScheduler,
 } from '../../features/reminders'
 import { PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../../features/uiV2/caption.ts'
+import { isUserTypingAnywhere } from '../../features/autonomy/userTyping.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
@@ -292,6 +293,7 @@ export function useReminderController({
     locale,
     onTrigger: handleReminderTaskTrigger,
     onEvent: debugConsole.appendDebugConsoleEvent,
+    canTrigger: () => !isUserTypingAnywhere(settingsRef.current),
   })
 
   return { handleReminderTaskTrigger }

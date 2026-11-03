@@ -93,23 +93,24 @@ export type TypingPresenceOffset = {
 }
 
 /**
- * Parameter offsets that scale with typing intensity. Zero intensity is the
- * idle rig, so a short pause returns the model without a latched pose.
+ * A still "settled" pose while desktop typing quiet is active.
+ *
+ * The old reaction pulsed the body, head and mouth with the typing rate. That
+ * is intentionally gone: quiet means no wiggle, no mouth movement and no
+ * motion start. What remains is a tiny, constant gaze-down bias so the model
+ * reads as attentive rather than frozen. Zero intensity returns the idle rig.
  */
-export function typingPresenceOffset(intensity: number, seconds: number): TypingPresenceOffset {
+export function typingPresenceOffset(intensity: number): TypingPresenceOffset {
   const level = clamp(intensity, 0, 1)
   if (level <= 0) {
     return { bodyAngleX: 0, angleZ: 0, mouthOpen: 0, gazeYBias: 0, breath: 0 }
   }
-  const rate = 8 + level * 14
-  const pulse = Math.sin(seconds * rate)
-  const tap = Math.max(0, Math.sin(seconds * rate * 2))
   return {
-    bodyAngleX: pulse * (1.2 + level * 2.4),
-    angleZ: pulse * (0.6 + level * 1.4),
-    mouthOpen: tap * (0.04 + level * 0.12),
-    gazeYBias: 0.12 + level * 0.08,
-    breath: 0.04 + level * 0.06,
+    bodyAngleX: 0,
+    angleZ: 0,
+    mouthOpen: 0,
+    gazeYBias: 0.06 + level * 0.05,
+    breath: 0,
   }
 }
 

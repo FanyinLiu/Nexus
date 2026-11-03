@@ -11,6 +11,11 @@ import { createRemoteMoodApply } from '../features/pet/moodPublish.ts'
 import { createIdleSequenceController, type IdleSequenceController } from '../features/pet/idleSequence.ts'
 import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
 import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
+import type {
+  MouseNearDirection,
+  MouseNearGlance,
+  MouseNearRect,
+} from '../features/desktopPresence/mouseNear.ts'
 import {
   createId,
   loadAmbientPresence,
@@ -80,8 +85,11 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
   const [petTapActive, setPetTapActive] = useState(false)
   const [petTouchZone, setPetTouchZone] = useState<PetTouchZone | null>(null)
   const [petHotspotActive, setPetHotspotActive] = useState(false)
+  const [mouseNearGlance, setMouseNearGlance] = useState<MouseNearGlance | null>(null)
 
   const moodRef = useRef<PetMood>(loadPetRuntimeState().mood)
+  const modelBoundsRef = useRef<MouseNearRect | null>(null)
+  const petDraggingRef = useRef(false)
   // A snapshot pushed by the other window must update the face here
   // without publishing it back. Publishing the applied value is what
   // makes the two windows chase each other's last mood. The gate resets
@@ -186,6 +194,19 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     hoverTimerRef.current = window.setTimeout(() => {
       setPetStatusOverride(null)
     }, duration)
+  }, [])
+
+  /** Live2D publishes the drawn model rectangle for proximity checks. */
+  const setModelBounds = useCallback((bounds: MouseNearRect | null) => {
+    modelBoundsRef.current = bounds
+  }, [])
+
+  const triggerMouseGlance = useCallback((direction: MouseNearDirection) => {
+    setMouseNearGlance({ direction, startedAt: performance.now() })
+  }, [])
+
+  const setPetDragging = useCallback((dragging: boolean) => {
+    petDraggingRef.current = dragging
   }, [])
 
   const dismissAmbientPresence = useCallback(() => {
@@ -371,6 +392,9 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
           && !performanceCueQueueRef.current.length
           && ctx.view === 'pet'
         ) {
+          // Idle fidgets wait out typing quiet instead of being dropped, so
+          // the next tick can still pick one once the user pauses.
+          if (isUserTypingAnywhere(ctx.settingsRef.current)) return
           queuePetPerformanceCue([cue])
         }
       },
@@ -426,6 +450,12 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     setPetTouchZone,
     petHotspotActive,
     setPetHotspotActive,
+    mouseNearGlance,
+    setModelBounds,
+    triggerMouseGlance,
+    setPetDragging,
+    modelBoundsRef,
+    petDraggingRef,
     presenceHistoryRef,
     updatePetStatus,
     playNextPetPerformanceCue,
@@ -454,6 +484,10 @@ export function usePetBehavior(ctx: UsePetBehaviorContext) {
     setPetTouchZone,
     petHotspotActive,
     setPetHotspotActive,
+    mouseNearGlance,
+    setModelBounds,
+    triggerMouseGlance,
+    setPetDragging,
     updatePetStatus,
     playNextPetPerformanceCue,
     clearPetPerformanceCue,

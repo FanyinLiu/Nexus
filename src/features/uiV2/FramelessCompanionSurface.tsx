@@ -22,6 +22,7 @@ import type {
 } from '../../types'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import type { MouseNearGlance, MouseNearRect } from '../desktopPresence/mouseNear.ts'
 import { proactiveBubbleIdentity } from '../proactive/proactivePresentation.ts'
 import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
 import {
@@ -58,10 +59,13 @@ export type FramelessCompanionSurfaceProps = {
     gazeTarget: GazeTarget
     setGazeTarget: (target: GazeTarget) => void
     typingActivity?: { active: boolean; keysPerSecond: number }
+    mouseNearGlance?: MouseNearGlance | null
+    setModelBounds: (bounds: MouseNearRect | null) => void
     setPetHotspotActive: (active: boolean) => void
     setMascotHovered: (hovered: boolean) => void
     markPresenceActivity: (options?: { dismissAmbient?: boolean }) => void
     setPetTapActive: (active: boolean) => void
+    setPetDragging: (dragging: boolean) => void
     setPetTouchZone: (zone: PetTouchZone | null) => void
   }
   voice: {
@@ -370,6 +374,7 @@ export function FramelessCompanionSurface({
   }
 
   function handleCharacterPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    pet.setPetDragging(true)
     stagePointerDown(event, dragStateRef.current, {
       markPresenceActivity: pet.markPresenceActivity,
       setTapActive: pet.setPetTapActive,
@@ -391,6 +396,7 @@ export function FramelessCompanionSurface({
   }
 
   function releaseCharacterPointer() {
+    pet.setPetDragging(false)
     stagePointerRelease(dragStateRef.current, {
       setTouchZone: pet.setPetTouchZone,
     })
@@ -453,6 +459,8 @@ export function FramelessCompanionSurface({
             speechLevelSource={voice.speechLevelSource}
             gazeTarget={pet.gazeTarget}
             typingActivity={pet.typingActivity}
+            mouseNearGlance={pet.mouseNearGlance}
+            onModelBoundsChange={pet.setModelBounds}
             performanceCue={null}
             placement="pet-stage"
             paused={paused}

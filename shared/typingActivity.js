@@ -6,6 +6,12 @@
 export const TYPING_STUCK_KEY_MS = 8_000
 export const TYPING_IDLE_STOP_MS = 450
 export const TYPING_RATE_WINDOW_MS = 1_000
+/**
+ * How long quiet holds after the last typing activity. Both processes use the
+ * same value so a bubble released by main cannot land before the renderer has
+ * finished its own typing grace.
+ */
+export const TYPING_QUIET_RESUME_MS = 5_000
 
 /**
  * @param {unknown} token
