@@ -230,6 +230,7 @@ export const enCore = {
   'pet.proactive.notebook_earlier': 'Noted earlier',
   'pet.proactive.notebook_yesterday': 'Yesterday',
   'pet.proactive.note_label': 'She jotted a few things down',
+  'pet.proactive.note_label_one': 'She jotted one thing down',
   'pet.button.settings': 'Settings',
   'pet.button.chat': 'Chat',
   'pet.voice.continuous_on': 'Continuous conversation is on',

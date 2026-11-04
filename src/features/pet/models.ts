@@ -325,7 +325,7 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       anchorY: 0,
       yOffsetRatio: 0.03,
       yOffsetPx: 12,
-      noteAnchor: { x: 0.66, y: 0.17 },
+      noteAnchor: { x: 0.675, y: 0.52 },
     },
     // Mao gets a 6-entry pool instead of the 4-entry default — `exp_07`
     // (blush/embarrassed) makes a good quiet "shy glance" fidget, and
@@ -393,7 +393,7 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       anchorY: 0,
       yOffsetRatio: 0.03,
       yOffsetPx: 12,
-      noteAnchor: { x: 0.65, y: 0.15 },
+      noteAnchor: { x: 0.625, y: 0.32 },
     },
   },
   {
@@ -430,7 +430,7 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       anchorY: 0,
       yOffsetRatio: 0.03,
       yOffsetPx: 12,
-      noteAnchor: { x: 0.64, y: 0.16 },
+      noteAnchor: { x: 0.655, y: 0.50 },
     },
   },
 ]

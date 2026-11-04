@@ -230,6 +230,7 @@ export const koCore = {
   'pet.proactive.notebook_earlier': '전에 적어 둔 것',
   'pet.proactive.notebook_yesterday': '어제',
   'pet.proactive.note_label': '몇 가지 적어 뒀대',
+  'pet.proactive.note_label_one': '한 가지 적어 뒀대',
   'pet.button.settings': '설정',
   'pet.button.chat': '대화',
   'pet.voice.continuous_on': '연속 대화 켜짐',

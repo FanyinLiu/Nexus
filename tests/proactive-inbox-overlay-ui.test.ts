@@ -380,7 +380,7 @@ test('a seen entry has no unread dot and shows every action once expanded', () =
   assert.doesNotMatch(unread, /proactive-inbox__row--read/)
 })
 
-test('more than five rows render in the scroll list, oldest last', () => {
+test('more than three rows render in the scroll list, oldest last', () => {
   const rows = Array.from({ length: 7 }, (_, index) => row({
     id: `row-${index}`,
     title: index === 0 ? 'Title newest' : index === 6 ? 'Title oldest' : `Title ${index}`,
@@ -389,10 +389,10 @@ test('more than five rows render in the scroll list, oldest last', () => {
 
   assert.equal((html.match(/proactive-inbox__summary/g) ?? []).length, 7)
   assert.ok(html.indexOf('Title newest') < html.indexOf('Title oldest'))
-  assert.match(html, /--proactive-inbox-visible-rows:\s*5/)
+  assert.match(html, /--proactive-inbox-visible-rows:\s*3/)
 })
 
-test('the list CSS scrolls and its height budget fits five rows in the default pet window', () => {
+test('the list CSS scrolls, fits three rows and leaves her upper body uncovered', () => {
   const windowCreation = readFileSync(
     new URL('../electron/windowCreation.js', import.meta.url),
     'utf8',
@@ -417,7 +417,6 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   assert.equal(defaultHeight, 460)
   assert.equal(defaultWidth, 320)
 
-  const top = px('--proactive-inbox-top')
   const bottomGap = px('--proactive-inbox-bottom-gap')
   const padding = px('--proactive-inbox-padding')
   const headerBlock = px('--proactive-inbox-header-block-size')
@@ -425,27 +424,34 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   const rowGap = px('--proactive-inbox-row-gap')
   const visibleRows = Number(variables['--proactive-inbox-visible-rows'])
 
-  assert.equal(visibleRows, 5)
+  assert.equal(visibleRows, 3)
   assert.equal(rowBlock, 40)
   assert.equal(rowGap, 8)
   assert.equal(headerBlock, 28)
 
-  // Popover chrome: the window minus its offset, padding, border and header.
-  const available = defaultHeight - top - bottomGap - 2 * padding - 2 - headerBlock
   const list = visibleRows * rowBlock + (visibleRows - 1) * rowGap
-  assert.equal(list, 232)
-  assert.ok(list <= available, `list ${list} must fit in ${available}`)
+  assert.equal(list, 136)
+
+  // Chrome plus the collapsed list, with the card's own border in the total.
+  const card = padding * 2 + headerBlock + list + 2
+  const topEdge = defaultHeight - bottomGap - card
+  assert.ok(
+    topEdge >= defaultHeight * 0.56,
+    `card top ${topEdge} must stay below 56% of the ${defaultHeight}px window`,
+  )
+  assert.ok(card <= defaultHeight * 0.44, `card ${card} must fit the bottom 44%`)
 
   const popoverRule = NOTEBOOK_CSS.slice(
     NOTEBOOK_CSS.indexOf('.proactive-inbox {'),
     NOTEBOOK_CSS.indexOf('\n}', NOTEBOOK_CSS.indexOf('.proactive-inbox {')),
   )
-  assert.match(popoverRule, /top:\s*var\(--proactive-inbox-top\)/)
+  assert.match(popoverRule, /top:\s*auto/)
+  assert.match(popoverRule, /right:\s*12px/)
+  assert.match(popoverRule, /bottom:\s*var\(--proactive-inbox-bottom-gap\)/)
   assert.match(popoverRule, /padding:\s*var\(--proactive-inbox-padding\)/)
-  assert.match(
-    popoverRule,
-    /max-height:\s*calc\(\s*100vh - var\(--proactive-inbox-top\) - var\(--proactive-inbox-bottom-gap\)\s*\)/,
-  )
+  assert.match(popoverRule, /max-height:\s*min\(/)
+  assert.match(popoverRule, /44vh/)
+  assert.match(popoverRule, /var\(--proactive-inbox-list-max-height\)/)
   assert.match(popoverRule, /box-sizing:\s*border-box/)
   assert.match(popoverRule, /border-radius:\s*16px/)
   // The 300px card plus its 12px insets is wider than 320px, so the min()
@@ -458,10 +464,11 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   )
   assert.match(listRule, /overflow-y:\s*auto/)
   assert.match(listRule, /gap:\s*var\(--proactive-inbox-row-gap\)/)
-  assert.match(listRule, /max-height:\s*calc\(/)
-  assert.match(listRule, /--proactive-inbox-visible-rows/)
-  assert.match(listRule, /--proactive-inbox-row-block-size/)
-  assert.match(listRule, /--proactive-inbox-row-gap/)
+  assert.match(listRule, /max-height:\s*var\(--proactive-inbox-list-max-height\)/)
+  assert.match(
+    NOTEBOOK_CSS,
+    /--proactive-inbox-list-max-height:\s*calc\([\s\S]*?--proactive-inbox-visible-rows[\s\S]*?--proactive-inbox-row-block-size[\s\S]*?--proactive-inbox-row-gap[\s\S]*?\);/,
+  )
 
   const closeRule = NOTEBOOK_CSS.slice(
     NOTEBOOK_CSS.indexOf('.proactive-inbox__close {'),
@@ -484,8 +491,12 @@ test('the list CSS scrolls and its height budget fits five rows in the default p
   )
   assert.match(collapsedRule, /max-height:\s*var\(--proactive-inbox-row-block-size\)/)
   assert.match(collapsedRule, /overflow:\s*hidden/)
+  assert.match(
+    NOTEBOOK_CSS,
+    /@keyframes proactive-inbox-enter\s*\{[\s\S]*?from\s*\{[\s\S]*?translateY\(4px\)/,
+  )
 
-  assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 5)
+  assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 3)
 })
 
 test('only the expanded row carries the expanded modifier', () => {

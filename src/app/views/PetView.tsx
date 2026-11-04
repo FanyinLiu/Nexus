@@ -1,7 +1,10 @@
 import { Suspense, lazy, useEffect, useMemo, type ReactNode } from 'react'
 import { ProactiveInboxHost } from '../../components/ProactiveInboxHost.tsx'
 import { resolveCharacterPreset } from '../../features/character/presets.ts'
-import type { ProactiveNoteStageBinding } from '../../features/proactive/proactiveNote.ts'
+import {
+  selectProactiveNoteLabelKey,
+  type ProactiveNoteStageBinding,
+} from '../../features/proactive/proactiveNote.ts'
 import { FramelessCompanionSurface } from '../../features/uiV2/FramelessCompanionSurface.tsx'
 import { useProactiveInboxOverlay } from '../../hooks/useProactiveInboxOverlay.ts'
 import { useProactiveNoteContext } from '../../hooks/useProactiveNoteContext.ts'
@@ -86,7 +89,7 @@ export function PetView({
   const note: ProactiveNoteStageBinding = {
     view: view.note,
     motion: noteMotion.motion,
-    label: pickTranslatedUiText(settings.uiLanguage, 'pet.proactive.note_label'),
+    label: pickTranslatedUiText(settings.uiLanguage, selectProactiveNoteLabelKey(view.note)),
     onApproach: noteMotion.onApproach,
     onToggleNotebook: () => {
       narration.interrupt()

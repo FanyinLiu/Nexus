@@ -230,6 +230,7 @@ export const jaCore = {
   'pet.proactive.notebook_earlier': '前のメモ',
   'pet.proactive.notebook_yesterday': '昨日',
   'pet.proactive.note_label': 'いくつかメモしてくれてるよ',
+  'pet.proactive.note_label_one': 'ひとつメモしてくれてるよ',
   'pet.button.settings': '設定',
   'pet.button.chat': 'チャット',
   'pet.voice.continuous_on': '連続会話オン',

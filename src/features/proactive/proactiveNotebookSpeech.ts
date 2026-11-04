@@ -27,6 +27,8 @@ export type ProactiveNotebookReturnInput = {
   fullscreen: boolean
   focusState: ProactiveNotebookFocusState
   hasUnseen: boolean
+  /** Ids of the unseen rows visible at this observation. */
+  unseenIds: readonly string[]
 }
 
 /** Remembers why the user was away while lines stayed unseen. */
@@ -92,30 +94,46 @@ export type ProactiveNotebookNarrator = {
 }
 
 /**
- * Track why the user was away while lines stayed unseen.
+ * Track why the user was away while new lines arrived.
  *
- * Away wins over busy even when busy was observed first: coming back to a
- * locked or away screen is the stronger story. A report with no unseen lines
- * clears the memory, so the next unseen batch starts from scratch.
+ * Only an unseen id that was not visible on the previous observation counts as
+ * an arrival. An item that arrived while the user was present therefore cannot
+ * make a later absence look like the reason. At the first observation the whole
+ * unseen set counts as arrived, because there is no earlier baseline. Away wins
+ * over busy even when both happened. A report with no unseen lines clears the
+ * memory, so the next unseen batch starts from scratch.
  *
  * @returns {ProactiveNotebookReturnTracker}
  */
 export function createProactiveNotebookReturnTracker(): ProactiveNotebookReturnTracker {
   let wasAway = false
   let wasBusy = false
+  let previousUnseenIds = new Set<string>()
 
   function reset(): void {
     wasAway = false
     wasBusy = false
+    previousUnseenIds = new Set()
   }
 
-  function observe({ fullscreen, focusState, hasUnseen }: ProactiveNotebookReturnInput): void {
+  function observe({
+    fullscreen,
+    focusState,
+    hasUnseen,
+    unseenIds,
+  }: ProactiveNotebookReturnInput): void {
     if (!hasUnseen) {
       reset()
       return
     }
-    if (focusState === 'away' || focusState === 'locked') wasAway = true
-    if (fullscreen) wasBusy = true
+
+    const current = new Set(unseenIds)
+    const arrivedNow = [...current].some((id) => !previousUnseenIds.has(id))
+    if (arrivedNow) {
+      if (focusState === 'away' || focusState === 'locked') wasAway = true
+      if (fullscreen) wasBusy = true
+    }
+    previousUnseenIds = current
   }
 
   function reason(): ProactiveNotebookReturnReason {

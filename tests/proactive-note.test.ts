@@ -10,6 +10,7 @@ import {
   isProactiveNoteMotionSuppressed,
   resolveProactiveNoteAnchor,
   resolveProactiveNoteView,
+  selectProactiveNoteLabelKey,
   shouldOpenNotebookOnStageClick,
   PROACTIVE_NOTE_GLANCE_THROTTLE_MS,
   PROACTIVE_NOTE_KEEPS_SEEN_ACTIONABLE,
@@ -450,12 +451,35 @@ test('built-in models define a note anchor inside the stage box', () => {
   }
 })
 
-test('a model without an anchor falls back to the beside-the-head default', () => {
-  assert.deepEqual(resolveProactiveNoteAnchor({}), { x: 0.7, y: 0.2 })
-  assert.deepEqual(resolveProactiveNoteAnchor({ layout: {} }), { x: 0.7, y: 0.2 })
+test('a model without an anchor falls back to the at-her-hand default', () => {
+  assert.deepEqual(resolveProactiveNoteAnchor({}), { x: 0.66, y: 0.5 })
+  assert.deepEqual(resolveProactiveNoteAnchor({ layout: {} }), { x: 0.66, y: 0.5 })
   assert.deepEqual(
     resolveProactiveNoteAnchor({ layout: { noteAnchor: { x: 0.61, y: 0.18 } } }),
     { x: 0.61, y: 0.18 },
+  )
+})
+
+test('the note label turns singular only for exactly one unseen item', () => {
+  assert.equal(
+    selectProactiveNoteLabelKey({ state: 'one', sheets: 1, animated: true }),
+    'pet.proactive.note_label_one',
+  )
+  assert.equal(
+    selectProactiveNoteLabelKey({ state: 'important', sheets: 1, animated: true }),
+    'pet.proactive.note_label_one',
+  )
+  assert.equal(
+    selectProactiveNoteLabelKey({ state: 'stack', sheets: 3, animated: true }),
+    'pet.proactive.note_label',
+  )
+  assert.equal(
+    selectProactiveNoteLabelKey({ state: 'important', sheets: 2, animated: true }),
+    'pet.proactive.note_label',
+  )
+  assert.equal(
+    selectProactiveNoteLabelKey({ state: 'none', sheets: 0, animated: true }),
+    'pet.proactive.note_label',
   )
 })
 

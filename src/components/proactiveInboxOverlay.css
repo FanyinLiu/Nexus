@@ -1,27 +1,27 @@
 /*
  * Proactive notebook popover (pet window).
  *
- * Anchored to the top-right corner, opening downward and leftward so it always
- * stays inside the pet window. The card is plain paper: a warm #F6F0E6 page, a
- * 16px radius and a soft shadow. A collapsed row is one title line plus its
- * local time; expanding it reveals the full text and that row's action buttons.
+ * Anchored to the bottom-right corner, opening upward and leftward so it sits
+ * over her legs only. The card is plain paper: a warm #F6F0E6 page, a 16px
+ * radius and a soft shadow. A collapsed row is one title line plus its local
+ * time; expanding it reveals the full text and that row's action buttons.
  *
- * Every vertical measurement is a custom property on `.proactive-inbox` so the
- * budget below can be checked arithmetically: five collapsed rows must fit the
- * 320x460 default pet window without resizing it. The list is capped at
- * `visible-rows * row-block-size + gaps`, a collapsed row is clamped to
- * `row-block-size`, and only the expanded row is allowed to grow. Older rows
- * scroll inside the list while the window itself never grows.
+ * Every vertical measurement is a custom property on `.proactive-inbox`: three
+ * collapsed rows fit the 320x460 default pet window and the card's top edge
+ * never rises above 56% of its height. Older and expanded rows scroll inside.
  */
 
 .proactive-inbox {
-  --proactive-inbox-top: 38px;
   --proactive-inbox-bottom-gap: 8px;
   --proactive-inbox-padding: 12px;
   --proactive-inbox-header-block-size: 28px;
   --proactive-inbox-row-gap: 8px;
   --proactive-inbox-row-block-size: 40px;
-  --proactive-inbox-visible-rows: 5;
+  --proactive-inbox-visible-rows: 3;
+  --proactive-inbox-list-max-height: calc(
+    var(--proactive-inbox-visible-rows) * var(--proactive-inbox-row-block-size) +
+      (var(--proactive-inbox-visible-rows) - 1) * var(--proactive-inbox-row-gap)
+  );
   --pi-paper: #F6F0E6;
   --pi-ink: #2E2A24;
   --pi-muted: rgba(46, 42, 36, 0.6);
@@ -31,15 +31,20 @@
   --pi-accent-soft: rgba(217, 160, 102, 0.16);
 
   position: absolute;
-  top: var(--proactive-inbox-top);
+  top: auto;
   right: 12px;
+  bottom: var(--proactive-inbox-bottom-gap);
   z-index: 8;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   width: min(300px, calc(100vw - 24px));
-  max-height: calc(
-    100vh - var(--proactive-inbox-top) - var(--proactive-inbox-bottom-gap)
+  max-height: min(
+    calc(
+      var(--proactive-inbox-padding) * 2 + var(--proactive-inbox-header-block-size) +
+        var(--proactive-inbox-list-max-height) + 2px
+    ),
+    calc(44vh - var(--proactive-inbox-bottom-gap))
   );
   padding: var(--proactive-inbox-padding);
   border: 1px solid rgba(60, 40, 20, 0.1);
@@ -67,7 +72,7 @@ html[data-theme='system-black'] .proactive-inbox {
 @keyframes proactive-inbox-enter {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(4px);
   }
 
   to {
@@ -128,10 +133,7 @@ html[data-theme='system-black'] .proactive-inbox {
   flex-direction: column;
   gap: var(--proactive-inbox-row-gap);
   min-height: 0;
-  max-height: calc(
-    var(--proactive-inbox-visible-rows) * var(--proactive-inbox-row-block-size) +
-      (var(--proactive-inbox-visible-rows) - 1) * var(--proactive-inbox-row-gap)
-  );
+  max-height: var(--proactive-inbox-list-max-height);
   margin: 0;
   padding: 0 2px 2px 0;
   overflow-y: auto;
@@ -154,7 +156,7 @@ html[data-theme='system-black'] .proactive-inbox {
   --pi-row-inset: 14px;
 }
 
-/* A collapsed row never exceeds the block size the five-row budget assumes. */
+/* A collapsed row never exceeds the block size the three-row budget assumes. */
 .proactive-inbox__row:not(.proactive-inbox__row--expanded) {
   max-height: var(--proactive-inbox-row-block-size);
   overflow: hidden;

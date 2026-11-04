@@ -98,6 +98,13 @@ const EXPECTED_NOTEBOOK_COPY = {
     ja: 'いくつかメモしてくれてるよ',
     ko: '몇 가지 적어 뒀대',
   },
+  'pet.proactive.note_label_one': {
+    'zh-CN': '她记了一件事',
+    'zh-TW': '她記了一件事',
+    'en-US': 'She jotted one thing down',
+    ja: 'ひとつメモしてくれてるよ',
+    ko: '한 가지 적어 뒀대',
+  },
   'pet.proactive.inbox_title': {
     'zh-CN': '小本子',
     'zh-TW': '小本子',

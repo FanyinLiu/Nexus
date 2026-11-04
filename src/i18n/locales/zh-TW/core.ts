@@ -230,6 +230,7 @@ export const zhTWCore = {
   'pet.proactive.notebook_earlier': '之前記的',
   'pet.proactive.notebook_yesterday': '昨天',
   'pet.proactive.note_label': '她記了幾件事',
+  'pet.proactive.note_label_one': '她記了一件事',
   'pet.button.settings': '設定',
   'pet.button.chat': '對話',
   'pet.voice.continuous_on': '連續對話已開啟',

@@ -9,6 +9,7 @@
 
 import type { DeliveryContext, ProactiveInboxEntry } from '../../../shared/proactiveDelivery.js'
 import { clamp } from '../../lib/common.ts'
+import type { TranslationKey } from '../../types/i18n.ts'
 
 /** Never draw more than this many sheets, however long the inbox is. */
 export const PROACTIVE_NOTE_MAX_SHEETS = 3
@@ -31,8 +32,8 @@ export const PROACTIVE_NOTE_GLANCE_DURATION_MS = 700
 /** Delay that separates a notebook single click from a voice double click. */
 export const PROACTIVE_NOTE_SINGLE_CLICK_DELAY_MS = 260
 
-/** Imported models usually look fine with this beside-the-head anchor. */
-const PROACTIVE_NOTE_DEFAULT_ANCHOR = { x: 0.7, y: 0.2 } as const
+/** Imported models usually look fine with this at-her-hand anchor. */
+const PROACTIVE_NOTE_DEFAULT_ANCHOR = { x: 0.66, y: 0.5 } as const
 
 /** Keep the note inside the character box even for an out-of-range anchor. */
 const PROACTIVE_NOTE_ANCHOR_MIN = 0.05
@@ -63,6 +64,19 @@ export type ProactiveNoteView = {
   animated: boolean
 }
 
+/**
+ * Pick the spoken label for the paper note.
+ *
+ * One unseen sheet reads as a single note; stacks and multi-item important
+ * notes keep the plural wording. Hidden or seen-only notes never reach here.
+ *
+ * @param view Resolved note view.
+ * @returns Translation key for the note's aria/title label.
+ */
+export function selectProactiveNoteLabelKey(view: ProactiveNoteView): TranslationKey {
+  return view.sheets === 1 ? 'pet.proactive.note_label_one' : 'pet.proactive.note_label'
+}
+
 /** Props the pet host hands to the stage note overlay. */
 export type ProactiveNoteStageBinding = {
   view: ProactiveNoteView
@@ -80,8 +94,8 @@ type ProactiveNoteAnchorSource = {
 /**
  * Resolve the paper note's anchor for one model.
  *
- * Built-in models ship an anchor tuned to their head position; imported models
- * fall back to a generic beside-the-head point. Both axes are clamped so a bad
+ * Built-in models ship an anchor tuned to their free hand; imported models
+ * fall back to a generic at-her-hand point. Both axes are clamped so a bad
  * preset can never place the note outside the character stage box.
  *
  * @param model Model whose note anchor should be read.

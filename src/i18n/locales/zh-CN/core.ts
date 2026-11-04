@@ -228,6 +228,7 @@ export const zhCNCore = {
   'pet.proactive.notebook_earlier': '之前记的',
   'pet.proactive.notebook_yesterday': '昨天',
   'pet.proactive.note_label': '她记了几件事',
+  'pet.proactive.note_label_one': '她记了一件事',
   'pet.button.settings': '设置',
   'pet.button.chat': '对话',
   'pet.voice.continuous_on': '连续对话已开启',

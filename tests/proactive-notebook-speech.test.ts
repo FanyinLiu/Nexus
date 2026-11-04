@@ -56,22 +56,87 @@ test('the return tracker remembers away over busy and clears when nothing is uns
   const tracker = createProactiveNotebookReturnTracker()
   assert.equal(tracker.reason(), null)
 
-  tracker.observe({ fullscreen: true, focusState: 'active', hasUnseen: true })
+  tracker.observe({
+    fullscreen: true,
+    focusState: 'active',
+    hasUnseen: true,
+    unseenIds: ['a'],
+  })
   assert.equal(tracker.reason(), 'busy')
 
-  tracker.observe({ fullscreen: true, focusState: 'locked', hasUnseen: true })
+  tracker.observe({
+    fullscreen: true,
+    focusState: 'locked',
+    hasUnseen: true,
+    unseenIds: ['a', 'b'],
+  })
   assert.equal(tracker.reason(), 'away')
 
-  tracker.observe({ fullscreen: false, focusState: 'away', hasUnseen: true })
+  tracker.observe({
+    fullscreen: false,
+    focusState: 'away',
+    hasUnseen: true,
+    unseenIds: ['a', 'b'],
+  })
   assert.equal(tracker.reason(), 'away')
 
-  tracker.observe({ fullscreen: false, focusState: 'active', hasUnseen: false })
+  tracker.observe({
+    fullscreen: false,
+    focusState: 'active',
+    hasUnseen: false,
+    unseenIds: [],
+  })
   assert.equal(tracker.reason(), null)
 
-  tracker.observe({ fullscreen: true, focusState: 'active', hasUnseen: true })
+  tracker.observe({
+    fullscreen: true,
+    focusState: 'active',
+    hasUnseen: true,
+    unseenIds: ['c'],
+  })
   assert.equal(tracker.reason(), 'busy')
   tracker.reset()
   assert.equal(tracker.reason(), null)
+})
+
+test('the return reason follows where each unseen item arrived', () => {
+  const away = createProactiveNotebookReturnTracker()
+  away.observe({ fullscreen: false, focusState: 'active', hasUnseen: false, unseenIds: [] })
+  away.observe({ fullscreen: false, focusState: 'away', hasUnseen: true, unseenIds: ['away-item'] })
+  assert.equal(away.reason(), 'away')
+
+  const presentThenLeft = createProactiveNotebookReturnTracker()
+  presentThenLeft.observe({
+    fullscreen: false,
+    focusState: 'active',
+    hasUnseen: true,
+    unseenIds: ['present-a', 'present-b'],
+  })
+  presentThenLeft.observe({
+    fullscreen: false,
+    focusState: 'away',
+    hasUnseen: true,
+    unseenIds: ['present-a', 'present-b'],
+  })
+  assert.equal(presentThenLeft.reason(), null)
+  assert.equal(
+    selectProactiveNotebookOpeningKey({
+      unseenCount: 2,
+      totalCount: 2,
+      reason: presentThenLeft.reason(),
+    }),
+    'pet.proactive.notebook_opening_generic',
+  )
+
+  const busy = createProactiveNotebookReturnTracker()
+  busy.observe({ fullscreen: false, focusState: 'active', hasUnseen: false, unseenIds: [] })
+  busy.observe({
+    fullscreen: true,
+    focusState: 'active',
+    hasUnseen: true,
+    unseenIds: ['fullscreen-item'],
+  })
+  assert.equal(busy.reason(), 'busy')
 })
 
 test('the return tracker never reads a typing signal', () => {
@@ -81,6 +146,7 @@ test('the return tracker never reads a typing signal', () => {
     fullscreen: false,
     focusState: 'active' as const,
     hasUnseen: true,
+    unseenIds: ['a'],
     get typing() {
       typingRead = true
       return true

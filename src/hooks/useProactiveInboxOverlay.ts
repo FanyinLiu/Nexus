@@ -98,12 +98,14 @@ export function useProactiveInboxOverlay({
   }, [openConversation])
 
   useEffect(() => {
+    const unseenIds = view.rows.filter((row) => row.unseen).map((row) => row.id)
     returnTrackerRef.current?.observe({
       fullscreen: noteContext?.fullscreen ?? false,
       focusState: noteContext?.focusState ?? focusState,
       hasUnseen: view.note.state !== 'none',
+      unseenIds,
     })
-  }, [focusState, noteContext, view.note.state])
+  }, [focusState, noteContext, view.note.state, view.rows])
 
   useEffect(() => {
     const controller = createProactiveInboxOverlayController({

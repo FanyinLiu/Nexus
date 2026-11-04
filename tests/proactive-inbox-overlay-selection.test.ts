@@ -155,7 +155,7 @@ test('inside the active groups priority leads and newest breaks ties; handled is
   assert.equal(rows.filter((row) => row.status === 'unread').length, 10)
 })
 
-test('more than five entries stay selected for the scroll list', () => {
+test('more than three entries stay selected for the scroll list', () => {
   const entries = Array.from({ length: 8 }, (_, index) => entry({
     id: `row-${index}`,
     createdAt: index + 1,
@@ -163,7 +163,7 @@ test('more than five entries stay selected for the scroll list', () => {
 
   const rows = selectProactiveInboxEntries(entries, { nowMs: 100 })
   assert.equal(rows.length, 8)
-  assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 5)
+  assert.equal(PROACTIVE_INBOX_OVERLAY_MAX_ROWS, 3)
   assert.equal(rows.at(-1)?.id, 'row-0')
 })
 

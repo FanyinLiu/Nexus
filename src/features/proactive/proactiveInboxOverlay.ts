@@ -28,7 +28,7 @@ import { isProactiveLetterEntry } from '../../../shared/proactiveInboxReadRule.j
 import { isSameLocalDay } from '../../lib/localDate.ts'
 
 /** Rows visible without scrolling. The list itself keeps the full selection. */
-export const PROACTIVE_INBOX_OVERLAY_MAX_ROWS = 5
+export const PROACTIVE_INBOX_OVERLAY_MAX_ROWS = 3
 
 /** Entries older than this are not part of the notebook. */
 export const PROACTIVE_INBOX_OVERLAY_WINDOW_MS = 15 * 24 * 60 * 60 * 1000
