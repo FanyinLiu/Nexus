@@ -105,6 +105,10 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   openPanel: { conditional: false, invoke: ['window:open-panel'], events: [] },
   openPetMenu: { conditional: false, invoke: ['window:open-pet-menu'], events: [] },
   openTextFile: { conditional: false, invoke: ['file:open-text'], events: [] },
+  ownerVoiceClear: { conditional: false, invoke: ['owner-voice:clear'], events: [] },
+  ownerVoiceEnroll: { conditional: false, invoke: ['owner-voice:enroll'], events: [] },
+  ownerVoiceLevel: { conditional: false, invoke: ['owner-voice:level'], events: [] },
+  ownerVoiceStatus: { conditional: false, invoke: ['owner-voice:status'], events: [] },
   paraformerAbort: { conditional: false, invoke: ['paraformer:abort'], events: [] },
   paraformerFeed: { conditional: false, invoke: ['paraformer:feed'], events: [] },
   paraformerFinish: { conditional: false, invoke: ['paraformer:finish'], events: [] },
@@ -344,6 +348,10 @@ export type DesktopPetInvokeChannel =
   | 'notification:watcher-set'
   | 'notification:watcher-status'
   | 'notification:webhook-info'
+  | 'owner-voice:clear'
+  | 'owner-voice:enroll'
+  | 'owner-voice:level'
+  | 'owner-voice:status'
   | 'panel-window:get-state'
   | 'panel-window:set-state'
   | 'paraformer:abort'
@@ -594,6 +602,10 @@ export interface DesktopPetBridgeMethodArguments {
   openPanel: readonly [section?: 'chat' | 'chat-text' | 'chat-recent' | 'settings']
   openPetMenu: readonly []
   openTextFile: readonly [payload: { title: string; filters?: Array<{ name: string; extensions: Array<string> }> }]
+  ownerVoiceClear: readonly []
+  ownerVoiceEnroll: unknown
+  ownerVoiceLevel: unknown
+  ownerVoiceStatus: readonly []
   paraformerAbort: readonly []
   paraformerFeed: unknown
   paraformerFinish: readonly []
@@ -721,7 +733,7 @@ export interface DesktopPetBridgeMethodArguments {
   vaultStore: unknown
   vaultStoreMany: unknown
   voiceProfileProbe: unknown
-  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string }]
+  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string; ownerVoiceLockEnabled?: boolean }]
   vtsBridgeConnect: readonly [payload: { port: number }]
   vtsBridgeDisconnect: readonly []
   vtsBridgeMigrateLegacyToken: unknown
@@ -834,6 +846,10 @@ export interface DesktopPetBridgeMethodResults {
   openPanel: void
   openPetMenu: null | 'messages'
   openTextFile: unknown
+  ownerVoiceClear: { supported: boolean; modelInstalled: boolean; enrolled: boolean; enabled: boolean; active: boolean; enrolledAt: null | number; voicedSeconds: null | number; lastError: null | string }
+  ownerVoiceEnroll: { ok: boolean; reason: null | 'unsupported' | 'too_short' | 'too_long' | 'too_quiet' | 'write_failed'; voicedSeconds: number }
+  ownerVoiceLevel: { rms: number; isolated: boolean }
+  ownerVoiceStatus: { supported: boolean; modelInstalled: boolean; enrolled: boolean; enabled: boolean; active: boolean; enrolledAt: null | number; voicedSeconds: null | number; lastError: null | string }
   paraformerAbort: { ok: boolean }
   paraformerFeed: unknown
   paraformerFinish: unknown
@@ -1018,6 +1034,8 @@ export interface DesktopPetGeneratedBridge {
   openDesktopTypingPermission: (...args: DesktopPetBridgeMethodArguments['openDesktopTypingPermission']) => Promise<DesktopPetBridgeMethodResults['openDesktopTypingPermission']>
   openPanel: (...args: DesktopPetBridgeMethodArguments['openPanel']) => Promise<DesktopPetBridgeMethodResults['openPanel']>
   openPetMenu: (...args: DesktopPetBridgeMethodArguments['openPetMenu']) => Promise<DesktopPetBridgeMethodResults['openPetMenu']>
+  ownerVoiceClear: (...args: DesktopPetBridgeMethodArguments['ownerVoiceClear']) => Promise<DesktopPetBridgeMethodResults['ownerVoiceClear']>
+  ownerVoiceStatus: (...args: DesktopPetBridgeMethodArguments['ownerVoiceStatus']) => Promise<DesktopPetBridgeMethodResults['ownerVoiceStatus']>
   paraformerAbort: (...args: DesktopPetBridgeMethodArguments['paraformerAbort']) => Promise<DesktopPetBridgeMethodResults['paraformerAbort']>
   paraformerStart: (...args: DesktopPetBridgeMethodArguments['paraformerStart']) => Promise<DesktopPetBridgeMethodResults['paraformerStart']>
   paraformerStatus: (...args: DesktopPetBridgeMethodArguments['paraformerStatus']) => Promise<DesktopPetBridgeMethodResults['paraformerStatus']>

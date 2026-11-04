@@ -117,7 +117,7 @@
     "pixi.js": "^8.19.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "sherpa-onnx-node": "^1.12.39",
+    "sherpa-onnx-node": "^2.0.1",
     "tesseract.js": "^7.0.0",
     "uiohook-napi": "^1.5.5",
     "ws": "^8.21.0"

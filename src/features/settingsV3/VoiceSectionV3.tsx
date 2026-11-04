@@ -37,6 +37,7 @@ import {
 import { VoiceProfileSuggestion } from '../../components/VoiceProfileSuggestion.tsx'
 import { voiceSettingsStatusKey } from '../setup/localModelRepair.ts'
 import { LocalVoiceModelsPanel } from './LocalVoiceModelsPanel.tsx'
+import { OwnerVoiceLockV3 } from './OwnerVoiceLockV3.tsx'
 import { SpeechInputProviderV3 } from './SpeechInputProviderV3.tsx'
 import { SpeechOutputProviderV3 } from './SpeechOutputProviderV3.tsx'
 import './voice-section-v3.css'
@@ -410,6 +411,12 @@ export const VoiceSectionV3 = memo(function VoiceSectionV3({
             onChange={(value) => setSetting('voiceInterruptionEnabled', value)}
           />
         </SettingsV3Row>
+        <OwnerVoiceLockV3
+          uiLanguage={uiLanguage}
+          enabled={draft.ownerVoiceLockEnabled}
+          disabled={!inputAvailable}
+          setSetting={setSetting}
+        />
         <SettingsV3Row label={ti('settings.voice.backchannel')} hint={ti('settings.voice.backchannel_hint')}>
           <SettingsV3Switch
             label={ti('settings.voice.backchannel')}

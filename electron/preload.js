@@ -241,6 +241,13 @@ contextBridge.exposeInMainWorld('desktopPet', {
   vadFlush: () => ipcRenderer.invoke('vad:flush'),
   vadStop: () => ipcRenderer.invoke('vad:stop'),
 
+  // Owner voice lock (VoxLock): enroll the owner's voice, then VAD, local ASR
+  // and the barge-in monitor hear only that voice while the lock is on.
+  ownerVoiceStatus: () => ipcRenderer.invoke('owner-voice:status'),
+  ownerVoiceEnroll: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('owner-voice:enroll', payload),
+  ownerVoiceClear: () => ipcRenderer.invoke('owner-voice:clear'),
+  ownerVoiceLevel: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('owner-voice:level', payload),
+
   // Smart Turn v3 end-of-turn probe over the session's in-memory audio ring
   turnEndStart: () => ipcRenderer.invoke('voice-turn:start'),
   turnEndProbe: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('voice-turn:probe', payload),

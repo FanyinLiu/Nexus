@@ -242,6 +242,12 @@ interface VoiceControlSettings {
    * default; only active inside a voice session the user opened.
    */
   voiceBackchannelEnabled: boolean
+  /**
+   * Owner voice lock: VAD, local recognition and barge-in hear only the
+   * enrolled owner's voice. Off by default; needs an enrolled sample and the
+   * VoxLock model, and passes audio through unchanged until both exist.
+   */
+  ownerVoiceLockEnabled: boolean
   voiceTriggerMode: VoiceTriggerMode
   wakeWordEnabled: boolean
   wakeWord: string

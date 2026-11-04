@@ -15,7 +15,7 @@ type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
 export const AUDIO_SMOKE_PLAYBACK_TIMEOUT_MS = 15_000
 
-export type VoiceInputPurpose = 'stt' | 'wakeword' | 'interrupt' | 'vad'
+export type VoiceInputPurpose = 'stt' | 'wakeword' | 'interrupt' | 'vad' | 'enroll'
 
 export type VoiceInputStreamHandle = {
   stream: MediaStream
@@ -82,6 +82,9 @@ function buildVoiceInputConstraintProfiles(
   }
 
   switch (purpose) {
+    // Enrollment records the owner through the same processing the
+    // wake-word frames use, so the saved voice matches what the lock hears.
+    case 'enroll':
     case 'interrupt':
       return [
         processed,

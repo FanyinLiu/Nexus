@@ -5,6 +5,7 @@ import sherpaVadService from '../sherpaVad.js'
 import sherpaSenseVoiceService from '../sherpaSenseVoice.js'
 import sherpaParaformerService from '../sherpaParaformer.js'
 import smartTurnService from '../smartTurn.js'
+import { getOwnerVoiceLock, rmsOf } from '../services/ownerVoiceLock.js'
 import {
   getInventory as getModelInventory,
   downloadModel as downloadModelById,
@@ -22,6 +23,11 @@ import {
 } from './payloadSchemas.js'
 
 export function register() {
+  // Owner voice lock: when on, VAD, Smart Turn and local ASR hear only the
+  // enrolled owner. It passes audio through unchanged when it is off or not
+  // ready, so these handlers behave exactly as before in that case.
+  const ownerVoice = getOwnerVoiceLock()
+
   ipcMain.handle('kws:status', (event, payload) => {
     requireTrustedSender(event)
     payload = validateKwsOptionsPayload('kws:status', payload)
@@ -69,6 +75,7 @@ export function register() {
   ipcMain.handle('vad:start', (event, payload) => {
     requireTrustedSender(event)
     payload = validateVadStartPayload(payload)
+    ownerVoice.resetChannel('vad')
     return sherpaVadService.start(payload ?? {})
   })
 
@@ -84,9 +91,14 @@ export function register() {
     if (samples.length > 320000) {
       return { speechDetected: false, speechStarted: false, speechEnded: false, segments: [] }
     }
-    const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    const raw = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    const { samples: float32, isolated } = ownerVoice.process('vad', raw)
+    if (!float32.length) {
+      return { speechDetected: false, speechStarted: false, speechEnded: false, segments: [], ownerRms: 0 }
+    }
     smartTurnService.feed(float32)
-    return sherpaVadService.feed(float32)
+    const result = sherpaVadService.feed(float32)
+    return isolated ? { ...result, ownerRms: rmsOf(float32) } : result
   })
 
   ipcMain.handle('vad:flush', (event) => {
@@ -109,6 +121,7 @@ export function register() {
 
   ipcMain.handle('sensevoice:start', (event) => {
     requireTrustedSender(event)
+    ownerVoice.resetChannel('sensevoice')
     if (!sherpaSenseVoiceService.isAvailable()) {
       const status = sherpaSenseVoiceService.getStatus()
       throw new Error(
@@ -128,7 +141,9 @@ export function register() {
     if (!samples || !samples.length) return { ok: true }
     if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { ok: true }
     if (samples.length > 320000) return { ok: true }
-    const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    const raw = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    const { samples: float32 } = ownerVoice.process('sensevoice', raw)
+    if (!float32.length) return { ok: true }
     smartTurnService.feed(float32)
     sherpaSenseVoiceService.feedAudio(float32)
     return { ok: true }
@@ -168,6 +183,7 @@ export function register() {
 
   ipcMain.handle('paraformer:start', (event) => {
     requireTrustedSender(event)
+    ownerVoice.resetChannel('paraformer')
     if (!sherpaParaformerService.isAvailable()) {
       const status = sherpaParaformerService.getStatus()
       throw new Error(
@@ -187,7 +203,9 @@ export function register() {
     if (!samples || !samples.length) return { text: '', isEndpoint: false }
     if (!Array.isArray(samples) && !(samples instanceof Float32Array)) return { text: '', isEndpoint: false }
     if (samples.length > 320000) return { text: '', isEndpoint: false }
-    const float32 = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    const raw = samples instanceof Float32Array ? samples : new Float32Array(samples)
+    const { samples: float32 } = ownerVoice.process('paraformer', raw)
+    if (!float32.length) return { text: '', isEndpoint: false }
     smartTurnService.feed(float32)
     return sherpaParaformerService.feedAudio(float32)
   })

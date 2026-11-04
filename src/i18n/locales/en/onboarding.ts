@@ -20,6 +20,8 @@ export const enOnboarding = {
   'model_setup.model.smart-turn-v3.purpose': 'Listens to how your sentence ends so I can reply right after you finish, even without captions.',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS voice (Chinese + English)',
   'model_setup.model.tts-melo-zh-en.purpose': 'Lets me answer you out loud in Chinese or English. Runs on your computer, free, works offline. Pick it under How she speaks to use it.',
+  'model_setup.model.voxlock.name': 'Only hear you',
+  'model_setup.model.voxlock.purpose': 'After you record your voice, a TV, other people and my own echo are no longer taken for you talking. Runs on your computer, works offline.',
   'model_setup.dismiss': 'Maybe later',
   'model_setup.dismiss_hint': 'Skip it for now — I will nudge you once next time you want to talk.',
   'model_setup.deferred_reminder': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',

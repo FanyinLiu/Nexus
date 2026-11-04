@@ -91,6 +91,7 @@ const LOCAL_MODEL_NAME_KEYS: Record<string, TranslationKey> = {
   'paraformer-zh-en': 'model_setup.model.paraformer-zh-en.name',
   'smart-turn-v3': 'model_setup.model.smart-turn-v3.name',
   'tts-melo-zh-en': 'model_setup.model.tts-melo-zh-en.name',
+  voxlock: 'model_setup.model.voxlock.name',
 }
 
 const LOCAL_MODEL_PURPOSE_KEYS: Record<string, TranslationKey> = {
@@ -101,6 +102,7 @@ const LOCAL_MODEL_PURPOSE_KEYS: Record<string, TranslationKey> = {
   'paraformer-zh-en': 'model_setup.model.paraformer-zh-en.purpose',
   'smart-turn-v3': 'model_setup.model.smart-turn-v3.purpose',
   'tts-melo-zh-en': 'model_setup.model.tts-melo-zh-en.purpose',
+  voxlock: 'model_setup.model.voxlock.purpose',
 }
 
 /**

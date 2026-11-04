@@ -62,7 +62,7 @@ import type {
   TtsStreamStartResponse,
 } from './types'
 import type { LocalDataCompanionStorageKey } from '../shared/localDataStorageKeys.js'
-import type { DesktopPetGeneratedBridge } from './types/generated/desktopPetBridge.generated.ts'
+import type { DesktopPetBridgeMethodResults, DesktopPetGeneratedBridge } from './types/generated/desktopPetBridge.generated.ts'
 
 
 type MinecraftGatewayEvent = {
@@ -1006,9 +1006,15 @@ declare global {
         speechStarted: boolean
         speechEnded: boolean
         segments: Float32Array[]
+        /** RMS of the isolated owner audio; present only while the owner voice lock is active. */
+        ownerRms?: number
       }>
       vadFlush: () => Promise<{ segments: Float32Array[] }>
       vadStop: DesktopPetGeneratedBridge['vadStop']
+      ownerVoiceStatus?: DesktopPetGeneratedBridge['ownerVoiceStatus']
+      ownerVoiceEnroll?: (payload: { samples: Float32Array }) => Promise<DesktopPetBridgeMethodResults['ownerVoiceEnroll']>
+      ownerVoiceClear?: DesktopPetGeneratedBridge['ownerVoiceClear']
+      ownerVoiceLevel?: (payload: { samples: Float32Array; reset?: boolean }) => Promise<DesktopPetBridgeMethodResults['ownerVoiceLevel']>
 
       // Smart Turn v3 end-of-turn probe. Audio stays in the main process.
       // Every call for a turn carries the generation returned by start; the

@@ -77,6 +77,7 @@ import {
  * @property {string} speechInputProviderId
  * @property {boolean} speechOutputEnabled
  * @property {string} speechOutputProviderId
+ * @property {boolean} [ownerVoiceLockEnabled]
  */
 
 const modelDownloadSchema = {
@@ -337,6 +338,7 @@ const voiceRuntimeSyncSchema = {
     speechInputProviderId: { type: 'string', maxLength: SHORT_TEXT_MAX },
     speechOutputEnabled: { type: 'boolean' },
     speechOutputProviderId: { type: 'string', maxLength: SHORT_TEXT_MAX },
+    ownerVoiceLockEnabled: { type: 'boolean', optional: true, default: false },
   },
 }
 

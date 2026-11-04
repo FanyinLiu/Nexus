@@ -114,6 +114,7 @@ const defaultSettings: AppSettings = {
   vadSensitivity: 'high',
   voiceInterruptionEnabled: false,
   voiceBackchannelEnabled: false,
+  ownerVoiceLockEnabled: false,
   voiceTriggerMode: 'direct_send',
   wakeWordEnabled: false,
   wakeWord: '星绘',
@@ -522,6 +523,7 @@ export function loadSettings(): AppSettings {
       stored.toolWeatherDefaultLocation ?? defaultSettings.toolWeatherDefaultLocation,
     ).trim(),
     voiceBackchannelEnabled: stored.voiceBackchannelEnabled === true,
+    ownerVoiceLockEnabled: stored.ownerVoiceLockEnabled === true,
     voiceTriggerMode,
     wakeWordEnabled: voiceTriggerMode === 'wake_word',
     memorySearchMode:

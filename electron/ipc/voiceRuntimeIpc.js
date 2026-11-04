@@ -3,11 +3,14 @@ import { ipcMain } from 'electron'
 
 import { requireTrustedSender } from './validate.js'
 import { validateVoiceRuntimeSyncPayload } from './payloadSchemas.js'
+import { getOwnerVoiceLock } from '../services/ownerVoiceLock.js'
 
 /**
  * Push the selected voice engines from the renderer so the main process can
  * start/stop the optional Python sidecars on demand. The payload is only the
- * engine ids and voice switches — no keys or user text.
+ * engine ids and voice switches — no keys or user text. The owner voice
+ * lock switch rides along so the main-process audio path knows whether to
+ * isolate the owner's voice.
  *
  * @param {{ voiceSidecarSupervisor?: { applySettings: (payload: object) => unknown } }} deps
  */
@@ -15,6 +18,7 @@ export function register({ voiceSidecarSupervisor } = {}) {
   ipcMain.handle('voice-runtime:sync', (event, payload) => {
     requireTrustedSender(event)
     payload = validateVoiceRuntimeSyncPayload(payload)
+    getOwnerVoiceLock().setEnabled(payload.ownerVoiceLockEnabled === true)
     // Starting a sidecar can take minutes (model load). Never make a settings
     // commit wait on that; the supervisor serialises transitions internally.
     voiceSidecarSupervisor?.applySettings(payload)

@@ -28,6 +28,11 @@ type VoiceActivityCallbacks = {
 
 export type MainProcessVadController = {
   pushSamples: (samples: Float32Array) => void
+  /**
+   * RMS of the last frame after the owner voice lock isolated it, or null
+   * when the lock is not isolating. Lags the raw frames by one IPC round trip.
+   */
+  ownerRms: () => number | null
   flush: () => Promise<boolean>
   destroy: () => Promise<void>
 }
@@ -114,6 +119,7 @@ export async function createMainProcessVadController(
   let destroyed = false
   let feedChain: Promise<void> = Promise.resolve()
   let realStartFired = false
+  let lastOwnerRms: number | null = null
 
   async function sendChunk(samples: Float32Array) {
     if (destroyed) return
@@ -121,6 +127,8 @@ export async function createMainProcessVadController(
       const result = await api!.vadFeed({ samples })
 
       if (destroyed) return
+
+      lastOwnerRms = typeof result.ownerRms === 'number' ? result.ownerRms : null
 
       if (result.speechDetected) {
         callbacks.onFrameProcessed?.(0.9)
@@ -159,6 +167,7 @@ export async function createMainProcessVadController(
   }
 
   return {
+    ownerRms: () => lastOwnerRms,
     pushSamples(samples: Float32Array) {
       if (destroyed) return
       // Clone the buffer — ipcRenderer.invoke structurally clones, but we

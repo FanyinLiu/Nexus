@@ -20,6 +20,8 @@ export const zhTWOnboarding = {
   'model_setup.model.smart-turn-v3.purpose': '聽你這句話怎麼收尾，你說完就接話，沒有字幕也行。',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 中英聲音',
   'model_setup.model.tts-melo-zh-en.purpose': '讓我用聲音回你，中英文都行。在你電腦上執行，免費，不連網也能用。在「她怎麼開口」裡選它才會用上。',
+  'model_setup.model.voxlock.name': '只聽你的聲音',
+  'model_setup.model.voxlock.purpose': '錄一段你的聲音後，電視、旁人和她自己的回聲都不會被當成你在說話。在你電腦上執行，不連網也能用。',
   'model_setup.dismiss': '稍後再說',
   'model_setup.dismiss_hint': '先跳過也行 —— 下次想說話的時候我再提醒你一次。',
   'model_setup.deferred_reminder': '語音還沒裝好，去「{settings} → {voice} → {advanced}」裡下載。',

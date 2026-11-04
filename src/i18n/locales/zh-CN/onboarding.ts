@@ -18,6 +18,8 @@ export const zhCNOnboarding = {
   'model_setup.model.smart-turn-v3.purpose': '听你这句话怎么收尾，你说完就接话，没有字幕也行。',
   'model_setup.model.tts-melo-zh-en.name': 'MeloTTS 中英声音',
   'model_setup.model.tts-melo-zh-en.purpose': '让我用声音回你，中英文都行。在你电脑上运行，免费，不联网也能用。在「她怎么开口」里选它才会用上。',
+  'model_setup.model.voxlock.name': '只听你的声音',
+  'model_setup.model.voxlock.purpose': '录一段你的声音后，电视、旁人和她自己的回声都不会被当成你在说话。在你电脑上运行，不联网也能用。',
   'model_setup.dismiss': '稍后再说',
   'model_setup.dismiss_hint': '先跳过也行 —— 下次想说话的时候我再提醒你一次。',
   'model_setup.deferred_reminder': '语音还没装好，去「{settings} → {voice} → {advanced}」里下载。',
