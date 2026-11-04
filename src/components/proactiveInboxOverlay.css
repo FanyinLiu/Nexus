@@ -145,6 +145,7 @@ html[data-theme='system-black'] .proactive-inbox {
   --pi-row-inset: 0px;
 
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 4px;
   box-sizing: border-box;
