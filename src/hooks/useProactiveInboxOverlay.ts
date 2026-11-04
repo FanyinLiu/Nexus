@@ -18,7 +18,7 @@ import { useProactiveNoteContext } from './useProactiveNoteContext.ts'
 
 const log = createLogger('proactive.inbox.overlay')
 
-const EMPTY_NOTE: ProactiveNoteView = { state: 'none', sheets: 0, animated: true }
+const EMPTY_NOTE: ProactiveNoteView = { state: 'none' }
 
 const EMPTY_VIEW: ProactiveInboxOverlayView = Object.freeze({
   open: false,
@@ -41,7 +41,7 @@ export type UseProactiveInboxOverlayOptions = {
 
 export type UseProactiveInboxOverlayResult = {
   view: ProactiveInboxOverlayView
-  /** Shared note environment; the motion and narration hooks consume this. */
+  /** Shared notebook environment; the narration and arrival hooks consume this. */
   noteContext: DeliveryContext | null
   /** Open from an external trigger (the pet context menu), not just the badge. */
   open: (options?: ProactiveNotebookOpenOptions) => void

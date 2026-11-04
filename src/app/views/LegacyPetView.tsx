@@ -12,8 +12,6 @@ import { pickHoverReaction } from '../appSupport.ts'
 import { MusicPopupCard } from '../../components/MusicPopupCard.tsx'
 import { PetControlIcon } from '../../components/PetControlIcon.tsx'
 import { PetThoughtBubble } from '../../components/PetThoughtBubble.tsx'
-import { ProactiveNote } from '../../components/ProactiveNote.tsx'
-import type { ProactiveNoteStageBinding } from '../../features/proactive/proactiveNote.ts'
 import {
   classifyWeatherCondition,
   getTimeOfDayBand,
@@ -42,8 +40,6 @@ const Live2DCanvas = lazy(async () => {
 
 type LegacyPetViewProps = Omit<UseAppControllerResult['petView'], 'registerInboxOverlayOpen'> & {
   modalOpen: boolean
-  /** Paper note overlay, anchored to the legacy pet root's top-right corner. */
-  note?: ProactiveNoteStageBinding
 }
 
 const WAVE_SHAPE = [0.6, 0.9, 1.0, 0.9, 0.6] as const
@@ -94,7 +90,6 @@ export function LegacyPetView({
   handleMediaSessionControl,
   dismissCurrentMediaSession,
   modalOpen,
-  note,
 }: LegacyPetViewProps) {
   const interactiveZoneRef = useRef<HTMLDivElement | null>(null)
   const mascotRef = useRef<HTMLDivElement | null>(null)
@@ -646,15 +641,6 @@ export function LegacyPetView({
             {/* dock removed to avoid blocking Live2D character */}
           </div>
         </div>
-        {note ? (
-          <ProactiveNote
-            view={note.view}
-            motion={note.motion}
-            label={note.label}
-            anchor={{ x: 0.86, y: 0.06 }}
-            onActivate={note.onToggleNotebook}
-          />
-        ) : null}
       </section>
   )
 }

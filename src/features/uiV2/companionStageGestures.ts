@@ -2,9 +2,9 @@
  * Gesture routing and drag sequencing for the companion's character stage.
  *
  * The stage has four gestures: a pointer-down starts the drag/touch feedback,
- * a left single click opens the notebook only while a paper note is shown, a
- * double-click toggles voice, and the context menu (right click) opens the
- * native pet menu. The context menu is the only path to `openPetMenu`; no
+ * a left single click opens the notebook only while there are unread notebook
+ * items, a double-click toggles voice, and the context menu (right click) opens
+ * the native pet menu. The context menu is the only path to `openPetMenu`; no
  * click gesture ever reaches it, and a double click never opens the notebook.
  *
  * Drag state is a tiny mutable object (`createStageDragState`) and every side
@@ -134,8 +134,9 @@ export const companionStageGestures = {
   },
 
   /**
-   * Left single click: opens the notebook only while a note is shown and the
-   * press was a tap, not a drag. A right click or a double click does nothing.
+   * Left single click: opens the notebook only while unread items exist and
+   * the press was a tap, not a drag. A right click or a double click does
+   * nothing.
    */
   click(
     event: { button: number; detail: number },

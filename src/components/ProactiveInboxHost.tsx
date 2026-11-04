@@ -3,8 +3,7 @@
  *
  * The overlay controller lives in PetView, so the pet context menu and the
  * notebook share one instance; this host only translates the controller view
- * into props. The paper note beside the character is rendered by the companion
- * surfaces, not here, so the host stays a single popover mount.
+ * into props, so the host stays a single popover mount.
  */
 
 import { useState } from 'react'

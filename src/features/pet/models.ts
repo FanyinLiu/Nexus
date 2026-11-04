@@ -110,12 +110,6 @@ export interface PetModelDefinition {
     anchorY?: number
     yOffsetRatio?: number
     yOffsetPx?: number
-    /**
-     * Where the paper note sits over this model's character stage box, as
-     * ratios of that box (0..1). The note is a DOM overlay, not a model edit,
-     * so a per-model anchor is the only way to keep it beside the head.
-     */
-    noteAnchor?: { x: number; y: number }
   }
   /**
    * Per-model idle fidget pool. Omit to use the default pool (blink /
@@ -325,7 +319,6 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       anchorY: 0,
       yOffsetRatio: 0.03,
       yOffsetPx: 12,
-      noteAnchor: { x: 0.675, y: 0.52 },
     },
     // Mao gets a 6-entry pool instead of the 4-entry default — `exp_07`
     // (blush/embarrassed) makes a good quiet "shy glance" fidget, and
@@ -393,7 +386,6 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       anchorY: 0,
       yOffsetRatio: 0.03,
       yOffsetPx: 12,
-      noteAnchor: { x: 0.625, y: 0.32 },
     },
   },
   {
@@ -430,7 +422,6 @@ export const PET_MODEL_PRESETS: PetModelDefinition[] = [
       anchorY: 0,
       yOffsetRatio: 0.03,
       yOffsetPx: 12,
-      noteAnchor: { x: 0.655, y: 0.50 },
     },
   },
 ]

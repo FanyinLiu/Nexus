@@ -11,12 +11,12 @@ export const PROACTIVE_NOTE_CONTEXT_REFRESH_MS = 60_000
 export type UseProactiveNoteContextOptions = {
   settings: AppSettings
   focusState: FocusState
-  /** Only sample desktop context while the note or notebook can use it. */
+  /** Only sample desktop context while the notebook can use it. */
   active: boolean
 }
 
 /**
- * Delivery context for the paper note and the notebook speech rules.
+ * Delivery context for the notebook's speech and arrival rules.
  *
  * The snapshot is rebuilt on every activation/focus change and then once a
  * minute while active, through the same privacy gate as reminder delivery.

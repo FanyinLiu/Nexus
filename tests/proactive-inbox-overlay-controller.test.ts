@@ -390,14 +390,14 @@ test('refresh reflects changes made by the strip or another window', async () =>
   assert.equal(harness.controller.getSnapshot().unreadCount, 1)
 })
 
-test('the note view follows unseen entries and ignores snoozed rows', async () => {
+test('the unread view follows unseen entries and ignores snoozed rows', async () => {
   const harness = createHarness([])
   await harness.controller.open()
   assert.equal(harness.controller.getSnapshot().note.state, 'none')
 
   harness.setEntries([entry({ id: 'one', actions: [], priority: 'normal' })])
   await harness.controller.refresh()
-  assert.equal(harness.controller.getSnapshot().note.state, 'one')
+  assert.equal(harness.controller.getSnapshot().note.state, 'unread')
 
   harness.setEntries([
     entry({ id: 'stack-1', actions: [], priority: 'normal', createdAt: 3 }),
@@ -405,13 +405,13 @@ test('the note view follows unseen entries and ignores snoozed rows', async () =
     entry({ id: 'stack-3', actions: [], priority: 'normal', createdAt: 1 }),
   ])
   await harness.controller.refresh()
-  assert.equal(harness.controller.getSnapshot().note.state, 'stack')
+  assert.equal(harness.controller.getSnapshot().note.state, 'unread')
 
   harness.setEntries([entry({ id: 'important', actions: ['done'], priority: 'normal' })])
   await harness.controller.refresh()
-  assert.equal(harness.controller.getSnapshot().note.state, 'important')
+  assert.equal(harness.controller.getSnapshot().note.state, 'unread')
 
-  // A snoozed entry keeps its unread status but contributes no sheet.
+  // A snoozed entry keeps its unread status but no longer counts as unseen.
   await harness.controller.runAction('important', 'snooze')
   assert.equal(harness.controller.getSnapshot().note.state, 'none')
   assert.equal(harness.entries()[0].status, 'unread')
@@ -556,12 +556,12 @@ test('snoozing an actionable entry keeps it unseen and returns it on top', async
   const ids = () => harness.controller.getSnapshot().rows.map((row) => row.id)
   await harness.controller.open()
   assert.deepEqual(ids(), ['actionable', 'plain'])
-  assert.equal(harness.controller.getSnapshot().note.state, 'important')
+  assert.equal(harness.controller.getSnapshot().note.state, 'unread')
 
   await harness.controller.runAction('actionable', 'snooze')
   assert.deepEqual(harness.updates, [])
   assert.deepEqual(ids(), ['plain'])
-  assert.equal(harness.controller.getSnapshot().note.state, 'one')
+  assert.equal(harness.controller.getSnapshot().note.state, 'unread')
   assert.equal(harness.entries()[0].status, 'unread')
 
   harness.clock.advance(PROACTIVE_INBOX_SNOOZE_MS - 1)
@@ -572,5 +572,5 @@ test('snoozing an actionable entry keeps it unseen and returns it on top', async
   await flushAsync()
   assert.equal(harness.deliveries.length, 1)
   assert.deepEqual(ids(), ['actionable', 'plain'])
-  assert.equal(harness.controller.getSnapshot().note.state, 'important')
+  assert.equal(harness.controller.getSnapshot().note.state, 'unread')
 })

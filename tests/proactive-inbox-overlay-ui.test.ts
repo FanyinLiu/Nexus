@@ -11,7 +11,6 @@ import {
   PROACTIVE_INBOX_OVERLAY_MAX_ROWS,
   type ProactiveInboxRow,
 } from '../src/features/proactive/proactiveInboxOverlay.ts'
-import type { ProactiveNoteView } from '../src/features/proactive/proactiveNote.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { jaMessages } from '../src/i18n/locales/ja/index.ts'
 import { koMessages } from '../src/i18n/locales/ko/index.ts'
@@ -20,12 +19,7 @@ import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 
 register(new URL('./helpers/tsx-test-loader.mjs', import.meta.url))
 const { ProactiveInboxPopover } = await import('../src/components/ProactiveInboxPopover.tsx')
-const { ProactiveNote } = await import('../src/components/ProactiveNote.tsx')
 
-const NOTE_CSS = readFileSync(
-  new URL('../src/components/proactiveNote.css', import.meta.url),
-  'utf8',
-)
 const NOTEBOOK_CSS = readFileSync(
   new URL('../src/components/proactiveInboxOverlay.css', import.meta.url),
   'utf8',
@@ -87,106 +81,6 @@ function renderPopover(overrides: Partial<React.ComponentProps<typeof ProactiveI
     ...overrides,
   }))
 }
-
-const ONE_SHEET: ProactiveNoteView = { state: 'one', sheets: 1, animated: true }
-
-function renderNote(overrides: Partial<React.ComponentProps<typeof ProactiveNote>> = {}) {
-  return renderToStaticMarkup(React.createElement(ProactiveNote, {
-    view: ONE_SHEET,
-    motion: null,
-    label: '她记了几件事',
-    anchor: { x: 0.5, y: 0.4 },
-    onActivate: () => {},
-    ...overrides,
-  }))
-}
-
-function sheetCount(html: string): number {
-  return (html.match(/class="proactive-note__sheet"/g) ?? []).length
-}
-
-function cssDurations(css: string): number[] {
-  const durations: number[] = []
-  for (const match of css.matchAll(/(\d+(?:\.\d+)?)(ms|s)\b/g)) {
-    const value = Number(match[1])
-    durations.push(match[2] === 's' ? value * 1000 : value)
-  }
-  return durations
-}
-
-test('the paper note renders nothing when there is no unseen line', () => {
-  assert.equal(renderNote({ view: { state: 'none', sheets: 0, animated: true } }), '')
-})
-
-test('the paper note exposes each state and exactly its sheet count', () => {
-  const cases: Array<{ view: ProactiveNoteView; sheets: number }> = [
-    { view: { state: 'one', sheets: 1, animated: true }, sheets: 1 },
-    { view: { state: 'stack', sheets: 3, animated: true }, sheets: 3 },
-    { view: { state: 'important', sheets: 2, animated: true }, sheets: 2 },
-  ]
-
-  for (const { view, sheets } of cases) {
-    const html = renderNote({ view })
-    assert.match(html, new RegExp(`data-note-state="${view.state}"`))
-    assert.match(html, new RegExp(`data-note-sheets="${view.sheets}"`))
-    assert.equal(sheetCount(html), sheets, view.state)
-  }
-
-  // Even an out-of-range count can never draw more than the three-sheet stack.
-  const many = renderNote({
-    view: { state: 'stack', sheets: 10 } as unknown as ProactiveNoteView,
-  })
-  assert.equal(sheetCount(many), 3)
-})
-
-test('the paper note is text-free, labelled and carries no count or red', () => {
-  const html = renderNote()
-  assert.match(html, /<button/)
-  assert.match(html, /type="button"/)
-  assert.match(html, /aria-label="她记了几件事"/)
-  assert.match(html, /title="她记了几件事"/)
-  assert.match(html, /--note-x:50%/)
-  assert.match(html, /--note-y:40%/)
-  assert.equal(/\d/.test(html.replace(/<[^>]*>/g, '')), false)
-  assert.equal(html.toLowerCase().includes('red'), false)
-  assert.equal(html.includes('#f00'), false)
-  assert.equal(html.toLowerCase().includes('#ff0000'), false)
-  assert.equal(html.includes('rgb(255, 0, 0)'), false)
-})
-
-test('the paper note CSS keeps the visual budget and has no red or badge rules', () => {
-  assert.doesNotMatch(NOTE_CSS, /\bred\b/i)
-  assert.doesNotMatch(NOTE_CSS, /#f00\b/i)
-  assert.doesNotMatch(NOTE_CSS, /#ff0000/i)
-  assert.doesNotMatch(NOTE_CSS, /rgb\(\s*255\s*,\s*0\s*,\s*0\s*\)/i)
-  assert.doesNotMatch(NOTE_CSS, /badge/i)
-
-  assert.match(NOTE_CSS, /left:\s*var\(--note-x\)/)
-  assert.match(NOTE_CSS, /top:\s*var\(--note-y\)/)
-  assert.match(NOTE_CSS, /width:\s*clamp\(22px, 8%, 34px\)/)
-  assert.match(NOTE_CSS, /aspect-ratio:\s*4 \/ 5/)
-  assert.match(NOTE_CSS, /prefers-reduced-motion:\s*reduce/)
-  assert.match(NOTE_CSS, /#F6F0E6/)
-  assert.match(NOTE_CSS, /#2C2824/)
-})
-
-test('every note and notebook motion stays short except the one-shot glance and wiggle', () => {
-  const durations = [...cssDurations(NOTE_CSS), ...cssDurations(NOTEBOOK_CSS)]
-  assert.ok(durations.includes(700), 'the glance lasts 700ms')
-  assert.ok(durations.includes(900), 'the wiggle stays under one second')
-
-  for (const duration of durations) {
-    assert.ok(
-      duration <= 180 || duration === 700 || (duration >= 900 && duration <= 1000),
-      `unexpected motion duration ${duration}ms`,
-    )
-  }
-
-  assert.match(NOTE_CSS, /animation:\s*proactive-note-glance 700ms/)
-  assert.match(NOTE_CSS, /animation:\s*proactive-note-wiggle 900ms/)
-  assert.match(NOTE_CSS, /data-note-motion='glance'/)
-  assert.match(NOTE_CSS, /data-note-motion='wiggle'/)
-})
 
 test('the notebook uses plain paper colours, a 16px radius and no ruled lines', () => {
   assert.match(NOTEBOOK_CSS, /#F6F0E6/)

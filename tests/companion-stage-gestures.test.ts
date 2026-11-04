@@ -275,7 +275,7 @@ function createFakeTimers() {
   }
 }
 
-test('a left single click with a note opens the notebook after the gate delay', () => {
+test('a left single click with unread items opens the notebook after the gate delay', () => {
   const timers = createFakeTimers()
   const gate = createSingleClickGate(timers)
   let opens = 0
@@ -283,7 +283,7 @@ test('a left single click with a note opens the notebook after the gate delay', 
   companionStageGestures.click(
     { button: 0, detail: 1 },
     {
-      noteState: 'one',
+      noteState: 'unread',
       dragged: false,
       gate,
       toggleNotebook: () => {
@@ -299,7 +299,7 @@ test('a left single click with a note opens the notebook after the gate delay', 
   assert.equal(opens, 1)
 })
 
-test('a left single click without a note does nothing', () => {
+test('a left single click without unread items does nothing', () => {
   const timers = createFakeTimers()
   const gate = createSingleClickGate(timers)
   let opens = 0
@@ -340,7 +340,7 @@ test('a click after the stage dragged never opens the notebook', () => {
   companionStageGestures.click(
     { button: 0, detail: 1 },
     {
-      noteState: 'important',
+      noteState: 'unread',
       dragged: harness.state.dragged,
       gate,
       toggleNotebook: () => {
@@ -362,7 +362,7 @@ test('a right click never opens the notebook', () => {
   companionStageGestures.click(
     { button: 2, detail: 1 },
     {
-      noteState: 'stack',
+      noteState: 'unread',
       dragged: false,
       gate,
       toggleNotebook: () => {
@@ -385,7 +385,7 @@ test('a double click toggles voice and never opens the notebook', () => {
   companionStageGestures.click(
     { button: 0, detail: 1 },
     {
-      noteState: 'one',
+      noteState: 'unread',
       dragged: false,
       gate,
       toggleNotebook: () => {

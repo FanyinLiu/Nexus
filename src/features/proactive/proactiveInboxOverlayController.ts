@@ -16,9 +16,9 @@
  * layers, so a letter can be seen without being opened. Snooze keeps the entry
  * unread and hides it only for this app session.
  *
- * The note indicator reads the same snapshot through
- * `resolveProactiveNoteView`, while the opening line and the frozen unseen ids
- * feed the notebook's speech rules.
+ * The unread view reads the same snapshot through `resolveProactiveNoteView`,
+ * while the opening line and the frozen unseen ids feed the notebook's speech
+ * rules.
  */
 
 import type {
@@ -60,7 +60,7 @@ export type ProactiveInboxOverlayView = {
   unreadCount: number
   rows: ProactiveInboxRow[]
   expandedId: string | null
-  /** Paper-note state derived from the same entries; snoozed rows are hidden. */
+  /** Unread state derived from the same entries; snoozed rows are hidden. */
   note: ProactiveNoteView
   /** Opening line for the notebook; computed once per opening. */
   openingKey: TranslationKey
@@ -93,7 +93,7 @@ export type ProactiveInboxOverlayDependencies = {
   logger: Pick<Logger, 'warn'>
   setTimeout: ProactiveInboxSnoozeDependencies['setTimeout']
   clearTimeout: ProactiveInboxSnoozeDependencies['clearTimeout']
-  /** Injectable clock for the 15-day window and the note; defaults to `Date.now`. */
+  /** Injectable clock for the 15-day window and the unread view; defaults to `Date.now`. */
   nowMs?: () => number
   /** Safety bound on rendered rows; defaults to the store's own maximum. */
   maxRows?: number
@@ -101,8 +101,6 @@ export type ProactiveInboxOverlayDependencies = {
 
 const EMPTY_NOTE: ProactiveNoteView = Object.freeze({
   state: 'none',
-  sheets: 0,
-  animated: true,
 })
 
 const EMPTY_OPENING_KEY = selectProactiveNotebookOpeningKey({

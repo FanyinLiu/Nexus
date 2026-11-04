@@ -91,19 +91,19 @@ const EXPECTED_NOTEBOOK_COPY = {
     ja: '昨日',
     ko: '어제',
   },
-  'pet.proactive.note_label': {
-    'zh-CN': '她记了几件事',
-    'zh-TW': '她記了幾件事',
-    'en-US': 'She jotted a few things down',
-    ja: 'いくつかメモしてくれてるよ',
-    ko: '몇 가지 적어 뒀대',
+  'pet.proactive.notebook_arrived_one': {
+    'zh-CN': '我记了件事。',
+    'zh-TW': '我記了件事。',
+    'en-US': 'I jotted something down.',
+    ja: 'ひとつメモしといたよ。',
+    ko: '하나 적어 뒀어.',
   },
-  'pet.proactive.note_label_one': {
-    'zh-CN': '她记了一件事',
-    'zh-TW': '她記了一件事',
-    'en-US': 'She jotted one thing down',
-    ja: 'ひとつメモしてくれてるよ',
-    ko: '한 가지 적어 뒀대',
+  'pet.proactive.notebook_arrived_many': {
+    'zh-CN': '我记了几件事。',
+    'zh-TW': '我記了幾件事。',
+    'en-US': 'I jotted a few things down.',
+    ja: 'いくつかメモしといたよ。',
+    ko: '몇 가지 적어 뒀어.',
   },
   'pet.proactive.inbox_title': {
     'zh-CN': '小本子',

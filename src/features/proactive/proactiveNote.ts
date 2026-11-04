@@ -1,154 +1,57 @@
 /**
- * Paper-note view rules for the pet's proactive inbox indicator.
+ * Unread-view rules for the pet's proactive notebook.
  *
- * The note replaces the red unread dot: unseen entries become up to three
- * drawn sheets, important items may wiggle, and ordinary items may glance once
- * per half hour. All clocks and timers are injected so the renderer owns
- * scheduling while this module stays pure and testable.
+ * The notebook indicator needs one pure answer: whether the notebook currently
+ * holds unseen entries. That answer decides whether a plain stage click opens
+ * the notebook. All clocks are injected so this module stays pure and testable.
  */
 
-import type { DeliveryContext, ProactiveInboxEntry } from '../../../shared/proactiveDelivery.js'
-import { clamp } from '../../lib/common.ts'
-import type { TranslationKey } from '../../types/i18n.ts'
-
-/** Never draw more than this many sheets, however long the inbox is. */
-export const PROACTIVE_NOTE_MAX_SHEETS = 3
-
-/** Three or more unseen ordinary entries turn the single note into a stack. */
-export const PROACTIVE_NOTE_STACK_THRESHOLD = 3
-
-/** Ordinary note: at most one glance per this interval. */
-export const PROACTIVE_NOTE_GLANCE_THROTTLE_MS = 30 * 60 * 1000
-
-/** Important note: at most one gentle wiggle per this interval. */
-export const PROACTIVE_NOTE_WIGGLE_INTERVAL_MS = 10 * 60 * 1000
-
-/** How long one wiggle lasts; kept well under a second to stay gentle. */
-export const PROACTIVE_NOTE_WIGGLE_DURATION_MS = 900
-
-/** How long one glance / hand-the-note-toward-you motion lasts. */
-export const PROACTIVE_NOTE_GLANCE_DURATION_MS = 700
+import type { ProactiveInboxEntry } from '../../../shared/proactiveDelivery.js'
 
 /** Delay that separates a notebook single click from a voice double click. */
 export const PROACTIVE_NOTE_SINGLE_CLICK_DELAY_MS = 260
 
-/** Imported models usually look fine with this at-her-hand anchor. */
-const PROACTIVE_NOTE_DEFAULT_ANCHOR = { x: 0.66, y: 0.5 } as const
-
-/** Keep the note inside the character box even for an out-of-range anchor. */
-const PROACTIVE_NOTE_ANCHOR_MIN = 0.05
-const PROACTIVE_NOTE_ANCHOR_MAX = 0.95
-
-/**
- * Pending product decision; flip to true to keep one static note.
- *
- * The open question is whether a seen-but-unhandled actionable entry should
- * still show a motionless note. Today the answer is no: only unseen entries
- * draw the note.
- */
-export const PROACTIVE_NOTE_KEEPS_SEEN_ACTIONABLE = false
-
-/** How long an inbox entry can still surface as a note. */
+/** How long an inbox entry can still count as unseen. */
 const PROACTIVE_NOTE_WINDOW_MS = 15 * 24 * 60 * 60 * 1000
 
-/** Sheet count is clipped to what the artwork can draw. */
-type ProactiveNoteSheetCount = 0 | 1 | 2 | 3
+/** `none` means a click does nothing special; `unread` means it opens the notebook. */
+export type ProactiveNoteState = 'none' | 'unread'
 
-/** The four note shapes; `none` means nothing is drawn. */
-export type ProactiveNoteState = 'none' | 'one' | 'stack' | 'important'
-
-/** `animated` false means the note may be drawn but must never move. */
+/** The unread view the notebook host and the stage click rule share. */
 export type ProactiveNoteView = {
   state: ProactiveNoteState
-  sheets: ProactiveNoteSheetCount
-  animated: boolean
 }
 
-/**
- * Pick the spoken label for the paper note.
- *
- * One unseen sheet reads as a single note; stacks and multi-item important
- * notes keep the plural wording. Hidden or seen-only notes never reach here.
- *
- * @param view Resolved note view.
- * @returns Translation key for the note's aria/title label.
- */
-export function selectProactiveNoteLabelKey(view: ProactiveNoteView): TranslationKey {
-  return view.sheets === 1 ? 'pet.proactive.note_label_one' : 'pet.proactive.note_label'
-}
-
-/** Props the pet host hands to the stage note overlay. */
+/** Props the pet host hands to the stage for the click rule. */
 export type ProactiveNoteStageBinding = {
   view: ProactiveNoteView
-  motion: 'glance' | 'wiggle' | null
-  label: string
-  onApproach: () => void
   onToggleNotebook: () => void
 }
 
-/** The model bits that decide where the note is drawn. */
-type ProactiveNoteAnchorSource = {
-  layout?: { noteAnchor?: { x: number; y: number } }
-}
+/** The subset of an inbox entry the unread rule needs. */
+export type ProactiveNoteEntry = Pick<ProactiveInboxEntry, 'id' | 'status' | 'createdAt'>
 
-/**
- * Resolve the paper note's anchor for one model.
- *
- * Built-in models ship an anchor tuned to their free hand; imported models
- * fall back to a generic at-her-hand point. Both axes are clamped so a bad
- * preset can never place the note outside the character stage box.
- *
- * @param model Model whose note anchor should be read.
- * @returns Anchor ratios in 0..1.
- */
-export function resolveProactiveNoteAnchor(model: ProactiveNoteAnchorSource): {
-  x: number
-  y: number
-} {
-  const anchor = model.layout?.noteAnchor ?? PROACTIVE_NOTE_DEFAULT_ANCHOR
-  return {
-    x: clamp(anchor.x, PROACTIVE_NOTE_ANCHOR_MIN, PROACTIVE_NOTE_ANCHOR_MAX),
-    y: clamp(anchor.y, PROACTIVE_NOTE_ANCHOR_MIN, PROACTIVE_NOTE_ANCHOR_MAX),
-  }
-}
-
-/** The subset of an inbox entry the note rules need. */
-export type ProactiveNoteEntry = Pick<
-  ProactiveInboxEntry,
-  'id' | 'status' | 'actions' | 'priority' | 'createdAt'
->
-
-/** Options that narrow the inbox snapshot before it becomes a note. */
+/** Options that narrow the inbox snapshot before it becomes an unread view. */
 export type ProactiveNoteOptions = {
-  /** Snoozed ids; a hidden entry never contributes a sheet. */
+  /** Snoozed ids; a hidden entry never counts as unseen. */
   hiddenIds?: readonly string[]
   /** Reference instant; callers in the app must pass their clock. */
   nowMs?: number
   /** Age cutoff for entries; defaults to 15 days. */
   windowMs?: number
-  /** Overrides `PROACTIVE_NOTE_KEEPS_SEEN_ACTIONABLE` for one call. */
-  keepSeenActionable?: boolean
-}
-
-function hasActions(entry: Pick<ProactiveInboxEntry, 'actions'>): boolean {
-  return Array.isArray(entry.actions) && entry.actions.length > 0
-}
-
-function clipSheets(count: number): ProactiveNoteSheetCount {
-  return Math.min(count, PROACTIVE_NOTE_MAX_SHEETS) as ProactiveNoteSheetCount
 }
 
 /**
- * Resolve what the note should look like for the current inbox snapshot.
+ * Resolve whether the notebook holds unseen entries.
  *
- * Old, hidden and non-unread entries are filtered first. Any unseen entry that
- * is high priority or actionable makes the note important, which wins over the
- * one/stack shapes. `nowMs` is required in practice; without it the batch is
- * treated as current instead of consulting the wall clock.
+ * Hidden, old and non-unread entries are filtered first. The state carries no
+ * count or shape: only "none" versus "unread" matters to the click rule.
+ * `nowMs` is required in practice; without it the batch is treated as current
+ * instead of consulting the wall clock.
  *
  * @param entries Inbox entries to inspect.
- * @param options Hidden ids, clock, age window and seen-actionable override.
- * @returns The state, sheet count and whether the note may animate.
+ * @param options Hidden ids, clock and age window.
+ * @returns `unread` when at least one unseen entry remains, otherwise `none`.
  */
 export function resolveProactiveNoteView(
   entries: readonly ProactiveNoteEntry[],
@@ -156,7 +59,6 @@ export function resolveProactiveNoteView(
 ): ProactiveNoteView {
   const hiddenIds = options.hiddenIds ?? []
   const windowMs = options.windowMs ?? PROACTIVE_NOTE_WINDOW_MS
-  const keepSeenActionable = options.keepSeenActionable ?? PROACTIVE_NOTE_KEEPS_SEEN_ACTIONABLE
   const newestCreatedAt = entries.reduce(
     (newest, entry) => (entry.createdAt > newest ? entry.createdAt : newest),
     0,
@@ -164,140 +66,13 @@ export function resolveProactiveNoteView(
   const nowMs = options.nowMs ?? newestCreatedAt
   const oldestAllowed = nowMs - windowMs
 
-  const visible = entries.filter(
-    (entry) => !hiddenIds.includes(entry.id) && entry.createdAt >= oldestAllowed,
+  const hasUnseen = entries.some(
+    (entry) =>
+      !hiddenIds.includes(entry.id)
+      && entry.createdAt >= oldestAllowed
+      && entry.status === 'unread',
   )
-  const unseen = visible.filter((entry) => entry.status === 'unread')
-  const unseenCount = unseen.length
-
-  if (unseenCount === 0) {
-    const keepsSeenNote =
-      keepSeenActionable &&
-      visible.some((entry) => entry.status === 'read' && hasActions(entry))
-    return keepsSeenNote
-      ? { state: 'one', sheets: 1, animated: false }
-      : { state: 'none', sheets: 0, animated: true }
-  }
-
-  const important = unseen.some((entry) => entry.priority === 'high' || hasActions(entry))
-  if (important) {
-    return { state: 'important', sheets: clipSheets(unseenCount), animated: true }
-  }
-
-  if (unseenCount >= PROACTIVE_NOTE_STACK_THRESHOLD) {
-    return { state: 'stack', sheets: clipSheets(unseenCount), animated: true }
-  }
-
-  return { state: 'one', sheets: 1, animated: true }
-}
-
-/** Context subset that decides whether the note is allowed to move. */
-export type ProactiveNoteMotionContext = Pick<
-  DeliveryContext,
-  'fullscreen' | 'systemDnd' | 'inQuietHours' | 'focusState'
->
-
-/**
- * Whether the environment forbids note motion.
- *
- * The note still gets drawn; it simply makes zero motions while the user is
- * fullscreen, in DND/quiet hours, or away/locked.
- *
- * @param context Desktop delivery context.
- * @returns True when no glance or wiggle may play.
- */
-export function isProactiveNoteMotionSuppressed(context: ProactiveNoteMotionContext): boolean {
-  return (
-    context.fullscreen ||
-    context.systemDnd === true ||
-    context.inQuietHours ||
-    context.focusState === 'locked' ||
-    context.focusState === 'away'
-  )
-}
-
-type ProactiveNoteMotionInput = {
-  nowMs: number
-  view: ProactiveNoteView
-  suppressed: boolean
-}
-
-/** Stateful timing gate owned by one mounted note. */
-export type ProactiveNoteMotionGate = {
-  /**
-   * One pointer approach. Returns true when a glance should play now.
-   */
-  approach: (input: ProactiveNoteMotionInput) => boolean
-  /**
-   * One timer tick. Returns the wiggle duration to play, or 0 for no motion.
-   */
-  tick: (input: ProactiveNoteMotionInput) => number
-  /** Clear every timing record, e.g. when the note is remounted. */
-  reset: () => void
-}
-
-/**
- * Create the timing gate for note motions.
- *
- * The 30-minute glance budget is measured from the last glance that played,
- * whatever kind it was; suppressed or refused approaches leave it untouched.
- * Important notes themselves glance on every approach. Important wiggles wait
- * one full interval after the state was first observed, then repeat at most
- * once per interval. The gate never reads the clock.
- *
- * @returns Stateful gate driven entirely by the caller's timestamps.
- */
-export function createProactiveNoteMotionGate(): ProactiveNoteMotionGate {
-  let lastGlanceAtMs: number | null = null
-  let importantSinceMs: number | null = null
-  let lastWiggleAtMs: number | null = null
-
-  function clearImportantTiming() {
-    importantSinceMs = null
-    lastWiggleAtMs = null
-  }
-
-  return {
-    approach({ nowMs, view, suppressed }) {
-      if (suppressed) return false
-      if (view.state === 'none' || !view.animated) return false
-
-      // Important notes glance on every approach; the shared clock only
-      // throttles the ordinary one/stack shape below.
-      if (view.state === 'important') {
-        lastGlanceAtMs = nowMs
-        return true
-      }
-
-      if (lastGlanceAtMs !== null && nowMs - lastGlanceAtMs < PROACTIVE_NOTE_GLANCE_THROTTLE_MS) {
-        return false
-      }
-      lastGlanceAtMs = nowMs
-      return true
-    },
-
-    tick({ nowMs, view, suppressed }) {
-      if (view.state !== 'important' || !view.animated) {
-        clearImportantTiming()
-        return 0
-      }
-
-      if (importantSinceMs === null) importantSinceMs = nowMs
-      if (suppressed) return 0
-      if (nowMs - importantSinceMs < PROACTIVE_NOTE_WIGGLE_INTERVAL_MS) return 0
-      if (lastWiggleAtMs !== null && nowMs - lastWiggleAtMs < PROACTIVE_NOTE_WIGGLE_INTERVAL_MS) {
-        return 0
-      }
-
-      lastWiggleAtMs = nowMs
-      return PROACTIVE_NOTE_WIGGLE_DURATION_MS
-    },
-
-    reset() {
-      lastGlanceAtMs = null
-      clearImportantTiming()
-    },
-  }
+  return { state: hasUnseen ? 'unread' : 'none' }
 }
 
 type ProactiveNoteStageClickInput = {
@@ -310,11 +85,11 @@ type ProactiveNoteStageClickInput = {
 /**
  * Whether a stage click should open the notebook.
  *
- * Only a left single click without dragging qualifies, and only while a note
- * is on screen. A double click stays the voice toggle.
+ * Only a left single click without dragging qualifies, and only while there
+ * are unread notebook items. A double click stays the voice toggle.
  *
- * @param input Pointer button, drag state, click count and note state.
- * @returns True only for a plain left click on a visible note.
+ * @param input Pointer button, drag state, click count and unread state.
+ * @returns True only for a plain left click while unseen items exist.
  */
 export function shouldOpenNotebookOnStageClick(input: ProactiveNoteStageClickInput): boolean {
   return (

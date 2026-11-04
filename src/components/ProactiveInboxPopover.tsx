@@ -43,8 +43,8 @@ const ACTION_LABEL_KEYS = {
   reply: 'pet.proactive.inbox_open',
 } as const
 
-/** Clicks on the note or the pet itself toggle the notebook instead of closing it. */
-const DEFAULT_IGNORE_OUTSIDE_SELECTOR = '.proactive-note, .nexus-companion-v2__character-hit'
+/** Clicks on the pet itself toggle the notebook instead of closing it. */
+const DEFAULT_IGNORE_OUTSIDE_SELECTOR = '.nexus-companion-v2__character-hit'
 
 export type ProactiveInboxPopoverProps = {
   open: boolean

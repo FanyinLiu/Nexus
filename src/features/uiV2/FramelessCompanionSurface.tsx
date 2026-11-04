@@ -10,7 +10,6 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon.tsx'
-import { ProactiveNote } from '../../components/ProactiveNote.tsx'
 import { pickTranslatedUiText } from '../../lib'
 import type {
   AppSettings,
@@ -26,7 +25,6 @@ import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
 import {
   createSingleClickGate,
-  resolveProactiveNoteAnchor,
   type ProactiveNoteSingleClickGate,
   type ProactiveNoteStageBinding,
 } from '../proactive/proactiveNote.ts'
@@ -87,7 +85,7 @@ export type FramelessCompanionSurfaceProps = {
     cancelActiveTurn: () => void
     hidePetDialogBubble: () => void
   }
-  /** Paper note overlay; omit to draw no note and keep stage clicks inert. */
+  /** Unread notebook binding; omit to keep stage clicks inert. */
   note?: ProactiveNoteStageBinding
   isPinned: boolean
   clickThrough: boolean
@@ -255,14 +253,6 @@ export function FramelessCompanionSurface({
   useEffect(() => {
     setGazeTargetRef.current = pet.setGazeTarget
   }, [pet.setGazeTarget])
-
-  // A glance hands the note toward the user once, so the character briefly
-  // looks at them too. Keyed on the motion edge, never on the gaze setter.
-  const noteGlancing = note?.motion === 'glance'
-  useEffect(() => {
-    if (!noteGlancing || settings.gazeFollowEnabled === false) return
-    setGazeTargetRef.current({ x: 0, y: 0 })
-  }, [noteGlancing, settings.gazeFollowEnabled])
 
   const specificSurfaceError = Boolean(chat.error?.trim() || runtimeSnapshot.wakewordError?.trim())
   const replacingNotice = Boolean(
@@ -479,7 +469,6 @@ export function FramelessCompanionSurface({
         onPointerEnter={() => {
           pet.setMascotHovered(true)
           pet.markPresenceActivity({ dismissAmbient: false })
-          note?.onApproach()
         }}
         onPointerLeave={() => {
           pet.setMascotHovered(false)
@@ -514,15 +503,6 @@ export function FramelessCompanionSurface({
             paused={paused}
           />
         </Suspense>
-        {note ? (
-          <ProactiveNote
-            view={note.view}
-            motion={note.motion}
-            label={note.label}
-            anchor={resolveProactiveNoteAnchor(petModel)}
-            onActivate={note.onToggleNotebook}
-          />
-        ) : null}
       </div>
 
       {showCaption ? (
