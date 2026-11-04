@@ -56,7 +56,7 @@ export const koSettingsChat = {
   'settings.chat_history.clear_error': '채팅 기록 지우기가 안 됐어요 — 잠시 후 다시 해볼래요?',
   'settings.chat_history.import_confirm': '가져오기 하면 현재 채팅 기록이 대체되지만 기억 보관소는 바뀌지 않습니다. 계속하시겠어요?',
   'settings.chat_history.nothing_to_clear': '지울 수 있는 채팅 기록이 없습니다.',
-  'settings.chat_history.clear_confirm': '현재 채팅 기록을 지우시겠어요? 장기 기억과 일일 로그는 삭제되지 않습니다.',
+  'settings.chat_history.clear_confirm': '현재 채팅 기록을 지우시겠어요? 장기 기억과 일일 기록은 삭제되지 않습니다.',
   'settings.chat_connection.ready': '연결됐어요. 모델이 실제 응답을 보냈어요.',
   'settings.chat_connection.identity_unverified': '서비스는 응답했지만 모델 식별자를 제공하지 않아 요청한 모델인지는 아직 확인되지 않았어요.',
   'settings.chat_connection.identity_unverified_rec': '서비스가 모델 식별자를 반환하는지 확인해 주세요. 호환 게이트웨이는 실제 라우팅을 별도로 확인해야 할 수 있어요.',

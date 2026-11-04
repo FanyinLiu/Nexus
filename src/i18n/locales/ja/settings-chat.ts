@@ -56,7 +56,7 @@ export const jaSettingsChat = {
   'settings.chat_history.clear_error': 'チャット履歴の消去がうまくいきませんでした。少し待ってからもう一度お試しください。',
   'settings.chat_history.import_confirm': 'インポートすると現在のチャット履歴が置き換えられますが、記憶ライブラリは変更されません。続行しますか？',
   'settings.chat_history.nothing_to_clear': '消去できるチャット履歴はありません。',
-  'settings.chat_history.clear_confirm': '現在のチャット履歴を消去しますか？長期記憶と日次ログは削除されません。',
+  'settings.chat_history.clear_confirm': '現在のチャット履歴を消去しますか？長期記憶と毎日の記録は削除されません。',
   'settings.chat_connection.ready': '接続できました。モデルから実応答が返ってきました。',
   'settings.chat_connection.identity_unverified': 'サービスは応答しましたがモデル識別子がなく、要求したモデルかはまだ確認できません。',
   'settings.chat_connection.identity_unverified_rec': 'サービスがモデル識別子を返すか確認してください。互換ゲートウェイでは実際のルーティング確認が別途必要な場合があります。',
