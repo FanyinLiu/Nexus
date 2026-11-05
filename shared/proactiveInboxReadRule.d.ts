@@ -14,13 +14,22 @@ export type ProactiveInboxInteraction =
   | 'snooze'
   | 'notification_click'
   | 'expire'
+  | 'notebook_seen'
 
 export const PROACTIVE_INBOX_INTERACTIONS: readonly ProactiveInboxInteraction[]
+
+/**
+ * True when the entry is delivered as a letter that carries its own full
+ * text, so reading it is the handling action.
+ */
+export function isProactiveLetterEntry(
+  entry: { kind?: string, source?: string } | null | undefined,
+): boolean
 
 /**
  * Next status after one interaction, or `null` when nothing should change.
  */
 export function inboxStatusAfterInteraction(
-  entry: { actions?: readonly string[], kind?: string } | null | undefined,
+  entry: { actions?: readonly string[], kind?: string, source?: string } | null | undefined,
   interaction: ProactiveInboxInteraction | string,
 ): 'done' | 'read' | null

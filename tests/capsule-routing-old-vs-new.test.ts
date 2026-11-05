@@ -23,7 +23,6 @@ import type {
 import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
 import type { FutureCapsuleRecord } from '../src/features/futureCapsule/futureCapsuleStore.ts'
 import { PROACTIVE_LEGACY_PATH } from '../src/features/proactive/legacyPaths.ts'
-import { formatProactiveUnreadBadge } from '../src/features/proactive/proactiveUnreadBadge.ts'
 
 const NOW = 1_700_000_000_000
 
@@ -355,7 +354,7 @@ const QUIET_CONDITIONS: ReadonlyArray<{ name: string; context: DeliveryContext }
 ]
 
 for (const quiet of QUIET_CONDITIONS) {
-  test(`quiet conditions (${quiet.name}) keep a high-priority capsule in the inbox and badge`, (t) => {
+  test(`quiet conditions (${quiet.name}) keep a high-priority capsule in the inbox`, (t) => {
     const message = buildCapsuleProactiveMessage(CAPSULE, DELIVERY, NOW)
     const decision = routeDelivery(message, quiet.context)
 
@@ -368,11 +367,10 @@ for (const quiet of QUIET_CONDITIONS) {
     const stored = snapshot.entries.find((entry) => entry.id === message.id)
 
     assert.equal(mutation.unreadCount, 1)
-    assert.equal(snapshot.unreadCount, 1, 'the badge count is the inbox unread count')
-    assert.equal(formatProactiveUnreadBadge(snapshot.unreadCount), '1')
+    assert.equal(snapshot.unreadCount, 1, 'the unread count is the inbox unread count')
     assert.equal(stored?.priority, 'high')
 
-    // The capsule has no actions, so only 'high' keeps the dot lit.
+    // The capsule has no actions, so only 'high' counts as unread.
     const normalStore = createInbox(t)
     normalStore.upsert({ ...message, priority: 'normal' })
     assert.equal(normalStore.list().unreadCount, 0)

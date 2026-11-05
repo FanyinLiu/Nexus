@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { PetControlIcon, type PetControlIconName } from '../../components/PetControlIcon.tsx'
@@ -22,6 +23,11 @@ import type {
 } from '../../types'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import {
+  createSingleClickGate,
+  type ProactiveNoteSingleClickGate,
+  type ProactiveNoteStageBinding,
+} from '../proactive/proactiveNote.ts'
 import { proactiveBubbleIdentity } from '../proactive/proactivePresentation.ts'
 import { mapRelativeCursorToGaze } from '../../../shared/gazeFollow.js'
 import {
@@ -79,6 +85,8 @@ export type FramelessCompanionSurfaceProps = {
     cancelActiveTurn: () => void
     hidePetDialogBubble: () => void
   }
+  /** Unread notebook binding; omit to keep stage clicks inert. */
+  note?: ProactiveNoteStageBinding
   isPinned: boolean
   clickThrough: boolean
   runtimeSnapshot: RuntimeStateSnapshot
@@ -127,6 +135,7 @@ export function FramelessCompanionSurface({
   pet,
   voice,
   chat,
+  note,
   isPinned,
   clickThrough,
   runtimeSnapshot,
@@ -145,6 +154,8 @@ export function FramelessCompanionSurface({
   const utilityMenuRef = useRef<HTMLDivElement | null>(null)
   const characterRef = useRef<HTMLDivElement | null>(null)
   const dragStateRef = useRef<StageDragState>(createStageDragState())
+  const singleClickGateRef = useRef<ProactiveNoteSingleClickGate | null>(null)
+  const setGazeTargetRef = useRef(pet.setGazeTarget)
   const [utilityOpen, setUtilityOpen] = useState(false)
   const [captionPaused, setCaptionPaused] = useState(false)
   const [revealedStateLabel, setRevealedStateLabel] = useState<'listening' | 'thinking' | null>(null)
@@ -223,6 +234,25 @@ export function FramelessCompanionSurface({
       state.tapTimeout = null
     }
   }, [])
+
+  // One click/double-click disambiguator per mount. It is created here, not
+  // during render, so StrictMode's extra effects cannot leave a disposed gate
+  // behind for the next click.
+  useEffect(() => {
+    const gate = createSingleClickGate({
+      setTimeout: (callback, delayMs) => window.setTimeout(callback, delayMs),
+      clearTimeout: (handle) => window.clearTimeout(handle),
+    })
+    singleClickGateRef.current = gate
+    return () => {
+      gate.dispose()
+      if (singleClickGateRef.current === gate) singleClickGateRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    setGazeTargetRef.current = pet.setGazeTarget
+  }, [pet.setGazeTarget])
 
   const specificSurfaceError = Boolean(chat.error?.trim() || runtimeSnapshot.wakewordError?.trim())
   const replacingNotice = Boolean(
@@ -396,6 +426,17 @@ export function FramelessCompanionSurface({
     })
   }
 
+  function handleCharacterClick(event: ReactMouseEvent<HTMLDivElement>) {
+    const gate = singleClickGateRef.current
+    if (!gate) return
+    companionStageGestures.click(event, {
+      noteState: note?.view.state ?? 'none',
+      dragged: dragStateRef.current.dragged,
+      gate,
+      toggleNotebook: () => note?.onToggleNotebook(),
+    })
+  }
+
   function handleInteractivePointerOut(event: ReactPointerEvent<HTMLElement>) {
     const nextTarget = event.relatedTarget
     if (
@@ -440,8 +481,12 @@ export function FramelessCompanionSurface({
         onPointerMove={handleCharacterPointerMove}
         onPointerUp={releaseCharacterPointer}
         onPointerCancel={releaseCharacterPointer}
+        onClick={handleCharacterClick}
         onContextMenu={(event) => companionStageGestures.contextMenu(event, openPetMenu)}
-        onDoubleClick={() => companionStageGestures.doubleClick(voice.toggleVoiceConversation)}
+        onDoubleClick={() => companionStageGestures.doubleClick(
+          voice.toggleVoiceConversation,
+          singleClickGateRef.current ?? undefined,
+        )}
       >
         <Suspense fallback={null}>
           <Live2DCanvas

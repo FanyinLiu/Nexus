@@ -12,6 +12,32 @@ const NORMAL_NO_ACTIONS = { actions: [], priority: 'normal' }
 const HIGH_NO_ACTIONS = { actions: [], priority: 'high' }
 const CAPSULE_NO_ACTIONS = { actions: [], kind: 'capsule' }
 const CAPSULE_WITH_ACTIONS = { actions: ['done', 'open'], kind: 'capsule' }
+const LETTER_NO_ACTIONS = { actions: [], source: 'letter' }
+const CAPSULE_SOURCE_WITH_ACTIONS = { actions: ['done', 'snooze', 'open'], source: 'capsule' }
+
+test('the notebook table decides seen and handled for every surface variant', () => {
+  const rows: Array<
+    [string, Parameters<typeof inboxStatusAfterInteraction>[0], string, 'done' | 'read' | null]
+  > = [
+    ['no-action line is handled once seen', WITHOUT_ACTIONS, 'notebook_seen', 'done'],
+    ['no-action line with normal priority too', NORMAL_NO_ACTIONS, 'notebook_seen', 'done'],
+    ['actionable entry is only seen', WITH_ACTIONS, 'notebook_seen', 'read'],
+    ['actionable entry is handled by done', WITH_ACTIONS, 'done', 'done'],
+    ['actionable entry is handled by open', WITH_ACTIONS, 'open', 'done'],
+    ['actionable entry stays on top when snoozed', WITH_ACTIONS, 'snooze', null],
+    ['letter is only seen', LETTER_NO_ACTIONS, 'notebook_seen', 'read'],
+    ['letter is handled by expanding it', LETTER_NO_ACTIONS, 'expand', 'done'],
+    ['capsule is only seen', CAPSULE_NO_ACTIONS, 'notebook_seen', 'read'],
+    ['capsule with actions is still only seen', CAPSULE_WITH_ACTIONS, 'notebook_seen', 'read'],
+    ['capsule with actions is handled by expanding it', CAPSULE_WITH_ACTIONS, 'expand', 'done'],
+    ['capsule by source is handled by expanding it', CAPSULE_SOURCE_WITH_ACTIONS, 'expand', 'done'],
+    ['capsule never counts on a notification click', CAPSULE_NO_ACTIONS, 'notification_click', null],
+    ['capsule with actions never counts on a notification click', CAPSULE_WITH_ACTIONS, 'notification_click', null],
+  ]
+  for (const [name, entry, interaction, expected] of rows) {
+    assert.equal(inboxStatusAfterInteraction(entry, interaction), expected, name)
+  }
+})
 
 test('opening the overlay never changes a status', () => {
   for (const entry of [
@@ -56,12 +82,12 @@ test('snooze, expire and unknown interactions leave every entry unchanged', () =
   }
 })
 
-test('expand marks a no-button entry done but leaves an actionable entry unchanged', () => {
+test('expand handles a no-button entry and any letter, but leaves other actionable entries unchanged', () => {
   for (const entry of [WITHOUT_ACTIONS, NORMAL_NO_ACTIONS, HIGH_NO_ACTIONS, CAPSULE_NO_ACTIONS]) {
     assert.equal(inboxStatusAfterInteraction(entry, 'expand'), 'done')
   }
   assert.equal(inboxStatusAfterInteraction(WITH_ACTIONS, 'expand'), null)
-  assert.equal(inboxStatusAfterInteraction(CAPSULE_WITH_ACTIONS, 'expand'), null)
+  assert.equal(inboxStatusAfterInteraction(CAPSULE_WITH_ACTIONS, 'expand'), 'done')
 })
 
 test('a notification click reads an actionable entry but never a capsule', () => {
