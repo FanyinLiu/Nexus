@@ -6,13 +6,13 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const CURRENT_STABLE_RELEASE = '0.4.8'
-const PREVIOUS_PUBLIC_RELEASE = '0.4.7'
+const CURRENT_STABLE_RELEASE = '0.5.0'
+const PREVIOUS_PUBLIC_RELEASE = '0.4.8'
 const DRAFT_RELEASES = []
 const LOCALIZED_DRAFT_RELEASES = []
-// v0.4.8 is the current stable release; future beta work may legitimately
+// v0.5.0 is the current stable release; future beta work may legitimately
 // leave the stable release number while the stable entry point stays here.
-const DRAFT_BETA_VERSION_PATTERN = /^0\.4\.9-beta\.\d+$/
+const DRAFT_BETA_VERSION_PATTERN = /^0\.5\.1-beta\.\d+$/
 
 function escapedVersion(version) {
   return version.replaceAll('.', '\\.')
@@ -190,8 +190,7 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     const stableNotes = requireFile(stableNotesFile)
     for (const phrase of [
       'Status: Stable unsigned release',
-      `${versionTag(CURRENT_STABLE_RELEASE)} is the current stable version`,
-      'formal release record',
+      'maintainer exception',
       'protected tag workflow',
       'standard beta flow',
       'No cross-platform physical-device evidence is claimed',
@@ -210,12 +209,10 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
     const stableLocalizedFile = `docs/RELEASE-NOTES-v${CURRENT_STABLE_RELEASE}.zh-CN.md`
     const stableLocalizedNotes = requireFile(stableLocalizedFile)
     for (const phrase of [
-      '状态：正式未签名稳定版',
-      `${versionTag(CURRENT_STABLE_RELEASE)} 是当前稳定版本`,
-      '正式发行记录',
+      '状态：正式未签名版',
+      '维护者例外',
       '受保护的 tag 工作流',
-      '标准 beta 流程',
-      '不会虚构跨平台实体设备验证证据',
+      '不声称跨平台真机证据',
     ]) {
       requirePhrase(stableLocalizedFile, stableLocalizedNotes, phrase)
     }
@@ -338,8 +335,8 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
 
     const changelog = requireFile('CHANGELOG.md')
     for (const phrase of [
-      `## [${CURRENT_STABLE_RELEASE}] - 2026-10-29`,
-      'current stable companion presence and stability release',
+      `## [${CURRENT_STABLE_RELEASE}] - 2026-11-05`,
+      'v0.5.0 is the current stable release',
       'full v0.4 draft-stack audit',
       'The release commit is published only through the protected stable-tag workflow',
       'current stable release',
@@ -377,10 +374,9 @@ export function buildV04DraftStackReport(root = ROOT, options = {}) {
       `# Nexus ${versionTag(CURRENT_STABLE_RELEASE)} Stable Release Handoff`,
       'Status: Stable unsigned release handoff.',
       `${versionTag(CURRENT_STABLE_RELEASE)} is the current stable version`,
-      'standard beta flow',
+      'maintainer exception',
       'beta validation window',
       'protected tag workflow',
-      'v0.4.8-beta.1',
     ]) {
       requirePhrase(stableHandoffFile, stableHandoff, phrase)
     }

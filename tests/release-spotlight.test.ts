@@ -26,7 +26,7 @@ test('current release spotlight keeps the package version explicit', () => {
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
-    ['gaze', 'messages', 'voice', 'updates'],
+    ['notebook', 'reminders', 'quiet', 'away'],
   )
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.actions.map((item) => [item.id, item.targetSectionId]),
@@ -37,7 +37,7 @@ test('current release spotlight keeps the package version explicit', () => {
   )
   assert.ok(
     getReleaseSpotlightTranslationKeys().includes(
-      'about.release_spotlight.bullet.gaze.title',
+      'about.release_spotlight.bullet.notebook.title',
     ),
   )
 })
@@ -61,12 +61,16 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes what 0.4.8 brings and keeps historical keys', async () => {
+test('current release spotlight describes what 0.5.0 brings and keeps historical keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'Your pet stays closer.')
-  assert.match(en['about.release_spotlight.summary'], /follows your gaze/i)
+  assert.equal(en['about.release_spotlight.title'], 'She lives on your computer.')
+  assert.match(en['about.release_spotlight.summary'], /writes it down/i)
+  assert.match(en['about.release_spotlight.bullet.notebook.body'], /notebook/i)
+  assert.match(en['about.release_spotlight.bullet.reminders.body'], /key point/i)
+  assert.match(en['about.release_spotlight.bullet.quiet.body'], /never reads keys/i)
+  assert.match(en['about.release_spotlight.bullet.away.body'], /Daily log/i)
   assert.match(en['about.release_spotlight.bullet.gaze.body'], /follows your cursor/i)
   assert.match(en['about.release_spotlight.bullet.messages.body'], /Telegram and Discord/i)
   assert.match(en['about.release_spotlight.bullet.voice.body'], /suggest a voice for this computer/i)
@@ -85,8 +89,12 @@ test('current release spotlight describes what 0.4.8 brings and keeps historical
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
-  assert.equal(zhCN['about.release_spotlight.title'], '桌宠更会陪在你身边。')
-  assert.match(zhCN['about.release_spotlight.summary'], /跟着你的视线/)
+  assert.equal(zhCN['about.release_spotlight.title'], '她活在你的电脑里。')
+  assert.match(zhCN['about.release_spotlight.summary'], /先记下/)
+  assert.match(zhCN['about.release_spotlight.bullet.notebook.body'], /小本子/)
+  assert.match(zhCN['about.release_spotlight.bullet.reminders.body'], /最要紧/)
+  assert.match(zhCN['about.release_spotlight.bullet.quiet.body'], /不记你按了什么/)
+  assert.match(zhCN['about.release_spotlight.bullet.away.body'], /每日记录/)
   assert.match(zhCN['about.release_spotlight.bullet.gaze.body'], /看向哪里/)
   assert.match(zhCN['about.release_spotlight.bullet.messages.body'], /Telegram 和 Discord/)
   assert.match(zhCN['about.release_spotlight.bullet.voice.body'], /推荐语音/)
@@ -109,11 +117,11 @@ test('current release spotlight describes what 0.4.8 brings and keeps historical
 test('current release spotlight stays plain and does not claim a stable version', async () => {
   const devSpeak = /稳定版|安定版|안정 버전|current stable|Moc|烟测|煙霧|smoke report|Cubism|WebGL|Pixi|probe|pipeline|链路|鏈路|自检|自檢/i
   const highlights = [
-    ['en-US', /follows your gaze/i, /Telegram and Discord/i],
-    ['zh-CN', /跟着你的视线/, /Telegram 和 Discord/],
-    ['zh-TW', /跟著你的視線/, /Telegram 和 Discord/],
-    ['ja', /視線を追い/, /Telegram と Discord/],
-    ['ko', /시선을 따라오고/, /Telegram과 Discord/],
+    ['en-US', /writes it down/i, /key point/i],
+    ['zh-CN', /小本子/, /重点/],
+    ['zh-TW', /小本子/, /重點/],
+    ['ja', /手帳/, /要点/],
+    ['ko', /수첩/, /핵심/],
   ] as const
 
   for (const [locale, gazePattern, messagePattern] of highlights) {
@@ -126,8 +134,8 @@ test('current release spotlight stays plain and does not claim a stable version'
         dictionary[item.bodyKey],
       ]),
     ].join(' ')
-    assert.match(copy, gazePattern, `${locale} must describe gaze follow`)
-    assert.match(copy, messagePattern, `${locale} must describe message cards`)
+    assert.match(copy, gazePattern, `${locale} must describe the notebook`)
+    assert.match(copy, messagePattern, `${locale} must describe reminder key points`)
     assert.doesNotMatch(copy, devSpeak, `${locale} spotlight must stay plain`)
     assert.doesNotMatch(copy, /v0\.4\.[0-9]/, `${locale} spotlight must not pin a version claim`)
   }
@@ -255,8 +263,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.4\.8/)
-  assert.match(rootReadme, /上一公开版本 — v0\.4\.7/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.5\.0/)
+  assert.match(rootReadme, /上一公开版本 — v0\.4\.8/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)

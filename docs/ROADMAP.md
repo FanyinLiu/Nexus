@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-10-30. Stewardship follows Klein's product direction.
+> Last updated 2026-11-05. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -27,10 +27,15 @@ The larger product steps are:
   hardening, check-in policy, companion-surface cohesion and transparency,
   maintenance and hardening, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; the current
-  public stable release is v0.4.8, which shipped as the current stable release
-  on 2026-10-29 through the standard beta flow (`v0.4.8-beta.1`, published
-  2026-10-15, followed by the beta validation window; the planned
-  `0.4.8-beta.2` was dropped) as a companion presence and stability release.
+  public stable release is v0.5.0, which shipped as the current stable release
+  on 2026-11-05 under a version-scoped maintainer exception. v0.5.0 is the
+  desktop-life slice: a notebook for things she could not say yet, reminder
+  key points, an optional reminder strip, one mouse-near glance,
+  quiet-while-typing off by default, an away summary count, and daily-log
+  copy. `v0.4.8` was the previous companion presence and stability release,
+  shipped on 2026-10-29 through the standard beta flow (`v0.4.8-beta.1`,
+  published 2026-10-15, followed by the beta validation window; the planned
+  `0.4.8-beta.2` was dropped).
   `v0.4.7` was the previous companion-avatar and catalog release, shipped on
   2026-08-27 under a version-scoped maintainer exception. `v0.4.6` was the
   previous avatar runtime reliability release, shipped on 2026-08-21 through
@@ -44,7 +49,7 @@ The larger product steps are:
   (the [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.4.8` until a later release is explicitly prepared. The v0.4.8 stable
+  `v0.5.0` until a later release is explicitly prepared. The v0.5.0 stable
   promotion is the current release boundary.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
@@ -73,10 +78,20 @@ The larger product steps are:
   removed, and a saved choice of either becomes Mao. Minecraft
   and Factorio stay hidden. Inputs stay derived and content-free, with
   explicit pause/permission controls.
-- **v0.5.0 — "she comes alive".** One major release, decided 2026-10-30,
-  whose single theme is making the companion feel more and more like a person.
-  It replaces the earlier Kokoro TTS + Minecraft companion plan; the gaming
-  companion stays off the roadmap until a separate decision. Headline scope:
+- **v0.5.0 — she lives on the computer.** Shipped as stable on 2026-11-05
+  under a version-scoped maintainer exception. When she cannot interrupt, she
+  writes it in a notebook (last 15 days, no red-dot counts). Reminders show
+  the key point, and an optional strip can sit beside her without taking
+  keyboard focus. The mouse nearby gets one glance. Typing awareness is off
+  by default and never records keys. On return she can say how many items
+  piled up. Diary is now Daily log. A letter to the future keeps a short
+  lead-in in speech and notifications, then shows the original text
+  unchanged. Voiceprint wake stays 0.6, camera stays 0.7, and signed
+  installers are out of scope. See
+  [RELEASE-NOTES-v0.5.0.md](RELEASE-NOTES-v0.5.0.md).
+  The longer 2026-10-30 “she comes alive” design
+  ([v0.5 She Comes Alive](V0.5_SHE_COMES_ALIVE.md)) did not ship in this
+  release. Its unshipped items stay later work:
   - **Call mode.** Hands-free talking like a phone call on the local Qwen3-TTS
     voice (merged in #194): per-sentence emotion in the voice, first audio
     after the first sentence, backchannel ("mm", "right") while the user
@@ -843,9 +858,8 @@ These features can stay in the codebase, but should not dominate onboarding
 or the main settings flow until they are reliable and clearly companion-led.
 
 - Realtime OpenAI voice.
-- Minecraft / Factorio gateways. Both stay hidden through v0.4.8. v0.5.0
-  is the first time Minecraft is offered, via Mineflayer, sharing the pet's
-  voice and memory. The current gateways are not that companion.
+- Minecraft / Factorio gateways. Both stay hidden. v0.5.0 did not ship a
+  gaming companion. The current gateways are not that companion.
 - Telegram / Discord bridges.
 - Broad MCP/plugin execution.
 - Long-running autonomous tasks.
