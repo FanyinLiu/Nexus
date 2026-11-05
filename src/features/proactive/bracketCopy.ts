@@ -359,9 +359,18 @@ export type BuildBracketNotificationInput = {
   lastPicks?: BracketLastPicks
 }
 
+export type BracketCallback = 'evening' | 'event' | null
+
 export type BracketNotificationResult = {
   title: string
   body: string
+  /**
+   * Which callback supplied the body: `evening` quotes the prior evening's
+   * topic, `event` quotes today's dated event, null means an open question or
+   * the evening bracket. The OS toast turns these into fixed lines so the
+   * topic never reaches a lock screen.
+   */
+  callback: BracketCallback
   /** Indices picked this time — caller should persist for next dedup. */
   pickedIndices: BracketLastPicks
 }
@@ -379,6 +388,7 @@ export function buildBracketNotification(
       return {
         title: t.morningNotificationTitle.replace('{companionName}', companionName),
         body: t.morningCallback.replace('{topic}', eveningTopic),
+        callback: 'evening',
         pickedIndices: { morning: last.morning },
       }
     }
@@ -387,6 +397,7 @@ export function buildBracketNotification(
       return {
         title: t.morningNotificationTitle.replace('{companionName}', companionName),
         body: t.morningEventCallback.replace('{topic}', eventTopic),
+        callback: 'event',
         pickedIndices: { morning: last.morning },
       }
     }
@@ -399,6 +410,7 @@ export function buildBracketNotification(
     return {
       title: t.morningNotificationTitle.replace('{companionName}', companionName),
       body: pick.value,
+      callback: null,
       pickedIndices: { morning: pick.isCallback ? last.morning : pick.idx },
     }
   }
@@ -410,6 +422,7 @@ export function buildBracketNotification(
   return {
     title: t.eveningNotificationTitle.replace('{companionName}', companionName),
     body: `${hPick.value}${t.eveningJoiner}${sPick.value}${t.eveningJoiner}${t.eveningTomorrowPrompt}`,
+    callback: null,
     pickedIndices: { highlight: hPick.idx, stressful: sPick.idx },
   }
 }

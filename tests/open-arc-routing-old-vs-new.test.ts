@@ -20,6 +20,11 @@ import type {
 import { decideNextCheckIn } from '../src/features/arc/openArcPolicy.ts'
 import type { OpenArcRecord } from '../src/features/arc/openArcStore.ts'
 import { PROACTIVE_LEGACY_PATH } from '../src/features/proactive/legacyPaths.ts'
+import { ensureLocaleLoaded } from '../src/i18n/runtime.ts'
+
+// The fixed fallback body is locale-resolved; load the fixture locale so the
+// expected English line is available in this test process.
+await ensureLocaleLoaded('en-US')
 
 const NOW = 1_700_000_000_000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -36,6 +41,12 @@ const ARC: OpenArcRecord = {
 const DELIVERY: OpenArcDeliveryText = {
   title: 'A thread you opened',
   body: 'Nexus held this for you: "manager 1:1 friday". Three days in — is it still sitting with you?',
+}
+
+/** The legacy/fallback toast keeps the title but replaces the themed body. */
+const NOTIFICATION = {
+  title: DELIVERY.title,
+  body: 'How did that thing you mentioned last time turn out?',
 }
 
 function makeContext(overrides: Partial<DeliveryContext> = {}): DeliveryContext {
@@ -55,6 +66,7 @@ function makeDeps(overrides: Partial<DeliverDueOpenArcDeps> = {}): DeliverDueOpe
   return {
     arc: ARC,
     delivery: DELIVERY,
+    uiLanguage: 'en-US',
     milestoneDay: 3,
     now: NOW,
     useLegacyPath: false,
@@ -231,7 +243,7 @@ test('legacy toggle: one notification, no router call, check-in recorded', async
   }))
 
   assert.deepEqual(result, { path: 'legacy' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
   assert.deepEqual(deliveries, [])
   assert.deepEqual(fired, [ARC.id])
 })
@@ -247,7 +259,7 @@ test('a missing router bridge falls back to the legacy notification', async () =
   }))
 
   assert.deepEqual(result, { path: 'legacy' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
   assert.deepEqual(fired, [ARC.id])
 })
 
@@ -262,7 +274,7 @@ test('a throwing router call falls back to exactly one notification and still re
   }))
 
   assert.deepEqual(result, { path: 'fallback' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
   assert.deepEqual(fired, [ARC.id])
 })
 
@@ -386,7 +398,7 @@ test('a stopped fallback tick records the check-in once', async () => {
   }))
 
   assert.deepEqual(result, { path: 'fallback' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
   assert.deepEqual(fired, [ARC.id])
 })
 
@@ -402,6 +414,6 @@ test('a stopped legacy tick records the check-in once', async () => {
   }))
 
   assert.deepEqual(result, { path: 'legacy' })
-  assert.deepEqual(notifications, [DELIVERY])
+  assert.deepEqual(notifications, [NOTIFICATION])
   assert.deepEqual(fired, [ARC.id])
 })

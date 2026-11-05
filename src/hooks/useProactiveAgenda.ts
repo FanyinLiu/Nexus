@@ -44,6 +44,7 @@ import { appendMemoryOpLog } from '../lib/storage/memoryOpLog.ts'
 import { saveMemoryRunSnapshot } from '../lib/storage/memoryRunSnapshot.ts'
 import { applyBookedLoopAction, applyLoopCardAction, applyLoopEventAction, type LoopBookedAction, type LoopCardAction, type LoopEventCardAction } from '../features/memory/loopCardActions.ts'
 import { bookClearPlanReminders, buildLoopOutreach } from '../features/memory/loopOutreach.ts'
+import { buildAgendaNotification } from '../features/proactive/directNotificationCopy.ts'
 import { acceptLoopOffer } from '../features/memory/loopOfferAccept.ts'
 import type { LoopOutreach } from '../features/memory/loopOutreach.ts'
 import { loopKindOf } from '../features/memory/loopDetails.ts'
@@ -302,10 +303,13 @@ export function useProactiveAgenda(options: {
       })
       const hidden = typeof document !== 'undefined' && (document.hidden || !document.hasFocus())
       if (hidden && settings.proactiveAwayNotificationsEnabled && outreach) {
-        await window.desktopPet?.showProactiveNotification?.({
+        // A lock screen must not carry the outreach sentence, the place, the
+        // time or any template. Only the reminder's own `what`, clipped.
+        const notification = buildAgendaNotification({
           title: current.t('proactive.loop.notify_title'),
-          body: text,
+          what: outreach.why.summary,
         })
+        await window.desktopPet?.showProactiveNotification?.(notification)
       }
     } catch (error) {
       current.onLog('Proactive agenda skipped', getRedactedLogErrorMessage(error))
