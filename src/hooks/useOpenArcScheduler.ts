@@ -94,6 +94,7 @@ export function useOpenArcScheduler({
         await deliverDueOpenArc({
           arc,
           delivery: payload,
+          uiLanguage: s.uiLanguage,
           milestoneDay,
           now,
           useLegacyPath: PROACTIVE_LEGACY_PATH.open_arc,

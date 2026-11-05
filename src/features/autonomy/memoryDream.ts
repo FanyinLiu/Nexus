@@ -163,19 +163,21 @@ export function applyDreamEdits(
     const existing = next[index]!
     if (isProtectedMemory(existing)) continue
     const mergedRelated = [...new Set([...(existing.relatedIds ?? []), ...archivedIds])]
-    next = next.map((memory, memoryIndex) => (
-      memoryIndex === index
-        ? {
-            ...existing,
-            content: update.content,
-            lastUsedAt: now,
-            updatedAt: now,
-            schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
-            status: existing.status === 'archived' ? 'archived' as const : (existing.status ?? 'active'),
-            relatedIds: mergedRelated.length ? mergedRelated : undefined,
-          }
-        : memory
-    ))
+    const contentChanged = update.content !== existing.content
+    next = next.map((memory, memoryIndex) => {
+      if (memoryIndex !== index) return memory
+      const updated: MemoryItem = {
+        ...existing,
+        content: update.content,
+        lastUsedAt: now,
+        updatedAt: now,
+        schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
+        status: existing.status === 'archived' ? 'archived' : (existing.status ?? 'active'),
+        relatedIds: mergedRelated.length ? mergedRelated : undefined,
+      }
+      if (contentChanged) delete updated.loopKeyPoint
+      return updated
+    })
   }
 
   return { memories: next, archivedIds }

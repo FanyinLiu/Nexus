@@ -1,4 +1,5 @@
 import type { ReminderTask, ReminderTaskAction, ReminderTaskSchedule } from '../../types'
+import { normalizeKeyPoint } from '../../features/reminders/keyPoint.ts'
 import { readJson, REMINDER_TASKS_STORAGE_KEY, writeJson } from './core.ts'
 
 const defaultReminderTasks: ReminderTask[] = []
@@ -116,9 +117,11 @@ function normalizeReminderTaskRecord(value: unknown): ReminderTask | null {
     schedule,
   }
   const speechText = String(obj.speechText ?? '').trim()
+  const keyPoint = normalizeKeyPoint(obj.keyPoint)
   const lastTriggeredAt = normalizeIsoString(obj.lastTriggeredAt)
   const nextRunAt = normalizeIsoString(obj.nextRunAt)
   if (speechText) task.speechText = speechText
+  if (keyPoint) task.keyPoint = keyPoint
   if (lastTriggeredAt) task.lastTriggeredAt = lastTriggeredAt
   if (nextRunAt) task.nextRunAt = nextRunAt
   return task

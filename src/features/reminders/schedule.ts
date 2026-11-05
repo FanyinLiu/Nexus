@@ -1,5 +1,6 @@
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
 import type { ReminderTask, ReminderTaskAction, ReminderTaskSchedule, UiLanguage } from '../../types'
+import { normalizeKeyPoint } from './keyPoint.ts'
 
 const MINUTE_MS = 60_000
 const DAY_MS = 24 * 60 * MINUTE_MS
@@ -301,6 +302,8 @@ function updateReminderTask(
   updates: ReminderTaskUpdateInput,
   now = new Date(),
 ) {
+  const titleChanged = typeof updates.title === 'string' && updates.title.trim() !== task.title
+  const promptChanged = typeof updates.prompt === 'string' && updates.prompt.trim() !== task.prompt
   const nextTask: ReminderTask = {
     ...task,
     ...updates,
@@ -311,6 +314,15 @@ function updateReminderTask(
       : task.speechText,
     action: normalizeReminderTaskAction(updates.action ?? task.action),
     updatedAt: now.toISOString(),
+  }
+
+  // The summary describes the old wording, so a text edit must not leave a
+  // stale title on the next toast. An explicit new key point in the same
+  // update still wins.
+  if (titleChanged || promptChanged) {
+    const nextKeyPoint = typeof updates.keyPoint === 'string' ? normalizeKeyPoint(updates.keyPoint) : null
+    if (nextKeyPoint) nextTask.keyPoint = nextKeyPoint
+    else delete nextTask.keyPoint
   }
 
   if (nextTask.schedule.kind === 'every') {

@@ -124,12 +124,12 @@ test('an entry without fullBody stays valid and an oversized copy is dropped', (
   assert.equal('fullBody' in oversized, false)
 })
 
-test('entries past 30 days or past expiresAt are pruned on load', (t) => {
+test('entries past 15 days or past expiresAt are pruned on load', (t) => {
   const directory = createTempDir(t)
   writeInbox(directory, {
     entries: [
       makeStoredEntry({ id: 'keep', createdAt: NOW - DAY_MS }),
-      makeStoredEntry({ id: 'too-old', createdAt: NOW - 30 * DAY_MS - 1 }),
+      makeStoredEntry({ id: 'too-old', createdAt: NOW - 15 * DAY_MS - 1 }),
       makeStoredEntry({ id: 'expired', createdAt: NOW - DAY_MS, expiresAt: NOW }),
     ],
   })

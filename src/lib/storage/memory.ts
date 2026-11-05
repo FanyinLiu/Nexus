@@ -30,6 +30,7 @@ import {
 import { isObject } from '../guards.ts'
 import { getRedactedLogErrorMessage } from '../logRedaction.ts'
 import { normalizeBoundedText } from '../normalize.ts'
+import { normalizeKeyPoint } from '../../features/reminders/keyPoint.ts'
 
 const MAX_DAILY_ENTRIES_PER_DAY = 16
 const MEMORY_STATUSES = new Set<MemoryStatus>(['active', 'superseded', 'archived'])
@@ -166,6 +167,7 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
   const loopLastSurfacedAt = normalizeIsoTimestamp(value.loopLastSurfacedAt)
   const loopCheckAskedAt = normalizeIsoTimestamp(value.loopCheckAskedAt)
   const loopPlace = normalizeBoundedText(value.loopPlace, 80, true)
+  const loopKeyPoint = kind === 'open_loop' ? normalizeKeyPoint(value.loopKeyPoint) : null
   const loopReminderTaskId = normalizeBoundedText(value.loopReminderTaskId, 120, true)
   const slotKey = normalizeBoundedText(value.slotKey, 80, true)
   const pinned = value.pinned === true
@@ -213,6 +215,7 @@ export function normalizeMemoryItem(value: unknown, index: number): MemoryItem |
     ...(loopLastSurfacedAt ? { loopLastSurfacedAt } : {}),
     ...(loopCheckAskedAt ? { loopCheckAskedAt } : {}),
     ...(loopPlace ? { loopPlace } : {}),
+    ...(loopKeyPoint ? { loopKeyPoint } : {}),
     ...(loopReminderTaskId ? { loopReminderTaskId } : {}),
     ...(slotKey ? { slotKey } : {}),
     ...(evidence ? { evidence } : {}),

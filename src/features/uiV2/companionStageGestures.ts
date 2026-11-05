@@ -1,10 +1,11 @@
 /**
  * Gesture routing and drag sequencing for the companion's character stage.
  *
- * The stage has three gestures: a pointer-down starts the drag/touch feedback,
- * a double-click toggles voice, and the context menu (right click) opens the
- * native pet menu. The context menu is the only path to `openPetMenu`; a left
- * click or double click never reaches it.
+ * The stage has four gestures: a pointer-down starts the drag/touch feedback,
+ * a left single click opens the notebook only while there are unread notebook
+ * items, a double-click toggles voice, and the context menu (right click) opens
+ * the native pet menu. The context menu is the only path to `openPetMenu`; no
+ * click gesture ever reaches it, and a double click never opens the notebook.
  *
  * Drag state is a tiny mutable object (`createStageDragState`) and every side
  * effect is injected, so the whole press/move/release sequence is testable
@@ -15,6 +16,11 @@
  */
 
 import type { PetTouchZone } from '../../types/index.ts'
+import {
+  shouldOpenNotebookOnStageClick,
+  type ProactiveNoteSingleClickGate,
+  type ProactiveNoteState,
+} from '../proactive/proactiveNote.ts'
 
 /** Screen point used both as the drag origin and as the drag delta. */
 export type StagePointerPoint = { x: number; y: number }
@@ -25,6 +31,8 @@ export type StageDragState = {
   point: StagePointerPoint | null
   /** Pending tap-release timer; cleared on the next press and on unmount. */
   tapTimeout: number | null
+  /** True once this press actually moved the window, so the click is not a tap. */
+  dragged: boolean
 }
 
 /** How long the pressed/touch feedback stays visible after pointer-down. */
@@ -32,7 +40,7 @@ export const STAGE_TAP_RELEASE_DELAY_MS = 280
 
 /** Fresh idle state for one mounted character stage. */
 export function createStageDragState(): StageDragState {
-  return { point: null, tapTimeout: null }
+  return { point: null, tapTimeout: null, dragged: false }
 }
 
 /** Effects a pointer-down needs; all window/timer access is injected. */
@@ -68,6 +76,8 @@ export function stagePointerDown<Event extends { button: number; screenX: number
 ): void {
   if (event.button !== 0) return
   state.point = { x: event.screenX, y: event.screenY }
+  // A new press starts a new tap; only a move may turn it into a drag.
+  state.dragged = false
   effects.markPresenceActivity()
   effects.setTapActive(true)
   effects.setTouchZone(effects.touchZoneFor(event))
@@ -94,6 +104,7 @@ export function stagePointerMove<Event extends { buttons: number; screenX: numbe
     y: event.screenY - state.point.y,
   }
   if (!delta.x && !delta.y) return
+  state.dragged = true
   effects.dragBy(delta)
   state.point = { x: event.screenX, y: event.screenY }
 }
@@ -122,8 +133,32 @@ export const companionStageGestures = {
     openPetMenu()
   },
 
-  /** Double-click: toggles voice only. */
-  doubleClick(toggleVoice: () => void): void {
+  /**
+   * Left single click: opens the notebook only while unread items exist and
+   * the press was a tap, not a drag. A right click or a double click does
+   * nothing.
+   */
+  click(
+    event: { button: number; detail: number },
+    input: {
+      noteState: ProactiveNoteState
+      dragged: boolean
+      gate: ProactiveNoteSingleClickGate
+      toggleNotebook: () => void
+    },
+  ): void {
+    if (!shouldOpenNotebookOnStageClick({
+      noteState: input.noteState,
+      button: event.button,
+      dragged: input.dragged,
+      clickCount: event.detail,
+    })) return
+    input.gate.click(input.toggleNotebook)
+  },
+
+  /** Double-click: toggles voice only and cancels the waiting single click. */
+  doubleClick(toggleVoice: () => void, gate?: ProactiveNoteSingleClickGate): void {
+    gate?.doubleClick()
     toggleVoice()
   },
 }
