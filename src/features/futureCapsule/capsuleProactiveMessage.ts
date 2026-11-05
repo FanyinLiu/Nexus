@@ -215,7 +215,7 @@ export async function deliverDueCapsule(
     planLegacyChatLine: () => buildCapsuleChatLine(deps.capsule, deps.delivery),
     onDelivered: () => deps.markDelivered(deps.capsule.id),
     isStopped: deps.isStopped,
-    runLegacy: () => deliverLegacy(deps),
+    runLegacy: () => deliverLegacy(deps, message),
   })
 }
 
@@ -226,13 +226,21 @@ export async function deliverDueCapsule(
  * after this resolves so a throwing notification leaves the capsule pending
  * with no half-delivery.
  *
- * The notification carries the routing title and the opener only. The letter
- * is bound for the chat card and the inbox; a lock screen is not the place for
- * it.
+ * The notification carries the message's existing `publicCopy` (routing title
+ * and opener) only. The letter is bound for the chat card and the inbox; a lock
+ * screen is not the place for it. Reusing the already-built message keeps the
+ * public copy in one place instead of recomputing it here.
  */
-async function deliverLegacy(deps: DeliverDueCapsuleDeps): Promise<void> {
-  await deps.showNotification?.({
+async function deliverLegacy(
+  deps: DeliverDueCapsuleDeps,
+  message: CapsuleProactiveMessage,
+): Promise<void> {
+  const copy = message.publicCopy ?? {
     title: deps.delivery.notificationTitle,
     body: deps.delivery.opener,
+  }
+  await deps.showNotification?.({
+    title: copy.title,
+    body: copy.body,
   })
 }

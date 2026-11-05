@@ -23,7 +23,6 @@ import {
   validateInboxUpdatePayload,
   validateProactiveDeliveryPayload,
 } from '../electron/ipc/proactivePayloadSchemas.js'
-import { formatProactiveUnreadBadge } from '../src/features/proactive/proactiveUnreadBadge.ts'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const START = 1_700_000_000_000
@@ -216,15 +215,15 @@ test('inbox keeps exactly 100 entries and drops the oldest on the 101st', async 
   assert.ok(!snapshot.entries.some((entry) => entry.id === 'msg-0'))
 })
 
-test('inbox keeps an entry exactly 30 days old and prunes anything older', async (t) => {
+test('inbox keeps an entry exactly 15 days old and prunes anything older', async (t) => {
   const { store } = createInbox(t)
 
-  store.upsert(makeMessage({ id: 'exactly-30d', createdAt: START - 30 * DAY_MS }))
-  store.upsert(makeMessage({ id: 'just-under', createdAt: START - 30 * DAY_MS + 1 }))
-  store.upsert(makeMessage({ id: 'just-over', createdAt: START - 30 * DAY_MS - 1 }))
+  store.upsert(makeMessage({ id: 'exactly-15d', createdAt: START - 15 * DAY_MS }))
+  store.upsert(makeMessage({ id: 'just-under', createdAt: START - 15 * DAY_MS + 1 }))
+  store.upsert(makeMessage({ id: 'just-over', createdAt: START - 15 * DAY_MS - 1 }))
 
   const ids = store.list().entries.map((entry) => entry.id)
-  assert.deepEqual(ids, ['just-under', 'exactly-30d'])
+  assert.deepEqual(ids, ['just-under', 'exactly-15d'])
 })
 
 test('inbox prunes an entry once expiresAt is in the past', async (t) => {
@@ -240,7 +239,7 @@ test('inbox prunes an entry once expiresAt is in the past', async (t) => {
 test('prune reports removed ids and the refreshed count for age-based retention', async (t) => {
   const { store, advance } = createInbox(t)
 
-  store.upsert(makeMessage({ id: 'old', createdAt: START - 29 * DAY_MS }))
+  store.upsert(makeMessage({ id: 'old', createdAt: START - 14 * DAY_MS }))
   store.upsert(makeMessage({ id: 'new', createdAt: START }))
   assert.equal(store.list().unreadCount, 2)
 
@@ -271,7 +270,7 @@ test('prune reports removed ids and the refreshed count for expiresAt', async (t
 test('list reports the entries its read-time prune removed', async (t) => {
   const { store, advance } = createInbox(t)
 
-  store.upsert(makeMessage({ id: 'old', createdAt: START - 29 * DAY_MS }))
+  store.upsert(makeMessage({ id: 'old', createdAt: START - 14 * DAY_MS }))
   store.upsert(makeMessage({ id: 'new', createdAt: START }))
   advance(2 * DAY_MS)
 
@@ -349,7 +348,7 @@ test('badge drops a message when its status becomes done or dismissed', async (t
 test('badge count drops when a prune removes an unread entry', async (t) => {
   const { store, advance } = createInbox(t)
 
-  store.upsert(makeMessage({ id: 'old', createdAt: START - 29 * DAY_MS }))
+  store.upsert(makeMessage({ id: 'old', createdAt: START - 14 * DAY_MS }))
   store.upsert(makeMessage({ id: 'new', createdAt: START }))
   assert.equal(store.list().unreadCount, 2)
 
@@ -520,16 +519,6 @@ test('a throwing mirror outlet is logged once and does not stop the others', asy
   assert.deepEqual(delivered, ['inbox', 'badge', 'archive'])
   assert.equal(errors.length, 1)
   assert.match(errors[0]!.message, /outlet=bridge/)
-})
-
-test('badge label hides zero, prints 1..99, and caps above 99', () => {
-  assert.equal(formatProactiveUnreadBadge(0), null)
-  assert.equal(formatProactiveUnreadBadge(1), '1')
-  assert.equal(formatProactiveUnreadBadge(42), '42')
-  assert.equal(formatProactiveUnreadBadge(99), '99')
-  assert.equal(formatProactiveUnreadBadge(100), '99+')
-  assert.equal(formatProactiveUnreadBadge(1_000), '99+')
-  assert.equal(formatProactiveUnreadBadge(-3), null)
 })
 
 // ── Payload schema ──────────────────────────────────────────────────────────

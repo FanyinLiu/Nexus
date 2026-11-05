@@ -1059,7 +1059,7 @@ declare global {
       subscribeNotifications: (listener: (message: import('./types').NotificationMessage) => void) => () => void
 
       // Proactive OS-level notification ("[name] 在想你")
-      showProactiveNotification: (payload: { title: string; body: string }) => Promise<{ ok: boolean }>
+      showProactiveNotification: (payload: { title: string; body?: string }) => Promise<{ ok: boolean }>
 
       // Key vault (safeStorage encryption). Retrieval returns opaque
       // nexus-vault-ref tokens; plaintext is resolved only in the main process.

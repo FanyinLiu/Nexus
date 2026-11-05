@@ -10,7 +10,6 @@
 import {
   PROACTIVE_BODY_MAX_LENGTH,
   PROACTIVE_STRIP_ENABLED,
-  PROACTIVE_TITLE_MAX_LENGTH,
 } from '../../../shared/proactiveDelivery.js'
 import type {
   DeliveryContext,
@@ -23,6 +22,7 @@ import type {
 import { isQuietHour, isLikelyFullscreenSurface } from '../autonomy/proactiveBudget.ts'
 import type { ProactiveMessageKind } from '../autonomy/proactiveEtiquette.ts'
 import type { AppSettings, DesktopContextSnapshot, ReminderTask } from '../../types/index.ts'
+import { resolveKeyPoint } from './keyPoint.ts'
 
 /** A reminder message whose `kind` is already narrowed for the renderer bridge. */
 export type ReminderProactiveMessage = Omit<SharedProactiveMessage, 'kind'> & {
@@ -52,9 +52,12 @@ export function clipText(value: string, maxLength: number): string {
  * `now` is part of the id so every firing creates its own inbox entry, while a
  * repeated delivery of the same firing updates that entry in place. Reminders
  * are high priority because they are must-deliver and must count in the badge.
+ * The title is the stored key point (or the clipped title when none exists):
+ * the router's toast and strip read this field, so the full prompt never
+ * reaches them.
  */
 export function buildReminderProactiveMessage(
-  task: Pick<ReminderTask, 'id' | 'title'>,
+  task: Pick<ReminderTask, 'id' | 'title' | 'keyPoint'>,
   options: { displayText: string; speech: string; now: number },
 ): ReminderProactiveMessage {
   const speech = options.speech.trim()
@@ -63,7 +66,7 @@ export function buildReminderProactiveMessage(
     source: 'reminder',
     kind: 'reminder_follow_up',
     priority: 'high',
-    title: clipText(task.title, PROACTIVE_TITLE_MAX_LENGTH),
+    title: resolveKeyPoint(task.keyPoint, task.title),
     body: clipText(options.displayText, PROACTIVE_BODY_MAX_LENGTH),
     ...(speech ? { speech } : {}),
     actions: [...REMINDER_ACTIONS],

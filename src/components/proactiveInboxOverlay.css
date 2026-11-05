@@ -1,91 +1,87 @@
 /*
- * Proactive inbox popover (pet window).
+ * Proactive notebook popover (pet window).
  *
- * Anchored to the top-right corner, opening downward and leftward so it always
- * stays inside the pet window even when the red dot is absent (the context
- * menu can open it at unread count 0). The card follows the design tokens in
- * §5.3: a light translucent glass card, a near-black dark variant, 13px text,
- * and a soft blue primary action.
+ * Anchored to the bottom-right corner, opening upward and leftward so it sits
+ * over her legs only. The card is plain paper: a warm #F6F0E6 page, a 16px
+ * radius and a soft shadow. A collapsed row is one title line plus its local
+ * time; expanding it reveals the full text and that row's action buttons.
  *
- * Every vertical measurement is a custom property on `.proactive-inbox` so the
- * budget below can be checked arithmetically: five collapsed rows with action
- * buttons must fit the 320x460 default pet window without resizing it. The
- * list is capped at `visible-rows * row-block-size + gaps`, a collapsed row is
- * clamped to `row-block-size`, and only the expanded row is allowed to grow.
- * Older rows scroll inside the list while the window itself never grows. Read
- * rows are dimmed but still expandable. Pointer events stay on because the pet
- * window ignores them entirely when click-through is enabled (that mode is
- * intentional and untouched).
+ * Every vertical measurement is a custom property on `.proactive-inbox`: three
+ * collapsed rows fit the 320x460 default pet window and the card's top edge
+ * never rises above 56% of its height. Older and expanded rows scroll inside.
  */
 
 .proactive-inbox {
-  --proactive-inbox-top: 38px;
   --proactive-inbox-bottom-gap: 8px;
-  --proactive-inbox-padding: 10px;
+  --proactive-inbox-padding: 12px;
   --proactive-inbox-header-block-size: 28px;
-  --proactive-inbox-row-gap: 5px;
-  --proactive-inbox-row-block-size: 68px;
-  --proactive-inbox-visible-rows: 5;
-  --pi-bg: rgba(255, 255, 255, 0.82);
-  --pi-ink: #1D1D1F;
-  --pi-muted: rgba(29, 29, 31, 0.66);
-  --pi-strong: rgba(29, 29, 31, 0.82);
-  --pi-row-border: rgba(0, 0, 0, 0.07);
-  --pi-action-border: rgba(0, 0, 0, 0.1);
-  --pi-hover: rgba(0, 0, 0, 0.05);
-  --pi-close-hover: rgba(0, 0, 0, 0.06);
+  --proactive-inbox-row-gap: 8px;
+  --proactive-inbox-row-block-size: 40px;
+  --proactive-inbox-visible-rows: 3;
+  --proactive-inbox-list-max-height: calc(
+    var(--proactive-inbox-visible-rows) * var(--proactive-inbox-row-block-size) +
+      (var(--proactive-inbox-visible-rows) - 1) * var(--proactive-inbox-row-gap)
+  );
+  --pi-paper: #F6F0E6;
+  --pi-ink: #2E2A24;
+  --pi-muted: rgba(46, 42, 36, 0.6);
+  --pi-action-border: rgba(60, 40, 20, 0.16);
+  --pi-hover: rgba(60, 40, 20, 0.06);
+  --pi-accent: #D9A066;
+  --pi-accent-soft: rgba(217, 160, 102, 0.16);
 
   position: absolute;
-  top: var(--proactive-inbox-top);
+  top: auto;
   right: 12px;
+  bottom: var(--proactive-inbox-bottom-gap);
   z-index: 8;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   width: min(300px, calc(100vw - 24px));
-  max-height: calc(
-    100vh - var(--proactive-inbox-top) - var(--proactive-inbox-bottom-gap)
+  max-height: min(
+    calc(
+      var(--proactive-inbox-padding) * 2 + var(--proactive-inbox-header-block-size) +
+        var(--proactive-inbox-list-max-height) + 2px
+    ),
+    calc(44vh - var(--proactive-inbox-bottom-gap))
   );
   padding: var(--proactive-inbox-padding);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  background: var(--pi-bg);
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(60, 40, 20, 0.1);
+  border-radius: 16px;
+  background-color: var(--pi-paper);
+  box-shadow: 0 8px 24px rgba(60, 40, 20, 0.12);
   color: var(--pi-ink);
   font-size: 13px;
-  line-height: 1.42;
+  line-height: 1.4;
   pointer-events: auto;
-  animation: proactive-inbox-enter 0.14s ease-out;
+  animation: proactive-inbox-enter 140ms ease-out;
 }
 
 html[data-color-scheme='dark'] .proactive-inbox,
 html[data-theme='system-dark'] .proactive-inbox,
 html[data-theme='system-black'] .proactive-inbox {
-  --pi-bg: rgba(44, 44, 46, 0.86);
-  --pi-ink: #F5F5F7;
-  --pi-muted: rgba(245, 245, 247, 0.68);
-  --pi-strong: rgba(245, 245, 247, 0.88);
-  --pi-row-border: rgba(255, 255, 255, 0.1);
-  --pi-action-border: rgba(255, 255, 255, 0.16);
-  --pi-hover: rgba(255, 255, 255, 0.08);
-  --pi-close-hover: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.12);
+  --pi-paper: #2C2824;
+  --pi-ink: #F3ECE1;
+  --pi-muted: rgba(243, 236, 225, 0.6);
+  --pi-action-border: rgba(246, 240, 230, 0.16);
+  --pi-hover: rgba(246, 240, 230, 0.08);
+  border-color: rgba(246, 240, 230, 0.12);
 }
 
 @keyframes proactive-inbox-enter {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* 22px close button + 6px padding = the fixed header block the budget assumes. */
+/* One opening line plus the close button; the line owns the header width. */
 .proactive-inbox__header {
   display: flex;
   flex: 0 0 auto;
@@ -94,43 +90,42 @@ html[data-theme='system-black'] .proactive-inbox {
   justify-content: space-between;
   gap: 8px;
   height: var(--proactive-inbox-header-block-size);
-  padding-bottom: 6px;
 }
 
-.proactive-inbox__title {
+.proactive-inbox__opening {
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 13px;
-  font-weight: 650;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .proactive-inbox__close {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
   opacity: 0.62;
 }
 
 .proactive-inbox__close:hover {
-  background: var(--pi-close-hover);
+  background: var(--pi-hover);
   opacity: 1;
-}
-
-.proactive-inbox__empty {
-  margin: 6px 0 2px;
-  color: var(--pi-muted);
-  font-size: 13px;
 }
 
 .proactive-inbox__list {
@@ -138,10 +133,7 @@ html[data-theme='system-black'] .proactive-inbox {
   flex-direction: column;
   gap: var(--proactive-inbox-row-gap);
   min-height: 0;
-  max-height: calc(
-    var(--proactive-inbox-visible-rows) * var(--proactive-inbox-row-block-size) +
-      (var(--proactive-inbox-visible-rows) - 1) * var(--proactive-inbox-row-gap)
-  );
+  max-height: var(--proactive-inbox-list-max-height);
   margin: 0;
   padding: 0 2px 2px 0;
   overflow-y: auto;
@@ -150,36 +142,56 @@ html[data-theme='system-black'] .proactive-inbox {
 }
 
 .proactive-inbox__row {
+  --pi-row-inset: 0px;
+
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   box-sizing: border-box;
-  min-width: 0;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--pi-row-border);
+  padding: 0 4px;
+  border-radius: 10px;
 }
 
-/* A collapsed row never exceeds the block size the five-row budget assumes. */
+.proactive-inbox__row[data-unseen='true'] {
+  --pi-row-inset: 14px;
+}
+
+/* A collapsed row never exceeds the block size the three-row budget assumes. */
 .proactive-inbox__row:not(.proactive-inbox__row--expanded) {
   max-height: var(--proactive-inbox-row-block-size);
   overflow: hidden;
 }
 
-.proactive-inbox__row:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-/* Read/done rows stay available for context but recede behind unread rows. */
+/* Read/handled rows stay available for context but recede behind unseen rows. */
 .proactive-inbox__row--read {
   opacity: 0.68;
 }
 
+/* The narrated row keeps a soft warm highlight instead of an alarm colour. */
+.proactive-inbox__row--speaking {
+  background: var(--pi-accent-soft);
+}
+
+.proactive-inbox__row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--proactive-inbox-row-block-size);
+}
+
+.proactive-inbox__dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pi-accent);
+}
+
 .proactive-inbox__summary {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
+  flex: 1 1 auto;
+  align-items: center;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -191,53 +203,91 @@ html[data-theme='system-black'] .proactive-inbox {
 }
 
 .proactive-inbox__summary:focus-visible,
+.proactive-inbox__earlier-toggle:focus-visible,
 .proactive-inbox__action:focus-visible,
 .proactive-inbox__close:focus-visible {
-  outline: 2px solid #2F5BD3;
+  outline: 2px solid rgba(176, 122, 60, 0.55);
   outline-offset: 2px;
 }
 
 .proactive-inbox__row-title {
-  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 650;
-  line-height: 17px;
+  font-weight: 400;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.proactive-inbox__row-body {
-  display: -webkit-box;
-  overflow: hidden;
+.proactive-inbox__row[data-unseen='true'] .proactive-inbox__row-title {
+  font-weight: 500;
+}
+
+.proactive-inbox__time {
+  flex: 0 0 auto;
   color: var(--pi-muted);
-  font-size: 13px;
-  line-height: 17px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.proactive-inbox__body {
+  padding-left: var(--pi-row-inset);
 }
 
 .proactive-inbox__full {
-  display: block;
-  margin-top: 2px;
-  color: var(--pi-strong);
+  color: var(--pi-ink);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
+/* One quiet row where the old "noted earlier" divider sat. */
+.proactive-inbox__earlier {
+  padding: 0 4px;
+}
+
+.proactive-inbox__earlier-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pi-muted);
+  font: inherit;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.proactive-inbox__earlier-toggle::after {
+  content: '›';
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 140ms ease-out;
+}
+
+.proactive-inbox__earlier-toggle[aria-expanded='true']::after {
+  transform: rotate(90deg);
+}
+
 .proactive-inbox__actions {
   display: flex;
-  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 2px;
+  padding-left: var(--pi-row-inset);
 }
 
 .proactive-inbox__action {
-  min-height: 22px;
-  padding: 2px 10px;
+  min-height: 28px;
+  padding: 4px 12px;
   border: 1px solid var(--pi-action-border);
   border-radius: 999px;
   background: transparent;
@@ -245,7 +295,7 @@ html[data-theme='system-black'] .proactive-inbox {
   font: inherit;
   font-size: 12px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 18px;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -257,10 +307,17 @@ html[data-theme='system-black'] .proactive-inbox {
 .proactive-inbox__action--primary,
 .proactive-inbox__action--primary:hover {
   border-color: transparent;
-  background: #E8EFFF;
-  color: #2F5BD3;
+  background: rgba(217, 160, 102, 0.2);
+  color: #7A5530;
 }
 
 .proactive-inbox__action--primary:hover {
-  background: #DCE7FF;
+  background: rgba(217, 160, 102, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proactive-inbox {
+    animation: none;
+    transition: none;
+  }
 }

@@ -1,14 +1,17 @@
 /**
- * Pure view rules for the pet's inbox overlay.
+ * Pure view rules for the pet's notebook (the former inbox overlay).
  *
- * The overlay lists every inbox entry created in the last 30 days, whether or
- * not the red dot counts it. Unread entries come first (high priority first,
- * then newest); read/done entries follow newest first. Snoozed ids are hidden
- * until their timer fires, and rows stay in the DOM so the list can scroll.
+ * The notebook lists every entry noted in the last 15 days. Rows are grouped
+ * so anything that still needs a decision comes first: actionable unhandled
+ * lines, other unseen lines, then seen-but-unhandled lines; handled lines sit
+ * under the "noted earlier" divider. Groups 0-2 sort high priority first and
+ * newest; handled rows sort newest first. Snoozed ids stay hidden, and rows
+ * remain in the DOM so the list can scroll.
  *
  * The visible window is `PROACTIVE_INBOX_OVERLAY_MAX_ROWS` rows tall, but the
- * selection keeps the full (bounded) list. Badge count and badge-worthiness
- * remain a separate, unchanged predicate.
+ * selection keeps the full (bounded) list. "Seen" (`read`/`done`/`dismissed`)
+ * and "handled" (`done`/`dismissed`) are separate layers, so a letter can be
+ * seen without being opened. There is no red dot in the notebook.
  *
  * Nothing here touches React, the bridge or the clock, so every ordering,
  * windowing and action decision is testable without a window.
@@ -21,12 +24,14 @@ import type {
   ProactiveMessage,
   ProactivePriority,
 } from '../../../shared/proactiveDelivery.js'
+import { isProactiveLetterEntry } from '../../../shared/proactiveInboxReadRule.js'
+import { isSameLocalDay } from '../../lib/localDate.ts'
 
 /** Rows visible without scrolling. The list itself keeps the full selection. */
-export const PROACTIVE_INBOX_OVERLAY_MAX_ROWS = 5
+export const PROACTIVE_INBOX_OVERLAY_MAX_ROWS = 3
 
-/** Entries older than this are not part of the overlay. */
-export const PROACTIVE_INBOX_OVERLAY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
+/** Entries older than this are not part of the notebook. */
+export const PROACTIVE_INBOX_OVERLAY_WINDOW_MS = 15 * 24 * 60 * 60 * 1000
 
 /** Upper safety bound; the main-process inbox store only keeps this many. */
 export const PROACTIVE_INBOX_OVERLAY_SAFETY_LIMIT = 100
@@ -48,14 +53,20 @@ export type ProactiveInboxRow = {
   createdAt: number
   /** Stored status, so the row can expose it without inventing an unread marker. */
   status: ProactiveInboxStatus
+  /** `unread` only: the user has never seen this line. */
+  unseen: boolean
   /** Done/dismissed rows render dimmed and hide their Done/Snooze buttons. */
+  handled: boolean
+  /** Alias of `handled`, kept for callers that predate the seen/handled split. */
   read: boolean
+  /** Letter rows speak their fixed line instead of their private title. */
+  letter: boolean
 }
 
 export type ProactiveInboxSelectionOptions = {
   hiddenIds?: readonly string[]
   /**
-   * Reference time for the 30-day window. The controller injects its clock so
+   * Reference time for the 15-day window. The controller injects its clock so
    * the boundary is testable; a missing value falls back to the real clock.
    */
   nowMs?: number
@@ -81,14 +92,33 @@ function priorityRank(priority: ProactivePriority): number {
   return 1
 }
 
+function hasActions(entry: Pick<ProactiveInboxEntry, 'actions'>): boolean {
+  return Array.isArray(entry.actions) && entry.actions.length > 0
+}
+
 /**
- * Pick and order the rows the overlay renders.
+ * Notebook section for one entry: 0 actionable and unhandled, 1 other unseen,
+ * 2 seen but unhandled, 3 handled. Actionable lines lead because they are the
+ * things that still wait on the user; a seen line with buttons still needs a
+ * decision. The order is the rendering order.
+ */
+function notebookGroup(
+  entry: Pick<ProactiveInboxEntry, 'status' | 'actions'>,
+): number {
+  if (entry.status === 'done' || entry.status === 'dismissed') return 3
+  if (hasActions(entry)) return 0
+  return entry.status === 'unread' ? 1 : 2
+}
+
+/**
+ * Pick and order the rows the notebook renders.
  *
- * Every entry inside the 30-day window is listed, not only the ones the badge
- * counts. Unread rows come first with high priority ahead of normal/low, then
- * newest first; read/done rows follow, newest first. `hiddenIds` always wins,
- * including for a snoozed row that is still expanded. Ties on `createdAt` fall
- * back to id so the order is deterministic in tests and in the window.
+ * Every entry inside the 15-day window is listed. Actionable unhandled lines
+ * lead, then other unseen lines, then seen-but-unhandled lines; groups 0-2 put
+ * high priority ahead of normal/low and then newest first. Handled rows follow
+ * newest first. `hiddenIds` always wins, including for a snoozed row that is
+ * still expanded. Ties on `createdAt` fall back to id so the order is
+ * deterministic in tests and in the window.
  */
 export function selectProactiveInboxEntries(
   entries: readonly ProactiveInboxEntryView[],
@@ -107,16 +137,52 @@ export function selectProactiveInboxEntries(
     })
     .slice()
     .sort((left, right) => {
-      const leftUnread = left.status === 'unread'
-      const rightUnread = right.status === 'unread'
-      if (leftUnread !== rightUnread) return leftUnread ? -1 : 1
-      if (leftUnread) {
+      const leftGroup = notebookGroup(left)
+      const group = leftGroup - notebookGroup(right)
+      if (group !== 0) return group
+      if (leftGroup < 3) {
         const rank = priorityRank(left.priority) - priorityRank(right.priority)
         if (rank !== 0) return rank
       }
       return right.createdAt - left.createdAt || left.id.localeCompare(right.id)
     })
     .slice(0, Math.max(0, limit))
+}
+
+/**
+ * Index where the "noted earlier" divider belongs: the first handled row, but only
+ * when at least one unhandled row sits above it. `-1` means no divider, either
+ * because everything is still unhandled or because everything is handled (a
+ * divider at the very top would label nothing).
+ */
+export function proactiveNotebookDividerIndex(
+  rows: readonly Pick<ProactiveInboxRow, 'handled'>[],
+): number {
+  const index = rows.findIndex((row) => row.handled)
+  return index > 0 ? index : -1
+}
+
+/**
+ * Notebook timestamp label: local clock time for today, the caller's
+ * yesterday word for the previous calendar day, and `M/D` for anything older.
+ * Built from `Date` getters so no locale or `Intl` data can change the shape.
+ */
+export function formatProactiveNotebookTime(
+  createdAt: number,
+  nowMs: number,
+  yesterdayLabel: string,
+): string {
+  const date = new Date(createdAt)
+  if (Number.isNaN(date.valueOf())) return ''
+  if (isSameLocalDay(createdAt, nowMs)) {
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
+  }
+  const now = new Date(nowMs)
+  const yesterdayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).getTime()
+  if (isSameLocalDay(createdAt, yesterdayMs)) return yesterdayLabel
+  return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
 /** The expanded text an expanded row shows. `fullBody` may be absent on this branch. */
@@ -151,8 +217,9 @@ export function proactiveInboxRowActions(
   return result
 }
 
-/** Turn a stored entry into the immutable shape the popover renders. */
+/** Turn a stored entry into the immutable shape the notebook renders. */
 export function toProactiveInboxRow(entry: ProactiveInboxEntryView): ProactiveInboxRow {
+  const handled = entry.status === 'done' || entry.status === 'dismissed'
   return {
     id: entry.id,
     title: entry.title,
@@ -162,9 +229,12 @@ export function toProactiveInboxRow(entry: ProactiveInboxEntryView): ProactiveIn
     priority: entry.priority,
     createdAt: entry.createdAt,
     status: entry.status,
-    // `read` is seen but not handled: it still shows every button, so it can
+    unseen: entry.status === 'unread',
+    // A seen line is not handled: it still shows every button, so it can
     // become done. Only done/dismissed rows are dimmed and lose buttons.
-    read: entry.status === 'done' || entry.status === 'dismissed',
+    handled,
+    read: handled,
+    letter: isProactiveLetterEntry(entry),
   }
 }
 

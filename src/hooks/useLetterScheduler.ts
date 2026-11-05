@@ -24,6 +24,7 @@ import { resolveActivePersona } from '../features/persona/resolveActivePersona.t
 import { localDayKey } from '../lib/localDate.ts'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
 import { admitProactiveMessage } from '../features/autonomy/proactiveEtiquette.ts'
+import { letterNotificationBody } from '../features/proactive/directNotificationCopy.ts'
 import { isUserTypingAnywhere } from '../features/autonomy/userTyping.ts'
 import {
   acquireBackgroundChatLease,
@@ -319,7 +320,9 @@ export function useLetterScheduler({
         try {
           await window.desktopPet?.showProactiveNotification?.({
             title: `${s.companionName?.trim() || 'Nexus'}`,
-            body: parsed.greeting,
+            // A lock screen gets the fixed "letter is ready" line, never the
+            // letter's greeting or body.
+            body: letterNotificationBody(s.uiLanguage),
           })
         } catch {
           // Notification failure shouldn't undo the save.

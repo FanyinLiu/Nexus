@@ -2,14 +2,15 @@
 /**
  * Persistent inbox for proactive messages.
  *
- * The inbox is the durable record behind the pet's red dot: every routed
- * message lands here, including the ones that were only allowed to show a
- * quiet dot. Entries are deduped by message id, kept for 30 days and capped at
- * 100, and pruning runs both on load and on every write so a stale file cannot
- * resurrect an expired reminder.
+ * The inbox is the durable record behind the pet's note: every routed message
+ * lands here, including the ones that were only allowed to show a quiet dot.
+ * Entries are deduped by message id, kept for 15 days and capped at 100, with
+ * no special case for unhandled reminders or todos — the notebook is a reading
+ * surface, not a task manager. Pruning runs both on load and on every write so
+ * a stale file cannot resurrect an expired reminder.
  *
- * The count that drives the dot deliberately ignores companionship lines
- * (no actions, not high priority) so the dot is not permanently lit.
+ * The count that drives the note deliberately ignores companionship lines
+ * (no actions, not high priority) so the note is not permanently lit.
  */
 
 import {
@@ -35,7 +36,7 @@ export const PROACTIVE_INBOX_FILE_NAME = 'proactive-inbox.json'
 export const PROACTIVE_INBOX_MAX_ENTRIES = 100
 
 /** Age limit. An entry exactly this old is still kept. */
-export const PROACTIVE_INBOX_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+export const PROACTIVE_INBOX_RETENTION_MS = 15 * 24 * 60 * 60 * 1000
 
 /**
  * What one mutation changed, so the caller can push a matching renderer event.
@@ -173,7 +174,7 @@ function normalizeEntry(value) {
 
 /**
  * Apply both retention rules. Age is inclusive at the boundary: an entry that
- * is exactly 30 days old is still inside the window.
+ * is exactly 15 days old is still inside the window.
  *
  * @param {ProactiveInboxEntry[]} entries
  * @param {number} nowMs
@@ -203,7 +204,7 @@ function pruneEntries(entries, nowMs) {
 /**
  * @param {unknown} parsed
  * @param {number} nowMs
- * @returns {{ entries: ProactiveInboxEntry[] }}
+ * @returns {{ entries: ProactiveInboxEntry[], removedCount: number }}
  */
 function normalizeInbox(parsed, nowMs) {
   const record = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
@@ -213,7 +214,8 @@ function normalizeInbox(parsed, nowMs) {
   const entries = rawEntries
     .map((entry) => normalizeEntry(entry))
     .filter((entry) => entry !== null)
-  return { entries: pruneEntries(entries, nowMs).kept }
+  const { kept, removed } = pruneEntries(entries, nowMs)
+  return { entries: kept, removedCount: removed.length }
 }
 
 /**
@@ -244,23 +246,39 @@ export function createProactiveInboxStore({
   debounceMs,
   onPersistError,
 }) {
+  let prunedOnLoad = false
+
   const store = createSyncJsonFileStore({
     getStorePath,
-    normalize: (/** @type {unknown} */ parsed) => normalizeInbox(parsed, now()),
+    normalize: (/** @type {unknown} */ parsed) => {
+      const { entries, removedCount } = normalizeInbox(parsed, now())
+      prunedOnLoad = removedCount > 0
+      return { entries }
+    },
     ...(debounceMs !== undefined ? { debounceMs } : {}),
     ...(onPersistError !== undefined ? { onPersistError } : {}),
   })
 
   /** @returns {{ entries: ProactiveInboxEntry[] }} */
   function loadCache() {
-    return /** @type {{ entries: ProactiveInboxEntry[] }} */ (store.load())
+    const loaded = /** @type {{ entries: ProactiveInboxEntry[] }} */ (store.load())
+    if (prunedOnLoad) {
+      // The shorter retention must not leave 16-30 day old entries in the file
+      // until the next unrelated mutation: write the pruned view as soon as
+      // the first read exposes it. persistDebounced already turns failures
+      // into onPersistError warnings instead of throws.
+      prunedOnLoad = false
+      store.persistDebounced()
+    }
+    return loaded
   }
 
   /**
    * Whole inbox, newest first. Read-time pruning keeps the count honest even
-   * when nothing has been written since the last entry expired; the pruned
-   * state reaches disk with the next write. `removedIds` lets the caller push
-   * a matching `inbox:changed` so a badge updated only by pushes cannot stay
+   * when nothing has been written since the last entry expired; pruning done
+   * during the first load is persisted by loadCache, later read-time prunes
+   * reach disk with the next write. `removedIds` lets the caller push a
+   * matching `inbox:changed` so a badge updated only by pushes cannot stay
    * stale after entries age out.
    * @returns {ProactiveInboxSnapshot}
    */

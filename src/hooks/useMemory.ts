@@ -51,7 +51,7 @@ type UseMemoryParams = {
 /** Enough of each row that a remote copy does not write itself back. */
 function memorySyncSignature(items: readonly MemoryItem[]): string {
   return items.map((item) => (
-    `${item.id}:${item.updatedAt ?? ''}:${item.status ?? ''}:${item.loopStatus ?? ''}:${item.loopDueAt ?? ''}:${item.loopPlace ?? ''}:${item.content.length}`
+    `${item.id}:${item.updatedAt ?? ''}:${item.status ?? ''}:${item.loopStatus ?? ''}:${item.loopDueAt ?? ''}:${item.loopPlace ?? ''}:${item.loopKeyPoint ?? ''}:${item.content.length}`
   )).join('|')
 }
 
@@ -294,13 +294,16 @@ export function useMemory({ settings }: UseMemoryParams) {
         if (memory.id !== id) return memory
         const content = typeof patch.content === 'string' ? patch.content.trim() : memory.content
         if (!content) return memory
-        return {
+        const contentChanged = content !== memory.content
+        const next: MemoryItem = {
           ...memory,
           ...patch,
           content,
           ...(typeof patch.content === 'string' ? { userEdited: true } : {}),
           updatedAt: new Date().toISOString(),
         }
+        if (contentChanged) delete next.loopKeyPoint
+        return next
       })
       memoriesRef.current = nextMemories
       return nextMemories
@@ -314,16 +317,17 @@ export function useMemory({ settings }: UseMemoryParams) {
     }
 
     setMemories((current) => {
-      const nextMemories = current.map((memory) => (
-        memory.id === id
-          ? {
-              ...memory,
-              content: normalizedContent,
-              userEdited: true,
-              lastUsedAt: new Date().toISOString(),
-            }
-          : memory
-      ))
+      const nextMemories = current.map((memory) => {
+        if (memory.id !== id) return memory
+        const next: MemoryItem = {
+          ...memory,
+          content: normalizedContent,
+          userEdited: true,
+          lastUsedAt: new Date().toISOString(),
+        }
+        if (normalizedContent !== memory.content) delete next.loopKeyPoint
+        return next
+      })
       memoriesRef.current = nextMemories
       return nextMemories
     })

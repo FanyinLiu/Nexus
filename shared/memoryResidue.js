@@ -26,6 +26,8 @@ export const MEMORY_TEXT_FIELD_NAMES = Object.freeze([
   'speechText',
   'place',
   'loopPlace',
+  'keyPoint',
+  'loopKeyPoint',
   'dueText',
   'loopDueText',
   'instruction',

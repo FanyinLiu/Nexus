@@ -17,6 +17,7 @@ import { useGameIntegration } from '../../hooks/useGameIntegration.ts'
 import { useMemory } from '../../hooks/useMemory.ts'
 import { useCompanionLocalDataAuthority } from '../../hooks/useCompanionLocalDataAuthority.ts'
 import { useDesktopPresence } from '../../hooks/useDesktopPresence.ts'
+import { useKeyPointScheduler } from '../../hooks/useKeyPointScheduler.ts'
 import { usePetBehavior } from '../../hooks/usePetBehavior.ts'
 import { useVoice } from '../../hooks/useVoice.ts'
 import { useReminderController } from './useReminderController.ts'
@@ -347,6 +348,19 @@ export function useAppController() {
     pet,
     debugConsole,
     reminderTaskStore,
+  })
+
+  // One small background call per new or edited reminder/open loop. The save
+  // already happened; this only fills in the short lock-screen title.
+  useKeyPointScheduler({
+    enabled: true,
+    settingsRef,
+    reminderTasks: reminderTaskStore.reminderTasks,
+    reminderTasksRef: reminderTaskStore.reminderTasksRef,
+    setReminderKeyPoint: reminderTaskStore.setReminderKeyPoint,
+    memories: memory.memories,
+    memoriesRef: memory.memoriesRef,
+    setMemories: memory.setMemories,
   })
 
   useBackgroundSchedulers({
