@@ -8,12 +8,6 @@ export const PROACTIVE_TITLE_MAX_LENGTH: 80
 export const PROACTIVE_BODY_MAX_LENGTH: 160
 export const PROACTIVE_FULL_BODY_MAX_LENGTH: 10000
 
-/**
- * Code constant, not a setting: the settings schema stays at 25 and a
- * user-facing toggle is still undecided.
- */
-export const PROACTIVE_STRIP_ENABLED: true
-
 export type ProactiveSource =
   | 'reminder'
   | 'agenda'
@@ -166,6 +160,11 @@ export interface ProactiveDeliveryPreferences {
   /** False when desktop awareness is off or paused; fullscreen stays false. */
   desktopAwarenessAllowed: boolean
   awayNotificationsEnabled: boolean
+  /**
+   * Whether actionable messages may use the desktop edge strip. Optional so an
+   * older renderer that never sent it keeps the pre-setting behavior (on).
+   */
+  stripEnabled?: boolean
 }
 
 export interface ProactiveDeliveryPayload {

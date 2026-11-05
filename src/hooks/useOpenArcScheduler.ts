@@ -109,6 +109,7 @@ export function useOpenArcScheduler({
               quietStart: s.proactiveQuietHoursStart,
               quietEnd: s.proactiveQuietHoursEnd,
               awayNotificationsEnabled: s.proactiveAwayNotificationsEnabled,
+              stripEnabled: s.proactiveReminderStripEnabled,
               now,
             })
           },

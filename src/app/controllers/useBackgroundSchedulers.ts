@@ -45,6 +45,7 @@ export function useBackgroundSchedulers({
     messages,
     panelOpen,
     enabled: schedulerEnabled,
+    focusState,
   })
 
   // Without a chat bridge there is nowhere to show the bracket; keep the

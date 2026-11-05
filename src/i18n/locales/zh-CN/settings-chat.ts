@@ -54,7 +54,7 @@ export const zhCNSettingsChat = {
   'settings.chat_history.clear_error': '聊天记录没能清掉，稍后再试试？',
   'settings.chat_history.import_confirm': '导入会替换当前聊天记录，但不会改动记忆库。要继续吗？',
   'settings.chat_history.nothing_to_clear': '当前没有可清空的聊天记录。',
-  'settings.chat_history.clear_confirm': '确认清空当前聊天记录吗？这不会删除长期记忆和每日日志。',
+  'settings.chat_history.clear_confirm': '确认清空当前聊天记录吗？这不会删除长期记忆和每日记录。',
   'settings.chat_connection.ready': '连上了，模型已经回应啦。',
   'settings.chat_connection.identity_unverified': '服务有响应，但没有返回模型身份，暂时无法确认是当前模型。',
   'settings.chat_connection.identity_unverified_rec': '检查服务是否会返回模型标识；兼容网关可能需要单独确认实际路由。',

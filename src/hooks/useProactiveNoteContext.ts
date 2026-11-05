@@ -60,6 +60,7 @@ export function useProactiveNoteContext({
           quietStart: currentSettings.proactiveQuietHoursStart,
           quietEnd: currentSettings.proactiveQuietHoursEnd,
           awayNotificationsEnabled: currentSettings.proactiveAwayNotificationsEnabled,
+          stripEnabled: currentSettings.proactiveReminderStripEnabled,
           now: Date.now(),
         }))
       } finally {

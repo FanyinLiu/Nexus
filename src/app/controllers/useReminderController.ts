@@ -113,6 +113,7 @@ export function useReminderController({
           quietStart: currentSettings.proactiveQuietHoursStart,
           quietEnd: currentSettings.proactiveQuietHoursEnd,
           awayNotificationsEnabled: currentSettings.proactiveAwayNotificationsEnabled,
+          stripEnabled: currentSettings.proactiveReminderStripEnabled,
           now,
         })
 

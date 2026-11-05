@@ -16,7 +16,7 @@ export const koChat = {
   'message_bubble.memory_trace.none': '기억은 켜져 있지만 이번 답변에는 불러온 내용이 없어요.',
   'message_bubble.memory_trace.paused': '이 답변은 기억을 쓰지 않았어요',
   'message_bubble.memory_trace.long_term': '장기 기억',
-  'message_bubble.memory_trace.daily': '일기 기억',
+  'message_bubble.memory_trace.daily': '일일 기록',
   'message_bubble.memory_trace.semantic': '의미 검색',
   'message_bubble.memory_trace.missing': '없음',
   'message_bubble.memory_trace.disabled': '이 기억 정지됨',

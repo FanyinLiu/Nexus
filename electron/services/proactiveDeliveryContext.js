@@ -16,7 +16,6 @@
 /** @typedef {import('../../shared/proactiveDelivery.js').FocusState} FocusState */
 /** @typedef {import('../../shared/proactiveDelivery.js').ProactiveDeliveryPreferences} ProactiveDeliveryPreferences */
 
-import { PROACTIVE_STRIP_ENABLED } from '../../shared/proactiveDelivery.js'
 import { isLikelyFullscreenSurface, isQuietHour } from '../../shared/proactiveSignals.js'
 
 /**
@@ -64,7 +63,9 @@ export function createProactiveDeliveryContextProvider({
         : false,
       systemDnd: null,
       awayNotificationsEnabled: preferences?.awayNotificationsEnabled === true,
-      stripEnabled: PROACTIVE_STRIP_ENABLED,
+      // Unknown preferences (an older renderer or a first re-route) keep the
+      // strip on, matching the behavior before the switch existed.
+      stripEnabled: preferences?.stripEnabled !== false,
     }
   }
 

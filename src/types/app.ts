@@ -325,6 +325,11 @@ interface PresenceSettings {
   proactiveAwayNotificationsEnabled: boolean
   proactiveAwayNotificationThresholdMinutes: number
   /**
+   * Whether actionable proactive reminders may use the desktop edge strip.
+   * On by default. When off, the router falls back to a bubble (rule 4).
+   */
+  proactiveReminderStripEnabled: boolean
+  /**
    * Daily morning + evening "bracket" — paired prompts that bookend the
    * day. Morning fires an open-question OS notification in the 7-10
    * window; evening fires a highlight + stressful question pair in the

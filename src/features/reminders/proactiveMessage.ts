@@ -9,7 +9,6 @@
 
 import {
   PROACTIVE_BODY_MAX_LENGTH,
-  PROACTIVE_STRIP_ENABLED,
 } from '../../../shared/proactiveDelivery.js'
 import type {
   DeliveryContext,
@@ -83,6 +82,8 @@ export type ReminderContextSignals = {
   quietStart: number
   quietEnd: number
   awayNotificationsEnabled: boolean
+  /** Whether actionable messages may use the desktop edge strip. */
+  stripEnabled: boolean
   now: number
 }
 
@@ -104,7 +105,7 @@ export function buildReminderDeliveryContext(
     inQuietHours: isQuietHour(hour, signals.quietStart, signals.quietEnd),
     systemDnd: null,
     awayNotificationsEnabled: signals.awayNotificationsEnabled,
-    stripEnabled: PROACTIVE_STRIP_ENABLED,
+    stripEnabled: signals.stripEnabled,
   }
 }
 
@@ -144,6 +145,7 @@ export type ReminderPreferenceSettings = Pick<
   | 'activeWindowContextEnabled'
   | 'companionAwarenessPaused'
   | 'proactiveAwayNotificationsEnabled'
+  | 'proactiveReminderStripEnabled'
 >
 
 /**
@@ -162,6 +164,7 @@ export function buildReminderDeliveryPreferences(
       && settings.activeWindowContextEnabled
       && !settings.companionAwarenessPaused,
     awayNotificationsEnabled: settings.proactiveAwayNotificationsEnabled,
+    stripEnabled: settings.proactiveReminderStripEnabled,
   }
 }
 

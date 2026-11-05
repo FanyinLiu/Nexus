@@ -3,7 +3,7 @@ import test from 'node:test'
 import { CURRENT_SETTINGS_SCHEMA_VERSION, migrateSettings } from '../src/lib/settingsMigrations.ts'
 
 test('schema 25 adds the backchannel switch off for older stores', () => {
-  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 25)
+  assert.equal(CURRENT_SETTINGS_SCHEMA_VERSION, 26)
 
   const next = migrateSettings({
     settingsSchemaVersion: 24,
@@ -11,7 +11,7 @@ test('schema 25 adds the backchannel switch off for older stores', () => {
     model: 'qwen3:8b',
   }, 24)
 
-  assert.equal(next.settingsSchemaVersion, 25)
+  assert.equal(next.settingsSchemaVersion, 26)
   assert.equal(next.voiceBackchannelEnabled, false)
   assert.equal(next.voiceInterruptionEnabled, true)
   assert.equal(next.model, 'qwen3:8b')

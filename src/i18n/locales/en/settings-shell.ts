@@ -52,7 +52,7 @@ export const enSettingsShell = {
   'settings.section_desc.window': 'Control desktop presence and interaction.',
   'settings.section_desc.tools': 'Configure built-in tools for web search, weather, and external link authorization.',
   'settings.section_desc.voice': 'Speech, dictation, and voice choice',
-  'settings.section_desc.memory': 'Organize long-term memory, diary notes, background phrases, and retrieval.',
+  'settings.section_desc.memory': 'Organize long-term memory, daily logs, background phrases, and retrieval.',
   'settings.section_desc.history': 'Manage import, export, and cleanup for the current chat history.',
   'settings.save': 'Save settings',
   'settings.return_to_companion': 'Back to companion',

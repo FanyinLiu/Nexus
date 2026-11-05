@@ -56,7 +56,7 @@ export const zhTWSettingsChat = {
   'settings.chat_history.clear_error': '聊天記錄沒能清空，等一下再試試？',
   'settings.chat_history.import_confirm': '匯入會取代目前聊天記錄，但不會更動記憶庫。要繼續嗎？',
   'settings.chat_history.nothing_to_clear': '目前沒有可清空的聊天記錄。',
-  'settings.chat_history.clear_confirm': '確認清空目前聊天記錄嗎？這不會刪除長期記憶和每日日誌。',
+  'settings.chat_history.clear_confirm': '確認清空目前聊天記錄嗎？這不會刪除長期記憶和每日紀錄。',
   'settings.chat_connection.ready': '連上了，模型已經回應啦。',
   'settings.chat_connection.identity_unverified': '服務有回應，但沒有回傳模型身分，暫時無法確認是目前模型。',
   'settings.chat_connection.identity_unverified_rec': '請確認服務是否會回傳模型識別；相容閘道可能需要另外確認實際路由。',
