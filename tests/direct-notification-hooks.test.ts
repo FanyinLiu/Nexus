@@ -78,7 +78,7 @@ test('agenda logs never echo the memory text, its clipped what, or distinctive w
   }
 })
 
-test('agenda first line: the OS body drops later lines and logs never carry them', async (t) => {
+test('agenda first line: the OS title drops later lines and logs never carry them', async (t) => {
   const now = new Date(2026, 4, 1, 12, 0, 0).getTime()
   const content = '买牛奶\n顺便取快递\n密码 1234'
   const run = await runAgenda(t, {
@@ -93,13 +93,14 @@ test('agenda first line: the OS body drops later lines and logs never carry them
 
   assert.equal(run.notifications.length, 1)
   const notification = run.notifications[0]
-  assertSame(notification.body, '买牛奶…', 'OS body is the clipped first line')
+  assertSame(notification.title, '买牛奶…', 'OS title is the clipped first line')
+  assert.equal(notification.body, undefined, 'OS toast has no body')
   assert.equal(run.notices.length, 1)
   assert.equal(run.notices[0].chatContent.includes(content), true, 'chat keeps the full memory text')
 
   for (const secret of ['顺便取快递', '1234', content]) {
     assertNotLeaked(notification.title, secret, 'notification title leaked a later agenda line')
-    assertNotLeaked(notification.body, secret, 'notification body leaked a later agenda line')
+    assertNotLeaked(notification.body ?? '', secret, 'notification body leaked a later agenda line')
     for (const log of run.logs) {
       assertNotLeaked(log.title, secret, 'onLog title leaked a later agenda line')
       assertNotLeaked(log.detail, secret, 'onLog detail leaked a later agenda line')
@@ -110,16 +111,17 @@ test('agenda first line: the OS body drops later lines and logs never carry them
   }
 })
 
-test('agenda chat/bubble keep the full outreach while the OS toast is the clipped first line', async (t) => {
+test('agenda chat/bubble keep the full outreach while the OS toast is the key point', async (t) => {
   const now = new Date(2026, 4, 1, 9, 0, 0).getTime()
   // The place lives only in loopPlace, not in `what`, so the two surfaces are
-  // clearly distinguishable: chat has it, the OS body does not.
+  // clearly distinguishable: chat has it, the OS toast does not.
   const what = '对一下季度方案的细节顺便把上周的发票带过去'
   const run = await runAgenda(t, {
     now,
     memories: [makeLoop({
       id: 'agenda-full-copy',
       content: what,
+      loopKeyPoint: '对季度方案',
       loopPlace: '国贸',
       loopDueText: '下午三点',
       loopDueAt: new Date(now + 3 * HOUR).toISOString(),
@@ -134,8 +136,10 @@ test('agenda chat/bubble keep the full outreach while the OS toast is the clippe
   assertSame(notice.bubbleContent, notice.chatContent, 'bubble keeps the full copy')
 
   assert.equal(run.notifications.length, 1)
-  assertSame(run.notifications[0].body, truncateAgendaWhat(what), 'OS body is the clipped what')
-  assert.equal(run.notifications[0].body.includes('国贸'), false, 'OS toast omits the place')
+  const notification = run.notifications[0]
+  assertSame(notification.title, '对季度方案', 'OS title is the stored key point')
+  assert.equal(notification.body, undefined, 'OS toast has no body')
+  assert.equal(notification.title.includes('国贸'), false, 'OS toast omits the place')
 })
 
 // ── Bracket hook ───────────────────────────────────────────────────────────
@@ -161,7 +165,7 @@ test('bracket errand keeps the result in chat/bubble while the OS toast is the f
 
   assert.equal(run.notifications.length, 1)
   assertSame(run.notifications[0].body, '昨晚帮你查的东西整理好了。', 'OS toast is the fixed errand line')
-  assertNotLeaked(run.notifications[0].body, ERRAND_RESULT, 'OS toast leaked the errand result')
+  assertNotLeaked(run.notifications[0].body ?? '', ERRAND_RESULT, 'OS toast leaked the errand result')
 })
 
 test('bracket last-night callback keeps the topic in chat/bubble while the OS toast is the fixed line', async (t) => {
@@ -183,7 +187,7 @@ test('bracket last-night callback keeps the topic in chat/bubble while the OS to
 
   assert.equal(run.notifications.length, 1)
   assertSame(run.notifications[0].body, '昨晚聊的事，我还记着。', 'OS toast is the fixed callback line')
-  assertNotLeaked(run.notifications[0].body, EVENING_TOPIC, 'OS toast leaked the topic')
+  assertNotLeaked(run.notifications[0].body ?? '', EVENING_TOPIC, 'OS toast leaked the topic')
 })
 
 // ── Weekly letter hook ─────────────────────────────────────────────────────
@@ -195,8 +199,8 @@ test('the weekly letter OS title is the companion name, never the greeting', asy
   const notification = run.notifications[0]
   assertSame(notification.title, '星绘', 'letter title is the companion name')
   assertNotLeaked(notification.title, LETTER_GREETING, 'letter title leaked the greeting')
-  assertNotLeaked(notification.body, LETTER_GREETING, 'letter body leaked the greeting')
-  assertNotLeaked(notification.body, LETTER_BODY, 'letter body leaked the letter text')
+  assertNotLeaked(notification.body ?? '', LETTER_GREETING, 'letter body leaked the greeting')
+  assertNotLeaked(notification.body ?? '', LETTER_BODY, 'letter body leaked the letter text')
 })
 
 test('the weekly letter OS title falls back to Nexus for a blank companion name', async (t) => {

@@ -112,7 +112,7 @@ export function createHookRenderer<P, R>(hookFn: (props: P) => R) {
 
 // ── Environment ────────────────────────────────────────────────────────────
 
-export type NotificationCall = { title: string; body: string }
+export type NotificationCall = { title: string; body?: string }
 export type NoticeCall = { chatContent: string; bubbleContent?: string; dedupeKey?: string }
 export type ConsoleOutput = string[]
 

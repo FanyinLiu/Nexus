@@ -3,65 +3,37 @@
  *
  * A lock screen is not a private surface: an OS toast must never carry memory
  * text, the user's own words, an errand prompt/result, or letter content. The
- * only exception is the agenda reminder, whose body is the first non-blank
- * line of the reminder's `what`, clipped to a short budget. In-app chat and
- * bubbles keep their own copy and do not go through this module.
+ * agenda reminder shows only its stored key point, or the clipped first line
+ * when none exists, and carries no body. In-app chat and bubbles keep their
+ * own copy and do not go through this module.
  *
- * Every string here is a fixed localized line, resolved through the runtime
- * `t()` so non-hook code can build the same body the renderer would.
+ * Fixed lines are localized through the runtime `t()`; the agenda title comes
+ * from the reminder key-point module.
  */
 
 import { normalizeLocale, t } from '../../i18n/runtime.ts'
 import type { TranslationKey, UiLanguage } from '../../types'
+import { resolveKeyPoint } from '../reminders/keyPoint.ts'
 import type { BracketCallback } from './bracketCopy.ts'
 
-/** Longest agenda `what` the OS body may carry, counted in grapheme clusters. */
-export const AGENDA_NOTIFICATION_WHAT_MAX = 20
-
-/** Grapheme segmentation shared by every clip; the locale only affects word breaks. */
-const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
-
-/**
- * Clip an agenda reminder's `what` for the OS body.
- *
- * Only the first non-blank line is eligible, so a multi-line memory can never
- * smuggle a later line onto the lock screen. Leading blank lines are skipped;
- * an all-blank value becomes an empty body. The line is trimmed before
- * counting so trailing whitespace never spends the budget. The cut is by
- * grapheme cluster, not UTF-16 unit or code point, so a user-perceived
- * character — an emoji ZWJ sequence, a flag, or a base letter plus its
- * combining mark — is one unit and is never cut. A single ellipsis marks
- * either a clipped line or any later non-blank line.
- */
-export function truncateAgendaWhat(what: string): string {
-  const lines = what.split(/\r\n|\n|\r/)
-  const firstLineIndex = lines.findIndex((line) => line.trim().length > 0)
-  if (firstLineIndex === -1) return ''
-  const firstLine = lines[firstLineIndex].trim()
-  const graphemes = Array.from(GRAPHEME_SEGMENTER.segment(firstLine), (part) => part.segment)
-  const clipped = graphemes.length > AGENDA_NOTIFICATION_WHAT_MAX
-    ? graphemes.slice(0, AGENDA_NOTIFICATION_WHAT_MAX).join('')
-    : firstLine
-  const hasFollowingLine = lines
-    .slice(firstLineIndex + 1)
-    .some((line) => line.trim().length > 0)
-  return graphemes.length > AGENDA_NOTIFICATION_WHAT_MAX || hasFollowingLine
-    ? `${clipped}…`
-    : clipped
-}
+export {
+  AGENDA_NOTIFICATION_WHAT_MAX,
+  truncateAgendaWhat,
+} from './graphemeClip.ts'
 
 export interface AgendaNotification {
   title: string
-  body: string
 }
 
 /**
- * The agenda reminder's OS payload: the unchanged title plus only the clipped
- * first line of `what`. Place, time, later lines and outreach templates stay
- * out of the toast.
+ * The agenda reminder's OS payload: the key point only.
+ *
+ * A lock screen must not carry the full `what`, the place, the time, a later
+ * line, or the outreach template. A stored key point wins; otherwise the
+ * first line is clipped by the shared agenda rule.
  */
-export function buildAgendaNotification(input: { title: string; what: string }): AgendaNotification {
-  return { title: input.title, body: truncateAgendaWhat(input.what) }
+export function buildAgendaNotification(input: { keyPoint?: unknown; what: string }): AgendaNotification {
+  return { title: resolveKeyPoint(input.keyPoint, input.what) }
 }
 
 /** Which bracket content kind fired, if any. */

@@ -158,6 +158,8 @@ export interface MemoryItem {
   loopCheckAskedAt?: string
   /** Place the user named, such as a hall or office. */
   loopPlace?: string
+  /** Short title an OS toast may show; absent on old rows (fallback applies). */
+  loopKeyPoint?: string
   /** Reminder booked for a clear plan, or when the user accepts an ask. */
   loopReminderTaskId?: string
   /**

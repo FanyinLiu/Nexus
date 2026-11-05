@@ -36,10 +36,11 @@ export interface MemoryPurgeRequest {
   at: string
 }
 
-/** Phrases a row can leak: the line itself, the place, the time, and quotes. */
-export function memoryPlaintextNeedles(memory: Pick<MemoryItem, 'content' | 'loopPlace' | 'loopDueText' | 'evidence'>): string[] {
+/** Phrases a row can leak: the line itself, the key point, the place, the time, and quotes. */
+export function memoryPlaintextNeedles(memory: Pick<MemoryItem, 'content' | 'loopKeyPoint' | 'loopPlace' | 'loopDueText' | 'evidence'>): string[] {
   const values = [
     memory.content,
+    memory.loopKeyPoint,
     memory.loopPlace,
     memory.loopDueText,
     ...(memory.evidence ?? []).map((item) => item.quote),
@@ -173,6 +174,7 @@ function taskHits(task: Record<string, unknown>, needles: string[]): boolean {
   if (hits(stringField(task, 'title'), needles)) return true
   if (hits(stringField(task, 'prompt'), needles)) return true
   if (hits(stringField(task, 'speechText'), needles)) return true
+  if (hits(stringField(task, 'keyPoint'), needles)) return true
   return isRecord(task.action) && objectHits(task.action, needles)
 }
 

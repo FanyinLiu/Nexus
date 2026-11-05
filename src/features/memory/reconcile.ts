@@ -189,12 +189,9 @@ function findCandidate(candidates: readonly MemoryItem[], draft: DraftOp): Memor
 }
 
 function withV2(memory: MemoryItem, now: string, patch: Partial<MemoryItem>): MemoryItem {
-  return {
-    ...memory,
-    ...patch,
-    schemaVersion: MEMORY_RECORD_SCHEMA_VERSION,
-    updatedAt: patch.updatedAt ?? now,
-  }
+  const next = { ...memory, ...patch, schemaVersion: MEMORY_RECORD_SCHEMA_VERSION, updatedAt: patch.updatedAt ?? now }
+  if (typeof patch.content === 'string' && patch.content !== memory.content) delete next.loopKeyPoint
+  return next
 }
 
 function stampOp(
