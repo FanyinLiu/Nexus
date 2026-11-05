@@ -5,6 +5,31 @@ broken builds to installed users. Every feature-bearing release MUST pass
 through the beta stage unless an explicit, version-scoped maintainer exception
 is recorded below.
 
+### v0.5.0 maintainer exception — 2026-11-05
+
+For v0.5.0 only, the owner explicitly accepted a direct stable promotion after
+reviewing the merged 0.5 feature stack on `main` (proactive notebook delivery,
+reminder key points, reminder strip, mouse-near glance, quiet-while-typing,
+away summary count, daily-log copy), local isolated-data acceptance on macOS
+arm64 against tip `663c8c03`, and the complete automated release gate. The
+normal multi-day beta validation window was waived; no multi-day conversation
+evidence or cross-platform physical-device validation is claimed. Final v0.5.0
+binaries must be rebuilt from the merged release commit by
+`.github/workflows/release.yml`, pass the clean remote asset/checksum closure
+gate, and only then become public. This exception does not change the default
+policy for v0.5.1 or later releases.
+
+### v0.5.0 stable record — 2026-11-05
+
+v0.5.0 is the current stable release. She lives on the computer: a notebook
+for things she could not say yet, reminder key points and an optional strip,
+one mouse-near glance, quiet-while-typing off by default, an away summary
+count, and daily-log copy. The stable handoff lives in
+`RELEASE-CANDIDATE-v0.5.0-HANDOFF.md`. Full notes live in
+`RELEASE-NOTES-v0.5.0.md`. Official binaries must still be rebuilt from the
+release commit by the protected workflow; no physical-device evidence is
+claimed.
+
 ### v0.4.3 maintainer exception — 2026-07-16
 
 For v0.4.3 only, the maintainer explicitly accepted a direct stable promotion

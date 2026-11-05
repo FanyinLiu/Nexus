@@ -6,9 +6,32 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-05
+
+v0.5.0 is the current stable release. The owner recorded a version-scoped
+maintainer exception and waived the beta window. Full detail in
+[`docs/RELEASE-NOTES-v0.5.0.md`](docs/RELEASE-NOTES-v0.5.0.md).
+
+- Notebook: when she has something to say and cannot interrupt, she writes it
+  down. Unread notes open beside her for the last 15 days. Red-dot counts are
+  gone.
+- Reminders show only the key point. Notifications keep the short line.
+- Reminder strip: a small strip beside the pet that does not take keyboard
+  focus, then tucks itself away. Turn it off in Settings to keep the ordinary
+  bubble path.
+- Mouse-near: she glances once, then waits before glancing again.
+- Quiet while typing: off by default. Typing awareness only knows that you
+  are typing, never which keys.
+- On return, she can say how many items piled up while you were away.
+- “Diary” is now “Daily log.”
+- Letters to the future: a short lead-in, then the original text unchanged.
+  Speech and notifications keep only the lead-in.
+
+The release commit is published only through the protected stable-tag workflow.
+
 ## [0.4.8] - 2026-10-29
 
-v0.4.8 is the current stable companion presence and stability release,
+v0.4.8 is the previous stable companion presence and stability release,
 promoted through the standard beta flow from `v0.4.8-beta.1` (published
 2026-10-15; the planned `0.4.8-beta.2` was dropped). Full detail in
 [`docs/RELEASE-NOTES-v0.4.8.md`](docs/RELEASE-NOTES-v0.4.8.md).

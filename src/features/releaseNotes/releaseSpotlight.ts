@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../../types/i18n.ts'
 
 export type ReleaseSpotlightBullet = {
-  id: 'gaze' | 'messages' | 'voice' | 'updates'
+  id: 'notebook' | 'reminders' | 'quiet' | 'away'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -22,30 +22,30 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.4.8',
+  version: '0.5.0',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'gaze',
-      titleKey: 'about.release_spotlight.bullet.gaze.title',
-      bodyKey: 'about.release_spotlight.bullet.gaze.body',
+      id: 'notebook',
+      titleKey: 'about.release_spotlight.bullet.notebook.title',
+      bodyKey: 'about.release_spotlight.bullet.notebook.body',
     },
     {
-      id: 'messages',
-      titleKey: 'about.release_spotlight.bullet.messages.title',
-      bodyKey: 'about.release_spotlight.bullet.messages.body',
+      id: 'reminders',
+      titleKey: 'about.release_spotlight.bullet.reminders.title',
+      bodyKey: 'about.release_spotlight.bullet.reminders.body',
     },
     {
-      id: 'voice',
-      titleKey: 'about.release_spotlight.bullet.voice.title',
-      bodyKey: 'about.release_spotlight.bullet.voice.body',
+      id: 'quiet',
+      titleKey: 'about.release_spotlight.bullet.quiet.title',
+      bodyKey: 'about.release_spotlight.bullet.quiet.body',
     },
     {
-      id: 'updates',
-      titleKey: 'about.release_spotlight.bullet.updates.title',
-      bodyKey: 'about.release_spotlight.bullet.updates.body',
+      id: 'away',
+      titleKey: 'about.release_spotlight.bullet.away.title',
+      bodyKey: 'about.release_spotlight.bullet.away.body',
     },
   ],
   actions: [
