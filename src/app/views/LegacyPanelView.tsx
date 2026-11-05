@@ -729,7 +729,7 @@ export function LegacyPanelView({
                     speechLevelSource={voice.speechLevelSource}
                     gazeTarget={pet.gazeTarget}
                     typingActivity={pet.typingActivity}
-                    performanceCue={pet.petPerformanceCue}
+                    mouseNearGlance={pet.mouseNearGlance} onModelBoundsChange={pet.setModelBounds} performanceCue={pet.petPerformanceCue}
                     placement="pet-stage"
                     paused={Boolean(onboardingGuide)}
                   />

@@ -32,6 +32,7 @@ import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
 import * as localDataIpc from './ipc/localDataIpc.js'
 import * as desktopPresenceIpc from './ipc/desktopPresenceIpc.js'
+import { getTypingQuietState, subscribeTypingQuiet } from './services/desktopPresence.js'
 
 const CHAT_REQUEST_TIMEOUT_MS = 25_000
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
@@ -157,6 +158,8 @@ export function registerIpc(options = {}) {
     setDeliveryPreferences: (preferences) => {
       deliveryPreferences.current = preferences
     },
+    getTypingQuiet: getTypingQuietState,
+    subscribeTypingQuiet,
     strip: {
       show: reminderStrip.showReminderStrip,
       withdraw: reminderStrip.withdrawReminderStripItem,

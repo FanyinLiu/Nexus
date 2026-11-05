@@ -13,11 +13,15 @@ import {
   applyAccentStyle,
   resolvePerformanceAccentWindowMs,
 } from './accentStyle.ts'
-import { updateBlinkEyes, type BlinkState } from './blink.ts'
+import { createBlinkState, updateBlinkEyes, type BlinkState } from './blink.ts'
 import { createSaccadeState, stepIdleSaccade, type SaccadeState } from '../../idleSaccades.ts'
 import { resolveSpeechVisemes } from '../../speechVisemes.ts'
 import { clamp } from '../../../../lib/common.ts'
 import { typingPresenceOffset } from '../../../desktopPresence/typingPresence.ts'
+import {
+  mouseNearGlanceOffset,
+  type MouseNearGlance,
+} from '../../../desktopPresence/mouseNear.ts'
 import type {
   CubismCoreModel,
   GazeTarget,
@@ -48,12 +52,23 @@ export type FrameRenderState = {
   saccade?: SaccadeState
 }
 
+/** Reset all smoothing accumulators for a freshly mounted runtime. */
+export function createPetFrameState(): FrameRenderState {
+  return {
+    smoothedGaze: { x: 0, y: 0 },
+    smoothedSpeechLevel: 0,
+    blink: createBlinkState(),
+    saccade: createSaccadeState(),
+  }
+}
+
 export type FrameRenderInputs = {
   modelDefinition: PetModelDefinition
   internalModel: Live2DInternalModel
   activeExpressionSlot: PetExpressionSlot
   gazeTarget: GazeTarget
   typingIntensity?: number
+  mouseNearGlance?: MouseNearGlance | null
   speechLevelTarget: number
   performanceCue: PetPerformanceCue | null
   performanceCueStartedAt: number
@@ -67,6 +82,7 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
     activeExpressionSlot,
     gazeTarget,
     typingIntensity = 0,
+    mouseNearGlance = null,
     speechLevelTarget,
     performanceCue,
     performanceCueStartedAt,
@@ -110,10 +126,11 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
     now,
     activeExpressionSlot === 'idle' && speechLevelTarget < 0.015,
   )
-  let gazeX = clamp(state.smoothedGaze.x + saccade.x, -1, 1)
-  let gazeY = clamp(state.smoothedGaze.y + saccade.y, -1, 1)
-  let angleZ = Math.sin(seconds * 0.95) * 0.65
-  let bodyAngleX = Math.sin(seconds * 0.82) * 0.55 + gazeX * 1.9
+  const glance = mouseNearGlanceOffset(mouseNearGlance, now)
+  let gazeX = clamp(state.smoothedGaze.x + saccade.x + glance.gazeX, -1, 1)
+  let gazeY = clamp(state.smoothedGaze.y + saccade.y + glance.gazeY, -1, 1)
+  let angleZ = Math.sin(seconds * 0.95) * 0.65 + glance.angleZ
+  let bodyAngleX = Math.sin(seconds * 0.82) * 0.55 + gazeX * 1.9 + glance.bodyAngleX
   let smileLevel = 0
   let cheekLevel = 0
   let browFormLevel = 0
@@ -125,7 +142,7 @@ export function applyLive2DFrame(inputs: FrameRenderInputs) {
   let eyeFormLevel = 0
   let mouthDownLevel = 0
   let breathLevel = 0.22 + (Math.sin(seconds * 2.1) + 1) * 0.1
-  const typing = typingPresenceOffset(typingIntensity, seconds)
+  const typing = typingPresenceOffset(typingIntensity)
 
   // ── Base expression-slot rig overlays ────────────────────────────────
   switch (activeExpressionSlot) {

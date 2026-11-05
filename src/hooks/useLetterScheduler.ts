@@ -48,6 +48,8 @@ const POLL_INTERVAL_MS = 30 * 60_000
 const WEEK_MS = 7 * 24 * 60 * 60_000
 const LETTER_TEMPERATURE = 0.85
 const LETTER_MAX_TOKENS = 1200
+const LETTER_TYPING_RETRY_MS = 5_000
+const LETTER_TYPING_MAX_WAIT_MS = 5 * 60_000
 
 type UseLetterSchedulerOptions = {
   settings: AppSettings
@@ -302,6 +304,19 @@ export function useLetterScheduler({
         if (!saved) return
         saveLetter(saved)
 
+        // The admission check above ran before the LLM call. Re-check right
+        // before the only visible surface: a letter generated during a typing
+        // burst waits for the grace instead of firing a toast mid-sentence.
+        const waitStartedAt = Date.now()
+        while (
+          isUserTypingAnywhere(liveRef.current.settings)
+          && liveRef.current.settings.proactiveLetterEnabled
+          && Date.now() - waitStartedAt < LETTER_TYPING_MAX_WAIT_MS
+        ) {
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, LETTER_TYPING_RETRY_MS)
+          })
+        }
         try {
           await window.desktopPet?.showProactiveNotification?.({
             title: `${s.companionName?.trim() || 'Nexus'}`,

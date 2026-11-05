@@ -20,6 +20,7 @@ import type {
 } from '../../types'
 import { captionRepeatsVisibleNotification } from '../notifications/notificationCardSession.ts'
 import type { GazeTarget } from '../pet/components/live2d/types.ts'
+import type { MouseNearGlance, MouseNearRect } from '../desktopPresence/mouseNear.ts'
 import type { PetModelDefinition } from '../pet/models.ts'
 import type { PetPerformanceCue } from '../pet/types.ts'
 import { describeChatMemoryTrace } from '../memory/memoryTraceLabel.ts'
@@ -50,6 +51,8 @@ export type CompanionPanelV2Props = {
     petTouchZone: PetTouchZone | null
     gazeTarget: GazeTarget
     typingActivity?: { active: boolean; keysPerSecond: number }
+    mouseNearGlance?: MouseNearGlance | null
+    setModelBounds: (bounds: MouseNearRect | null) => void
     petPerformanceCue?: PetPerformanceCue | null
   }
   voice: {
@@ -310,6 +313,8 @@ export function CompanionPanelV2({
             speechLevelSource={voice.speechLevelSource}
             gazeTarget={pet.gazeTarget}
             typingActivity={pet.typingActivity}
+            mouseNearGlance={pet.mouseNearGlance}
+            onModelBoundsChange={pet.setModelBounds}
             performanceCue={pet.petPerformanceCue ?? null}
             placement="pet-stage"
             paused={panelCollapsed || hasModalOverlay}

@@ -366,6 +366,7 @@ export function LegacyPetView({
 
   function handleMascotPointerUp() {
     dragStateRef.current = null
+    pet.setPetDragging(false)
   }
 
   function handleMascotPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -375,6 +376,7 @@ export function LegacyPetView({
 
     pet.markPresenceActivity()
     dragStateRef.current = { x: event.screenX, y: event.screenY }
+    pet.setPetDragging(true)
     const touchZone = detectTouchZone(event)
 
     pet.setPetTapActive(true)
@@ -629,6 +631,8 @@ export function LegacyPetView({
                       speechLevelSource={voice.speechLevelSource}
                       gazeTarget={pet.gazeTarget}
                       typingActivity={pet.typingActivity}
+                      mouseNearGlance={pet.mouseNearGlance}
+                      onModelBoundsChange={pet.setModelBounds}
                       performanceCue={pet.petPerformanceCue}
                       placement="pet-stage"
                       paused={modalOpen}

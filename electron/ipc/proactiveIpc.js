@@ -26,6 +26,7 @@ import path from 'node:path'
 
 import { PROACTIVE_STRIP_ENABLED, routeDelivery } from '../../shared/proactiveDelivery.js'
 import { inboxStatusAfterInteraction } from '../../shared/proactiveInboxReadRule.js'
+import { createTypingQuietGate } from '../../shared/typingQuietGate.js'
 import { createLogger } from '../logger.js'
 import { readMainUiLocale } from '../mainMessages.js'
 import { buildProactiveNotificationCopy } from '../proactiveNotificationCopy.js'
@@ -117,6 +118,8 @@ const STRIP_HANDLED_ACTIONS = new Set(['done', 'open', 'reply'])
  * @property {() => boolean} isPanelFocused
  * @property {() => Promise<DeliveryContext>} [getDeliveryContext]
  * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
+ * @property {() => boolean} [getTypingQuiet] True only while desktop typing quiet is active.
+ * @property {(listener: (typing: boolean) => void) => () => void} [subscribeTypingQuiet]
  */
 
 /**
@@ -145,9 +148,38 @@ export function createProactiveIpc({
     stripEnabled: PROACTIVE_STRIP_ENABLED,
   }),
   setDeliveryPreferences = () => {},
+  getTypingQuiet = () => false,
+  subscribeTypingQuiet = () => () => {},
 }) {
   /** @type {{ unref?: () => void } | null} */
   let pruneTimer = null
+
+  const typingGate = createTypingQuietGate({
+    isTyping: () => getTypingQuiet() === true,
+    subscribe: subscribeTypingQuiet,
+  })
+
+  /**
+   * Serialise deliveries so a held queue keeps its arrival order. Each task
+   * re-checks the typing boolean after the previous one finishes, which is
+   * what lets a repeatedly flipping flag hold only the messages still
+   * waiting. The inbox write and every visible outlet happen inside the task,
+   * so a held message is neither marked delivered nor surfaced early.
+   */
+  let deliveryChain = Promise.resolve()
+  /**
+   * @template T
+   * @param {() => Promise<T>} task
+   * @returns {Promise<T>}
+   */
+  function enqueueDelivery(task) {
+    const run = deliveryChain.then(async () => {
+      await typingGate.whenFree()
+      return task()
+    })
+    deliveryChain = run.then(() => undefined, () => undefined)
+    return run
+  }
 
   /**
    * @param {string} channel
@@ -232,6 +264,9 @@ export function createProactiveIpc({
    * @returns {Promise<boolean>}
    */
   async function canReshowStripEntry(id) {
+    // A snoozed row waits out desktop typing quiet instead of being dropped:
+    // the strip session awaits this promise and keeps its snooze token.
+    await typingGate.whenFree()
     const entry = inbox.list().entries.find((item) => item.id === id && item.status === 'unread')
     if (!entry) return false
     let context
@@ -355,10 +390,10 @@ export function createProactiveIpc({
     if (preferences) setDeliveryPreferences(preferences)
     // The pet window cannot see whether the panel is focused, so main, which
     // owns every window, adds that one signal before the pure router runs.
-    return router.deliver(message, {
+    return enqueueDelivery(() => router.deliver(message, {
       ...context,
       panelFocused: context.panelFocused || isPanelFocused(),
-    })
+    }))
   })
 
   ipcMain.handle('inbox:list', (event) => {
@@ -449,6 +484,8 @@ let activeIpc = null
  *   isPanelFocused: ProactiveIpcDependencies['isPanelFocused'],
  *   getDeliveryContext: ProactiveIpcDependencies['getDeliveryContext'],
  *   setDeliveryPreferences: ProactiveIpcDependencies['setDeliveryPreferences'],
+ *   getTypingQuiet: ProactiveIpcDependencies['getTypingQuiet'],
+ *   subscribeTypingQuiet: ProactiveIpcDependencies['subscribeTypingQuiet'],
  *   strip: ProactiveIpcDependencies['strip'],
  *   showOsNotification: ProactiveIpcDependencies['showOsNotification'],
  * }} dependencies
@@ -461,6 +498,8 @@ export function register({
   isPanelFocused,
   getDeliveryContext,
   setDeliveryPreferences,
+  getTypingQuiet,
+  subscribeTypingQuiet,
   strip,
   showOsNotification,
 }) {
@@ -490,6 +529,8 @@ export function register({
     isPanelFocused,
     getDeliveryContext,
     setDeliveryPreferences,
+    getTypingQuiet,
+    subscribeTypingQuiet,
   })
 }
 

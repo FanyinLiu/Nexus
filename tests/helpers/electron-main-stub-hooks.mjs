@@ -130,6 +130,9 @@ export const nativeImage = {
 export const screen = { getAllDisplays: () => [] }
 export const session = { defaultSession: {} }
 export const shell = { openExternal: () => Promise.resolve() }
+export const systemPreferences = {
+  isTrustedAccessibilityClient: () => false,
+}
 export class Tray {}
 export const ipcMain = { handle: () => undefined }
 export const powerMonitor = {

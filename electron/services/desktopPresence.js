@@ -24,10 +24,12 @@ import {
   toPublicGazeSample,
 } from '../../shared/gazeFollow.js'
 import {
+  TYPING_QUIET_RESUME_MS,
   classifyLinuxTypingHookFailure,
   createTypingActivityMachine,
   toPublicTypingSignal,
 } from '../../shared/typingActivity.js'
+import { shouldHoldForTypingQuiet } from '../../shared/typingQuietGate.js'
 
 const TYPING_TICK_MS = 100
 const TYPING_EMIT_MS = 50
@@ -57,6 +59,11 @@ let typingGeneration = 0
 let activityTimer = null
 let typingTimer = null
 let pendingTyping = null
+let typingQuietUntil = 0
+let typingQuietActive = false
+let typingQuietTimer = null
+/** @type {Set<(typing: boolean) => void>} */
+const typingQuietListeners = new Set()
 
 /**
  * @param {'granted' | 'denied' | 'unavailable' | 'not-applicable'} permission
@@ -113,6 +120,7 @@ function sendTyping(payload) {
 function publishTyping(signal) {
   const payload = toPublicTypingSignal(signal)
   if (payload.phase === 'idle') return
+  noteTypingQuiet()
   if (payload.phase === 'start' || payload.phase === 'stop') {
     if (typingTimer) clearTimeout(typingTimer)
     typingTimer = null
@@ -128,6 +136,89 @@ function publishTyping(signal) {
     pendingTyping = null
     if (next) sendTyping(next)
   }, TYPING_EMIT_MS)
+}
+
+/**
+ * The router only needs a boolean. True means the opt-in switch is on, the
+ * native hook is running, and the last activity is inside the quiet grace.
+ * @returns {boolean}
+ */
+function computeTypingQuiet() {
+  return shouldHoldForTypingQuiet({
+    settingEnabled: preferences.typingAwarenessEnabled === true,
+    hookRunning: input.isTypingRunning() === true,
+    quietUntil: typingQuietUntil,
+    now: Date.now(),
+  })
+}
+
+function emitTypingQuiet() {
+  const next = computeTypingQuiet()
+  if (next === typingQuietActive) return
+  typingQuietActive = next
+  for (const listener of typingQuietListeners) {
+    try {
+      listener(next)
+    } catch {
+      // A broken subscriber must not stop the remaining listeners.
+    }
+  }
+}
+
+function armTypingQuietTimer() {
+  if (typingQuietTimer) clearTimeout(typingQuietTimer)
+  typingQuietTimer = null
+  const remaining = typingQuietUntil - Date.now()
+  if (remaining <= 0) {
+    emitTypingQuiet()
+    return
+  }
+  typingQuietTimer = setTimeout(() => {
+    typingQuietTimer = null
+    emitTypingQuiet()
+  }, remaining + 50)
+  typingQuietTimer.unref?.()
+}
+
+/** Start or extend the post-typing grace. */
+function noteTypingQuiet() {
+  if (preferences.typingAwarenessEnabled !== true) {
+    clearTypingQuiet()
+    return
+  }
+  typingQuietUntil = Date.now() + TYPING_QUIET_RESUME_MS
+  armTypingQuietTimer()
+  emitTypingQuiet()
+}
+
+/** Fail-closed clear for setting off, hook stop, lock, suspend or quit. */
+function clearTypingQuiet() {
+  typingQuietUntil = 0
+  if (typingQuietTimer) clearTimeout(typingQuietTimer)
+  typingQuietTimer = null
+  emitTypingQuiet()
+}
+
+/**
+ * Boolean-only view for the proactive router.
+ * @returns {boolean}
+ */
+export function getTypingQuietState() {
+  return computeTypingQuiet()
+}
+
+/**
+ * Subscribe to quiet-start / quiet-end flips. The callback receives only a
+ * boolean; no key, rate or cursor value crosses this boundary.
+ * @param {(typing: boolean) => void} listener
+ * @returns {() => void}
+ */
+export function subscribeTypingQuiet(listener) {
+  if (typeof listener !== 'function') return () => {}
+  typingQuietListeners.add(listener)
+  return () => {
+    typingQuietListeners.delete(listener)
+  }
 }
 
 function ensureActivityTimer() {
@@ -163,6 +254,7 @@ function stopTypingOutput(publishStop, wasRunning) {
   pendingTyping = null
   const signal = machine.reset(Date.now())
   if (publishStop && wasRunning) publishTyping(signal)
+  clearTypingQuiet()
 }
 
 function accessibilityGranted() {
@@ -395,6 +487,7 @@ function tickGaze() {
 function resetTypingForPower() {
   const signal = machine.reset(Date.now())
   publishTyping(signal)
+  clearTypingQuiet()
 }
 
 function onSuspend() {
@@ -462,6 +555,7 @@ export function applyDesktopPresencePreferences(next) {
     typingAwarenessEnabled: next?.typingAwarenessEnabled === true,
   }
   pauseSent = false
+  emitTypingQuiet()
   void refreshTyping()
   tickGaze()
   return currentStatus
@@ -536,6 +630,7 @@ export function stopDesktopPresence() {
   gazeTimer = null
   gazeInterval = 0
   stopTypingOutput(true, input.isTypingRunning())
+  clearTypingQuiet()
   void input.stop()
   unbindPower()
   unbindFocus()
