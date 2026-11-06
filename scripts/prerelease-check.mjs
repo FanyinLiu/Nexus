@@ -19,7 +19,7 @@
  */
 
 import { execFileSync, execSync } from 'node:child_process'
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -453,14 +453,33 @@ stage('D', 'Asset integrity', () => {
     if (errors.length > 0) throw new Error(errors.join('\n       '))
   })
 
-  check('D', 'dist/ contains app-runtime + index.html + ort-wasm', () => {
+  check('D', 'dist/ contains app-runtime + index.html + vendor/ort ORT runtime', () => {
     const required = ['index.html']
     for (const r of required) {
       if (!existsSync(join(ROOT, 'dist', r))) throw new Error(`dist/${r} missing — run 'npm run build'`)
     }
     const assets = existsSync(join(ROOT, 'dist/assets')) ? readdirSync(join(ROOT, 'dist/assets')) : []
     if (!assets.some((f) => f.startsWith('app-runtime-'))) throw new Error('dist/assets/app-runtime-*.js missing')
-    if (!assets.some((f) => f.includes('ort-wasm-simd'))) throw new Error('dist/assets/ort-wasm-simd*.wasm missing')
+    // ORT wasm is vendored, not bundled: the build drops the asyncify emission
+    // from dist/assets, and VAD / Smart Turn / transformers all load these files
+    // from dist/vendor/ort at runtime.
+    const ortFiles = [
+      'ort-wasm-simd-threaded.mjs',
+      'ort-wasm-simd-threaded.wasm',
+      'ort-wasm-simd-threaded.jsep.mjs',
+      'ort-wasm-simd-threaded.jsep.wasm',
+      'ort-wasm-simd-threaded.asyncify.mjs',
+      'ort-wasm-simd-threaded.asyncify.wasm',
+    ]
+    const missing = ortFiles.filter((file) => {
+      const path = join(ROOT, 'dist', 'vendor', 'ort', file)
+      return !existsSync(path) || statSync(path).size === 0
+    })
+    if (missing.length > 0) {
+      throw new Error(
+        `dist/vendor/ort missing or empty: ${missing.join(', ')} — run 'node scripts/setup-vendor.mjs' then 'npm run build'`,
+      )
+    }
   })
 })
 
