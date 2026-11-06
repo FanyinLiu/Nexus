@@ -30,6 +30,33 @@ count, and daily-log copy. The stable handoff lives in
 release commit by the protected workflow; no physical-device evidence is
 claimed.
 
+### v0.5.0 unsigned update channel exception — 2026-11-06
+
+For v0.5.0 only, 音梵 (the owner) explicitly authorized publishing the stable
+release without the `NEXUS_UPDATE_SIGNING_KEY` secret. This does not waive any
+gate: tag provenance, `release:unsigned:gate`, `prerelease-check`, packaging,
+per-platform checksum generation, remote asset closure, and draft publication
+still run unchanged.
+
+The accepted profile is `unsigned-manual`:
+
+- Windows and Linux publish installers and `SHA256SUMS-*.txt` only. Their
+  `latest.yml` / `latest-linux*.yml` and `.sig` files are removed before the
+  checksum and upload steps and are never published.
+- Windows and Linux therefore have **no automatic update** for v0.5.0. Users
+  must download the next version manually from the official GitHub Release.
+  Release notes and support replies must not claim Windows/Linux auto-update.
+- The macOS arm64 build stays ad-hoc signed and manual-download. Its
+  `latest-mac.yml` is produced but not consumed by the unsigned macOS runtime.
+- The Windows x64 installer stays `NotSigned`; the SmartScreen warning is
+  expected.
+- A missing key must never be replaced by a fabricated signature, a new key
+  introduced during the release, or an unsigned manifest upload.
+
+This exception ends with v0.5.0. v0.5.1 and later must publish the signed
+profile by configuring `NEXUS_UPDATE_SIGNING_KEY`, or record a new
+version-scoped exception before tagging.
+
 ### v0.4.3 maintainer exception — 2026-07-16
 
 For v0.4.3 only, the maintainer explicitly accepted a direct stable promotion
@@ -219,11 +246,14 @@ Nexus is distributed as a desktop app, not as an npm-installed end-user app.
   [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) page. It is
   the only official binary source; mirrors and re-hosted archives are not part
   of the release contract.
-- **v0.4.4 platform scope** is macOS arm64, Windows x64, and Linux x64. Do not
+- **v0.5.0 platform scope** is macOS arm64, Windows x64, and Linux x64. Do not
   describe the macOS asset as x64 or universal.
 - **Updates are platform-specific.** Windows and Linux may consume published
-  update metadata; unsigned macOS builds only check for a version and open the
-  official release page for a manual download.
+  update metadata when the signed profile is active. For v0.5.0 the
+  `unsigned-manual` profile is active: Windows and Linux publish no updater
+  metadata and users download the next version manually from GitHub Releases.
+  Unsigned macOS builds only check for a version and open the official release
+  page for a manual download.
 - **npm** is the developer path: `npm install`, `npm run electron:dev`,
   `npm run doctor`, packaging scripts, and release checks.
 - There is no npm installer in the current release plan. Keep the end-user path
@@ -240,7 +270,14 @@ installer trust docs, or release workflow secrets:
 npm run release:trust:audit
 ```
 
-`npm run distribution:audit` also runs this gate.
+Inspect the Windows/Linux update profile the workflow would select without
+printing the secret value:
+
+```bash
+node scripts/release-update-profile.mjs --resolve
+```
+
+`distribution:audit` also runs the release trust gate.
 
 To inspect optional future signing readiness without changing the supported
 unsigned release posture, run:
@@ -251,7 +288,7 @@ npm run release:signing:readiness
 
 This report is non-blocking. It is expected to warn until Apple Developer ID
 signing and a Windows signing provider are configured; those warnings do not
-block an explicitly unsigned v0.4.4 beta or stable release.
+block an explicitly unsigned v0.5.0 stable release.
 
 Only when intentionally preparing a future signed beta, run the signed-profile
 hard gate:
@@ -268,14 +305,14 @@ npm run release:signing:gate:mac
 npm run release:signing:gate:windows
 ```
 
-These gates are opt-in and are not part of the unsigned v0.4.4 release
+These gates are opt-in and are not part of the unsigned v0.5.0 release
 decision. They verify that signed configuration and secret wiring are present;
 actual certificate values remain GitHub Actions secrets and are never stored
 in this repository.
 
 ## Signing and Update Trust
 
-Current v0.4.4 release posture:
+Current v0.5.0 release posture:
 
 - **macOS arm64 only.** The app is ad-hoc signed, which checks internal code
   consistency but does not establish Apple Developer ID trust and is not
@@ -291,14 +328,21 @@ Current v0.4.4 release posture:
   `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`. SHA-256 is the manual
   download integrity path; the current workflow does not generate GPG
   signature assets.
-- **Signed update manifests.** Windows and Linux auto-update consume
+- **Update manifest profiles.** The release workflow resolves `signed` when
+  `NEXUS_UPDATE_SIGNING_KEY` is present and `unsigned-manual` when it is
+  absent. In `signed`, Windows and Linux auto-update consume
   `latest.yml` / `latest-linux*.yml` only after the app verifies the detached
   Ed25519 signature in the adjacent `<manifest>.sig`. The CI build signs each
   manifest with the `NEXUS_UPDATE_SIGNING_KEY` GitHub Actions secret (PKCS8
   Ed25519 PEM), verifies the result against the public key embedded in
-  `electron/services/updateSigningKey.js`, and fails the job when the secret is
-  missing so an unsigned Windows/Linux release is never published. The private
-  key is never stored in this repository.
+  `electron/services/updateSigningKey.js`, and fails the job when a manifest is
+  missing. In `unsigned-manual`, the workflow deletes the Windows/Linux
+  manifests and signatures before checksums and upload; only installers and
+  `SHA256SUMS-*` are published, and both the per-platform checksum audit and
+  the remote closure audit run with `--update-profile unsigned-manual`. An
+  unsigned manifest is never uploaded because the client refuses it. v0.5.0
+  uses `unsigned-manual` under the 2026-11-06 exception. The private key is
+  never stored in this repository.
 - **Official source.** Only `https://github.com/FanyinLiu/Nexus/releases` is
   official. Release notes and READMEs must tell users to delete artifacts from
   mirrors or unknown sources and download again from GitHub.
@@ -313,7 +357,7 @@ handle Gatekeeper again, and replace `/Applications/Nexus.app`.
 Ad-hoc signing must never be described as Apple trust, Developer ID signing,
 notarization, or a passing `spctl` assessment. A future signed/notarized path
 requires a separate beta cycle and explicit signed-profile gates; it is not a
-v0.4.4 release prerequisite.
+v0.5.0 release prerequisite.
 
 ### Windows unsigned installer limitation
 
@@ -321,7 +365,7 @@ The Windows x64 NSIS artifact is `NotSigned`, so it cannot provide verified
 publisher identity or stable SmartScreen reputation. Users must verify that the
 file came from the official GitHub Release before choosing **More info → Run
 anyway**. A future signed path requires separate credentials and validation; it
-is not a v0.4.4 release prerequisite.
+is not a v0.5.0 release prerequisite.
 
 Rollback and recovery:
 
@@ -335,7 +379,7 @@ Rollback and recovery:
 - If an opt-in `release:signing:gate` fails, keep the documented unsigned path.
   For macOS, stay on manual update downloads. For Windows, retain the
   `NotSigned` and SmartScreen caveat. Signing-gate failure does not invalidate
-  the intentionally unsigned v0.4.4 artifacts.
+  the intentionally unsigned v0.5.0 artifacts.
 
 For first-run validation evidence, attach a local doctor report from:
 
@@ -414,7 +458,7 @@ The beta must accumulate real-world use time before stable ships. No fixed
 minimum, but **multiple days of actual conversation** is the expectation, not
 "it installs and the home screen loads."
 
-The v0.4.3 and v0.4.4 exceptions above explicitly waive this duration requirement for those
+The v0.4.3, v0.4.4, v0.4.7, and v0.5.0 exceptions above explicitly waive this duration requirement for those
 version only; it does not invent or substitute multi-day evidence.
 
 - Anything user-facing found during validation → fix on `main` → bump to
@@ -427,12 +471,15 @@ version only; it does not invent or substitute multi-day evidence.
 **Tag format**: `vX.Y.Z` (no hyphen)
 
 - `release.yml` creates a normal (non-pre) release.
-- electron-updater serves the new `latest.yml` / `latest-mac.yml` /
-  `latest-linux.yml` metadata — both stable users AND beta users auto-upgrade on
-  next app launch.
+- With the signed update profile, electron-updater serves the new `latest.yml`
+  / `latest-mac.yml` / `latest-linux.yml` metadata — stable users auto-upgrade
+  on next app launch. With `unsigned-manual` (v0.5.0), Windows and Linux publish
+  no updater metadata; stable users download the next version manually from
+  GitHub Releases, and unsigned macOS already uses the manual release page.
 - **Never** publish a feature release directly as stable unless a version-scoped
   maintainer exception is documented before the release commit. The v0.4.3,
-  v0.4.4, and v0.4.7 exceptions above are the only current exceptions.
+  v0.4.4, v0.4.7, and v0.5.0 version-scoped exceptions above are the only
+  current exceptions.
 
 ---
 

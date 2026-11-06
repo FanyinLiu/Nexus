@@ -26,6 +26,12 @@
 
 发版提交须通过 `verify:release`、Live2D 烟测、打包烟测、持续运行门禁，以及 `prerelease-check -- v0.5.0`。macOS / Windows / Linux CI 须全绿。不声称跨平台真机证据。
 
+## 更新通道（v0.5.0）
+
+音梵已于 2026-11-06 明确允许本版采用未签名更新通道，范围仅限 v0.5.0。由于没有配置 `NEXUS_UPDATE_SIGNING_KEY`，本版不发布 Windows/Linux 更新清单。Windows 和 Linux 在 v0.5.0 **没有自动更新**：下一个版本请到官方 GitHub Releases 手动下载，并核对 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt`。macOS 未签名版本本来就是手动下载。不要对外声称这一版的 Windows/Linux 自动更新可用。
+
+缺少 key 不会放宽发布门禁。tag 来源、preflight、`prerelease-check`、打包、各平台校验和、远端资产闭合检查都照常执行；只是不发布未签名清单。
+
 ## macOS 未签名自动更新限制
 
 macOS arm64 构建为 ad-hoc 签名，非 Apple Developer ID，也未经公证。Gatekeeper 可能要求右键打开或 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。未签名 macOS 包只会检查新版本并打开官方发布页，需手动下载安装。
@@ -44,4 +50,4 @@ Windows x64 安装器为 `NotSigned`。SmartScreen 可能提示未知发布者�
 
 - 不声称跨平台真机证据。
 - macOS / Windows 构建仍未签名，首次启动可能出现系统信任提示。
-- 仓库 Actions secrets 须配置 `NEXUS_UPDATE_SIGNING_KEY`，否则 Windows/Linux 更新清单签名会失败，发版工作流无法发布。
+- v0.5.0 不发布 Windows/Linux 更新清单；本版在 Windows / Linux 上没有自动更新。后续版本请到官方 GitHub Releases 手动下载。这次未签名更新通道只获批用于 v0.5.0。

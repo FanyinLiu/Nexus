@@ -143,6 +143,15 @@ test('a missing signature file fails closed', async () => {
   assert.equal(result.reason, 'missing-signature')
 })
 
+test('a missing channel manifest fails closed instead of reporting an update', async () => {
+  const base = baseInput()
+  const fetch = fakeFetch({})
+
+  const result = await verifyUpdateManifestSignature({ ...base.input, fetchImpl: fetch.fetchImpl })
+  assert.deepEqual(result, { ok: false, reason: 'manifest-unavailable' })
+  assert.deepEqual(fetch.calls, [base.url])
+})
+
 test('a signature made with a different key fails closed', async () => {
   const base = baseInput()
   const otherKeys = createKeyPair()

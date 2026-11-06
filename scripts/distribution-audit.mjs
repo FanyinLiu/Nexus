@@ -169,6 +169,32 @@ check('release workflow builds and uploads updater metadata', () => {
   }
 })
 
+check('release workflow resolves signed and unsigned-manual update profiles', () => {
+  assert(
+    releaseWorkflow.includes('release-update-profile.mjs --resolve'),
+    'release workflow must resolve the update profile before packaging',
+  )
+  assert(
+    releaseWorkflow.includes('secrets.NEXUS_UPDATE_SIGNING_KEY'),
+    'release workflow must read the update signing secret to choose the profile',
+  )
+  assert(
+    releaseWorkflow.includes('release-update-profile.mjs') &&
+      releaseWorkflow.includes('--apply') &&
+      releaseWorkflow.includes('--profile "$UPDATE_PROFILE"'),
+    'release workflow must apply the resolved profile to the Windows/Linux release directory',
+  )
+  assert(
+    releaseWorkflow.includes('unsigned-manual profile must not upload updater metadata'),
+    'upload step must fail closed if unsigned-manual tries to upload updater metadata',
+  )
+  assert(
+    releaseWorkflow.includes('--update-profile "${{ needs.ensure-release.outputs.update_profile }}"') &&
+      releaseWorkflow.includes('--update-profile "$UPDATE_PROFILE"'),
+    'checksum and remote-closure audits must use the resolved update profile',
+  )
+})
+
 check('release workflow serializes runs for the same resolved tag', () => {
   assert(
     releaseWorkflow.includes('group: release-${{ github.repository }}-${{ inputs.tag || github.ref_name }}'),
@@ -405,12 +431,12 @@ check('every release platform has SHA256 integrity metadata', () => {
   }
   assert(releaseWorkflow.includes('Generate platform SHA256 checksums'), 'release workflow must generate platform checksum files')
   assert(
-    releaseWorkflow.includes('node scripts/release-artifact-audit.mjs --platform ${{ matrix.platform }} --release-dir release --tag "${{ needs.ensure-release.outputs.tag }}" --write-checksums'),
+    releaseWorkflow.includes('node scripts/release-artifact-audit.mjs --platform ${{ matrix.platform }} --release-dir release --tag "${{ needs.ensure-release.outputs.tag }}" --update-profile "${{ needs.ensure-release.outputs.update_profile }}" --write-checksums'),
     'release workflow must use the artifact contract to require every platform pattern before writing checksums',
   )
   assert(releaseWorkflow.includes('gh release download "$TAG"'), 'publish must download all remote release assets')
   assert(
-    releaseWorkflow.includes('node scripts/release-artifact-audit.mjs --release-dir "$VERIFY_DIR" --tag "$TAG" --verify-all'),
+    releaseWorkflow.includes('node scripts/release-artifact-audit.mjs --release-dir "$VERIFY_DIR" --tag "$TAG" --update-profile "$UPDATE_PROFILE" --verify-all'),
     'publish must verify the complete remote asset set before publication',
   )
   assert(
