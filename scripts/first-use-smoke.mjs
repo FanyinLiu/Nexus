@@ -336,12 +336,12 @@ async function run() {
 
   await record('settings save rejection is visible inside model settings and retains the draft', async () => {
     await openModelSettings(panel)
-    await panel.getByLabel('Key', { exact: true }).fill(`${FAKE_KEY}-retry`)
+    await panel.getByLabel('API key', { exact: true }).fill(`${FAKE_KEY}-retry`)
     await application.evaluate(() => { globalThis.__nexusFirstUseSmoke.rejectNextVaultWrite = true })
     await panel.locator('.settings-v2__draft-button--primary').click()
     const error = panel.locator('.settings-v3-page > .settings-v3-notice.is-error[role="alert"]')
     await error.waitFor()
-    assert.equal(await panel.getByLabel('Key', { exact: true }).inputValue(), `${FAKE_KEY}-retry`)
+    assert.equal(await panel.getByLabel('API key', { exact: true }).inputValue(), `${FAKE_KEY}-retry`)
     assert.equal(await panel.getByLabel('Address', { exact: true }).inputValue(), provider.baseUrl)
     assert.equal(await panel.getByLabel('Model', { exact: true }).inputValue(), provider.model)
     const visible = await error.evaluate((element) => new Promise((resolve) => {

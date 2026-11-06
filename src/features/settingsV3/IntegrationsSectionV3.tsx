@@ -256,8 +256,14 @@ export const IntegrationsSectionV3 = memo(function IntegrationsSectionV3({ activ
 
       {showGameCompanion ? game('minecraft') : null}
       {showGameCompanion ? game('factorio') : null}
-      {messenger('telegram')}
-      {messenger('discord')}
+
+      <SettingsV3Section
+        title={ti('settings.integrations.messengers_title')}
+        description={ti('settings.integrations.messengers_note')}
+      >
+        {messenger('telegram')}
+        {messenger('discord')}
+      </SettingsV3Section>
     </SettingsV3Page>
   )
 })

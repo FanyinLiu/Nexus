@@ -149,37 +149,40 @@ export function AppearanceSimplePage({ draft, setDraft, petModelPresets }: Appea
         {pace === 'sometimes' ? <p>{ti('settings.simple.initiative_sometimes_hint')}</p> : null}
         {pace === 'often' ? <p>{ti('settings.simple.initiative_often_hint')}</p> : null}
         {showPaceExtras && quiet ? (
-          <div className="settings-v3-row">
-            <div className="settings-v3-row__copy">
-              <strong>{ti('settings.simple.quiet_hours')}</strong>
+          <>
+            <div className="settings-v3-row">
+              <div className="settings-v3-row__copy">
+                <strong>{ti('settings.simple.quiet_hours')}</strong>
+              </div>
+              <input
+                aria-label={ti('settings.memory.proactive.quiet_start')}
+                type="number"
+                min={0}
+                max={23}
+                value={quiet.start}
+                onChange={(event) => patchDraft(quietHoursPatch({
+                  start: clampHour(event.target.value),
+                  end: quiet.end,
+                }))}
+              />
+              <input
+                aria-label={ti('settings.memory.proactive.quiet_end')}
+                type="number"
+                min={0}
+                max={23}
+                value={quiet.end}
+                onChange={(event) => patchDraft(quietHoursPatch({
+                  start: quiet.start,
+                  end: clampHour(event.target.value),
+                }))}
+              />
             </div>
-            <input
-              aria-label={ti('settings.memory.proactive.quiet_start')}
-              type="number"
-              min={0}
-              max={23}
-              value={quiet.start}
-              onChange={(event) => patchDraft(quietHoursPatch({
-                start: clampHour(event.target.value),
-                end: quiet.end,
-              }))}
-            />
-            <input
-              aria-label={ti('settings.memory.proactive.quiet_end')}
-              type="number"
-              min={0}
-              max={23}
-              value={quiet.end}
-              onChange={(event) => patchDraft(quietHoursPatch({
-                start: quiet.start,
-                end: clampHour(event.target.value),
-              }))}
-            />
-          </div>
+            <p>{ti('settings.simple.quiet_hours_hint')}</p>
+          </>
         ) : null}
         {showPaceExtras && !quiet ? <p>{ti('settings.simple.quiet_split')}</p> : null}
         {showPaceExtras ? (
-          <SimpleRow icon="bell" tone="warning" title={ti('settings.simple.away')}>
+          <SimpleRow icon="bell" tone="warning" title={ti('settings.simple.away')} hint={ti('settings.simple.away_hint')}>
             <SettingsV3Switch
               checked={draft.proactiveAwayNotificationsEnabled}
               label={ti('settings.simple.away')}

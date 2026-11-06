@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 
 import { zhCNSettingsModel } from '../src/i18n/locales/zh-CN/settings-model.ts'
+import { zhCNSettingsSimple } from '../src/i18n/locales/zh-CN/settings-simple.ts'
 import { zhCNSettingsVoice } from '../src/i18n/locales/zh-CN/settings-voice.ts'
 import { zhCNVoice } from '../src/i18n/locales/zh-CN/voice.ts'
 
@@ -172,7 +173,7 @@ test('the voice page can still pick the fill-the-box trigger', { timeout: 150_00
     wakeWord: '小N',
     wakeWordEnabled: true,
   })
-  await openAdvanced(page, '换服务、语速、一直听')
+  await openAdvanced(page, zhCNSettingsSimple['settings.simple.advanced_voice'])
 
   const trigger = page.getByRole('combobox', { name: TRIGGER_MODE_LABEL })
   await trigger.waitFor({ state: 'visible' })
@@ -203,7 +204,7 @@ test('a preset service keeps its address editable in the advanced section', { ti
     apiProviderId: 'openai',
     apiBaseUrl: 'https://proxy.example/v1',
   })
-  await openAdvanced(page, '地址、Telegram、Discord、花费上限')
+  await openAdvanced(page, zhCNSettingsSimple['settings.simple.advanced_connect'])
 
   const endpoint = page.getByLabel(ENDPOINT_LABEL)
   await endpoint.waitFor({ state: 'visible' })
@@ -224,7 +225,7 @@ test('a service the person fills in keeps its address on the plain page', { time
     apiProviderId: 'custom',
     apiBaseUrl: 'https://proxy.example/v1',
   })
-  await openAdvanced(page, '地址、Telegram、Discord、花费上限')
+  await openAdvanced(page, zhCNSettingsSimple['settings.simple.advanced_connect'])
 
   const address = page.getByLabel('地址', { exact: true })
   await address.waitFor({ state: 'visible' })
@@ -240,7 +241,7 @@ test('the weather city stays editable when search and weather disagree', { timeo
     toolWeatherEnabled: true,
     toolWeatherDefaultLocation: '深圳',
   })
-  await openAdvanced(page, '地址、Telegram、Discord、花费上限')
+  await openAdvanced(page, zhCNSettingsSimple['settings.simple.advanced_connect'])
 
   const city = page.getByLabel('天气默认地点')
   await city.waitFor({ state: 'visible' })
