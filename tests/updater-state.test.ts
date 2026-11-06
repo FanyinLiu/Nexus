@@ -8,6 +8,7 @@ import {
   normalizeUpdaterEvent,
   reduceUpdaterCheckResult,
   reduceUpdaterEvent,
+  resolveUpdaterSimpleStatus,
 } from '../src/features/updater/state.ts'
 
 test('updater busy state covers checking, available, and progress phases', () => {
@@ -240,6 +241,33 @@ test('reduceUpdaterCheckResult does not regress download progress from a late ch
 
   assert.equal(state.busy, true)
   assert.deepEqual(state.event, progress.event)
+})
+
+test('simple updater status keeps a failed check distinct from up to date', () => {
+  assert.equal(resolveUpdaterSimpleStatus({
+    busy: true,
+    event: { type: 'checking' },
+  }), 'checking')
+
+  assert.equal(resolveUpdaterSimpleStatus({
+    busy: false,
+    event: { type: 'not-available', version: '0.5.0' },
+  }), 'current')
+
+  assert.equal(resolveUpdaterSimpleStatus({
+    busy: false,
+    event: { type: 'error', message: 'Cannot find latest.yml in the latest release artifacts' },
+  }), 'failed')
+
+  assert.equal(resolveUpdaterSimpleStatus({
+    busy: false,
+    event: {
+      type: 'manual-update',
+      version: '0.5.1',
+      releaseUrl: 'https://github.com/FanyinLiu/Nexus/releases/tag/v0.5.1',
+      reason: 'unsigned-manual',
+    },
+  }), 'available')
 })
 
 test('reduceUpdaterCheckResult clears busy for no-update and failed checks', () => {

@@ -211,6 +211,32 @@ export function isUpdaterBusyEvent(event: unknown): boolean {
     || normalizedEvent.type === 'progress'
 }
 
+/** Coarse status used by the simple settings page. */
+export type UpdaterSimpleStatus = 'checking' | 'available' | 'failed' | 'current'
+
+/**
+ * Map the updater state to the simple page status without turning a failed
+ * check into "current". A missing channel manifest is an error here, not an
+ * up-to-date success.
+ * @param {{ busy: boolean, event: UpdaterEvent }} state
+ * @returns {UpdaterSimpleStatus}
+ */
+export function resolveUpdaterSimpleStatus(state: {
+  busy: boolean
+  event: UpdaterEvent
+}): UpdaterSimpleStatus {
+  if (state.busy || state.event.type === 'checking') return 'checking'
+  if (
+    state.event.type === 'available'
+    || state.event.type === 'downloaded'
+    || state.event.type === 'manual-update'
+  ) {
+    return 'available'
+  }
+  if (state.event.type === 'error') return 'failed'
+  return 'current'
+}
+
 export function applyUpdaterStatus(
   previous: UpdaterState,
   status: UpdaterStatusSnapshot | null | undefined,

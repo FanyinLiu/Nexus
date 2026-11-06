@@ -3,6 +3,7 @@
  */
 
 import { useUpdater } from '../../features/updater/useUpdater.ts'
+import { resolveUpdaterSimpleStatus } from '../../features/updater/state.ts'
 import { UI_LANGUAGE_OPTIONS } from '../../lib/uiLanguage.ts'
 import { SettingsV3Field } from '../../features/settingsV3/SettingsV3Primitives.tsx'
 import type { AppSettings } from '../../types/index.ts'
@@ -18,15 +19,16 @@ type AboutSimplePageProps = {
 export function AboutSimplePage({ draft, onSelectLanguage, onOpenOnboarding }: AboutSimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
   const updater = useUpdater()
-  const newer = updater.event.type === 'available'
-    || updater.event.type === 'downloaded'
-    || updater.event.type === 'manual-update'
-  const checking = updater.busy || updater.event.type === 'checking'
+  const simpleStatus = resolveUpdaterSimpleStatus(updater)
+  const checking = simpleStatus === 'checking'
   const status = checking
     ? ti('settings.simple.about_checking')
-    : newer
+    : simpleStatus === 'available'
       ? ti('settings.simple.about_available')
-      : ti('settings.simple.about_current')
+      : simpleStatus === 'failed'
+        ? ti('updater.error.check_failed')
+        : ti('settings.simple.about_current')
+  const statusTone = simpleStatus === 'failed' ? 'warning' : 'success'
 
   return (
     <>
@@ -42,7 +44,7 @@ export function AboutSimplePage({ draft, onSelectLanguage, onOpenOnboarding }: A
             ))}
           </select>
         </SettingsV3Field>
-        <SimpleRow icon="refresh" tone="success" title={status}>
+        <SimpleRow icon="refresh" tone={statusTone} title={status}>
           <button
             type="button"
             className="settings-v3-action"
