@@ -144,10 +144,13 @@ function MessageWatcher({ draft, setDraft, ti }: {
           }))}
         />
       </SettingsV3Row>
+      {draft.macosMessageWatcherEnabled && !draft.autonomyNotificationsEnabled ? (
+        <SettingsV3Notice title={ti('settings.autonomy.watcher.master_off')} />
+      ) : null}
       {draft.macosMessageWatcherEnabled && status === 'needs-permission' ? (
         <div className="settings-v3-editor">
           <SettingsV3Notice tone="warning" title={ti('settings.autonomy.watcher.permission_note')}>
-            {ti('settings.autonomy.watcher.permission_note')}
+            {ti('settings.autonomy.watcher.permission_body')}
           </SettingsV3Notice>
           <SettingsV3Toolbar>
             <button
@@ -171,7 +174,7 @@ function MessageWatcher({ draft, setDraft, ti }: {
           </SettingsV3Field>
           <SettingsV3Row
             label={ti('settings.autonomy.watcher.to_chat')}
-            hint={ti('settings.autonomy.watcher.hint')}
+            hint={ti('settings.autonomy.watcher.to_chat_hint')}
           >
             <SettingsV3Switch
               label={ti('settings.autonomy.watcher.to_chat')}
@@ -245,7 +248,7 @@ function NotificationChannels({
   return (
     <div className="settings-v3-editor">
       <SettingsV3Notice title={ti('settings.autonomy.notifications.local_webhook')}>
-        {`POST ${webhookInfo?.url ?? 'http://127.0.0.1:47830/webhook'}${webhookInfo?.requiresAuth ? ` · ${webhookInfo.tokenFileName || 'notification-webhook-token.txt'}` : ''}`}
+        <>{`POST ${webhookInfo?.url ?? 'http://127.0.0.1:47830/webhook'}${webhookInfo?.requiresAuth ? ` · ${webhookInfo.tokenFileName || 'notification-webhook-token.txt'}` : ''}`}<br />{ti('settings.autonomy.notifications.webhook_hint')}</>
       </SettingsV3Notice>
       {channelsLoading ? <SettingsV3Notice title={ti('settings.autonomy.notifications.loading')} announce /> : null}
       {!channelsLoading && rssChannels.length ? (
@@ -334,6 +337,7 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
   }
   const hasChannels = channels !== undefined && onAddChannel && onUpdateChannel && onRemoveChannel
   const quietHours = `${String(draft.autonomyQuietHoursStart).padStart(2, '0')}:00 – ${String(draft.autonomyQuietHoursEnd).padStart(2, '0')}:00`
+  const proactiveQuietHours = `${String(draft.proactiveQuietHoursStart).padStart(2, '0')}:00 – ${String(draft.proactiveQuietHoursEnd).padStart(2, '0')}:00`
 
   return (
     <SettingsV3Page className={active ? 'settings-v3-autonomy' : 'is-hidden settings-v3-autonomy'}>
@@ -341,8 +345,8 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
         <SettingsV3Row
           icon="sparkles"
           label={ti('settings.autonomy.enable')}
-          hint={ti('settings.autonomy.presence.hint')}
-          meta={draft.autonomyEnabled ? ti('settings.autonomy.watcher.status.running') : ti('settings.autonomy.watcher.status.stopped')}
+          hint={ti('settings.autonomy.enable_hint')}
+          meta={draft.autonomyEnabled ? ti('settings.autonomy.enable_meta.on') : ti('settings.autonomy.enable_meta.off')}
         >
           <SettingsV3Switch
             label={ti('settings.autonomy.enable')}
@@ -352,17 +356,10 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
         </SettingsV3Row>
       </SettingsV3Section>
 
-      <SettingsV3Section title={ti('settings.autonomy.tick.title')} description={ti('settings.autonomy.tick.quiet_note')}>
-        <div className="settings-v3-editor">
-          <SettingsV3Notice title={quietHours}>{ti('settings.autonomy.tick.quiet_note')}</SettingsV3Notice>
-          <div className="settings-v3-editor">
-            <NumberSetting draft={draft} field="autonomyQuietHoursStart" label={ti('settings.autonomy.tick.quiet_start')} min={0} max={23} setDraft={setDraft} />
-            <NumberSetting draft={draft} field="autonomyQuietHoursEnd" label={ti('settings.autonomy.tick.quiet_end')} min={0} max={23} setDraft={setDraft} />
-          </div>
-        </div>
-      </SettingsV3Section>
-
-      <SettingsV3Section title={ti('settings.autonomy.presence.title')} description={ti('settings.autonomy.presence.hint')}>
+      <SettingsV3Section
+        title={ti('settings.autonomy.presence.title')}
+        description={ti('settings.autonomy.presence.section_hint')}
+      >
         <SettingsV3Row label={ti('settings.autonomy.presence.enable')} hint={ti('settings.autonomy.presence.hint')}>
           <SettingsV3Switch
             label={ti('settings.autonomy.presence.enable')}
@@ -372,7 +369,10 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
         </SettingsV3Row>
         {draft.proactivePresenceEnabled ? (
           <div className="settings-v3-editor">
-            <SettingsV3Field label={ti('settings.autonomy.presence.interval')} hint={ti('settings.autonomy.presence.hint')}>
+            <SettingsV3Field
+              label={ti('settings.autonomy.presence.interval')}
+              hint={ti('settings.autonomy.presence.interval_hint')}
+            >
               <input
                 type="number"
                 min={5}
@@ -404,14 +404,22 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
               step={30}
               setDraft={setDraft}
             />
-            <SettingsV3Notice title={ti('settings.autonomy.tick.quiet_note')}>{ti('settings.autonomy.away_notification.hint')}</SettingsV3Notice>
+            <SettingsV3Notice title={proactiveQuietHours}>
+              {ti('settings.autonomy.away_notification.quiet_note')}
+            </SettingsV3Notice>
           </div>
         ) : null}
       </SettingsV3Section>
 
       {draft.autonomyEnabled ? (
-        <SettingsV3Disclosure title={ti('settings.autonomy.tick.title')} description={ti('settings.autonomy.tick.hint')}>
-          <SettingsV3Row label={ti('settings.autonomy.tick.wake_on_input')} hint={ti('settings.autonomy.tick.hint')}>
+        <SettingsV3Disclosure
+          title={ti('settings.autonomy.background.title')}
+          description={ti('settings.autonomy.background.hint')}
+        >
+          <SettingsV3Row
+            label={ti('settings.autonomy.tick.wake_on_input')}
+            hint={ti('settings.autonomy.tick.wake_on_input_hint')}
+          >
             <SettingsV3Switch
               label={ti('settings.autonomy.tick.wake_on_input')}
               checked={draft.autonomyWakeOnInput}
@@ -443,12 +451,21 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
           <SettingsV3Row label={ti('settings.autonomy.triggers.enable')} hint={ti('settings.autonomy.triggers.hint')}>
             <SettingsV3Switch label={ti('settings.autonomy.triggers.enable')} checked={draft.autonomyContextTriggersEnabled} onChange={(value) => setSetting('autonomyContextTriggersEnabled', value)} />
           </SettingsV3Row>
+          <div className="settings-v3-editor">
+            <SettingsV3Notice title={`${ti('settings.autonomy.tick.quiet_title')} · ${quietHours}`}>
+              {ti('settings.autonomy.tick.quiet_note')}
+            </SettingsV3Notice>
+            <div className="settings-v3-editor">
+              <NumberSetting draft={draft} field="autonomyQuietHoursStart" label={ti('settings.autonomy.tick.quiet_start')} min={0} max={23} setDraft={setDraft} />
+              <NumberSetting draft={draft} field="autonomyQuietHoursEnd" label={ti('settings.autonomy.tick.quiet_end')} min={0} max={23} setDraft={setDraft} />
+            </div>
+          </div>
         </SettingsV3Disclosure>
       ) : null}
 
       <SettingsV3Disclosure title={ti('settings.autonomy.notifications.title')} description={ti('settings.autonomy.notifications.hint')}>
         <MessageWatcher draft={draft} setDraft={setDraft} ti={ti} />
-        <SettingsV3Row label={ti('settings.autonomy.notifications.enable')} hint={ti('settings.autonomy.notifications.hint')}>
+        <SettingsV3Row label={ti('settings.autonomy.notifications.enable')} hint={ti('settings.autonomy.notifications.enable_hint')}>
           <SettingsV3Switch label={ti('settings.autonomy.notifications.enable')} checked={draft.autonomyNotificationsEnabled} onChange={(value) => setSetting('autonomyNotificationsEnabled', value)} />
         </SettingsV3Row>
         {draft.autonomyNotificationsEnabled ? (
@@ -460,15 +477,20 @@ export const AutonomySectionV3 = memo(function AutonomySectionV3({
               <SettingsV3Switch label={ti('settings.autonomy.notifications.message_preview')} checked={draft.autonomyNotificationMessagePreviewEnabled} disabled={!draft.autonomyNotificationMessageAnnouncementsEnabled} onChange={(value) => setSetting('autonomyNotificationMessagePreviewEnabled', value)} />
             </SettingsV3Row>
             {hasChannels ? (
-              <NotificationChannels
-                channels={channels}
-                channelsLoading={channelsLoading ?? true}
-                onAddChannel={onAddChannel}
-                onUpdateChannel={onUpdateChannel}
-                onRemoveChannel={onRemoveChannel}
-                confirm={confirm}
-                ti={ti}
-              />
+              <SettingsV3Disclosure
+                title={ti('settings.autonomy.notifications.advanced_title')}
+                description={ti('settings.autonomy.notifications.advanced_hint')}
+              >
+                <NotificationChannels
+                  channels={channels}
+                  channelsLoading={channelsLoading ?? true}
+                  onAddChannel={onAddChannel}
+                  onUpdateChannel={onUpdateChannel}
+                  onRemoveChannel={onRemoveChannel}
+                  confirm={confirm}
+                  ti={ti}
+                />
+              </SettingsV3Disclosure>
             ) : null}
           </>
         ) : null}

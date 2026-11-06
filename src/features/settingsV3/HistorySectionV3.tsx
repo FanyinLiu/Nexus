@@ -139,7 +139,7 @@ export const HistorySectionV3 = memo(function HistorySectionV3({
       </SettingsV3Section>
 
       <SettingsV3Section
-        title={ti('settings.history.export')}
+        title={ti('settings.history.transfer_title')}
         description={ti('settings.history.hint')}
       >
         <div className="settings-v3-editor">
@@ -268,7 +268,7 @@ export const HistorySectionV3 = memo(function HistorySectionV3({
 
       <SettingsV3Section
         title={ti('settings.history.clear')}
-        description={ti('settings.chat_history.clear_confirm')}
+        description={ti('settings.history.clear_note')}
       >
         <div className="settings-v3-editor">
           <SettingsV3Toolbar>

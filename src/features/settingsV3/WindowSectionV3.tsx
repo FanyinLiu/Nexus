@@ -283,7 +283,10 @@ export const WindowSectionV3 = memo(function WindowSectionV3({
               />
             </SettingsV3Row>
             {draft.ambientWeatherEnabled ? (
-              <SettingsV3Field label={ti('settings.window.ambient_weather_location_label')}>
+              <SettingsV3Field
+                label={ti('settings.window.ambient_weather_location_label')}
+                hint={ti('settings.window.ambient_weather_location_hint')}
+              >
                 <input
                   value={draft.toolWeatherDefaultLocation}
                   placeholder={ti('settings.window.ambient_weather_location_placeholder')}

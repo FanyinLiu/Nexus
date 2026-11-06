@@ -112,7 +112,8 @@ export function OpenLoopAgendaV3({
   }
 
   return (
-    <SettingsV3Section title={ti('settings.memory.loops.title')} description={ti('settings.memory.loops.note')}>
+    <>
+      <SettingsV3Section title={ti('settings.memory.loops.title')} description={ti('settings.memory.loops.note')}>
       <SettingsV3Row label={ti('settings.memory.proactive.enable')} hint={ti('settings.memory.proactive.enable_hint')}>
         <SettingsV3Switch
           checked={draft.proactiveAgendaEnabled}
@@ -132,33 +133,6 @@ export function OpenLoopAgendaV3({
           <option value="normal">{ti('settings.memory.proactive.frequency_normal')}</option>
         </select>
       </SettingsV3Field>
-      <div className="settings-v3-hour-fields">
-        <SettingsV3Field label={ti('settings.memory.proactive.quiet_start')}>
-          <input
-            type="number"
-            min={0}
-            max={23}
-            value={draft.proactiveQuietHoursStart}
-            onChange={(event) => setDraft((previous) => ({
-              ...previous,
-              proactiveQuietHoursStart: Number(event.target.value),
-            }))}
-          />
-        </SettingsV3Field>
-        <SettingsV3Field label={ti('settings.memory.proactive.quiet_end')}>
-          <input
-            type="number"
-            min={0}
-            max={23}
-            value={draft.proactiveQuietHoursEnd}
-            onChange={(event) => setDraft((previous) => ({
-              ...previous,
-              proactiveQuietHoursEnd: Number(event.target.value),
-            }))}
-          />
-        </SettingsV3Field>
-      </div>
-
       <SettingsV3Row
         label={ti('settings.memory.proactive.reminder_strip')}
         hint={ti('settings.memory.proactive.reminder_strip_hint')}
@@ -270,6 +244,39 @@ export function OpenLoopAgendaV3({
           </ul>
         ) : <SettingsV3Empty title={ti('settings.memory.agenda.empty')} />}
       </SettingsV3Disclosure>
-    </SettingsV3Section>
+      </SettingsV3Section>
+
+      <SettingsV3Disclosure
+        title={ti('settings.memory.proactive.quiet_title')}
+        description={ti('settings.memory.proactive.quiet_hint')}
+      >
+        <div className="settings-v3-hour-fields">
+          <SettingsV3Field label={ti('settings.memory.proactive.quiet_start')}>
+            <input
+              type="number"
+              min={0}
+              max={23}
+              value={draft.proactiveQuietHoursStart}
+              onChange={(event) => setDraft((previous) => ({
+                ...previous,
+                proactiveQuietHoursStart: Number(event.target.value),
+              }))}
+            />
+          </SettingsV3Field>
+          <SettingsV3Field label={ti('settings.memory.proactive.quiet_end')}>
+            <input
+              type="number"
+              min={0}
+              max={23}
+              value={draft.proactiveQuietHoursEnd}
+              onChange={(event) => setDraft((previous) => ({
+                ...previous,
+                proactiveQuietHoursEnd: Number(event.target.value),
+              }))}
+            />
+          </SettingsV3Field>
+        </div>
+      </SettingsV3Disclosure>
+    </>
   )
 }
