@@ -15,6 +15,13 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseDocument } from 'yaml'
 
+import {
+  DEFAULT_RELEASE_UPDATE_PROFILE,
+  RELEASE_UPDATE_PROFILE_UNSIGNED_MANUAL,
+  getUpdateManifestGlobs,
+  normalizeReleaseUpdateProfile,
+} from './lib/release-update-profile.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 export const RELEASE_ARTIFACT_CONTRACTS = Object.freeze({
@@ -204,18 +211,34 @@ function validateUpdateMetadata(releaseDir, fileName, version, expectedArtifacts
   return errors
 }
 
-function contractFor(platform) {
+function contractFor(platform, updateProfile = DEFAULT_RELEASE_UPDATE_PROFILE) {
   const contract = RELEASE_ARTIFACT_CONTRACTS[platform]
   if (!contract) throw new Error(`unknown release platform: ${platform}`)
-  return contract
+  if (updateProfile !== RELEASE_UPDATE_PROFILE_UNSIGNED_MANUAL || platform === 'macos') return contract
+
+  const manifestGlobs = getUpdateManifestGlobs(platform)
+  return {
+    ...contract,
+    artifactPatterns: contract.artifactPatterns.filter((pattern) => !manifestGlobs.includes(pattern)),
+    signaturePatterns: [],
+    forbiddenPatterns: [...manifestGlobs, ...manifestGlobs.map((glob) => `${glob}.sig`)],
+  }
 }
 
-export function collectPlatformArtifacts(releaseDir, platform, tag) {
-  const contract = contractFor(platform)
+export function collectPlatformArtifacts(releaseDir, platform, tag, options = {}) {
+  const updateProfile = normalizeReleaseUpdateProfile(options.updateProfile ?? DEFAULT_RELEASE_UPDATE_PROFILE)
+  const contract = contractFor(platform, updateProfile)
   const version = releaseVersionFromTag(tag)
   const files = listTopLevelFiles(releaseDir)
   const errors = []
   const matches = new Map()
+
+  for (const pattern of contract.forbiddenPatterns ?? []) {
+    const forbidden = files.filter((fileName) => matchesPattern(fileName, pattern))
+    if (forbidden.length) {
+      errors.push(`${platform}: ${updateProfile} update profile must not publish: ${forbidden.join(', ')}`)
+    }
+  }
 
   for (const pattern of contract.artifactPatterns) {
     const matched = files.filter((fileName) => matchesPattern(fileName, pattern))
@@ -244,11 +267,11 @@ export function collectPlatformArtifacts(releaseDir, platform, tag) {
     }
   }
 
-  return { platform, contract, files, artifacts, updaterArtifacts, errors, tag, version }
+  return { platform, updateProfile, contract, files, artifacts, updaterArtifacts, errors, tag, version }
 }
 
-export function writePlatformChecksum(releaseDir, platform, tag) {
-  const report = collectPlatformArtifacts(releaseDir, platform, tag)
+export function writePlatformChecksum(releaseDir, platform, tag, options = {}) {
+  const report = collectPlatformArtifacts(releaseDir, platform, tag, options)
   if (report.errors.length) throw new Error(report.errors.join('\n'))
 
   const lines = report.artifacts.map((fileName) => `${sha256(join(releaseDir, fileName))}  ${fileName}`)
@@ -283,7 +306,8 @@ function parseChecksumFile(releaseDir, checksumFile) {
   return { entries, errors }
 }
 
-export function verifyReleaseDirectory(releaseDir, tag) {
+export function verifyReleaseDirectory(releaseDir, tag, options = {}) {
+  const updateProfile = normalizeReleaseUpdateProfile(options.updateProfile ?? DEFAULT_RELEASE_UPDATE_PROFILE)
   const version = releaseVersionFromTag(tag)
   const files = listTopLevelFiles(releaseDir)
   const errors = []
@@ -297,7 +321,7 @@ export function verifyReleaseDirectory(releaseDir, tag) {
 
   const platforms = {}
   for (const platform of Object.keys(RELEASE_ARTIFACT_CONTRACTS)) {
-    const collected = collectPlatformArtifacts(releaseDir, platform, tag)
+    const collected = collectPlatformArtifacts(releaseDir, platform, tag, { updateProfile })
     const { checksumFile } = collected.contract
     errors.push(...collected.errors)
     if (!files.includes(checksumFile)) {
@@ -334,6 +358,7 @@ export function verifyReleaseDirectory(releaseDir, tag) {
     releaseDir,
     tag,
     version,
+    updateProfile,
     files,
     platforms,
     errors,
@@ -345,6 +370,7 @@ export function parseReleaseArtifactArgs(argv) {
     platform: null,
     tag: null,
     releaseDir: resolve(ROOT, 'release'),
+    updateProfile: DEFAULT_RELEASE_UPDATE_PROFILE,
     writeChecksums: false,
     verifyAll: false,
   }
@@ -368,6 +394,11 @@ export function parseReleaseArtifactArgs(argv) {
       options.platform = setValue('--platform', argument.slice('--platform='.length))
     } else if (argument.startsWith('--tag=')) {
       options.tag = setValue('--tag', argument.slice('--tag='.length))
+    } else if (argument === '--update-profile') {
+      options.updateProfile = normalizeReleaseUpdateProfile(setValue('--update-profile', argv[index + 1]))
+      index += 1
+    } else if (argument.startsWith('--update-profile=')) {
+      options.updateProfile = normalizeReleaseUpdateProfile(setValue('--update-profile', argument.slice('--update-profile='.length)))
     } else if (argument.startsWith('--release-dir=')) {
       options.releaseDir = resolve(ROOT, setValue('--release-dir', argument.slice('--release-dir='.length)))
     } else if (argument === '--write-checksums') {
@@ -392,8 +423,10 @@ function main(argv) {
     const args = parseReleaseArtifactArgs(argv)
     if (args.writeChecksums) {
       if (!args.platform) throw new Error('--platform is required with --write-checksums')
-      const report = writePlatformChecksum(args.releaseDir, args.platform, args.tag)
-      console.log(`Release artifact checksum passed for ${args.platform}`)
+      const report = writePlatformChecksum(args.releaseDir, args.platform, args.tag, {
+        updateProfile: args.updateProfile,
+      })
+      console.log(`Release artifact checksum passed for ${args.platform} (${args.updateProfile} update profile)`)
       for (const pattern of report.contract.artifactPatterns) {
         console.log(`- ${pattern}: ${report.artifacts.filter((name) => matchesPattern(name, pattern)).length}`)
       }
@@ -401,9 +434,9 @@ function main(argv) {
       return
     }
     if (args.verifyAll) {
-      const report = verifyReleaseDirectory(args.releaseDir, args.tag)
+      const report = verifyReleaseDirectory(args.releaseDir, args.tag, { updateProfile: args.updateProfile })
       if (!report.ok) throw new Error(report.errors.join('\n'))
-      console.log('Remote release artifact audit passed')
+      console.log(`Remote release artifact audit passed (${report.updateProfile} update profile)`)
       for (const [platform, platformReport] of Object.entries(report.platforms)) {
         console.log(`- ${platform}: ${platformReport.artifacts.length} artifacts + ${platformReport.checksumFile}`)
       }

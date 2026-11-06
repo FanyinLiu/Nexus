@@ -73,8 +73,10 @@ function withFixture(callback: (root: string) => void) {
   }
 }
 
-function writeAllChecksums(root: string) {
-  for (const platform of ['windows', 'macos', 'linux']) writePlatformChecksum(root, platform, 'v0.4.3')
+function writeAllChecksums(root: string, options: { updateProfile?: string } = {}) {
+  for (const platform of ['windows', 'macos', 'linux']) {
+    writePlatformChecksum(root, platform, 'v0.4.3', options)
+  }
 }
 
 test('release artifact audit requires every declared platform pattern and verifies all checksums', () => {
@@ -97,6 +99,62 @@ test('remote release audit accepts detached update manifest signature assets', (
 
     assert.equal(report.ok, true)
     assert.equal(report.errors.length, 0)
+  })
+})
+
+test('unsigned-manual profile accepts installers and checksums without Windows/Linux metadata', () => {
+  withFixture((root) => {
+    rmSync(join(root, 'latest.yml'))
+    rmSync(join(root, 'latest-linux.yml'))
+    writeAllChecksums(root, { updateProfile: 'unsigned-manual' })
+    const report = verifyReleaseDirectory(root, 'v0.4.3', { updateProfile: 'unsigned-manual' })
+
+    assert.equal(report.ok, true)
+    assert.equal(report.errors.length, 0)
+    assert.equal(report.updateProfile, 'unsigned-manual')
+    assert.deepEqual(report.platforms.windows.artifacts, [
+      'Nexus Setup 0.4.3.exe',
+      'Nexus Setup 0.4.3.exe.blockmap',
+    ])
+    assert.deepEqual(report.platforms.linux.artifacts, [
+      'Nexus-0.4.3-x86_64.AppImage',
+      'nexus-0.4.3-x64.tar.gz',
+      'nexus_0.4.3_amd64.deb',
+    ])
+    assert.ok(report.platforms.macos.artifacts.includes('latest-mac.yml'))
+
+    const windowsChecksums = readFileSync(join(root, 'SHA256SUMS-windows.txt'), 'utf8')
+    const linuxChecksums = readFileSync(join(root, 'SHA256SUMS-linux.txt'), 'utf8')
+    assert.doesNotMatch(windowsChecksums, /latest\.yml/)
+    assert.doesNotMatch(linuxChecksums, /latest-linux/)
+    assert.match(windowsChecksums, /Nexus Setup 0\.4\.3\.exe/)
+    assert.match(linuxChecksums, /Nexus-0\.4\.3-x86_64\.AppImage/)
+  })
+})
+
+test('unsigned-manual profile rejects leftover Windows/Linux manifests and signatures', () => {
+  withFixture((root) => {
+    writeFileSync(join(root, 'latest.yml.sig'), 'fixture-signature\n')
+    writeFileSync(join(root, 'latest-linux.yml.sig'), 'fixture-signature\n')
+
+    assert.throws(
+      () => writePlatformChecksum(root, 'windows', 'v0.4.3', { updateProfile: 'unsigned-manual' }),
+      /unsigned-manual update profile must not publish: latest\.yml/,
+    )
+    assert.throws(
+      () => writePlatformChecksum(root, 'linux', 'v0.4.3', { updateProfile: 'unsigned-manual' }),
+      /unsigned-manual update profile must not publish: latest-linux.*\.yml/,
+    )
+  })
+})
+
+test('unsigned-manual profile still requires the macOS manual-download metadata', () => {
+  withFixture((root) => {
+    rmSync(join(root, 'latest-mac.yml'))
+    assert.throws(
+      () => writePlatformChecksum(root, 'macos', 'v0.4.3', { updateProfile: 'unsigned-manual' }),
+      /required artifact pattern must match exactly once: latest-mac\.yml/,
+    )
   })
 })
 
@@ -216,16 +274,22 @@ test('release artifact CLI parser fails closed on missing, duplicate, or unknown
     parseReleaseArtifactArgs(['--platform', 'macos', '--release-dir=out', '--tag=v0.4.3', '--write-checksums']).tag,
     'v0.4.3',
   )
+  assert.equal(
+    parseReleaseArtifactArgs(['--verify-all', '--tag=v0.4.3', '--update-profile=unsigned-manual']).updateProfile,
+    'unsigned-manual',
+  )
   for (const argv of [
     [],
     ['--verify-all', '--write-checksums'],
     ['--tag'],
     ['--tag=v0.4.3', '--tag=v0.4.3', '--verify-all'],
+    ['--update-profile=nope', '--verify-all'],
+    ['--update-profile', '--verify-all'],
     ['--unknown', '--verify-all'],
   ]) {
     assert.throws(
       () => parseReleaseArtifactArgs(argv),
-      /exactly one mode|requires a value|only be provided once|unknown argument/,
+      /exactly one mode|requires a value|only be provided once|unknown argument|unknown update profile/,
     )
   }
 })

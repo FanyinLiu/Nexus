@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { classifyReleaseUpdateProfileWiring } from './lib/release-update-profile.mjs'
+
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const MAC_SIGNING_SECRET_NAMES = [
   'APPLE_API_KEY',
@@ -164,6 +166,10 @@ function classifyLinuxIntegrity(releaseWorkflow) {
       !releaseWorkflow.includes('GPG_PASSPHRASE') &&
       !releaseWorkflow.includes('--detach-sign'),
   }
+}
+
+function classifyUpdateManifestProfile(releaseWorkflow, releasingDoc) {
+  return classifyReleaseUpdateProfileWiring({ releaseWorkflow, releasingDoc })
 }
 
 function buildMacSignedReadiness(pkg, releaseWorkflow, releasingDoc) {
@@ -390,6 +396,7 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
   const mac = classifyMacSigning(pkg, releaseWorkflow, releasingDoc)
   const windows = classifyWindowsSigning(pkg, releaseWorkflow, releasingDoc)
   const linux = classifyLinuxIntegrity(releaseWorkflow)
+  const updateManifestProfile = classifyUpdateManifestProfile(releaseWorkflow, releasingDoc)
   const macSignedReadiness = buildMacSignedReadiness(pkg, releaseWorkflow, releasingDoc)
   const windowsSignedReadiness = buildWindowsSignedReadiness(pkg, releaseWorkflow, releasingDoc)
   const formalIdentity = buildFormalReleaseIdentity(pkg, releaseWorkflow)
@@ -596,6 +603,22 @@ export function buildReleaseTrustReport(root = DEFAULT_ROOT, options = {}) {
     linux.sha256Sums && linux.gpgRemoved
       ? 'Windows, macOS, and Linux SHA256 checksum files are wired without an optional GPG branch'
       : 'per-platform SHA256 checksum files are missing or the obsolete optional GPG branch remains',
+  )
+
+  const updateProfileReady =
+    updateManifestProfile.resolvesFromSecret &&
+    updateManifestProfile.appliesBeforeUpload &&
+    updateManifestProfile.auditsWithProfile &&
+    updateManifestProfile.signsWhenConfigured &&
+    updateManifestProfile.docsRecordUnsignedProfile
+  addCheck(
+    checks,
+    'release.update-manifest-profile',
+    'Update manifests follow an explicit signed/unsigned-manual profile',
+    updateProfileReady ? 'ok' : 'error',
+    updateProfileReady
+      ? 'the workflow signs manifests when the key exists, removes them when it does not, and audits/upload with the resolved profile'
+      : 'update manifest profile resolution, enforcement, audit wiring, signing, or docs are incomplete',
   )
 
   const docsExist =

@@ -15,9 +15,9 @@ import { fileURLToPath } from 'node:url'
 
 import { verifyDetachedManifestSignature } from '../electron/services/updateManifestSignature.js'
 import { UPDATE_SIGNING_PUBLIC_KEY_PEM } from '../electron/services/updateSigningKey.js'
+import { UPDATE_SIGNING_KEY_ENV } from './lib/release-update-profile.mjs'
 
-/** Environment variable that carries the Ed25519 PKCS8 private key. */
-export const UPDATE_SIGNING_KEY_ENV = 'NEXUS_UPDATE_SIGNING_KEY'
+export { UPDATE_SIGNING_KEY_ENV }
 
 /**
  * @param {string} manifestPath

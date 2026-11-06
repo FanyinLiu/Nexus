@@ -72,6 +72,15 @@ jobs:
       - run: CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --config.forceCodeSigning=false --config.mac.identity=-
       - run: electron-builder --win nsis --x64 --config.forceCodeSigning=false --config.win.signAndEditExecutable=true
       - run: node scripts/verify-windows-release.mjs --expect-unsigned
+      - run: profile=$(node scripts/release-update-profile.mjs --resolve)
+        env:
+          NEXUS_UPDATE_SIGNING_KEY: \${{ secrets.NEXUS_UPDATE_SIGNING_KEY }}
+      - run: node scripts/release-update-profile.mjs --apply --profile "$UPDATE_PROFILE" --platform windows --release-dir release
+      - if: always()
+        run: echo 'unsigned-manual profile must not upload updater metadata'
+      - run: node scripts/sign-update-manifest.mjs release/latest.yml
+      - run: node scripts/release-artifact-audit.mjs --update-profile "\${{ needs.ensure-release.outputs.update_profile }}" --verify-all
+      - run: node scripts/release-artifact-audit.mjs --update-profile "$UPDATE_PROFILE" --verify-all
       - run: upload SHA256SUMS-windows.txt
       - run: upload SHA256SUMS-macos.txt
       - run: upload SHA256SUMS-linux.txt
@@ -85,6 +94,8 @@ Run npm run release:trust:audit before release.
 ## macOS unsigned auto-update limitation
 
 Current unsigned macOS builds use manual update downloads.
+The unsigned-manual profile publishes no Windows/Linux updater manifests.
+Users use manual download when no automatic update is published.
 
 Future signing requires APPLE_API_KEY, APPLE_API_KEY_ID, APPLE_API_ISSUER, CSC_LINK, and CSC_KEY_PASSWORD.
 Signed macOS verification will use spctl -a -vv and must document the unsigned to signed transition.
@@ -168,6 +179,21 @@ test('release trust audit accepts the documented unsigned baseline without error
     assert.equal(findCheck(report, 'mac.unsigned-runtime')?.status, 'ok')
     assert.equal(findCheck(report, 'linux.integrity')?.status, 'ok')
     assert.equal(findCheck(report, 'docs.trust-posture')?.status, 'ok')
+  })
+})
+
+test('release trust audit rejects release workflows without update profile wiring', () => {
+  withReleaseTrustFixture({
+    '.github/workflows/release.yml': BASELINE_RELEASE_WORKFLOW.replace(
+      'node scripts/release-update-profile.mjs --resolve',
+      'echo resolve-update-profile',
+    ),
+  }, (root) => {
+    const report = buildReleaseTrustReport(root)
+    const summary = summarizeReleaseTrustReport(report)
+
+    assert.ok(summary.error > 0)
+    assert.equal(findCheck(report, 'release.update-manifest-profile')?.status, 'error')
   })
 })
 

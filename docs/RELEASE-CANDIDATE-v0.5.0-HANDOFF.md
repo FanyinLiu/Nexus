@@ -38,9 +38,27 @@ The macOS arm64 build remains ad-hoc signed and not notarized. The Windows x64
 installer remains unsigned. Users should use only the official GitHub Release
 and verify the published platform checksum.
 
-Repository Actions secrets must include `NEXUS_UPDATE_SIGNING_KEY`, or the
-Windows and Linux update-manifest signing step fails and the release workflow
-cannot publish.
+## Unsigned update channel record — 2026-11-06
+
+The owner (音梵) explicitly authorized v0.5.0 to publish without
+`NEXUS_UPDATE_SIGNING_KEY`. The accepted profile is `unsigned-manual`: the
+Windows/Linux `latest*.yml` and `.sig` files are removed before checksums and
+upload, so no unsigned manifest reaches clients that would refuse it. Installers
+and every platform's `SHA256SUMS-*` still publish.
+
+Consequences for this version:
+
+- Windows and Linux have no automatic update. Users must download later
+  versions manually from the official GitHub Releases.
+- macOS remains ad-hoc signed with manual-download updates.
+- Windows remains `NotSigned` with the expected SmartScreen warning.
+- No gate was waived: tag provenance, `release:unsigned:gate`,
+  `prerelease-check`, packaging, checksum generation, remote asset closure, and
+  draft publication all still run.
+
+This exception is scoped to v0.5.0 only. Later releases must restore the signed
+profile or record a new version-scoped exception before tagging.
+
 
 ## Promotion record
 

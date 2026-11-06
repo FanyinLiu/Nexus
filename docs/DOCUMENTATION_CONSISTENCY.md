@@ -10,7 +10,7 @@
 - v0.4.7 经维护者例外直接晋升为稳定版（2026-08-27）：形象兼容诊断、分层立绘 v4、Grok 语音与 Qwen 3.8-max / GLM-5.3 目录默认。例外记录见 `RELEASING.md`。`v0.4.7-beta.1` 的 2026-08-10 准备记录只作历史，不描述本棵树。
 - v0.4.6 走标准 beta 流程晋升（v0.4.6-beta.1 于 2026-08-10 预发布，验证窗口关闭后于 2026-08-21 稳定）：形象运行时可靠性切片。
 - v0.4.5 走标准 beta 流程晋升（v0.4.5-beta.1 于 2026-08-03 预发布，验证窗口 2026-08-03 → 2026-08-06，无维护者例外）：记忆可信度切片（矛盾检测、迁移默认开）+ presence 管道 + 维护加固。
-- v0.5.0 采用明确的未签名发行策略，签名准备度不是这个版本的阻塞项；v0.4.4 / v0.4.7 / v0.5.0 的维护者例外仅属对应版本，不影响后续默认流程。仓库 Actions secrets 仍须配置 `NEXUS_UPDATE_SIGNING_KEY`，否则 Windows/Linux 更新清单无法签名发布。
+- v0.5.0 采用明确的未签名发行策略，签名准备度不是这个版本的阻塞项；v0.4.4 / v0.4.7 / v0.5.0 的维护者例外仅属对应版本，不影响后续默认流程。2026-11-06 音梵额外允许 v0.5.0 在缺少 `NEXUS_UPDATE_SIGNING_KEY` 时使用 `unsigned-manual` 更新通道：Windows/Linux 不发布 `latest*.yml` 及 `.sig`，因此本版没有自动更新，需手动从 GitHub Releases 下载；installers 与各平台 `SHA256SUMS` 照常发布，tag、preflight、prerelease-check、校验和与远端闭合门禁不得跳过。该例外仅限 v0.5.0，后续版本须恢复签名清单或另记版本范围例外。
 - 官方 GitHub Releases 是唯一二进制来源；平台范围固定为 macOS arm64、Windows x64、Linux x64。
 - v0.3.6 这类更早历史只作为归档 release note / changelog 节点保留。
 - 更早历史放在 GitHub Releases 和 `docs/RELEASE-NOTES-v*.md`，不在 README 顶部继续滚动维护旧版本号。

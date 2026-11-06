@@ -34,6 +34,19 @@ name: Release Build
 # metadata editing but supplies no signing certificate, then verifies the
 # result is unsigned. The production Nexus identity is still isolated from the
 # separate packaged-smoke configuration, and every platform ships SHA256 data.
+#
+# Windows/Linux updater manifests have two explicit profiles:
+#
+#   signed          NEXUS_UPDATE_SIGNING_KEY is present. latest*.yml is signed
+#                   with the embedded Ed25519 public key and uploaded.
+#   unsigned-manual NEXUS_UPDATE_SIGNING_KEY is absent. latest.yml /
+#                   latest-linux*.yml and their .sig files are removed before
+#                   checksums and upload, because clients refuse an unsigned
+#                   manifest. Installers and SHA256SUMS are still published.
+#
+# v0.5.0 uses the unsigned-manual profile under a version-scoped owner
+# exception recorded in docs/RELEASING.md. That is not a license to skip the
+# tag, preflight, packaging, checksum, remote-closure, or publication gates.
 
 on:
   push:
@@ -58,6 +71,7 @@ jobs:
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
       tag_commit: ${{ steps.provenance.outputs.tag_commit }}
+      update_profile: ${{ steps.update-profile.outputs.update_profile }}
     steps:
       - name: Resolve tag
         id: resolve
@@ -85,6 +99,20 @@ jobs:
         with:
           ref: ${{ steps.resolve.outputs.tag }}
           fetch-depth: 0
+
+      - name: Resolve Windows/Linux update manifest profile
+        id: update-profile
+        env:
+          NEXUS_UPDATE_SIGNING_KEY: ${{ secrets.NEXUS_UPDATE_SIGNING_KEY }}
+        shell: bash
+        run: |
+          profile=$(node scripts/release-update-profile.mjs --resolve)
+          echo "update_profile=$profile" >> "$GITHUB_OUTPUT"
+          if [ "$profile" = "signed" ]; then
+            echo "NEXUS_UPDATE_SIGNING_KEY is available; Windows/Linux manifests will be signed."
+          else
+            echo "::warning::NEXUS_UPDATE_SIGNING_KEY is absent; using unsigned-manual profile: no Windows/Linux updater manifests will be produced or uploaded."
+          fi
 
       - name: Validate tag commit provenance
         id: provenance
@@ -192,6 +220,7 @@ jobs:
     outputs:
       tag: ${{ needs.resolve-tag.outputs.tag }}
       tag_commit: ${{ needs.resolve-tag.outputs.tag_commit }}
+      update_profile: ${{ needs.resolve-tag.outputs.update_profile }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -531,14 +560,26 @@ jobs:
           }
           NODE
 
-      - name: Sign Windows and Linux update manifests
+      - name: Apply Windows and Linux update manifest profile
         if: matrix.platform == 'windows' || matrix.platform == 'linux'
         shell: bash
         env:
+          UPDATE_PROFILE: ${{ needs.ensure-release.outputs.update_profile }}
           NEXUS_UPDATE_SIGNING_KEY: ${{ secrets.NEXUS_UPDATE_SIGNING_KEY }}
         run: |
+          node scripts/release-update-profile.mjs \
+            --apply \
+            --profile "$UPDATE_PROFILE" \
+            --platform "${{ matrix.platform }}" \
+            --release-dir release
+
+          if [ "$UPDATE_PROFILE" != "signed" ]; then
+            echo "unsigned-manual profile: Windows/Linux updater manifests and signatures are absent by design."
+            exit 0
+          fi
+
           if [ -z "${NEXUS_UPDATE_SIGNING_KEY:-}" ]; then
-            echo "::error::NEXUS_UPDATE_SIGNING_KEY is missing or empty. Refusing to publish unsigned Windows/Linux update manifests."
+            echo "::error::Signed update profile selected but NEXUS_UPDATE_SIGNING_KEY is missing or empty."
             exit 1
           fi
           shopt -s nullglob
@@ -552,17 +593,6 @@ jobs:
             exit 1
           fi
           node scripts/sign-update-manifest.mjs "${manifests[@]}"
-
-      - name: Verify Windows and Linux update manifest signatures
-        if: matrix.platform == 'windows' || matrix.platform == 'linux'
-        shell: bash
-        run: |
-          shopt -s nullglob
-          if [ "${{ matrix.platform }}" = "windows" ]; then
-            manifests=(release/latest.yml)
-          else
-            manifests=(release/latest-linux*.yml)
-          fi
           node scripts/sign-update-manifest.mjs --verify "${manifests[@]}"
 
       - name: List built artifacts
@@ -570,12 +600,13 @@ jobs:
         run: ls -lh release/ || true
 
       - name: Generate platform SHA256 checksums
-        run: node scripts/release-artifact-audit.mjs --platform ${{ matrix.platform }} --release-dir release --tag "${{ needs.ensure-release.outputs.tag }}" --write-checksums
+        run: node scripts/release-artifact-audit.mjs --platform ${{ matrix.platform }} --release-dir release --tag "${{ needs.ensure-release.outputs.tag }}" --update-profile "${{ needs.ensure-release.outputs.update_profile }}" --write-checksums
 
       - name: Upload assets to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.ensure-release.outputs.tag }}
+          UPDATE_PROFILE: ${{ needs.ensure-release.outputs.update_profile }}
         shell: bash
         run: |
           shopt -s nullglob
@@ -590,6 +621,18 @@ jobs:
           if [ ${#files[@]} -eq 0 ]; then
             echo "No matching artifacts found for ${{ matrix.os }} — failing so the missing platform is visible." >&2
             exit 1
+          fi
+
+          if [ "$UPDATE_PROFILE" = "unsigned-manual" ]; then
+            for f in "${files[@]}"; do
+              base=$(basename "$f")
+              case "$base" in
+                latest.yml|latest.yml.sig|latest-linux*.yml|latest-linux*.yml.sig)
+                  echo "::error::unsigned-manual profile must not upload updater metadata: $f"
+                  exit 1
+                  ;;
+              esac
+            done
           fi
 
           for f in "${files[@]}"; do
@@ -619,6 +662,7 @@ jobs:
           TAG: ${{ needs.ensure-release.outputs.tag }}
           EXPECTED_COMMIT: ${{ needs.ensure-release.outputs.tag_commit }}
           REPOSITORY: ${{ github.repository }}
+          UPDATE_PROFILE: ${{ needs.ensure-release.outputs.update_profile }}
         shell: bash
         run: |
           # Revalidate draft identity before the final tag check. GitHub's
@@ -689,7 +733,7 @@ jobs:
           rm -rf "$VERIFY_DIR"
           mkdir -p "$VERIFY_DIR"
           gh release download "$TAG" --repo "$REPOSITORY" --dir "$VERIFY_DIR"
-          node scripts/release-artifact-audit.mjs --release-dir "$VERIFY_DIR" --tag "$TAG" --verify-all
+          node scripts/release-artifact-audit.mjs --release-dir "$VERIFY_DIR" --tag "$TAG" --update-profile "$UPDATE_PROFILE" --verify-all
 
           echo "Publishing draft release $TAG"
           gh release edit "$TAG" --repo "$REPOSITORY" --draft=false

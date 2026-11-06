@@ -49,6 +49,20 @@ the sustained runtime gate, and `prerelease-check -- v0.5.0`. Cross-platform CI
 must be green on macOS, Windows, and Linux. No cross-platform physical-device
 evidence is claimed.
 
+## Update channel (v0.5.0)
+
+The owner (音梵) approved this unsigned update channel on 2026-11-06, for
+v0.5.0 only. This release publishes no Windows/Linux updater manifests because
+`NEXUS_UPDATE_SIGNING_KEY` was not configured. Windows and Linux have **no
+automatic update** for v0.5.0: download the next version manually from the
+official GitHub Releases and verify `SHA256SUMS-windows.txt` /
+`SHA256SUMS-linux.txt`. Unsigned macOS already uses manual download. Do not
+describe Windows/Linux auto-update as working for this version.
+
+The missing key does not relax the release gates. Tag provenance, preflight,
+`prerelease-check`, packaging, per-platform checksums, and the remote asset
+closure check still run; only unsigned manifests are withheld.
+
 ## macOS unsigned auto-update limitation
 
 The macOS arm64 build is ad-hoc signed, not Apple Developer ID signed or
@@ -76,6 +90,7 @@ Use only the official GitHub Release and verify its published SHA-256 checksum.
 - No cross-platform physical-device evidence is claimed.
 - The macOS and Windows builds remain unsigned, so the first launch can show a
   system trust prompt.
-- Repository Actions secrets must include `NEXUS_UPDATE_SIGNING_KEY`, or the
-  Windows/Linux update-manifest signing step fails and the release workflow
-  cannot publish.
+- v0.5.0 publishes no Windows/Linux updater manifests. Auto-update is not
+  available on Windows or Linux for this version; download future versions
+  manually from the official GitHub Releases. This unsigned update profile is
+  approved only for v0.5.0.
