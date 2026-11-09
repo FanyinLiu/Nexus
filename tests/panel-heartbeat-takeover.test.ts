@@ -10,6 +10,7 @@ const {
   runtimeHeartbeatIntervalMs,
   shouldApplyHeartbeatSnapshot,
   useRuntimeHeartbeat,
+  useRuntimeStateBridge,
 } = await import('../src/app/controllers/useDesktopBridge.ts')
 const { shouldRunReminderScheduler } = await import('../src/features/reminders/runtime.ts')
 
@@ -109,4 +110,71 @@ test('an offline runtime snapshot bumps the panel wake token only', () => {
   assert.equal(nextReminderWakeToken('panel', { mood: 'idle', petOnline: false }, 4), 5)
   assert.equal(nextReminderWakeToken('panel', { mood: 'idle', petOnline: true }, 4), 4)
   assert.equal(nextReminderWakeToken('pet', { mood: 'idle', petOnline: false }, 4), 4)
+})
+
+test('runtime-state subscription applies snapshots and bumps the panel wake token', async () => {
+  let listener: ((state: RuntimeSnapshot & Record<string, unknown>) => void) | null = null
+  let unsubscribed = false
+  const initial = { mood: 'idle', petOnline: true, petLastSeenAt: '2026-01-01T00:00:00.000Z' }
+  const windowStub = {
+    desktopPet: {
+      getRuntimeState: () => Promise.resolve(initial),
+      subscribeRuntimeState: (callback: (state: RuntimeSnapshot & Record<string, unknown>) => void) => {
+        listener = callback
+        return () => { unsubscribed = true }
+      },
+    },
+  }
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: windowStub })
+
+  let snapshot: RuntimeSnapshot | null = null
+  let mood: string | null = null
+  let continuousVoiceActive = false
+  let panelSettingsOpen = false
+  const applyRemoteMood = (value: string) => { mood = value }
+  const renderer = createHookRenderer(() => useRuntimeStateBridge({
+    view: 'panel',
+    applyRemoteMood,
+    setRuntimeSnapshotState: (value) => {
+      snapshot = typeof value === 'function' ? value(snapshot) as RuntimeSnapshot : value as RuntimeSnapshot
+    },
+    setPetRuntimeContinuousVoiceActive: (value) => {
+      continuousVoiceActive = typeof value === 'function' ? Boolean(value(continuousVoiceActive)) : Boolean(value)
+    },
+    setRemotePanelSettingsOpen: (value) => {
+      panelSettingsOpen = typeof value === 'function' ? Boolean(value(panelSettingsOpen)) : Boolean(value)
+    },
+  }))
+  try {
+    assert.equal(renderer.render(undefined), 0)
+    await flushAsync()
+    assert.equal(snapshot?.petOnline, true)
+    assert.ok(listener, 'the panel subscribes to runtime snapshots')
+
+    listener!({
+      mood: 'concerned',
+      petOnline: false,
+      petLastSeenAt: '2026-01-01T00:00:10.000Z',
+      continuousVoiceActive: true,
+      panelSettingsOpen: true,
+    })
+    assert.equal(renderer.render(undefined), 1, 'an offline snapshot wakes the scheduler')
+    assert.equal(snapshot?.petOnline, false)
+    assert.equal(snapshot?.petLastSeenAt, '2026-01-01T00:00:10.000Z')
+    assert.equal(mood, 'concerned')
+    assert.equal(continuousVoiceActive, true)
+    assert.equal(panelSettingsOpen, true)
+
+    listener!({
+      mood: 'idle',
+      petOnline: true,
+      petLastSeenAt: '2026-01-01T00:00:20.000Z',
+    })
+    assert.equal(renderer.render(undefined), 1, 'an online snapshot only stops scheduling')
+    assert.equal(snapshot?.petOnline, true)
+  } finally {
+    renderer.unmount()
+    assert.equal(unsubscribed, true, 'unmount removes the runtime-state subscription')
+    Reflect.deleteProperty(globalThis, 'window')
+  }
 })

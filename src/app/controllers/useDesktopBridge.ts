@@ -195,6 +195,45 @@ export function nextReminderWakeToken(
   return view === 'panel' && state.petOnline === false ? token + 1 : token
 }
 
+type RuntimeStateBridgeOptions = {
+  view: 'pet' | 'panel'
+  applyRemoteMood: (mood: RuntimeStateSnapshot['mood']) => void
+  setRuntimeSnapshotState: Dispatch<SetStateAction<RuntimeStateSnapshot>>
+  setPetRuntimeContinuousVoiceActive: Dispatch<SetStateAction<boolean>>
+  setRemotePanelSettingsOpen: Dispatch<SetStateAction<boolean>>
+}
+
+/**
+ * Subscribe to cross-window runtime snapshots and mirror them into local
+ * state. The returned token increments whenever the panel receives an offline
+ * snapshot, which is how a main-process wake triggers an immediate due check.
+ */
+export function useRuntimeStateBridge({
+  view,
+  applyRemoteMood,
+  setRuntimeSnapshotState,
+  setPetRuntimeContinuousVoiceActive,
+  setRemotePanelSettingsOpen,
+}: RuntimeStateBridgeOptions): number {
+  const [reminderWakeToken, setReminderWakeToken] = useState(0)
+  useBridgeSubscription<RuntimeStateSnapshot>({
+    apply: (state) => {
+      setRuntimeSnapshotState(state)
+      setReminderWakeToken((token) => nextReminderWakeToken(view, state, token))
+
+      if (state.mood) {
+        applyRemoteMood(state.mood)
+      }
+
+      setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
+      setRemotePanelSettingsOpen(Boolean(state.panelSettingsOpen))
+    },
+    getInitial: () => window.desktopPet?.getRuntimeState?.(),
+    subscribe: (listener) => window.desktopPet?.subscribeRuntimeState?.(listener),
+  }, [applyRemoteMood, view])
+  return reminderWakeToken
+}
+
 export function useDesktopBridge({
   view,
   settings,
@@ -233,7 +272,6 @@ export function useDesktopBridge({
   const [runtimeSnapshot, setRuntimeSnapshotState] = useState<RuntimeStateSnapshot>(
     DEFAULT_RUNTIME_SNAPSHOT,
   )
-  const [reminderWakeToken, setReminderWakeToken] = useState(0)
 
   // Settings are persisted explicitly by applySettingsSave → setSettingsSnapshot.
   // Cross-window sync is handled by subscribeToSettings in useAppController.
@@ -421,21 +459,13 @@ export function useDesktopBridge({
   // `applyRemoteMood` is a stable callback. It updates the face without
   // publishing the snapshot back, so the two windows do not chase.
   const applyRemoteMood = pet.applyRemoteMood
-  useBridgeSubscription<RuntimeStateSnapshot>({
-    apply: (state) => {
-      setRuntimeSnapshotState(state)
-      setReminderWakeToken((token) => nextReminderWakeToken(view, state, token))
-
-      if (state.mood) {
-        applyRemoteMood(state.mood)
-      }
-
-      setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
-      setRemotePanelSettingsOpen(Boolean(state.panelSettingsOpen))
-    },
-    getInitial: () => window.desktopPet?.getRuntimeState?.(),
-    subscribe: (listener) => window.desktopPet?.subscribeRuntimeState?.(listener),
-  }, [applyRemoteMood, view])
+  const reminderWakeToken = useRuntimeStateBridge({
+    view,
+    applyRemoteMood,
+    setRuntimeSnapshotState,
+    setPetRuntimeContinuousVoiceActive,
+    setRemotePanelSettingsOpen,
+  })
 
   useRuntimeHeartbeat(view, setRuntimeSnapshotState)
 
