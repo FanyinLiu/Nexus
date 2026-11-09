@@ -49,6 +49,7 @@ import { addActiveStreamingController, removeActiveStreamingController } from '.
 // voice/mood/language and replayed from this cache on later tool bursts.
 const FILLER_AUDIO_CACHE_LIMIT = 24
 const fillerAudioCache = new Map<string, { samples: number[]; sampleRate: number }>()
+
 function fillerCacheKey(settings: AppSettings, style: SegmentVoiceStyle | null | undefined) {
   return JSON.stringify([
     settings.speechOutputVoice,
@@ -61,6 +62,7 @@ function fillerCacheKey(settings: AppSettings, style: SegmentVoiceStyle | null |
     style?.speechTempo ?? 1,
   ])
 }
+
 function cacheFillerAudio(key: string, entry: { samples: number[]; sampleRate: number }) {
   if (!entry.samples.length || !entry.sampleRate) return
   if (fillerAudioCache.size >= FILLER_AUDIO_CACHE_LIMIT) {
@@ -69,6 +71,7 @@ function cacheFillerAudio(key: string, entry: { samples: number[]; sampleRate: n
   }
   fillerAudioCache.set(key, entry)
 }
+
 export type StreamingSpeechOutputOptions = {
   onStart?: () => void
   onEnd?: () => void

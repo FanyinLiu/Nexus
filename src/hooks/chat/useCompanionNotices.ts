@@ -48,7 +48,7 @@ export function useCompanionNotices({
   const flushingDeferredCompanionNoticesRef = useRef(false)
   const recentCompanionNoticesRef = useRef<Map<string, number>>(new Map())
 
-  const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
+  const deliverCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
     const chatContent = options.chatContent.trim()
     const bubbleContent = (options.bubbleContent ?? chatContent).trim()
     const proactiveTitle = options.proactiveTitle?.trim() ?? ''
@@ -140,6 +140,16 @@ export function useCompanionNotices({
     && ctx.voiceStateRef.current !== 'speaking'
   ), [busyRef, ctx.voiceStateRef])
 
+  const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
+    // A notice that arrives mid-reply must not start speaking over the pet.
+    // Queue it instead; flush only runs once the turn and its speech are done.
+    if (!canDeliverDeferredCompanionNotice()) {
+      deferredCompanionNoticesRef.current.push(options)
+      return
+    }
+    await deliverCompanionNotice(options)
+  }, [canDeliverDeferredCompanionNotice, deliverCompanionNotice])
+
   const discardDeferredCompanionNotices = useCallback(() => (
     clearDeferredCompanionNotices(deferredCompanionNoticesRef.current)
   ), [])
@@ -158,12 +168,12 @@ export function useCompanionNotices({
           continue
         }
 
-        await pushCompanionNotice(nextNotice)
+        await deliverCompanionNotice(nextNotice)
       }
     } finally {
       flushingDeferredCompanionNoticesRef.current = false
     }
-  }, [canDeliverDeferredCompanionNotice, pushCompanionNotice])
+  }, [canDeliverDeferredCompanionNotice, deliverCompanionNotice])
 
   return {
     pushCompanionNotice,

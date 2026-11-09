@@ -148,3 +148,50 @@ test('the stop broadcast reaches every other window and skips the sender', () =>
 
   assert.deepEqual(sent, [{ id: 2, channel: 'voice:stop-playback' }])
 })
+
+type WindowHarness = {
+  id: number
+  webContents: { id: number; send: (channel: string) => void }
+  subscribe: (listener: () => void) => () => void
+  localStops: number
+}
+
+function windowHarness(id: number): WindowHarness {
+  const listeners = new Set<() => void>()
+  const harness: WindowHarness = {
+    id,
+    localStops: 0,
+    webContents: {
+      id,
+      send: (channel: string) => {
+        if (channel !== 'voice:stop-playback') return
+        for (const listener of [...listeners]) listener()
+      },
+    },
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+  }
+  // Mirrors the renderer subscription: an incoming broadcast runs the local
+  // stop-all without sending another broadcast.
+  harness.subscribe(() => { harness.localStops += 1 })
+  return harness
+}
+
+test('panel stop reaches the pet window and pet stop reaches the panel', () => {
+  const panel = windowHarness(11)
+  const pet = windowHarness(22)
+  const windows = [panel, pet]
+
+  // The sender already stopped locally before invoking main.
+  panel.localStops += 1
+  broadcastVoiceStopPlayback(panel.id, windows)
+  assert.equal(pet.localStops, 1, 'pet window must receive the panel stop')
+  assert.equal(panel.localStops, 1, 'sender is not asked to stop twice')
+
+  pet.localStops += 1
+  broadcastVoiceStopPlayback(pet.id, windows)
+  assert.equal(panel.localStops, 2, 'panel window must receive the pet stop')
+  assert.equal(pet.localStops, 2, 'sender is not asked to stop twice')
+})
