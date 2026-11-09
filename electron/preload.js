@@ -115,6 +115,14 @@ contextBridge.exposeInMainWorld('desktopPet', {
     ipcRenderer.on('panel-window:state-changed', handler)
     return () => ipcRenderer.removeListener('panel-window:state-changed', handler)
   },
+  // Stop is window-scoped: the renderer stops its own TTS runtime, then asks
+  // main to notify the other window. The sender is skipped to avoid a loop.
+  stopSpeechPlayback: () => ipcRenderer.invoke('voice:stop-playback', {}),
+  subscribeSpeechPlaybackStop: /** @param {IpcVoidListener} listener */ (listener) => {
+    const handler = () => listener()
+    ipcRenderer.on('voice:stop-playback', handler)
+    return () => ipcRenderer.removeListener('voice:stop-playback', handler)
+  },
   subscribeRuntimeState: /** @param {IpcListener} listener */ (listener) => {
     /** @type {IpcEventHandler} */
     const handler = (_event, state) => listener(state)

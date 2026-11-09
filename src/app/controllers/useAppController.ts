@@ -194,7 +194,7 @@ export function useAppController() {
     resetNoSpeechRestartCount: voice.resetNoSpeechRestartCount,
     setContinuousVoiceSession: voice.setContinuousVoiceSession,
     fillComposerWithVoiceTranscript: voice.fillComposerWithVoiceTranscript,
-    stopActiveSpeechOutput: voice.stopActiveSpeechOutput,
+    interruptActiveSpeechOutput: voice.speechStop.interrupt,
     canInterruptSpeech: () => settingsRef.current.voiceInterruptionEnabled,
     loadDesktopContextSnapshot: desktopContext.loadDesktopContextSnapshot,
     ...signalBridge.companionSignals,

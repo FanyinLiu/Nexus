@@ -257,7 +257,7 @@ test('a new voice turn aborts a pending reply without opening the microphone', (
     voiceStateRef: { current: 'processing' },
     canInterruptSpeech: () => true,
     showPetStatus: () => {},
-    stopActiveSpeechOutput: () => { stopCount += 1 },
+    interruptActiveSpeechOutput: () => { stopCount += 1 },
     abortPendingSpeechOutput: () => { abortCount += 1 },
     dispatchVoiceSessionAndSync: () => ({}) as never,
     voiceEchoCooldownUntilRef: { current: 0 },

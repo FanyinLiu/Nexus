@@ -185,7 +185,7 @@ type UseAppOverlaysOptions = {
     | 'speechLevelSource'
     | 'voicePipeline'
     | 'voiceTrace'
-    | 'stopActiveSpeechOutput'
+    | 'speechStop'
     | 'setVoiceState'
     | 'runAudioSmokeTest'
     | 'startSpeechOutput'
@@ -416,7 +416,7 @@ export function useAppOverlays({
       throw new Error(t('settings.preview.busy_error'))
     }
 
-    voice.stopActiveSpeechOutput()
+    voice.speechStop.stopAll()
     chat.setError(null)
 
     await voice.startSpeechOutput(text, draftSettings, {

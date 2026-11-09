@@ -83,6 +83,7 @@ import { createVoiceBindings } from './voice/voiceBindings.ts'
 import { createVoiceConversationStarters } from './voice/voiceConversationStarters.ts'
 import { createVoiceLifecycleControls } from './voice/voiceLifecycleControls.ts'
 import { createVoiceTestEntries } from './voice/voiceTestEntries.ts'
+import { useSpeechPlaybackStopSubscription } from './useSpeechPlaybackStopSubscription.ts'
 import {
   createSpeechLevelPublisher,
   type SpeechLevelPublisher,
@@ -180,7 +181,6 @@ export function useVoice(ctx: UseVoiceContext) {
   const startVoiceConversationRef = useRef<(options?: VoiceConversationOptions) => void>(() => undefined)
   const stopApiRecordingRef = useRef<(cancel?: boolean) => void>(() => undefined)
   const stopVadListeningRef = useRef<(cancel?: boolean) => Promise<void>>(async () => undefined)
-  const stopActiveSpeechOutputRef = useRef<() => void>(() => undefined)
   const setContinuousVoiceSessionRef = useRef<(value: boolean) => void>(() => undefined)
 
   // ── Hearing runtime (unified input-side store) ──────────────────────────
@@ -649,9 +649,10 @@ export function useVoice(ctx: UseVoiceContext) {
     startVoiceConversationRef.current = lifecycle.startVoiceConversation
     stopApiRecordingRef.current = bindings.stopApiRecording
     stopVadListeningRef.current = bindings.stopVadListening
-    stopActiveSpeechOutputRef.current = bindings.stopActiveSpeechOutput
     setContinuousVoiceSessionRef.current = bindings.setContinuousVoiceSession
   })
+
+  const stopSpeechLocally = useSpeechPlaybackStopSubscription(bindings.speechStop.stopAllLocally)
 
   // ── Effects ────────────────────────────────────────────────────────────────
 
@@ -749,7 +750,7 @@ export function useVoice(ctx: UseVoiceContext) {
         stopApiRecording: stopApiRecordingRef.current,
         stopVadListening: stopVadListeningRef.current,
         speechLevelPublisher,
-        stopActiveSpeechOutput: stopActiveSpeechOutputRef.current,
+        stopAllSpeechOutput: stopSpeechLocally,
         paraformerSessionRef,
         sensevoiceSessionRef,
         tencentAsrSessionRef,
@@ -768,7 +769,7 @@ export function useVoice(ctx: UseVoiceContext) {
         disposeGeneration,
       )
     }
-  }, [clearPendingVoiceRestart, speechLevelPublisher])
+  }, [clearPendingVoiceRestart, speechLevelPublisher, stopSpeechLocally])
 
   useEffect(() => {
     return () => {
@@ -803,7 +804,6 @@ export function useVoice(ctx: UseVoiceContext) {
     wakewordState,
     voicePipeline,
     voiceTrace,
-
     // Refs (for cross-hook access)
     voiceStateRef,
     continuousVoiceActiveRef,
@@ -834,7 +834,7 @@ export function useVoice(ctx: UseVoiceContext) {
     resetNoSpeechRestartCount: bindings.resetNoSpeechRestartCount,
     setContinuousVoiceSession: bindings.setContinuousVoiceSession,
     fillComposerWithVoiceTranscript: bindings.fillComposerWithVoiceTranscript,
-    stopActiveSpeechOutput: bindings.stopActiveSpeechOutput,
+    speechStop: bindings.speechStop,
 
     // Test functions
     testSpeechInputConnection: testEntries.testSpeechInputConnection,

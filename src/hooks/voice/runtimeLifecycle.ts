@@ -13,7 +13,7 @@ export type CleanupVoiceRuntimeResourcesOptions = {
   stopApiRecording: (cancel?: boolean) => void
   stopVadListening: (cancel?: boolean) => Promise<void>
   speechLevelPublisher: Pick<SpeechLevelPublisher, 'reset'>
-  stopActiveSpeechOutput: () => void
+  stopAllSpeechOutput: () => void
   paraformerSessionRef: MutableRefObject<ParaformerStreamSession | null>
   sensevoiceSessionRef: MutableRefObject<SenseVoiceStreamSession | null>
   tencentAsrSessionRef: MutableRefObject<TencentAsrStreamSession | null>
@@ -32,7 +32,7 @@ export function cleanupVoiceRuntimeResources(
   void options.stopVadListening(true)
 
   options.speechLevelPublisher.reset()
-  options.stopActiveSpeechOutput()
+  options.stopAllSpeechOutput()
   options.paraformerSessionRef.current?.abort()
   options.paraformerSessionRef.current = null
   options.sensevoiceSessionRef.current?.abort()

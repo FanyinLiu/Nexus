@@ -21,6 +21,8 @@ type Translator = (key: TranslationKey, params?: TranslationParams) => string
 
 const log = createLogger('voice.runtime')
 import { cleanupApiRecordingSession } from './recordingSession.ts'
+import { abortAllStreamingSpeechOutputs } from './streamingSpeechOutputRegistry.ts'
+import { emitSpeechStopAll } from '../../features/voice/speechStopBus.ts'
 import type { ParaformerConversationState } from './paraformerConversation.ts'
 import type { SenseVoiceConversationState } from './sensevoiceConversation.ts'
 import type { TencentConversationState } from './tencentConversation.ts'
@@ -84,7 +86,8 @@ type InterruptSpeakingForVoiceInputRuntimeOptions = {
   voiceStateRef: MutableRefObject<VoiceState>
   canInterruptSpeech: () => boolean
   showPetStatus: ShowPetStatus
-  stopActiveSpeechOutput: () => void
+  /** Interrupt the sentence being spoken without clearing queued notices. */
+  interruptActiveSpeechOutput: () => void
   /** Abort a reply whose audio has not started yet (thinking/processing). */
   abortPendingSpeechOutput: () => void
   dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => VoiceSessionState
@@ -124,12 +127,17 @@ type ClearTencentConversationStateRuntimeOptions = {
   setSpeechLevelValue: (level: number) => void
 }
 
-type StopActiveSpeechOutputRuntimeOptions = {
+type SpeechPlaybackTeardownOptions = {
   wakewordAcknowledgingRef: MutableRefObject<boolean>
   stopSpeechInterruptMonitor: () => void
   stopSpeechTracking: () => void
   activeStreamingSpeechOutputRef: MutableRefObject<StreamingSpeechOutputController | null>
   streamAudioPlayerRef: MutableRefObject<StreamAudioPlayer | null>
+  assistantSpeechGenerationRef: MutableRefObject<number>
+  interruptedSpeechGenerationRef: MutableRefObject<number | null>
+}
+
+type StopAllSpeechOutputRuntimeOptions = SpeechPlaybackTeardownOptions & {
   audioPlaybackQueueRef: MutableRefObject<AudioPlaybackQueue<SpeechSegmentMeta> | null>
 }
 
@@ -276,7 +284,7 @@ export function interruptSpeakingForVoiceInputRuntime(
     return false
   }
 
-  options.stopActiveSpeechOutput()
+  options.interruptActiveSpeechOutput()
   // Arm the echo cooldown so the VAD session that opens ~60 ms from now
   // doesn't mistake the tail of the aborted TTS audio for a fresh speech
   // onset. 200 ms covers the longest typical main-process PCM ring drain.
@@ -399,18 +407,52 @@ export function clearTencentConversationStateRuntime(
   options.setSpeechLevelValue(0)
 }
 
-export function stopActiveSpeechOutputRuntime(
-  options: StopActiveSpeechOutputRuntimeOptions,
-) {
+function stopSpeechPlaybackTeardown(options: SpeechPlaybackTeardownOptions) {
   options.wakewordAcknowledgingRef.current = false
   options.stopSpeechInterruptMonitor()
   options.stopSpeechTracking()
   stopBrowserSpeaking()
+}
+
+/**
+ * Interrupt the sentence that is playing right now. Called by a typed turn,
+ * voice barge-in, and starting a new voice conversation: queued notices and
+ * letters are not touched and keep playing after this turn.
+ */
+export function interruptActiveSpeechOutputRuntime(
+  options: SpeechPlaybackTeardownOptions,
+) {
+  stopSpeechPlaybackTeardown(options)
   options.activeStreamingSpeechOutputRef.current?.abort()
   options.activeStreamingSpeechOutputRef.current = null
   options.streamAudioPlayerRef.current?.stopAndClear()
   options.streamAudioPlayerRef.current = null
+}
+
+/**
+ * Stop the current sentence and the whole queue. Called by the Stop button:
+ * every live controller, the stream player, and the legacy audio queue are
+ * torn down, and the busy-deferred notice queue is told to clear itself.
+ * Reminder tasks and history are persisted elsewhere and stay untouched.
+ */
+export function stopAllSpeechOutputRuntime(
+  options: StopAllSpeechOutputRuntimeOptions,
+) {
+  stopSpeechPlaybackTeardown(options)
+  // Abort the active controller first; the registry covers any reminder that
+  // queued speech while another reply was playing.
+  options.activeStreamingSpeechOutputRef.current?.abort()
+  abortAllStreamingSpeechOutputs()
+  // Mark every generation up to this click as interrupted so an aborted
+  // controller's late error is not surfaced as a real playback failure. A
+  // reminder that starts after this point owns a higher generation and is
+  // therefore not mistaken for the interrupted turn.
+  options.interruptedSpeechGenerationRef.current = options.assistantSpeechGenerationRef.current
+  options.activeStreamingSpeechOutputRef.current = null
+  options.streamAudioPlayerRef.current?.stopAndClear()
+  options.streamAudioPlayerRef.current = null
   options.audioPlaybackQueueRef.current?.stopAndClear()
+  emitSpeechStopAll()
 }
 
 export function getStreamAudioPlayerRuntime(

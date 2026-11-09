@@ -72,6 +72,7 @@ import {
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
+  validateSpeechStopPlaybackPayload,
   validateTextFileOpenPayload,
   validateTextFileSavePayload,
   validateWeatherToolPayload,
@@ -81,6 +82,7 @@ import {
 import { createModelSetupDeferralStore, MODEL_SETUP_DEFERRAL_FILE_NAME } from '../services/modelSetupDeferralStore.js'
 import { createModelSetupRequestGate } from '../services/modelSetupRequestGate.js'
 import { POWER_EVENT_KINDS } from '../../shared/powerEventKinds.js'
+import { broadcastVoiceStopPlayback } from './voiceStopBroadcast.js'
 
 const POWER_EVENT_CHANNEL = 'app:power-event'
 const PET_MODEL_LIBRARY_CHANGED_CHANNEL = 'pet-model:library-changed'
@@ -333,6 +335,13 @@ export function register() {
   ipcMain.handle('window:get-view-kind', (event) => {
     requireTrustedSender(event)
     return getViewKind(event)
+  })
+
+  ipcMain.handle('voice:stop-playback', (event, payload) => {
+    requireTrustedSender(event)
+    validateSpeechStopPlaybackPayload(payload)
+    // The sender already tore down its own runtime; only peers need the event.
+    broadcastVoiceStopPlayback(event.sender.id, BrowserWindow.getAllWindows())
   })
 
   ipcMain.handle('runtime-state:get', (event) => {

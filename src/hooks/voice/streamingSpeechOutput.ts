@@ -41,6 +41,7 @@ import {
   splitReplyForSingleGeneration,
 } from './speechTextSegmentation.ts'
 import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.ts'
+import { addActiveStreamingController, removeActiveStreamingController } from './streamingSpeechOutputRegistry.ts'
 
 // A tool call in whole-reply mode would otherwise leave seconds of dead air:
 // the pre-tool text is still buffered and the model is not generating audio
@@ -48,7 +49,6 @@ import type { StreamingSpeechOutputController, VoiceStreamEvent } from './types.
 // voice/mood/language and replayed from this cache on later tool bursts.
 const FILLER_AUDIO_CACHE_LIMIT = 24
 const fillerAudioCache = new Map<string, { samples: number[]; sampleRate: number }>()
-
 function fillerCacheKey(settings: AppSettings, style: SegmentVoiceStyle | null | undefined) {
   return JSON.stringify([
     settings.speechOutputVoice,
@@ -61,7 +61,6 @@ function fillerCacheKey(settings: AppSettings, style: SegmentVoiceStyle | null |
     style?.speechTempo ?? 1,
   ])
 }
-
 function cacheFillerAudio(key: string, entry: { samples: number[]; sampleRate: number }) {
   if (!entry.samples.length || !entry.sampleRate) return
   if (fillerAudioCache.size >= FILLER_AUDIO_CACHE_LIMIT) {
@@ -70,7 +69,6 @@ function cacheFillerAudio(key: string, entry: { samples: number[]; sampleRate: n
   }
   fillerAudioCache.set(key, entry)
 }
-
 export type StreamingSpeechOutputOptions = {
   onStart?: () => void
   onEnd?: () => void
@@ -417,6 +415,7 @@ export function createStreamingSpeechOutputController(
     }
     // Never cache a partially synthesized filler after an abort or failure.
     fillerCapture = null
+    removeActiveStreamingController(controller)
     runtime.setActiveController?.(null)
   }
 
@@ -932,6 +931,7 @@ export function createStreamingSpeechOutputController(
     },
   }
 
+  addActiveStreamingController(controller)
   runtime.setActiveController?.(controller)
   return controller
 }

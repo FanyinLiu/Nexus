@@ -48,7 +48,7 @@ export type TestSpeechInputConnectionRuntimeOptions = {
 export type ProbeSpeechOutputPlaybackStartRuntimeOptions = {
   draftSettings: AppSettings
   text: string
-  stopActiveSpeechOutput: () => void
+  stopAllSpeechOutput: () => void
   startSpeechOutput: (
     text: string,
     speechSettings: AppSettings,
@@ -336,13 +336,13 @@ export async function testSpeechInputConnectionRuntime(
 export async function probeSpeechOutputPlaybackStartRuntime(
   options: ProbeSpeechOutputPlaybackStartRuntimeOptions,
 ) {
-  options.stopActiveSpeechOutput()
+  options.stopAllSpeechOutput()
 
   await new Promise<void>((resolve, reject) => {
     let settled = false
     let timeoutId: number | null = window.setTimeout(() => {
       finish(() => {
-        options.stopActiveSpeechOutput()
+        options.stopAllSpeechOutput()
         reject(new Error(options.ti('voice.diagnostics.playback_timeout')))
       })
     }, AUDIO_SMOKE_PLAYBACK_TIMEOUT_MS)
@@ -367,7 +367,7 @@ export async function probeSpeechOutputPlaybackStartRuntime(
 
     function scheduleStop() {
       stopTimerId = window.setTimeout(() => {
-        options.stopActiveSpeechOutput()
+        options.stopAllSpeechOutput()
       }, 220)
     }
 
@@ -385,13 +385,13 @@ export async function probeSpeechOutputPlaybackStartRuntime(
       },
       onError: (message) => {
         finish(() => {
-          options.stopActiveSpeechOutput()
+          options.stopAllSpeechOutput()
           reject(new Error(message))
         })
       },
     }).catch((error) => {
       finish(() => {
-        options.stopActiveSpeechOutput()
+        options.stopAllSpeechOutput()
         reject(error instanceof Error ? error : new Error(String(error)))
       })
     })

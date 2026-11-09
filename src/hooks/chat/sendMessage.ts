@@ -177,7 +177,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
           return false
         }
 
-        ctx.stopActiveSpeechOutput()
+        ctx.interruptActiveSpeechOutput()
         ctx.setVoiceState('idle')
         emitPetNotify({ type: 'mood', mood: 'happy' })
       }

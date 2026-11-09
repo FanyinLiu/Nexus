@@ -165,6 +165,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   skillStats: { conditional: false, invoke: ['skill:stats'], events: [] },
   startNotificationBridge: { conditional: false, invoke: ['notification:start'], events: [] },
   stopNotificationBridge: { conditional: false, invoke: ['notification:stop'], events: [] },
+  stopSpeechPlayback: { conditional: false, invoke: ['voice:stop-playback'], events: [] },
   subscribeDesktopGaze: { conditional: false, invoke: [], events: ['desktop-presence:gaze'] },
   subscribeDesktopTyping: { conditional: false, invoke: [], events: ['desktop-presence:typing'] },
   subscribeDesktopTypingStatus: { conditional: false, invoke: [], events: ['desktop-presence:typing-status'] },
@@ -183,6 +184,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   subscribeProactivePresentation: { conditional: false, invoke: [], events: ['proactive:present'] },
   subscribeRuntimeState: { conditional: false, invoke: [], events: ['runtime-state:changed'] },
   subscribeSettingsReturnFocus: { conditional: false, invoke: [], events: ['settings:return-focus'] },
+  subscribeSpeechPlaybackStop: { conditional: false, invoke: [], events: ['voice:stop-playback'] },
   subscribeTelegramMessage: { conditional: false, invoke: [], events: ['telegram:message'] },
   subscribeTelegramPairing: { conditional: false, invoke: [], events: ['telegram:pairing-request'] },
   subscribeTencentAsrResult: { conditional: false, invoke: [], events: ['tencent-asr:result'] },
@@ -443,6 +445,7 @@ export type DesktopPetInvokeChannel =
   | 'voice-turn:probe'
   | 'voice-turn:start'
   | 'voice-turn:stop'
+  | 'voice:stop-playback'
   | 'vts-bridge:connect'
   | 'vts-bridge:disconnect'
   | 'vts-bridge:migrate-legacy-token'
@@ -487,6 +490,7 @@ export type DesktopPetEventChannel =
   | 'tencent-asr:result'
   | 'tts:stream-event'
   | 'updater:event'
+  | 'voice:stop-playback'
   | 'vts-bridge:status'
 
 export interface DesktopPetBridgeMethodArguments {
@@ -654,6 +658,7 @@ export interface DesktopPetBridgeMethodArguments {
   skillStats: readonly []
   startNotificationBridge: readonly []
   stopNotificationBridge: readonly []
+  stopSpeechPlayback: readonly []
   subscribeDesktopGaze: unknown
   subscribeDesktopTyping: unknown
   subscribeDesktopTypingStatus: unknown
@@ -672,6 +677,7 @@ export interface DesktopPetBridgeMethodArguments {
   subscribeProactivePresentation: unknown
   subscribeRuntimeState: unknown
   subscribeSettingsReturnFocus: unknown
+  subscribeSpeechPlaybackStop: unknown
   subscribeTelegramMessage: unknown
   subscribeTelegramPairing: unknown
   subscribeTencentAsrResult: unknown
@@ -894,6 +900,7 @@ export interface DesktopPetBridgeMethodResults {
   skillStats: { totalSkills: number; maxSkills: number; skillsDir: string }
   startNotificationBridge: void
   stopNotificationBridge: void
+  stopSpeechPlayback: void
   subscribeDesktopGaze: unknown
   subscribeDesktopTyping: unknown
   subscribeDesktopTypingStatus: unknown
@@ -912,6 +919,7 @@ export interface DesktopPetBridgeMethodResults {
   subscribeProactivePresentation: unknown
   subscribeRuntimeState: unknown
   subscribeSettingsReturnFocus: unknown
+  subscribeSpeechPlaybackStop: unknown
   subscribeTelegramMessage: unknown
   subscribeTelegramPairing: unknown
   subscribeTencentAsrResult: unknown
@@ -1040,6 +1048,7 @@ export interface DesktopPetGeneratedBridge {
   skillStats: (...args: DesktopPetBridgeMethodArguments['skillStats']) => Promise<DesktopPetBridgeMethodResults['skillStats']>
   startNotificationBridge: (...args: DesktopPetBridgeMethodArguments['startNotificationBridge']) => Promise<DesktopPetBridgeMethodResults['startNotificationBridge']>
   stopNotificationBridge: (...args: DesktopPetBridgeMethodArguments['stopNotificationBridge']) => Promise<DesktopPetBridgeMethodResults['stopNotificationBridge']>
+  stopSpeechPlayback: (...args: DesktopPetBridgeMethodArguments['stopSpeechPlayback']) => Promise<DesktopPetBridgeMethodResults['stopSpeechPlayback']>
   telegramDisconnect: (...args: DesktopPetBridgeMethodArguments['telegramDisconnect']) => Promise<DesktopPetBridgeMethodResults['telegramDisconnect']>
   telegramPairingList: (...args: DesktopPetBridgeMethodArguments['telegramPairingList']) => Promise<DesktopPetBridgeMethodResults['telegramPairingList']>
   telegramStatus: (...args: DesktopPetBridgeMethodArguments['telegramStatus']) => Promise<DesktopPetBridgeMethodResults['telegramStatus']>

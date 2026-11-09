@@ -35,7 +35,7 @@ export function createVoiceTestEntries(bag: VoiceRuntimeBag): VoiceTestEntries {
     await probeSpeechOutputPlaybackStartRuntime({
       draftSettings,
       text,
-      stopActiveSpeechOutput: bindings.stopActiveSpeechOutput,
+      stopAllSpeechOutput: bindings.speechStop.stopAllLocally,
       startSpeechOutput: bindings.startSpeechOutput,
       ti,
     })

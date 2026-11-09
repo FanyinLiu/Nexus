@@ -39,6 +39,7 @@ import {
   validateSkillIdPayload,
   validateSkillSavePayload,
   validateSkillSearchPayload,
+  validateSpeechStopPlaybackPayload,
   validateTelegramSendMessagePayload,
   validateTelegramSendVoicePayload,
   validateTextFileOpenPayload,
@@ -1337,4 +1338,13 @@ test('IPC high-risk schemas reject unknown top-level fields', () => {
   for (const [channel, run] of cases) {
     assert.throws(run, /is not allowed/, `${channel} must reject unknown top-level fields`)
   }
+})
+
+test('IPC speech-stop payload accepts an empty request and rejects stray fields', () => {
+  assert.deepEqual(validateSpeechStopPlaybackPayload({}), {})
+  assert.deepEqual(validateSpeechStopPlaybackPayload(undefined), {})
+  assert.throws(
+    () => validateSpeechStopPlaybackPayload({ rogue: true }),
+    /rogue is not allowed/,
+  )
 })

@@ -256,7 +256,7 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
       clearTencentConversationState: bindings.clearTencentConversationState,
       stopApiRecording: bindings.stopApiRecording,
       stopVadListening: bindings.stopVadListening,
-      stopActiveSpeechOutput: bindings.stopActiveSpeechOutput,
+      stopAllSpeechOutput: bindings.speechStop.stopAll,
       dispatchVoiceSessionAndSync: bindings.dispatchVoiceSessionAndSync,
       setLiveTranscript: setters.setLiveTranscript,
       setMood: ctx.setMood,

@@ -90,7 +90,8 @@ type StartSpeechInterruptMonitorOptions = {
    */
   wakewordRuntimeRef?: MutableRefObject<WakewordRuntimeController | null>
   clearPendingVoiceRestart: () => void
-  stopActiveSpeechOutput: () => void
+  /** Barge-in only interrupts the sentence being spoken; queued notices stay. */
+  interruptActiveSpeechOutput: () => void
   onInterrupted: () => void
   setMood: (mood: PetMood) => void
   showPetStatus: ShowPetStatus
@@ -199,7 +200,8 @@ export function isSpeechInterrupted(
   interruptedSpeechGenerationRef: MutableRefObject<number | null>,
   speechGeneration: number,
 ) {
-  return interruptedSpeechGenerationRef.current === speechGeneration
+  return interruptedSpeechGenerationRef.current !== null
+    && interruptedSpeechGenerationRef.current >= speechGeneration
 }
 
 export function clearSpeechInterruptedFlag(
@@ -437,7 +439,7 @@ export async function startSpeechInterruptMonitor(
         )
         destroySpeechInterruptMonitor(options.speechInterruptMonitorRef, session)
         options.clearPendingVoiceRestart()
-        options.stopActiveSpeechOutput()
+        options.interruptActiveSpeechOutput()
         options.onInterrupted()
         options.setMood('happy')
         options.showPetStatus(options.ti('voice.pause_before_continue'), 2_400, 3_200)

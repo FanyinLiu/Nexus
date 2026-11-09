@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react'
 import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
+import { isInterruptedError } from '../../features/voice/interruptedError.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
 import { getSpeechOutputErrorMessage } from './support.ts'
@@ -17,6 +18,17 @@ type CompanionNoticeDependencies = {
     options?: { autoHideMs?: number },
   ) => void
   setError: (value: string | null) => void
+}
+
+/**
+ * Drop every busy-deferred notice. The reminder task row and its history live
+ * in persistence, so a user-initiated Stop only silences delivery here.
+ * Returns the number of notices dropped.
+ */
+export function clearDeferredCompanionNotices(queue: CompanionNoticePayload[]): number {
+  const cleared = queue.length
+  queue.length = 0
+  return cleared
 }
 
 /**
@@ -114,6 +126,9 @@ export function useCompanionNotices({
     try {
       await ctx.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
     } catch (speechError) {
+      // An intentional stop aborts this promise. That is a normal cancellation,
+      // not a playback failure; surfacing it would flip the pet to error.
+      if (isInterruptedError(speechError)) return
       const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
       setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
     }
@@ -124,6 +139,10 @@ export function useCompanionNotices({
     && ctx.voiceStateRef.current !== 'processing'
     && ctx.voiceStateRef.current !== 'speaking'
   ), [busyRef, ctx.voiceStateRef])
+
+  const discardDeferredCompanionNotices = useCallback(() => (
+    clearDeferredCompanionNotices(deferredCompanionNoticesRef.current)
+  ), [])
 
   const flushDeferredCompanionNotices = useCallback(async () => {
     if (flushingDeferredCompanionNoticesRef.current || !canDeliverDeferredCompanionNotice()) {
@@ -149,5 +168,6 @@ export function useCompanionNotices({
   return {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
+    discardDeferredCompanionNotices,
   }
 }

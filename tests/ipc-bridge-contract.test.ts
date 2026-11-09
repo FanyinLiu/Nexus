@@ -382,3 +382,27 @@ test('ambient weather is quiet without muting explicit weather tool failures', (
     'explicit weather tool calls should continue surfacing weather lookup failures',
   )
 })
+
+test('preload wires the cross-window speech stop invoke and subscription', () => {
+  const { desktopPet, invokedChannels, subscribedChannels } = loadPreloadDesktopPetApi('panel')
+  const stopSpeechPlayback = desktopPet.stopSpeechPlayback as (() => Promise<unknown>) | undefined
+  const subscribeSpeechPlaybackStop = desktopPet.subscribeSpeechPlaybackStop as
+    | ((listener: () => void) => () => void)
+    | undefined
+
+  assert.equal(typeof stopSpeechPlayback, 'function')
+  assert.equal(typeof subscribeSpeechPlaybackStop, 'function')
+
+  const listener = () => undefined
+  const unsubscribe = subscribeSpeechPlaybackStop!(listener)
+  assert.equal(subscribedChannels.get('voice:stop-playback')?.size, 1)
+
+  void stopSpeechPlayback!()
+  assert.deepEqual(
+    invokedChannels.filter((channel) => channel === 'voice:stop-playback'),
+    ['voice:stop-playback'],
+  )
+
+  unsubscribe()
+  assert.equal(subscribedChannels.get('voice:stop-playback')?.size, 0)
+})

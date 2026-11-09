@@ -86,7 +86,8 @@ export type ChatVoiceDeps = {
   resetNoSpeechRestartCount: () => void
   setContinuousVoiceSession: (active: boolean) => void
   fillComposerWithVoiceTranscript: (transcript: string) => void
-  stopActiveSpeechOutput: () => void
+  /** Interrupt the sentence being spoken; queued notices and letters stay. */
+  interruptActiveSpeechOutput: () => void
   canInterruptSpeech: () => boolean
 }
 
