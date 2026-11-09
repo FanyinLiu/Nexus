@@ -70,6 +70,43 @@ test('Python warm-up probes /health and /v1/warmup for every accepted base URL s
   }
 })
 
+test('a Python base URL without /v1 and with a trailing slash normalizes warm-up and synthesis', async () => {
+  const tts = await ttsServicePromise
+  const runtime = await runtimePromise
+  runtime.resetQwen3TtsRuntime()
+  const baseUrl = 'http://127.0.0.1:8013/'
+
+  tts.clearQwen3TtsWarmup(baseUrl, 'python')
+  tts.clearQwen3TtsWarmup('http://127.0.0.1:8013', 'python')
+  resetNetworkMock()
+  setNetworkHandler((url: string) => {
+    if (url === 'http://127.0.0.1:8013/health') return jsonResponse({ status: 'ok', loaded: false })
+    if (url === 'http://127.0.0.1:8013/v1/warmup') return jsonResponse({ status: 'ok', loaded: true })
+    if (url === 'http://127.0.0.1:8013/v1/audio/speech') return pcmResponse()
+    throw new Error(`unexpected request: ${url}`)
+  })
+
+  try {
+    const result = await tts.synthesizeRemoteTts(
+      { providerId: 'qwen3-tts-local', baseUrl, voice: 'vivian' },
+      'hello',
+    )
+    result.pcmStream.destroy()
+
+    assert.deepEqual(
+      requests.map((request) => request.url),
+      [
+        'http://127.0.0.1:8013/health',
+        'http://127.0.0.1:8013/v1/warmup',
+        'http://127.0.0.1:8013/v1/audio/speech',
+      ],
+    )
+  } finally {
+    resetNetworkMock()
+    runtime.resetQwen3TtsRuntime()
+  }
+})
+
 test('a loaded Python sidecar skips /v1/warmup', async () => {
   const tts = await ttsServicePromise
   const baseUrl = 'http://127.0.0.1:8012/v1'
