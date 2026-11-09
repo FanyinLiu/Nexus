@@ -22,6 +22,8 @@ function createLifecycle(
     onStatus?: (message: string) => void
     speechInputProviderId?: string
     translationCalls?: Array<{ key: string; params?: Record<string, string> }>
+    voiceState?: 'idle' | 'listening' | 'processing' | 'speaking'
+    onInterrupt?: () => void
   } = {},
 ) {
   const settings = {
@@ -33,7 +35,7 @@ function createLifecycle(
 
   const refs = {
     continuousVoiceActiveRef: { current: false },
-    voiceStateRef: { current: 'idle' },
+    voiceStateRef: { current: options.voiceState ?? 'idle' },
     activeVoiceConversationOptionsRef: { current: {} },
     suppressVoiceReplyRef: { current: false },
     recognitionRef: { current: null },
@@ -48,7 +50,10 @@ function createLifecycle(
 
   const bindings = {
     canInterruptSpeech: () => true,
-    interruptSpeakingForVoiceInput: () => true,
+    interruptSpeakingForVoiceInput: () => {
+      options.onInterrupt?.()
+      return true
+    },
     setContinuousVoiceSession: () => {},
     shouldKeepContinuousVoiceSession: () => false,
     resetNoSpeechRestartCount: () => {},
@@ -154,6 +159,18 @@ function installBridge(
 async function flushAsyncWork() {
   for (let i = 0; i < 12; i += 1) await Promise.resolve()
 }
+
+test('starting a new voice conversation while she speaks interrupts only the current sentence', () => {
+  const interrupts: number[] = []
+  const lifecycle = createLifecycle('pet', {
+    voiceState: 'speaking',
+    onInterrupt: () => { interrupts.push(1) },
+  })
+
+  lifecycle.toggleVoiceConversation()
+
+  assert.equal(interrupts.length, 1, 'the new voice turn interrupts current speech')
+})
 
 test('the mic trigger requests model setup while required models are missing', async () => {
   const bridge = installBridge(false)
