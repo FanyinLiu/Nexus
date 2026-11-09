@@ -13,6 +13,7 @@ import { emitSpeechStopAll } from '../src/features/voice/speechStopBus.ts'
 import { createVoiceSessionState } from '../src/features/voice/sessionMachine.ts'
 import { handleVoiceListeningFailureRuntime } from '../src/hooks/voice/transcriptHandling.ts'
 import { dispatchVoiceSessionAndSyncRuntime } from '../src/hooks/voice/runtimeSupport.ts'
+import { stopVoiceConversationEntrypoint } from '../src/hooks/voice/conversationEntrypoints.ts'
 
 type ReactInternals = { H: unknown }
 const reactInternals = (React as unknown as {
@@ -301,6 +302,91 @@ test('a non-no-speech STT error still waits for the fallback window', async () =
   await Promise.resolve()
   await Promise.resolve()
   assert.equal(flushes, 1)
+  session.unmount()
+})
+
+test('the stop entrypoint emits user-button and waits for the fallback', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  const noop = () => undefined
+  const sessionRef = { current: createVoiceSessionState() }
+  const voiceStateRef: { current: 'listening' } = { current: 'listening' }
+  const events: unknown[] = []
+  stopVoiceConversationEntrypoint({
+    continuousVoiceActiveRef: { current: true },
+    suppressVoiceReplyRef: { current: false },
+    recognitionRef: { current: null },
+    paraformerSessionRef: { current: null },
+    sensevoiceSessionRef: { current: null },
+    tencentAsrSessionRef: { current: null },
+    clearPendingVoiceRestart: noop,
+    setContinuousVoiceSession: noop,
+    resetNoSpeechRestartCount: noop,
+    resetSpeechLevel: noop,
+    clearParaformerConversationState: noop,
+    clearSenseVoiceConversationState: noop,
+    clearTencentConversationState: noop,
+    stopApiRecording: noop,
+    stopVadListening: async () => undefined,
+    interruptSpeechOutput: noop,
+    dispatchVoiceSessionAndSync: (event) => {
+      events.push(event)
+      return dispatchVoiceSessionAndSyncRuntime({
+        voiceSessionRef: sessionRef,
+        voiceStateRef,
+        setVoiceState: () => undefined,
+        busEmit: (busEvent) => { bus.emit(busEvent) },
+        event,
+      })
+    },
+    setLiveTranscript: noop,
+    setMood: noop,
+    updateVoicePipeline: noop,
+    showPetStatus: noop,
+    ti: (key) => key,
+  })
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.deepEqual(events, [{ type: 'aborted', reason: 'user-button' }])
+  assert.equal(flushes, 0, 'the button abort waits for the fallback window')
+
+  timers.advance(15_000)
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(flushes, 1)
+  session.unmount()
+})
+
+test('a release re-arms the fallback so a still-blocked queue retries', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  bus.emit({
+    type: 'tts:error',
+    message: 'provider failed',
+    speechGeneration: 1,
+    shouldResumeContinuousVoice: false,
+  })
+  for (let index = 0; index < 4; index += 1) await Promise.resolve()
+  assert.equal(flushes, 1)
+
+  timers.advance(15_000)
+  for (let index = 0; index < 4; index += 1) await Promise.resolve()
+  assert.equal(flushes, 2, 'the fallback is re-armed after a release')
   session.unmount()
 })
 
