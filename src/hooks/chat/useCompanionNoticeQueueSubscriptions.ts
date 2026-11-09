@@ -68,6 +68,12 @@ export function useCompanionNoticeIdleFlush(
     }
 
     const unsubscribe = voiceBus.onAny((event) => {
+      // The pet voice button ends the turn without a new reply; wait for the
+      // fallback window so an interrupted reminder cannot replay immediately.
+      if (event.type === 'session:aborted' && event.abortReason === 'user-button') {
+        armFallback()
+        return
+      }
       if (
         event.type === 'tts:completed'
         || event.type === 'session:completed'

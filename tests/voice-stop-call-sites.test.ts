@@ -177,6 +177,7 @@ test('barge-in from the interrupt monitor interrupts only the current sentence',
 
 test('ending the listening microphone interrupts speech instead of clearing the queue', () => {
   const calls: string[] = []
+  const events: unknown[] = []
   const params = {
     continuousVoiceActiveRef: { current: true },
     suppressVoiceReplyRef: { current: false },
@@ -195,7 +196,7 @@ test('ending the listening microphone interrupts speech instead of clearing the 
     stopVadListening: async () => undefined,
     interruptSpeechOutput: () => { calls.push('interrupt') },
     stopAllSpeechOutput: () => { calls.push('stop-all') },
-    dispatchVoiceSessionAndSync: noop,
+    dispatchVoiceSessionAndSync: (event: unknown) => { events.push(event) },
     setLiveTranscript: noop,
     setMood: noop,
     updateVoicePipeline: noop,
@@ -206,6 +207,7 @@ test('ending the listening microphone interrupts speech instead of clearing the 
   stopVoiceConversationEntrypoint(params as never)
 
   assert.deepEqual(calls, ['interrupt'], 'mic teardown keeps queued reminders')
+  assert.deepEqual(events, [{ type: 'aborted', reason: 'user-button' }], 'the button abort carries its origin')
 })
 
 test('settings preview and diagnostics interrupt local playback only', () => {

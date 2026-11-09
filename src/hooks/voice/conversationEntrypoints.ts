@@ -380,7 +380,7 @@ export function stopVoiceConversationEntrypoint(
   params.interruptSpeechOutput()
   // dispatchVoiceSessionAndSync now auto-emits the mapped session:aborted to
   // VoiceBus, so the explicit busEmit call is no longer needed.
-  params.dispatchVoiceSessionAndSync({ type: 'aborted' })
+  params.dispatchVoiceSessionAndSync({ type: 'aborted', reason: 'user-button' })
   params.setLiveTranscript('')
   params.updateVoicePipeline(
     'idle',
