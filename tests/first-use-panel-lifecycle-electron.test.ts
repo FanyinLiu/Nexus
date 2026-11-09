@@ -390,6 +390,35 @@ test('a takeover panel the user opened is never reclaimed automatically', async 
   assert.equal(hidden.destroyed, false, 'a user-visible panel follows the ordinary lifecycle')
 })
 
+test('a takeover panel the user opened and then hid is still never reclaimed', async (t) => {
+  destroyAllPanels()
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const state = windowLifecycleState()
+  state.snapshot.petOnline = false
+  const sender = { id: 7013 }
+  const firstUsePanel = createHiddenPanel()
+  state.bySender.set(sender, firstUsePanel)
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  windowManager.confirmFirstUsePanelRetire(sender, lastSentNonce())
+  const hidden = state.windows.at(-1) as FakeWindow
+  hidden.show()
+  hidden.hide()
+  assert.equal(hidden.visible, false)
+
+  state.snapshot.petOnline = true
+  for (let index = 0; index < 13; index += 1) t.mock.timers.tick(5_000)
+  assert.equal(
+    hidden.destroyed,
+    false,
+    'a panel the user has seen keeps the ordinary lifecycle after it is hidden again',
+  )
+})
+
 test('speaking or busy takeover panels are not reclaimed until idle', async (t) => {
   destroyAllPanels()
   t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
