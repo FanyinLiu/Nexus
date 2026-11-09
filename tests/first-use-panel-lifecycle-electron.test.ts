@@ -18,7 +18,8 @@ type FakeWindow = {
   hide: () => void
   destroy: () => void
   emit: (event: string) => void
-  emitWebContents: (event: string) => void
+  emitWebContents: (event: string, ...args: unknown[]) => void
+  url?: string
   webContents: { removeListener: (event: string, listener: () => void) => void }
 }
 
@@ -33,7 +34,15 @@ function createHiddenPanel(): FakeWindow {
   return windowCreation.createPanelWindowWithOptions({ startWakeMonitor: false }) as unknown as FakeWindow
 }
 
-test('show or focus cancels a pending retirement before confirmation destroys the panel', () => {
+function destroyAllPanels() {
+  for (const win of windowLifecycleState().windows as unknown as FakeWindow[]) {
+    if (!win.destroyed) win.destroy()
+  }
+}
+
+test('show or focus cancels a pending retirement before confirmation destroys the panel', (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
   const state = windowLifecycleState()
   const sender = { id: 7001 }
   const panel = createHiddenPanel()
@@ -62,7 +71,47 @@ test('show or focus cancels a pending retirement before confirmation destroys th
   panel.destroy()
 })
 
-test('closing a pending panel clears the request instead of retiring it later', () => {
+test('a visible panel cannot start a first-use retirement request', (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
+  const state = windowLifecycleState()
+  const sender = { id: 7005 }
+  const panel = createHiddenPanel()
+  state.bySender.set(sender, panel)
+  panel.visible = true
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), {
+    requested: false,
+    reason: 'not_hidden_first_use_panel',
+  })
+})
+
+test('showPanelWindow cancels the pending retirement before asking the window to show', (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
+  const state = windowLifecycleState()
+  const sender = { id: 7003 }
+  const panel = createHiddenPanel()
+  state.bySender.set(sender, panel)
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  const nonce = lastSentNonce()
+  // Drop the window event so only showPanelWindow's explicit cancel can clear
+  // the request; the production show/focus handlers are covered separately.
+  panel.show = () => { panel.visible = true }
+  windowManager.showPanelWindow('chat')
+
+  assert.deepEqual(
+    windowManager.confirmFirstUsePanelRetire(sender, nonce),
+    { retired: false, reason: 'no_pending' },
+  )
+  assert.equal(panel.destroyed, false)
+  panel.destroy()
+})
+
+test('closing a pending panel clears the request instead of retiring it later', (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
   const state = windowLifecycleState()
   const sender = { id: 7002 }
   const panel = createHiddenPanel()
@@ -79,7 +128,55 @@ test('closing a pending panel clears the request instead of retiring it later', 
   )
 })
 
-test('the hidden takeover panel resolves only after its renderer finishes loading', async () => {
+test('retiring the panel arms the hidden takeover driver', (t) => {
+  destroyAllPanels()
+  t.mock.timers.enable({ apis: ['setInterval'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const state = windowLifecycleState()
+  state.snapshot.petOnline = false
+  const sender = { id: 7004 }
+  const panel = createHiddenPanel()
+  state.bySender.set(sender, panel)
+  const windowsBefore = state.windows.length
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  const nonce = lastSentNonce()
+  assert.deepEqual(windowManager.confirmFirstUsePanelRetire(sender, nonce), {
+    retired: true,
+    reason: null,
+  })
+  assert.equal(panel.destroyed, true)
+
+  const rebuilt = state.windows.at(-1) as FakeWindow
+  assert.equal(state.windows.length, windowsBefore + 1, 'the takeover driver creates a fallback panel')
+  assert.equal(rebuilt.visible, false, 'the fallback panel stays hidden')
+  rebuilt.destroy()
+})
+
+test('a failed panel load is replaced on the next explicit open', (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
+  const state = windowLifecycleState()
+  const failed = createHiddenPanel()
+  const before = state.windows.length
+  failed.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///panel', true)
+
+  windowManager.showPanelWindow('chat')
+
+  const replacement = state.windows.at(-1) as FakeWindow
+  assert.equal(state.windows.length, before + 1, 'the blank window is not reused')
+  assert.equal(failed.destroyed, true, 'the failed window is destroyed')
+  assert.equal(replacement.visible, true, 'the replacement opens for the user')
+  assert.match(String((replacement as unknown as { url?: string }).url), /view=panel/)
+  replacement.destroy()
+})
+
+test('the hidden takeover panel resolves only after its renderer finishes loading', async (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
   const state = windowLifecycleState()
   const before = state.monitorStarts
   const pending = windowManager.createHiddenTakeoverPanel()
@@ -94,7 +191,9 @@ test('the hidden takeover panel resolves only after its renderer finishes loadin
   panel.destroy()
 })
 
-test('a takeover panel closed before load resolves null and creates no monitor', async () => {
+test('a takeover panel closed before load resolves null and creates no monitor', async (t) => {
+  destroyAllPanels()
+  t.after(destroyAllPanels)
   const state = windowLifecycleState()
   const before = state.monitorStarts
   const pending = windowManager.createHiddenTakeoverPanel()

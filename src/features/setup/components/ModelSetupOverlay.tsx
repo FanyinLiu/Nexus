@@ -60,6 +60,9 @@ export function ModelSetupOverlay({
   const [busy, setBusy] = useState(false)
   const [dismissed, setDismissed] = useState(readModelSetupDismissed)
   const [requested, setRequested] = useState(hasModelSetupRequest)
+  const [pageVisible, setPageVisible] = useState(() => (
+    typeof document === 'undefined' || document.visibilityState === 'visible'
+  ))
   const [coverSeen, setCoverSeen] = useState(suppressed)
   if (coverSeen !== suppressed) {
     setCoverSeen(suppressed)
@@ -113,6 +116,16 @@ export function ModelSetupOverlay({
     // transition. The first paint still acks from the layout effect below.
     if (overlayVisibilityRef.current === true) resolveModelSetupRequest('shown')
   }), [])
+
+  // A hidden takeover panel may pull the request, but the user cannot see the
+  // prompt there. Keep the main-process pending until the page is actually
+  // visible, then let the normal layout effect acknowledge the first paint.
+  useEffect(() => {
+    const syncVisibility = () => setPageVisible(document.visibilityState === 'visible')
+    syncVisibility()
+    document.addEventListener('visibilitychange', syncVisibility)
+    return () => document.removeEventListener('visibilitychange', syncVisibility)
+  }, [])
 
   // sessionStorage only lasts for this page. The refusal itself is on disk
   // in the main process; peeking it (without spending the reminder) keeps
@@ -187,7 +200,7 @@ export function ModelSetupOverlay({
       resolveModelSetupRequest('installed')
     }
   }, [inventory, voiceStillNeeded])
-  const overlayVisible = shouldShowModelSetupOverlay({
+  const overlayVisible = pageVisible && shouldShowModelSetupOverlay({
     dismissed,
     // Required models alone are not "done": the selected listener is part of
     // this install, and the dialog has to stay up while that file is fetched.
@@ -279,6 +292,7 @@ export function ModelSetupOverlay({
     }
   }, [busy, handleDismiss, overlayVisible])
 
+  if (!pageVisible) return null
   if (suppressed) return null
   if (dismissed) return null
   if (!requested) return null

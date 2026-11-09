@@ -67,6 +67,11 @@ let settingsReturnFocus = {
   request: () => {},
 }
 
+// A panel whose main frame never loaded cannot render a second open. Track it
+// so the next createPanelWindow call replaces the blank window instead of
+// showing it again.
+const panelLoadFailures = new WeakSet()
+
 // macOS Dock overlaps transparent windows near the bottom edge even within
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
 // action buttons (mic, menu) above the Dock hit region.
@@ -405,8 +410,12 @@ export function createPanelWindow() {
  * }} [options]
  */
 export function createPanelWindowWithOptions(options = {}) {
-  if (getPanelWindow() && !getPanelWindow().isDestroyed()) {
-    return getPanelWindow()
+  const existing = getPanelWindow()
+  if (existing && !existing.isDestroyed()) {
+    if (!panelLoadFailures.has(existing)) return existing
+    // The renderer never produced content. Reusing this window would keep
+    // showing a blank panel, so replace it on the next explicit open.
+    existing.destroy()
   }
   const startWakeMonitor = options.startWakeMonitor !== false
 
@@ -542,7 +551,13 @@ export function createPanelWindowWithOptions(options = {}) {
     rememberPanelWindowBounds()
   })
 
+  win.webContents.on('did-fail-load', (_event, _errorCode, _errorDescription, _validatedURL, isMainFrame) => {
+    if (isMainFrame === false) return
+    panelLoadFailures.add(win)
+  })
+
   win.webContents.on('did-finish-load', () => {
+    panelLoadFailures.delete(win)
     syncRuntimeState()
     syncPetWindowState()
     emitPanelWindowState()

@@ -20,6 +20,7 @@ function testState() {
       panelRequests: [],
       panelShown: [],
       panelEventSink: null,
+      panelLoading: false,
     }
   }
   return globalThis.${STATE_KEY}
@@ -61,6 +62,7 @@ export const mainWindow = null
 export const panelWindow = {
   isDestroyed: () => false,
   webContents: {
+    isLoadingMainFrame: () => testState().panelLoading,
     send: (channel, payload) => {
       testState().panelRequests.push(channel)
       // A test may hand the event to the panel renderer, the way Electron

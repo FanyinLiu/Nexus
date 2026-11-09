@@ -179,11 +179,18 @@ function installWindowMock(nextInventory: Inventory = inventory) {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => { storage.set(key, value) },
   }
+  let visibilityState: DocumentVisibilityState = 'visible'
+  const visibilityListeners = new Set<() => void>()
   const documentMock = {
     activeElement: null,
+    get visibilityState() { return visibilityState },
     querySelector: () => null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (type: string, listener: () => void) => {
+      if (type === 'visibilitychange') visibilityListeners.add(listener)
+    },
+    removeEventListener: (type: string, listener: () => void) => {
+      if (type === 'visibilitychange') visibilityListeners.delete(listener)
+    },
   }
   const windowMock = {
     desktopPet: {
@@ -221,6 +228,10 @@ function installWindowMock(nextInventory: Inventory = inventory) {
     downloadCalls,
     resolveCalls,
     emitProgress: (event: unknown) => progressListener?.(event),
+    setVisibility: (next: DocumentVisibilityState) => {
+      visibilityState = next
+      for (const listener of visibilityListeners) listener()
+    },
   }
 }
 
@@ -292,6 +303,34 @@ test('the installer card renders the zh-CN invite inside its sized panel shell',
 
   renderer.unmount()
   setLocale('en-US')
+})
+
+test('a hidden panel pulls the request without acknowledging until it becomes visible', async () => {
+  const { resolveCalls, setVisibility } = installWindowMock()
+  setVisibility('hidden')
+  requestModelSetupOnVoiceUse()
+
+  const renderer = createComponentRenderer<{
+    suppressed?: boolean
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
+
+  renderer.render({})
+  await flushEffects()
+  renderer.render({})
+  await flushEffects()
+
+  assert.deepEqual(resolveCalls, [], 'the hidden takeover panel must not spend the request')
+  assert.deepEqual(collectText(renderer.render({})), [], 'the prompt does not paint while hidden')
+
+  setVisibility('visible')
+  renderer.render({})
+  await flushEffects()
+  assert.deepEqual(resolveCalls, [{ reason: 'shown' }], 'becoming visible paints and acknowledges once')
+
+  renderer.render({})
+  await flushEffects()
+  assert.deepEqual(resolveCalls, [{ reason: 'shown' }], 'later renders do not acknowledge again')
+  renderer.unmount()
 })
 
 test('a painted prompt acknowledges the pending delivery exactly once', async () => {
