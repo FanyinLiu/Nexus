@@ -18,6 +18,7 @@
     "tests/helpers/memory-vector-electron-stub.mjs",
     "tests/helpers/persona-ipc-electron-stub.mjs",
     "tests/helpers/proactive-notification-hooks.mjs",
+    "tests/helpers/realReactRoot.ts",
     "tests/helpers/reminder-strip-runtime-hooks.mjs",
     "tests/helpers/tsx-test-loader.mjs",
     "tests/helpers/tts-net-request-mock-hooks.mjs",
