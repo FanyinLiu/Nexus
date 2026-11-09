@@ -74,8 +74,11 @@ export function useCompanionNoticeIdleFlush(
         armFallback()
         return
       }
+      const noSpeechEnded = event.type === 'vad:no_speech_timeout'
+        || (event.type === 'stt:error' && event.code === 'no-speech')
       if (
-        event.type === 'tts:completed'
+        noSpeechEnded
+        || event.type === 'tts:completed'
         || event.type === 'session:completed'
         || event.type === 'tts:error'
         || event.type === 'session:aborted'

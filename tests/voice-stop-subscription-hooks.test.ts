@@ -10,6 +10,9 @@ import {
 } from '../src/hooks/chat/useCompanionNoticeQueueSubscriptions.ts'
 import { VoiceBus } from '../src/features/voice/bus.ts'
 import { emitSpeechStopAll } from '../src/features/voice/speechStopBus.ts'
+import { createVoiceSessionState } from '../src/features/voice/sessionMachine.ts'
+import { handleVoiceListeningFailureRuntime } from '../src/hooks/voice/transcriptHandling.ts'
+import { dispatchVoiceSessionAndSyncRuntime } from '../src/hooks/voice/runtimeSupport.ts'
 
 type ReactInternals = { H: unknown }
 const reactInternals = (React as unknown as {
@@ -210,6 +213,93 @@ test('the idle fallback releases the queue when no voice event arrives', async (
   await Promise.resolve()
   await Promise.resolve()
 
+  assert.equal(flushes, 1)
+  session.unmount()
+})
+
+test('a no-speech STT error through the real handler releases the queue immediately', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  const noop = () => undefined
+  const sessionRef = { current: createVoiceSessionState() }
+  const voiceStateRef: { current: 'listening' } = { current: 'listening' }
+  handleVoiceListeningFailureRuntime({
+    message: 'no speech detected',
+    errorCode: 'no-speech',
+    activeVoiceConversationOptionsRef: { current: {} },
+    dispatchVoiceSessionAndSync: (event) => dispatchVoiceSessionAndSyncRuntime({
+      voiceSessionRef: sessionRef,
+      voiceStateRef,
+      setVoiceState: () => undefined,
+      busEmit: (busEvent) => { bus.emit(busEvent) },
+      event,
+    }),
+    setLiveTranscript: noop,
+    setSpeechLevelValue: noop,
+    setMood: noop,
+    updateVoicePipeline: noop,
+    appendVoiceTrace: noop,
+    setError: noop,
+    shouldAutoRestartVoice: () => false,
+    noSpeechRestartCountRef: { current: 0 },
+    maxContinuousNoSpeechRestarts: 1,
+    pauseContinuousVoice: noop,
+    showPetStatus: noop,
+    scheduleVoiceRestart: noop,
+    getNoSpeechRestartDelay: () => 0,
+    setContinuousVoiceSession: noop,
+    resetNoSpeechRestartCount: noop,
+    ti: (key) => key,
+  })
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.equal(flushes, 1, 'no-speech releases without waiting for the fallback')
+  session.unmount()
+})
+
+test('vad:no_speech_timeout releases the queue immediately', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  bus.emit({ type: 'vad:no_speech_timeout', waitedMs: 3_000 })
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.equal(flushes, 1)
+  session.unmount()
+})
+
+test('a non-no-speech STT error still waits for the fallback window', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  bus.emit({ type: 'stt:error', code: 'network', message: 'network failed' })
+  await Promise.resolve()
+  assert.equal(flushes, 0, 'only no-speech is an immediate release')
+
+  timers.advance(15_000)
+  await Promise.resolve()
+  await Promise.resolve()
   assert.equal(flushes, 1)
   session.unmount()
 })
