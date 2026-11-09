@@ -185,7 +185,12 @@ function surfaceProps(input: {
   presence?: RuntimeStateSnapshot['companionPresence']
   voiceState?: VoiceState
   chatBusy?: boolean
+  continuousVoiceActive?: boolean
   onHideBubble?: () => void
+  onStopVoiceConversation?: () => void
+  onToggleVoiceConversation?: () => void
+  onSpeechInterrupt?: () => void
+  onSpeechStopAll?: () => void
 } = {}) {
   return {
     settings: {
@@ -219,10 +224,14 @@ function surfaceProps(input: {
     voice: {
       voiceState: input.voiceState ?? ('idle' as const),
       speechLevelSource: { current: 0, getSnapshot: () => 0, subscribe: () => () => {} },
-      continuousVoiceActive: false,
-      toggleVoiceConversation: () => {},
-      stopVoiceConversation: () => {},
-      speechStop: { interrupt: () => {}, stopAll: () => {} },
+      continuousVoiceActive: input.continuousVoiceActive ?? false,
+      toggleVoiceConversation: input.onToggleVoiceConversation ?? (() => {}),
+      stopVoiceConversation: input.onStopVoiceConversation ?? (() => {}),
+      // Kept as an extra probe: the surface must never reach for stop-all.
+      speechStop: {
+        interrupt: input.onSpeechInterrupt ?? (() => {}),
+        stopAll: input.onSpeechStopAll ?? (() => {}),
+      },
     },
     chat: {
       assistantActivity: 'idle' as const,
@@ -562,5 +571,33 @@ test('a newer proactive bubble with the same title gets its own collapse window'
   } finally {
     view.unmount()
     restore()
+  }
+})
+
+test('the voice button interrupts listening and speaking instead of stopping everything', () => {
+  for (const voiceState of ['listening', 'speaking'] as const) {
+    const calls = { stopVoice: 0, interrupt: 0, stopAll: 0, toggle: 0 }
+    const view = createRenderer(FramelessCompanionSurface)
+    try {
+      const tree = view.render(surfaceProps({
+        voiceState,
+        onStopVoiceConversation: () => { calls.stopVoice += 1 },
+        onToggleVoiceConversation: () => { calls.toggle += 1 },
+        onSpeechInterrupt: () => { calls.interrupt += 1 },
+        onSpeechStopAll: () => { calls.stopAll += 1 },
+      }))
+      const button = findElements(tree, (element) => (
+        String(element.props.className).includes('nexus-companion-v2__voice')
+      ))[0]
+      assert.ok(button, `voice button missing in ${voiceState}`)
+      ;(button.props.onClick as () => void)()
+
+      assert.equal(calls.stopVoice, 1, `${voiceState} uses the mic/interrupt session stop`)
+      assert.equal(calls.stopAll, 0, `${voiceState} must not call stop-all`)
+      assert.equal(calls.interrupt, 0, 'the surface leaves interruption to stopVoiceConversation')
+      assert.equal(calls.toggle, 0)
+    } finally {
+      view.unmount()
+    }
   }
 })
