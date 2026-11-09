@@ -160,6 +160,8 @@ let tray = null
 let panelBlurTimer = null
 let settingsReturnTarget = null
 const firstUsePanelRetirement = createFirstUsePanelRetirementState()
+let takeoverPanels = new WeakSet()
+let shownTakeoverPanels = new WeakSet()
 const settingsReturnFocus = createSettingsReturnFocusCoordinator(() => {
   if (!mainWindow || mainWindow.isDestroyed()) return
   mainWindow.show()
@@ -425,8 +427,32 @@ export function createHiddenTakeoverPanel() {
       finish(null)
       return
     }
+    takeoverPanels.add(win)
+    win.once('show', () => shownTakeoverPanels.add(win))
     win.once('closed', () => finish(null))
   })
+}
+
+/**
+ * Only a hidden panel rebuilt by takeover may be reclaimed, and only while it
+ * has never been shown to the user. The pet being online for the whole window
+ * also means the panel reminder scheduler is stopped (it runs only offline).
+ */
+function isTakeoverPanelReclaimable(snapshot) {
+  const win = panelWindow
+  if (!win || win.isDestroyed() || !takeoverPanels.has(win)) return false
+  if (shownTakeoverPanels.has(win) || win.isVisible()) return false
+  return snapshot.voiceState === 'idle'
+    && snapshot.continuousVoiceActive !== true
+    && snapshot.assistantActivity === 'idle'
+    && snapshot.searchInProgress !== true
+    && snapshot.ttsInProgress !== true
+}
+
+function reclaimHiddenTakeoverPanel() {
+  const win = panelWindow
+  if (!win || win.isDestroyed() || !takeoverPanels.has(win)) return
+  win.destroy()
 }
 
 const retiredPanelTakeover = createRetiredPanelTakeover({
@@ -434,6 +460,8 @@ const retiredPanelTakeover = createRetiredPanelTakeover({
   hasPanelWindow: () => Boolean(panelWindow && !panelWindow.isDestroyed()),
   createHiddenPanel: createHiddenTakeoverPanel,
   isQuitting: () => app.isQuitting === true,
+  shouldReclaimPanel: isTakeoverPanelReclaimable,
+  reclaimPanel: reclaimHiddenTakeoverPanel,
   onHiddenPanelReady: (win) => {
     if (!win || win.isDestroyed()) return
     startReminderPanelWakeMonitor()
@@ -446,6 +474,8 @@ export function resetPanelLifecycleForTests() {
   firstUsePanelRetirement.pending = null
   firstUsePanelRetirement.visibilityEpoch = 0
   firstUsePanelRetirement.retired = false
+  takeoverPanels = new WeakSet()
+  shownTakeoverPanels = new WeakSet()
   if (panelBlurTimer) {
     clearTimeout(panelBlurTimer)
     panelBlurTimer = null

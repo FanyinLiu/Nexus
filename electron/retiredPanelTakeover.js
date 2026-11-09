@@ -20,6 +20,9 @@ export const RETIRED_PANEL_TAKEOVER_INTERVAL_MS = 5_000
  * @property {(win: unknown) => void} onHiddenPanelReady
  * @property {() => boolean} [isQuitting] Main-process quit latch; a closing
  *   pet window must not be mistaken for an offline companion.
+ * @property {(snapshot: Record<string, unknown>) => boolean} [shouldReclaimPanel]
+ * @property {() => void} [reclaimPanel]
+ * @property {number} [reclaimAfterMs]
  * @property {() => number} [now]
  * @property {(callback: () => void, ms: number) => unknown} [setIntervalFn]
  * @property {(timer: unknown) => void} [clearIntervalFn]
@@ -35,7 +38,10 @@ export function createRetiredPanelTakeover({
   createHiddenPanel,
   onHiddenPanelReady,
   isQuitting = () => false,
-  now = Date.now,
+  shouldReclaimPanel = () => false,
+  reclaimPanel = () => {},
+  reclaimAfterMs = 60_000,
+  now = () => Date.now(),
   setIntervalFn = (callback, ms) => setInterval(callback, ms),
   clearIntervalFn = (timer) => clearInterval(/** @type {any} */ (timer)),
   intervalMs = RETIRED_PANEL_TAKEOVER_INTERVAL_MS,
@@ -46,6 +52,8 @@ export function createRetiredPanelTakeover({
   let creating = false
   /** @type {boolean | null} */
   let lastPetOnline = null
+  /** @type {number | null} */
+  let petOnlineSince = null
   let lastActionAt = 0
 
   const stop = () => {
@@ -54,6 +62,7 @@ export function createRetiredPanelTakeover({
       timer = null
     }
     lastPetOnline = null
+    petOnlineSince = null
     lastActionAt = 0
   }
 
@@ -66,12 +75,30 @@ export function createRetiredPanelTakeover({
     }
     if (hasPanelWindow()) {
       creating = false
+      const snapshot = getSnapshot()
+      const petOnline = Boolean(snapshot?.petOnline)
+      lastPetOnline = petOnline
+      if (!petOnline) {
+        petOnlineSince = null
+        return 'panel_present'
+      }
+      const nowMs = now()
+      if (petOnlineSince === null) petOnlineSince = nowMs
+      if (nowMs - petOnlineSince >= reclaimAfterMs && shouldReclaimPanel(snapshot)) {
+        // Destroy only the never-shown takeover panel; the first-use latch
+        // stays untouched and a later real fall can rebuild it.
+        reclaimPanel()
+        petOnlineSince = null
+        lastActionAt = nowMs
+        return 'reclaimed'
+      }
       return 'panel_present'
     }
 
     const snapshot = getSnapshot()
     const petOnline = Boolean(snapshot?.petOnline)
     lastPetOnline = petOnline
+    petOnlineSince = null
     if (petOnline) return 'pet_online'
     if (creating) return 'creating'
 
@@ -113,6 +140,7 @@ export function createRetiredPanelTakeover({
     armed = false
     creating = false
     lastPetOnline = null
+    petOnlineSince = null
     lastActionAt = 0
   }
 
@@ -122,7 +150,7 @@ export function createRetiredPanelTakeover({
     tick,
     isArmed: () => armed,
     isRunning: () => timer !== null,
-    debugState: () => ({ armed, creating, lastPetOnline, lastActionAt }),
+    debugState: () => ({ armed, creating, lastPetOnline, petOnlineSince, lastActionAt }),
     resetForTests,
   }
 }

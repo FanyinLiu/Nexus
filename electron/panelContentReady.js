@@ -17,9 +17,30 @@
  * }} webContents
  */
 
+// Electron emits did-finish-load for its own error page after did-fail-load.
+// Keep that navigation flagged until the retry starts so neither the window
+// lifecycle nor a notification click mistakes the error page for ready.
+const failedNavigations = new WeakSet()
+
+/** @param {PanelReadyWindow | null | undefined} win */
+export function markPanelNavigationFailed(win) {
+  if (win) failedNavigations.add(win)
+}
+
+/** @param {PanelReadyWindow | null | undefined} win */
+export function clearPanelNavigationFailure(win) {
+  if (win) failedNavigations.delete(win)
+}
+
+/** @param {PanelReadyWindow | null | undefined} win */
+export function isPanelNavigationFailed(win) {
+  return Boolean(win && failedNavigations.has(win))
+}
+
 /** @param {PanelReadyWindow | null | undefined} win */
 export function isPanelContentReady(win) {
   if (!win || win.isDestroyed()) return false
+  if (isPanelNavigationFailed(win)) return false
   const webContents = win.webContents
   if (!webContents) return false
   if (typeof webContents.isLoadingMainFrame !== 'function') return true
@@ -48,6 +69,11 @@ export function runWhenPanelContentReady(win, callback) {
   let cancelled = false
   const handler = () => {
     if (cancelled) return
+    if (isPanelNavigationFailed(win)) {
+      // This finish belongs to the error page; wait for the retried load.
+      win.webContents.once('did-finish-load', handler)
+      return
+    }
     cancelled = true
     callback()
   }

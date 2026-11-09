@@ -19,7 +19,7 @@ function testState() {
       monitorStarts: 0,
       monitorStops: 0,
       panelWindowSetter: null,
-      snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '' },
+      snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
     }
   }
@@ -74,6 +74,8 @@ export class BrowserWindow extends EventEmitter {
     this.loadCount = 0
     this.webContents = {
       id: this.id,
+      loading: true,
+      isLoadingMainFrame: () => this.webContents.loading,
       send: (channel, payload) => {
         testState().sends.push({ window: this, channel, payload })
       },
@@ -109,6 +111,7 @@ export class BrowserWindow extends EventEmitter {
     this.onWebContents(event, wrapper)
   }
   emitWebContents(event, ...args) {
+    if (event === 'did-finish-load') this.webContents.loading = false
     for (const listener of [...(this.webContentsEvents.get(event) ?? [])]) listener(...args)
   }
   isDestroyed() { return this.destroyed }
@@ -124,7 +127,12 @@ export class BrowserWindow extends EventEmitter {
   setPosition(x, y) { this.bounds = { ...this.bounds, x, y } }
   setAlwaysOnTop() {}
   setVisibleOnAllWorkspaces() {}
-  loadURL(url) { this.url = url; this.loadCount += 1; return Promise.resolve() }
+  loadURL(url) {
+    this.url = url
+    this.loadCount += 1
+    this.webContents.loading = true
+    return Promise.resolve()
+  }
   destroy() {
     if (this.destroyed) return
     this.destroyed = true
@@ -291,7 +299,7 @@ export function windowLifecycleState() {
       monitorStarts: 0,
       monitorStops: 0,
       panelWindowSetter: null,
-      snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '' },
+      snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
     }
   }

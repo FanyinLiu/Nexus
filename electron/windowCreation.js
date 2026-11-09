@@ -41,6 +41,10 @@ import {
 } from './windowRuntimeState.js'
 import { sanitizeRuntimeLogMessage } from './runtimeLogSanitizer.js'
 import { createLogger } from './logger.js'
+import {
+  clearPanelNavigationFailure,
+  markPanelNavigationFailed,
+} from './panelContentReady.js'
 
 let getMainWindow = () => null
 let getPanelWindow = () => null
@@ -75,7 +79,7 @@ let settingsReturnFocus = {
 const PANEL_LOAD_RETRY_LIMIT = 2
 const PANEL_LOAD_RETRY_BASE_DELAY_MS = 250
 const panelLog = createLogger('panel.window')
-/** @type {WeakMap<object, { attempts: number, timer: ReturnType<typeof setTimeout> | null }>} */
+/** @type {WeakMap<object, { attempts: number, timer: ReturnType<typeof setTimeout> | null, failedThisNavigation: boolean }>} */
 const panelLoadRetries = new WeakMap()
 
 // macOS Dock overlaps transparent windows near the bottom edge even within
@@ -559,7 +563,11 @@ export function createPanelWindowWithOptions(options = {}) {
   win.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, _validatedURL, isMainFrame) => {
     // -3 is ERR_ABORTED: a navigation was superseded, not a broken renderer.
     if (isMainFrame === false || errorCode === -3) return
-    const retry = panelLoadRetries.get(win) ?? { attempts: 0, timer: null }
+    const retry = panelLoadRetries.get(win)
+      ?? { attempts: 0, timer: null, failedThisNavigation: false }
+    retry.failedThisNavigation = true
+    panelLoadRetries.set(win, retry)
+    markPanelNavigationFailed(win)
     if (retry.attempts < PANEL_LOAD_RETRY_LIMIT) {
       const delay = PANEL_LOAD_RETRY_BASE_DELAY_MS * (2 ** retry.attempts)
       retry.attempts += 1
@@ -579,8 +587,16 @@ export function createPanelWindowWithOptions(options = {}) {
 
   win.webContents.on('did-finish-load', () => {
     const retry = panelLoadRetries.get(win)
+    if (retry?.failedThisNavigation) {
+      // The error page also fires did-finish-load. Do not clear the retry
+      // timer and never treat this navigation as ready.
+      retry.failedThisNavigation = false
+      queueMicrotask(() => clearPanelNavigationFailure(win))
+      return
+    }
     if (retry?.timer) clearTimeout(retry.timer)
     panelLoadRetries.delete(win)
+    clearPanelNavigationFailure(win)
     syncRuntimeState()
     syncPetWindowState()
     emitPanelWindowState()
