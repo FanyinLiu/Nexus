@@ -495,7 +495,7 @@ export type DesktopPetEventChannel =
 
 export interface DesktopPetBridgeMethodArguments {
   claimModelSetupReminder: readonly [options?: { peek?: boolean }]
-  closePanel: readonly []
+  closePanel: readonly [options?: { retireFirstUse?: boolean; nonce?: string }]
   closeSettings: readonly []
   completeChat: unknown
   completeChatStream: unknown
@@ -737,7 +737,7 @@ export interface DesktopPetBridgeMethodArguments {
 
 export interface DesktopPetBridgeMethodResults {
   claimModelSetupReminder: { declined: boolean; remind: boolean }
-  closePanel: void
+  closePanel: undefined | { retired: boolean; reason: null | string } | { requested: boolean; reason: string } | { requested: boolean; reason?: undefined }
   closeSettings: void
   completeChat: unknown
   completeChatStream: unknown

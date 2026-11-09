@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   validateChatCompletionPayload,
+  validateClosePanelPayload,
   validateAudioSynthesisPayload,
   validateAudioTranscriptionPayload,
   validateDesktopContextRequestPayload,
@@ -148,6 +149,24 @@ test('IPC window state schema strips unknown keys and rejects wrong types', () =
   assert.throws(
     () => validatePetWindowStatePayload({ isPinned: 'true' }),
     /Invalid IPC payload for pet-window:update-state: payload\.isPinned must be a boolean/,
+  )
+})
+
+test('close-panel schema permits only the one-time retirement flag', () => {
+  assert.deepEqual(validateClosePanelPayload(undefined), {})
+  assert.deepEqual(validateClosePanelPayload({ retireFirstUse: true }), { retireFirstUse: true })
+  assert.deepEqual(validateClosePanelPayload({ retireFirstUse: false }), { retireFirstUse: false })
+  assert.deepEqual(
+    validateClosePanelPayload({ retireFirstUse: true, nonce: 'nonce-1' }),
+    { retireFirstUse: true, nonce: 'nonce-1' },
+  )
+  assert.throws(
+    () => validateClosePanelPayload({ retireFirstUse: 'yes' }),
+    /retireFirstUse must be a boolean/,
+  )
+  assert.deepEqual(
+    validateClosePanelPayload({ retireFirstUse: true, unknown: true }),
+    { retireFirstUse: true },
   )
 })
 

@@ -55,6 +55,7 @@ let releaseDock = () => {}
 let hasSystemTray = () => false
 let syncPetWindowState = () => {}
 let emitPanelSection = () => {}
+let cancelFirstUsePanelRetirement = () => {}
 let isSmokeTest = false
 let SMOKE_RENDERER_TIMEOUT_MS = 15_000
 let SMOKE_SUCCESS_GRACE_MS = 1_200
@@ -91,6 +92,7 @@ export function configureWindowCreation(deps) {
   hasSystemTray = deps.hasSystemTray
   syncPetWindowState = deps.syncPetWindowState
   emitPanelSection = deps.emitPanelSection
+  cancelFirstUsePanelRetirement = deps.cancelFirstUsePanelRetirement ?? (() => {})
   isSmokeTest = deps.isSmokeTest
   SMOKE_RENDERER_TIMEOUT_MS = deps.SMOKE_RENDERER_TIMEOUT_MS
   SMOKE_SUCCESS_GRACE_MS = deps.SMOKE_SUCCESS_GRACE_MS
@@ -393,9 +395,20 @@ export function createMainWindow({ showOnReady = true } = {}) {
 }
 
 export function createPanelWindow() {
+  return createPanelWindowWithOptions()
+}
+
+/**
+ * @param {{
+ *   startWakeMonitor?: boolean,
+ *   onRendererReady?: (win: import('electron').BrowserWindow) => void,
+ * }} [options]
+ */
+export function createPanelWindowWithOptions(options = {}) {
   if (getPanelWindow() && !getPanelWindow().isDestroyed()) {
     return getPanelWindow()
   }
+  const startWakeMonitor = options.startWakeMonitor !== false
 
   const {
     width,
@@ -456,6 +469,7 @@ export function createPanelWindow() {
   }
 
   win.on('show', () => {
+    cancelFirstUsePanelRetirement()
     holdDock()
     if (getMainWindow() && !getMainWindow().isDestroyed() && getMainWindow().isVisible()) {
       _setPetHiddenForPanel(true)
@@ -483,6 +497,7 @@ export function createPanelWindow() {
   })
 
   win.on('closed', () => {
+    cancelFirstUsePanelRetirement()
     stopReminderPanelWakeMonitor()
     if (getPanelBlurTimer()) {
       clearTimeout(getPanelBlurTimer())
@@ -512,6 +527,7 @@ export function createPanelWindow() {
   })
 
   win.on('focus', () => {
+    cancelFirstUsePanelRetirement()
     if (getPanelBlurTimer()) {
       clearTimeout(getPanelBlurTimer())
       _setPanelBlurTimer(null)
@@ -531,13 +547,14 @@ export function createPanelWindow() {
     syncPetWindowState()
     emitPanelWindowState()
     emitPanelSection()
+    options.onRendererReady?.(win)
   })
 
   win.loadURL(getRendererEntry('panel'))
 
   _setPanelWindow(win)
   trackWindow(win, 'panel', { isTrackable: isPanelWindowTrackable })
-  startReminderPanelWakeMonitor()
+  if (startWakeMonitor) startReminderPanelWakeMonitor()
   return win
 }
 

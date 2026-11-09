@@ -564,6 +564,8 @@ type RuntimeState = {
   shown: number
   focusCalls: number
   createdWindows: number
+  panelWindows: Array<{ loading: boolean, finishLoad: () => void }>
+  nextPanelLoading: boolean
 }
 
 function runtime(): RuntimeState {

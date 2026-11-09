@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  FIRST_USE_PANEL_TRANSIENT_SURFACE_SELECTORS,
   createFirstUsePanelHandoff,
+  hasOpenFirstUsePanelTransientSurface,
   resolveFirstUseGuideHost,
+  shouldRetireFirstUsePanel,
 } from '../src/features/onboarding/firstUseGuideHost.ts'
 
 test('first-use Electron pet delegates before showing a credential form', () => {
@@ -21,6 +24,53 @@ test('completed setup never requests an initial guide or panel', () => {
       assert.equal(resolveFirstUseGuideHost({ pending: false, view, canOpenPanel }), 'none')
     }
   }
+})
+
+test('only a pristine completed first-use panel may be retired', () => {
+  const pristine = {
+    firstUsePanel: true,
+    onboardingPending: false,
+    onboardingOpen: false,
+    settingsOpen: false,
+    busy: false,
+    hasDraft: false,
+    hasPendingImage: false,
+    hasUserMessage: false,
+    voiceActive: false,
+    petRuntimeOnline: true,
+  }
+  assert.equal(shouldRetireFirstUsePanel(pristine), true)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, firstUsePanel: false }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, onboardingPending: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, onboardingOpen: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, settingsOpen: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, busy: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, hasDraft: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, hasPendingImage: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, hasUserMessage: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, voiceActive: true }), false)
+  assert.equal(shouldRetireFirstUsePanel({ ...pristine, petRuntimeOnline: false }), false)
+})
+
+test('the transient-surface whitelist is exact and blocks a visible overlay', () => {
+  assert.deepEqual([...FIRST_USE_PANEL_TRANSIENT_SURFACE_SELECTORS], [
+    '.chat-sheet-v2',
+    '.settings-v2',
+    '.sd',
+    '.onboarding-card',
+    '.sunday-letter-reader',
+    '[role="dialog"]',
+  ])
+  const selectors: string[] = []
+  const root = {
+    querySelector: (selector: string) => {
+      selectors.push(selector)
+      return selector.includes('.onboarding-card') ? {} : null
+    },
+  }
+  assert.equal(hasOpenFirstUsePanelTransientSurface(root), true)
+  assert.equal(selectors.length, 1)
+  assert.equal(hasOpenFirstUsePanelTransientSurface(null), false)
 })
 
 test('repeated effect subscriptions share one panel launch and its completion', async () => {

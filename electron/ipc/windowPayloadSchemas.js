@@ -90,6 +90,16 @@ const panelSectionSchema = {
   values: ['chat', 'chat-text', 'chat-recent', 'settings'],
 }
 
+const closePanelSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    retireFirstUse: optionalBoolean,
+    nonce: { type: 'string', optional: true, maxLength: 64 },
+  },
+}
+
 const dragDeltaSchema = {
   type: 'object',
   fields: {
@@ -217,6 +227,14 @@ export function validatePanelWindowStatePayload(payload) {
  */
 export function validateOpenPanelPayload(payload) {
   return /** @type {'chat'|'chat-text'|'chat-recent'|'settings'} */ (validateIpcPayload('window:open-panel', payload, panelSectionSchema))
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ retireFirstUse?: boolean, nonce?: string }}
+ */
+export function validateClosePanelPayload(payload) {
+  return /** @type {{ retireFirstUse?: boolean, nonce?: string }} */ (validateIpcPayload('window:close-panel', payload, closePanelSchema))
 }
 
 /**

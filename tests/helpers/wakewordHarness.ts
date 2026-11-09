@@ -131,6 +131,7 @@ export function createOverlayProps(view: 'pet' | 'panel', settings: AppSettings)
     petModelPresets: [],
     petModelPresetsReady: true,
     petRuntimeContinuousVoiceActive: false,
+    petRuntimeOnline: true,
     reminderTasks: [],
     debugConsoleEvents: [],
     loadPetModels: async () => [],

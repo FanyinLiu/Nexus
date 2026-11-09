@@ -203,6 +203,6 @@ test('methods with multiple preload parameters keep unknown argument types', () 
 
   assert.equal(methodTypes.vaultStore?.argument, 'unknown')
   assert.equal(methodTypes.completeChatStream?.argument, 'unknown')
-  assert.equal(methodTypes.closePanel?.argument, 'readonly []')
+  assert.equal(methodTypes.closePanel?.argument, 'readonly [options?: { retireFirstUse?: boolean; nonce?: string }]')
 })
 

@@ -15,6 +15,8 @@ import {
   showPanelWindow,
   closeSettingsWindow,
   closePanelWindow,
+  requestFirstUsePanelRetire,
+  confirmFirstUsePanelRetire,
   getPanelSectionSnapshot,
   showPetContextMenu,
   getLaunchOnStartupState,
@@ -68,6 +70,7 @@ import {
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
   validateOpenPanelPayload,
+  validateClosePanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
@@ -298,8 +301,14 @@ export function register() {
     return showPetContextMenu(sourceWindow)
   })
 
-  ipcMain.handle('window:close-panel', (event) => {
+  ipcMain.handle('window:close-panel', (event, payload) => {
     requireTrustedSender(event)
+    const { retireFirstUse, nonce } = validateClosePanelPayload(payload)
+    if (retireFirstUse === true && getViewKind(event) === 'panel') {
+      return nonce
+        ? confirmFirstUsePanelRetire(event.sender, nonce)
+        : requestFirstUsePanelRetire(event.sender)
+    }
     closePanelWindow()
   })
 

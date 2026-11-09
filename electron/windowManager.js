@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { promises as fsp } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { app, BrowserWindow, Menu, nativeImage, screen, Tray } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,7 +38,17 @@ import {
 
 import {
   bindRuntimeWindows,
+  buildRuntimeStateSnapshot,
+  startReminderPanelWakeMonitor,
 } from './windowRuntimeState.js'
+import {
+  beginFirstUsePanelRetirement,
+  bumpFirstUsePanelVisibilityEpoch,
+  cancelPendingFirstUsePanelRetirement,
+  confirmFirstUsePanelRetirement,
+  createFirstUsePanelRetirementState,
+} from './firstUsePanelRetirement.js'
+import { createRetiredPanelTakeover } from './retiredPanelTakeover.js'
 export {
   buildRuntimeStateSnapshot,
   updateRuntimeState,
@@ -47,6 +58,7 @@ import {
   configureWindowCreation,
   createMainWindow,
   createPanelWindow,
+  createPanelWindowWithOptions,
 } from './windowCreation.js'
 export { createMainWindow, createPanelWindow } from './windowCreation.js'
 
@@ -147,6 +159,7 @@ export let panelWindow = null
 let tray = null
 let panelBlurTimer = null
 let settingsReturnTarget = null
+const firstUsePanelRetirement = createFirstUsePanelRetirementState()
 const settingsReturnFocus = createSettingsReturnFocusCoordinator(() => {
   if (!mainWindow || mainWindow.isDestroyed()) return
   mainWindow.show()
@@ -183,6 +196,7 @@ configureWindowCreation({
   releaseDock,
   hasSystemTray,
   syncPetWindowState: () => applyPetWindowInstances(),
+  cancelFirstUsePanelRetirement,
   // Function declaration is hoisted; safe to pass before its source location.
   emitPanelSection,
   isSmokeTest,
@@ -310,6 +324,7 @@ export function showPanelWindow(section = 'chat', options = {}) {
   if (win.isMinimized()) {
     win.restore()
   }
+  cancelFirstUsePanelRetirement()
   win.show()
   win.focus()
   emitPanelSection()
@@ -338,8 +353,88 @@ export function closeSettingsWindow() {
 export function closePanelWindow() {
   settingsReturnTarget = null
   settingsReturnFocus.cancel()
+  cancelPendingFirstUsePanelRetirement(firstUsePanelRetirement)
   panelWindow?.hide()
 }
+
+/** Start a two-phase retirement request for the hidden first-use panel. */
+export function requestFirstUsePanelRetire(sender) {
+  if (firstUsePanelRetirement.retired) return { requested: false, reason: 'already_retired' }
+  const target = BrowserWindow.fromWebContents(sender)
+  if (!target || target !== panelWindow || target.isDestroyed() || target.isVisible()) {
+    return { requested: false, reason: 'not_hidden_first_use_panel' }
+  }
+  const nonce = randomUUID()
+  const pending = beginFirstUsePanelRetirement(firstUsePanelRetirement, {
+    nonce,
+    target,
+    webContentsId: sender.id,
+    visible: target.isVisible(),
+  })
+  if (!pending) return { requested: false, reason: 'pending_or_invalid' }
+  target.webContents.send('window:first-use-panel-retire-check', { nonce })
+  return { requested: true }
+}
+
+/** Confirm and synchronously retire the exact hidden panel that requested it. */
+export function confirmFirstUsePanelRetire(sender, nonce) {
+  const target = BrowserWindow.fromWebContents(sender)
+  const decision = confirmFirstUsePanelRetirement(firstUsePanelRetirement, {
+    nonce,
+    target,
+    webContentsId: sender.id,
+    visible: !target || target.isDestroyed() || target.isVisible(),
+  })
+  if (!decision.retired) return decision
+  if (!target || target !== panelWindow || target.isDestroyed() || target.isVisible()) {
+    return { retired: false, reason: 'target_no_longer_eligible' }
+  }
+  target.destroy()
+  // The surviving main process watches pet liveness from here: a later pet
+  // failure rebuilds a hidden panel so reminders still have an owner.
+  retiredPanelTakeover.start()
+  return decision
+}
+
+/** Show/focus/replacement cancels any in-flight request. */
+export function cancelFirstUsePanelRetirement() {
+  return bumpFirstUsePanelVisibilityEpoch(firstUsePanelRetirement)
+}
+
+/**
+ * Build the post-retirement fallback panel without showing it. Resolves once
+ * the renderer is ready so the wake driver never pushes into a loading page.
+ * @returns {Promise<import('electron').BrowserWindow | null>}
+ */
+function createHiddenTakeoverPanel() {
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (win) => {
+      if (settled) return
+      settled = true
+      resolve(win ?? null)
+    }
+    const win = createPanelWindowWithOptions({
+      startWakeMonitor: false,
+      onRendererReady: () => finish(win),
+    })
+    if (!win) {
+      finish(null)
+      return
+    }
+    win.once('closed', () => finish(null))
+  })
+}
+
+const retiredPanelTakeover = createRetiredPanelTakeover({
+  getSnapshot: () => buildRuntimeStateSnapshot(),
+  hasPanelWindow: () => Boolean(panelWindow && !panelWindow.isDestroyed()),
+  createHiddenPanel: createHiddenTakeoverPanel,
+  onHiddenPanelReady: (win) => {
+    if (!win || win.isDestroyed()) return
+    startReminderPanelWakeMonitor()
+  },
+})
 
 /**
  * Open the pet context menu. Resolves `'messages'` when that item was chosen,

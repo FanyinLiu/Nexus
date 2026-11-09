@@ -17,6 +17,7 @@ import { settingsSavedForUiLanguageChoice } from '../../features/onboarding/comp
 import { resolveGuideLaunch } from '../../features/onboarding/guideDeferral.ts'
 import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
 import type { PetModelDefinition } from '../../features/pet'
+import { useFirstUsePanelRetirement } from '../../hooks/onboarding/useFirstUsePanelRetirement.ts'
 import { useClearChatErrorOnVoiceCapture } from '../../hooks/voice/useClearChatErrorOnVoiceCapture.ts'
 import {
   loadGuideDeferral,
@@ -139,6 +140,8 @@ type UseAppOverlaysOptions = {
   petModelPresets: PetModelDefinition[]
   petModelPresetsReady: boolean
   petRuntimeContinuousVoiceActive: boolean
+  /** The panel owns reminder scheduling only when the pet renderer is offline. */
+  petRuntimeOnline: boolean
   reminderTasks: ReminderTask[]
   debugConsoleEvents: DebugConsoleEvent[]
   loadPetModels: () => Promise<PetModelDefinition[]>
@@ -164,6 +167,8 @@ type UseAppOverlaysOptions = {
     | 'messages'
     | 'busy'
     | 'busyRef'
+    | 'input'
+    | 'pendingImage'
     | 'currentSessionId'
     | 'setError'
     | 'appendSystemMessage'
@@ -178,6 +183,7 @@ type UseAppOverlaysOptions = {
     VoiceController,
     | 'voiceState'
     | 'continuousVoiceActive'
+    | 'continuousVoiceActiveRef'
     | 'toggleVoiceConversation'
     | 'stopVoiceConversation'
     | 'voiceStateRef'
@@ -217,6 +223,7 @@ export function useAppOverlays({
   petModelPresets,
   petModelPresetsReady,
   petRuntimeContinuousVoiceActive,
+  petRuntimeOnline,
   reminderTasks,
   debugConsoleEvents,
   loadPetModels,
@@ -236,6 +243,7 @@ export function useAppOverlays({
 }: UseAppOverlaysOptions) {
   const { t } = useTranslation()
   const onboardingPendingInitial = useMemo(() => !loadOnboardingCompleted(), [])
+  const firstUsePanelCandidate = view === 'panel' && onboardingPendingInitial
   const [onboardingPending, setOnboardingPending] = useState(onboardingPendingInitial)
   const [firstUseGuideHost] = useState(() => readInitialFirstUseGuide(view))
   const [onboardingOpen, setOnboardingOpen] = useState(firstUseGuideHost === 'local')
@@ -253,6 +261,24 @@ export function useAppOverlays({
     })
     return () => { active = false }
   }, [firstUseGuideHost, openFirstUsePanel, setChatError, t])
+
+  useFirstUsePanelRetirement({
+    enabled: firstUsePanelCandidate,
+    onboardingPending,
+    onboardingOpen,
+    settingsOpen,
+    busy: chat.busy,
+    busyRef: chat.busyRef,
+    hasDraft: (chat.input ?? '').trim().length > 0,
+    hasPendingImage: Boolean(chat.pendingImage),
+    hasUserMessage: chat.messages.some((message) => message.role === 'user'),
+    voiceState: voice.voiceState,
+    continuousVoiceActive: voice.continuousVoiceActive,
+    continuousVoiceActiveRef: voice.continuousVoiceActiveRef,
+    petRuntimeContinuousVoiceActive,
+    petRuntimeOnline,
+    closePanel: window.desktopPet?.closePanel,
+  })
 
   const closeSettingsSurface = useCallback(() => {
     setSettingsOpen(false)

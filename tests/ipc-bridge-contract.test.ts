@@ -217,7 +217,10 @@ test('panel preload model setup methods use only their classified channels', asy
     'window:decline-model-setup',
     'window:claim-model-setup-reminder',
   ])
-  assert.deepEqual([...subscribedChannels.keys()], ['models:setup-requested'])
+  assert.deepEqual([...subscribedChannels.keys()], [
+    'window:first-use-panel-retire-check',
+    'models:setup-requested',
+  ])
 })
 
 test('pet preload forwards the model setup request and the reminder claim', async () => {

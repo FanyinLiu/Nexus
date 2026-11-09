@@ -50,6 +50,7 @@
     "image4:contract:report": "node scripts/image4-contract-reporter.mjs",
     "performance:baseline": "node scripts/performance-baseline.mjs",
     "runtime:packaged-sustained": "node scripts/packaged-sustained-runtime.mjs",
+    "runtime:packaged-first-use": "node scripts/packaged-first-use-lifecycle.mjs",
     "live2d:three-model:smoke": "node scripts/live2d-three-model-smoke.mjs",
     "v04:draft-stack:audit": "node scripts/v04-draft-stack-audit.mjs",
     "v04:draft-stack:audit:quick": "node scripts/v04-draft-stack-audit.mjs --quick",

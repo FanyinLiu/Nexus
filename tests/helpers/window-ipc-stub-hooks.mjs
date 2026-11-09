@@ -84,6 +84,8 @@ export function showPanelWindow(section, options) {
 }
 export function closeSettingsWindow() {}
 export function closePanelWindow() {}
+export function requestFirstUsePanelRetire() { return { requested: false } }
+export function confirmFirstUsePanelRetire() { return { retired: false } }
 export function getPanelSectionSnapshot() { return { section: 'chat' } }
 export function showPetContextMenu() { return Promise.resolve(null) }
 export function getLaunchOnStartupState() { return false }
