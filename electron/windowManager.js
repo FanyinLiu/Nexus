@@ -440,6 +440,19 @@ const retiredPanelTakeover = createRetiredPanelTakeover({
   },
 })
 
+/** Test-only: clear module singletons so a failed test cannot leak timers. */
+export function resetPanelLifecycleForTests() {
+  retiredPanelTakeover.resetForTests()
+  firstUsePanelRetirement.pending = null
+  firstUsePanelRetirement.visibilityEpoch = 0
+  firstUsePanelRetirement.retired = false
+  if (panelBlurTimer) {
+    clearTimeout(panelBlurTimer)
+    panelBlurTimer = null
+  }
+  settingsReturnTarget = null
+}
+
 /**
  * Open the pet context menu. Resolves `'messages'` when that item was chosen,
  * otherwise `null` once the menu closes; the IPC handler forwards the result

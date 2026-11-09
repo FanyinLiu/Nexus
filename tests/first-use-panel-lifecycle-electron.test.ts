@@ -43,6 +43,13 @@ function destroyAllPanels() {
   }
 }
 
+// Even when an assertion fails, stop the takeover interval and release any
+// pending did-finish-load/closed waiters so the runner can exit promptly.
+test.afterEach(() => {
+  windowManager.resetPanelLifecycleForTests()
+  destroyAllPanels()
+})
+
 test('show or focus cancels a pending retirement before confirmation destroys the panel', (t) => {
   destroyAllPanels()
   t.after(destroyAllPanels)

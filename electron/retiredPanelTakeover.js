@@ -102,7 +102,18 @@ export function createRetiredPanelTakeover({
       return
     }
     timer = setIntervalFn(tick, intervalMs)
+    // A test runner or tray-only session must still be able to exit.
+    const startedTimer = /** @type {{ unref?: () => void } | null} */ (timer)
+    startedTimer?.unref?.()
     tick()
+  }
+
+  const resetForTests = () => {
+    stop()
+    armed = false
+    creating = false
+    lastPetOnline = null
+    lastActionAt = 0
   }
 
   return {
@@ -112,5 +123,6 @@ export function createRetiredPanelTakeover({
     isArmed: () => armed,
     isRunning: () => timer !== null,
     debugState: () => ({ armed, creating, lastPetOnline, lastActionAt }),
+    resetForTests,
   }
 }
