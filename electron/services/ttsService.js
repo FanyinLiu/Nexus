@@ -116,11 +116,19 @@ export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
   const existing = qwen3TtsReadyPromises.get(cacheKey)
   if (existing) return existing
 
+  // Strip trailing slashes first: `http://host:8002/` would otherwise become
+  // `http://host:8002//health`, which none of the sidecar routers answer.
+  const normalizedBaseUrl = String(baseUrl ?? '').replace(/\/+$/, '')
+  // The C server owns `/v1/health`, but the Python sidecar answers `/health`
+  // and keeps its load/warmup and speech endpoints under `/v1`. Accept a base
+  // URL with or without `/v1` so the fallback is reachable.
+  const pythonRoot = normalizedBaseUrl.replace(/\/v1$/, '')
+  const healthUrl = engine === 'cport' ? `${normalizedBaseUrl}/health` : `${pythonRoot}/health`
   const promise = (async () => {
-    const health = await performNetworkRequestWithRetry(`${baseUrl}/health`, {
+    const health = await performNetworkRequestWithRetry(healthUrl, {
       allowPrivateNetwork: true,
       method: 'GET',
-      headers: withSidecarAuth(`${baseUrl}/health`),
+      headers: withSidecarAuth(healthUrl),
       timeoutMs: 5_000,
       timeoutMessage: SPEECH_IPC_ERROR_CODES.TTS_TIMEOUT,
       signal,
@@ -138,10 +146,10 @@ export async function warmupQwen3Tts(baseUrl, signal, engine = 'python') {
     if (engine === 'cport') return status
     if (status?.loaded === true) return status
 
-    const warm = await performNetworkRequestWithRetry(`${baseUrl}/v1/warmup`, {
+    const warm = await performNetworkRequestWithRetry(`${pythonRoot}/v1/warmup`, {
       allowPrivateNetwork: true,
       method: 'POST',
-      headers: withSidecarAuth(`${baseUrl}/v1/warmup`, {
+      headers: withSidecarAuth(`${pythonRoot}/v1/warmup`, {
         'Content-Type': 'application/json',
       }),
       body: '{}',
@@ -222,9 +230,11 @@ async function synthesizeRemoteTts(sessionPayload, text, signal) {
     const engine = runtime.engine
     const qwen3BaseUrl = engine === 'cport' ? runtime.baseUrl : baseUrl
     await warmupQwen3Tts(qwen3BaseUrl, signal, engine)
+    const qwen3Root = String(qwen3BaseUrl ?? '').replace(/\/+$/, '')
+    const pythonV1 = /\/v1$/.test(qwen3Root) ? qwen3Root : `${qwen3Root}/v1`
     const endpoint = engine === 'cport'
-      ? `${qwen3BaseUrl}/tts/stream`
-      : `${qwen3BaseUrl}/audio/speech`
+      ? `${qwen3Root}/tts/stream`
+      : `${pythonV1}/audio/speech`
     const requestBody = JSON.stringify(engine === 'cport'
       ? buildQwen3CportRequestPayload(payload, content)
       : buildQwen3TtsSpeechRequestPayload(payload, content))
