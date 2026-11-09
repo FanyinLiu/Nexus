@@ -103,10 +103,14 @@ export function useReminderController({
     try {
       if (action.kind === 'notice') {
         const now = Date.now()
+        // The occurrence key is the stored due instant, never the delivery
+        // time: a frozen pet can resume and offer the same occurrence again.
+        const parsedDueAt = Date.parse(task.nextRunAt ?? '')
         const message = buildReminderProactiveMessage(task, {
           displayText,
           speech: defaultSpeechText,
           now,
+          occurrenceDueAt: Number.isFinite(parsedDueAt) ? parsedDueAt : undefined,
         })
         const desktopContext = await readProactiveDesktopContext(currentSettings)
         const context = buildReminderDeliveryContext({
@@ -135,6 +139,20 @@ export function useReminderController({
           reminderLog.warn('reminder routing bridge unavailable; using the legacy notice', {
             source: 'reminder',
           })
+        }
+
+        if (decision?.duplicate) {
+          // Main already accepted this occurrence from another window. The
+          // scheduler has advanced the local row; do not surface, speak or
+          // forward it again.
+          debugConsole.appendDebugConsoleEvent({
+            source: 'tool',
+            title: 'Reminder occurrence already delivered',
+            detail: `${task.title} / deduplicated`,
+            tone: 'info',
+            relatedTaskId: task.id,
+          })
+          return
         }
 
         if (decision) {

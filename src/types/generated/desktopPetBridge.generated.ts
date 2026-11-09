@@ -748,7 +748,7 @@ export interface DesktopPetBridgeMethodResults {
   consumeModelSetupRequest: boolean
   controlSystemMediaSession: { ok: boolean; hasSession: boolean; action: string; message: undefined | string }
   declineModelSetup: void
-  deliverProactiveMessage: { rule: 1 | 2 | 4 | 3 | 5 | 6; outlets: Array<'panel' | 'inbox' | 'badge' | 'strip' | 'bubble' | 'os_notification'> }
+  deliverProactiveMessage: { rule: 1 | 2 | 4 | 3 | 6 | 5; outlets: Array<'panel' | 'inbox' | 'badge' | 'strip' | 'bubble' | 'os_notification'>; duplicate?: boolean } | { rule: number; outlets: Array<never>; duplicate: boolean }
   discordConnect: { state: 'error' | 'disconnected' | 'connecting' | 'connected'; botUsername: null | string; allowedChannelIds: Array<string>; lastError: null | string }
   discordDisconnect: { ok: boolean }
   discordPairingList: Array<{ senderId: string; name: string; code: string; createdAt: number }>
@@ -787,7 +787,7 @@ export interface DesktopPetBridgeMethodResults {
   kwsStop: { ok: boolean }
   listChatModels: unknown
   listPetModels: unknown
-  listProactiveInbox: { entries: Array<{ status: 'done' | 'unread' | 'read' | 'dismissed'; updatedAt: number; id: string; source: 'reminder' | 'agenda' | 'bracket' | 'letter' | 'capsule' | 'open_arc' | 'away' | 'dream'; kind: string; priority: 'high' | 'normal' | 'low'; title: string; body: string; fullBody?: string; publicCopy?: { title: string; body: string }; summaryCount?: number; speech?: string; actions: Array<'done' | 'snooze' | 'open' | 'reply'>; createdAt: number; expiresAt?: number; origin?: { taskId?: string; letterId?: string; capsuleId?: string; arcId?: string } }>; unreadCount: number; removedIds: Array<string> }
+  listProactiveInbox: { entries: Array<{ status: 'done' | 'unread' | 'read' | 'dismissed'; updatedAt: number; id: string; source: 'reminder' | 'agenda' | 'bracket' | 'letter' | 'capsule' | 'open_arc' | 'away' | 'dream'; kind: string; priority: 'high' | 'normal' | 'low'; title: string; body: string; fullBody?: string; publicCopy?: { title: string; body: string }; summaryCount?: number; speech?: string; actions: Array<'done' | 'snooze' | 'open' | 'reply'>; createdAt: number; expiresAt?: number; origin?: { taskId?: string; occurrenceDueAt?: number; letterId?: string; capsuleId?: string; arcId?: string } }>; unreadCount: number; removedIds: Array<string> }
   listSpeechVoices: unknown
   localDataApplyChatMigration: unknown
   localDataApplyCompanionMigration: unknown

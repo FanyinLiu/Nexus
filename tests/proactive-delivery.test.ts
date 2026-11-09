@@ -625,3 +625,26 @@ test('inbox update schema accepts only the three statuses', () => {
   assert.throws(() => validateInboxUpdatePayload({ id: 'msg-1', status: 'archived' }))
   assert.throws(() => validateInboxUpdatePayload({ id: '', status: 'done' }))
 })
+
+test('delivery payload accepts a reminder occurrence due instant only as a non-negative integer', () => {
+  const base = {
+    message: makeMessage({ origin: { taskId: 'task-1', occurrenceDueAt: START } }),
+    context: makeContext(),
+  }
+  assert.deepEqual(
+    validateProactiveDeliveryPayload(base).message.origin,
+    { taskId: 'task-1', occurrenceDueAt: START },
+  )
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    message: makeMessage({ origin: { taskId: 'task-1', occurrenceDueAt: START + 0.5 } }),
+  }), /occurrenceDueAt must be an integer/)
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    message: makeMessage({ origin: { taskId: 'task-1', occurrenceDueAt: -1 } }),
+  }), /occurrenceDueAt must be >= 0/)
+  assert.throws(() => validateProactiveDeliveryPayload({
+    ...base,
+    message: makeMessage({ origin: { taskId: 'task-1', occurrenceDueAt: START, rogue: true } }),
+  }), /origin\.rogue is not allowed/)
+})

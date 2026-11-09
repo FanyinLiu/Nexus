@@ -253,8 +253,12 @@ function makeTask(): ReminderTask {
   }
 }
 
+type DeliveryPayload = {
+  message: { id: string; origin?: { taskId?: string; occurrenceDueAt?: number } }
+}
+
 function createControllerSession(options: {
-  deliver?: () => Promise<never>
+  deliver?: (payload: DeliveryPayload) => Promise<Record<string, unknown>>
   speakAssistantReply?: (text: string) => Promise<void>
   onError?: (value: string | null) => void
 } = {}) {
@@ -596,6 +600,25 @@ test('a real companion speech failure still sets the error state', async () => {
   try {
     await session.push({ chatContent: '', bubbleContent: 'Failed notice', speechContent: 'Failed speech', dedupeKey: 'stop-fail' })
     assert.equal(errors.length, 1)
+  } finally {
+    session.unmount()
+  }
+})
+
+test('a duplicate reminder occurrence never falls back to the local bubble', async () => {
+  let payload: DeliveryPayload | null = null
+  const session = createControllerSession({
+    deliver: async (next) => {
+      payload = next
+      return { rule: 2, outlets: ['inbox', 'panel'], duplicate: true }
+    },
+  })
+  const dueAt = '2026-01-01T00:05:00.000Z'
+  try {
+    await session.trigger({ ...makeTask(), nextRunAt: dueAt })
+    assert.equal(payload?.message.origin?.occurrenceDueAt, Date.parse(dueAt))
+    assert.equal(session.bubble, null)
+    assert.deepEqual(session.inboxUpdates, [])
   } finally {
     session.unmount()
   }

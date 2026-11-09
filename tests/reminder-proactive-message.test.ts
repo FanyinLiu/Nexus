@@ -176,3 +176,16 @@ test('readProactiveDesktopContext calls the bridge once with the active-window r
   assert.deepEqual(result, snapshot)
   assert.deepEqual(payloads, [{ includeActiveWindow: true }])
 })
+
+test('a reminder carries the occurrence due instant, not the delivery time', () => {
+  const dueAt = NOW - 5_000
+  const message = buildReminderProactiveMessage(task, {
+    displayText: 'Time to move',
+    speech: 'Stand up now',
+    now: NOW,
+    occurrenceDueAt: dueAt,
+  })
+
+  assert.equal(message.createdAt, NOW)
+  assert.deepEqual(message.origin, { taskId: 'task-1', occurrenceDueAt: dueAt })
+})
