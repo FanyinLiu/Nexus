@@ -196,6 +196,7 @@ export function useAppController() {
     fillComposerWithVoiceTranscript: voice.fillComposerWithVoiceTranscript,
     interruptActiveSpeechOutput: voice.speechStop.interrupt,
     canInterruptSpeech: () => settingsRef.current.voiceInterruptionEnabled,
+    voiceBus: voice.voiceBus,
     loadDesktopContextSnapshot: desktopContext.loadDesktopContextSnapshot,
     ...signalBridge.companionSignals,
     reminderTasksRef: reminderTaskStore.reminderTasksRef,

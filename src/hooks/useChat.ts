@@ -201,6 +201,21 @@ export function useChat(ctx: UseChatContext) {
     [discardDeferredCompanionNotices],
   )
 
+  // A deferred notice may only play after the current reply has both finished
+  // speaking and gone idle. The bus transition runs before useVoice syncs its
+  // ref, so defer the flush by one microtask and let canDeliver re-check.
+  useEffect(() => {
+    const bus = ctx.voiceBus
+    if (!bus) return
+    return bus.onTransition((event, _previous, next) => {
+      if (next !== 'idle') return
+      if (event.type !== 'tts:completed' && event.type !== 'session:completed') return
+      queueMicrotask(() => {
+        void flushDeferredCompanionNotices()
+      })
+    })
+  }, [ctx.voiceBus, flushDeferredCompanionNotices])
+
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(
       pendingReminderDraftRef.current,

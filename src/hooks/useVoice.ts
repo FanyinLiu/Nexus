@@ -804,6 +804,7 @@ export function useVoice(ctx: UseVoiceContext) {
     wakewordState,
     voicePipeline,
     voiceTrace,
+
     // Refs (for cross-hook access)
     voiceStateRef,
     continuousVoiceActiveRef,
