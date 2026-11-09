@@ -239,11 +239,29 @@ function createMockTimerClock(): IntervalClock {
   }
 }
 
+type MemoryLedger = {
+  has: (taskId: string, dueAt: number) => Promise<boolean>
+  record: (taskId: string, dueAt: number) => Promise<void>
+  flush: () => Promise<unknown>
+  keys: Set<string>
+}
+
+function createMemoryLedger(): MemoryLedger {
+  const keys = new Set<string>()
+  return {
+    keys,
+    has: async (taskId, dueAt) => keys.has(`${taskId}:${dueAt}`),
+    record: async (taskId, dueAt) => { keys.add(`${taskId}:${dueAt}`) },
+    flush: async () => undefined,
+  }
+}
+
 function createHarness(options: {
   trusted: (event: unknown) => boolean
   capabilities?: Capability[]
   clock?: IntervalClock
   panelFocused?: boolean
+  reminderDeliveryLedger?: MemoryLedger
 }) {
   const fakeIpc = createFakeIpcMain()
   const fakeInbox = createFakeInbox()
@@ -268,6 +286,7 @@ function createHarness(options: {
       osNotifications.push(payload)
     },
     isPanelFocused: () => options.panelFocused === true,
+    reminderDeliveryLedger: options.reminderDeliveryLedger,
   })
   return { ...fakeIpc, ...fakeInbox, ...windows, clock, ipc, fakeStrip, osNotifications }
 }
@@ -412,4 +431,44 @@ test('stopping the prune sweep clears the interval', (t: TestContext) => {
 
   assert.equal(harness.clock.clearCount(), 1)
   assert.equal(harness.calls.prune, pruneCallsAfterStop)
+})
+
+test('a resumed pet cannot re-deliver an occurrence the panel already accepted', async () => {
+  const ledger = createMemoryLedger()
+  const harness = createHarness({
+    trusted: () => true,
+    capabilities: ['pet', 'panel'],
+    reminderDeliveryLedger: ledger,
+  })
+  const occurrence = { taskId: 'task-1', occurrenceDueAt: NOW }
+
+  const panelDecision = await harness.invoke('proactive:deliver', { trusted: true }, {
+    message: makeMessage({ id: 'panel-delivery', origin: occurrence }),
+    context: makeContext(),
+  }) as { duplicate?: boolean; outlets: string[] }
+  assert.equal(panelDecision.duplicate, undefined)
+  assert.equal(harness.calls.upsert, 1)
+
+  // The resumed pet still holds the old row and offers the same due instant.
+  const stalePetDecision = await harness.invoke('proactive:deliver', { trusted: true }, {
+    message: makeMessage({ id: 'stale-pet-delivery', origin: occurrence }),
+    context: makeContext(),
+  }) as { duplicate?: boolean; outlets: string[] }
+  assert.equal(stalePetDecision.duplicate, true)
+  assert.deepEqual(stalePetDecision.outlets, [])
+  assert.equal(harness.calls.upsert, 1, 'the duplicate never reaches the inbox')
+
+  const presentations = harness.sentByWindow[0]?.filter((item) => item.channel === 'proactive:present') ?? []
+  assert.equal(presentations.length, 1, 'the duplicate never reaches the pet bubble')
+
+  // The next recurrence is a different occurrence and still delivers.
+  const nextDecision = await harness.invoke('proactive:deliver', { trusted: true }, {
+    message: makeMessage({
+      id: 'next-occurrence',
+      origin: { taskId: 'task-1', occurrenceDueAt: NOW + 60_000 },
+    }),
+    context: makeContext(),
+  }) as { duplicate?: boolean }
+  assert.equal(nextDecision.duplicate, undefined)
+  assert.equal(harness.calls.upsert, 2)
 })

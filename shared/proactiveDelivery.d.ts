@@ -79,6 +79,8 @@ export interface ProactiveMessage {
   expiresAt?: number
   origin?: {
     taskId?: string
+    /** Due instant of the reminder occurrence, independent of delivery time. */
+    occurrenceDueAt?: number
     letterId?: string
     capsuleId?: string
     arcId?: string
@@ -102,6 +104,11 @@ export interface DeliveryDecision {
   rule: ProactiveDeliveryRule
   /** Always starts with `inbox`; `panel` and `os_notification` may be unregistered. */
   outlets: DeliverySurface[]
+  /**
+   * True when main suppressed a reminder occurrence another window already
+   * delivered. The renderer must not show or forward it again.
+   */
+  duplicate?: boolean
 }
 
 export interface ProactiveInboxEntry extends ProactiveMessage {

@@ -57,9 +57,12 @@ export function clipText(value: string, maxLength: number): string {
  */
 export function buildReminderProactiveMessage(
   task: Pick<ReminderTask, 'id' | 'title' | 'keyPoint'>,
-  options: { displayText: string; speech: string; now: number },
+  options: { displayText: string; speech: string; now: number; occurrenceDueAt?: number },
 ): ReminderProactiveMessage {
   const speech = options.speech.trim()
+  const occurrenceDueAt = Number.isFinite(options.occurrenceDueAt)
+    ? Math.floor(options.occurrenceDueAt as number)
+    : undefined
   return {
     id: `reminder:${task.id}:${options.now}`,
     source: 'reminder',
@@ -70,7 +73,10 @@ export function buildReminderProactiveMessage(
     ...(speech ? { speech } : {}),
     actions: [...REMINDER_ACTIONS],
     createdAt: options.now,
-    origin: { taskId: task.id },
+    origin: {
+      taskId: task.id,
+      ...(occurrenceDueAt !== undefined ? { occurrenceDueAt } : {}),
+    },
   }
 }
 

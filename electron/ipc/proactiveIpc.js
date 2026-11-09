@@ -31,6 +31,10 @@ import { createLogger } from '../logger.js'
 import { readMainUiLocale } from '../mainMessages.js'
 import { buildProactiveNotificationCopy } from '../proactiveNotificationCopy.js'
 import { createProactiveInboxStore, PROACTIVE_INBOX_FILE_NAME } from '../services/proactiveInboxStore.js'
+import {
+  createReminderDeliveryLedger,
+  REMINDER_DELIVERY_FILE_NAME,
+} from '../services/reminderDeliveryLedger.js'
 import { createProactiveOutletRegistry, createProactiveRouter } from '../services/proactiveRouter.js'
 import { buildReminderStripLabels } from '../reminderStripLabels.js'
 import { getBoundWindowCapability } from './windowCapabilities.js'
@@ -86,6 +90,38 @@ const STRIP_HANDLED_ACTIONS = new Set(['done', 'open', 'reply'])
 /** @typedef {(handle: { unref?: () => void }) => void} IntervalClearer */
 
 /**
+ * @typedef {object} ReminderDeliveryLedger
+ * @property {(taskId: string, dueAt: number) => Promise<boolean>} has
+ * @property {(taskId: string, dueAt: number) => Promise<void>} record
+ * @property {() => Promise<unknown>} flush
+ */
+
+/** Tests and older wiring can omit the ledger; it then accepts everything. */
+function createNoopReminderDeliveryLedger() {
+  return {
+    has: async () => false,
+    record: async () => {},
+    flush: async () => undefined,
+  }
+}
+
+/**
+ * Reminder rows are idempotent on taskId + the occurrence dueAt. Both fields
+ * are optional in the shared message shape, so anything incomplete is left to
+ * the normal delivery path.
+ *
+ * @param {ProactiveMessage} message
+ * @returns {{ taskId: string, dueAt: number } | null}
+ */
+function reminderOccurrence(message) {
+  if (message?.source !== 'reminder') return null
+  const taskId = typeof message.origin?.taskId === 'string' ? message.origin.taskId.trim() : ''
+  const dueAt = message.origin?.occurrenceDueAt
+  if (!taskId || typeof dueAt !== 'number' || !Number.isFinite(dueAt) || dueAt < 0) return null
+  return { taskId, dueAt: Math.floor(dueAt) }
+}
+
+/**
  * The reminder strip is wired in-process: the router's strip outlet calls this
  * bag directly instead of pushing a presentation to a renderer.
  *
@@ -120,6 +156,7 @@ const STRIP_HANDLED_ACTIONS = new Set(['done', 'open', 'reply'])
  * @property {(preferences: ProactiveDeliveryPreferences) => void} [setDeliveryPreferences]
  * @property {() => boolean} [getTypingQuiet] True only while desktop typing quiet is active.
  * @property {(listener: (typing: boolean) => void) => () => void} [subscribeTypingQuiet]
+ * @property {ReminderDeliveryLedger} [reminderDeliveryLedger]
  */
 
 /**
@@ -152,6 +189,7 @@ export function createProactiveIpc({
   setDeliveryPreferences = () => {},
   getTypingQuiet = () => false,
   subscribeTypingQuiet = () => () => {},
+  reminderDeliveryLedger = createNoopReminderDeliveryLedger(),
 }) {
   /** @type {{ unref?: () => void } | null} */
   let pruneTimer = null
@@ -392,10 +430,24 @@ export function createProactiveIpc({
     if (preferences) setDeliveryPreferences(preferences)
     // The pet window cannot see whether the panel is focused, so main, which
     // owns every window, adds that one signal before the pure router runs.
-    return enqueueDelivery(() => router.deliver(message, {
-      ...context,
-      panelFocused: context.panelFocused || isPanelFocused(),
-    }))
+    return enqueueDelivery(async () => {
+      const occurrence = reminderOccurrence(message)
+      if (occurrence && await reminderDeliveryLedger.has(occurrence.taskId, occurrence.dueAt)) {
+        // A frozen/backgrounded renderer can offer the same occurrence again
+        // with stale local state. Suppress every visible outlet and tell the
+        // renderer to keep the locally advanced next run.
+        return { rule: 6, outlets: [], duplicate: true }
+      }
+      const decision = await router.deliver(message, {
+        ...context,
+        panelFocused: context.panelFocused || isPanelFocused(),
+      })
+      if (occurrence) {
+        // Record only after the router ran, so a thrown delivery can retry.
+        await reminderDeliveryLedger.record(occurrence.taskId, occurrence.dueAt)
+      }
+      return decision
+    })
   })
 
   ipcMain.handle('inbox:list', (event) => {
@@ -437,9 +489,13 @@ export function createProactiveIpc({
     pruneTimer.unref?.()
   }
 
-  /** Land any debounced inbox write before the process quits. */
-  function flush() {
-    return inbox.flush()
+  /** Land any debounced inbox/ledger write before the process quits. */
+  async function flush() {
+    const [inboxOk] = await Promise.all([
+      inbox.flush(),
+      reminderDeliveryLedger.flush?.() ?? Promise.resolve(),
+    ])
+    return inboxOk
   }
 
   /**
@@ -514,6 +570,12 @@ export function register({
       logger.warn('proactive inbox persist failed', { source: 'inbox' })
     },
   })
+  const reminderDeliveryLedger = createReminderDeliveryLedger({
+    getStorePath: () => path.join(app.getPath('userData'), REMINDER_DELIVERY_FILE_NAME),
+    onPersistError: () => {
+      logger.warn('reminder delivery ledger persist failed', { source: 'reminder' })
+    },
+  })
 
   activeIpc = createProactiveIpc({
     ipcMain,
@@ -533,6 +595,7 @@ export function register({
     setDeliveryPreferences,
     getTypingQuiet,
     subscribeTypingQuiet,
+    reminderDeliveryLedger,
   })
 }
 

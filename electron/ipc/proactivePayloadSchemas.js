@@ -69,6 +69,9 @@ const proactiveMessageSchema = {
       unknown: 'reject',
       fields: {
         taskId: { type: 'string', optional: true, maxLength: ORIGIN_ID_MAX_LENGTH, trim: true, allowEmpty: false },
+        // The occurrence this delivery belongs to, not the delivery time: the
+        // main-process idempotency ledger keys reminder rows on taskId + this.
+        occurrenceDueAt: { type: 'number', optional: true, integer: true, min: 0 },
         letterId: { type: 'string', optional: true, maxLength: ORIGIN_ID_MAX_LENGTH, trim: true, allowEmpty: false },
         capsuleId: { type: 'string', optional: true, maxLength: ORIGIN_ID_MAX_LENGTH, trim: true, allowEmpty: false },
         arcId: { type: 'string', optional: true, maxLength: ORIGIN_ID_MAX_LENGTH, trim: true, allowEmpty: false },
