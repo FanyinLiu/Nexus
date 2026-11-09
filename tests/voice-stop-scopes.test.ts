@@ -10,6 +10,7 @@ import {
   stopAllSpeechOutputRuntime,
 } from '../src/hooks/voice/runtimeSupport.ts'
 import { subscribeSpeechStopAll } from '../src/features/voice/speechStopBus.ts'
+import { isInterruptedError, isStopAllInterrupted } from '../src/features/voice/interruptedError.ts'
 import { clearDeferredCompanionNotices } from '../src/hooks/chat/useCompanionNotices.ts'
 import { broadcastVoiceStopPlayback } from '../electron/ipc/voiceStopBroadcast.js'
 
@@ -194,4 +195,14 @@ test('panel stop reaches the pet window and pet stop reaches the panel', () => {
   broadcastVoiceStopPlayback(pet.id, windows)
   assert.equal(panel.localStops, 2, 'panel window must receive the pet stop')
   assert.equal(pet.localStops, 2, 'sender is not asked to stop twice')
+})
+
+test('a foreign interrupted error is recognized by name and keeps its stop scope', () => {
+  const interrupted = { name: 'InterruptedError', reason: 'interrupt', message: 'stopped' }
+  const stopped = { name: 'InterruptedError', reason: 'stop-all', message: 'stopped' }
+
+  assert.equal(isInterruptedError(interrupted), true)
+  assert.equal(isStopAllInterrupted(interrupted), false)
+  assert.equal(isInterruptedError(stopped), true)
+  assert.equal(isStopAllInterrupted(stopped), true)
 })
