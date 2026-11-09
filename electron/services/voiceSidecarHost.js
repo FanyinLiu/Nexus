@@ -21,6 +21,7 @@ import {
   createVoiceSidecarSupervisor,
   resolveQwen3TtsPythonCommand,
 } from './voiceSidecarService.js'
+import { resolveVoiceSidecarScriptPath } from './voiceSidecarPaths.js'
 import {
   buildParentDeathGuardLaunch,
   buildQwen3CportArgs,
@@ -41,12 +42,13 @@ function resolveAppRoot() {
 // packaged builds. child_process bypasses Electron's asar fs shim, so the
 // returned path must point at a real file on disk.
 function resolveVoiceScriptPath(relativePath) {
-  if (app.isPackaged) {
-    const unpacked = path.join(process.resourcesPath, 'app.asar.unpacked', relativePath)
-    if (fs.existsSync(unpacked)) return unpacked
-  }
-  const devCandidate = path.join(resolveAppRoot(), relativePath)
-  return fs.existsSync(devCandidate) ? devCandidate : null
+  return resolveVoiceSidecarScriptPath({
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    appRoot: resolveAppRoot(),
+    relativePath,
+    existsSync: fs.existsSync,
+  })
 }
 
 function resolvePythonCommand() {

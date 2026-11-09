@@ -14,10 +14,13 @@ test('a connection error after warm-up drops the cached health check', async () 
   const tts = await ttsServicePromise
   let healthChecks = 0
   const authorizationHeaders: Array<string | undefined> = []
+  const paths: string[] = []
 
   const server = http.createServer((request, response) => {
     authorizationHeaders.push(request.headers.authorization)
-    if (request.url === '/v1/health') {
+    paths.push(request.url ?? '')
+    // Python answers the root health path; the C server uses /v1/health.
+    if (request.url === '/health') {
       healthChecks += 1
       response.writeHead(200, { 'Content-Type': 'application/json' })
       response.end(JSON.stringify({ status: 'ok', loaded: true }))
@@ -36,6 +39,7 @@ test('a connection error after warm-up drops the cached health check', async () 
     await tts.warmupQwen3Tts(baseUrl, undefined, 'python')
     await tts.warmupQwen3Tts(baseUrl, undefined, 'python')
     assert.equal(healthChecks, 1, 'a successful warm-up is reused')
+    assert.equal(paths[0], '/health', 'Python health is probed at the root')
     assert.equal(authorizationHeaders[0], `Bearer ${getSidecarToken()}`)
 
     await assert.rejects(
