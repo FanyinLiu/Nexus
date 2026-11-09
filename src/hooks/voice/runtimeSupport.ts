@@ -423,7 +423,11 @@ export function interruptActiveSpeechOutputRuntime(
   options: SpeechPlaybackTeardownOptions,
 ) {
   stopSpeechPlaybackTeardown(options)
-  options.activeStreamingSpeechOutputRef.current?.abort()
+  options.activeStreamingSpeechOutputRef.current?.abort('interrupt')
+  // Every live controller shares this player; leaving one alive would keep
+  // streaming into a torn-down pipeline. Stop scopes differ only in whether
+  // companion notices may requeue themselves.
+  abortAllStreamingSpeechOutputs('interrupt')
   options.activeStreamingSpeechOutputRef.current = null
   options.streamAudioPlayerRef.current?.stopAndClear()
   options.streamAudioPlayerRef.current = null
@@ -441,8 +445,8 @@ export function stopAllSpeechOutputRuntime(
   stopSpeechPlaybackTeardown(options)
   // Abort the active controller first; the registry covers any reminder that
   // queued speech while another reply was playing.
-  options.activeStreamingSpeechOutputRef.current?.abort()
-  abortAllStreamingSpeechOutputs()
+  options.activeStreamingSpeechOutputRef.current?.abort('stop-all')
+  abortAllStreamingSpeechOutputs('stop-all')
   // Mark every generation up to this click as interrupted so an aborted
   // controller's late error is not surfaced as a real playback failure. A
   // reminder that starts after this point owns a higher generation and is

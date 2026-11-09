@@ -80,6 +80,10 @@ export type FramelessCompanionSurfaceProps = {
     continuousVoiceActive: boolean
     toggleVoiceConversation: () => void
     stopVoiceConversation: () => void
+    speechStop: {
+      interrupt: () => void
+      stopAll: () => void
+    }
   }
   chat: {
     assistantActivity: AssistantRuntimeActivity
@@ -578,7 +582,7 @@ export function FramelessCompanionSurface({
             ? voice.toggleVoiceConversation
             : phase === 'thinking'
               ? chat.cancelActiveTurn
-              : voice.stopVoiceConversation}
+              : voice.speechStop.stopAll}
         disabled={voiceDisabled}
         aria-label={voiceActionLabel}
       >

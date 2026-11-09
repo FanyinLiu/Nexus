@@ -5,6 +5,7 @@ import React from 'react'
 
 import { useCompanionNotices } from '../src/hooks/chat/useCompanionNotices.ts'
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
+import { InterruptedError } from '../src/features/voice/interruptedError.ts'
 import { emitSpeechStopAll, subscribeSpeechStopAll } from '../src/features/voice/speechStopBus.ts'
 import type { ChatMessage, VoiceState } from '../src/types/index.ts'
 
@@ -22,6 +23,7 @@ const reactInternals = (React as unknown as {
 function renderCompanionNotices(options: {
   busyRef: { current: boolean }
   voiceStateRef: { current: VoiceState }
+  speakAssistantReply?: (text: string) => Promise<void>
 }) {
   const speech: string[] = []
   const messages: ChatMessage[] = []
@@ -43,7 +45,12 @@ function renderCompanionNotices(options: {
   function Probe() {
     return useCompanionNotices({
       ctx: {
-        speakAssistantReply: async (text: string) => { speech.push(text) },
+        speakAssistantReply: (text: string) => {
+          speech.push(text)
+          return options.speakAssistantReply
+            ? options.speakAssistantReply(text)
+            : Promise.resolve()
+        },
         voiceStateRef: options.voiceStateRef,
       },
       t: (key) => String(key),
@@ -140,4 +147,161 @@ test('the stop bus clears the hook deferred queue before it can play', async () 
   voiceStateRef.current = 'idle'
   await api.flushDeferredCompanionNotices()
   assert.deepEqual(speech, [], 'stopped notices must not play after idle')
+})
+
+function pendingSpeech() {
+  const pending: Array<{ resolve: () => void; reject: (error: unknown) => void }> = []
+  return {
+    speak: () => new Promise<void>((resolve, reject) => {
+      pending.push({ resolve, reject })
+    }),
+    interruptLatest: () => {
+      const entry = pending.shift()
+      assert.ok(entry, 'no pending speech to interrupt')
+      entry.reject(new InterruptedError('interrupt'))
+    },
+    stopAllLatest: () => {
+      const entry = pending.shift()
+      assert.ok(entry, 'no pending speech to stop')
+      entry.reject(new InterruptedError('stop-all'))
+    },
+    resolveLatest: () => {
+      const entry = pending.shift()
+      assert.ok(entry, 'no pending speech to finish')
+      entry.resolve()
+    },
+  }
+}
+
+const flushMicrotasks = async () => {
+  for (let index = 0; index < 4; index += 1) await Promise.resolve()
+}
+
+test('a queued reminder interrupted by typing replays once after the reply is idle', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'idle' as VoiceState }
+  const pending = pendingSpeech()
+  const { api, speech, messages } = renderCompanionNotices({
+    busyRef,
+    voiceStateRef,
+    speakAssistantReply: pending.speak,
+  })
+
+  const first = api.pushCompanionNotice(notice('reminder'))
+  await flushMicrotasks()
+  assert.deepEqual(speech, ['speech-reminder'])
+  assert.equal(messages.length, 1)
+
+  // Typing interrupts while that reminder is already in the shared player.
+  pending.interruptLatest()
+  await first
+  // The typed turn immediately starts a new reply; the queue must not run.
+  busyRef.current = true
+  voiceStateRef.current = 'speaking'
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, ['speech-reminder'], 'replay waits for the new reply')
+
+  busyRef.current = false
+  voiceStateRef.current = 'idle'
+  const replay = api.flushDeferredCompanionNotices()
+  await flushMicrotasks()
+  assert.deepEqual(speech, ['speech-reminder', 'speech-reminder'], 'the reminder plays once more')
+  pending.resolveLatest()
+  await replay
+  assert.equal(messages.length, 1, 'replay never duplicates the chat line')
+})
+
+test('a reminder interrupted while speaking replays once when idle', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'idle' as VoiceState }
+  const pending = pendingSpeech()
+  const { api, speech } = renderCompanionNotices({
+    busyRef,
+    voiceStateRef,
+    speakAssistantReply: pending.speak,
+  })
+
+  const first = api.pushCompanionNotice(notice('active-reminder'))
+  await flushMicrotasks()
+  pending.interruptLatest()
+  await first
+
+  const replay = api.flushDeferredCompanionNotices()
+  await flushMicrotasks()
+  assert.deepEqual(speech, ['speech-active-reminder', 'speech-active-reminder'])
+  pending.resolveLatest()
+  await replay
+})
+
+test('the stop button never requeues an interrupted notice', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'idle' as VoiceState }
+  const pending = pendingSpeech()
+  const { api, speech } = renderCompanionNotices({
+    busyRef,
+    voiceStateRef,
+    speakAssistantReply: pending.speak,
+  })
+
+  const first = api.pushCompanionNotice(notice('stopped-reminder'))
+  await flushMicrotasks()
+  pending.stopAllLatest()
+  await first
+
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, ['speech-stopped-reminder'], 'Stop clears instead of requeueing')
+})
+
+test('a replay interrupted again is not put back a second time', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'idle' as VoiceState }
+  const pending = pendingSpeech()
+  const { api, speech } = renderCompanionNotices({
+    busyRef,
+    voiceStateRef,
+    speakAssistantReply: pending.speak,
+  })
+
+  const first = api.pushCompanionNotice(notice('once-only'))
+  await flushMicrotasks()
+  pending.interruptLatest()
+  await first
+
+  const replay = api.flushDeferredCompanionNotices()
+  await flushMicrotasks()
+  assert.equal(speech.length, 2)
+  pending.interruptLatest()
+  await replay
+
+  await api.flushDeferredCompanionNotices()
+  assert.equal(speech.length, 2, 'the replay is not queued again')
+})
+
+test('two notices already in the shared player both requeue and replay in order', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'idle' as VoiceState }
+  const pending = pendingSpeech()
+  const { api, speech } = renderCompanionNotices({
+    busyRef,
+    voiceStateRef,
+    speakAssistantReply: pending.speak,
+  })
+
+  const first = api.pushCompanionNotice(notice('a'))
+  const second = api.pushCompanionNotice(notice('b'))
+  await flushMicrotasks()
+  assert.deepEqual(speech, ['speech-a', 'speech-b'])
+
+  pending.interruptLatest()
+  pending.interruptLatest()
+  await Promise.all([first, second])
+
+  const replay = api.flushDeferredCompanionNotices()
+  await flushMicrotasks()
+  assert.deepEqual(speech, ['speech-a', 'speech-b', 'speech-a'])
+  pending.resolveLatest()
+  await flushMicrotasks()
+  assert.deepEqual(speech, ['speech-a', 'speech-b', 'speech-a', 'speech-b'])
+  pending.resolveLatest()
+  await replay
 })
