@@ -30,6 +30,12 @@ type UseReminderSchedulerOptions = {
    * it survive no matter how late the panel notices.
    */
   petLastOnlineAt?: string
+  /**
+   * Panel takeover only owns notice reminders. Weather, search and scheduled
+   * chat actions stay pending for the pet window, so the panel must not mark
+   * them triggered while it skips execution.
+   */
+  takeoverOnlyNotice?: boolean
   /** Incremented by a main-process wake push to run a due check immediately. */
   wakeToken?: number
 }
@@ -59,6 +65,7 @@ export function useReminderScheduler({
   onEvent,
   canTrigger,
   petLastOnlineAt,
+  takeoverOnlyNotice = false,
   wakeToken = 0,
 }: UseReminderSchedulerOptions) {
   const timerRef = useRef<number | null>(null)
@@ -93,6 +100,10 @@ export function useReminderScheduler({
     }).filter((task) => (
       !petLastOnlineAt
       || isReminderDueEligibleForHandoff(task, new Date(threshold), petLastOnlineAt)
+    )).filter((task) => (
+      // Panel takeover skips non-notice execution, so it must not consume the
+      // occurrence either. Leave the row untouched for the pet window.
+      !takeoverOnlyNotice || task.action.kind === 'notice'
     ))
     const staleTasks = dueTasks.filter((task) => reminderAlreadyTriggered(task, persistedById.get(task.id)))
     const triggeredTasks = dueTasks.filter((task) => !reminderAlreadyTriggered(task, persistedById.get(task.id)))
@@ -142,7 +153,7 @@ export function useReminderScheduler({
         console.warn('[reminder] onTrigger failed:', getRedactedLogErrorMessage(err))
       })
     }
-  }, [locale, petLastOnlineAt, setTasks, tasks])
+  }, [locale, petLastOnlineAt, setTasks, takeoverOnlyNotice, tasks])
 
   useEffect(() => {
     if (!enabled) {

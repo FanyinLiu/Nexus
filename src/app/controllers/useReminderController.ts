@@ -89,6 +89,19 @@ export function useReminderController({
   const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
     const displayText = task.prompt.trim()
     const action = task.action
+    if (view === 'panel' && action.kind !== 'notice') {
+      // The scheduler already drops these rows before marking them. Keep the
+      // same rule here so a direct caller can never consume a weather/search/
+      // chat-action occurrence on the takeover panel.
+      debugConsole.appendDebugConsoleEvent({
+        source: 'tool',
+        title: 'Reminder deferred to the pet window',
+        detail: `${task.title} / ${action.kind}`,
+        tone: 'info',
+        relatedTaskId: task.id,
+      })
+      return
+    }
     const currentSettings = settingsRef.current
     const defaultSpeechText = task.speechText?.trim() || t('chat.reminder_task.speech_fallback', { title: task.title, content: task.prompt.trim() })
 
@@ -306,7 +319,7 @@ export function useReminderController({
         relatedTaskId: task.id,
       })
     }
-  }, [chat, debugConsole, focusState, pet, settingsRef, t])
+  }, [chat, debugConsole, focusState, pet, settingsRef, t, view])
 
   useReminderScheduler({
     enabled: shouldRunReminderScheduler(view, runtimeSnapshot),
@@ -319,6 +332,9 @@ export function useReminderController({
     // Only the panel takeover is anchored at the pet's last online instant;
     // the pet window keeps its normal overdue handling.
     petLastOnlineAt: view === 'panel' ? runtimeSnapshot.petLastSeenAt : undefined,
+    // Double safety: the scheduler already filters before marking, but the
+    // controller keeps its panel-side guard for non-notice actions too.
+    takeoverOnlyNotice: view === 'panel',
     wakeToken: reminderWakeToken,
   })
 

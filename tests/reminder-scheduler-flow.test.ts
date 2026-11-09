@@ -51,7 +51,16 @@ function installEnvironment(t: TestContext) {
   return { readTasks, writeTasks }
 }
 
-function createScheduler(initialTasks: Task[], onTrigger: (task: Task) => void) {
+type SchedulerOptions = {
+  petLastOnlineAt?: string
+  takeoverOnlyNotice?: boolean
+}
+
+function createScheduler(
+  initialTasks: Task[],
+  onTrigger: (task: Task) => void,
+  options: SchedulerOptions = {},
+) {
   let tasks = initialTasks
   const setTasks = (updater: unknown) => {
     tasks = typeof updater === 'function'
@@ -64,6 +73,8 @@ function createScheduler(initialTasks: Task[], onTrigger: (task: Task) => void) 
     setTasks: setTasks as never,
     locale: 'en-US',
     onTrigger: onTrigger as never,
+    petLastOnlineAt: options.petLastOnlineAt,
+    takeoverOnlyNotice: options.takeoverOnlyNotice,
   }))
   return { renderer, getTasks: () => tasks }
 }
@@ -123,6 +134,68 @@ test('the pet and panel firing in the same tick deliver a due task exactly once'
     assert.equal(typeof stored[0]?.lastTriggeredAt, 'string')
   } finally {
     pet.renderer.unmount()
+    panel.renderer.unmount()
+  }
+})
+
+const NON_NOTICE_CASES = [
+  { label: 'weather', action: { kind: 'weather', location: 'Beijing' } },
+  { label: 'web search', action: { kind: 'web_search', query: 'news', limit: 5 } },
+  { label: 'scheduled chat action', action: { kind: 'chat_action', instruction: 'say hello' } },
+]
+
+for (const { label, action } of NON_NOTICE_CASES) {
+  test(`panel takeover leaves a ${label} reminder pending for the pet window`, (t) => {
+    const { readTasks, writeTasks } = installEnvironment(t)
+    const dueAt = NOW - 1_000
+    const task = makeTask(`pending-${action.kind}`, dueAt, { action })
+    writeTasks([task])
+
+    const panelTriggered: string[] = []
+    const panel = createScheduler([task], (triggeredTask) => { panelTriggered.push(triggeredTask.id) }, {
+      petLastOnlineAt: new Date(dueAt - 10_000).toISOString(),
+      takeoverOnlyNotice: true,
+    })
+    try {
+      panel.renderer.render(undefined)
+      assert.deepEqual(panelTriggered, [], 'the panel does not execute a non-notice action')
+      assert.equal(panel.getTasks()[0]?.lastTriggeredAt, undefined, 'the live row is not marked')
+      const persisted = readTasks()[0]
+      assert.equal(persisted?.lastTriggeredAt, undefined, 'the persisted row is not marked')
+      assert.equal(persisted?.nextRunAt, new Date(dueAt).toISOString())
+    } finally {
+      panel.renderer.unmount()
+    }
+
+    // The pet window owns the same row after recovery and still runs it once.
+    const petTriggered: string[] = []
+    const pet = createScheduler([task], (triggeredTask) => { petTriggered.push(triggeredTask.id) })
+    try {
+      pet.renderer.render(undefined)
+      assert.deepEqual(petTriggered, [task.id], 'the pet runs the deferred occurrence once')
+      assert.equal(typeof readTasks()[0]?.lastTriggeredAt, 'string')
+    } finally {
+      pet.renderer.unmount()
+    }
+  })
+}
+
+test('panel takeover still delivers a notice reminder once', (t) => {
+  const { readTasks, writeTasks } = installEnvironment(t)
+  const dueAt = NOW - 1_000
+  const task = makeTask('notice-takeover', dueAt)
+  writeTasks([task])
+
+  const triggered: string[] = []
+  const panel = createScheduler([task], (triggeredTask) => { triggered.push(triggeredTask.id) }, {
+    petLastOnlineAt: new Date(dueAt - 10_000).toISOString(),
+    takeoverOnlyNotice: true,
+  })
+  try {
+    panel.renderer.render(undefined)
+    assert.deepEqual(triggered, [task.id], 'the panel delivers the notice once')
+    assert.equal(typeof readTasks()[0]?.lastTriggeredAt, 'string')
+  } finally {
     panel.renderer.unmount()
   }
 })
