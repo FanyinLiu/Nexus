@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import test from 'node:test'
 
+import { collectBuildInputPaths } from '../scripts/build-fingerprint.mjs'
 import { VOICE_SIDECAR_DEFINITIONS } from '../electron/services/voiceSidecarService.js'
 import { resolveVoiceSidecarScriptPath } from '../electron/services/voiceSidecarPaths.js'
 
@@ -26,6 +27,10 @@ test('qwen3_tts_server.py ships in files and asarUnpack', () => {
 test('the qwen3 sidecar definition names a script that exists in the repo', () => {
   assert.equal(VOICE_SIDECAR_DEFINITIONS.qwen3Tts.script, QWEN3_SCRIPT)
   assert.equal(existsSync(new URL(`../${QWEN3_SCRIPT}`, import.meta.url)), true)
+})
+
+test('the build fingerprint covers the qwen3 sidecar script', () => {
+  assert.ok(collectBuildInputPaths().includes(QWEN3_SCRIPT))
 })
 
 test('packaged resolution reads app.asar.unpacked instead of the asar archive', () => {
