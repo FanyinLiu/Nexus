@@ -41,7 +41,7 @@ const FILE_BUDGETS = {
   // controller for stop-all. Both grew by the real feature code, so the
   // budget follows the source instead of deleting explanatory blank lines.
   'src/hooks/useVoice.ts': 880,
-  'src/hooks/voice/streamingSpeechOutput.ts': 941,
+  'src/hooks/voice/streamingSpeechOutput.ts': 942,
   // Generated from electron/preload by scripts/generate-ipc-types.mjs (ipc:types:check).
   // Grows with every added bridge channel, including the cross-window speech
   // stop invoke/subscription.

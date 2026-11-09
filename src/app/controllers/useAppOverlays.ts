@@ -13,6 +13,7 @@ import {
   type ChatMemoryTraceFocusTarget,
 } from '../../features/memory/traceDetails.ts'
 import type { OnboardingGuideProps } from '../../features/onboarding/components/OnboardingGuide.tsx'
+import { interruptLocalSpeechPlayback } from '../../features/voice/speechPlaybackActions.ts'
 import { settingsSavedForUiLanguageChoice } from '../../features/onboarding/components/onboardingGuideSupport.ts'
 import { resolveGuideLaunch } from '../../features/onboarding/guideDeferral.ts'
 import { createFirstUsePanelHandoff, resolveFirstUseGuideHost } from '../../features/onboarding/firstUseGuideHost.ts'
@@ -442,7 +443,7 @@ export function useAppOverlays({
       throw new Error(t('settings.preview.busy_error'))
     }
 
-    voice.speechStop.stopAll()
+    interruptLocalSpeechPlayback(voice.speechStop)
     chat.setError(null)
 
     await voice.startSpeechOutput(text, draftSettings, {

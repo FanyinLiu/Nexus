@@ -4,6 +4,8 @@ import { afterEach, beforeEach, test } from 'node:test'
 import { interruptSpeechForTypedTurn } from '../src/hooks/chat/sendMessageInterrupt.ts'
 import { interruptSpeakingForVoiceInputRuntime } from '../src/hooks/voice/runtimeSupport.ts'
 import { startSpeechInterruptMonitor } from '../src/hooks/voice/continuousVoice.ts'
+import { stopVoiceConversationEntrypoint } from '../src/hooks/voice/conversationEntrypoints.ts'
+import { interruptLocalSpeechPlayback } from '../src/features/voice/speechPlaybackActions.ts'
 import type { AppSettings } from '../src/types/index.ts'
 
 const noop = () => undefined
@@ -171,4 +173,47 @@ test('barge-in from the interrupt monitor interrupts only the current sentence',
     Object.defineProperty(performance, 'now', { configurable: true, value: originalNow })
     queue.length = 0
   }
+})
+
+test('ending the listening microphone interrupts speech instead of clearing the queue', () => {
+  const calls: string[] = []
+  const params = {
+    continuousVoiceActiveRef: { current: true },
+    suppressVoiceReplyRef: { current: false },
+    recognitionRef: { current: null },
+    paraformerSessionRef: { current: null },
+    sensevoiceSessionRef: { current: null },
+    tencentAsrSessionRef: { current: null },
+    clearPendingVoiceRestart: noop,
+    setContinuousVoiceSession: noop,
+    resetNoSpeechRestartCount: noop,
+    resetSpeechLevel: noop,
+    clearParaformerConversationState: noop,
+    clearSenseVoiceConversationState: noop,
+    clearTencentConversationState: noop,
+    stopApiRecording: noop,
+    stopVadListening: async () => undefined,
+    interruptSpeechOutput: () => { calls.push('interrupt') },
+    stopAllSpeechOutput: () => { calls.push('stop-all') },
+    dispatchVoiceSessionAndSync: noop,
+    setLiveTranscript: noop,
+    setMood: noop,
+    updateVoicePipeline: noop,
+    showPetStatus: noop,
+    ti: (key: string) => key,
+  }
+
+  stopVoiceConversationEntrypoint(params as never)
+
+  assert.deepEqual(calls, ['interrupt'], 'mic teardown keeps queued reminders')
+})
+
+test('settings preview and diagnostics interrupt local playback only', () => {
+  const calls: string[] = []
+  interruptLocalSpeechPlayback({
+    interrupt: () => { calls.push('interrupt') },
+    stopAll: () => { calls.push('stop-all') },
+  })
+
+  assert.deepEqual(calls, ['interrupt'], 'preview must not clear queued notices')
 })

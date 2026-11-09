@@ -9,7 +9,10 @@ import {
   markRecalled,
 } from '../features/memory/index.ts'
 import { logVoiceEvent } from '../features/voice/index.ts'
-import { subscribeSpeechStopAll } from '../features/voice/speechStopBus.ts'
+import {
+  useCompanionNoticeIdleFlush,
+  useCompanionNoticeStopSubscription,
+} from './chat/useCompanionNoticeQueueSubscriptions.ts'
 import { noteUserTyping } from '../features/autonomy/userTyping.ts'
 import {
   createAssistantReplyRunner,
@@ -194,27 +197,9 @@ export function useChat(ctx: UseChatContext) {
   })
 
   // The Stop button lives in the voice hook; this queue lives here, so a
-  // user-initiated stop-all clears the busy-deferred notices through the
-  // renderer-local bus.
-  useEffect(
-    () => subscribeSpeechStopAll(discardDeferredCompanionNotices),
-    [discardDeferredCompanionNotices],
-  )
-
-  // A deferred notice may only play after the current reply has both finished
-  // speaking and gone idle. The bus transition runs before useVoice syncs its
-  // ref, so defer the flush by one microtask and let canDeliver re-check.
-  useEffect(() => {
-    const bus = ctx.voiceBus
-    if (!bus) return
-    return bus.onTransition((event, _previous, next) => {
-      if (next !== 'idle') return
-      if (event.type !== 'tts:completed' && event.type !== 'session:completed') return
-      queueMicrotask(() => {
-        void flushDeferredCompanionNotices()
-      })
-    })
-  }, [ctx.voiceBus, flushDeferredCompanionNotices])
+  // user-initiated stop-all clears the busy-deferred notices.
+  useCompanionNoticeStopSubscription(discardDeferredCompanionNotices)
+  useCompanionNoticeIdleFlush(ctx.voiceBus, flushDeferredCompanionNotices)
 
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(
