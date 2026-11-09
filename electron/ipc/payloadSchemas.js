@@ -1,9 +1,11 @@
 // @ts-check
 export {
+  validateClosePanelPayload,
   validateDesktopContextRequestPayload,
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
+  validateModelSetupResolvePayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,

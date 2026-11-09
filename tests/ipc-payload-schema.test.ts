@@ -3,6 +3,7 @@ import { test } from 'node:test'
 
 import {
   validateChatCompletionPayload,
+  validateClosePanelPayload,
   validateAudioSynthesisPayload,
   validateAudioTranscriptionPayload,
   validateDesktopContextRequestPayload,
@@ -29,6 +30,7 @@ import {
   validateMemoryVectorIndexPayload,
   validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
+  validateModelSetupResolvePayload,
   validatePluginBusRecentPayload,
   validatePluginBusTopicPayload,
   validatePluginIdPayload,
@@ -148,6 +150,42 @@ test('IPC window state schema strips unknown keys and rejects wrong types', () =
   assert.throws(
     () => validatePetWindowStatePayload({ isPinned: 'true' }),
     /Invalid IPC payload for pet-window:update-state: payload\.isPinned must be a boolean/,
+  )
+})
+
+test('close-panel schema permits only the one-time retirement flag', () => {
+  assert.deepEqual(validateClosePanelPayload(undefined), {})
+  assert.deepEqual(validateClosePanelPayload({ retireFirstUse: true }), { retireFirstUse: true })
+  assert.deepEqual(validateClosePanelPayload({ retireFirstUse: false }), { retireFirstUse: false })
+  assert.deepEqual(
+    validateClosePanelPayload({ retireFirstUse: true, nonce: 'nonce-1' }),
+    { retireFirstUse: true, nonce: 'nonce-1' },
+  )
+  assert.throws(
+    () => validateClosePanelPayload({ retireFirstUse: 'yes' }),
+    /retireFirstUse must be a boolean/,
+  )
+  assert.throws(
+    () => validateClosePanelPayload({ retireFirstUse: true, unknown: true }),
+    /unknown/i,
+  )
+})
+
+test('model setup resolve schema rejects unknown fields and invalid reasons', () => {
+  assert.deepEqual(validateModelSetupResolvePayload({ reason: 'shown' }), { reason: 'shown' })
+  assert.deepEqual(validateModelSetupResolvePayload({ reason: 'dismissed' }), { reason: 'dismissed' })
+  assert.deepEqual(validateModelSetupResolvePayload({ reason: 'installed' }), { reason: 'installed' })
+  assert.throws(
+    () => validateModelSetupResolvePayload({ reason: 'shown', extra: true }),
+    /not allowed/i,
+  )
+  assert.throws(
+    () => validateModelSetupResolvePayload({ reason: 'later' }),
+    /reason/i,
+  )
+  assert.throws(
+    () => validateModelSetupResolvePayload({}),
+    /reason/i,
   )
 })
 

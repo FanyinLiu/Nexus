@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   claimModelSetupReminder: /** @param {unknown} options */ (options) => ipcRenderer.invoke('window:claim-model-setup-reminder', options),
   ...(panelView ? {
     consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
+    resolveModelSetupRequest: /** @param {unknown} options */ (options) => ipcRenderer.invoke('window:resolve-model-setup-request', options),
     declineModelSetup: () => ipcRenderer.invoke('window:decline-model-setup'),
     subscribeModelSetupRequest: /** @param {IpcVoidListener} listener */ (listener) => {
       const handler = () => listener()
@@ -92,7 +93,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
     return () => ipcRenderer.removeListener('proactive:present', handler)
   },
   openPetMenu: () => ipcRenderer.invoke('window:open-pet-menu'),
-  closePanel: () => ipcRenderer.invoke('window:close-panel'),
+  closePanel: /** @param {{ retireFirstUse?: boolean, nonce?: string } | undefined} options */ (options) => ipcRenderer.invoke('window:close-panel', options),
   closeSettings: () => ipcRenderer.invoke('window:close-settings'),
   setSystemVibrancy: /** @param {boolean} enabled */ (enabled) => ipcRenderer.invoke('window:set-system-vibrancy', { enabled: enabled === true }),
   getPanelWindowState: () => ipcRenderer.invoke('panel-window:get-state'),
@@ -518,3 +519,14 @@ contextBridge.exposeInMainWorld('desktopPet', {
     return () => ipcRenderer.removeListener('desktop-presence:typing-status', handler)
   },
 })
+
+// The retire check is an internal main->panel lifecycle signal, not part of
+// the public bridge. Post a DOM message so the renderer can confirm the
+// current state after hidden/focus races without widening the bridge surface.
+const firstUsePanelRetireHandler = /** @type {IpcEventHandler<{ nonce: string }>} */ ((_event, payload) => {
+  window.postMessage({
+    type: 'nexus:first-use-panel-retire-check',
+    nonce: payload?.nonce ?? '',
+  }, '*')
+})
+ipcRenderer.on('window:first-use-panel-retire-check', firstUsePanelRetireHandler)

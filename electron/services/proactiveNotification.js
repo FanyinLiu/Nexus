@@ -1,17 +1,24 @@
 import { Notification } from 'electron'
+import { runWhenPanelContentReady } from '../panelContentReady.js'
 import { panelWindow, mainWindow, createPanelWindow, getPetIconPath } from '../windowManager.js'
 
 /**
  * Bring the companion panel forward (creating it if needed) and keep the pet
  * above it. Shared by the OS notification click and the reminder strip.
+ *
+ * `onReady` runs only after the panel's renderer has loaded, which matters
+ * when a retired panel is rebuilt for this click.
  */
-export function focusCompanionPanel() {
+/** @param {{ onReady?: () => void }} [options] */
+export function focusCompanionPanel({ onReady } = {}) {
   const win = panelWindow && !panelWindow.isDestroyed() ? panelWindow : createPanelWindow()
-  if (!win || win.isDestroyed()) return
+  if (!win || win.isDestroyed()) return undefined
   if (win.isMinimized()) win.restore()
   win.show()
   win.focus()
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.moveTop()
+  if (typeof onReady === 'function') runWhenPanelContentReady(win, onReady)
+  return win
 }
 
 /**
@@ -37,8 +44,11 @@ export function showProactiveNotification({ title, body, onClick }) {
   })
 
   notification.on('click', () => {
-    focusCompanionPanel()
-    if (typeof onClick === 'function') onClick()
+    focusCompanionPanel({
+      onReady: () => {
+        if (typeof onClick === 'function') onClick()
+      },
+    })
   })
 
   notification.show()

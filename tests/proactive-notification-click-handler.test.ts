@@ -27,12 +27,19 @@ type NotificationInstance = {
   shown: boolean
 }
 
+type PanelWindow = {
+  loading: boolean
+  finishLoad: () => void
+}
+
 type RuntimeState = {
   supported: boolean
   instances: NotificationInstance[]
   shown: number
   focusCalls: number
   createdWindows: number
+  panelWindows: PanelWindow[]
+  nextPanelLoading: boolean
 }
 
 type ShowNotification = (input: {
@@ -94,6 +101,25 @@ test('firing the click focuses the panel and calls onClick exactly once', async 
 
   assert.deepEqual(calls, ['hand-off'])
   assert.equal(runtime().focusCalls, 1)
+})
+
+test('a rebuilt panel defers the notification hand-off until its renderer is ready', async () => {
+  resetProactiveNotificationState()
+  runtime().nextPanelLoading = true
+  const show = await loadShowNotification()
+  const calls: string[] = []
+
+  assert.equal(show({ title: 'Reminder', body: 'Body', onClick: () => calls.push('hand-off') }), true)
+  const handler = clickHandlers(runtime().instances[0]!)[0]
+  assert.ok(handler)
+  handler()
+
+  assert.equal(runtime().createdWindows, 1, 'the retired panel is rebuilt')
+  assert.equal(runtime().focusCalls, 1)
+  assert.deepEqual(calls, [], 'the hand-off waits for did-finish-load')
+
+  runtime().panelWindows[0]!.finishLoad()
+  assert.deepEqual(calls, ['hand-off'])
 })
 
 test('a missing onClick still focuses the panel and does not throw', async () => {

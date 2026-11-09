@@ -40,6 +40,11 @@ import {
   syncRuntimeState,
 } from './windowRuntimeState.js'
 import { sanitizeRuntimeLogMessage } from './runtimeLogSanitizer.js'
+import { createLogger } from './logger.js'
+import {
+  clearPanelNavigationFailure,
+  markPanelNavigationFailed,
+} from './panelContentReady.js'
 
 let getMainWindow = () => null
 let getPanelWindow = () => null
@@ -55,6 +60,7 @@ let releaseDock = () => {}
 let hasSystemTray = () => false
 let syncPetWindowState = () => {}
 let emitPanelSection = () => {}
+let cancelFirstUsePanelRetirement = () => {}
 let isSmokeTest = false
 let SMOKE_RENDERER_TIMEOUT_MS = 15_000
 let SMOKE_SUCCESS_GRACE_MS = 1_200
@@ -65,6 +71,16 @@ let settingsReturnFocus = {
   cancel: () => {},
   request: () => {},
 }
+
+// A panel whose main frame never loaded cannot render a second open. Retry a
+// bounded number of times, then destroy it so the next open creates a fresh
+// window. Only the numeric error code is logged: URLs and page content never
+// reach the console.
+const PANEL_LOAD_RETRY_LIMIT = 2
+const PANEL_LOAD_RETRY_BASE_DELAY_MS = 250
+const panelLog = createLogger('panel.window')
+/** @type {WeakMap<object, { attempts: number, timer: ReturnType<typeof setTimeout> | null, failedThisNavigation: boolean }>} */
+const panelLoadRetries = new WeakMap()
 
 // macOS Dock overlaps transparent windows near the bottom edge even within
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
@@ -91,6 +107,7 @@ export function configureWindowCreation(deps) {
   hasSystemTray = deps.hasSystemTray
   syncPetWindowState = deps.syncPetWindowState
   emitPanelSection = deps.emitPanelSection
+  cancelFirstUsePanelRetirement = deps.cancelFirstUsePanelRetirement ?? (() => {})
   isSmokeTest = deps.isSmokeTest
   SMOKE_RENDERER_TIMEOUT_MS = deps.SMOKE_RENDERER_TIMEOUT_MS
   SMOKE_SUCCESS_GRACE_MS = deps.SMOKE_SUCCESS_GRACE_MS
@@ -393,9 +410,20 @@ export function createMainWindow({ showOnReady = true } = {}) {
 }
 
 export function createPanelWindow() {
-  if (getPanelWindow() && !getPanelWindow().isDestroyed()) {
-    return getPanelWindow()
-  }
+  return createPanelWindowWithOptions()
+}
+
+/**
+ * @param {{
+ *   startWakeMonitor?: boolean,
+ *   onRendererReady?: (win: import('electron').BrowserWindow) => void,
+ *   onRendererFailed?: (win: import('electron').BrowserWindow) => void,
+ * }} [options]
+ */
+export function createPanelWindowWithOptions(options = {}) {
+  const existing = getPanelWindow()
+  if (existing && !existing.isDestroyed()) return existing
+  const startWakeMonitor = options.startWakeMonitor !== false
 
   const {
     width,
@@ -456,6 +484,7 @@ export function createPanelWindow() {
   }
 
   win.on('show', () => {
+    cancelFirstUsePanelRetirement()
     holdDock()
     if (getMainWindow() && !getMainWindow().isDestroyed() && getMainWindow().isVisible()) {
       _setPetHiddenForPanel(true)
@@ -483,6 +512,10 @@ export function createPanelWindow() {
   })
 
   win.on('closed', () => {
+    const retry = panelLoadRetries.get(win)
+    if (retry?.timer) clearTimeout(retry.timer)
+    panelLoadRetries.delete(win)
+    cancelFirstUsePanelRetirement()
     stopReminderPanelWakeMonitor()
     if (getPanelBlurTimer()) {
       clearTimeout(getPanelBlurTimer())
@@ -512,6 +545,7 @@ export function createPanelWindow() {
   })
 
   win.on('focus', () => {
+    cancelFirstUsePanelRetirement()
     if (getPanelBlurTimer()) {
       clearTimeout(getPanelBlurTimer())
       _setPanelBlurTimer(null)
@@ -526,18 +560,55 @@ export function createPanelWindow() {
     rememberPanelWindowBounds()
   })
 
+  win.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, _validatedURL, isMainFrame) => {
+    // -3 is ERR_ABORTED: a navigation was superseded, not a broken renderer.
+    if (isMainFrame === false || errorCode === -3) return
+    const retry = panelLoadRetries.get(win)
+      ?? { attempts: 0, timer: null, failedThisNavigation: false }
+    retry.failedThisNavigation = true
+    panelLoadRetries.set(win, retry)
+    markPanelNavigationFailed(win)
+    if (retry.attempts < PANEL_LOAD_RETRY_LIMIT) {
+      const delay = PANEL_LOAD_RETRY_BASE_DELAY_MS * (2 ** retry.attempts)
+      retry.attempts += 1
+      panelLoadRetries.set(win, retry)
+      panelLog.warn(`renderer load failed; retrying code=${errorCode}`)
+      retry.timer = setTimeout(() => {
+        retry.timer = null
+        if (win.isDestroyed()) return
+        win.loadURL(getRendererEntry('panel')).catch(() => undefined)
+      }, delay)
+      return
+    }
+    panelLog.error(`renderer load failed after retries code=${errorCode}`)
+    options.onRendererFailed?.(win)
+    if (!win.isDestroyed()) win.destroy()
+  })
+
   win.webContents.on('did-finish-load', () => {
+    const retry = panelLoadRetries.get(win)
+    if (retry?.failedThisNavigation) {
+      // The error page also fires did-finish-load. Do not clear the retry
+      // timer and never treat this navigation as ready.
+      retry.failedThisNavigation = false
+      queueMicrotask(() => clearPanelNavigationFailure(win))
+      return
+    }
+    if (retry?.timer) clearTimeout(retry.timer)
+    panelLoadRetries.delete(win)
+    clearPanelNavigationFailure(win)
     syncRuntimeState()
     syncPetWindowState()
     emitPanelWindowState()
     emitPanelSection()
+    options.onRendererReady?.(win)
   })
 
   win.loadURL(getRendererEntry('panel'))
 
   _setPanelWindow(win)
   trackWindow(win, 'panel', { isTrackable: isPanelWindowTrackable })
-  startReminderPanelWakeMonitor()
+  if (startWakeMonitor) startReminderPanelWakeMonitor()
   return win
 }
 

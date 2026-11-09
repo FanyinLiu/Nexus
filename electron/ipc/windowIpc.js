@@ -15,6 +15,8 @@ import {
   showPanelWindow,
   closeSettingsWindow,
   closePanelWindow,
+  requestFirstUsePanelRetire,
+  confirmFirstUsePanelRetire,
   getPanelSectionSnapshot,
   showPetContextMenu,
   getLaunchOnStartupState,
@@ -67,7 +69,9 @@ import {
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
+  validateModelSetupResolvePayload,
   validateOpenPanelPayload,
+  validateClosePanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
@@ -198,6 +202,11 @@ function registerPowerEventForwarding() {
 // raises the panel and replays the request there.
 function emitModelSetupRequest() {
   if (!panelWindow || panelWindow.isDestroyed()) return
+  // A freshly created panel is still loading; its mount-time pull reads the
+  // pending request instead. Sending into a loading page would lose the event,
+  // and even did-finish-load can land before React subscribes.
+  if (typeof panelWindow.webContents.isLoadingMainFrame === 'function'
+    && panelWindow.webContents.isLoadingMainFrame()) return
   panelWindow.webContents.send('models:setup-requested')
 }
 
@@ -287,6 +296,12 @@ export function register() {
     return modelSetupRequestGate.consume()
   })
 
+  ipcMain.handle('window:resolve-model-setup-request', (event, payload) => {
+    requireTrustedSender(event)
+    const { reason } = validateModelSetupResolvePayload(payload)
+    return modelSetupRequestGate.resolve(reason)
+  })
+
   ipcMain.handle('window:get-panel-section', (event) => {
     requireTrustedSender(event)
     return getPanelSectionSnapshot()
@@ -298,8 +313,14 @@ export function register() {
     return showPetContextMenu(sourceWindow)
   })
 
-  ipcMain.handle('window:close-panel', (event) => {
+  ipcMain.handle('window:close-panel', (event, payload) => {
     requireTrustedSender(event)
+    const { retireFirstUse, nonce } = validateClosePanelPayload(payload)
+    if (retireFirstUse === true && getViewKind(event) === 'panel') {
+      return nonce
+        ? confirmFirstUsePanelRetire(event.sender, nonce)
+        : requestFirstUsePanelRetire(event.sender)
+    }
     closePanelWindow()
   })
 

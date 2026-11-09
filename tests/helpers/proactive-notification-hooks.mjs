@@ -19,6 +19,8 @@ function testState() {
       shown: 0,
       focusCalls: 0,
       createdWindows: 0,
+      panelWindows: [],
+      nextPanelLoading: false,
     }
   }
   return globalThis.${STATE_KEY}
@@ -58,7 +60,9 @@ export function getPetIconPath() {
 }
 export function createPanelWindow() {
   testState().createdWindows += 1
-  return {
+  const listeners = new Map()
+  const win = {
+    loading: testState().nextPanelLoading,
     isDestroyed: () => false,
     isMinimized: () => false,
     restore() {},
@@ -66,7 +70,29 @@ export function createPanelWindow() {
     focus() {
       testState().focusCalls += 1
     },
+    webContents: {
+      isLoadingMainFrame() {
+        return win.loading
+      },
+      once(event, listener) {
+        const entries = listeners.get(event) ?? []
+        entries.push(listener)
+        listeners.set(event, entries)
+      },
+      removeListener(event, listener) {
+        const entries = listeners.get(event) ?? []
+        const index = entries.indexOf(listener)
+        if (index >= 0) entries.splice(index, 1)
+      },
+    },
+    finishLoad() {
+      win.loading = false
+      for (const listener of listeners.get('did-finish-load') ?? []) listener()
+      listeners.delete('did-finish-load')
+    },
   }
+  testState().panelWindows.push(win)
+  return win
 }
 `
 
@@ -84,6 +110,8 @@ export function resetProactiveNotificationState() {
     shown: 0,
     focusCalls: 0,
     createdWindows: 0,
+    panelWindows: [],
+    nextPanelLoading: false,
   }
 }
 

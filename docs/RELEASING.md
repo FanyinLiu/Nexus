@@ -578,7 +578,14 @@ Flags:
 5. `npm run runtime:packaged-sustained` — run only after packaged smoke has
    passed, with `PACKAGED_SMOKE_RELEASE_DIR=release-smoke`; this is a hard
    gate.
-6. Packaged runtime regression vs the local baseline (warn-only, full mode
+6. `npm run runtime:packaged-first-use` — drives the real packaged first-use
+   guide through the UI with a synthetic loopback provider, verifies the
+   completion marker, hides the panel through the product API, and samples
+   completed-hidden plus reopened-panel RSS. It is the product-lifecycle
+   counterpart to the seeded sustained harness. A pristine completed first-use
+   panel is retired once after its first hide; ordinary panel hides keep the
+   existing hide-and-reuse behavior.
+7. Packaged runtime regression vs the local baseline (warn-only, full mode
    only) — compares the fresh sustained report against
    `tests/fixtures/packagedRuntimeBaseline.json`: sustained main+renderer RSS
    peak > baseline × 1.25 or cold start > baseline × 1.5 flags a regression;
@@ -589,9 +596,9 @@ Flags:
    the gate after a green sustained run via `buildBaseline` from
    `scripts/lib/packaged-runtime-baseline.mjs` (the comparison itself runs
    inside `npm run prerelease-check`).
-7. Coverage ≥ 80% lines (warn).
-8. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
-9. Benchmarks complete without crash (warn).
+8. Coverage ≥ 80% lines (warn).
+9. `dist/assets/app-runtime-*.js` ≤ 1700 KB.
+10. Benchmarks complete without crash (warn).
 
 ### Stage C — Security (6 checks)
 1. `npm audit --omit=dev`: 0 critical + 0 high.

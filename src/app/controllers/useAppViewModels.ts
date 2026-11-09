@@ -117,6 +117,7 @@ export function useAppViewModels({
     petModelPresets,
     petModelPresetsReady,
     petRuntimeContinuousVoiceActive,
+    petRuntimeOnline: runtimeSnapshot.petOnline === true,
     reminderTasks: reminderTaskStore.reminderTasks,
     debugConsoleEvents: debugConsole.debugConsoleEvents,
     loadPetModels,

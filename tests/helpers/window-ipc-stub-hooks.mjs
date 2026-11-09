@@ -20,6 +20,7 @@ function testState() {
       panelRequests: [],
       panelShown: [],
       panelEventSink: null,
+      panelLoading: false,
     }
   }
   return globalThis.${STATE_KEY}
@@ -61,6 +62,7 @@ export const mainWindow = null
 export const panelWindow = {
   isDestroyed: () => false,
   webContents: {
+    isLoadingMainFrame: () => testState().panelLoading,
     send: (channel, payload) => {
       testState().panelRequests.push(channel)
       // A test may hand the event to the panel renderer, the way Electron
@@ -84,6 +86,8 @@ export function showPanelWindow(section, options) {
 }
 export function closeSettingsWindow() {}
 export function closePanelWindow() {}
+export function requestFirstUsePanelRetire() { return { requested: false } }
+export function confirmFirstUsePanelRetire() { return { retired: false } }
 export function getPanelSectionSnapshot() { return { section: 'chat' } }
 export function showPetContextMenu() { return Promise.resolve(null) }
 export function getLaunchOnStartupState() { return false }
