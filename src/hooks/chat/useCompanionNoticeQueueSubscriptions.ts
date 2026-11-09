@@ -2,6 +2,15 @@ import { useEffect } from 'react'
 import type { VoiceBus } from '../../features/voice/bus.ts'
 import { subscribeSpeechStopAll } from '../../features/voice/speechStopBus.ts'
 
+/** Fallback window when no speech/listening event arrives to settle the queue. */
+export const COMPANION_NOTICE_IDLE_FALLBACK_MS = 15_000
+
+type IdleFlushTimers = {
+  idleTimeoutMs?: number
+  setTimeoutFn?: (callback: () => void, delayMs: number) => number
+  clearTimeoutFn?: (id: number) => void
+}
+
 /**
  * The Stop button lives in the voice hook while the busy-deferred notice queue
  * lives in the chat hook. This subscription is the renderer-local bridge that
@@ -12,22 +21,69 @@ export function useCompanionNoticeStopSubscription(discard: () => number): void 
 }
 
 /**
- * Resume the queue only after the interrupted turn has completed and the pet
- * is idle. The bus transition runs before useVoice syncs its ref, so the flush
- * is deferred by one microtask and re-checks `canDeliver` itself.
+ * Resume the queue once the interrupted turn has ended and the pet is idle.
+ *
+ * A completed turn, a speech error, or the end of a listening session all
+ * release the queue. A barge-in alone does not: it may be followed by a new
+ * reply, so it only arms the fallback timer. The 15 s fallback also releases
+ * the queue when no further voice event arrives. The bus transition runs
+ * before useVoice syncs its ref, so each release is one microtask late and
+ * `flush` re-checks its own busy/speaking guard.
  */
 export function useCompanionNoticeIdleFlush(
   voiceBus: VoiceBus | undefined,
   flush: () => Promise<void>,
+  timers: IdleFlushTimers = {},
 ): void {
+  const idleTimeoutMs = timers.idleTimeoutMs ?? COMPANION_NOTICE_IDLE_FALLBACK_MS
+  const setTimeoutFn = timers.setTimeoutFn
+  const clearTimeoutFn = timers.clearTimeoutFn
+
   useEffect(() => {
     if (!voiceBus) return
-    return voiceBus.onTransition((event, _previous, next) => {
-      if (next !== 'idle') return
-      if (event.type !== 'tts:completed' && event.type !== 'session:completed') return
-      queueMicrotask(() => {
+
+    const schedule = setTimeoutFn ?? ((callback: () => void, delayMs: number) => (
+      window.setTimeout(callback, delayMs)
+    ))
+    const cancel = clearTimeoutFn ?? ((id: number) => { window.clearTimeout(id) })
+    let timer: number | null = null
+
+    const clearTimer = () => {
+      if (timer === null) return
+      cancel(timer)
+      timer = null
+    }
+    const armFallback = () => {
+      clearTimer()
+      timer = schedule(() => {
+        timer = null
         void flush()
+      }, idleTimeoutMs)
+    }
+    const releaseNow = () => {
+      clearTimer()
+      queueMicrotask(() => {
+        void flush().finally(armFallback)
       })
+    }
+
+    const unsubscribe = voiceBus.onAny((event) => {
+      if (
+        event.type === 'tts:completed'
+        || event.type === 'session:completed'
+        || event.type === 'tts:error'
+        || event.type === 'session:aborted'
+      ) {
+        releaseNow()
+        return
+      }
+      armFallback()
     })
-  }, [voiceBus, flush])
+
+    armFallback()
+    return () => {
+      clearTimer()
+      unsubscribe()
+    }
+  }, [voiceBus, flush, idleTimeoutMs, setTimeoutFn, clearTimeoutFn])
 }

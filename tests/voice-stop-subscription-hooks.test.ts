@@ -18,6 +18,27 @@ const reactInternals = (React as unknown as {
 
 type Slot = { current: unknown }
 
+function fakeTimers() {
+  let nextId = 1
+  const timers = new Map<number, { callback: () => void; delayMs: number }>()
+  return {
+    setTimeoutFn: (callback: () => void, delayMs: number) => {
+      const id = nextId++
+      timers.set(id, { callback, delayMs })
+      return id
+    },
+    clearTimeoutFn: (id: number) => { timers.delete(id) },
+    advance: (ms: number) => {
+      for (const [id, timer] of [...timers]) {
+        if (timer.delayMs > ms) continue
+        timers.delete(id)
+        timer.callback()
+      }
+    },
+    pending: () => timers.size,
+  }
+}
+
 /** Minimal dispatcher: the hooks under test use only refs, callbacks, effects. */
 function renderHook<T>(hook: () => T) {
   const slots: unknown[] = []
@@ -100,10 +121,12 @@ test('the chat stop subscription clears the deferred queue', () => {
 
 test('idle flush resumes on a completed reply but never on an interrupt', async () => {
   const bus = new VoiceBus()
+  const timers = fakeTimers()
   let flushes = 0
   const session = renderHook(() => useCompanionNoticeIdleFlush(
     bus,
     async () => { flushes += 1 },
+    timers,
   ))
 
   bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
@@ -123,4 +146,68 @@ test('idle flush resumes on a completed reply but never on an interrupt', async 
   await Promise.resolve()
   await Promise.resolve()
   assert.equal(flushes, 1, 'unmounted hook no longer flushes')
+})
+
+test('a speech error releases the deferred queue', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
+  bus.emit({
+    type: 'tts:error',
+    message: 'provider failed',
+    speechGeneration: 1,
+    shouldResumeContinuousVoice: false,
+  })
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.equal(flushes, 1)
+  session.unmount()
+})
+
+test('ending the listening session releases the deferred queue', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
+  bus.emit({ type: 'tts:interrupted', speechGeneration: 1 })
+  bus.emit({ type: 'session:aborted', abortReason: 'user' })
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.equal(flushes, 1)
+  session.unmount()
+})
+
+test('the idle fallback releases the queue when no voice event arrives', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+  ))
+
+  bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
+  assert.equal(flushes, 0)
+  timers.advance(15_000)
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.equal(flushes, 1)
+  session.unmount()
 })
