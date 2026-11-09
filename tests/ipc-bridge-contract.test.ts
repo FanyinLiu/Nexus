@@ -153,7 +153,7 @@ test('the pet preload exposes the request entry point and the reminder claim for
   ])
 })
 
-test('the panel preload exposes request, consume, decline, and subscribe for model setup', () => {
+test('the panel preload exposes request, consume, resolve, decline, and subscribe for model setup', () => {
   const panelKeys = Object.keys(loadPreloadDesktopPetApi('panel').desktopPet)
   const modelSetupKeys = panelKeys
     .filter((key) => /modelSetup/i.test(key))
@@ -164,6 +164,7 @@ test('the panel preload exposes request, consume, decline, and subscribe for mod
     'consumeModelSetupRequest',
     'declineModelSetup',
     'requestModelSetup',
+    'resolveModelSetupRequest',
     'subscribeModelSetupRequest',
   ])
 })
@@ -178,6 +179,9 @@ test('panel preload model setup methods use only their classified channels', asy
   const consumeModelSetupRequest = desktopPet.consumeModelSetupRequest as
     | (() => Promise<unknown>)
     | undefined
+  const resolveModelSetupRequest = desktopPet.resolveModelSetupRequest as
+    | ((options: { reason: 'shown' | 'dismissed' | 'installed' }) => Promise<unknown>)
+    | undefined
   const declineModelSetup = desktopPet.declineModelSetup as
     | (() => Promise<unknown>)
     | undefined
@@ -190,12 +194,14 @@ test('panel preload model setup methods use only their classified channels', asy
 
   assert.equal(typeof requestModelSetup, 'function')
   assert.equal(typeof consumeModelSetupRequest, 'function')
+  assert.equal(typeof resolveModelSetupRequest, 'function')
   assert.equal(typeof declineModelSetup, 'function')
   assert.equal(typeof claimModelSetupReminder, 'function')
   assert.equal(typeof subscribeModelSetupRequest, 'function')
 
   await requestModelSetup!({ delayMs: 3_000 })
   await consumeModelSetupRequest!()
+  await resolveModelSetupRequest!({ reason: 'shown' })
   await declineModelSetup!()
   await claimModelSetupReminder!()
 
@@ -214,6 +220,7 @@ test('panel preload model setup methods use only their classified channels', asy
   assert.deepEqual(invokedChannels, [
     'window:request-model-setup',
     'window:consume-model-setup-request',
+    'window:resolve-model-setup-request',
     'window:decline-model-setup',
     'window:claim-model-setup-reminder',
   ])

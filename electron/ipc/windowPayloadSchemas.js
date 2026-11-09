@@ -94,6 +94,7 @@ const closePanelSchema = {
   type: 'object',
   optional: true,
   default: {},
+  unknown: 'reject',
   fields: {
     retireFirstUse: optionalBoolean,
     nonce: { type: 'string', optional: true, maxLength: 64 },
@@ -286,6 +287,17 @@ const modelSetupReminderSchema = {
   },
 }
 
+const modelSetupResolveSchema = {
+  type: 'object',
+  unknown: 'reject',
+  fields: {
+    reason: {
+      type: 'enum',
+      values: ['shown', 'dismissed', 'installed'],
+    },
+  },
+}
+
 const speechStopPlaybackSchema = {
   type: 'object',
   optional: true,
@@ -318,4 +330,14 @@ export function validateModelSetupRequestPayload(payload) {
  */
 export function validateModelSetupReminderPayload(payload) {
   return /** @type {{ peek?: boolean }} */ (validateIpcPayload('window:claim-model-setup-reminder', payload, modelSetupReminderSchema))
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ reason: 'shown'|'dismissed'|'installed' }}
+ */
+export function validateModelSetupResolvePayload(payload) {
+  return /** @type {{ reason: 'shown'|'dismissed'|'installed' }} */ (
+    validateIpcPayload('window:resolve-model-setup-request', payload, modelSetupResolveSchema)
+  )
 }

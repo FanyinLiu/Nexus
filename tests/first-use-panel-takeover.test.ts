@@ -21,6 +21,7 @@ function createHarness(initial: Snapshot) {
   const intervals: Array<{ callback: () => void; ms: number }> = []
   const cleared: unknown[] = []
   let panelExists = false
+  let quitting = false
   let created = 0
   let resolveReady!: (win: unknown) => void
   let ready = false
@@ -65,6 +66,7 @@ function createHarness(initial: Snapshot) {
       monitor.start()
       deliverDue()
     },
+    isQuitting: () => quitting,
     now: () => now,
     setIntervalFn: (callback, ms) => {
       intervals.push({ callback, ms })
@@ -82,6 +84,7 @@ function createHarness(initial: Snapshot) {
     setSnapshot: (next: Partial<Snapshot>) => { snapshot = { ...snapshot, ...next } },
     setNow: (value: number) => { now = value },
     setDueAt: (value: number) => { dueAt = value },
+    setQuitting: () => { quitting = true },
     get created() { return created },
     get delivered() { return delivered },
     get panelExists() { return panelExists },
@@ -133,6 +136,25 @@ test('the wake driver reconnects only after the rebuilt panel is ready', async (
     harness.setNow(1_010_000)
     harness.monitor.tick()
     assert.equal(harness.delivered, 1, 'the rebuilt panel takes over exactly once')
+  } finally {
+    harness.takeover.stop()
+    harness.monitor.stop()
+  }
+})
+
+test('quitting the app never turns a closing pet window into a rebuilt panel', () => {
+  const harness = createHarness({
+    petOnline: false,
+    panelOnline: false,
+    petLastSeenAt: '2026-01-01T00:00:00.000Z',
+  })
+  try {
+    harness.setQuitting()
+    harness.takeover.start()
+    assert.equal(harness.created, 0, 'the app is quitting, not the pet failing')
+    assert.equal(harness.takeover.tick(), 'idle', 'the coordinator disarms on quit')
+    assert.equal(harness.created, 0)
+    assert.equal(harness.takeover.isRunning(), false, 'the takeover timer stops on quit')
   } finally {
     harness.takeover.stop()
     harness.monitor.stop()

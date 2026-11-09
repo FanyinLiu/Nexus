@@ -173,6 +173,7 @@ const inventory: Inventory = {
 function installWindowMock(nextInventory: Inventory = inventory) {
   const storage = new Map<string, string>()
   const downloadCalls: unknown[] = []
+  const resolveCalls: unknown[] = []
   let progressListener: ((event: unknown) => void) | null = null
   const sessionStorage = {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -196,6 +197,10 @@ function installWindowMock(nextInventory: Inventory = inventory) {
         progressListener = listener
         return () => { progressListener = null }
       },
+      resolveModelSetupRequest: async (payload: unknown) => {
+        resolveCalls.push(payload)
+        return true
+      },
     },
     requestAnimationFrame: (callback: () => void) => {
       callback()
@@ -214,6 +219,7 @@ function installWindowMock(nextInventory: Inventory = inventory) {
     windowMock,
     documentMock,
     downloadCalls,
+    resolveCalls,
     emitProgress: (event: unknown) => progressListener?.(event),
   }
 }
@@ -288,8 +294,54 @@ test('the installer card renders the zh-CN invite inside its sized panel shell',
   setLocale('en-US')
 })
 
+test('a painted prompt acknowledges the pending delivery exactly once', async () => {
+  const { resolveCalls } = installWindowMock()
+  requestModelSetupOnVoiceUse()
+
+  const renderer = createComponentRenderer<{
+    suppressed?: boolean
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
+
+  renderer.render({})
+  await flushEffects()
+  renderer.render({})
+  await flushEffects()
+  renderer.render({})
+  await flushEffects()
+
+  assert.deepEqual(
+    resolveCalls,
+    [{ reason: 'shown' }],
+    'the main process is told only after the overlay can paint',
+  )
+  renderer.unmount()
+})
+
+test('installed models spend a pending delivery without painting the prompt', async () => {
+  const installedInventory: Inventory = {
+    ...inventory,
+    ready: true,
+    missingRequired: [],
+    models: inventory.models.map((model) => ({ ...model, present: true, verified: true })),
+  }
+  const { resolveCalls } = installWindowMock(installedInventory)
+  requestModelSetupOnVoiceUse()
+
+  const renderer = createComponentRenderer<{
+    suppressed?: boolean
+  }>(ModelSetupOverlay as (props: { suppressed?: boolean }) => unknown)
+
+  renderer.render({})
+  await flushEffects()
+  renderer.render({})
+  await flushEffects()
+
+  assert.deepEqual(resolveCalls, [{ reason: 'installed' }])
+  renderer.unmount()
+})
+
 test('dismissing the installer refuses it in the main process', async () => {
-  const { windowMock } = installWindowMock()
+  const { windowMock, resolveCalls } = installWindowMock()
   requestModelSetupOnVoiceUse()
 
   const requests: unknown[] = []
@@ -327,6 +379,7 @@ test('dismissing the installer refuses it in the main process', async () => {
     1,
     'dismissal tells the main process that the installer was refused',
   )
+  assert.deepEqual(resolveCalls, [{ reason: 'shown' }, { reason: 'dismissed' }])
 
   renderer.unmount()
 })

@@ -244,6 +244,10 @@ async function run() {
   const child = spawn(executable, [
     `--remote-debugging-port=${port}`,
     '--remote-allow-origins=*',
+    // The synthetic API key still goes through the product vault. This
+    // Chromium switch makes safeStorage use the mock keychain, so a
+    // measurement run can never read or prompt for the user's real Keychain.
+    '--use-mock-keychain',
     `--user-data-dir=${userDataDir}`,
   ], {
     cwd: ROOT,

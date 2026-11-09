@@ -45,15 +45,18 @@ test('a panel that consumes before the delay keeps the request armed', (t) => {
   assert.equal(harness.gate.hasPending(), true)
 })
 
-test('an expired request is claimed exactly once', (t) => {
+test('an expired request stays pending until the renderer acknowledges it', (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const harness = createHarness()
 
   harness.gate.request({ delayMs: 3_000 })
   t.mock.timers.tick(3_000)
 
-  assert.equal(harness.gate.consume(), true, 'the expired request is handed over')
-  assert.equal(harness.gate.consume(), false, 'a handed-over request is gone')
+  assert.equal(harness.gate.consume(), true, 'the renderer can read the delivered request')
+  assert.equal(harness.gate.consume(), true, 'reading alone does not spend the request')
+  assert.equal(harness.gate.hasPending(), true)
+  assert.equal(harness.gate.resolve('shown'), true, 'the renderer confirms the prompt painted')
+  assert.equal(harness.gate.consume(), false, 'an acknowledged request is gone')
   assert.equal(harness.gate.hasPending(), false)
 })
 
@@ -98,14 +101,28 @@ test('a new request replaces the armed one without touching a delivered latch', 
   assert.equal(harness.delivered, 1)
 })
 
-test('an immediate request delivers once and consume reports the pending latch', () => {
+test('an immediate request delivers once and stays pending until acknowledged', () => {
   const harness = createHarness()
 
   harness.gate.request()
   assert.equal(harness.delivered, 1)
   assert.equal(harness.gate.hasPending(), true)
   assert.equal(harness.gate.consume(), true)
+  assert.equal(harness.gate.consume(), true)
+  assert.equal(harness.gate.resolve('installed'), true)
   assert.equal(harness.gate.consume(), false)
+})
+
+test('only explicit renderer reasons clear a pending delivery', () => {
+  const harness = createHarness()
+
+  harness.gate.request()
+  assert.equal(harness.gate.resolve('unknown'), false)
+  assert.equal(harness.gate.hasPending(), true)
+
+  assert.equal(harness.gate.resolve('dismissed'), true)
+  assert.equal(harness.gate.hasPending(), false)
+  assert.equal(harness.gate.resolve('shown'), false, 'a second acknowledgement is a no-op')
 })
 
 test('a declined installer is never delivered again', () => {

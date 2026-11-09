@@ -38,7 +38,9 @@ export function createModelSetupRequestGate(dependencies = {}) {
     loadDeferral = () => ({ declined: false, reminded: false }),
     saveDeferral = () => {},
   } = dependencies
-  // A request that already reached the panel and waits to be claimed.
+  // A request that already reached the panel and waits for a renderer ack.
+  // Delivery alone never clears it: a panel can reload between the IPC event
+  // and React mounting, and the rebuilt panel must see the request once.
   let delivered = false
   // A request whose delay has not elapsed yet.
   let timer = null
@@ -145,16 +147,26 @@ export function createModelSetupRequestGate(dependencies = {}) {
       delivered = false
     },
     /**
-     * Claims a request that already reached the panel. A request that is
-     * still counting down stays armed: the panel may mount again before the
-     * delay elapses, and the main process raises it either way.
+     * Reads the pending delivery without clearing it. A request that is still
+     * counting down stays armed: the panel may mount again before the delay
+     * elapses, and the main process raises it either way.
      */
     consume() {
+      return delivered
+    },
+    /**
+     * Clears a delivered request only after the renderer confirms the prompt
+     * was shown, dismissed, or is no longer needed because models installed.
+     * @param {'shown'|'dismissed'|'installed'} reason
+     * @returns {boolean}
+     */
+    resolve(reason) {
+      if (reason !== 'shown' && reason !== 'dismissed' && reason !== 'installed') return false
       if (!delivered) return false
       delivered = false
       return true
     },
-    /** Whether a request already reached the panel and waits to be claimed. */
+    /** Whether a request already reached the panel and waits for an ack. */
     hasPending() {
       return delivered
     },

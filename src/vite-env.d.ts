@@ -524,6 +524,7 @@ declare global {
       requestModelSetup: DesktopPetGeneratedBridge['requestModelSetup']
       claimModelSetupReminder?: DesktopPetGeneratedBridge['claimModelSetupReminder']
       consumeModelSetupRequest?: DesktopPetGeneratedBridge['consumeModelSetupRequest']
+      resolveModelSetupRequest?: DesktopPetGeneratedBridge['resolveModelSetupRequest']
       declineModelSetup?: DesktopPetGeneratedBridge['declineModelSetup']
       subscribeModelSetupRequest?: (listener: () => void) => () => void
       getPanelSection: DesktopPetGeneratedBridge['getPanelSection']

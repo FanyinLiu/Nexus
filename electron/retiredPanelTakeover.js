@@ -18,6 +18,8 @@ export const RETIRED_PANEL_TAKEOVER_INTERVAL_MS = 5_000
  * @property {() => Promise<unknown> | unknown} createHiddenPanel Resolves with
  *   the panel only after its renderer is ready, or null when creation failed.
  * @property {(win: unknown) => void} onHiddenPanelReady
+ * @property {() => boolean} [isQuitting] Main-process quit latch; a closing
+ *   pet window must not be mistaken for an offline companion.
  * @property {() => number} [now]
  * @property {(callback: () => void, ms: number) => unknown} [setIntervalFn]
  * @property {(timer: unknown) => void} [clearIntervalFn]
@@ -32,6 +34,7 @@ export function createRetiredPanelTakeover({
   hasPanelWindow,
   createHiddenPanel,
   onHiddenPanelReady,
+  isQuitting = () => false,
   now = Date.now,
   setIntervalFn = (callback, ms) => setInterval(callback, ms),
   clearIntervalFn = (timer) => clearInterval(/** @type {any} */ (timer)),
@@ -56,6 +59,11 @@ export function createRetiredPanelTakeover({
 
   const tick = () => {
     if (!armed) return 'idle'
+    if (isQuitting()) {
+      stop()
+      armed = false
+      return 'quitting'
+    }
     if (hasPanelWindow()) {
       creating = false
       return 'panel_present'

@@ -38,6 +38,7 @@ const PANEL_ONLY_PATTERNS = Object.freeze([
   /^vts-bridge:migrate-legacy-token$/,
   /^models:setup-requested$/,
   /^window:consume-model-setup-request$/,
+  /^window:resolve-model-setup-request$/,
 ])
 
 const EXPLICIT_SHARED_HIGH_IMPACT_CHANNELS = Object.freeze(new Set([

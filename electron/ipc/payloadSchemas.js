@@ -5,6 +5,7 @@ export {
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
+  validateModelSetupResolvePayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
   validatePetWindowStatePayload,

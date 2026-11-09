@@ -21,7 +21,7 @@ import {
   hasModelSetupRequest,
   subscribeModelSetupRequests,
 } from '../modelSetupRequests.ts'
-import { declineModelSetup } from '../../../lib/modelSetupBridge.ts'
+import { declineModelSetup, resolveModelSetupRequest } from '../../../lib/modelSetupBridge.ts'
 import { createLogger } from '../../../lib/logger.ts'
 
 const log = createLogger('models.setup')
@@ -106,7 +106,13 @@ export function ModelSetupOverlay({
     window.desktopPet?.modelsNetworkProbe?.().then(setNetworkProbe).catch(() => { log.debug('model network probe failed', { errorPresent: true }) })
   }, [fetchInventory])
 
-  useEffect(() => subscribeModelSetupRequests(() => setRequested(true)), [])
+  useEffect(() => subscribeModelSetupRequests(() => {
+    setRequested(true)
+    // A second request arriving while the dialog is already painted is shown
+    // by definition; acknowledge it without waiting for another visibility
+    // transition. The first paint still acks from the layout effect below.
+    if (overlayVisibilityRef.current === true) resolveModelSetupRequest('shown')
+  }), [])
 
   // sessionStorage only lasts for this page. The refusal itself is on disk
   // in the main process; peeking it (without spending the reminder) keeps
@@ -165,6 +171,7 @@ export function ModelSetupOverlay({
     // A wake-word save may still be counting down in the main process.
     // The refusal retracts it, closes the box, and keeps the installer from
     // being offered again in this session.
+    resolveModelSetupRequest('dismissed')
     declineModelSetup()
     try { sessionStorage.setItem(MODEL_SETUP_DISMISSED_STORAGE_KEY, '1') } catch { /* silent-catch-ok: sandboxed renderers have no sessionStorage; dismissal still applies for this session */ }
     setDismissed(true)
@@ -173,6 +180,13 @@ export function ModelSetupOverlay({
   const voiceStillNeeded = inventory
     ? missingVoiceModelIds(inventory.models, speechInputProviderId ?? '').length > 0
     : undefined
+  // A request can arrive after the model was already installed elsewhere.
+  // That pending delivery is spent without painting the prompt.
+  useEffect(() => {
+    if (inventory && voiceStillNeeded === false) {
+      resolveModelSetupRequest('installed')
+    }
+  }, [inventory, voiceStillNeeded])
   const overlayVisible = shouldShowModelSetupOverlay({
     dismissed,
     // Required models alone are not "done": the selected listener is part of
@@ -203,6 +217,8 @@ export function ModelSetupOverlay({
     }
 
     if (overlayVisible && !overlayWasVisibleRef.current) {
+      // The request is consumed only here, after the prompt can actually paint.
+      resolveModelSetupRequest('shown')
       const activeElement = document.activeElement
       openerRef.current = activeElement instanceof HTMLElement
         && activeElement !== document.body

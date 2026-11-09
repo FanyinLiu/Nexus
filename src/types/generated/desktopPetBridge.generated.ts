@@ -140,6 +140,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   pluginStop: { conditional: false, invoke: ['plugin:stop'], events: [] },
   probeLocalServices: { conditional: false, invoke: ['doctor:probe-local-services'], events: [] },
   requestModelSetup: { conditional: false, invoke: ['window:request-model-setup'], events: [] },
+  resolveModelSetupRequest: { conditional: true, invoke: ['window:resolve-model-setup-request'], events: [] },
   saveTextFile: { conditional: false, invoke: ['file:save-text'], events: [] },
   searchWeb: { conditional: false, invoke: ['tool:web-search'], events: [] },
   sensevoiceAbort: { conditional: false, invoke: ['sensevoice:abort'], events: [] },
@@ -247,6 +248,7 @@ export type DesktopPetBridgeKey = keyof typeof DESKTOP_PET_BRIDGE_SURFACE
 export type DesktopPetConditionalBridgeKey =
   | 'consumeModelSetupRequest'
   | 'declineModelSetup'
+  | 'resolveModelSetupRequest'
   | 'subscribeModelSetupRequest'
 
 export type DesktopPetInvokeChannel =
@@ -462,6 +464,7 @@ export type DesktopPetInvokeChannel =
   | 'window:open-panel'
   | 'window:open-pet-menu'
   | 'window:request-model-setup'
+  | 'window:resolve-model-setup-request'
   | 'window:set-system-vibrancy'
 
 export type DesktopPetEventChannel =
@@ -633,6 +636,7 @@ export interface DesktopPetBridgeMethodArguments {
   pluginStop: readonly [payload: { id: string }]
   probeLocalServices: unknown
   requestModelSetup: readonly [options?: { delayMs?: number; cancel?: boolean }]
+  resolveModelSetupRequest: readonly [options: { reason: 'dismissed' | 'shown' | 'installed' }]
   saveTextFile: readonly [payload: { title: string; defaultFileName: string; content: string; filters?: Array<{ name: string; extensions: Array<string> }> }]
   searchWeb: unknown
   sensevoiceAbort: readonly []
@@ -875,6 +879,7 @@ export interface DesktopPetBridgeMethodResults {
   pluginStop: unknown
   probeLocalServices: unknown
   requestModelSetup: void
+  resolveModelSetupRequest: boolean
   saveTextFile: unknown
   searchWeb: unknown
   sensevoiceAbort: { ok: boolean }
@@ -1034,6 +1039,7 @@ export interface DesktopPetGeneratedBridge {
   pluginBusStats: (...args: DesktopPetBridgeMethodArguments['pluginBusStats']) => Promise<DesktopPetBridgeMethodResults['pluginBusStats']>
   pluginDir: (...args: DesktopPetBridgeMethodArguments['pluginDir']) => Promise<DesktopPetBridgeMethodResults['pluginDir']>
   requestModelSetup: (...args: DesktopPetBridgeMethodArguments['requestModelSetup']) => Promise<DesktopPetBridgeMethodResults['requestModelSetup']>
+  resolveModelSetupRequest: (...args: DesktopPetBridgeMethodArguments['resolveModelSetupRequest']) => Promise<DesktopPetBridgeMethodResults['resolveModelSetupRequest']>
   sensevoiceAbort: (...args: DesktopPetBridgeMethodArguments['sensevoiceAbort']) => Promise<DesktopPetBridgeMethodResults['sensevoiceAbort']>
   sensevoiceStart: (...args: DesktopPetBridgeMethodArguments['sensevoiceStart']) => Promise<DesktopPetBridgeMethodResults['sensevoiceStart']>
   sensevoiceStatus: (...args: DesktopPetBridgeMethodArguments['sensevoiceStatus']) => Promise<DesktopPetBridgeMethodResults['sensevoiceStatus']>

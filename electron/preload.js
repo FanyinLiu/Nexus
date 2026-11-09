@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   claimModelSetupReminder: /** @param {unknown} options */ (options) => ipcRenderer.invoke('window:claim-model-setup-reminder', options),
   ...(panelView ? {
     consumeModelSetupRequest: () => ipcRenderer.invoke('window:consume-model-setup-request'),
+  resolveModelSetupRequest: /** @param {unknown} options */ (options) => ipcRenderer.invoke('window:resolve-model-setup-request', options),
     declineModelSetup: () => ipcRenderer.invoke('window:decline-model-setup'),
     subscribeModelSetupRequest: /** @param {IpcVoidListener} listener */ (listener) => {
       const handler = () => listener()

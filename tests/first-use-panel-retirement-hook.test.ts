@@ -146,6 +146,21 @@ test('a non-pristine first hide consumes eligibility instead of retiring', (t) =
   }
 })
 
+test('a restored completed profile is never a retirement candidate', (t) => {
+  const env = installEnvironment(t)
+  const props = baseProps(env)
+  props.enabled = false
+  props.onboardingPending = false
+  const renderer = createHookRenderer(() => useFirstUsePanelRetirement(props))
+  try {
+    renderer.render()
+    env.fireDocument('visibilitychange')
+    assert.equal(env.closeCalls.length, 0, 'an old profile keeps its ordinary panel lifecycle')
+  } finally {
+    renderer.unmount()
+  }
+})
+
 test('an offline pet keeps the panel alive for reminder takeover', (t) => {
   const env = installEnvironment(t)
   const props = baseProps(env)

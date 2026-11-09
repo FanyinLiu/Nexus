@@ -406,7 +406,7 @@ export function cancelFirstUsePanelRetirement() {
  * the renderer is ready so the wake driver never pushes into a loading page.
  * @returns {Promise<import('electron').BrowserWindow | null>}
  */
-function createHiddenTakeoverPanel() {
+export function createHiddenTakeoverPanel() {
   return new Promise((resolve) => {
     let settled = false
     const finish = (win) => {
@@ -430,6 +430,7 @@ const retiredPanelTakeover = createRetiredPanelTakeover({
   getSnapshot: () => buildRuntimeStateSnapshot(),
   hasPanelWindow: () => Boolean(panelWindow && !panelWindow.isDestroyed()),
   createHiddenPanel: createHiddenTakeoverPanel,
+  isQuitting: () => app.isQuitting === true,
   onHiddenPanelReady: (win) => {
     if (!win || win.isDestroyed()) return
     startReminderPanelWakeMonitor()

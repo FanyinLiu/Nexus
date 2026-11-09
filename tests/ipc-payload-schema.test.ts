@@ -30,6 +30,7 @@ import {
   validateMemoryVectorIndexPayload,
   validateModelDownloadMissingPayload,
   validateModelDownloadPayload,
+  validateModelSetupResolvePayload,
   validatePluginBusRecentPayload,
   validatePluginBusTopicPayload,
   validatePluginIdPayload,
@@ -164,9 +165,27 @@ test('close-panel schema permits only the one-time retirement flag', () => {
     () => validateClosePanelPayload({ retireFirstUse: 'yes' }),
     /retireFirstUse must be a boolean/,
   )
-  assert.deepEqual(
-    validateClosePanelPayload({ retireFirstUse: true, unknown: true }),
-    { retireFirstUse: true },
+  assert.throws(
+    () => validateClosePanelPayload({ retireFirstUse: true, unknown: true }),
+    /unknown/i,
+  )
+})
+
+test('model setup resolve schema rejects unknown fields and invalid reasons', () => {
+  assert.deepEqual(validateModelSetupResolvePayload({ reason: 'shown' }), { reason: 'shown' })
+  assert.deepEqual(validateModelSetupResolvePayload({ reason: 'dismissed' }), { reason: 'dismissed' })
+  assert.deepEqual(validateModelSetupResolvePayload({ reason: 'installed' }), { reason: 'installed' })
+  assert.throws(
+    () => validateModelSetupResolvePayload({ reason: 'shown', extra: true }),
+    /not allowed/i,
+  )
+  assert.throws(
+    () => validateModelSetupResolvePayload({ reason: 'later' }),
+    /reason/i,
+  )
+  assert.throws(
+    () => validateModelSetupResolvePayload({}),
+    /reason/i,
   )
 })
 

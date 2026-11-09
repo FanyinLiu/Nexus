@@ -149,6 +149,7 @@ test('an unbound window stays unprivileged even if its url says panel', () => {
 const MODEL_SETUP_CHANNELS = [
   'window:request-model-setup',
   'window:consume-model-setup-request',
+  'window:resolve-model-setup-request',
   'window:decline-model-setup',
   'window:claim-model-setup-reminder',
 ] as const
@@ -171,6 +172,14 @@ test('model setup request consumption is panel-only', () => {
     assert.throws(
       () => assertBoundWindowChannelAllowed(stranger, 'window:consume-model-setup-request'),
       /panel capability is unavailable to unknown window/,
+    )
+    assert.equal(getRequiredWindowCapability('window:resolve-model-setup-request'), 'panel')
+    assert.doesNotThrow(
+      () => assertBoundWindowChannelAllowed(panel, 'window:resolve-model-setup-request'),
+    )
+    assert.throws(
+      () => assertBoundWindowChannelAllowed(pet, 'window:resolve-model-setup-request'),
+      /panel capability is unavailable to pet window/,
     )
   } finally {
     unbindWindowCapability(panel)

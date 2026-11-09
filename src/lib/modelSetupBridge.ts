@@ -117,6 +117,19 @@ export function cancelModelSetupAfterWakeword(): void {
 }
 
 /**
+ * Confirms that a delivered setup request reached its final renderer state.
+ * The main process keeps the pending request until this ack, so a reload
+ * before the prompt paints still replays it; a reload after a paint does not.
+ */
+export function resolveModelSetupRequest(
+  reason: 'shown' | 'dismissed' | 'installed',
+): void {
+  const resolve = window.desktopPet?.resolveModelSetupRequest
+  if (!resolve) return
+  void resolve({ reason }).catch(() => { log.debug('model setup resolve failed', { errorPresent: true }) })
+}
+
+/**
  * Tells the main process that the user answered "maybe later" in the
  * installer. The refusal lives in the main process, so a later voice action
  * cannot raise the chat panel for the installer again — the surface that

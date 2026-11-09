@@ -69,6 +69,7 @@ import {
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
+  validateModelSetupResolvePayload,
   validateOpenPanelPayload,
   validateClosePanelPayload,
   validatePanelWindowStatePayload,
@@ -201,6 +202,11 @@ function registerPowerEventForwarding() {
 // raises the panel and replays the request there.
 function emitModelSetupRequest() {
   if (!panelWindow || panelWindow.isDestroyed()) return
+  // A freshly created panel is still loading; its mount-time pull reads the
+  // pending request instead. Sending into a loading page would lose the event,
+  // and even did-finish-load can land before React subscribes.
+  if (typeof panelWindow.webContents.isLoadingMainFrame === 'function'
+    && panelWindow.webContents.isLoadingMainFrame()) return
   panelWindow.webContents.send('models:setup-requested')
 }
 
@@ -288,6 +294,12 @@ export function register() {
   ipcMain.handle('window:consume-model-setup-request', (event) => {
     requireTrustedSender(event)
     return modelSetupRequestGate.consume()
+  })
+
+  ipcMain.handle('window:resolve-model-setup-request', (event, payload) => {
+    requireTrustedSender(event)
+    const { reason } = validateModelSetupResolvePayload(payload)
+    return modelSetupRequestGate.resolve(reason)
   })
 
   ipcMain.handle('window:get-panel-section', (event) => {
