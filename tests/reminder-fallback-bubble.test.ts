@@ -83,6 +83,8 @@ type NoticeDependencies = Parameters<typeof useCompanionNotices>[0]
 type ProbeProps = {
   settingsRef: ControllerOptions['settingsRef']
   runtimeSnapshot: ControllerOptions['runtimeSnapshot']
+  reminderTasks: ControllerOptions['reminderTaskStore']['reminderTasks']
+  setReminderTasks: ControllerOptions['reminderTaskStore']['setReminderTasks']
   ctx: NoticeDependencies['ctx']
   t: NoticeDependencies['t']
   busyRef: NoticeDependencies['busyRef']
@@ -125,8 +127,8 @@ function ControllerProbe(props: ProbeProps): ControllerApi {
     pet: { updatePetStatus: props.updatePetStatus },
     debugConsole: { appendDebugConsoleEvent: props.appendDebugConsoleEvent },
     reminderTaskStore: {
-      reminderTasks: [],
-      setReminderTasks: () => {},
+      reminderTasks: props.reminderTasks,
+      setReminderTasks: props.setReminderTasks,
     },
   })
 
@@ -261,9 +263,16 @@ function createControllerSession(options: {
   deliver?: (payload: DeliveryPayload) => Promise<Record<string, unknown>>
   speakAssistantReply?: (text: string) => Promise<void>
   onError?: (value: string | null) => void
+  settings?: Partial<AppSettings>
+  appendChatMessage?: (message: { content: string }) => void
+  telegramSendMessage?: (payload: { chatId: string; text: string }) => Promise<void>
+  runtimeSnapshot?: ControllerOptions['runtimeSnapshot']
+  reminderTasks?: ControllerOptions['reminderTaskStore']['reminderTasks']
+  setReminderTasks?: ControllerOptions['reminderTaskStore']['setReminderTasks']
 } = {}) {
   const clock = createClock()
   const inboxUpdates: string[] = []
+  const storage = new Map<string, string>()
   const desktopPet: Record<string, unknown> = {
     updateProactiveInboxEntry: async (payload: { id: string; status: string }) => {
       inboxUpdates.push(`${payload.id}:${payload.status}`)
@@ -271,11 +280,17 @@ function createControllerSession(options: {
     },
   }
   if (options.deliver) desktopPet.deliverProactiveMessage = options.deliver
+  if (options.telegramSendMessage) desktopPet.telegramSendMessage = options.telegramSendMessage
 
   Object.defineProperty(globalThis, 'window', {
     value: {
       setTimeout: clock.setTimeout,
       clearTimeout: clock.clearTimeout,
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => { storage.set(key, String(value)) },
+        removeItem: (key: string) => { storage.delete(key) },
+      },
       desktopPet,
     },
     configurable: true,
@@ -283,15 +298,17 @@ function createControllerSession(options: {
   })
 
   const props: ProbeProps = {
-    settingsRef: { current: createSettings() },
-    runtimeSnapshot: { mood: 'idle', panelOnline: false, petOnline: false },
+    settingsRef: { current: { ...createSettings(), ...options.settings } },
+    runtimeSnapshot: options.runtimeSnapshot ?? { mood: 'idle', panelOnline: false, petOnline: false },
+    reminderTasks: options.reminderTasks ?? [],
+    setReminderTasks: options.setReminderTasks ?? (() => {}),
     ctx: {
       speakAssistantReply: options.speakAssistantReply ?? (async () => {}),
       voiceStateRef: { current: 'idle' },
     },
     t: (key) => key,
     busyRef: { current: false },
-    appendChatMessage: () => {},
+    appendChatMessage: options.appendChatMessage ?? (() => {}),
     setError: options.onError ?? (() => {}),
     appendSystemMessage: () => {},
     sendMessage: async () => undefined,
@@ -605,13 +622,23 @@ test('a real companion speech failure still sets the error state', async () => {
   }
 })
 
-test('a duplicate reminder occurrence never falls back to the local bubble', async () => {
+test('a duplicate reminder occurrence never falls back to bubble, chat, speech or external channels', async () => {
   let payload: DeliveryPayload | null = null
+  const chatLines: string[] = []
+  const speeches: string[] = []
+  const telegramMessages: string[] = []
   const session = createControllerSession({
     deliver: async (next) => {
       payload = next
       return { rule: 2, outlets: ['inbox', 'panel'], duplicate: true }
     },
+    settings: {
+      telegramPermissionMode: 'auto',
+      ownerTelegramChatIds: '4242',
+    },
+    appendChatMessage: (message) => { chatLines.push(message.content) },
+    speakAssistantReply: async (text) => { speeches.push(text) },
+    telegramSendMessage: async ({ text }) => { telegramMessages.push(text) },
   })
   const dueAt = '2026-01-01T00:05:00.000Z'
   try {
@@ -619,6 +646,44 @@ test('a duplicate reminder occurrence never falls back to the local bubble', asy
     assert.equal(payload?.message.origin?.occurrenceDueAt, Date.parse(dueAt))
     assert.equal(session.bubble, null)
     assert.deepEqual(session.inboxUpdates, [])
+    assert.deepEqual(chatLines, [], 'no duplicate chat line')
+    assert.deepEqual(speeches, [], 'no duplicate speech')
+    assert.deepEqual(telegramMessages, [], 'no duplicate external channel send')
+  } finally {
+    session.unmount()
+  }
+})
+
+test('panel handoff refreshes reminders against the pet last online instant', () => {
+  const now = Date.now()
+  const dueAt = new Date(now - 3 * 60_000).toISOString()
+  const petLastSeenAt = new Date(now - 2 * 60_000 - 40_000).toISOString()
+  const task: ReminderTask = {
+    ...makeTask(),
+    schedule: { kind: 'at', at: dueAt },
+    nextRunAt: dueAt,
+  }
+  let tasks = [task]
+  const refreshedNextRuns: Array<string | undefined> = []
+  const session = createControllerSession({
+    runtimeSnapshot: {
+      mood: 'idle',
+      panelOnline: true,
+      petOnline: false,
+      petLastSeenAt,
+    },
+    reminderTasks: tasks,
+    setReminderTasks: (updater) => {
+      tasks = typeof updater === 'function' ? updater(tasks) : updater
+      refreshedNextRuns.push(tasks[0]?.nextRunAt)
+    },
+    deliver: async () => ({ rule: 1, outlets: ['inbox', 'badge'] }),
+  })
+  try {
+    assert.ok(
+      refreshedNextRuns.includes(dueAt),
+      'the due instant survives because it is within grace of petLastSeenAt',
+    )
   } finally {
     session.unmount()
   }
