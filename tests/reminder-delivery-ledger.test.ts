@@ -79,3 +79,22 @@ test('the default retention constant is seven days', () => {
   assert.equal(REMINDER_DELIVERY_RETENTION_MS, 7 * 24 * 60 * 60 * 1000)
   assert.equal(REMINDER_DELIVERY_MAX_PER_TASK, 50)
 })
+
+test('a recurring task\u2019s next occurrence is not suppressed by the accepted one', async (t) => {
+  const storePath = await createTempStore(t)
+  const ledger = createReminderDeliveryLedger({ getStorePath: () => storePath, now: () => NOW })
+
+  const firstDue = NOW
+  const secondDue = NOW + 60_000
+  await ledger.record('task-every', firstDue)
+
+  assert.equal(await ledger.has('task-every', firstDue), true, 'the same occurrence stays closed')
+  assert.equal(await ledger.has('task-every', secondDue), false, 'the next occurrence stays open')
+
+  await ledger.record('task-every', secondDue)
+  assert.equal(await ledger.has('task-every', secondDue), true)
+  assert.deepEqual(
+    (await ledger.snapshot()).map((entry) => entry.dueAt),
+    [firstDue, secondDue],
+  )
+})

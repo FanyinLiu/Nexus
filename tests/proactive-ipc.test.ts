@@ -1,9 +1,16 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { test, type TestContext } from 'node:test'
 
 import {
   createProactiveIpc,
 } from '../electron/ipc/proactiveIpc.js'
+import {
+  createReminderDeliveryLedger,
+  REMINDER_DELIVERY_FILE_NAME,
+} from '../electron/services/reminderDeliveryLedger.js'
 import type { Logger } from '../electron/logger.js'
 import type {
   DeliveryContext,
@@ -239,12 +246,13 @@ function createMockTimerClock(): IntervalClock {
   }
 }
 
-type MemoryLedger = {
+type DeliveryLedger = {
   has: (taskId: string, dueAt: number) => Promise<boolean>
   record: (taskId: string, dueAt: number) => Promise<void>
   flush: () => Promise<unknown>
-  keys: Set<string>
 }
+
+type MemoryLedger = DeliveryLedger & { keys: Set<string> }
 
 function createMemoryLedger(): MemoryLedger {
   const keys = new Set<string>()
@@ -261,7 +269,7 @@ function createHarness(options: {
   capabilities?: Capability[]
   clock?: IntervalClock
   panelFocused?: boolean
-  reminderDeliveryLedger?: MemoryLedger
+  reminderDeliveryLedger?: DeliveryLedger
 }) {
   const fakeIpc = createFakeIpcMain()
   const fakeInbox = createFakeInbox()
@@ -471,4 +479,45 @@ test('a resumed pet cannot re-deliver an occurrence the panel already accepted',
   }) as { duplicate?: boolean }
   assert.equal(nextDecision.duplicate, undefined)
   assert.equal(harness.calls.upsert, 2)
+})
+
+test('a recurring reminder\u2019s next occurrence still delivers with the durable ledger', async (t: TestContext) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-proactive-ledger-'))
+  t.after(async () => {
+    await fs.rm(directory, { recursive: true, force: true })
+  })
+  let now = NOW
+  const ledger = createReminderDeliveryLedger({
+    getStorePath: () => path.join(directory, REMINDER_DELIVERY_FILE_NAME),
+    now: () => now,
+  })
+  const harness = createHarness({
+    trusted: () => true,
+    capabilities: ['pet', 'panel'],
+    reminderDeliveryLedger: ledger,
+  })
+
+  const deliver = (occurrenceDueAt: number, id: string) => harness.invoke(
+    'proactive:deliver',
+    { trusted: true },
+    {
+      message: makeMessage({ id, origin: { taskId: 'task-every', occurrenceDueAt } }),
+      context: makeContext(),
+    },
+  ) as Promise<{ duplicate?: boolean }>
+
+  const firstDue = NOW
+  const secondDue = NOW + 60_000
+  const first = await deliver(firstDue, 'first-occurrence')
+  assert.equal(first.duplicate, undefined)
+  assert.equal(harness.calls.upsert, 1)
+
+  const repeated = await deliver(firstDue, 'repeated-occurrence')
+  assert.equal(repeated.duplicate, true)
+  assert.equal(harness.calls.upsert, 1, 'the same occurrence is suppressed')
+
+  now += 60_000
+  const next = await deliver(secondDue, 'next-occurrence')
+  assert.equal(next.duplicate, undefined)
+  assert.equal(harness.calls.upsert, 2, 'the next recurrence is delivered normally')
 })
