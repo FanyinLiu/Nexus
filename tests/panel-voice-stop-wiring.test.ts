@@ -18,7 +18,15 @@ class MemoryStorage {
 }
 
 test('the panel stop-voice wiring uses the button path, not a bare interrupt', () => {
+  const previousWindow = (globalThis as { window?: unknown }).window
+  const previousDocument = (globalThis as { document?: unknown }).document
   const localStorage = new MemoryStorage()
+  const documentStub = {
+    visibilityState: 'visible',
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    querySelector: () => null,
+  }
   Object.defineProperty(globalThis, 'window', {
     configurable: true,
     writable: true,
@@ -27,7 +35,13 @@ test('the panel stop-voice wiring uses the button path, not a bare interrupt', (
       setTimeout: globalThis.setTimeout.bind(globalThis),
       clearTimeout: globalThis.clearTimeout.bind(globalThis),
       addEventListener: () => undefined,
+      removeEventListener: () => undefined,
     },
+  })
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    writable: true,
+    value: documentStub,
   })
 
   const calls = { stopVoice: 0, interrupt: 0, stopAll: 0 }
@@ -62,5 +76,12 @@ test('the panel stop-voice wiring uses the button path, not a bare interrupt', (
     assert.equal(calls.stopAll, 0)
   } finally {
     renderer.unmount()
+    for (const [key, previous] of [['window', previousWindow], ['document', previousDocument]] as const) {
+      if (previous === undefined) {
+        delete (globalThis as Record<string, unknown>)[key]
+      } else {
+        Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: previous })
+      }
+    }
   }
 })
