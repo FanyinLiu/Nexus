@@ -141,6 +141,99 @@ function useBridgeSubscription<T>(
   }, deps)
 }
 
+/**
+ * The runtime client TTL is 30 s. A 10 s panel beat can leave the panel
+ * believing the pet is online until after a due reminder (observed at 35 s).
+ * Four seconds gives the fallback scheduler a safe margin before due.
+ */
+export function runtimeHeartbeatIntervalMs(view: 'pet' | 'panel'): number {
+  return view === 'panel' ? 4_000 : 10_000
+}
+
+/** Only the panel needs its own heartbeat snapshot applied locally. */
+export function shouldApplyHeartbeatSnapshot(view: 'pet' | 'panel'): boolean {
+  return view === 'panel'
+}
+
+/**
+ * Keep this window's runtime liveness fresh and mirror the main process
+ * snapshot back into local state. The main process skips the sender when it
+ * rebroadcasts a heartbeat, so without the local apply the panel would never
+ * learn from its own beat that the pet went offline.
+ */
+export function useRuntimeHeartbeat(
+  view: 'pet' | 'panel',
+  setRuntimeSnapshotState: Dispatch<SetStateAction<RuntimeStateSnapshot>>,
+) {
+  useEffect(() => {
+    const beat = () => {
+      const pending = window.desktopPet?.heartbeatRuntimeState?.({ view })
+      pending?.then((state) => {
+        if (shouldApplyHeartbeatSnapshot(view) && state) setRuntimeSnapshotState(state)
+      }).catch(() => undefined)
+    }
+
+    beat()
+    const intervalId = window.setInterval(() => {
+      beat()
+    }, runtimeHeartbeatIntervalMs(view))
+
+    return () => window.clearInterval(intervalId)
+  }, [setRuntimeSnapshotState, view])
+}
+
+/**
+ * A main-process wake rides the existing runtime-state channel. The panel
+ * bumps its due-check token whenever an offline snapshot arrives; an online
+ * snapshot only stops the scheduler.
+ */
+export function nextReminderWakeToken(
+  view: 'pet' | 'panel',
+  state: RuntimeStateSnapshot,
+  token: number,
+): number {
+  return view === 'panel' && state.petOnline === false ? token + 1 : token
+}
+
+type RuntimeStateBridgeOptions = {
+  view: 'pet' | 'panel'
+  applyRemoteMood: (mood: RuntimeStateSnapshot['mood']) => void
+  setRuntimeSnapshotState: Dispatch<SetStateAction<RuntimeStateSnapshot>>
+  setPetRuntimeContinuousVoiceActive: Dispatch<SetStateAction<boolean>>
+  setRemotePanelSettingsOpen: Dispatch<SetStateAction<boolean>>
+}
+
+/**
+ * Subscribe to cross-window runtime snapshots and mirror them into local
+ * state. The returned token increments whenever the panel receives an offline
+ * snapshot, which is how a main-process wake triggers an immediate due check.
+ */
+export function useRuntimeStateBridge({
+  view,
+  applyRemoteMood,
+  setRuntimeSnapshotState,
+  setPetRuntimeContinuousVoiceActive,
+  setRemotePanelSettingsOpen,
+}: RuntimeStateBridgeOptions): number {
+  const [reminderWakeToken, setReminderWakeToken] = useState(0)
+  useBridgeSubscription<RuntimeStateSnapshot>({
+    apply: (state) => {
+      setRuntimeSnapshotState(state)
+      setReminderWakeToken((token) => nextReminderWakeToken(view, state, token))
+
+      if (state.mood) {
+        applyRemoteMood(state.mood)
+      }
+
+      setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
+      setRemotePanelSettingsOpen(Boolean(state.panelSettingsOpen))
+    },
+    getInitial: () => window.desktopPet?.getRuntimeState?.(),
+    subscribe: (listener) => window.desktopPet?.subscribeRuntimeState?.(listener),
+  }, [applyRemoteMood, view])
+  return reminderWakeToken
+}
+
 export function useDesktopBridge({
   view,
   settings,
@@ -366,34 +459,15 @@ export function useDesktopBridge({
   // `applyRemoteMood` is a stable callback. It updates the face without
   // publishing the snapshot back, so the two windows do not chase.
   const applyRemoteMood = pet.applyRemoteMood
-  useBridgeSubscription<RuntimeStateSnapshot>({
-    apply: (state) => {
-      setRuntimeSnapshotState(state)
+  const reminderWakeToken = useRuntimeStateBridge({
+    view,
+    applyRemoteMood,
+    setRuntimeSnapshotState,
+    setPetRuntimeContinuousVoiceActive,
+    setRemotePanelSettingsOpen,
+  })
 
-      if (state.mood) {
-        applyRemoteMood(state.mood)
-      }
-
-      setPetRuntimeContinuousVoiceActive(Boolean(state.continuousVoiceActive))
-      setRemotePanelSettingsOpen(Boolean(state.panelSettingsOpen))
-    },
-    getInitial: () => window.desktopPet?.getRuntimeState?.(),
-    subscribe: (listener) => window.desktopPet?.subscribeRuntimeState?.(listener),
-  }, [applyRemoteMood])
-
-  useEffect(() => {
-    const beat = () => {
-      const pending = window.desktopPet?.heartbeatRuntimeState?.({ view })
-      pending?.catch(() => undefined)
-    }
-
-    beat()
-    const intervalId = window.setInterval(() => {
-      beat()
-    }, 10_000)
-
-    return () => window.clearInterval(intervalId)
-  }, [view])
+  useRuntimeHeartbeat(view, setRuntimeSnapshotState)
 
   useEffect(() => {
     let assistantActivity: RuntimeStateSnapshot['assistantActivity']
@@ -604,6 +678,7 @@ export function useDesktopBridge({
 
   return {
     runtimeSnapshot,
+    reminderWakeToken,
     platformProfile,
     petRuntimeContinuousVoiceActive,
     remotePanelSettingsOpen,

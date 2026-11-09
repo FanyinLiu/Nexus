@@ -70,6 +70,8 @@ export type UseReminderControllerOptions = {
   pet: PetBridge
   debugConsole: DebugConsoleBridge
   reminderTaskStore: ReminderTaskStore
+  /** Main-process wake counter; only the panel receives it. */
+  reminderWakeToken?: number
 }
 
 export function useReminderController({
@@ -81,11 +83,25 @@ export function useReminderController({
   pet,
   debugConsole,
   reminderTaskStore,
+  reminderWakeToken = 0,
 }: UseReminderControllerOptions) {
   const { t, locale } = useTranslation()
   const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
     const displayText = task.prompt.trim()
     const action = task.action
+    if (view === 'panel' && action.kind !== 'notice') {
+      // The scheduler already drops these rows before marking them. Keep the
+      // same rule here so a direct caller can never consume a weather/search/
+      // chat-action occurrence on the takeover panel.
+      debugConsole.appendDebugConsoleEvent({
+        source: 'tool',
+        title: 'Reminder deferred to the pet window',
+        detail: `${task.title} / ${action.kind}`,
+        tone: 'info',
+        relatedTaskId: task.id,
+      })
+      return
+    }
     const currentSettings = settingsRef.current
     const defaultSpeechText = task.speechText?.trim() || t('chat.reminder_task.speech_fallback', { title: task.title, content: task.prompt.trim() })
 
@@ -100,10 +116,14 @@ export function useReminderController({
     try {
       if (action.kind === 'notice') {
         const now = Date.now()
+        // The occurrence key is the stored due instant, never the delivery
+        // time: a frozen pet can resume and offer the same occurrence again.
+        const parsedDueAt = Date.parse(task.nextRunAt ?? '')
         const message = buildReminderProactiveMessage(task, {
           displayText,
           speech: defaultSpeechText,
           now,
+          occurrenceDueAt: Number.isFinite(parsedDueAt) ? parsedDueAt : undefined,
         })
         const desktopContext = await readProactiveDesktopContext(currentSettings)
         const context = buildReminderDeliveryContext({
@@ -132,6 +152,20 @@ export function useReminderController({
           reminderLog.warn('reminder routing bridge unavailable; using the legacy notice', {
             source: 'reminder',
           })
+        }
+
+        if (decision?.duplicate) {
+          // Main already accepted this occurrence from another window. The
+          // scheduler has advanced the local row; do not surface, speak or
+          // forward it again.
+          debugConsole.appendDebugConsoleEvent({
+            source: 'tool',
+            title: 'Reminder occurrence already delivered',
+            detail: `${task.title} / deduplicated`,
+            tone: 'info',
+            relatedTaskId: task.id,
+          })
+          return
         }
 
         if (decision) {
@@ -285,7 +319,7 @@ export function useReminderController({
         relatedTaskId: task.id,
       })
     }
-  }, [chat, debugConsole, focusState, pet, settingsRef, t])
+  }, [chat, debugConsole, focusState, pet, settingsRef, t, view])
 
   useReminderScheduler({
     enabled: shouldRunReminderScheduler(view, runtimeSnapshot),
@@ -295,6 +329,13 @@ export function useReminderController({
     onTrigger: handleReminderTaskTrigger,
     onEvent: debugConsole.appendDebugConsoleEvent,
     canTrigger: () => !isUserTypingAnywhere(settingsRef.current),
+    // Only the panel takeover is anchored at the pet's last online instant;
+    // the pet window keeps its normal overdue handling.
+    petLastOnlineAt: view === 'panel' ? runtimeSnapshot.petLastSeenAt : undefined,
+    // Double safety: the scheduler already filters before marking, but the
+    // controller keeps its panel-side guard for non-notice actions too.
+    takeoverOnlyNotice: view === 'panel',
+    wakeToken: reminderWakeToken,
   })
 
   return { handleReminderTaskTrigger }

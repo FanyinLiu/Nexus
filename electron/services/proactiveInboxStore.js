@@ -77,11 +77,15 @@ function finiteNumber(value) {
 function normalizeOrigin(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   const record = /** @type {Record<string, unknown>} */ (value)
-  /** @type {{ taskId?: string, letterId?: string, capsuleId?: string, arcId?: string }} */
+  /** @type {{ taskId?: string, occurrenceDueAt?: number, letterId?: string, capsuleId?: string, arcId?: string }} */
   const origin = {}
   for (const key of ORIGIN_KEYS) {
     const id = record[key]
     if (typeof id === 'string' && id.trim()) origin[key] = id
+  }
+  const occurrenceDueAt = finiteNumber(record.occurrenceDueAt)
+  if (occurrenceDueAt !== null && occurrenceDueAt >= 0 && Number.isInteger(occurrenceDueAt)) {
+    origin.occurrenceDueAt = occurrenceDueAt
   }
   return Object.keys(origin).length > 0 ? origin : undefined
 }

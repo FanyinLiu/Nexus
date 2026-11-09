@@ -33,7 +33,12 @@ import {
   registerPetInstance,
 } from './petWindowInstances.js'
 import { getRedactedErrorMessage } from './services/errorRedaction.js'
-import { syncRuntimeState } from './windowRuntimeState.js'
+import {
+  checkReminderPanelWakeNow,
+  startReminderPanelWakeMonitor,
+  stopReminderPanelWakeMonitor,
+  syncRuntimeState,
+} from './windowRuntimeState.js'
 import { sanitizeRuntimeLogMessage } from './runtimeLogSanitizer.js'
 
 let getMainWindow = () => null
@@ -290,6 +295,9 @@ export function createMainWindow({ showOnReady = true } = {}) {
   win.on('closed', () => {
     destroyPetInstance(inst)
     _setMainWindow(null)
+    // The panel may be the surviving window; tell it immediately instead of
+    // waiting for the next monitor poll.
+    checkReminderPanelWakeNow()
   })
 
   win.webContents.on('did-finish-load', () => {
@@ -475,6 +483,7 @@ export function createPanelWindow() {
   })
 
   win.on('closed', () => {
+    stopReminderPanelWakeMonitor()
     if (getPanelBlurTimer()) {
       clearTimeout(getPanelBlurTimer())
       _setPanelBlurTimer(null)
@@ -528,6 +537,7 @@ export function createPanelWindow() {
 
   _setPanelWindow(win)
   trackWindow(win, 'panel', { isTrackable: isPanelWindowTrackable })
+  startReminderPanelWakeMonitor()
   return win
 }
 

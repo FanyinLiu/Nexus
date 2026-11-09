@@ -254,6 +254,100 @@ export function refreshReminderTask(task: ReminderTask, from = new Date()) {
   }
 }
 
+/** Whether `stored` already fired at or after the due instant held by `task`. */
+export function reminderAlreadyTriggered(
+  task: ReminderTask,
+  stored: ReminderTask | undefined,
+): boolean {
+  const dueAt = Date.parse(task.nextRunAt ?? '')
+  const triggeredAt = Date.parse(stored?.lastTriggeredAt ?? '')
+  return Number.isFinite(dueAt) && Number.isFinite(triggeredAt) && triggeredAt >= dueAt
+}
+
+/**
+ * Merge the canonical trigger state into a stale local row after another
+ * window delivered it, so the local copy advances to the next recurrence
+ * instead of replaying the due instant.
+ */
+export function reconcileTriggeredTaskWithPersisted(
+  task: ReminderTask,
+  stored: ReminderTask | undefined,
+): ReminderTask {
+  if (!reminderAlreadyTriggered(task, stored)) return task
+  return {
+    ...task,
+    ...(stored?.lastTriggeredAt ? { lastTriggeredAt: stored.lastTriggeredAt } : {}),
+    nextRunAt: stored?.nextRunAt,
+    updatedAt: stored?.updatedAt ?? task.updatedAt,
+  }
+}
+
+type ReminderHandoffOptions = {
+  now?: Date
+  /**
+   * Last instant the pet window was known online. The takeover window is
+   * anchored here, not at the panel's local clock: a hidden panel can learn
+   * minutes late that the pet went offline.
+   */
+  petLastOnlineAt?: string
+  graceMs?: number
+}
+
+/**
+ * Whether a due instant is still deliverable after a scheduler handoff.
+ *
+ * The lower bound is anchored at the pet's last online time (falling back to
+ * `now - graceMs` when the pet was never seen). There is deliberately no upper
+ * bound: a reminder that fell due while the pet was offline must still be
+ * delivered when the panel finally notices, otherwise a throttled hidden
+ * panel would silently drop it.
+ */
+export function isReminderDueEligibleForHandoff(
+  task: ReminderTask,
+  from: Date,
+  petLastOnlineAt?: string,
+  graceMs = 30_000,
+): boolean {
+  if (!task.enabled) return false
+  const dueAt = Date.parse(task.nextRunAt ?? '')
+  if (!Number.isFinite(dueAt) || dueAt > from.getTime()) return false
+  const referenceAt = Date.parse(petLastOnlineAt ?? '')
+  const lowerBound = Number.isFinite(referenceAt)
+    ? referenceAt - graceMs
+    : from.getTime() - graceMs
+  return dueAt >= lowerBound
+}
+
+/**
+ * Keep a task whose next run fell due during a scheduler handoff. The due
+ * instant survives when it is eligible against the pet's last online time and
+ * has not already been triggered; the window taking over delivers it once.
+ */
+export function refreshReminderTaskForHandoff(
+  task: ReminderTask,
+  options: ReminderHandoffOptions = {},
+) {
+  const from = options.now ?? new Date()
+  const refreshed = refreshReminderTask(task, from)
+  const previousRunAt = Date.parse(task.nextRunAt ?? '')
+  const lastTriggeredAt = Date.parse(task.lastTriggeredAt ?? '')
+  const alreadyTriggered = Number.isFinite(previousRunAt)
+    && Number.isFinite(lastTriggeredAt)
+    && lastTriggeredAt >= previousRunAt
+  if (
+    alreadyTriggered
+    || !isReminderDueEligibleForHandoff(
+      task,
+      from,
+      options.petLastOnlineAt,
+      options.graceMs,
+    )
+  ) {
+    return refreshed
+  }
+  return { ...refreshed, nextRunAt: new Date(previousRunAt).toISOString() }
+}
+
 function createReminderTask(
   createId: (prefix: string) => string,
   input: ReminderTaskDraftInput,
