@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
@@ -55,6 +55,13 @@ export function useCompanionNotices({
   const deferredCompanionNoticesRef = useRef<DeferredCompanionNotice[]>([])
   const flushingDeferredCompanionNoticesRef = useRef(false)
   const recentCompanionNoticesRef = useRef<Map<string, number>>(new Map())
+  // The host recreates its ctx literal every render. Reading through a ref
+  // keeps delivery callbacks stable so the idle-flush subscription is not
+  // torn down and restarted (which would postpone the 15 s fallback forever).
+  const ctxRef = useRef(ctx)
+  useEffect(() => {
+    ctxRef.current = ctx
+  }, [ctx])
   // A notice interrupted while it was already in the shared player gets one
   // replay. The WeakSet keeps a second interruption from queueing it forever.
   const replayedCompanionNoticesRef = useRef(new WeakSet<CompanionNoticePayload>())
@@ -66,7 +73,7 @@ export function useCompanionNotices({
     if (!speechContent) return 'played'
 
     try {
-      await ctx.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
+      await ctxRef.current.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
       return 'played'
     } catch (speechError) {
       if (isInterruptedError(speechError)) {
@@ -84,7 +91,7 @@ export function useCompanionNotices({
       setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
       return 'played'
     }
-  }, [ctx, setError, t])
+  }, [setError, t])
 
   const deliverCompanionNotice = useCallback(async (
     options: CompanionNoticePayload,
@@ -169,9 +176,9 @@ export function useCompanionNotices({
 
   const canDeliverDeferredCompanionNotice = useCallback(() => (
     !busyRef.current
-    && ctx.voiceStateRef.current !== 'processing'
-    && ctx.voiceStateRef.current !== 'speaking'
-  ), [busyRef, ctx.voiceStateRef])
+    && ctxRef.current.voiceStateRef.current !== 'processing'
+    && ctxRef.current.voiceStateRef.current !== 'speaking'
+  ), [busyRef])
 
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
     // A notice that arrives mid-reply must not start speaking over the pet.
