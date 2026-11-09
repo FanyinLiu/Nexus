@@ -67,10 +67,14 @@ let settingsReturnFocus = {
   request: () => {},
 }
 
-// A panel whose main frame never loaded cannot render a second open. Track it
-// so the next createPanelWindow call replaces the blank window instead of
-// showing it again.
-const panelLoadFailures = new WeakSet()
+// A panel whose main frame never loaded cannot render a second open. Retry a
+// bounded number of times, then destroy it so the next open creates a fresh
+// window. Only the numeric error code is logged: URLs and page content never
+// reach the console.
+const PANEL_LOAD_RETRY_LIMIT = 2
+const PANEL_LOAD_RETRY_BASE_DELAY_MS = 250
+/** @type {WeakMap<object, { attempts: number, timer: ReturnType<typeof setTimeout> | null }>} */
+const panelLoadRetries = new WeakMap()
 
 // macOS Dock overlaps transparent windows near the bottom edge even within
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
@@ -407,16 +411,12 @@ export function createPanelWindow() {
  * @param {{
  *   startWakeMonitor?: boolean,
  *   onRendererReady?: (win: import('electron').BrowserWindow) => void,
+ *   onRendererFailed?: (win: import('electron').BrowserWindow) => void,
  * }} [options]
  */
 export function createPanelWindowWithOptions(options = {}) {
   const existing = getPanelWindow()
-  if (existing && !existing.isDestroyed()) {
-    if (!panelLoadFailures.has(existing)) return existing
-    // The renderer never produced content. Reusing this window would keep
-    // showing a blank panel, so replace it on the next explicit open.
-    existing.destroy()
-  }
+  if (existing && !existing.isDestroyed()) return existing
   const startWakeMonitor = options.startWakeMonitor !== false
 
   const {
@@ -506,6 +506,9 @@ export function createPanelWindowWithOptions(options = {}) {
   })
 
   win.on('closed', () => {
+    const retry = panelLoadRetries.get(win)
+    if (retry?.timer) clearTimeout(retry.timer)
+    panelLoadRetries.delete(win)
     cancelFirstUsePanelRetirement()
     stopReminderPanelWakeMonitor()
     if (getPanelBlurTimer()) {
@@ -551,13 +554,31 @@ export function createPanelWindowWithOptions(options = {}) {
     rememberPanelWindowBounds()
   })
 
-  win.webContents.on('did-fail-load', (_event, _errorCode, _errorDescription, _validatedURL, isMainFrame) => {
-    if (isMainFrame === false) return
-    panelLoadFailures.add(win)
+  win.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, _validatedURL, isMainFrame) => {
+    // -3 is ERR_ABORTED: a navigation was superseded, not a broken renderer.
+    if (isMainFrame === false || errorCode === -3) return
+    const retry = panelLoadRetries.get(win) ?? { attempts: 0, timer: null }
+    if (retry.attempts < PANEL_LOAD_RETRY_LIMIT) {
+      const delay = PANEL_LOAD_RETRY_BASE_DELAY_MS * (2 ** retry.attempts)
+      retry.attempts += 1
+      panelLoadRetries.set(win, retry)
+      console.warn('[panel] renderer load failed; retrying', errorCode)
+      retry.timer = setTimeout(() => {
+        retry.timer = null
+        if (win.isDestroyed()) return
+        win.loadURL(getRendererEntry('panel')).catch(() => undefined)
+      }, delay)
+      return
+    }
+    console.error('[panel] renderer load failed after retries', errorCode)
+    options.onRendererFailed?.(win)
+    if (!win.isDestroyed()) win.destroy()
   })
 
   win.webContents.on('did-finish-load', () => {
-    panelLoadFailures.delete(win)
+    const retry = panelLoadRetries.get(win)
+    if (retry?.timer) clearTimeout(retry.timer)
+    panelLoadRetries.delete(win)
     syncRuntimeState()
     syncPetWindowState()
     emitPanelWindowState()

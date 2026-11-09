@@ -71,6 +71,7 @@ export class BrowserWindow extends EventEmitter {
     this.focused = false
     this.minimized = false
     this.bounds = { x: options.x ?? 0, y: options.y ?? 0, width: options.width ?? 400, height: options.height ?? 600 }
+    this.loadCount = 0
     this.webContents = {
       id: this.id,
       send: (channel, payload) => {
@@ -123,7 +124,7 @@ export class BrowserWindow extends EventEmitter {
   setPosition(x, y) { this.bounds = { ...this.bounds, x, y } }
   setAlwaysOnTop() {}
   setVisibleOnAllWorkspaces() {}
-  loadURL(url) { this.url = url; return Promise.resolve() }
+  loadURL(url) { this.url = url; this.loadCount += 1; return Promise.resolve() }
   destroy() {
     if (this.destroyed) return
     this.destroyed = true

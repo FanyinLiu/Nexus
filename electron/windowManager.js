@@ -417,6 +417,9 @@ export function createHiddenTakeoverPanel() {
     const win = createPanelWindowWithOptions({
       startWakeMonitor: false,
       onRendererReady: () => finish(win),
+      // A failed fallback must resolve null so the takeover timer retries on
+      // its next tick instead of treating the dead window as present.
+      onRendererFailed: () => finish(null),
     })
     if (!win) {
       finish(null)

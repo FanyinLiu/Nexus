@@ -21,6 +21,7 @@ type FakeWindow = {
   emit: (event: string) => void
   emitWebContents: (event: string, ...args: unknown[]) => void
   url?: string
+  loadCount: number
   webContents: { removeListener: (event: string, listener: () => void) => void }
 }
 
@@ -130,9 +131,9 @@ test('closing a pending panel clears the request instead of retiring it later', 
   )
 })
 
-test('retiring the panel arms the hidden takeover driver', (t) => {
+test('retiring the panel arms the hidden takeover driver and rebuilds after load failure', async (t) => {
   destroyAllPanels()
-  t.mock.timers.enable({ apis: ['setInterval'] })
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] })
   t.after(() => {
     t.mock.timers.reset()
     destroyAllPanels()
@@ -155,25 +156,85 @@ test('retiring the panel arms the hidden takeover driver', (t) => {
   const rebuilt = state.windows.at(-1) as FakeWindow
   assert.equal(state.windows.length, windowsBefore + 1, 'the takeover driver creates a fallback panel')
   assert.equal(rebuilt.visible, false, 'the fallback panel stays hidden')
-  rebuilt.destroy()
+
+  rebuilt.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///panel', true)
+  t.mock.timers.tick(250)
+  rebuilt.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///panel', true)
+  t.mock.timers.tick(500)
+  rebuilt.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///panel', true)
+  assert.equal(rebuilt.destroyed, true, 'the takeover panel gives up after bounded retries')
+  await new Promise<void>((resolve) => setImmediate(resolve))
+
+  const afterFailure = state.windows.length
+  t.mock.timers.tick(5_000)
+  const replacement = state.windows.at(-1) as FakeWindow
+  assert.equal(state.windows.length, afterFailure + 1, 'the next takeover tick rebuilds the panel')
+  assert.equal(replacement.visible, false)
+  replacement.destroy()
 })
 
-test('a failed panel load is replaced on the next explicit open', (t) => {
+test('a failed panel load retries with backoff, then is replaced on the next open', (t) => {
   destroyAllPanels()
-  t.after(destroyAllPanels)
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
   const state = windowLifecycleState()
   const failed = createHiddenPanel()
   const before = state.windows.length
-  failed.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///panel', true)
+  const logs: string[] = []
+  const originalWarn = console.warn
+  const originalError = console.error
+  console.warn = (...args: unknown[]) => { logs.push(args.map(String).join(' ')) }
+  console.error = (...args: unknown[]) => { logs.push(args.map(String).join(' ')) }
+  t.after(() => {
+    console.warn = originalWarn
+    console.error = originalError
+  })
+  const failureUrl = 'file:///panel?token=secret-user-content'
+
+  failed.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', failureUrl, true)
+  assert.equal(failed.destroyed, false, 'the first failure schedules a retry')
+  assert.equal(failed.loadCount, 1)
+  t.mock.timers.tick(250)
+  assert.equal(failed.loadCount, 2, 'the first retry reloads the renderer')
+
+  failed.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', failureUrl, true)
+  t.mock.timers.tick(500)
+  assert.equal(failed.loadCount, 3, 'the second retry uses the backoff')
+
+  failed.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', failureUrl, true)
+  assert.equal(failed.destroyed, true, 'the retry budget is bounded and the window is destroyed')
 
   windowManager.showPanelWindow('chat')
-
   const replacement = state.windows.at(-1) as FakeWindow
-  assert.equal(state.windows.length, before + 1, 'the blank window is not reused')
-  assert.equal(failed.destroyed, true, 'the failed window is destroyed')
+  assert.equal(state.windows.length, before + 1, 'the next explicit open creates a new window')
   assert.equal(replacement.visible, true, 'the replacement opens for the user')
-  assert.match(String((replacement as unknown as { url?: string }).url), /view=panel/)
+  assert.match(String(replacement.url), /view=panel/)
+  assert.equal(
+    logs.some((line) => line.includes('secret-user-content') || line.includes('file:///panel')),
+    false,
+    'logs contain only error codes, never URLs or user content',
+  )
   replacement.destroy()
+})
+
+test('ERR_ABORTED and subframe failures do not consume retries', (t) => {
+  destroyAllPanels()
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const panel = createHiddenPanel()
+
+  panel.emitWebContents('did-fail-load', {}, -3, 'ERR_ABORTED', 'file:///panel', true)
+  panel.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///child', false)
+  t.mock.timers.tick(10_000)
+
+  assert.equal(panel.destroyed, false)
+  assert.equal(panel.loadCount, 1, 'neither ignored failure schedules a reload')
 })
 
 test('the hidden takeover panel resolves only after its renderer finishes loading', async (t) => {
