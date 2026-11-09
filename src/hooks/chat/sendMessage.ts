@@ -35,6 +35,7 @@ import {
 import { bumpMemoryReconcileRevision, scheduleMemoryReconcile } from './memoryReconcile.ts'
 import { recordProactiveUserMessage } from '../../features/autonomy/proactiveEtiquette.ts'
 import { executeAssistantTurn } from './turnExecution.ts'
+import { interruptSpeechForTypedTurn } from './sendMessageInterrupt.ts'
 import type { PendingReminderDraft, UseChatContext } from './types.ts'
 
 type SendMessageOptions = {
@@ -170,16 +171,17 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
       // closes the session and the wake word listener takes over normally.
       const shouldResumeContinuousVoice = fromVoice
 
-      if (ctx.voiceStateRef.current === 'speaking') {
-        if (!ctx.canInterruptSpeech()) {
+      const interruptedForTypedTurn = interruptSpeechForTypedTurn(ctx, {
+        onBlocked: () => {
           setError(t('chat.voice.no_interrupt_error'))
           emitPetNotify({ type: 'status', text: t('chat.voice.no_interrupt_pet_status'), duration: 3_000 })
-          return false
-        }
-
-        ctx.interruptActiveSpeechOutput()
-        ctx.setVoiceState('idle')
-        emitPetNotify({ type: 'mood', mood: 'happy' })
+        },
+        onInterrupted: () => {
+          emitPetNotify({ type: 'mood', mood: 'happy' })
+        },
+      })
+      if (!interruptedForTypedTurn) {
+        return false
       }
 
       hidePetDialogBubble()
