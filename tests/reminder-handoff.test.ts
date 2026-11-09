@@ -254,3 +254,21 @@ for (const { name, schedule, missedByMs } of MISSED_CATCH_UP_CASES) {
     assert.ok(Date.parse(second.task.nextRunAt ?? '') > from.getTime())
   })
 }
+
+test('a due occurrence already triggered by the pet is not preserved for the handoff', () => {
+  const dueAt = '2026-01-05T00:15:05.000Z'
+  const task = makeTask({
+    schedule: { kind: 'every', everyMinutes: 15, anchorAt: '2026-01-05T00:00:05.000Z' },
+    nextRunAt: dueAt,
+    lastTriggeredAt: '2026-01-05T00:15:05.500Z',
+  })
+  const from = new Date('2026-01-05T00:15:10.000Z')
+
+  const handedOff = refreshReminderTaskForHandoff(task, {
+    now: from,
+    petLastOnlineAt: '2026-01-05T00:14:55.000Z',
+  })
+
+  assert.notEqual(handedOff.nextRunAt, dueAt)
+  assert.ok(Date.parse(handedOff.nextRunAt ?? '') > from.getTime())
+})
