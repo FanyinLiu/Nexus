@@ -6,6 +6,11 @@
 import { sanitizeRuntimeStatePatch } from './windowStateSanitizers.js'
 
 const RUNTIME_CLIENT_TTL_MS = 30_000
+// Chromium throttles a hidden renderer's timers to roughly once a minute,
+// which outruns the visible TTL. A hidden-but-alive window can still deliver
+// reminders, so widen only its liveness TTL instead of disabling background
+// throttling for the whole panel (which would keep its Live2D loop running).
+const RUNTIME_HIDDEN_CLIENT_TTL_MS = 90_000
 
 /** @type {{ get: () => import('electron').BrowserWindow | null } | null} */
 let mainWindowRef = null
@@ -45,6 +50,35 @@ export function bindRuntimeWindows({ getMainWindow, getPanelWindow }) {
   panelWindowRef = { get: getPanelWindow }
 }
 
+function liveWindow(ref) {
+  const win = ref?.get?.() ?? null
+  if (!win || win.isDestroyed()) return null
+  return win
+}
+
+function windowVisible(ref) {
+  const win = liveWindow(ref)
+  if (!win) return false
+  try {
+    return win.isVisible()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Liveness is decided here in the main process, not from the renderer's timer
+ * cadence: a hidden window's heartbeat is throttled but it is still alive.
+ */
+function isClientOnline(view, now) {
+  const lastSeenAt = runtimeClientHeartbeat[view]
+  if (!lastSeenAt) return false
+  const ref = view === 'pet' ? mainWindowRef : panelWindowRef
+  if (!liveWindow(ref)) return false
+  const ttl = windowVisible(ref) ? RUNTIME_CLIENT_TTL_MS : RUNTIME_HIDDEN_CLIENT_TTL_MS
+  return now - lastSeenAt <= ttl
+}
+
 export function buildRuntimeStateSnapshot() {
   const now = Date.now()
   const petLastSeenAt = runtimeClientHeartbeat.pet
@@ -52,8 +86,8 @@ export function buildRuntimeStateSnapshot() {
 
   return {
     ...runtimeState,
-    petOnline: now - petLastSeenAt <= RUNTIME_CLIENT_TTL_MS,
-    panelOnline: now - panelLastSeenAt <= RUNTIME_CLIENT_TTL_MS,
+    petOnline: isClientOnline('pet', now),
+    panelOnline: isClientOnline('panel', now),
     petLastSeenAt: petLastSeenAt ? new Date(petLastSeenAt).toISOString() : '',
     panelLastSeenAt: panelLastSeenAt ? new Date(panelLastSeenAt).toISOString() : '',
   }

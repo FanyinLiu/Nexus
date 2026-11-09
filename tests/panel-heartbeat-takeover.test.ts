@@ -1,0 +1,104 @@
+import assert from 'node:assert/strict'
+import { register } from 'node:module'
+import test from 'node:test'
+
+register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
+
+const { createHookRenderer } = await import('./helpers/directNotificationHookHarness.ts')
+const {
+  runtimeHeartbeatIntervalMs,
+  shouldApplyHeartbeatSnapshot,
+  useRuntimeHeartbeat,
+} = await import('../src/app/controllers/useDesktopBridge.ts')
+const { shouldRunReminderScheduler } = await import('../src/features/reminders/runtime.ts')
+
+type RuntimeSnapshot = { petOnline: boolean; panelOnline: boolean }
+
+function flushAsync(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve))
+}
+
+function installHeartbeatWindow(initial: RuntimeSnapshot) {
+  const beats: string[] = []
+  let snapshot = initial
+  let intervalMs = 0
+  let intervalCallback = () => {}
+  const windowStub = {
+    desktopPet: {
+      heartbeatRuntimeState: ({ view }: { view: string }) => {
+        beats.push(view)
+        return Promise.resolve(snapshot)
+      },
+    },
+    setInterval: (callback: () => void, ms: number) => {
+      intervalMs = ms
+      intervalCallback = callback
+      return 1
+    },
+    clearInterval: () => undefined,
+  }
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: windowStub })
+  return {
+    beats,
+    setSnapshot: (next: RuntimeSnapshot) => { snapshot = next },
+    getIntervalMs: () => intervalMs,
+    runInterval: () => intervalCallback(),
+    cleanup: () => { Reflect.deleteProperty(globalThis, 'window') },
+  }
+}
+
+test('panel applies its own heartbeat snapshot and hands the scheduler over when the pet goes offline', async () => {
+  const environment = installHeartbeatWindow({ petOnline: true, panelOnline: true })
+  let applied: RuntimeSnapshot | null = null
+  const renderer = createHookRenderer(() => useRuntimeHeartbeat('panel', (value) => {
+    applied = typeof value === 'function'
+      ? value(applied) as RuntimeSnapshot
+      : value as RuntimeSnapshot
+  }))
+  try {
+    renderer.render(undefined)
+    await flushAsync()
+
+    assert.deepEqual(environment.beats, ['panel'])
+    assert.equal(environment.getIntervalMs(), runtimeHeartbeatIntervalMs('panel'))
+    assert.equal(runtimeHeartbeatIntervalMs('panel'), 4_000)
+    assert.equal(shouldApplyHeartbeatSnapshot('panel'), true)
+    assert.equal(applied?.petOnline, true)
+    assert.equal(shouldRunReminderScheduler('panel', applied!), false)
+    assert.equal(shouldRunReminderScheduler('pet', applied!), true)
+
+    environment.setSnapshot({ petOnline: false, panelOnline: true })
+    environment.runInterval()
+    await flushAsync()
+
+    assert.equal(applied?.petOnline, false, 'the heartbeat snapshot reached local state')
+    assert.equal(shouldRunReminderScheduler('panel', applied!), true, 'the panel takes over')
+  } finally {
+    renderer.unmount()
+    environment.cleanup()
+  }
+})
+
+test('pet beats at the slow interval and does not apply its own heartbeat snapshot', async () => {
+  const environment = installHeartbeatWindow({ petOnline: true, panelOnline: true })
+  let applied: RuntimeSnapshot | null = null
+  const renderer = createHookRenderer(() => useRuntimeHeartbeat('pet', (value) => {
+    applied = typeof value === 'function'
+      ? value(applied) as RuntimeSnapshot
+      : value as RuntimeSnapshot
+  }))
+  try {
+    renderer.render(undefined)
+    await flushAsync()
+
+    assert.deepEqual(environment.beats, ['pet'])
+    assert.equal(environment.getIntervalMs(), runtimeHeartbeatIntervalMs('pet'))
+    assert.equal(runtimeHeartbeatIntervalMs('pet'), 10_000)
+    assert.equal(shouldApplyHeartbeatSnapshot('pet'), false)
+    assert.equal(applied, null)
+    assert.equal(shouldRunReminderScheduler('pet', { petOnline: false, panelOnline: false }), true)
+  } finally {
+    renderer.unmount()
+    environment.cleanup()
+  }
+})

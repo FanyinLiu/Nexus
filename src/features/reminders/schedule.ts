@@ -254,6 +254,63 @@ export function refreshReminderTask(task: ReminderTask, from = new Date()) {
   }
 }
 
+/** Whether `stored` already fired at or after the due instant held by `task`. */
+export function reminderAlreadyTriggered(
+  task: ReminderTask,
+  stored: ReminderTask | undefined,
+): boolean {
+  const dueAt = Date.parse(task.nextRunAt ?? '')
+  const triggeredAt = Date.parse(stored?.lastTriggeredAt ?? '')
+  return Number.isFinite(dueAt) && Number.isFinite(triggeredAt) && triggeredAt >= dueAt
+}
+
+/**
+ * Merge the canonical trigger state into a stale local row after another
+ * window delivered it, so the local copy advances to the next recurrence
+ * instead of replaying the due instant.
+ */
+export function reconcileTriggeredTaskWithPersisted(
+  task: ReminderTask,
+  stored: ReminderTask | undefined,
+): ReminderTask {
+  if (!reminderAlreadyTriggered(task, stored)) return task
+  return {
+    ...task,
+    ...(stored?.lastTriggeredAt ? { lastTriggeredAt: stored.lastTriggeredAt } : {}),
+    nextRunAt: stored?.nextRunAt,
+    updatedAt: stored?.updatedAt ?? task.updatedAt,
+  }
+}
+
+/**
+ * Keep a task whose next run fell due during a scheduler handoff. A pending
+ * row within `graceMs` of its stored instant is delivered exactly once by the
+ * window taking over; older overdue rows and rows already triggered at or
+ * after that instant are recomputed normally so they are not replayed.
+ */
+export function refreshReminderTaskForHandoff(
+  task: ReminderTask,
+  from = new Date(),
+  graceMs = 30_000,
+) {
+  const refreshed = refreshReminderTask(task, from)
+  const previousRunAt = Date.parse(task.nextRunAt ?? '')
+  const lastTriggeredAt = Date.parse(task.lastTriggeredAt ?? '')
+  const alreadyTriggered = Number.isFinite(previousRunAt)
+    && Number.isFinite(lastTriggeredAt)
+    && lastTriggeredAt >= previousRunAt
+  if (
+    !task.enabled
+    || alreadyTriggered
+    || !Number.isFinite(previousRunAt)
+    || previousRunAt > from.getTime()
+    || from.getTime() - previousRunAt > graceMs
+  ) {
+    return refreshed
+  }
+  return { ...refreshed, nextRunAt: new Date(previousRunAt).toISOString() }
+}
+
 function createReminderTask(
   createId: (prefix: string) => string,
   input: ReminderTaskDraftInput,

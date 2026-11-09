@@ -13,6 +13,7 @@ import { test } from 'node:test'
 import React from 'react'
 
 import { PROACTIVE_BUBBLE_AFTER_HOVER_COLLAPSE_MS, PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS } from '../src/features/proactive/proactiveCollapse.ts'
+import { InterruptedError } from '../src/features/voice/interruptedError.ts'
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
 import type { AppSettings, PetDialogBubbleState, ReminderTask } from '../src/types/index.ts'
 
@@ -250,7 +251,11 @@ function makeTask(): ReminderTask {
   }
 }
 
-function createControllerSession(options: { deliver?: () => Promise<never> } = {}) {
+function createControllerSession(options: {
+  deliver?: () => Promise<never>
+  speakAssistantReply?: () => Promise<void>
+  onError?: (value: string | null) => void
+} = {}) {
   const clock = createClock()
   const inboxUpdates: string[] = []
   const desktopPet: Record<string, unknown> = {
@@ -275,13 +280,13 @@ function createControllerSession(options: { deliver?: () => Promise<never> } = {
     settingsRef: { current: createSettings() },
     runtimeSnapshot: { mood: 'idle', panelOnline: false, petOnline: false },
     ctx: {
-      speakAssistantReply: async () => {},
+      speakAssistantReply: options.speakAssistantReply ?? (async () => {}),
       voiceStateRef: { current: 'idle' },
     },
     t: (key) => key,
     busyRef: { current: false },
     appendChatMessage: () => {},
-    setError: () => {},
+    setError: options.onError ?? (() => {}),
     appendSystemMessage: () => {},
     sendMessage: async () => undefined,
     updatePetStatus: () => {},
@@ -544,6 +549,34 @@ test('a non-proactive companion notice still auto-hides with its own timer', asy
     assert.ok(session.bubble)
     session.clock.tick(1)
     assert.equal(session.bubble, null)
+  } finally {
+    session.unmount()
+  }
+})
+
+test('an interrupted companion notice does not set the error state', async () => {
+  const errors: Array<string | null> = []
+  const session = createControllerSession({
+    speakAssistantReply: async () => { throw new InterruptedError() },
+    onError: (value) => errors.push(value),
+  })
+  try {
+    await session.push({ chatContent: '', bubbleContent: 'Stopped notice', speechContent: 'Stopped speech', dedupeKey: 'stop-ok' })
+    assert.deepEqual(errors, [])
+  } finally {
+    session.unmount()
+  }
+})
+
+test('a real companion speech failure still sets the error state', async () => {
+  const errors: Array<string | null> = []
+  const session = createControllerSession({
+    speakAssistantReply: async () => { throw new Error('real playback failure') },
+    onError: (value) => errors.push(value),
+  })
+  try {
+    await session.push({ chatContent: '', bubbleContent: 'Failed notice', speechContent: 'Failed speech', dedupeKey: 'stop-fail' })
+    assert.equal(errors.length, 1)
   } finally {
     session.unmount()
   }

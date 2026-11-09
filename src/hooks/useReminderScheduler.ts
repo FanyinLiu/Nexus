@@ -1,10 +1,13 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import {
   markReminderTaskTriggered,
-  refreshReminderTask,
+  reconcileTriggeredTaskWithPersisted,
+  refreshReminderTaskForHandoff,
+  reminderAlreadyTriggered,
   sortReminderTasks,
 } from '../features/reminders'
 import { getRedactedLogErrorMessage } from '../lib/logRedaction.ts'
+import { loadReminderTasks, saveReminderTasks } from '../lib/storage/reminders.ts'
 import type { DebugConsoleEventDraft, ReminderTask } from '../types'
 
 type UseReminderSchedulerOptions = {
@@ -73,7 +76,7 @@ export function useReminderScheduler({
     setTasks((current) => {
       const normalized = sortReminderTasks(current.map((task) => {
         try {
-          return refreshReminderTask(task)
+          return refreshReminderTaskForHandoff(task)
         } catch {
           return {
             ...task,
@@ -158,15 +161,40 @@ export function useReminderScheduler({
       const now = new Date()
       const threshold = now.getTime() + 1_000
 
-      // Identify triggered tasks outside updater to avoid StrictMode double-fire
-      const triggeredTasks = tasks.filter((task) => {
+      // Identify triggered tasks outside updater to avoid StrictMode double-fire.
+      // Reconcile against persisted rows first: a paused/restored window can
+      // hold a stale copy of a task another window already delivered.
+      const persistedById = new Map(loadReminderTasks().map((stored) => [stored.id, stored]))
+      const dueTasks = tasks.filter((task) => {
         const nextRunAt = Date.parse(task.nextRunAt ?? '')
         return task.enabled && Number.isFinite(nextRunAt) && nextRunAt <= threshold
       })
+      const staleTasks = dueTasks.filter((task) => reminderAlreadyTriggered(task, persistedById.get(task.id)))
+      const triggeredTasks = dueTasks.filter((task) => !reminderAlreadyTriggered(task, persistedById.get(task.id)))
+
+      if (staleTasks.length > 0) {
+        // A paused/restored window may hold the old due row. Drain it into the
+        // live copy from persisted state; the task-list effect then arms the
+        // next valid row instead of stalling on the stale earliest timestamp.
+        const staleIds = new Set(staleTasks.map((task) => task.id))
+        setTasks((current) => sortReminderTasks(current.map((task) => (
+          staleIds.has(task.id)
+            ? reconcileTriggeredTaskWithPersisted(task, persistedById.get(task.id))
+            : task
+        ))))
+      }
 
       if (triggeredTasks.length > 0) {
+        const triggeredIds = new Set(triggeredTasks.map((task) => task.id))
+        const triggeredNow = triggeredTasks.map((task) => markReminderTaskTriggered(task, now))
+        // Persist the trigger record synchronously before delivering. Both
+        // windows read storage at trigger time; waiting for the save effect
+        // would let the pet and panel deliver the same due instant.
+        const nextPersisted = new Map(persistedById)
+        for (const task of triggeredNow) nextPersisted.set(task.id, task)
+        saveReminderTasks(sortReminderTasks([...nextPersisted.values()]))
+
         setTasks((current) => {
-          const triggeredIds = new Set(triggeredTasks.map((t) => t.id))
           const updated = current.map((task) =>
             triggeredIds.has(task.id) ? markReminderTaskTriggered(task, now) : task,
           )
