@@ -99,6 +99,7 @@ type ControllerApi = {
   hide: () => void
   trigger: (task: ReminderTask) => Promise<void>
   push: (payload: CompanionNoticePayload) => Promise<void>
+  flush: () => Promise<void>
 }
 
 function ControllerProbe(props: ProbeProps): ControllerApi {
@@ -134,6 +135,7 @@ function ControllerProbe(props: ProbeProps): ControllerApi {
     hide: bubbles.hidePetDialogBubble,
     trigger: controller.handleReminderTaskTrigger,
     push: notices.pushCompanionNotice,
+    flush: notices.flushDeferredCompanionNotices,
   }
 }
 
@@ -253,7 +255,7 @@ function makeTask(): ReminderTask {
 
 function createControllerSession(options: {
   deliver?: () => Promise<never>
-  speakAssistantReply?: () => Promise<void>
+  speakAssistantReply?: (text: string) => Promise<void>
   onError?: (value: string | null) => void
 } = {}) {
   const clock = createClock()
@@ -304,6 +306,7 @@ function createControllerSession(options: {
     },
     trigger: (task: ReminderTask) => renderer.api!.trigger(task),
     push: (payload: CompanionNoticePayload) => renderer.api!.push(payload),
+    flush: () => renderer.api!.flush(),
     hide: () => renderer.api!.hide(),
     unmount() {
       renderer.unmount()
@@ -554,15 +557,31 @@ test('a non-proactive companion notice still auto-hides with its own timer', asy
   }
 })
 
-test('an interrupted companion notice does not set the error state', async () => {
+test('an interrupted companion notice requeues and replays once instead of being dropped', async () => {
   const errors: Array<string | null> = []
+  const speech: string[] = []
+  const pending: Array<{ resolve: () => void; reject: (error: unknown) => void }> = []
   const session = createControllerSession({
-    speakAssistantReply: async () => { throw new InterruptedError() },
+    speakAssistantReply: (text) => {
+      speech.push(text)
+      return new Promise<void>((resolve, reject) => { pending.push({ resolve, reject }) })
+    },
     onError: (value) => errors.push(value),
   })
   try {
-    await session.push({ chatContent: '', bubbleContent: 'Stopped notice', speechContent: 'Stopped speech', dedupeKey: 'stop-ok' })
-    assert.deepEqual(errors, [])
+    const first = session.push({ chatContent: '', bubbleContent: 'Stopped notice', speechContent: 'Stopped speech', dedupeKey: 'stop-ok' })
+    for (let index = 0; index < 4; index += 1) await Promise.resolve()
+    assert.deepEqual(speech, ['Stopped speech'])
+
+    pending.shift()!.reject(new InterruptedError('interrupt'))
+    await first
+    assert.deepEqual(errors, [], 'a clean interrupt is not a playback error')
+
+    const replay = session.flush()
+    for (let index = 0; index < 4; index += 1) await Promise.resolve()
+    assert.deepEqual(speech, ['Stopped speech', 'Stopped speech'], 'the notice is replayed once')
+    pending.shift()!.resolve()
+    await replay
   } finally {
     session.unmount()
   }

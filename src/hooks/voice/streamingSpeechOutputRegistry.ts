@@ -1,3 +1,4 @@
+import type { SpeechInterruptReason } from '../../features/voice/interruptedError.ts'
 import type { StreamingSpeechOutputController } from './types.ts'
 
 /**
@@ -17,6 +18,6 @@ export function removeActiveStreamingController(controller: StreamingSpeechOutpu
 }
 
 /** Abort every controller live at the instant the user presses Stop. */
-export function abortAllStreamingSpeechOutputs(): void {
-  for (const controller of [...activeControllers]) controller.abort()
+export function abortAllStreamingSpeechOutputs(reason: SpeechInterruptReason = 'interrupt'): void {
+  for (const controller of [...activeControllers]) controller.abort(reason)
 }

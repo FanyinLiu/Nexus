@@ -222,6 +222,7 @@ function surfaceProps(input: {
       continuousVoiceActive: false,
       toggleVoiceConversation: () => {},
       stopVoiceConversation: () => {},
+      speechStop: { interrupt: () => {}, stopAll: () => {} },
     },
     chat: {
       assistantActivity: 'idle' as const,

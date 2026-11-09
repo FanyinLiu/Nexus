@@ -10,6 +10,7 @@ import {
   type HeardSpeechSnapshot,
 } from '../../features/voice/heardSpeech.ts'
 import { InterruptedError } from '../../features/voice/interruptedError.ts'
+import type { SpeechInterruptReason } from '../../features/voice/interruptedError.ts'
 import { createId } from '../../lib/storage.ts'
 import { humanizeVoiceError } from '../../lib/humanizeError.ts'
 import { recordTtsUsage } from '../../features/metering/speechCost.ts'
@@ -899,7 +900,7 @@ export function createStreamingSpeechOutputController(
     wasInterrupted() {
       return aborted
     },
-    abort() {
+    abort(reason: SpeechInterruptReason = 'interrupt') {
       if (aborted || settled) {
         return
       }
@@ -925,7 +926,7 @@ export function createStreamingSpeechOutputController(
       cleanup()
       player.stopAndClear()
       runtime.resetPlayer?.()
-      rejectAllPlayed?.(new InterruptedError())
+      rejectAllPlayed?.(new InterruptedError(reason))
       if (startPromise) {
         void startPromise
           .then(() => window.desktopPet!.ttsStreamAbort({ requestId }))
