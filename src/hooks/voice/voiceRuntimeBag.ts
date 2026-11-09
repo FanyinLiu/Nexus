@@ -166,7 +166,15 @@ export type VoiceBindings = {
   clearSenseVoiceConversationState: () => void
   clearTencentConversationState: () => void
   // Speech output plumbing
-  stopActiveSpeechOutput: () => void
+  /** Stop scopes shared by the UI and the cross-window bridge. */
+  speechStop: {
+    /** Interrupt the current sentence without clearing queued notices. */
+    interrupt: () => void
+    /** Clear the current sentence and the whole queue, then notify the peer. */
+    stopAll: () => void
+    /** Clear the local queue without notifying the peer (incoming broadcast). */
+    stopAllLocally: () => void
+  }
   getStreamAudioPlayer: () => StreamAudioPlayer
   getAudioPlaybackQueue: () => AudioPlaybackQueue<SpeechSegmentMeta>
   startSpeechOutput: (

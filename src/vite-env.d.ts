@@ -541,6 +541,10 @@ declare global {
       getRuntimeState: () => Promise<RuntimeStateSnapshot>
       heartbeatRuntimeState: (payload: { view: 'pet' | 'panel' }) => Promise<RuntimeStateSnapshot>
       updateRuntimeState: (state: Partial<RuntimeStateSnapshot>) => Promise<void>
+      // Stop the current sentence and queue in this window, then ask main to
+      // notify the other window.
+      stopSpeechPlayback: () => Promise<void>
+      subscribeSpeechPlaybackStop: (listener: () => void) => () => void
       deliverProactiveMessage: (payload: {
         message: ProactiveMessage
         context: DeliveryContext

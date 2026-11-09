@@ -9,6 +9,10 @@ import {
   markRecalled,
 } from '../features/memory/index.ts'
 import { logVoiceEvent } from '../features/voice/index.ts'
+import {
+  useCompanionNoticeIdleFlush,
+  useCompanionNoticeStopSubscription,
+} from './chat/useCompanionNoticeQueueSubscriptions.ts'
 import { noteUserTyping } from '../features/autonomy/userTyping.ts'
 import {
   createAssistantReplyRunner,
@@ -182,6 +186,7 @@ export function useChat(ctx: UseChatContext) {
   const {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
+    discardDeferredCompanionNotices,
   } = useCompanionNotices({
     ctx,
     t,
@@ -190,6 +195,11 @@ export function useChat(ctx: UseChatContext) {
     presentPetDialogBubble,
     setError,
   })
+
+  // The Stop button lives in the voice hook; this queue lives here, so a
+  // user-initiated stop-all clears the busy-deferred notices.
+  useCompanionNoticeStopSubscription(discardDeferredCompanionNotices)
+  useCompanionNoticeIdleFlush(ctx.voiceBus, flushDeferredCompanionNotices)
 
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(

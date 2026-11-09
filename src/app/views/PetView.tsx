@@ -98,7 +98,7 @@ export function PetView({
     settings,
     context: noteContext,
     speak: (text) => voice.speakAssistantReply(text, false),
-    stop: voice.stopActiveSpeechOutput,
+    stop: voice.speechStop.interrupt,
     setSpeakingId: inboxOverlay.setSpeakingId,
   })
   const note: ProactiveNoteStageBinding = {

@@ -160,7 +160,8 @@ export type StopVoiceConversationEntrypointOptions = {
   clearTencentConversationState: () => void
   stopApiRecording: (cancel?: boolean) => void
   stopVadListening: (cancel?: boolean) => Promise<void>
-  stopActiveSpeechOutput: () => void
+  /** Interrupt the current sentence; queued notices keep their place. */
+  interruptSpeechOutput: () => void
   dispatchVoiceSessionAndSync: (event: VoiceSessionEvent) => unknown
   setLiveTranscript: (transcript: string) => void
   setMood: (mood: PetMood) => void
@@ -376,10 +377,10 @@ export function stopVoiceConversationEntrypoint(
   params.tencentAsrSessionRef.current = null
   params.stopApiRecording(true)
   void params.stopVadListening(true)
-  params.stopActiveSpeechOutput()
+  params.interruptSpeechOutput()
   // dispatchVoiceSessionAndSync now auto-emits the mapped session:aborted to
   // VoiceBus, so the explicit busEmit call is no longer needed.
-  params.dispatchVoiceSessionAndSync({ type: 'aborted' })
+  params.dispatchVoiceSessionAndSync({ type: 'aborted', reason: 'user-button' })
   params.setLiveTranscript('')
   params.updateVoicePipeline(
     'idle',

@@ -22,6 +22,10 @@ function createLifecycle(
     onStatus?: (message: string) => void
     speechInputProviderId?: string
     translationCalls?: Array<{ key: string; params?: Record<string, string> }>
+    voiceState?: 'idle' | 'listening' | 'processing' | 'speaking'
+    continuousVoiceActive?: boolean
+    onInterrupt?: () => void
+    onAbort?: (event: unknown) => void
   } = {},
 ) {
   const settings = {
@@ -32,8 +36,8 @@ function createLifecycle(
   } as AppSettings
 
   const refs = {
-    continuousVoiceActiveRef: { current: false },
-    voiceStateRef: { current: 'idle' },
+    continuousVoiceActiveRef: { current: options.continuousVoiceActive ?? false },
+    voiceStateRef: { current: options.voiceState ?? 'idle' },
     activeVoiceConversationOptionsRef: { current: {} },
     suppressVoiceReplyRef: { current: false },
     recognitionRef: { current: null },
@@ -48,16 +52,29 @@ function createLifecycle(
 
   const bindings = {
     canInterruptSpeech: () => true,
-    interruptSpeakingForVoiceInput: () => true,
+    interruptSpeakingForVoiceInput: () => {
+      options.onInterrupt?.()
+      return true
+    },
     setContinuousVoiceSession: () => {},
     shouldKeepContinuousVoiceSession: () => false,
     resetNoSpeechRestartCount: () => {},
     beginVoiceListeningSession: () => {},
-    dispatchVoiceSessionAndSync: () => {},
+    dispatchVoiceSessionAndSync: (event: unknown) => { options.onAbort?.(event) },
     handleRecognizedVoiceTranscript: async () => false,
     handleVoiceListeningFailure: () => {},
     shouldAutoRestartVoice: () => false,
     resetSpeechLevel: () => {},
+    stopApiRecording: () => {},
+    stopVadListening: async () => {},
+    clearParaformerConversationState: () => {},
+    clearSenseVoiceConversationState: () => {},
+    clearTencentConversationState: () => {},
+    speechStop: {
+      interrupt: () => { options.onInterrupt?.() },
+      stopAll: () => {},
+      stopAllLocally: () => {},
+    },
   }
 
   const engines = {
@@ -154,6 +171,39 @@ function installBridge(
 async function flushAsyncWork() {
   for (let i = 0; i < 12; i += 1) await Promise.resolve()
 }
+
+for (const scenario of [
+  { label: 'continuous voice running', continuousVoiceActive: true, voiceState: 'idle' as const },
+  { label: 'listening', continuousVoiceActive: false, voiceState: 'listening' as const },
+]) {
+  test(`toggle during ${scenario.label} stops through the user-button path`, () => {
+    const events: unknown[] = []
+    let interrupts = 0
+    const lifecycle = createLifecycle('panel', {
+      continuousVoiceActive: scenario.continuousVoiceActive,
+      voiceState: scenario.voiceState,
+      onInterrupt: () => { interrupts += 1 },
+      onAbort: (event) => { events.push(event) },
+    })
+
+    lifecycle.toggleVoiceConversation()
+
+    assert.equal(interrupts, 1, 'the toggle interrupts the current speech locally')
+    assert.deepEqual(events, [{ type: 'aborted', reason: 'user-button' }])
+  })
+}
+
+test('starting a new voice conversation while she speaks interrupts only the current sentence', () => {
+  const interrupts: number[] = []
+  const lifecycle = createLifecycle('pet', {
+    voiceState: 'speaking',
+    onInterrupt: () => { interrupts.push(1) },
+  })
+
+  lifecycle.toggleVoiceConversation()
+
+  assert.equal(interrupts.length, 1, 'the new voice turn interrupts current speech')
+})
 
 test('the mic trigger requests model setup while required models are missing', async () => {
   const bridge = installBridge(false)

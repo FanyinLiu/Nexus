@@ -268,6 +268,24 @@ const modelSetupReminderSchema = {
   },
 }
 
+const speechStopPlaybackSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  unknown: 'reject',
+  fields: {},
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {Record<string, never>}
+ */
+export function validateSpeechStopPlaybackPayload(payload) {
+  return /** @type {Record<string, never>} */ (
+    validateIpcPayload('voice:stop-playback', payload, speechStopPlaybackSchema)
+  )
+}
+
 /**
  * @param {unknown} payload
  * @returns {{ delayMs?: number, cancel?: boolean }}

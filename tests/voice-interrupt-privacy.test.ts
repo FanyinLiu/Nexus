@@ -152,7 +152,7 @@ function monitorOptions(overrides: Record<string, unknown> = {}) {
     },
     wakewordRuntimeRef: { current: null },
     clearPendingVoiceRestart: noop,
-    stopActiveSpeechOutput: noop,
+    interruptActiveSpeechOutput: noop,
     onInterrupted: noop,
     setMood: noop,
     showPetStatus: noop,

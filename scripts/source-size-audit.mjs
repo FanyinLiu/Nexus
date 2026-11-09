@@ -36,10 +36,16 @@ const FILE_BUDGETS = {
   'src/features/onboarding/styles/onboarding-guide-shell.css': 870,
   'src/features/pet/components/Live2DCanvas.tsx': 959,
   'src/features/pet/performance.ts': 1016,
-  'src/hooks/useVoice.ts': 879,
-  'src/hooks/voice/streamingSpeechOutput.ts': 938,
+  // Voice stop scopes: useVoice wires the cross-window stop subscription and
+  // the stop-all cleanup path; streamingSpeechOutput registers every live
+  // controller for stop-all. Both grew by the real feature code, so the
+  // budget follows the source instead of deleting explanatory blank lines.
+  'src/hooks/useVoice.ts': 880,
+  'src/hooks/voice/streamingSpeechOutput.ts': 942,
   // Generated from electron/preload by scripts/generate-ipc-types.mjs (ipc:types:check).
-  'src/types/generated/desktopPetBridge.generated.ts': 1066,
+  // Grows with every added bridge channel, including the cross-window speech
+  // stop invoke/subscription.
+  'src/types/generated/desktopPetBridge.generated.ts': 1075,
   'src/vite-env.d.ts': 1196,
   'tests/fixtures/settingsSurfaceAuditBaseline.ts': 1197,
   // IPC payload schema suite keeps one test per domain plus the high-risk

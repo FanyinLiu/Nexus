@@ -1,5 +1,6 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import type { InterruptMicTurnSource } from '../../features/voice/autoRestartPolicy.ts'
+import type { VoiceBus } from '../../features/voice/bus.ts'
 import type { StreamingSpeechOutputController } from '../voice/types.ts'
 import type {
   AppSettings,
@@ -86,8 +87,14 @@ export type ChatVoiceDeps = {
   resetNoSpeechRestartCount: () => void
   setContinuousVoiceSession: (active: boolean) => void
   fillComposerWithVoiceTranscript: (transcript: string) => void
-  stopActiveSpeechOutput: () => void
+  /** Interrupt the sentence being spoken; queued notices and letters stay. */
+  interruptActiveSpeechOutput: () => void
   canInterruptSpeech: () => boolean
+  /**
+   * Optional bus used to resume the busy-deferred notice queue once a reply's
+   * speech completes. Omitted by lightweight test stubs.
+   */
+  voiceBus?: VoiceBus
 }
 
 /** One-way companion signals the chat pipeline reads from and reports into. */

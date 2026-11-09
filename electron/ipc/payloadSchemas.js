@@ -9,6 +9,7 @@ export {
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
+  validateSpeechStopPlaybackPayload,
   validateWindowDragPayload,
 } from './windowPayloadSchemas.js'
 export {

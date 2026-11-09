@@ -49,10 +49,11 @@ import {
   getAudioPlaybackQueueRuntime,
   getSpeechLevelControllerRuntime,
   getStreamAudioPlayerRuntime,
+  interruptActiveSpeechOutputRuntime,
   interruptSpeakingForVoiceInputRuntime,
   setContinuousVoiceSessionRuntime,
   setSpeechLevelValueRuntime,
-  stopActiveSpeechOutputRuntime,
+  stopAllSpeechOutputRuntime,
   stopApiRecordingRuntime,
   stopSpeechTrackingRuntime,
   stopVadListeningRuntime,
@@ -135,9 +136,9 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       voiceStateRef: refs.voiceStateRef,
       canInterruptSpeech,
       showPetStatus,
-      stopActiveSpeechOutput,
+      interruptActiveSpeechOutput,
       abortPendingSpeechOutput: () => {
-        refs.activeStreamingSpeechOutputRef.current?.abort()
+        refs.activeStreamingSpeechOutputRef.current?.abort('interrupt')
       },
       dispatchVoiceSessionAndSync,
       voiceEchoCooldownUntilRef: refs.voiceEchoCooldownUntilRef,
@@ -204,16 +205,44 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
   }
 
   // ── Speech output plumbing ──────────────────────────────────────────────
-  function stopActiveSpeechOutput() {
-    stopActiveSpeechOutputRuntime({
+  function interruptActiveSpeechOutput() {
+    interruptActiveSpeechOutputRuntime({
+      wakewordAcknowledgingRef: refs.wakewordAcknowledgingRef,
+      stopSpeechInterruptMonitor,
+      stopSpeechTracking,
+      activeStreamingSpeechOutputRef: refs.activeStreamingSpeechOutputRef,
+      streamAudioPlayerRef: refs.streamAudioPlayerRef,
+      assistantSpeechGenerationRef: refs.assistantSpeechGenerationRef,
+      interruptedSpeechGenerationRef: refs.interruptedSpeechGenerationRef,
+    })
+    resetSpeechLevel()
+  }
+
+  function stopAllSpeechOutput() {
+    stopAllSpeechOutputRuntime({
       wakewordAcknowledgingRef: refs.wakewordAcknowledgingRef,
       stopSpeechInterruptMonitor,
       stopSpeechTracking,
       activeStreamingSpeechOutputRef: refs.activeStreamingSpeechOutputRef,
       streamAudioPlayerRef: refs.streamAudioPlayerRef,
       audioPlaybackQueueRef: refs.audioPlaybackQueueRef,
+      assistantSpeechGenerationRef: refs.assistantSpeechGenerationRef,
+      interruptedSpeechGenerationRef: refs.interruptedSpeechGenerationRef,
     })
     resetSpeechLevel()
+  }
+
+  function stopAllSpeechOutputEverywhere() {
+    stopAllSpeechOutput()
+    broadcastSpeechStop()
+  }
+
+  // Ask the other window to stop its own playback. Kept separate from the
+  // local teardown so an incoming broadcast never bounces back to the sender.
+  function broadcastSpeechStop() {
+    void window.desktopPet?.stopSpeechPlayback?.()?.catch(() => {
+      logVoiceEvent('cross-window speech stop broadcast failed')
+    })
   }
 
   function getStreamAudioPlayer() {
@@ -341,7 +370,7 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
       // `startSpeechInterruptMonitor` for the full rationale.
       wakewordRuntimeRef: refs.wakewordRuntimeRef,
       clearPendingVoiceRestart,
-      stopActiveSpeechOutput,
+      interruptActiveSpeechOutput,
       onInterrupted: () => {
         logVoiceEvent('assistant speech interrupted by user speech')
         // Arm the same 200ms echo cooldown the manual-interrupt path arms
@@ -494,7 +523,11 @@ export function createVoiceBindings(bag: VoiceRuntimeBag): VoiceBindings {
     clearParaformerConversationState,
     clearSenseVoiceConversationState,
     clearTencentConversationState,
-    stopActiveSpeechOutput,
+    speechStop: {
+      interrupt: interruptActiveSpeechOutput,
+      stopAll: stopAllSpeechOutputEverywhere,
+      stopAllLocally: stopAllSpeechOutput,
+    },
     getStreamAudioPlayer,
     getAudioPlaybackQueue,
     startSpeechOutput,

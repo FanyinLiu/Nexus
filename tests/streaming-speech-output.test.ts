@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createStreamingSpeechOutputController } from '../src/hooks/voice/streamingSpeechOutput.ts'
+import { abortAllStreamingSpeechOutputs } from '../src/hooks/voice/streamingSpeechOutputRegistry.ts'
 import { createStreamingSpeechOutputWithFallback } from '../src/hooks/voice/streamingSpeechOutputFallback.ts'
+import { isInterruptedError, isStopAllInterrupted } from '../src/features/voice/interruptedError.ts'
 import {
   getMaxSegmentCharsForProvider,
   prefersWholeReplySegments,
@@ -222,6 +224,150 @@ test('queues the first sentence while the model is still streaming', async () =>
   )
   assert.equal(new Set(harness.pushes.map((push) => push.requestId)).size, 1)
   assert.equal(harness.startCalls.length, 1)
+})
+
+test('stop aborts every live controller without poisoning the next speech', async () => {
+  const harness = createHarness()
+  const makePlayer = () => ({
+    appendPcmChunk: async () => undefined,
+    waitForDrain: async () => undefined,
+    stopAndClear: () => undefined,
+  })
+  const firstPlayer = makePlayer()
+  const secondPlayer = makePlayer()
+  const first = createStreamingSpeechOutputController(SETTINGS, { getPlayer: () => firstPlayer as never })
+  const second = createStreamingSpeechOutputController(SETTINGS, { getPlayer: () => secondPlayer as never })
+  const firstResult = first.waitForCompletion().then(() => 'resolved', (error: unknown) => error)
+  const secondResult = second.waitForCompletion().then(() => 'resolved', (error: unknown) => error)
+  first.pushDelta('Alpha sentence is long enough.')
+  second.pushDelta('Bravo sentence is long enough.')
+  first.flushPending()
+  second.flushPending()
+  await ticks()
+
+  assert.equal(harness.startCalls.length, 2)
+  abortAllStreamingSpeechOutputs()
+  await ticks()
+  assert.equal(harness.abortCalls.length, 2, 'both active generations are aborted')
+  assert.equal(first.wasInterrupted?.(), true)
+  assert.equal(second.wasInterrupted?.(), true)
+
+  for (const result of await Promise.all([firstResult, secondResult])) {
+    assert.equal(isInterruptedError(result), true, 'an aborted controller never resolves as completed')
+  }
+
+  const nextPlayer = makePlayer()
+  const next = createStreamingSpeechOutputController(SETTINGS, { getPlayer: () => nextPlayer as never })
+  void next.waitForCompletion().catch(() => undefined)
+  next.pushDelta('Charlie sentence is long enough.')
+  next.flushPending()
+  await ticks()
+  assert.equal(harness.startCalls.length, 3, 'speech created after stop still starts')
+  next.abort()
+})
+
+test('the Stop scope rejects with a stop-all interruption, not a completion', async () => {
+  const harness = createHarness()
+  const controller = createStreamingSpeechOutputController(SETTINGS, {
+    getPlayer: () => harness.player as never,
+  })
+  const result = controller.waitForCompletion().then(() => 'resolved', (error: unknown) => error)
+  controller.pushDelta('A sentence that is long enough to queue.')
+  controller.flushPending()
+  await ticks()
+
+  abortAllStreamingSpeechOutputs('stop-all')
+  const outcome = await result
+
+  assert.equal(isInterruptedError(outcome), true)
+  assert.equal(isStopAllInterrupted(outcome), true, 'Stop is distinguishable from a plain interrupt')
+})
+
+test('an aborted controller cannot write late chunks into the new player', async () => {
+  const harness = createHarness()
+  let firstAppends = 0
+  let secondAppends = 0
+  const firstPlayer = {
+    appendPcmChunk: async () => { firstAppends += 1 },
+    waitForDrain: async () => undefined,
+    stopAndClear: () => undefined,
+  }
+  const secondPlayer = {
+    appendPcmChunk: async () => { secondAppends += 1 },
+    waitForDrain: async () => undefined,
+    stopAndClear: () => undefined,
+  }
+  const first = createStreamingSpeechOutputController(SETTINGS, { getPlayer: () => firstPlayer as never })
+  const firstDone = first.waitForCompletion().catch(() => undefined)
+  first.pushDelta('First sentence is long enough.')
+  first.flushPending()
+  await ticks()
+  const firstRequestId = harness.pushes[0]!.requestId
+  assert.ok(firstAppends >= 1)
+
+  abortAllStreamingSpeechOutputs('interrupt')
+  await firstDone
+
+  const second = createStreamingSpeechOutputController(SETTINGS, { getPlayer: () => secondPlayer as never })
+  void second.waitForCompletion().catch(() => undefined)
+  second.pushDelta('Second sentence is long enough.')
+  second.flushPending()
+  await ticks()
+
+  const firstAppendsAfterAbort = firstAppends
+  harness.emit({
+    type: 'chunk',
+    requestId: firstRequestId,
+    chunkId: 'late-chunk',
+    format: 'f32le',
+    sampleRate: 24000,
+    channels: 1,
+    text: 'late',
+    segmentIndex: 0,
+    samples: [0],
+    isFinal: true,
+  })
+  await ticks()
+
+  assert.equal(firstAppends, firstAppendsAfterAbort, 'late audio from the aborted controller is ignored')
+  assert.ok(secondAppends >= 1)
+  second.abort()
+})
+
+test('a failed controller leaves the stop registry', async () => {
+  const harness = createHarness({ failPushForFirstRequest: true })
+  const controller = createStreamingSpeechOutputController(SETTINGS, {
+    getPlayer: () => harness.player as never,
+  })
+  void controller.waitForCompletion().catch(() => undefined)
+  controller.pushDelta('A whole sentence that is long enough to queue.')
+  controller.finish()
+  await ticks()
+
+  const abortsBeforeStop = harness.abortCalls.length
+  abortAllStreamingSpeechOutputs()
+  await ticks()
+  assert.equal(harness.abortCalls.length, abortsBeforeStop, 'settled controller is not aborted again')
+  assert.equal(controller.wasInterrupted?.(), false)
+})
+
+test('abort before the first audio chunk settles as an interruption', async () => {
+  const harness = createHarness()
+  const controller = createStreamingSpeechOutputController(SETTINGS, {
+    getPlayer: () => harness.player as never,
+  })
+  const completion = controller.waitForCompletion().then(
+    () => null,
+    (error: unknown) => error,
+  )
+  controller.pushDelta('First sentence is long enough. Second sentence is still coming.')
+  controller.abort()
+  const outcome = await completion
+
+  assert.equal(isInterruptedError(outcome), true)
+  assert.equal(controller.wasInterrupted?.(), true)
+  await ticks()
+  assert.equal(harness.abortCalls.length, 1, 'the pending stream is aborted once it starts')
 })
 
 test('a too-short first fragment waits for the next sentence', async () => {

@@ -1,7 +1,8 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
+import { isInterruptedError, isStopAllInterrupted } from '../../features/voice/interruptedError.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
 import { getSpeechOutputErrorMessage } from './support.ts'
@@ -20,10 +21,29 @@ type CompanionNoticeDependencies = {
 }
 
 /**
+ * Drop every busy-deferred notice. The reminder task row and its history live
+ * in persistence, so a user-initiated Stop only silences delivery here.
+ * Returns the number of notices dropped.
+ */
+export function clearDeferredCompanionNotices<T>(queue: T[]): number {
+  const cleared = queue.length
+  queue.length = 0
+  return cleared
+}
+
+/**
  * Companion notice delivery: immediate chat/bubble/speech fan-out with a
  * 10min dedupe gate, plus a deferred queue that holds notices back while the
  * assistant is busy or speaking and flushes them in order once idle.
  */
+type DeferredCompanionNotice = {
+  payload: CompanionNoticePayload
+  /** A replay must not duplicate the chat line/bubble already shown. */
+  speechOnly: boolean
+}
+
+type CompanionNoticeSpeechResult = 'played' | 'interrupted' | 'cleared'
+
 export function useCompanionNotices({
   ctx,
   t,
@@ -32,11 +52,55 @@ export function useCompanionNotices({
   presentPetDialogBubble,
   setError,
 }: CompanionNoticeDependencies) {
-  const deferredCompanionNoticesRef = useRef<CompanionNoticePayload[]>([])
+  const deferredCompanionNoticesRef = useRef<DeferredCompanionNotice[]>([])
   const flushingDeferredCompanionNoticesRef = useRef(false)
   const recentCompanionNoticesRef = useRef<Map<string, number>>(new Map())
+  // The host recreates its ctx literal every render. Reading through a ref
+  // keeps delivery callbacks stable so the idle-flush subscription is not
+  // torn down and restarted (which would postpone the 15 s fallback forever).
+  const ctxRef = useRef(ctx)
+  useEffect(() => {
+    ctxRef.current = ctx
+  }, [ctx])
+  // A notice interrupted while it was already in the shared player gets one
+  // replay. The WeakSet keeps a second interruption from queueing it forever.
+  const replayedCompanionNoticesRef = useRef(new WeakSet<CompanionNoticePayload>())
 
-  const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
+  const playCompanionNoticeSpeech = useCallback(async (
+    options: CompanionNoticePayload,
+  ): Promise<CompanionNoticeSpeechResult> => {
+    const speechContent = options.speechContent?.trim() ?? ''
+    if (!speechContent) return 'played'
+
+    try {
+      await ctxRef.current.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
+      return 'played'
+    } catch (speechError) {
+      if (isInterruptedError(speechError)) {
+        // Stop is final: cleared notices never come back. An interrupt only
+        // pauses the notice; requeue it once so it can play in full later.
+        if (isStopAllInterrupted(speechError)) return 'cleared'
+        const replayed = replayedCompanionNoticesRef.current
+        if (!replayed.has(options)) {
+          replayed.add(options)
+          deferredCompanionNoticesRef.current.push({ payload: options, speechOnly: true })
+        }
+        return 'interrupted'
+      }
+      const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
+      setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
+      return 'played'
+    }
+  }, [setError, t])
+
+  const deliverCompanionNotice = useCallback(async (
+    options: CompanionNoticePayload,
+    speechOnly = false,
+  ): Promise<CompanionNoticeSpeechResult> => {
+    if (speechOnly) {
+      return playCompanionNoticeSpeech(options)
+    }
+
     const chatContent = options.chatContent.trim()
     const bubbleContent = (options.bubbleContent ?? chatContent).trim()
     const proactiveTitle = options.proactiveTitle?.trim() ?? ''
@@ -59,7 +123,7 @@ export function useCompanionNotices({
       }
       const lastTs = recent.get(dedupeKey)
       if (lastTs !== undefined && now - lastTs < DEDUPE_WINDOW_MS) {
-        return
+        return 'played'
       }
       recent.set(dedupeKey, now)
     }
@@ -107,23 +171,28 @@ export function useCompanionNotices({
       emitPetNotify({ type: 'mood', mood: 'happy' })
     }
 
-    if (!speechContent) {
-      return
-    }
-
-    try {
-      await ctx.speakAssistantReply(speechContent, options.shouldResumeContinuousVoice ?? false)
-    } catch (speechError) {
-      const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-      setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
-    }
-  }, [appendChatMessage, ctx, presentPetDialogBubble, setError, t])
+    return playCompanionNoticeSpeech(options)
+  }, [appendChatMessage, playCompanionNoticeSpeech, presentPetDialogBubble])
 
   const canDeliverDeferredCompanionNotice = useCallback(() => (
     !busyRef.current
-    && ctx.voiceStateRef.current !== 'processing'
-    && ctx.voiceStateRef.current !== 'speaking'
-  ), [busyRef, ctx.voiceStateRef])
+    && ctxRef.current.voiceStateRef.current !== 'processing'
+    && ctxRef.current.voiceStateRef.current !== 'speaking'
+  ), [busyRef])
+
+  const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
+    // A notice that arrives mid-reply must not start speaking over the pet.
+    // Queue it instead; flush only runs once the turn and its speech are done.
+    if (!canDeliverDeferredCompanionNotice()) {
+      deferredCompanionNoticesRef.current.push({ payload: options, speechOnly: false })
+      return
+    }
+    await deliverCompanionNotice(options)
+  }, [canDeliverDeferredCompanionNotice, deliverCompanionNotice])
+
+  const discardDeferredCompanionNotices = useCallback(() => (
+    clearDeferredCompanionNotices(deferredCompanionNoticesRef.current)
+  ), [])
 
   const flushDeferredCompanionNotices = useCallback(async () => {
     if (flushingDeferredCompanionNoticesRef.current || !canDeliverDeferredCompanionNotice()) {
@@ -139,15 +208,19 @@ export function useCompanionNotices({
           continue
         }
 
-        await pushCompanionNotice(nextNotice)
+        const result = await deliverCompanionNotice(nextNotice.payload, nextNotice.speechOnly)
+        // A requeued notice waits for the next completed turn/idle transition;
+        // replaying it inside this loop could start before the new reply.
+        if (result !== 'played') break
       }
     } finally {
       flushingDeferredCompanionNoticesRef.current = false
     }
-  }, [canDeliverDeferredCompanionNotice, pushCompanionNotice])
+  }, [canDeliverDeferredCompanionNotice, deliverCompanionNotice])
 
   return {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
+    discardDeferredCompanionNotices,
   }
 }

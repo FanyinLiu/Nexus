@@ -386,7 +386,7 @@ test('barge-in while replying keeps the heard prefix, reopens listening, and pre
     voiceStateRef: harness.voiceStateRef,
     canInterruptSpeech: () => true,
     showPetStatus: () => {},
-    stopActiveSpeechOutput: () => { harness.controller?.abort() },
+    interruptActiveSpeechOutput: () => { harness.controller?.abort() },
     abortPendingSpeechOutput: () => { harness.controller?.abort() },
     dispatchVoiceSessionAndSync: () => {
       harness.ctx.busEmit({ type: 'tts:interrupted', speechGeneration: 1 })

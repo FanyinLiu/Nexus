@@ -174,7 +174,7 @@ export function createOverlayProps(view: 'pet' | 'panel', settings: AppSettings)
       speechLevelSource: null,
       voicePipeline: null,
       voiceTrace: [],
-      stopActiveSpeechOutput: noop,
+      speechStop: { interrupt: noop, stopAll: noop, stopAllLocally: noop },
       setVoiceState: noop,
       runAudioSmokeTest: async () => ({ ok: true }),
       startSpeechOutput: async () => {},

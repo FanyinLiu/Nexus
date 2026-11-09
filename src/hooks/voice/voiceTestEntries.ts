@@ -10,6 +10,7 @@ import {
 } from './diagnostics.ts'
 import type { AppSettings } from '../../types'
 import { expectHolderValue, type VoiceRuntimeBag, type VoiceTestEntries } from './voiceRuntimeBag.ts'
+import { interruptLocalSpeechPlayback } from '../../features/voice/speechPlaybackActions.ts'
 
 export function createVoiceTestEntries(bag: VoiceRuntimeBag): VoiceTestEntries {
   const { bindingsHolder, hookCallbacks } = bag
@@ -35,7 +36,7 @@ export function createVoiceTestEntries(bag: VoiceRuntimeBag): VoiceTestEntries {
     await probeSpeechOutputPlaybackStartRuntime({
       draftSettings,
       text,
-      stopActiveSpeechOutput: bindings.stopActiveSpeechOutput,
+      interruptSpeechOutput: () => interruptLocalSpeechPlayback(bindings.speechStop),
       startSpeechOutput: bindings.startSpeechOutput,
       ti,
     })
