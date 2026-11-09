@@ -38,6 +38,9 @@ function renderCompanionNotices(options: {
       if (!(index in slots)) slots[index] = { fn }
       return (slots[index] as CallbackSlot).fn
     },
+    useEffect(effect: () => void | (() => void)) {
+      effect()
+    },
   }
 
   function Probe() {

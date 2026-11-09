@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { VoiceBus } from '../../features/voice/bus.ts'
 import { subscribeSpeechStopAll } from '../../features/voice/speechStopBus.ts'
 
@@ -38,6 +38,13 @@ export function useCompanionNoticeIdleFlush(
   const idleTimeoutMs = timers.idleTimeoutMs ?? COMPANION_NOTICE_IDLE_FALLBACK_MS
   const setTimeoutFn = timers.setTimeoutFn
   const clearTimeoutFn = timers.clearTimeoutFn
+  // The host gives flush a new identity on every render. Keep the latest in a
+  // ref so the subscription below does not restart (and reset the 15 s timer)
+  // on every heartbeat-driven render.
+  const flushRef = useRef(flush)
+  useEffect(() => {
+    flushRef.current = flush
+  })
 
   useEffect(() => {
     if (!voiceBus) return
@@ -47,6 +54,7 @@ export function useCompanionNoticeIdleFlush(
     ))
     const cancel = clearTimeoutFn ?? ((id: number) => { window.clearTimeout(id) })
     let timer: number | null = null
+    let disposed = false
 
     const clearTimer = () => {
       if (timer === null) return
@@ -54,16 +62,21 @@ export function useCompanionNoticeIdleFlush(
       timer = null
     }
     const armFallback = () => {
+      if (disposed) return
       clearTimer()
       timer = schedule(() => {
         timer = null
-        void flush()
+        if (disposed) return
+        void flushRef.current()
       }, idleTimeoutMs)
     }
     const releaseNow = () => {
       clearTimer()
       queueMicrotask(() => {
-        void flush().finally(armFallback)
+        if (disposed) return
+        void flushRef.current().finally(() => {
+          if (!disposed) armFallback()
+        })
       })
     }
 
@@ -91,8 +104,9 @@ export function useCompanionNoticeIdleFlush(
 
     armFallback()
     return () => {
+      disposed = true
       clearTimer()
       unsubscribe()
     }
-  }, [voiceBus, flush, idleTimeoutMs, setTimeoutFn, clearTimeoutFn])
+  }, [voiceBus, idleTimeoutMs, setTimeoutFn, clearTimeoutFn])
 }
