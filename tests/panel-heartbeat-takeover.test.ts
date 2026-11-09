@@ -6,6 +6,7 @@ register(new URL('./helpers/bundler-import-hooks.mjs', import.meta.url))
 
 const { createHookRenderer } = await import('./helpers/directNotificationHookHarness.ts')
 const {
+  nextReminderWakeToken,
   runtimeHeartbeatIntervalMs,
   shouldApplyHeartbeatSnapshot,
   useRuntimeHeartbeat,
@@ -101,4 +102,11 @@ test('pet beats at the slow interval and does not apply its own heartbeat snapsh
     renderer.unmount()
     environment.cleanup()
   }
+})
+
+test('an offline runtime snapshot bumps the panel wake token only', () => {
+  assert.equal(nextReminderWakeToken('panel', { mood: 'idle', petOnline: false }, 0), 1)
+  assert.equal(nextReminderWakeToken('panel', { mood: 'idle', petOnline: false }, 4), 5)
+  assert.equal(nextReminderWakeToken('panel', { mood: 'idle', petOnline: true }, 4), 4)
+  assert.equal(nextReminderWakeToken('pet', { mood: 'idle', petOnline: false }, 4), 4)
 })

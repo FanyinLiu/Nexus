@@ -3,6 +3,7 @@
  * Cross-window runtime state snapshot and pub-sub.
  * Extracted from windowManager so creation/lifecycle code does not own state shape.
  */
+import { createReminderPanelWakeMonitor } from './reminderPanelWake.js'
 import { sanitizeRuntimeStatePatch } from './windowStateSanitizers.js'
 
 const RUNTIME_CLIENT_TTL_MS = 30_000
@@ -110,6 +111,31 @@ export function syncRuntimeState(originWebContentsId = null) {
   }
 }
 
+const reminderPanelWakeMonitor = createReminderPanelWakeMonitor({
+  getPanelWindow: () => liveWindow(panelWindowRef),
+  getSnapshot: buildRuntimeStateSnapshot,
+  // The wake rides the existing runtime-state channel: the panel already
+  // subscribes to it, so this adds no IPC surface, preload method or type.
+  deliverWake: (win, snapshot) => {
+    win.webContents.send('runtime-state:changed', snapshot)
+  },
+})
+
+/** Start the panel wake driver once a panel window exists. */
+export function startReminderPanelWakeMonitor() {
+  reminderPanelWakeMonitor.start()
+}
+
+/** Stop the panel wake driver when the panel window is destroyed. */
+export function stopReminderPanelWakeMonitor() {
+  reminderPanelWakeMonitor.stop()
+}
+
+/** Re-evaluate pet liveness now (e.g. right after the pet window closes). */
+export function checkReminderPanelWakeNow() {
+  reminderPanelWakeMonitor.tick()
+}
+
 /**
  * @param {Record<string, unknown>} partialState
  * @param {number | null} [originWebContentsId]
@@ -134,4 +160,7 @@ export function updateHeartbeat(view, originWebContentsId = null) {
     [view]: Date.now(),
   }
   syncRuntimeState(originWebContentsId)
+  // A pet beat can restore liveness before the monitor's next poll; push the
+  // online transition right away so the panel stops scheduling.
+  if (view === 'pet') reminderPanelWakeMonitor.tick()
 }

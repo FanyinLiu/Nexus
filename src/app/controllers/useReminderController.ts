@@ -70,6 +70,8 @@ export type UseReminderControllerOptions = {
   pet: PetBridge
   debugConsole: DebugConsoleBridge
   reminderTaskStore: ReminderTaskStore
+  /** Main-process wake counter; only the panel receives it. */
+  reminderWakeToken?: number
 }
 
 export function useReminderController({
@@ -81,6 +83,7 @@ export function useReminderController({
   pet,
   debugConsole,
   reminderTaskStore,
+  reminderWakeToken = 0,
 }: UseReminderControllerOptions) {
   const { t, locale } = useTranslation()
   const handleReminderTaskTrigger = useCallback(async (task: ReminderTask) => {
@@ -295,6 +298,10 @@ export function useReminderController({
     onTrigger: handleReminderTaskTrigger,
     onEvent: debugConsole.appendDebugConsoleEvent,
     canTrigger: () => !isUserTypingAnywhere(settingsRef.current),
+    // Only the panel takeover is anchored at the pet's last online instant;
+    // the pet window keeps its normal overdue handling.
+    petLastOnlineAt: view === 'panel' ? runtimeSnapshot.petLastSeenAt : undefined,
+    wakeToken: reminderWakeToken,
   })
 
   return { handleReminderTaskTrigger }

@@ -265,6 +265,7 @@ export function useAppController() {
 
   const {
     runtimeSnapshot,
+    reminderWakeToken,
     platformProfile,
     petRuntimeContinuousVoiceActive,
     remotePanelSettingsOpen,
@@ -348,6 +349,7 @@ export function useAppController() {
     pet,
     debugConsole,
     reminderTaskStore,
+    reminderWakeToken,
   })
 
   // One small background call per new or edited reminder/open loop. The save
