@@ -40,6 +40,7 @@ import {
   syncRuntimeState,
 } from './windowRuntimeState.js'
 import { sanitizeRuntimeLogMessage } from './runtimeLogSanitizer.js'
+import { createLogger } from './logger.js'
 
 let getMainWindow = () => null
 let getPanelWindow = () => null
@@ -73,6 +74,7 @@ let settingsReturnFocus = {
 // reach the console.
 const PANEL_LOAD_RETRY_LIMIT = 2
 const PANEL_LOAD_RETRY_BASE_DELAY_MS = 250
+const panelLog = createLogger('panel.window')
 /** @type {WeakMap<object, { attempts: number, timer: ReturnType<typeof setTimeout> | null }>} */
 const panelLoadRetries = new WeakMap()
 
@@ -562,7 +564,7 @@ export function createPanelWindowWithOptions(options = {}) {
       const delay = PANEL_LOAD_RETRY_BASE_DELAY_MS * (2 ** retry.attempts)
       retry.attempts += 1
       panelLoadRetries.set(win, retry)
-      console.warn('[panel] renderer load failed; retrying', errorCode)
+      panelLog.warn(`renderer load failed; retrying code=${errorCode}`)
       retry.timer = setTimeout(() => {
         retry.timer = null
         if (win.isDestroyed()) return
@@ -570,7 +572,7 @@ export function createPanelWindowWithOptions(options = {}) {
       }, delay)
       return
     }
-    console.error('[panel] renderer load failed after retries', errorCode)
+    panelLog.error(`renderer load failed after retries code=${errorCode}`)
     options.onRendererFailed?.(win)
     if (!win.isDestroyed()) win.destroy()
   })

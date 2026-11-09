@@ -8,6 +8,7 @@ register(new URL('./helpers/window-lifecycle-stub-hooks.mjs', import.meta.url))
 
 const windowManager = await import('../electron/windowManager.js')
 const windowCreation = await import('../electron/windowCreation.js')
+const { clearLogs, getLogEntries } = await import('../electron/logger.js')
 
 type FakeWindow = {
   id: number
@@ -183,15 +184,7 @@ test('a failed panel load retries with backoff, then is replaced on the next ope
   const state = windowLifecycleState()
   const failed = createHiddenPanel()
   const before = state.windows.length
-  const logs: string[] = []
-  const originalWarn = console.warn
-  const originalError = console.error
-  console.warn = (...args: unknown[]) => { logs.push(args.map(String).join(' ')) }
-  console.error = (...args: unknown[]) => { logs.push(args.map(String).join(' ')) }
-  t.after(() => {
-    console.warn = originalWarn
-    console.error = originalError
-  })
+  clearLogs()
   const failureUrl = 'file:///panel?token=secret-user-content'
 
   failed.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', failureUrl, true)
@@ -212,10 +205,18 @@ test('a failed panel load retries with backoff, then is replaced on the next ope
   assert.equal(state.windows.length, before + 1, 'the next explicit open creates a new window')
   assert.equal(replacement.visible, true, 'the replacement opens for the user')
   assert.match(String(replacement.url), /view=panel/)
+  const panelLogs = getLogEntries({ module: 'panel.window' })
+  assert.ok(panelLogs.length > 0, 'the retry path records a structured log')
   assert.equal(
-    logs.some((line) => line.includes('secret-user-content') || line.includes('file:///panel')),
+    panelLogs.some((entry) => JSON.stringify(entry).includes('secret-user-content')
+      || JSON.stringify(entry).includes('file:///panel')),
     false,
     'logs contain only error codes, never URLs or user content',
+  )
+  assert.equal(
+    panelLogs.every((entry) => entry.message.includes('-105')),
+    true,
+    'the numeric error code is retained',
   )
   replacement.destroy()
 })

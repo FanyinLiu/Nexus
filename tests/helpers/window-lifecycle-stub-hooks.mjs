@@ -175,6 +175,7 @@ export function sanitizeRuntimeLogMessage(message) { return String(message ?? ''
 
 const ERROR_REDACTION_STUB = `
 export function getRedactedErrorMessage(error) { return String(error?.message ?? error ?? '') }
+export function redactSensitiveErrorText(value) { return String(value ?? '') }
 `
 
 const MAIN_MESSAGES_STUB = `
