@@ -165,7 +165,7 @@ export function useCompanionNotices({
     }
 
     return playCompanionNoticeSpeech(options)
-  }, [appendChatMessage, ctx, playCompanionNoticeSpeech, presentPetDialogBubble])
+  }, [appendChatMessage, playCompanionNoticeSpeech, presentPetDialogBubble])
 
   const canDeliverDeferredCompanionNotice = useCallback(() => (
     !busyRef.current
