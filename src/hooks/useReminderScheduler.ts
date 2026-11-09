@@ -86,7 +86,7 @@ export function useReminderScheduler({
     canTriggerRef.current = canTrigger
   }, [canTrigger])
 
-  const runDueCheck = useCallback(() => {
+  const runDueCheck = useCallback((options: { mountCheck?: boolean } = {}) => {
     const now = new Date()
     const threshold = now.getTime() + 1_000
 
@@ -97,10 +97,19 @@ export function useReminderScheduler({
     const dueTasks = tasks.filter((task) => {
       const nextRunAt = Date.parse(task.nextRunAt ?? '')
       return task.enabled && Number.isFinite(nextRunAt) && nextRunAt <= threshold
+    }).filter((task) => {
+      if (petLastOnlineAt) {
+        return isReminderDueEligibleForHandoff(task, new Date(threshold), petLastOnlineAt)
+      }
+      // A mount check reads rows before the refresh effect has rewritten them.
+      // Apply the same 30 s rule against the mount instant so a day-old row is
+      // not replayed; later timer/wake checks keep the no-lower-bound recovery
+      // path for a pet renderer that was merely stalled.
+      if (options.mountCheck) {
+        return isReminderDueEligibleForHandoff(task, now)
+      }
+      return true
     }).filter((task) => (
-      !petLastOnlineAt
-      || isReminderDueEligibleForHandoff(task, new Date(threshold), petLastOnlineAt)
-    )).filter((task) => (
       // Panel takeover skips non-notice execution, so it must not consume the
       // occurrence either. Leave the row untouched for the pet window.
       !takeoverOnlyNotice || task.action.kind === 'notice'
@@ -275,6 +284,6 @@ export function useReminderScheduler({
     wasEnabledRef.current = true
     if (!tokenChanged && !justEnabled) return
     if (canTriggerRef.current && !canTriggerRef.current()) return
-    runDueCheckRef.current()
+    runDueCheckRef.current(justEnabled ? { mountCheck: true } : undefined)
   }, [enabled, wakeToken])
 }

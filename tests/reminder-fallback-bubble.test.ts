@@ -322,6 +322,7 @@ function createControllerSession(options: {
   return {
     clock,
     inboxUpdates,
+    readReminderTasks: () => JSON.parse(storage.get('nexus:reminder-tasks') ?? '[]') as ReminderTask[],
     get bubble() {
       return renderer.api?.bubble ?? null
     },
@@ -684,6 +685,78 @@ test('panel handoff refreshes reminders against the pet last online instant', ()
       refreshedNextRuns.includes(dueAt),
       'the due instant survives because it is within grace of petLastSeenAt',
     )
+  } finally {
+    session.unmount()
+  }
+})
+
+const TAKEOVER_NON_NOTICE_ACTIONS = [
+  { label: 'weather', action: { kind: 'weather', location: 'Beijing' } },
+  { label: 'web search', action: { kind: 'web_search', query: 'news', limit: 5 } },
+  { label: 'scheduled chat action', action: { kind: 'chat_action', instruction: 'say hello' } },
+] as const
+
+for (const { label, action } of TAKEOVER_NON_NOTICE_ACTIONS) {
+  test(`the panel controller leaves a due ${label} unmarked for the pet window`, async () => {
+    const dueAt = Date.now() - 1_000
+    const task: ReminderTask = {
+      ...makeTask(),
+      action: action as ReminderTask['action'],
+      schedule: { kind: 'at', at: new Date(dueAt).toISOString() },
+      nextRunAt: new Date(dueAt).toISOString(),
+    }
+    const delivered: DeliveryPayload[] = []
+    const session = createControllerSession({
+      runtimeSnapshot: {
+        mood: 'idle',
+        panelOnline: true,
+        petOnline: false,
+        petLastSeenAt: new Date(dueAt - 10_000).toISOString(),
+      },
+      reminderTasks: [task],
+      setReminderTasks: () => {},
+      deliver: async (payload) => {
+        delivered.push(payload)
+        return { rule: 1, outlets: ['inbox', 'badge'] }
+      },
+    })
+    try {
+      await new Promise((resolve) => setImmediate(resolve))
+      assert.deepEqual(delivered, [], 'the panel does not execute the action')
+      assert.deepEqual(session.readReminderTasks(), [], 'the panel does not mark the occurrence')
+      assert.equal(session.bubble, null)
+    } finally {
+      session.unmount()
+    }
+  })
+}
+
+test('the panel controller still delivers and marks a due notice', async () => {
+  const dueAt = Date.now() - 1_000
+  const task: ReminderTask = {
+    ...makeTask(),
+    schedule: { kind: 'at', at: new Date(dueAt).toISOString() },
+    nextRunAt: new Date(dueAt).toISOString(),
+  }
+  const delivered: DeliveryPayload[] = []
+  const session = createControllerSession({
+    runtimeSnapshot: {
+      mood: 'idle',
+      panelOnline: true,
+      petOnline: false,
+      petLastSeenAt: new Date(dueAt - 10_000).toISOString(),
+    },
+    reminderTasks: [task],
+    setReminderTasks: () => {},
+    deliver: async (payload) => {
+      delivered.push(payload)
+      return { rule: 1, outlets: ['inbox', 'badge'] }
+    },
+  })
+  try {
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(delivered.length, 1)
+    assert.equal(typeof session.readReminderTasks()[0]?.lastTriggeredAt, 'string')
   } finally {
     session.unmount()
   }
