@@ -12,6 +12,7 @@ const windowCreation = await import('../electron/windowCreation.js')
 type FakeWindow = {
   id: number
   visible: boolean
+  focused: boolean
   destroyed: boolean
   send: unknown
   show: () => void
@@ -96,9 +97,10 @@ test('showPanelWindow cancels the pending retirement before asking the window to
 
   assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
   const nonce = lastSentNonce()
-  // Drop the window event so only showPanelWindow's explicit cancel can clear
-  // the request; the production show/focus handlers are covered separately.
+  // Drop both window events so only showPanelWindow's explicit cancel can
+  // clear the request; the production show/focus handlers are covered above.
   panel.show = () => { panel.visible = true }
+  panel.focus = () => { panel.focused = true }
   windowManager.showPanelWindow('chat')
 
   assert.deepEqual(
