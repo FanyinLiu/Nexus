@@ -17,6 +17,8 @@ type VoiceSessionCloseReason =
   | 'interrupted'
   | 'error'
   | 'no_speech'
+  // The pet voice button ended the turn; notice replay waits for the fallback.
+  | 'user-button'
 
 export type VoiceSessionState = {
   sessionId: string | null
@@ -70,7 +72,7 @@ export type VoiceSessionEvent =
     }
   | {
       type: 'aborted'
-      reason?: Extract<VoiceSessionCloseReason, 'aborted' | 'interrupted'>
+      reason?: Extract<VoiceSessionCloseReason, 'aborted' | 'interrupted'> | 'user-button'
     }
   | {
       type: 'error'

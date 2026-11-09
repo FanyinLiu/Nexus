@@ -20,17 +20,19 @@ type Slot = { current: unknown }
 
 function fakeTimers() {
   let nextId = 1
-  const timers = new Map<number, { callback: () => void; delayMs: number }>()
+  let now = 0
+  const timers = new Map<number, { callback: () => void; at: number }>()
   return {
     setTimeoutFn: (callback: () => void, delayMs: number) => {
       const id = nextId++
-      timers.set(id, { callback, delayMs })
+      timers.set(id, { callback, at: now + delayMs })
       return id
     },
     clearTimeoutFn: (id: number) => { timers.delete(id) },
     advance: (ms: number) => {
+      now += ms
       for (const [id, timer] of [...timers]) {
-        if (timer.delayMs > ms) continue
+        if (timer.at > now) continue
         timers.delete(id)
         timer.callback()
       }
@@ -211,3 +213,36 @@ test('the idle fallback releases the queue when no voice event arrives', async (
   assert.equal(flushes, 1)
   session.unmount()
 })
+
+for (const phase of ['speaking', 'listening'] as const) {
+  test(`the pet voice button during ${phase} waits for the 15 s fallback`, async () => {
+    const bus = new VoiceBus()
+    const timers = fakeTimers()
+    let flushes = 0
+    const session = renderHook(() => useCompanionNoticeIdleFlush(
+      bus,
+      async () => { flushes += 1 },
+      timers,
+    ))
+
+    if (phase === 'speaking') {
+      bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
+    } else {
+      bus.emit({ type: 'session:started', sessionId: 'session-1', transport: 'api' })
+    }
+    bus.emit({ type: 'session:aborted', abortReason: 'user-button' })
+    await Promise.resolve()
+    await Promise.resolve()
+    assert.equal(flushes, 0, 'the button never releases the queue immediately')
+
+    timers.advance(14_999)
+    await Promise.resolve()
+    assert.equal(flushes, 0, 'still waiting before 15 s')
+
+    timers.advance(1)
+    await Promise.resolve()
+    await Promise.resolve()
+    assert.equal(flushes, 1, 'the fallback replays once after 15 s')
+    session.unmount()
+  })
+}
