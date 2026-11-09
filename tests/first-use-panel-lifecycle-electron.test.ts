@@ -9,7 +9,7 @@ register(new URL('./helpers/window-lifecycle-stub-hooks.mjs', import.meta.url))
 const windowManager = await import('../electron/windowManager.js')
 const windowCreation = await import('../electron/windowCreation.js')
 const { clearLogs, getLogEntries } = await import('../electron/logger.js')
-const { runWhenPanelContentReady } = await import('../electron/panelContentReady.js')
+const { isPanelContentReady, runWhenPanelContentReady } = await import('../electron/panelContentReady.js')
 
 type FakeWindow = {
   id: number
@@ -270,6 +270,7 @@ test('panel content readiness waits for the retried load, not the error-page fin
 
   panel.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///panel', true)
   panel.emitWebContents('did-finish-load')
+  assert.equal(isPanelContentReady(panel), false, 'a failed navigation is not content-ready')
   await new Promise<void>((resolve) => setImmediate(resolve))
   assert.equal(ready, 0, 'the error-page finish is not panel readiness')
 
