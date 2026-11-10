@@ -5,7 +5,7 @@ import type { MediaPermissionStatusSnapshot } from '../types/permissions.ts'
 
 type MediaPermissionStatusOptions = {
   microphoneEnabled: boolean
-  screenContextEnabled: boolean
+  screenContextActive: boolean
 }
 
 /**
@@ -18,21 +18,21 @@ type MediaPermissionStatusOptions = {
  */
 export function useMediaPermissionStatus({
   microphoneEnabled,
-  screenContextEnabled,
+  screenContextActive,
 }: MediaPermissionStatusOptions): MediaPermissionStatusSnapshot | null {
   const [status, setStatus] = useState<MediaPermissionStatusSnapshot | null>(null)
-  const enabled = microphoneEnabled || screenContextEnabled
+  const enabled = microphoneEnabled || screenContextActive
 
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return
 
     let cancelled = false
     const load = () => {
-      const readStatus = window.desktopPet?.externalActionPolicyGet
+      const readStatus = window.desktopPet?.getMediaPermissionStatus
       if (!readStatus) return
-      void readStatus()
+      void readStatus({ microphoneEnabled, screenContextActive })
         .then((next) => {
-          if (!cancelled && next?.mediaPermissionStatus) setStatus(next.mediaPermissionStatus)
+          if (!cancelled && next) setStatus(next)
         })
         .catch((error) => {
           console.warn('[permission] status read failed:', getRedactedLogErrorMessage(error))
@@ -45,7 +45,7 @@ export function useMediaPermissionStatus({
       cancelled = true
       window.removeEventListener('focus', load)
     }
-  }, [enabled, microphoneEnabled, screenContextEnabled])
+  }, [enabled, microphoneEnabled, screenContextActive])
 
   return status
 }

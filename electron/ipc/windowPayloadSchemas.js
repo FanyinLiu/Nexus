@@ -168,7 +168,6 @@ const desktopContextPolicySchema = {
     activeWindow: optionalBoolean,
     clipboard: optionalBoolean,
     screenshot: optionalBoolean,
-    screenContextEnabled: optionalBoolean,
   },
 }
 

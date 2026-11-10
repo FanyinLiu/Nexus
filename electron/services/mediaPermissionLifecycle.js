@@ -10,6 +10,10 @@
  * User-action transitions (off → on) are the only place an OS permission
  * request or a one-shot Settings guide may run. Denied startup remains silent;
  * turning the feature off and on again is a new user action.
+ *
+ * Every renderer sync carries the persisted settingsRevision. A stale revision
+ * is dropped; a same-revision different value is a later write for the same
+ * save and wins; a newer revision computes edges normally.
  */
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
@@ -35,7 +39,7 @@ import {
 
 /**
  * @typedef {(
- *   options?: { interactive?: boolean, deps?: unknown }
+ *   options?: { interactive?: boolean, deps?: unknown, logStatus?: boolean }
  * ) => Promise<string>} PermissionCheck
  */
 
@@ -46,6 +50,7 @@ import {
  *     microphone?: boolean,
  *     screen?: boolean,
  *     interactive?: boolean,
+ *     logStatus?: boolean,
  *     deps?: unknown,
  *   }
  * ) => Promise<Record<string, string>>} MacReadOnlyCheck
@@ -57,6 +62,7 @@ import {
  *     delayMs?: number,
  *     microphone?: boolean,
  *     interactive?: boolean,
+ *     logStatus?: boolean,
  *     deps?: unknown,
  *   }
  * ) => Promise<Record<string, string>>} WindowsReadOnlyCheck
@@ -68,6 +74,61 @@ const windowsReadOnlyCheck = /** @type {WindowsReadOnlyCheck} */ (runWindowsPerm
 /** @param {unknown} value @returns {MediaPermissionState} */
 function normalizeStatus(value) {
   return typeof value === 'string' && value ? value : 'unknown'
+}
+
+/** @param {unknown} value */
+function normalizeRevision(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0
+  return Math.max(0, Math.floor(value))
+}
+
+/**
+ * Per-feature revision tracker. The first observation is always a baseline.
+ * Later observations follow the latest-commit-wins rules from the settings
+ * revision spec.
+ */
+function createRevisionTracker() {
+  let seen = false
+  let revision = 0
+  let value = false
+
+  return {
+    /**
+     * @param {unknown} rawRevision
+     * @param {unknown} rawValue
+     * @returns {{
+     *   kind: 'baseline' | 'stale' | 'same' | 'edge' | 'updated',
+     *   value: boolean,
+     * }}
+     */
+    observe(rawRevision, rawValue) {
+      const nextRevision = normalizeRevision(rawRevision)
+      const nextValue = rawValue === true
+
+      if (!seen) {
+        seen = true
+        revision = nextRevision
+        value = nextValue
+        return { kind: 'baseline', value: nextValue }
+      }
+
+      if (nextRevision < revision) {
+        return { kind: 'stale', value }
+      }
+
+      if (nextRevision === revision && nextValue === value) {
+        return { kind: 'same', value }
+      }
+
+      const previous = value
+      revision = nextRevision
+      value = nextValue
+      return {
+        kind: previous === false && nextValue === true ? 'edge' : 'updated',
+        value: nextValue,
+      }
+    },
+  }
 }
 
 /**
@@ -94,10 +155,8 @@ export function createMediaPermissionLifecycle({
   windowsReadOnly = windowsReadOnlyCheck,
   onError,
 } = {}) {
-  /** @type {boolean | null} */
-  let lastMicrophoneActive = null
-  /** @type {boolean | null} */
-  let lastScreenContextEnabled = null
+  const microphoneTracker = createRevisionTracker()
+  const screenTracker = createRevisionTracker()
   /** @type {MediaPermissionState} */
   let microphoneStatus = 'unknown'
   /** @type {MediaPermissionState} */
@@ -108,13 +167,26 @@ export function createMediaPermissionLifecycle({
     console.warn(`[permission] ${kind} check failed:`, getRedactedErrorMessage(error))
   })
 
+  /** @param {MediaPermissionState} next @param {MediaPermissionState} current */
+  function statusChanged(next, current) {
+    return next !== current
+  }
+
   /** @param {Record<string, unknown>} summary */
   function applyStatusSummary(summary) {
     if (typeof summary?.microphone === 'string') {
-      microphoneStatus = normalizeStatus(summary.microphone)
+      const next = normalizeStatus(summary.microphone)
+      if (statusChanged(next, microphoneStatus)) {
+        microphoneStatus = next
+        console.info('[permission] microphone:', next)
+      }
     }
     if (typeof summary?.screen === 'string') {
-      screenRecordingStatus = normalizeStatus(summary.screen)
+      const next = normalizeStatus(summary.screen)
+      if (statusChanged(next, screenRecordingStatus)) {
+        screenRecordingStatus = next
+        console.info('[permission] screen recording:', next)
+      }
     }
   }
 
@@ -127,29 +199,36 @@ export function createMediaPermissionLifecycle({
     }
   }
 
+  /** @param {unknown} summary */
+  function rememberStatus(summary) {
+    applyStatusSummary(/** @type {Record<string, unknown>} */ (summary ?? {}))
+  }
+
   /**
    * Read the OS status without prompting or opening Settings. Only the
-   * features the caller says are on are inspected.
-   * @param {{ microphone?: boolean, screenContextEnabled?: boolean }} [enabled]
+   * features the caller says are active are inspected.
+   * @param {{ microphone?: boolean, screenContextActive?: boolean }} [enabled]
    * @returns {Promise<MediaPermissionStatusSnapshot>}
    */
-  async function inspectReadOnly({ microphone = false, screenContextEnabled = false } = {}) {
+  async function inspectReadOnly({ microphone = false, screenContextActive = false } = {}) {
     try {
       if (platform === 'darwin') {
-        if (microphone || screenContextEnabled) {
-          applyStatusSummary(await macReadOnly({
+        if (microphone || screenContextActive) {
+          rememberStatus(await macReadOnly({
             delayMs: 0,
             microphone,
-            screen: screenContextEnabled,
+            screen: screenContextActive,
             interactive: false,
+            logStatus: false,
             deps: macDeps,
           }))
         }
       } else if (platform === 'win32' && microphone) {
-        applyStatusSummary(await windowsReadOnly({
+        rememberStatus(await windowsReadOnly({
           delayMs: 0,
           microphone: true,
           interactive: false,
+          logStatus: false,
           deps: windowsDeps,
         }))
       }
@@ -170,7 +249,7 @@ export function createMediaPermissionLifecycle({
     if (!check) return microphoneStatus
     try {
       const deps = platform === 'darwin' ? macDeps : windowsDeps
-      microphoneStatus = normalizeStatus(await check({ interactive, deps }))
+      rememberStatus({ microphone: await check({ interactive, deps, logStatus: false }) })
     } catch (error) {
       reportError('microphone', error)
     }
@@ -181,9 +260,9 @@ export function createMediaPermissionLifecycle({
   async function checkScreenRecording(interactive) {
     if (platform !== 'darwin') return screenRecordingStatus
     try {
-      screenRecordingStatus = normalizeStatus(
-        await macScreenCheck({ interactive, deps: macDeps }),
-      )
+      rememberStatus({
+        screen: await macScreenCheck({ interactive, deps: macDeps, logStatus: false }),
+      })
     } catch (error) {
       reportError('screen-recording', error)
     }
@@ -195,38 +274,31 @@ export function createMediaPermissionLifecycle({
     inspectReadOnly,
 
     /**
-     * @param {{ microphoneActive?: boolean } | null | undefined} payload
+     * @param {{ settingsRevision?: number, microphoneActive?: boolean } | null | undefined} payload
      * @returns {boolean} true only for an off → on user transition
      */
     observeVoiceRuntime(payload) {
-      const next = payload?.microphoneActive === true
-      const previous = lastMicrophoneActive
-      lastMicrophoneActive = next
-      if (!next) return false
-      if (previous === null) {
-        // First sync after launch is a baseline: read state, never prompt.
-        void inspectReadOnly({ microphone: true })
+      const outcome = microphoneTracker.observe(payload?.settingsRevision, payload?.microphoneActive)
+      if (outcome.kind === 'baseline') {
+        if (outcome.value) void inspectReadOnly({ microphone: true })
         return false
       }
-      if (previous === true) return false
+      if (outcome.kind !== 'edge') return false
       void checkMicrophone(true)
       return true
     },
 
     /**
-     * @param {{ screenContextEnabled?: boolean } | null | undefined} flags
+     * @param {{ settingsRevision?: number, screenshot?: boolean } | null | undefined} flags
      * @returns {boolean} true only for an off → on user transition
      */
     observeDesktopContext(flags) {
-      const next = flags?.screenContextEnabled === true
-      const previous = lastScreenContextEnabled
-      lastScreenContextEnabled = next
-      if (!next) return false
-      if (previous === null) {
-        void inspectReadOnly({ screenContextEnabled: true })
+      const outcome = screenTracker.observe(flags?.settingsRevision, flags?.screenshot)
+      if (outcome.kind === 'baseline') {
+        if (outcome.value) void inspectReadOnly({ screenContextActive: true })
         return false
       }
-      if (previous === true) return false
+      if (outcome.kind !== 'edge') return false
       void checkScreenRecording(true)
       return true
     },
@@ -239,11 +311,11 @@ export const mediaPermissionLifecycle = createMediaPermissionLifecycle()
 /**
  * Boot-time inspection. There is no unconditional probe: the microphone is
  * skipped because its setting lives in renderer storage, and screen recording
- * is read (never prompted) only when the persisted screenContextEnabled flag
- * says the user already turned it on.
+ * is read (never prompted) only when the persisted combined screenshot flag
+ * says the user already turned context awareness and screen context on.
  *
  * @param {{
- *   getDesktopContextFlags?: () => { screenContextEnabled?: boolean } | null | undefined,
+ *   getDesktopContextFlags?: () => { screenshot?: boolean } | null | undefined,
  *   delayMs?: number,
  *   lifecycle?: ReturnType<typeof createMediaPermissionLifecycle>,
  * }} [options]
@@ -260,10 +332,10 @@ export async function runStartupPermissionChecks({
   const flags = typeof getDesktopContextFlags === 'function'
     ? getDesktopContextFlags()
     : null
-  if (flags?.screenContextEnabled !== true) return snapshot
+  if (flags?.screenshot !== true) return snapshot
 
   if (delayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, delayMs))
   }
-  return lifecycle.inspectReadOnly({ screenContextEnabled: true })
+  return lifecycle.inspectReadOnly({ screenContextActive: true })
 }

@@ -11,6 +11,7 @@ const {
 } = await import('../electron/services/mediaPermissionLifecycle.js')
 const { runWindowsPermissionChecks } = await import('../electron/services/windowsPermissions.js')
 const { buildVoiceRuntimeSyncPayload } = await import('../src/features/voice/voiceRuntimeSync.ts')
+const { buildExternalActionPolicySyncPayload } = await import('../src/features/integrations/externalActionPolicySync.ts')
 
 type MediaCall = { type: 'status' | 'ask' | 'dialog' | 'open', kind?: string }
 
@@ -66,7 +67,7 @@ test('startup with voice off and screen context off never probes or prompts', as
 
   const snapshot = await runStartupPermissionChecks({
     lifecycle,
-    getDesktopContextFlags: () => ({ screenContextEnabled: false }),
+    getDesktopContextFlags: () => ({ screenshot: false }),
     delayMs: 0,
   })
 
@@ -75,13 +76,13 @@ test('startup with voice off and screen context off never probes or prompts', as
   assert.equal(snapshot.screenRecording, 'unknown')
 })
 
-test('startup checks screen recording only when screenContextEnabled and never prompts', async () => {
+test('startup checks screen recording only when the combined screen result is on and never prompts', async () => {
   const media = createMediaDeps({ screen: 'denied' })
   const lifecycle = lifecycleFor('darwin', media)
 
   const snapshot = await runStartupPermissionChecks({
     lifecycle,
-    getDesktopContextFlags: () => ({ screenContextEnabled: true }),
+    getDesktopContextFlags: () => ({ screenshot: true }),
     delayMs: 0,
   })
 
@@ -91,12 +92,30 @@ test('startup checks screen recording only when screenContextEnabled and never p
   assert.equal(snapshot.screenRecording, 'denied')
 })
 
+test('master off with the screen sub-switch on is not a startup screen check', async () => {
+  const media = createMediaDeps({ screen: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+  const combined = buildExternalActionPolicySyncPayload({
+    contextAwarenessEnabled: false,
+    screenContextEnabled: true,
+    settingsRevision: 1,
+  } as never).desktopContext.screenshot
+
+  await runStartupPermissionChecks({
+    lifecycle,
+    getDesktopContextFlags: () => ({ screenshot: combined }),
+    delayMs: 0,
+  })
+
+  assert.deepEqual(media.calls, [])
+})
+
 test('the first voice sync is a global baseline: two startup windows on never prompt', async () => {
   const media = createMediaDeps({ microphone: 'not-determined' })
   const lifecycle = lifecycleFor('darwin', media)
 
-  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), false)
-  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 7, microphoneActive: true }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 7, microphoneActive: true }), false)
   await flush()
 
   assert.equal(count(media.calls, 'ask'), 0)
@@ -107,8 +126,8 @@ test('the first screen-context sync is baseline and a denied startup never re-na
   const media = createMediaDeps({ screen: 'denied' })
   const lifecycle = lifecycleFor('darwin', media)
 
-  assert.equal(lifecycle.observeDesktopContext({ screenContextEnabled: true }), false)
-  assert.equal(lifecycle.observeDesktopContext({ screenContextEnabled: true }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 3, screenshot: true }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 3, screenshot: true }), false)
   await flush()
 
   assert.equal(count(media.calls, 'dialog'), 0)
@@ -119,17 +138,17 @@ test('microphone off → on while denied guides once, stays quiet while on, and 
   const media = createMediaDeps({ microphone: 'denied' })
   const lifecycle = lifecycleFor('darwin', media)
 
-  lifecycle.observeVoiceRuntime({ microphoneActive: false })
-  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), true)
+  lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true }), true)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 1)
 
-  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true }), false)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 1)
 
-  lifecycle.observeVoiceRuntime({ microphoneActive: false })
-  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), true)
+  lifecycle.observeVoiceRuntime({ settingsRevision: 3, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 4, microphoneActive: true }), true)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 2)
 })
@@ -138,19 +157,206 @@ test('screen recording off → on while denied guides once, stays quiet while on
   const media = createMediaDeps({ screen: 'denied' })
   const lifecycle = lifecycleFor('darwin', media)
 
-  lifecycle.observeDesktopContext({ screenContextEnabled: false })
-  assert.equal(lifecycle.observeDesktopContext({ screenContextEnabled: true }), true)
+  lifecycle.observeDesktopContext({ settingsRevision: 1, screenshot: false })
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 2, screenshot: true }), true)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 1)
 
-  assert.equal(lifecycle.observeDesktopContext({ screenContextEnabled: true }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 2, screenshot: true }), false)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 1)
 
-  lifecycle.observeDesktopContext({ screenContextEnabled: false })
-  assert.equal(lifecycle.observeDesktopContext({ screenContextEnabled: true }), true)
+  lifecycle.observeDesktopContext({ settingsRevision: 3, screenshot: false })
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 4, screenshot: true }), true)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 2)
+})
+
+test('interleaved stale false from one window does not add another guide', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 3, microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: false }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('a destroyed window cannot suppress the next real off → on guide', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true })
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 3, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 4, microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('panel false then true while the pet stays silent is one real off → on guide', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true })
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 3, microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('only wake word on is still a microphone off → on guide', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+  const base = {
+    speechInputEnabled: false,
+    speechInputProviderId: 'local-sensevoice',
+    speechOutputEnabled: false,
+    speechOutputProviderId: 'edge-tts',
+    wakeWordEnabled: true,
+    continuousVoiceModeEnabled: false,
+    wakewordAlwaysOn: false,
+    settingsRevision: 2,
+  }
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime(buildVoiceRuntimeSyncPayload(base)), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('always-on wake word enabled at startup with mic denied never prompts or guides', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+  const payload = buildVoiceRuntimeSyncPayload({
+    speechInputEnabled: false,
+    speechInputProviderId: 'local-sensevoice',
+    speechOutputEnabled: false,
+    speechOutputProviderId: 'edge-tts',
+    wakeWordEnabled: true,
+    continuousVoiceModeEnabled: false,
+    wakewordAlwaysOn: true,
+    settingsRevision: 6,
+  })
+
+  assert.equal(lifecycle.observeVoiceRuntime(payload), false)
+  await flush()
+
+  assert.equal(count(media.calls, 'ask'), 0)
+  assert.equal(count(media.calls, 'dialog'), 0)
+})
+
+test('master off → on with the screen sub-switch already on guides once when denied', async () => {
+  const media = createMediaDeps({ screen: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+  const off = buildExternalActionPolicySyncPayload({
+    contextAwarenessEnabled: false,
+    screenContextEnabled: true,
+    settingsRevision: 1,
+  } as never).desktopContext.screenshot
+  const on = buildExternalActionPolicySyncPayload({
+    contextAwarenessEnabled: true,
+    screenContextEnabled: true,
+    settingsRevision: 2,
+  } as never).desktopContext.screenshot
+
+  lifecycle.observeDesktopContext({ settingsRevision: 1, screenshot: off })
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 2, screenshot: on }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('same revision later value wins, repeated values are not edges, older revisions are dropped', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false })
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+
+  // The value now ends at false, so a newer true is the next real edge.
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 2)
+
+  // An older revision cannot move the state back.
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 2)
+})
+
+test('panel false survives a pet re-commit carrying the old revision', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true })
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  lifecycle.observeVoiceRuntime({ settingsRevision: 3, microphoneActive: false })
+  // Pet re-commits its old true snapshot with revision 2.
+  lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true })
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  // A fresh true proves main still ended at false.
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 4, microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('legacy settings without a revision use the first sync as baseline', async () => {
+  const media = createMediaDeps({ microphone: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('media-permission:status only inspects enabled features and logs only state changes', async (t) => {
+  const media = createMediaDeps({ microphone: 'denied', screen: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+  const info = t.mock.method(console, 'info', () => undefined)
+
+  const off = await lifecycle.inspectReadOnly({ microphone: false, screenContextActive: false })
+  assert.deepEqual(media.calls, [])
+  assert.equal(off.microphone, 'unknown')
+  assert.equal(off.screenRecording, 'unknown')
+  assert.equal(info.mock.callCount(), 0)
+
+  await lifecycle.inspectReadOnly({ microphone: true, screenContextActive: false })
+  assert.deepEqual(media.calls, [{ type: 'status', kind: 'microphone' }])
+  assert.equal(info.mock.callCount(), 1)
+
+  await lifecycle.inspectReadOnly({ microphone: true, screenContextActive: false })
+  await lifecycle.inspectReadOnly({ microphone: true, screenContextActive: false })
+  assert.deepEqual(media.calls, [
+    { type: 'status', kind: 'microphone' },
+    { type: 'status', kind: 'microphone' },
+    { type: 'status', kind: 'microphone' },
+  ])
+  assert.equal(info.mock.callCount(), 1)
 })
 
 test('Windows checks the microphone and never the camera', async () => {
@@ -179,7 +385,7 @@ test('Windows startup performs no media probe when voice state is unavailable', 
 
   const snapshot = await runStartupPermissionChecks({
     lifecycle,
-    getDesktopContextFlags: () => ({ screenContextEnabled: true }),
+    getDesktopContextFlags: () => ({ screenshot: true }),
     delayMs: 0,
   })
 
@@ -188,7 +394,7 @@ test('Windows startup performs no media probe when voice state is unavailable', 
   assert.equal(snapshot.screenRecording, 'unknown')
 })
 
-test('the voice-runtime sync marks speech, wake word, and continuous listening as mic features', () => {
+test('the voice-runtime sync marks speech, wake word, continuous listening, and revision', () => {
   const base = {
     speechInputEnabled: false,
     speechInputProviderId: 'local-sensevoice',
@@ -197,6 +403,7 @@ test('the voice-runtime sync marks speech, wake word, and continuous listening a
     wakeWordEnabled: false,
     continuousVoiceModeEnabled: false,
     wakewordAlwaysOn: false,
+    settingsRevision: 9,
   }
 
   assert.equal(buildVoiceRuntimeSyncPayload(base).microphoneActive, false)
@@ -204,14 +411,23 @@ test('the voice-runtime sync marks speech, wake word, and continuous listening a
   assert.equal(buildVoiceRuntimeSyncPayload({ ...base, wakeWordEnabled: true }).microphoneActive, true)
   assert.equal(buildVoiceRuntimeSyncPayload({ ...base, continuousVoiceModeEnabled: true }).microphoneActive, true)
   assert.equal(buildVoiceRuntimeSyncPayload({ ...base, wakewordAlwaysOn: true }).microphoneActive, true)
+  assert.equal(buildVoiceRuntimeSyncPayload(base).settingsRevision, 9)
 })
 
-test('IPC permission modules share the module-level lifecycle singleton', () => {
-  for (const file of ['../electron/ipc/voiceRuntimeIpc.js', '../electron/ipc/externalActionPolicyIpc.js']) {
+test('IPC permission modules receive the shared lifecycle instead of creating one', () => {
+  for (const file of [
+    '../electron/ipc/voiceRuntimeIpc.js',
+    '../electron/ipc/externalActionPolicyIpc.js',
+    '../electron/ipc/mediaPermissionIpc.js',
+  ]) {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8')
-    assert.match(source, /import \{ mediaPermissionLifecycle \} from '\.\.\/services\/mediaPermissionLifecycle\.js'/)
+    assert.match(source, /register\(\{[\s\S]*mediaPermissionLifecycle/)
     assert.doesNotMatch(source, /createMediaPermissionLifecycle\s*\(/)
+    assert.doesNotMatch(source, /import \{ mediaPermissionLifecycle \}/)
   }
+  const registry = readFileSync(new URL('../electron/ipcRegistry.js', import.meta.url), 'utf8')
+  assert.match(registry, /externalActionPolicyIpc\.register\(\{ mediaPermissionLifecycle \}\)/)
+  assert.match(registry, /mediaPermissionIpc\.register\(\{ mediaPermissionLifecycle \}\)/)
 })
 
 test('main starts only the gated read-only permission check', () => {

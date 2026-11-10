@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 import { loadSettings, SETTINGS_STORAGE_KEY, SETTINGS_UPDATED_EVENT } from '../src/lib/storage.ts'
+import { CURRENT_SETTINGS_SCHEMA_VERSION } from '../src/lib/settingsMigrations.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -396,6 +397,42 @@ test('a rejected mutation does not poison the queued tail', async () => {
     assert.equal(store.getSettingsSnapshot().userName, 'tail survives')
     assert.deepEqual(seen, ['tail survives'])
     unsubscribe()
+  } finally {
+    environment.restore()
+  }
+})
+
+test('hydration and identity re-commit carry the stored revision without bumping it', async () => {
+  const environment = installWindow({
+    vaultRetrieveMany: async () => ({}),
+    externalActionPolicySync: async () => undefined,
+    voiceRuntimeSync: async () => undefined,
+  })
+  environment.win.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      settingsRevision: 12,
+      companionName: 'Nexus revision',
+    }),
+  )
+
+  try {
+    const store = await importFreshSettingsStore()
+    const initialized = await store.initializeSettingsWithVault()
+    assert.equal(initialized.settingsRevision, 12)
+
+    const persistedAfterHydration = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number }
+    assert.equal(persistedAfterHydration.settingsRevision, 12)
+
+    const recommitted = await store.updateSettingsSnapshot((current) => current)
+    assert.equal(recommitted.settingsRevision, 12)
+    const persistedAfterRecommit = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number }
+    assert.equal(persistedAfterRecommit.settingsRevision, 12)
   } finally {
     environment.restore()
   }

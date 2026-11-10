@@ -60,6 +60,7 @@ import {
 
 const defaultSettings: AppSettings = {
   settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+  settingsRevision: 0,
   companionInitiative: 'quiet',
   petModelId: DEFAULT_PET_MODEL_ID,
   uiLanguage: 'zh-CN',
@@ -383,6 +384,14 @@ function readStoredSchemaVersion(raw: Record<string, unknown>): number {
   return Math.max(0, Math.floor(version))
 }
 
+function readStoredSettingsRevision(raw: Record<string, unknown>): number {
+  const revision = raw.settingsRevision
+  if (typeof revision !== 'number' || !Number.isFinite(revision)) {
+    return 0
+  }
+  return Math.max(0, Math.floor(revision))
+}
+
 export function loadSettings(): AppSettings {
   const raw = readStoredSettingsRecord()
   const storedVersion = readStoredSchemaVersion(raw)
@@ -480,6 +489,7 @@ export function loadSettings(): AppSettings {
     settingsSchemaVersion: storedVersion > CURRENT_SETTINGS_SCHEMA_VERSION
       ? storedVersion
       : CURRENT_SETTINGS_SCHEMA_VERSION,
+    settingsRevision: readStoredSettingsRevision(raw),
     companionInitiative,
     proactiveLetterChoice,
     proactiveLetterEnabled,
@@ -707,15 +717,30 @@ export function loadSettings(): AppSettings {
   return syncTextProviderProfiles(syncSpeechProviderProfiles(loadedSettings))
 }
 
+/**
+ * Strip fields that are internal bookkeeping, not user settings. Export and
+ * diagnostic serializers must use this so the write revision never leaves the
+ * app in a bug report or backup.
+ * @param {AppSettings} settings
+ * @returns {Omit<AppSettings, 'settingsRevision'>}
+ */
+export function stripInternalSettingsFields(settings: AppSettings): Omit<AppSettings, 'settingsRevision'> {
+  const rest: Partial<AppSettings> = { ...settings }
+  delete rest.settingsRevision
+  return rest as Omit<AppSettings, 'settingsRevision'>
+}
+
 export function saveSettings(settings: AppSettings, options?: { silent?: boolean }) {
   const withProfileSync = syncActiveCharacterProfile(settings)
   const nextSettings = syncTextProviderProfiles(syncSpeechProviderProfiles(withProfileSync))
+  const persistedRevision = readStoredSettingsRevision(readStoredSettingsRecord()) + 1
 
   const persistedSettings = {
     ...nextSettings,
     settingsSchemaVersion: nextSettings.settingsSchemaVersion > CURRENT_SETTINGS_SCHEMA_VERSION
       ? nextSettings.settingsSchemaVersion
       : CURRENT_SETTINGS_SCHEMA_VERSION,
+    settingsRevision: persistedRevision,
     apiKey: normalizeTextProviderApiKey(nextSettings.apiKey),
     speechOutputApiBaseUrl: normalizeSpeechOutputApiBaseUrl(
       nextSettings.speechOutputProviderId,

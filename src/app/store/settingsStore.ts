@@ -4,6 +4,7 @@ import {
   loadSettings,
   onStorageChange,
   saveSettings,
+  stripInternalSettingsFields,
 } from '../../lib/storage.ts'
 import {
   carryHydratedSettingsSecrets,
@@ -115,7 +116,7 @@ const SETTINGS_PROFILE_FIELDS = [
 ] as const
 
 function settingsPersistenceComparable(settings: AppSettings): string {
-  const comparable = { ...settings } as Record<string, unknown>
+  const comparable = stripInternalSettingsFields(settings) as Record<string, unknown>
   for (const field of SETTINGS_SECRET_FIELDS) {
     comparable[field] = ''
   }

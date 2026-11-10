@@ -28,6 +28,7 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   getDesktopContext: { conditional: false, invoke: ['desktop-context:get'], events: [] },
   getDesktopTypingStatus: { conditional: false, invoke: ['desktop-presence:get-typing-status'], events: [] },
   getLaunchOnStartup: { conditional: false, invoke: ['app:get-launch-on-startup'], events: [] },
+  getMediaPermissionStatus: { conditional: false, invoke: ['media-permission:status'], events: [] },
   getNotificationChannels: { conditional: false, invoke: ['notification:get-channels'], events: [] },
   getNotificationWebhookInfo: { conditional: false, invoke: ['notification:webhook-info'], events: [] },
   getPanelSection: { conditional: false, invoke: ['window:get-panel-section'], events: [] },
@@ -315,6 +316,7 @@ export type DesktopPetInvokeChannel =
   | 'mcp:list-tools'
   | 'mcp:status'
   | 'mcp:sync-servers'
+  | 'media-permission:status'
   | 'media-session:control'
   | 'media-session:get'
   | 'memory:clear-user-data'
@@ -515,7 +517,7 @@ export interface DesktopPetBridgeMethodArguments {
   discordStatus: readonly []
   dragBy: readonly [delta: { x: number; y: number }]
   externalActionPolicyGet: readonly []
-  externalActionPolicySync: readonly [payload: { policies: Record<string, undefined | { mode: 'read-only' | 'confirm' | 'auto'; active?: boolean }>; desktopContext?: { activeWindow?: boolean; clipboard?: boolean; screenshot?: boolean }; toolOpenExternalRequiresConfirmation?: boolean; uiLanguage?: string }]
+  externalActionPolicySync: readonly [payload: { policies: Record<string, undefined | { mode: 'read-only' | 'confirm' | 'auto'; active?: boolean }>; desktopContext?: { activeWindow?: boolean; clipboard?: boolean; screenshot?: boolean }; settingsRevision?: number; toolOpenExternalRequiresConfirmation?: boolean; uiLanguage?: string }]
   factorioConnect: readonly [payload: { address: string; port?: number; username?: string; password?: string }]
   factorioDisconnect: readonly []
   factorioExecute: readonly [payload: { command: string }]
@@ -524,6 +526,7 @@ export interface DesktopPetBridgeMethodArguments {
   getDesktopContext: unknown
   getDesktopTypingStatus: readonly []
   getLaunchOnStartup: readonly []
+  getMediaPermissionStatus: readonly [payload: { microphoneEnabled: boolean; screenContextActive: boolean }]
   getNotificationChannels: readonly []
   getNotificationWebhookInfo: readonly []
   getPanelSection: readonly []
@@ -731,7 +734,7 @@ export interface DesktopPetBridgeMethodArguments {
   vaultStore: unknown
   vaultStoreMany: unknown
   voiceProfileProbe: unknown
-  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string; microphoneActive: boolean }]
+  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string; microphoneActive: boolean; settingsRevision?: number }]
   vtsBridgeConnect: readonly [payload: { port: number }]
   vtsBridgeDisconnect: readonly []
   vtsBridgeMigrateLegacyToken: unknown
@@ -767,6 +770,7 @@ export interface DesktopPetBridgeMethodResults {
   getDesktopContext: unknown
   getDesktopTypingStatus: { running: boolean; permission: 'granted' | 'denied' | 'unavailable' | 'not-applicable'; platform: 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku' | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd'; messageKey: string; recommendationKey: string }
   getLaunchOnStartup: boolean
+  getMediaPermissionStatus: unknown
   getNotificationChannels: Array<{ id: string; kind: 'rss' | 'webhook' | 'calendar'; name: string; enabled: boolean; config: Record<string, string>; lastCheckedAt?: string; checkIntervalMinutes: number }>
   getNotificationWebhookInfo: { url: string; requiresAuth: boolean; tokenFileName: string; maxBodyBytes: number }
   getPanelSection: { section: 'chat' | 'settings'; intent: null | 'text' | 'recent'; intentToken: number }

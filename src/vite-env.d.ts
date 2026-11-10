@@ -653,9 +653,7 @@ declare global {
       mcpSyncServers: (payload: { servers: Array<{ id: string; label?: string; command: string; args?: string; enabled: boolean }> }) => Promise<McpHostStatus[]>
 
       // External action permission policy
-      externalActionPolicyGet: () => Promise<Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'> & {
-        mediaPermissionStatus: MediaPermissionStatusSnapshot
-      }>
+      externalActionPolicyGet: () => Promise<Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>>
       externalActionPolicySync: (payload: {
         policies: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', {
           mode: 'read-only' | 'confirm' | 'auto'
@@ -665,8 +663,8 @@ declare global {
           activeWindow: boolean
           clipboard: boolean
           screenshot: boolean
-          screenContextEnabled: boolean
         }
+        settingsRevision: number
         toolOpenExternalRequiresConfirmation?: boolean
         uiLanguage?: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja' | 'ko'
       }) => Promise<{
@@ -674,6 +672,10 @@ declare global {
         changes: Array<{ integration: string; from: string; to: string; active: boolean }>
         rejected: Array<{ integration: string; from: string; to: string; active: boolean }>
       }>
+      getMediaPermissionStatus: (payload: {
+        microphoneEnabled: boolean
+        screenContextActive: boolean
+      }) => Promise<MediaPermissionStatusSnapshot>
       voiceRuntimeSync: DesktopPetGeneratedBridge['voiceRuntimeSync']
       localDataStatus: () => Promise<LocalDataStatus>
       localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>

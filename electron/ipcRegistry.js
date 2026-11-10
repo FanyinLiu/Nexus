@@ -30,6 +30,8 @@ import { createProactiveDeliveryContextProvider } from './services/proactiveDeli
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
+import * as mediaPermissionIpc from './ipc/mediaPermissionIpc.js'
+import { mediaPermissionLifecycle } from './services/mediaPermissionLifecycle.js'
 import * as localDataIpc from './ipc/localDataIpc.js'
 import * as desktopPresenceIpc from './ipc/desktopPresenceIpc.js'
 import { getTypingQuietState, subscribeTypingQuiet } from './services/desktopPresence.js'
@@ -169,8 +171,9 @@ export function registerIpc(options = {}) {
     showOsNotification: showProactiveNotification,
   })
   mcpIpc.register()
-  externalActionPolicyIpc.register()
-  voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor })
+  externalActionPolicyIpc.register({ mediaPermissionLifecycle })
+  voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor, mediaPermissionLifecycle })
+  mediaPermissionIpc.register({ mediaPermissionLifecycle })
   localDataIpc.register()
   desktopPresenceIpc.register()
 

@@ -64,6 +64,7 @@ import {
  * @typedef {Object} ExternalActionPolicySyncPayload
  * @property {Record<string, ExternalActionPolicyItemPayload | undefined>} policies
  * @property {{ activeWindow?: boolean, clipboard?: boolean, screenshot?: boolean }} [desktopContext]
+ * @property {number} [settingsRevision]
  * @property {boolean} [toolOpenExternalRequiresConfirmation]
  * @property {string} [uiLanguage]
  */
@@ -184,6 +185,13 @@ const externalActionPolicySyncSchema = {
       },
     },
     desktopContext: desktopContextFlagsSchema,
+    settingsRevision: {
+      type: 'number',
+      optional: true,
+      default: 0,
+      integer: true,
+      min: 0,
+    },
     toolOpenExternalRequiresConfirmation: { type: 'boolean', optional: true },
     uiLanguage: {
       type: 'enum',

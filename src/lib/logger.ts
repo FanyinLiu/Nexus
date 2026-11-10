@@ -111,6 +111,8 @@ export function sanitizeLogMeta(meta?: Record<string, unknown>): Record<string, 
   const sanitized: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(meta)) {
     if (value === undefined) continue
+    // Internal settings bookkeeping must never leave through a bug-report log.
+    if (key === 'settingsRevision') continue
     const allowsString = SAFE_STRING_META_KEYS.has(key)
     const allowsScalar = allowsString || SAFE_SCALAR_META_KEY.test(key)
     sanitized[key] = allowsScalar ? sanitizeSafeScalar(value) : summarizePrivateValue(value)

@@ -11,6 +11,10 @@ register(new URL('./helpers/tsx-test-loader.mjs', import.meta.url))
 
 const { VoiceSimplePage } = await import('../src/components/settingsSimple/VoiceSimplePage.tsx')
 const { MemorySimplePage } = await import('../src/components/settingsSimple/MemorySimplePage.tsx')
+const {
+  buildMediaPermissionStatusRequest,
+  isScreenContextActive,
+} = await import('../src/features/context/mediaPermissionStatus.ts')
 
 await ensureLocaleLoaded('zh-CN')
 setLocale('zh-CN')
@@ -67,9 +71,12 @@ function renderVoice(mediaPermissionStatus: MediaPermissionStatusSnapshot) {
   }))
 }
 
-function renderMemory(mediaPermissionStatus: MediaPermissionStatusSnapshot) {
+function renderMemory(
+  mediaPermissionStatus: MediaPermissionStatusSnapshot,
+  draft: AppSettings = memoryDraft,
+) {
   return renderToStaticMarkup(React.createElement(MemorySimplePage, {
-    draft: memoryDraft,
+    draft,
     setDraft: () => undefined,
     memories: [],
     dailyMemoryEntries: [],
@@ -100,4 +107,36 @@ test('the screen recording permission line appears under the screen context togg
 
   const granted = renderMemory(status('unknown', 'granted'))
   assert.doesNotMatch(granted, /屏幕录制没授权，去系统设置打开/)
+})
+
+test('the combined screen result requires both the master and the sub-switch', () => {
+  assert.equal(isScreenContextActive({
+    contextAwarenessEnabled: false,
+    screenContextEnabled: true,
+  }), false)
+  assert.equal(isScreenContextActive({
+    contextAwarenessEnabled: true,
+    screenContextEnabled: false,
+  }), false)
+  assert.equal(isScreenContextActive({
+    contextAwarenessEnabled: true,
+    screenContextEnabled: true,
+  }), true)
+
+  const request = buildMediaPermissionStatusRequest({
+    ...memoryDraft,
+    contextAwarenessEnabled: false,
+    screenContextEnabled: true,
+  })
+  assert.equal(request.screenContextActive, false)
+})
+
+test('the screen recording line stays hidden when the context-awareness master is off', () => {
+  const masterOff = {
+    ...memoryDraft,
+    contextAwarenessEnabled: false,
+    screenContextEnabled: true,
+  } as AppSettings
+  const html = renderMemory(status('unknown', 'denied'), masterOff)
+  assert.doesNotMatch(html, /屏幕录制没授权，去系统设置打开/)
 })

@@ -21,6 +21,7 @@ import type {
   ProactiveFrequencyPreset,
 } from '../../types/index.ts'
 import { isMediaPermissionDenied } from '../../types/permissions.ts'
+import { isScreenContextActive } from '../../features/context/mediaPermissionStatus.ts'
 import { SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
 import { MemoryTimelineV3 } from '../../features/settingsV3/MemoryTimelineV3.tsx'
 import { SundayLetterReader } from '../SundayLetterReader.tsx'
@@ -58,7 +59,7 @@ export function MemorySimplePage({
   mediaPermissionStatus,
 }: MemorySimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
-  const screenRecordingDenied = draft.screenContextEnabled
+  const screenRecordingDenied = isScreenContextActive(draft)
     && isMediaPermissionDenied(mediaPermissionStatus?.screenRecording)
   const [timelineOpen, setTimelineOpen] = useState(false)
   const [letterShelfOpen, setLetterShelfOpen] = useState(false)

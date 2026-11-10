@@ -17,6 +17,7 @@ export type VoiceRuntimeSyncPayload = {
   speechOutputEnabled: boolean
   speechOutputProviderId: string
   microphoneActive: boolean
+  settingsRevision: number
 }
 
 /**
@@ -25,7 +26,7 @@ export type VoiceRuntimeSyncPayload = {
  * @param {Pick<AppSettings,
  *   'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' |
  *   'speechOutputProviderId' | 'wakeWordEnabled' | 'continuousVoiceModeEnabled' |
- *   'wakewordAlwaysOn'
+ *   'wakewordAlwaysOn' | 'settingsRevision'
  * >} settings
  * @returns {VoiceRuntimeSyncPayload}
  */
@@ -39,6 +40,7 @@ export function buildVoiceRuntimeSyncPayload(
     | 'wakeWordEnabled'
     | 'continuousVoiceModeEnabled'
     | 'wakewordAlwaysOn'
+    | 'settingsRevision'
   >,
 ): VoiceRuntimeSyncPayload {
   return {
@@ -47,6 +49,9 @@ export function buildVoiceRuntimeSyncPayload(
     speechOutputEnabled: settings.speechOutputEnabled === true,
     speechOutputProviderId: String(settings.speechOutputProviderId ?? ''),
     microphoneActive: isMicrophoneFeatureEnabled(settings),
+    settingsRevision: Number.isFinite(settings.settingsRevision)
+      ? Math.max(0, Math.floor(settings.settingsRevision))
+      : 0,
   }
 }
 

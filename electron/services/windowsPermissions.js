@@ -17,10 +17,6 @@ const SETTINGS_URLS = {
   microphone: 'ms-settings:privacy-microphone',
 }
 
-function logStatus(kind, status) {
-  console.info(`[windows-perm] ${kind}: ${status}`)
-}
-
 async function promptOpenSettings({ title, message, detail, settingsUrl }, deps) {
   const dialogApi = deps?.dialog ?? dialog
   const shellApi = deps?.shell ?? shell
@@ -45,7 +41,6 @@ async function ensureWindowsMediaPermission(kind, { interactive = true, deps } =
   const prefs = deps?.systemPreferences ?? systemPreferences
   try {
     const status = prefs.getMediaAccessStatus(kind)
-    logStatus(kind, status)
 
     if (status === 'granted' || status === 'not-determined') {
       return status
@@ -84,6 +79,7 @@ export async function runWindowsPermissionChecks({
   delayMs = 600,
   microphone = false,
   interactive = false,
+  logStatus = true,
   deps,
 } = {}) {
   const platform = deps?.platform ?? process.platform
@@ -94,6 +90,6 @@ export async function runWindowsPermissionChecks({
   }
 
   const status = await ensureWindowsMicrophonePermission({ interactive, deps })
-  console.info('[windows-perm] summary', { microphone: status })
+  if (logStatus) console.info('[windows-perm] summary', { microphone: status })
   return { microphone: status }
 }

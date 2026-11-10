@@ -149,6 +149,26 @@ test('external action channel descriptors map send execute and configure actions
   })
 })
 
+test('combined screenshot flag requires both context awareness and screen context', () => {
+  const masterOff = settings({
+    contextAwarenessEnabled: false,
+    screenContextEnabled: true,
+  })
+  assert.equal(buildExternalActionPolicySyncPayload(masterOff).desktopContext.screenshot, false)
+
+  const bothOn = settings({
+    contextAwarenessEnabled: true,
+    screenContextEnabled: true,
+  })
+  assert.equal(buildExternalActionPolicySyncPayload(bothOn).desktopContext.screenshot, true)
+
+  const subOff = settings({
+    contextAwarenessEnabled: true,
+    screenContextEnabled: false,
+  })
+  assert.equal(buildExternalActionPolicySyncPayload(subOff).desktopContext.screenshot, false)
+})
+
 test('renderer policy sync payload omits tokens target IDs commands and args', () => {
   const payload = buildExternalActionPolicySyncPayload(settings())
   assert.deepEqual(payload, {
@@ -156,8 +176,8 @@ test('renderer policy sync payload omits tokens target IDs commands and args', (
       activeWindow: false,
       clipboard: false,
       screenshot: false,
-      screenContextEnabled: false,
     },
+    settingsRevision: 0,
     policies: {
       telegram: { mode: 'auto', active: true },
       discord: { mode: 'confirm', active: true },

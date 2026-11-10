@@ -22,10 +22,6 @@ const SETTINGS_URLS = {
   automation: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Automation',
 }
 
-function logStatus(kind, status) {
-  console.info(`[mac-perm] ${kind}: ${status}`)
-}
-
 async function promptOpenSettings({ title, message, detail, settingsUrl }, deps) {
   const dialogApi = deps?.dialog ?? dialog
   const shellApi = deps?.shell ?? shell
@@ -57,14 +53,12 @@ export async function ensureMacMicrophonePermission({ interactive = true, deps }
   const prefs = deps?.systemPreferences ?? systemPreferences
   try {
     const status = prefs.getMediaAccessStatus('microphone')
-    logStatus('microphone', status)
 
     if (status === 'granted') return 'granted'
 
     if (status === 'not-determined') {
       if (!interactive) return status
       const ok = await prefs.askForMediaAccess('microphone')
-      logStatus('microphone (after prompt)', ok ? 'granted' : 'denied')
       return ok ? 'granted' : 'denied'
     }
 
@@ -98,7 +92,6 @@ export async function ensureMacScreenPermission({ interactive = true, deps } = {
   const prefs = deps?.systemPreferences ?? systemPreferences
   try {
     const status = prefs.getMediaAccessStatus('screen')
-    logStatus('screen', status)
 
     if (status === 'granted' || status === 'not-determined') {
       return status
@@ -134,6 +127,7 @@ export async function runMacPermissionChecks({
   microphone = false,
   screen = false,
   interactive = false,
+  logStatus = true,
   deps,
 } = {}) {
   const platform = deps?.platform ?? process.platform
@@ -153,6 +147,6 @@ export async function runMacPermissionChecks({
     summary.screen = await ensureMacScreenPermission({ interactive, deps })
   }
 
-  console.info('[mac-perm] summary', summary)
+  if (logStatus) console.info('[mac-perm] summary', summary)
   return summary
 }
