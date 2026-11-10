@@ -67,7 +67,7 @@ concurrency:
 
 jobs:
   resolve-tag:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.resolve.outputs.tag }}
       tag_commit: ${{ steps.provenance.outputs.tag_commit }}
@@ -158,7 +158,7 @@ jobs:
 
   preflight:
     needs: resolve-tag
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -216,7 +216,7 @@ jobs:
 
   ensure-release:
     needs: [resolve-tag, preflight]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ needs.resolve-tag.outputs.tag }}
       tag_commit: ${{ needs.resolve-tag.outputs.tag_commit }}
@@ -368,7 +368,7 @@ jobs:
               release/*.zip.blockmap
               release/latest-mac.yml
               release/SHA256SUMS-macos.txt
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             platform: linux
             cmd: npx electron-builder --linux AppImage deb tar.gz --publish never --config.forceCodeSigning=false
             assets: |
@@ -642,7 +642,7 @@ jobs:
 
   publish:
     needs: [ensure-release, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:

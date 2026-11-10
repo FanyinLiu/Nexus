@@ -11,7 +11,7 @@ on:
 
 jobs:
   policy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -41,7 +41,7 @@ jobs:
       # so we surface all three OS failures at once.
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -86,7 +86,7 @@ jobs:
         name: First use and restart smoke (Linux)
         if: runner.os == 'Linux'
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: first-use-smoke-${{ runner.os }}
