@@ -488,7 +488,11 @@ export function loadSettings(): AppSettings {
     themeColorScheme: resolveThemeColorScheme(stored.themeId, stored.themeColorScheme),
     ambientWeatherEnabled: stored.ambientWeatherEnabled === true,
     gazeFollowEnabled: stored.gazeFollowEnabled !== false,
-    typingAwarenessEnabled: stored.typingAwarenessEnabled === true,
+    // Typing awareness drives a global keyboard hook, so the declared default
+    // (off) is the only thing a missing or corrupt store may fall back to.
+    typingAwarenessEnabled: typeof stored.typingAwarenessEnabled === 'boolean'
+      ? stored.typingAwarenessEnabled
+      : defaultSettings.typingAwarenessEnabled,
     typingAwarenessNoticeAccepted: stored.typingAwarenessNoticeAccepted === true,
     companionBackdropEnabled: stored.companionBackdropEnabled === true,
     petSceneLocation: normalizePetSceneLocation(stored.petSceneLocation),
