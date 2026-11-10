@@ -179,6 +179,8 @@ test('local persisted hydration failure resolves with the stored settings and re
     assert.doesNotMatch(serializedErrors, /sk-test-SECRET-123/)
     assert.doesNotMatch(serializedErrors, /must-not-log-whole-settings/)
     assert.doesNotMatch(serializedErrors, /settingsRevision/)
+    assert.doesNotMatch(serializedErrors, /local-secret/)
+    assert.doesNotMatch(serializedErrors, /\/Users\/|[A-Z]:\\/)
 
     unsubscribe()
   } finally {
@@ -536,17 +538,36 @@ test('hydration failure after save re-reads value and revision from storage', as
 
   try {
     const store = await importFreshSettingsStore()
+    const base = loadSettings()
+    const providerId = base.apiProviderId
+    const draftProfile = {
+      apiBaseUrl: 'https://draft.invalid/v1',
+      apiKey: 'sk-profile-SECRET-456',
+      model: 'draft-profile-model',
+    }
     const committed = await store.setSettingsSnapshot({
-      ...loadSettings(),
+      ...base,
       companionName: 'stored after hydration failure',
       apiKey: 'sk-test-SECRET-123',
       voiceTriggerMode: 'wake_word',
       wakeWordEnabled: false,
+      textProviderProfiles: {
+        ...base.textProviderProfiles,
+        [providerId]: draftProfile,
+      },
     })
     const persisted = JSON.parse(
       environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
-    ) as { settingsRevision?: number; companionName?: string; apiKey?: string; wakeWordEnabled?: boolean }
+    ) as {
+      settingsRevision?: number
+      companionName?: string
+      apiKey?: string
+      wakeWordEnabled?: boolean
+      textProviderProfiles?: Record<string, { apiBaseUrl?: string; apiKey?: string; model?: string }>
+    }
 
+    const committedProfile = committed.textProviderProfiles[providerId]
+    const storedProfile = persisted.textProviderProfiles?.[providerId]
     assert.equal(committed.apiKey, 'sk-test-SECRET-123')
     assert.equal(committed.companionName, 'stored after hydration failure')
     assert.equal(committed.companionName, persisted.companionName)
@@ -555,6 +576,12 @@ test('hydration failure after save re-reads value and revision from storage', as
     assert.equal(committed.wakeWordEnabled, true)
     assert.equal(persisted.wakeWordEnabled, true)
     assert.equal(persisted.apiKey, '')
+    assert.equal(committedProfile?.apiKey, 'sk-profile-SECRET-456')
+    assert.equal(committedProfile?.apiBaseUrl, base.apiBaseUrl)
+    assert.equal(committedProfile?.model, base.model)
+    assert.equal(storedProfile?.apiKey, '')
+    assert.equal(storedProfile?.apiBaseUrl, base.apiBaseUrl)
+    assert.equal(storedProfile?.model, base.model)
   } finally {
     environment.restore()
   }

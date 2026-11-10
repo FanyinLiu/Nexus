@@ -90,5 +90,6 @@ test('open-settings failure logs neither a URL nor a secret', async (t) => {
     await flush()
     const text = warns.mock.calls.map((call) => call.arguments.map(String).join(' ')).join('\n')
     assert.doesNotMatch(text, /evil\.example|sk-test-SECRET-123/, label)
+    assert.doesNotMatch(text, /x-apple\.systempreferences|ms-settings/, label)
   }
 })
