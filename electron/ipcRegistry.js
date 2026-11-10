@@ -31,6 +31,7 @@ import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
 import * as mediaPermissionIpc from './ipc/mediaPermissionIpc.js'
+import { registerPermissionConsumers } from './ipc/permissionWiring.js'
 import { mediaPermissionLifecycle } from './services/mediaPermissionLifecycle.js'
 import * as localDataIpc from './ipc/localDataIpc.js'
 import * as desktopPresenceIpc from './ipc/desktopPresenceIpc.js'
@@ -171,9 +172,13 @@ export function registerIpc(options = {}) {
     showOsNotification: showProactiveNotification,
   })
   mcpIpc.register()
-  externalActionPolicyIpc.register({ mediaPermissionLifecycle })
-  voiceRuntimeIpc.register({ voiceSidecarSupervisor: options.voiceSidecarSupervisor, mediaPermissionLifecycle })
-  mediaPermissionIpc.register({ mediaPermissionLifecycle })
+  registerPermissionConsumers({
+    mediaPermissionLifecycle,
+    voiceSidecarSupervisor: options.voiceSidecarSupervisor,
+    voiceRuntimeIpc,
+    externalActionPolicyIpc,
+    mediaPermissionIpc,
+  })
   localDataIpc.register()
   desktopPresenceIpc.register()
 

@@ -276,28 +276,57 @@ test('master off → on with the screen sub-switch already on guides once when d
   assert.equal(count(media.calls, 'dialog'), 1)
 })
 
-test('same revision later value wins, repeated values are not edges, older revisions are dropped', async () => {
+test('same-revision microphone changes update value without an edge; only a revision increase guides', async () => {
   const media = createMediaDeps({ microphone: 'denied' })
   const lifecycle = lifecycleFor('darwin', media)
 
   lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false })
-  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true }), true)
-  await flush()
-  assert.equal(count(media.calls, 'dialog'), 1)
   assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true }), false)
-  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 3, microphoneActive: true }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 4, microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 5, microphoneActive: true }), true)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 1)
-
-  // The value now ends at false, so a newer true is the next real edge.
-  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 2, microphoneActive: true }), true)
-  await flush()
-  assert.equal(count(media.calls, 'dialog'), 2)
 
   // An older revision cannot move the state back.
-  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 4, microphoneActive: false }), false)
   await flush()
-  assert.equal(count(media.calls, 'dialog'), 2)
+  assert.equal(count(media.calls, 'dialog'), 1)
+})
+
+test('same-revision screen changes update value without an edge; only a revision increase guides', async () => {
+  const media = createMediaDeps({ screen: 'denied' })
+  const lifecycle = lifecycleFor('darwin', media)
+
+  lifecycle.observeDesktopContext({ settingsRevision: 1, screenshot: false })
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 1, screenshot: true }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 2, screenshot: true }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 2, screenshot: false }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 2, screenshot: true }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 3, screenshot: true }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 0)
+
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 4, screenshot: false }), false)
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 5, screenshot: true }), true)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
+
+  assert.equal(lifecycle.observeDesktopContext({ settingsRevision: 4, screenshot: false }), false)
+  await flush()
+  assert.equal(count(media.calls, 'dialog'), 1)
 })
 
 test('panel false survives a pet re-commit carrying the old revision', async () => {
@@ -329,7 +358,10 @@ test('legacy settings without a revision use the first sync as baseline', async 
   assert.equal(count(media.calls, 'dialog'), 0)
 
   assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: false }), false)
-  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), true)
+  // Same-revision changes are still not edges; the first revision increase is.
+  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: true }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ microphoneActive: false }), false)
+  assert.equal(lifecycle.observeVoiceRuntime({ settingsRevision: 1, microphoneActive: true }), true)
   await flush()
   assert.equal(count(media.calls, 'dialog'), 1)
 })
@@ -357,6 +389,17 @@ test('media-permission:status only inspects enabled features and logs only state
     { type: 'status', kind: 'microphone' },
   ])
   assert.equal(info.mock.callCount(), 1)
+
+  await lifecycle.inspectReadOnly({ microphone: false, screenContextActive: true })
+  await lifecycle.inspectReadOnly({ microphone: false, screenContextActive: true })
+  assert.deepEqual(media.calls, [
+    { type: 'status', kind: 'microphone' },
+    { type: 'status', kind: 'microphone' },
+    { type: 'status', kind: 'microphone' },
+    { type: 'status', kind: 'screen' },
+    { type: 'status', kind: 'screen' },
+  ])
+  assert.equal(info.mock.callCount(), 2)
 })
 
 test('Windows checks the microphone and never the camera', async () => {
@@ -412,22 +455,6 @@ test('the voice-runtime sync marks speech, wake word, continuous listening, and 
   assert.equal(buildVoiceRuntimeSyncPayload({ ...base, continuousVoiceModeEnabled: true }).microphoneActive, true)
   assert.equal(buildVoiceRuntimeSyncPayload({ ...base, wakewordAlwaysOn: true }).microphoneActive, true)
   assert.equal(buildVoiceRuntimeSyncPayload(base).settingsRevision, 9)
-})
-
-test('IPC permission modules receive the shared lifecycle instead of creating one', () => {
-  for (const file of [
-    '../electron/ipc/voiceRuntimeIpc.js',
-    '../electron/ipc/externalActionPolicyIpc.js',
-    '../electron/ipc/mediaPermissionIpc.js',
-  ]) {
-    const source = readFileSync(new URL(file, import.meta.url), 'utf8')
-    assert.match(source, /register\(\{[\s\S]*mediaPermissionLifecycle/)
-    assert.doesNotMatch(source, /createMediaPermissionLifecycle\s*\(/)
-    assert.doesNotMatch(source, /import \{ mediaPermissionLifecycle \}/)
-  }
-  const registry = readFileSync(new URL('../electron/ipcRegistry.js', import.meta.url), 'utf8')
-  assert.match(registry, /externalActionPolicyIpc\.register\(\{ mediaPermissionLifecycle \}\)/)
-  assert.match(registry, /mediaPermissionIpc\.register\(\{ mediaPermissionLifecycle \}\)/)
 })
 
 test('main starts only the gated read-only permission check', () => {

@@ -169,6 +169,11 @@ test('combined screenshot flag requires both context awareness and screen contex
   assert.equal(buildExternalActionPolicySyncPayload(subOff).desktopContext.screenshot, false)
 })
 
+test('policy sync payload carries the store revision unchanged', () => {
+  const payload = buildExternalActionPolicySyncPayload(settings({ settingsRevision: 7 }))
+  assert.equal(payload.settingsRevision, 7)
+})
+
 test('renderer policy sync payload omits tokens target IDs commands and args', () => {
   const payload = buildExternalActionPolicySyncPayload(settings())
   assert.deepEqual(payload, {

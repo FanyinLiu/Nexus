@@ -17,6 +17,10 @@ import {
 } from '../../lib/platformProfile.ts'
 import { keepTalkingPatch, voiceTriggerPatch } from '../../features/settingsSimplify/index.ts'
 import { isMicrophoneFeatureEnabled } from '../../features/voice/microphoneFeature.ts'
+import {
+  detectVoicePermissionPlatform,
+  pickMicrophonePermissionKey,
+} from '../../features/voice/runtimeSupport.ts'
 import { pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
 import type { AppSettings, MediaPermissionStatusSnapshot, PlatformProfile, SpeechVoiceOption } from '../../types/index.ts'
 import { isMediaPermissionDenied } from '../../types/permissions.ts'
@@ -31,6 +35,7 @@ type VoiceSimplePageProps = {
   speechVoiceOptions: SpeechVoiceOption[]
   onLoadSpeechVoices: () => void
   mediaPermissionStatus?: MediaPermissionStatusSnapshot | null
+  permissionPlatform?: string
 }
 
 export function VoiceSimplePage({
@@ -40,11 +45,16 @@ export function VoiceSimplePage({
   speechVoiceOptions,
   onLoadSpeechVoices,
   mediaPermissionStatus,
+  permissionPlatform,
 }: VoiceSimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
   const inputAvailable = isVoiceSpeechInputAvailable(platformProfile)
   const outputAvailable = isVoiceSpeechOutputAvailable(platformProfile)
   const microphoneEnabled = isMicrophoneFeatureEnabled(draft)
+  const permissionDeniedKey = pickMicrophonePermissionKey(
+    'settings.voice.permission_denied',
+    permissionPlatform ?? detectVoicePermissionPlatform(),
+  )
   const microphoneDenied = microphoneEnabled
     && isMediaPermissionDenied(mediaPermissionStatus?.microphone)
   const configured = useMemo(() => configuredVoiceLanguages({
@@ -99,7 +109,7 @@ export function VoiceSimplePage({
       </section>
 
       <section className="settings-v3-section__body">
-        <SimpleRow icon="voice" title={ti('settings.simple.voice_listen')} hint={ti('settings.simple.voice_listen_hint')} status={microphoneDenied ? ti('settings.voice.permission_denied') : undefined}>
+        <SimpleRow icon="voice" title={ti('settings.simple.voice_listen')} hint={ti('settings.simple.voice_listen_hint')} status={microphoneDenied ? ti(permissionDeniedKey) : undefined}>
           <SettingsV3Switch
             checked={draft.speechInputEnabled}
             disabled={!inputAvailable}

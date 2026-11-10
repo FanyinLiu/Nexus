@@ -120,6 +120,13 @@ function createRevisionTracker() {
         return { kind: 'same', value }
       }
 
+      if (nextRevision === revision) {
+        // A later value for the same save updates the current value only.
+        // It cannot create an off → on edge; only a revision increase can.
+        value = nextValue
+        return { kind: 'updated', value }
+      }
+
       const previous = value
       revision = nextRevision
       value = nextValue

@@ -19,6 +19,8 @@ export const zhCNSettingsVoice = {
   'settings.voice.checking': '正在试...',
   'settings.voice.enable_input': '启用语音输入',
   'settings.voice.permission_denied': '麦克风没授权，去系统设置打开',
+  'settings.voice.permission_denied_mac': '麦克风没授权，去系统设置打开',
+  'settings.voice.permission_denied_windows': '麦克风没授权，去 Windows 设置打开',
   'settings.voice.enable_output': '启用语音播报',
   'settings.voice.enable_continuous': '启用连续语音',
   'settings.voice.enable_vad': '启用 Silero VAD 断句',

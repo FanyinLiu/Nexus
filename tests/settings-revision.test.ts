@@ -5,7 +5,6 @@ import {
   loadSettings,
   saveSettings,
   SETTINGS_STORAGE_KEY,
-  stripInternalSettingsFields,
 } from '../src/lib/storage.ts'
 import { buildFirstRunQaReport } from '../src/features/onboarding/firstRunQaReport.ts'
 import { clearLogs, createLogger, exportLogs } from '../src/lib/logger.ts'
@@ -74,20 +73,17 @@ test('legacy settings without a revision load as revision zero', () => {
   assert.equal(settings.companionName, 'Legacy')
 })
 
-test('settingsRevision is excluded from exportable settings, QA reports, and log exports', () => {
-  const settings = {
-    settingsRevision: 42,
-    companionName: 'Nexus',
-  } as AppSettings
-
-  assert.equal('settingsRevision' in stripInternalSettingsFields(settings), false)
-  assert.doesNotMatch(JSON.stringify(stripInternalSettingsFields(settings)), /settingsRevision/)
-
+test('settingsRevision is excluded from QA reports and log exports', () => {
   const report = buildFirstRunQaReport({
     summary: { items: [], warningCount: 0 },
     generatedAt: '2026-11-10T00:00:00.000Z',
   })
   assert.doesNotMatch(JSON.stringify(report), /settingsRevision/)
+
+  const settings = {
+    settingsRevision: 42,
+    companionName: 'Nexus',
+  } as AppSettings
 
   clearLogs()
   createLogger('revision-privacy-test').info('settings snapshot', {

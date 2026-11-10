@@ -4,6 +4,7 @@ import { test } from 'node:test'
 
 import { loadSettings, SETTINGS_STORAGE_KEY, SETTINGS_UPDATED_EVENT } from '../src/lib/storage.ts'
 import { CURRENT_SETTINGS_SCHEMA_VERSION } from '../src/lib/settingsMigrations.ts'
+import type { AppSettings } from '../src/types/app.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -129,7 +130,7 @@ test('identity no-op completes without persistence, hydration, policy, or notifi
   }
 })
 
-test('local persisted hydration failure resolves with the authoritative next settings', async () => {
+test('local persisted hydration failure resolves with the stored settings and revision', async () => {
   const errors: unknown[][] = []
   const originalError = console.error
   console.error = (...args: unknown[]) => { errors.push(args) }
@@ -157,13 +158,22 @@ test('local persisted hydration failure resolves with the authoritative next set
     }
 
     const result = await store.setSettingsSnapshot(nextSettings)
+    const stored = JSON.parse(environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as {
+      apiKey?: string
+      companionName?: string
+      settingsRevision?: number
+    }
 
-    assert.equal(result.apiKey, 'authoritative-secret')
-    assert.equal(store.getSettingsSnapshot().apiKey, 'authoritative-secret')
-    assert.deepEqual(seen, ['authoritative-secret'])
+    assert.equal(result.apiKey, '')
+    assert.equal(result.companionName, 'authoritative next')
+    assert.equal(result.settingsRevision, stored.settingsRevision)
+    assert.equal(store.getSettingsSnapshot().apiKey, '')
+    assert.equal(store.getSettingsSnapshot().companionName, 'authoritative next')
+    assert.deepEqual(seen, [''])
     assert.equal(policySyncCalls, 1)
     assert.equal(vaultReads, 2)
-    assert.equal(JSON.parse(environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}').apiKey, '')
+    assert.equal(stored.apiKey, '')
+    assert.equal(stored.companionName, 'authoritative next')
     assert.equal(errors.length, 1)
     const serializedErrors = JSON.stringify(errors)
     assert.doesNotMatch(serializedErrors, /local-secret/)
@@ -433,6 +443,110 @@ test('hydration and identity re-commit carry the stored revision without bumping
       environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
     ) as { settingsRevision?: number }
     assert.equal(persistedAfterRecommit.settingsRevision, 12)
+  } finally {
+    environment.restore()
+  }
+})
+
+test('broadcast re-commit takes both value and revision from storage', async () => {
+  const environment = installWindow({
+    vaultStore: async () => undefined,
+    vaultRetrieveMany: async () => ({}),
+    externalActionPolicySync: async () => undefined,
+    voiceRuntimeSync: async () => undefined,
+  })
+  environment.win.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      settingsRevision: 1,
+      companionName: 'cached old',
+    }),
+  )
+
+  try {
+    const store = await importFreshSettingsStore()
+    const seen: AppSettings[] = []
+    const unsubscribe = store.subscribeToSettings((settings) => { seen.push(settings) })
+    assert.equal(store.getSettingsSnapshot().companionName, 'cached old')
+    assert.equal(store.getSettingsSnapshot().settingsRevision, 1)
+
+    environment.win.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+        settingsRevision: 5,
+        companionName: 'stored new',
+      }),
+    )
+    environment.win.dispatchEvent(new Event(SETTINGS_UPDATED_EVENT))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const latest = store.getSettingsSnapshot()
+    const persisted = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number; companionName?: string }
+    assert.equal(latest.companionName, 'stored new')
+    assert.equal(latest.settingsRevision, 5)
+    assert.equal(persisted.companionName, 'stored new')
+    assert.equal(persisted.settingsRevision, 5)
+    assert.deepEqual(seen.at(-1), latest)
+    unsubscribe()
+  } finally {
+    environment.restore()
+  }
+})
+
+test('settings persistence comparison ignores the write revision', async () => {
+  const store = await importFreshSettingsStore()
+  const first = {
+    settingsRevision: 1,
+    companionName: 'same content',
+    textProviderProfiles: {},
+    speechInputProviderProfiles: {},
+    speechOutputProviderProfiles: {},
+  } as unknown as AppSettings
+  const second = {
+    settingsRevision: 2,
+    companionName: 'same content',
+    textProviderProfiles: {},
+    speechInputProviderProfiles: {},
+    speechOutputProviderProfiles: {},
+  } as unknown as AppSettings
+  assert.equal(
+    store.settingsPersistenceComparable(first),
+    store.settingsPersistenceComparable(second),
+  )
+})
+
+test('hydration failure after save re-reads value and revision from storage', async () => {
+  let vaultReads = 0
+  const environment = installWindow({
+    vaultStore: async () => undefined,
+    vaultStoreMany: async () => undefined,
+    vaultRetrieveMany: async () => {
+      vaultReads += 1
+      if (vaultReads >= 2) throw new Error('post-save vault read failed')
+      return {}
+    },
+    externalActionPolicySync: async () => undefined,
+    voiceRuntimeSync: async () => undefined,
+  })
+
+  try {
+    const store = await importFreshSettingsStore()
+    const committed = await store.setSettingsSnapshot({
+      ...loadSettings(),
+      companionName: 'stored after hydration failure',
+    })
+    const persisted = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number; companionName?: string }
+
+    assert.equal(committed.companionName, 'stored after hydration failure')
+    assert.equal(committed.companionName, persisted.companionName)
+    assert.equal(committed.settingsRevision, persisted.settingsRevision)
+    assert.equal(committed.settingsRevision, 1)
   } finally {
     environment.restore()
   }

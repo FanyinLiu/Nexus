@@ -25,7 +25,7 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }, deps)
     title,
     message,
     detail,
-    buttons: [mainT('permission.openSettings'), mainT('permission.later')],
+    buttons: [mainT('permission.windows.openSettings'), mainT('permission.later')],
     defaultId: 0,
     cancelId: 1,
     noLink: true,

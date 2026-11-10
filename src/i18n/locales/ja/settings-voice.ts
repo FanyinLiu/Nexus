@@ -21,6 +21,8 @@ export const jaSettingsVoice = {
   'settings.voice.checking': '試している...',
   'settings.voice.enable_input': '音声入力を有効化',
   'settings.voice.permission_denied': 'マイクが許可されていません。システム設定で許可してください。',
+  'settings.voice.permission_denied_mac': 'マイクが許可されていません。システム設定で許可してください。',
+  'settings.voice.permission_denied_windows': 'マイクが許可されていません。Windows の設定で許可してください。',
   'settings.voice.enable_output': '音声出力を有効化',
   'settings.voice.enable_continuous': '連続音声を有効化',
   'settings.voice.enable_vad': 'Silero VAD を有効化',
