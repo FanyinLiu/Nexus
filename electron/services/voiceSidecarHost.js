@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 
 import { app } from 'electron'
 
+import { createLogger } from '../logger.js'
 import { ensurePythonRuntimeStatusFor, getDetectedPythonBinary } from './pythonRuntime.js'
 import { probeSidecarHealth } from './localServiceSecurity.js'
 import {
@@ -34,6 +35,8 @@ import {
 import { openSidecarLog } from './sidecarLog.js'
 import { setQwen3TtsRuntime } from './qwen3TtsRuntime.js'
 
+const pathLogger = createLogger('voice.sidecar.paths')
+
 function resolveAppRoot() {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 }
@@ -48,6 +51,7 @@ function resolveVoiceScriptPath(relativePath) {
     appRoot: resolveAppRoot(),
     relativePath,
     existsSync: fs.existsSync,
+    warn: (message) => pathLogger.warn(message),
   })
 }
 
