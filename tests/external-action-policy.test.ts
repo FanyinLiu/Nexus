@@ -156,6 +156,7 @@ test('renderer policy sync payload omits tokens target IDs commands and args', (
       activeWindow: false,
       clipboard: false,
       screenshot: false,
+      screenContextEnabled: false,
     },
     policies: {
       telegram: { mode: 'auto', active: true },

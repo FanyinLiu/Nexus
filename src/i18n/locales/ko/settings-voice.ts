@@ -20,6 +20,7 @@ export const koSettingsVoice = {
   'settings.voice.audio_smoke_test': '음성 들어보기',
   'settings.voice.checking': '듣는 중...',
   'settings.voice.enable_input': '음성 입력 활성화',
+  'settings.voice.permission_denied': '마이크 권한이 없어요. 시스템 설정에서 허용해 주세요.',
   'settings.voice.enable_output': '음성 출력 활성화',
   'settings.voice.enable_continuous': '연속 음성 활성화',
   'settings.voice.enable_vad': 'Silero VAD 활성화',

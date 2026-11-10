@@ -731,7 +731,7 @@ export interface DesktopPetBridgeMethodArguments {
   vaultStore: unknown
   vaultStoreMany: unknown
   voiceProfileProbe: unknown
-  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string }]
+  voiceRuntimeSync: readonly [payload: { speechInputEnabled: boolean; speechInputProviderId: string; speechOutputEnabled: boolean; speechOutputProviderId: string; microphoneActive: boolean }]
   vtsBridgeConnect: readonly [payload: { port: number }]
   vtsBridgeDisconnect: readonly []
   vtsBridgeMigrateLegacyToken: unknown

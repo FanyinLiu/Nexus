@@ -26,6 +26,7 @@ const DEFAULT_FLAGS = Object.freeze({
   activeWindow: false,
   clipboard: false,
   screenshot: false,
+  screenContextEnabled: false,
 })
 
 /** @param {unknown} value */
@@ -35,8 +36,10 @@ function flagEnabled(value) {
 
 /**
  * Missing or malformed input fails closed. Only an explicit true is on.
+ * `screenContextEnabled` is the raw settings switch; `screenshot` stays the
+ * capture permission (both context awareness and screen context on).
  * @param {unknown} flags
- * @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean }}
+ * @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean, screenContextEnabled: boolean }}
  */
 export function normalizeSavedDesktopContextFlags(flags) {
   const value = flags && typeof flags === 'object' ? flags : {}
@@ -44,6 +47,7 @@ export function normalizeSavedDesktopContextFlags(flags) {
     activeWindow: flagEnabled(value.activeWindow),
     clipboard: flagEnabled(value.clipboard),
     screenshot: flagEnabled(value.screenshot),
+    screenContextEnabled: flagEnabled(value.screenContextEnabled),
   }
 }
 
@@ -99,7 +103,7 @@ export function configureDesktopContextFlagStore(options = {}) {
   store = null
 }
 
-/** @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean }} */
+/** @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean, screenContextEnabled: boolean }} */
 export function getSavedDesktopContextFlags() {
   try {
     return normalizeSavedDesktopContextFlags(getStore().load())
@@ -112,7 +116,7 @@ export function getSavedDesktopContextFlags() {
 /**
  * Replace the saved flags. Called from the panel settings sync only.
  * @param {unknown} flags
- * @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean }}
+ * @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean, screenContextEnabled: boolean }}
  */
 export function saveDesktopContextFlags(flags) {
   const next = normalizeSavedDesktopContextFlags(flags)
@@ -120,6 +124,7 @@ export function saveDesktopContextFlags(flags) {
   cache.activeWindow = next.activeWindow
   cache.clipboard = next.clipboard
   cache.screenshot = next.screenshot
+  cache.screenContextEnabled = next.screenContextEnabled
   getStore().persistDebounced()
   return normalizeSavedDesktopContextFlags(cache)
 }

@@ -20,6 +20,7 @@ export const enSettingsVoice = {
   'settings.voice.audio_smoke_test': 'Try voice',
   'settings.voice.checking': 'Trying...',
   'settings.voice.enable_input': 'Enable speech input',
+  'settings.voice.permission_denied': 'Microphone access is off. Open System Settings to allow it.',
   'settings.voice.enable_output': 'Enable speech output',
   'settings.voice.enable_continuous': 'Enable continuous voice',
   'settings.voice.enable_vad': 'Enable Silero VAD',

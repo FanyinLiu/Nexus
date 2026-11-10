@@ -165,6 +165,7 @@ export const zhCNSettingsMemory = {
   'settings.memory.context.clipboard': '读取剪贴板上下文',
   'settings.memory.context.active_window': '读取当前窗口上下文',
   'settings.memory.context.screen_ocr': '读取屏幕文字（OCR）',
+  'settings.memory.context.screen_permission_denied': '屏幕录制没授权，去系统设置打开',
   'settings.memory.context.ocr_language': '屏幕 OCR 语言',
   'settings.memory.context.vlm_enable': '启用 VLM 屏幕理解',
   'settings.memory.context.vlm_note': '使用视觉语言模型（VLM）分析屏幕截图，获得比 OCR 更丰富的画面理解。需要支持视觉的模型（如 GPT-4o、Qwen-VL 等）。',

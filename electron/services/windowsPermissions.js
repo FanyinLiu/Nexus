@@ -1,4 +1,13 @@
 // @ts-nocheck
+/**
+ * Windows media-permission inspection and guidance.
+ *
+ * Only the microphone is checked: no current feature uses the camera (it is
+ * planned for a later release), so a camera probe would be noise. Startup
+ * stays silent because voice settings live in renderer storage; the
+ * interactive path runs when the user turns voice input on.
+ */
+
 import { dialog, shell, systemPreferences } from 'electron'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
@@ -6,15 +15,16 @@ import { mainT } from '../mainMessages.js'
 
 const SETTINGS_URLS = {
   microphone: 'ms-settings:privacy-microphone',
-  camera: 'ms-settings:privacy-webcam',
 }
 
 function logStatus(kind, status) {
   console.info(`[windows-perm] ${kind}: ${status}`)
 }
 
-async function promptOpenSettings({ title, message, detail, settingsUrl }) {
-  const { response } = await dialog.showMessageBox({
+async function promptOpenSettings({ title, message, detail, settingsUrl }, deps) {
+  const dialogApi = deps?.dialog ?? dialog
+  const shellApi = deps?.shell ?? shell
+  const { response } = await dialogApi.showMessageBox({
     type: 'warning',
     title,
     message,
@@ -25,15 +35,16 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }) {
     noLink: true,
   })
   if (response === 0) {
-    shell.openExternal(settingsUrl).catch((err) => {
+    shellApi.openExternal(settingsUrl).catch((err) => {
       console.warn('[windows-perm] failed to open settings:', getRedactedErrorMessage(err))
     })
   }
 }
 
-async function ensureWindowsMediaPermission(kind) {
+async function ensureWindowsMediaPermission(kind, { interactive = true, deps } = {}) {
+  const prefs = deps?.systemPreferences ?? systemPreferences
   try {
-    const status = systemPreferences.getMediaAccessStatus(kind)
+    const status = prefs.getMediaAccessStatus(kind)
     logStatus(kind, status)
 
     if (status === 'granted' || status === 'not-determined') {
@@ -41,20 +52,13 @@ async function ensureWindowsMediaPermission(kind) {
     }
 
     if (status === 'denied' || status === 'restricted') {
-      if (kind === 'microphone') {
+      if (interactive && kind === 'microphone') {
         await promptOpenSettings({
           title: mainT('permission.microphoneTitle'),
           message: mainT('permission.windows.microphoneMessage'),
           detail: mainT('permission.windows.microphoneDetail'),
           settingsUrl: SETTINGS_URLS.microphone,
-        })
-      } else if (kind === 'camera') {
-        await promptOpenSettings({
-          title: mainT('permission.cameraTitle'),
-          message: mainT('permission.windows.cameraMessage'),
-          detail: mainT('permission.windows.cameraDetail'),
-          settingsUrl: SETTINGS_URLS.camera,
-        })
+        }, deps)
       }
       return status
     }
@@ -66,12 +70,30 @@ async function ensureWindowsMediaPermission(kind) {
   }
 }
 
-export async function runWindowsPermissionChecks({ delayMs = 600 } = {}) {
-  if (process.platform !== 'win32') return
+/** Inspect the microphone; interactive=true shows the one-shot guidance. */
+export function ensureWindowsMicrophonePermission({ interactive = true, deps } = {}) {
+  return ensureWindowsMediaPermission('microphone', { interactive, deps })
+}
 
-  await new Promise((resolve) => setTimeout(resolve, delayMs))
+/**
+ * Inspect only the microphone when the caller explicitly asks for it.
+ * Startup passes microphone=false because there is no durable main-process
+ * copy of the voice setting, and the camera is never checked.
+ */
+export async function runWindowsPermissionChecks({
+  delayMs = 600,
+  microphone = false,
+  interactive = false,
+  deps,
+} = {}) {
+  const platform = deps?.platform ?? process.platform
+  if (platform !== 'win32' || !microphone) return {}
 
-  const microphone = await ensureWindowsMediaPermission('microphone')
-  const camera = await ensureWindowsMediaPermission('camera')
-  console.info('[windows-perm] summary', { microphone, camera })
+  if (delayMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+
+  const status = await ensureWindowsMicrophonePermission({ interactive, deps })
+  console.info('[windows-perm] summary', { microphone: status })
+  return { microphone: status }
 }

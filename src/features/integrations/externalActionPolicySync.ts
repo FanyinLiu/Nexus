@@ -16,6 +16,7 @@ export type ExternalActionPolicySyncPayload = {
     activeWindow: boolean
     clipboard: boolean
     screenshot: boolean
+    screenContextEnabled: boolean
   }
   toolOpenExternalRequiresConfirmation: boolean
   uiLanguage?: ExternalOpenUiLanguage
@@ -37,6 +38,7 @@ export function buildExternalActionPolicySyncPayload(settings: AppSettings): Ext
       activeWindow: contextAwarenessEnabled && settings.activeWindowContextEnabled === true,
       clipboard: contextAwarenessEnabled && settings.clipboardContextEnabled === true,
       screenshot: contextAwarenessEnabled && settings.screenContextEnabled === true,
+      screenContextEnabled: settings.screenContextEnabled === true,
     },
     policies: {
       telegram: {

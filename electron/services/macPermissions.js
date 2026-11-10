@@ -1,24 +1,21 @@
 // @ts-nocheck
+/**
+ * macOS media-permission inspection and guidance.
+ *
+ * TCC does not let the app grant itself access; only the user can. The startup
+ * path therefore only inspects features that are already enabled and never
+ * opens a guidance dialog. The interactive path runs when the user turns a
+ * feature on: that is the only place we ask the OS or deep-link Settings, so a
+ * previous denial can never turn into a prompt on every launch.
+ */
+
 import { systemPreferences, dialog, shell } from 'electron'
 
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { mainT } from '../mainMessages.js'
 
-/**
- * macOS 隐私权限自检 + 引导。
- *
- * macOS 的 TCC 不允许应用绕过用户授权 —— 首次"允许"必须用户自己点。
- * 不过我们可以做到:
- *   1. 第一次启动时主动触发系统弹窗(而不是等业务代码跑到受保护 API)
- *   2. 用户已拒绝时弹 Electron 对话框,一键跳转到对应的系统设置页
- *   3. 已允许时静默通过
- *
- * dev 模式下(`npm run electron:dev`)OS 看到的请求方是 Terminal / VS Code,
- * 而不是 Nexus.app —— 这是 Electron dev 模式的固有行为,打包后没这个问题。
- */
-
-// macOS 13+ 支持 "x-apple.systempreferences:" URL scheme 深链到 Privacy 面板。
-// 这几个 anchor 在 macOS 13 / 14 / 15 上都稳定。
+// macOS 13+ supports "x-apple.systempreferences:" deeplinks to Privacy panes.
+// These anchors are stable on macOS 13 / 14 / 15.
 const SETTINGS_URLS = {
   microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
   screen: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
@@ -29,8 +26,10 @@ function logStatus(kind, status) {
   console.info(`[mac-perm] ${kind}: ${status}`)
 }
 
-async function promptOpenSettings({ title, message, detail, settingsUrl }) {
-  const { response } = await dialog.showMessageBox({
+async function promptOpenSettings({ title, message, detail, settingsUrl }, deps) {
+  const dialogApi = deps?.dialog ?? dialog
+  const shellApi = deps?.shell ?? shell
+  const { response } = await dialogApi.showMessageBox({
     type: 'warning',
     title,
     message,
@@ -41,39 +40,43 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }) {
     noLink: true,
   })
   if (response === 0) {
-    shell.openExternal(settingsUrl).catch((err) => {
+    shellApi.openExternal(settingsUrl).catch((err) => {
       console.warn('[mac-perm] failed to open settings:', getRedactedErrorMessage(err))
     })
   }
 }
 
 /**
- * 麦克风:有 askForMediaAccess 可以主动触发 OS 弹窗。
- * - not-determined → 调 askForMediaAccess(会弹系统对话框)
- * - denied → 弹 Electron 引导对话框,跳系统设置
- * - granted → 静默通过
+ * Microphone: askForMediaAccess can trigger the native OS dialog.
+ * - not-determined + interactive → ask the OS once
+ * - not-determined + startup → leave it alone; the first real capture asks
+ * - denied / restricted + interactive → show the one-shot Settings guidance
+ * - denied / restricted + startup → stay silent, never re-nag
  */
-async function ensureMicrophonePermission() {
+export async function ensureMacMicrophonePermission({ interactive = true, deps } = {}) {
+  const prefs = deps?.systemPreferences ?? systemPreferences
   try {
-    const status = systemPreferences.getMediaAccessStatus('microphone')
+    const status = prefs.getMediaAccessStatus('microphone')
     logStatus('microphone', status)
 
     if (status === 'granted') return 'granted'
 
     if (status === 'not-determined') {
-      // 这一步会弹 OS 原生权限对话框。返回值是用户的选择。
-      const ok = await systemPreferences.askForMediaAccess('microphone')
+      if (!interactive) return status
+      const ok = await prefs.askForMediaAccess('microphone')
       logStatus('microphone (after prompt)', ok ? 'granted' : 'denied')
       return ok ? 'granted' : 'denied'
     }
 
     if (status === 'denied' || status === 'restricted') {
-      await promptOpenSettings({
-        title: mainT('permission.microphoneTitle'),
-        message: mainT('permission.mac.microphoneMessage'),
-        detail: mainT('permission.mac.microphoneDetail'),
-        settingsUrl: SETTINGS_URLS.microphone,
-      })
+      if (interactive) {
+        await promptOpenSettings({
+          title: mainT('permission.microphoneTitle'),
+          message: mainT('permission.mac.microphoneMessage'),
+          detail: mainT('permission.mac.microphoneDetail'),
+          settingsUrl: SETTINGS_URLS.microphone,
+        }, deps)
+      }
       return status
     }
 
@@ -85,14 +88,16 @@ async function ensureMicrophonePermission() {
 }
 
 /**
- * 屏幕录制:没有 askForMediaAccess 对应项。
- * - not-determined → 不主动弹,首次真正 desktopCapturer 调用时 OS 自会弹窗
- * - denied → 弹 Electron 引导对话框,跳系统设置
- * - granted → 静默通过
+ * Screen recording: there is no askForMediaAccess equivalent.
+ * - not-determined → never probe at startup; the first desktopCapturer call
+ *   lets the OS ask after a real user action
+ * - denied / restricted + interactive → show the one-shot Settings guidance
+ * - denied / restricted + startup → stay silent, never re-nag
  */
-async function ensureScreenPermission() {
+export async function ensureMacScreenPermission({ interactive = true, deps } = {}) {
+  const prefs = deps?.systemPreferences ?? systemPreferences
   try {
-    const status = systemPreferences.getMediaAccessStatus('screen')
+    const status = prefs.getMediaAccessStatus('screen')
     logStatus('screen', status)
 
     if (status === 'granted' || status === 'not-determined') {
@@ -100,12 +105,14 @@ async function ensureScreenPermission() {
     }
 
     if (status === 'denied' || status === 'restricted') {
-      await promptOpenSettings({
-        title: mainT('permission.screenTitle'),
-        message: mainT('permission.mac.screenMessage'),
-        detail: mainT('permission.mac.screenDetail'),
-        settingsUrl: SETTINGS_URLS.screen,
-      })
+      if (interactive) {
+        await promptOpenSettings({
+          title: mainT('permission.screenTitle'),
+          message: mainT('permission.mac.screenMessage'),
+          detail: mainT('permission.mac.screenDetail'),
+          settingsUrl: SETTINGS_URLS.screen,
+        }, deps)
+      }
       return status
     }
 
@@ -117,28 +124,35 @@ async function ensureScreenPermission() {
 }
 
 /**
- * AppleEvents / 自动化(Music / Spotify / System Events):
- * 没有直接的 getMediaAccessStatus('apple-events') API。第一次 osascript
- * 调用时 OS 会自动弹窗询问。我们在 mediaSessionRuntime.js 里已经做了
- * 权限被拒时返回空 session 的 fallback,所以这里不主动检查。
- * 只在启动日志里打一条提示,方便调试。
+ * Inspect only the features the caller says are enabled. Startup passes
+ * interactive=false, so a denied permission is logged but never re-prompts.
+ * The microphone is not inspected at startup because its setting lives in
+ * renderer storage; the user-action path asks when voice input is turned on.
  */
-function noteAutomationCaveat() {
-  console.info('[mac-perm] automation: the OS asks for permission on first Music/Spotify/System Events access')
-}
+export async function runMacPermissionChecks({
+  delayMs = 600,
+  microphone = false,
+  screen = false,
+  interactive = false,
+  deps,
+} = {}) {
+  const platform = deps?.platform ?? process.platform
+  if (platform !== 'darwin' || (!microphone && !screen)) return {}
 
-/**
- * 启动时跑一次,非阻塞。结果只记日志 + 需要时弹引导框。
- */
-export async function runMacPermissionChecks({ delayMs = 600 } = {}) {
-  if (process.platform !== 'darwin') return
+  // Let the window settle before asking the OS, so the pet's show/focus does
+  // not fight the system dialog for focus.
+  if (delayMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
 
-  // 等窗口先稳下来再弹对话框,避免和桌宠 show/focus 抢焦点。
-  await new Promise((resolve) => setTimeout(resolve, delayMs))
+  const summary = {}
+  if (microphone) {
+    summary.microphone = await ensureMacMicrophonePermission({ interactive, deps })
+  }
+  if (screen) {
+    summary.screen = await ensureMacScreenPermission({ interactive, deps })
+  }
 
-  const microphone = await ensureMicrophonePermission()
-  const screen = await ensureScreenPermission()
-  noteAutomationCaveat()
-
-  console.info('[mac-perm] summary', { microphone, screen })
+  console.info('[mac-perm] summary', summary)
+  return summary
 }

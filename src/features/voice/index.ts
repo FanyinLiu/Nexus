@@ -1,6 +1,7 @@
 export * from './audioQueue.ts'
 export * from './autoRestartPolicy.ts'
 export * from './lipSync.ts'
+export * from './microphoneFeature.ts'
 export * from './providerSettings.ts'
 export * from './runtimeSupport.ts'
 export * from './sessionMachine.ts'

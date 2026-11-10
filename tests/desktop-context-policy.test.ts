@@ -22,6 +22,7 @@ test('main ignores desktop-context flags the user has not saved', () => {
     activeWindow: false,
     clipboard: false,
     screenshot: false,
+    screenContextEnabled: false,
   })
 
   const rendererEnablesEverything = {
@@ -31,17 +32,26 @@ test('main ignores desktop-context flags the user has not saved', () => {
   }
   assert.deepEqual(
     normalizeDesktopContextPolicy(rendererEnablesEverything, savedOff),
-    savedOff,
+    {
+      activeWindow: false,
+      clipboard: false,
+      screenshot: false,
+    },
   )
   assert.deepEqual(
     normalizeDesktopContextPolicy(undefined, savedOff),
-    savedOff,
+    {
+      activeWindow: false,
+      clipboard: false,
+      screenshot: false,
+    },
   )
 
   const saved = saveDesktopContextFlags({
     activeWindow: true,
     clipboard: false,
     screenshot: true,
+    screenContextEnabled: true,
   })
   assert.deepEqual(getSavedDesktopContextFlags(), saved)
 

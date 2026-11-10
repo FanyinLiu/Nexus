@@ -16,9 +16,11 @@ import { useProactiveEtiquette } from '../../hooks/useProactiveEtiquette.ts'
 import type {
   AppSettings,
   DailyMemoryEntry,
+  MediaPermissionStatusSnapshot,
   MemoryItem,
   ProactiveFrequencyPreset,
 } from '../../types/index.ts'
+import { isMediaPermissionDenied } from '../../types/permissions.ts'
 import { SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
 import { MemoryTimelineV3 } from '../../features/settingsV3/MemoryTimelineV3.tsx'
 import { SundayLetterReader } from '../SundayLetterReader.tsx'
@@ -38,6 +40,7 @@ type MemorySimplePageProps = {
   onRemoveMemory: (id: string) => void
   onUpdateDailyEntry?: (id: string, day: string, content: string) => void
   onRemoveDailyEntry?: (id: string, day: string) => void
+  mediaPermissionStatus?: MediaPermissionStatusSnapshot | null
 }
 
 export function MemorySimplePage({
@@ -52,8 +55,11 @@ export function MemorySimplePage({
   onRemoveMemory,
   onUpdateDailyEntry,
   onRemoveDailyEntry,
+  mediaPermissionStatus,
 }: MemorySimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
+  const screenRecordingDenied = draft.screenContextEnabled
+    && isMediaPermissionDenied(mediaPermissionStatus?.screenRecording)
   const [timelineOpen, setTimelineOpen] = useState(false)
   const [letterShelfOpen, setLetterShelfOpen] = useState(false)
   const [openLetter, setOpenLetter] = useState<SavedLetter | null>(null)
@@ -193,7 +199,7 @@ export function MemorySimplePage({
                 onChange={(clipboardContextEnabled) => patch({ clipboardContextEnabled })}
               />
             </SimpleRow>
-            <SimpleRow icon="book" title={ti('settings.simple.memory_screen')}>
+            <SimpleRow icon="book" title={ti('settings.simple.memory_screen')} status={screenRecordingDenied ? ti('settings.memory.context.screen_permission_denied') : undefined}>
               <SettingsV3Switch
                 checked={draft.screenContextEnabled}
                 label={ti('settings.simple.memory_screen')}

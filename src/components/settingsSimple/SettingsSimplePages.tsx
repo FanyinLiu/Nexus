@@ -9,6 +9,8 @@ import {
   settingsPageForSection,
 } from '../../features/settingsSimplify/index.ts'
 import { SettingsDrawerActiveSection, type SettingsDrawerActiveSectionProps } from '../SettingsDrawerActiveSection.tsx'
+import { isMicrophoneFeatureEnabled } from '../../features/voice/microphoneFeature.ts'
+import { useMediaPermissionStatus } from '../../hooks/useMediaPermissionStatus.ts'
 import type { AppSettings } from '../../types/index.ts'
 import { AboutSimplePage } from './AboutSimplePage.tsx'
 import { AppearanceSimplePage } from './AppearanceSimplePage.tsx'
@@ -27,6 +29,10 @@ export function SettingsSimplePages(props: SettingsSimplePagesProps) {
   const { onOpenOnboarding, onSelectLanguage, ...sectionProps } = props
   const page = settingsPageForSection(props.activeSectionId)
   const ti = simpleTranslate(props.draft.uiLanguage)
+  const mediaPermissionStatus = useMediaPermissionStatus({
+    microphoneEnabled: isMicrophoneFeatureEnabled(props.draft),
+    screenContextEnabled: props.draft.screenContextEnabled === true,
+  })
   const lead = SETTINGS_SIMPLE_PAGE_SECTIONS[page][0]
   const [seenPage, setSeenPage] = useState(page)
   const [advancedOpen, setAdvancedOpen] = useState(props.activeSectionId !== lead)
@@ -51,6 +57,7 @@ export function SettingsSimplePages(props: SettingsSimplePagesProps) {
           platformProfile={props.platformProfile}
           speechVoiceOptions={props.speechVoices.speechVoiceOptions}
           onLoadSpeechVoices={() => void props.speechVoices.handleLoadSpeechVoices()}
+          mediaPermissionStatus={mediaPermissionStatus}
         />
       ) : null}
       {page === 'memory' ? (
@@ -66,6 +73,7 @@ export function SettingsSimplePages(props: SettingsSimplePagesProps) {
           onRemoveMemory={props.onRemoveMemory}
           onUpdateDailyEntry={props.onUpdateDailyEntry}
           onRemoveDailyEntry={props.onRemoveDailyEntry}
+          mediaPermissionStatus={mediaPermissionStatus}
         />
       ) : null}
       {page === 'connect' ? (

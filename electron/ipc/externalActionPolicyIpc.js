@@ -6,6 +6,7 @@ import {
   syncExternalActionPolicy,
 } from '../services/externalActionPolicy.js'
 import { saveDesktopContextFlags } from '../services/desktopContextPolicy.js'
+import { mediaPermissionLifecycle } from '../services/mediaPermissionLifecycle.js'
 import { saveExternalOpenConfirmation } from '../services/externalOpenConfirmation.js'
 import { requireTrustedSender } from './validate.js'
 import { validateExternalActionPolicySyncPayload } from './payloadSchemas.js'
@@ -30,7 +31,14 @@ function summarizePolicySyncPayload(payload = {}) {
 export function register() {
   ipcMain.handle('external-action-policy:get', async (event) => {
     requireTrustedSender(event)
-    return getExternalActionPolicySnapshot()
+    const [policy, mediaPermissionStatus] = await Promise.all([
+      getExternalActionPolicySnapshot(),
+      mediaPermissionLifecycle.inspectReadOnly({
+        microphone: true,
+        screenContextEnabled: true,
+      }),
+    ])
+    return { ...policy, mediaPermissionStatus }
   })
 
   ipcMain.handle('external-action-policy:sync', async (event, payload) => {
@@ -40,7 +48,10 @@ export function register() {
     // Panel-only channel. Persist the user's desktop-context flags here so
     // desktop-context:get cannot honor a pet-supplied enablement.
     if (payload?.desktopContext) {
-      saveDesktopContextFlags(payload.desktopContext)
+      const saved = saveDesktopContextFlags(payload.desktopContext)
+      // Only an off → on transition is a user action; the initial settings
+      // hydrate is a baseline and never prompts.
+      mediaPermissionLifecycle.observeDesktopContext(saved)
     }
     if (
       typeof payload?.toolOpenExternalRequiresConfirmation === 'boolean'

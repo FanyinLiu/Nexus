@@ -30,6 +30,7 @@ import type {
   IntegrationInspectResponse,
   LocalServiceProbeRequest,
   LocalServiceProbeResult,
+  MediaPermissionStatusSnapshot,
   MediaSessionControlRequest,
   MediaSessionControlResponse,
   MediaSessionSnapshot,
@@ -652,7 +653,9 @@ declare global {
       mcpSyncServers: (payload: { servers: Array<{ id: string; label?: string; command: string; args?: string; enabled: boolean }> }) => Promise<McpHostStatus[]>
 
       // External action permission policy
-      externalActionPolicyGet: () => Promise<Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>>
+      externalActionPolicyGet: () => Promise<Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'> & {
+        mediaPermissionStatus: MediaPermissionStatusSnapshot
+      }>
       externalActionPolicySync: (payload: {
         policies: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', {
           mode: 'read-only' | 'confirm' | 'auto'
@@ -662,6 +665,7 @@ declare global {
           activeWindow: boolean
           clipboard: boolean
           screenshot: boolean
+          screenContextEnabled: boolean
         }
         toolOpenExternalRequiresConfirmation?: boolean
         uiLanguage?: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja' | 'ko'
