@@ -17,8 +17,8 @@ around after a new user's first setup.
   voice script out of the installer; this build includes it again, so that
   voice path can start.
 - **Interrupting the pet no longer loses reminders.**
-  - Typing a message, voice barge-in, or starting a new voice chat only cuts the
-    current line. Queued reminders and letters wait until the pet finishes its
+  - Typing a message, talking over her, or starting a new voice chat only cuts
+    the current line. Queued reminders and letters wait until the pet finishes its
     reply and is idle, then continue; an interrupted reminder is read again once.
   - Ending a voice chat yourself with the button: the pet stays quiet for about
     15 seconds, then continues if nothing new has started.

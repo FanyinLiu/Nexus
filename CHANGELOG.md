@@ -14,7 +14,7 @@ reclaiming the first-use panel. Full detail in
 [`docs/RELEASE-NOTES-v0.5.1.md`](docs/RELEASE-NOTES-v0.5.1.md).
 
 - Packaged builds include the Qwen3 Python voice path again (broken in 0.5.0).
-- Typing, barge-in, or a new voice chat only cuts the current line; queued
+- Typing, talking over her, or a new voice chat only cuts the current line; queued
   reminders and letters resume after the pet finishes its reply and is idle,
   and an interrupted reminder is read again once. Ending a voice chat with
   the button waits ~15s of quiet before continuing.
@@ -1050,7 +1050,7 @@ memory recall, weather precision, tray + dock visuals.
   - `AudioContext` suspension not recovered — Chromium background throttling could freeze the audio pipeline
   - `acquireMicAndWire` race condition — teardown during async mic acquisition leaked streams and AudioContext
   - `useFrameDriver` decision too coarse — checked wakewordRuntime existence instead of its phase, causing silent VAD when listener was in error/retry state
-  - VoiceBus state drift on TTS interrupt — barge-in only updated the legacy machine, leaving VoiceBus stuck in SPEAKING
+  - VoiceBus state drift on TTS interrupt — a user talking over her only updated the legacy machine, leaving VoiceBus stuck in SPEAKING
   - `numTrailingBlanks` increased from 1 to 2 for better short-keyword stability
 - **Continuous voice broken after changes** — restored `shouldResumeContinuousVoice = fromVoice` so TTS completion always opens a brief VAD window for the user to continue speaking.
 - **Chat streaming concurrency** — added `isLatestTurn()` guards to `onDelta` and `handleBuiltInToolResult`; fixed `streamAbort.ts` finally-race that could clear a newer turn's abort ref; unmount now aborts active streams.

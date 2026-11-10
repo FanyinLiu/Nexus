@@ -65,11 +65,24 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'A smoother patch.')
-  assert.match(en['about.release_spotlight.summary'], /packaged voice/i)
-  assert.match(en['about.release_spotlight.bullet.packaged_voice.body'], /Qwen3 Python voice script/i)
+  assert.equal(en['about.release_spotlight.title'], 'A few fixes for 0.5.0.')
+  assert.match(en['about.release_spotlight.summary'], /Qwen3 voice works again in the installed app/i)
+  assert.match(en['about.release_spotlight.summary'], /new users save memory with the panel closed/i)
+  assert.equal(
+    en['about.release_spotlight.bullet.packaged_voice.title'],
+    'Qwen3 voice works again in the installed app.',
+  )
+  assert.match(en['about.release_spotlight.bullet.packaged_voice.body'], /installed app/i)
+  assert.doesNotMatch(en['about.release_spotlight.bullet.packaged_voice.body'], /Python/i)
+  assert.match(en['about.release_spotlight.bullet.interrupt.body'], /talking over her/i)
   assert.match(en['about.release_spotlight.bullet.interrupt.body'], /current line/i)
-  assert.match(en['about.release_spotlight.bullet.takeover.body'], /panel takes over reminders/i)
+  assert.doesNotMatch(en['about.release_spotlight.bullet.interrupt.body'], /barge-in/i)
+  assert.match(
+    en['about.release_spotlight.bullet.takeover.body'],
+    /panel takes over and reminders still arrive on time/i,
+  )
+  assert.equal(en['about.release_spotlight.bullet.memory.title'], 'Lighter for new users')
+  assert.match(en['about.release_spotlight.bullet.memory.body'], /^New installs only: /)
   assert.match(en['about.release_spotlight.bullet.memory.body'], /120 MiB/i)
   assert.match(en['about.release_spotlight.bullet.gaze.body'], /follows your cursor/i)
   assert.match(en['about.release_spotlight.bullet.messages.body'], /Telegram and Discord/i)
@@ -89,11 +102,18 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
-  assert.equal(zhCN['about.release_spotlight.title'], '把毛边收一收。')
-  assert.match(zhCN['about.release_spotlight.summary'], /打包版语音/)
-  assert.match(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Qwen3 Python 语音脚本/)
+  assert.equal(zhCN['about.release_spotlight.title'], '修好了几处小毛病。')
+  assert.match(zhCN['about.release_spotlight.summary'], /安装版里的 Qwen3 语音又能用了/)
+  assert.match(zhCN['about.release_spotlight.summary'], /新用户第一次收起面板更省内存/)
+  assert.equal(
+    zhCN['about.release_spotlight.bullet.packaged_voice.title'],
+    '安装版里的 Qwen3 语音又能用了。',
+  )
+  assert.match(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /安装版里的 Qwen3 语音又能用了/)
+  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Python/)
   assert.match(zhCN['about.release_spotlight.bullet.interrupt.body'], /当前这句/)
-  assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /面板会接手提醒/)
+  assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /提醒照样按时到/)
+  assert.equal(zhCN['about.release_spotlight.bullet.memory.title'], '新用户更省内存')
   assert.match(zhCN['about.release_spotlight.bullet.memory.body'], /120 MiB/)
   assert.match(zhCN['about.release_spotlight.bullet.gaze.body'], /看向哪里/)
   assert.match(zhCN['about.release_spotlight.bullet.messages.body'], /Telegram 和 Discord/)
@@ -117,11 +137,11 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
 test('current release spotlight stays plain and does not claim a stable version', async () => {
   const devSpeak = /稳定版|安定版|안정 버전|current stable|Moc|烟测|煙霧|smoke report|Cubism|WebGL|Pixi|probe|pipeline|链路|鏈路|自检|自檢/i
   const highlights = [
-    ['en-US', /Qwen3 Python voice script/i, /reminders/i],
-    ['zh-CN', /Qwen3 Python 语音脚本/, /提醒/],
-    ['zh-TW', /Qwen3 Python 語音腳本/, /提醒/],
-    ['ja', /Qwen3 Python/, /リマインダー/],
-    ['ko', /Qwen3 Python/, /알림/],
+    ['en-US', /Qwen3 voice works again in the installed app/i, /reminders/i],
+    ['zh-CN', /安装版里的 Qwen3 语音又能用了/, /提醒/],
+    ['zh-TW', /安裝版裡的 Qwen3 語音又能用了/, /提醒/],
+    ['ja', /インストール版の Qwen3 音声が再び使えます/, /リマインダー/],
+    ['ko', /설치된 앱의 Qwen3 음성이 다시 작동해요/, /알림/],
   ] as const
 
   for (const [locale, voicePattern, reminderPattern] of highlights) {
