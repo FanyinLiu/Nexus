@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../../types/i18n.ts'
 
 export type ReleaseSpotlightBullet = {
-  id: 'notebook' | 'reminders' | 'quiet' | 'away'
+  id: 'packaged_voice' | 'interrupt' | 'takeover' | 'memory'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -22,30 +22,30 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.5.0',
+  version: '0.5.1',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'notebook',
-      titleKey: 'about.release_spotlight.bullet.notebook.title',
-      bodyKey: 'about.release_spotlight.bullet.notebook.body',
+      id: 'packaged_voice',
+      titleKey: 'about.release_spotlight.bullet.packaged_voice.title',
+      bodyKey: 'about.release_spotlight.bullet.packaged_voice.body',
     },
     {
-      id: 'reminders',
-      titleKey: 'about.release_spotlight.bullet.reminders.title',
-      bodyKey: 'about.release_spotlight.bullet.reminders.body',
+      id: 'interrupt',
+      titleKey: 'about.release_spotlight.bullet.interrupt.title',
+      bodyKey: 'about.release_spotlight.bullet.interrupt.body',
     },
     {
-      id: 'quiet',
-      titleKey: 'about.release_spotlight.bullet.quiet.title',
-      bodyKey: 'about.release_spotlight.bullet.quiet.body',
+      id: 'takeover',
+      titleKey: 'about.release_spotlight.bullet.takeover.title',
+      bodyKey: 'about.release_spotlight.bullet.takeover.body',
     },
     {
-      id: 'away',
-      titleKey: 'about.release_spotlight.bullet.away.title',
-      bodyKey: 'about.release_spotlight.bullet.away.body',
+      id: 'memory',
+      titleKey: 'about.release_spotlight.bullet.memory.title',
+      bodyKey: 'about.release_spotlight.bullet.memory.body',
     },
   ],
   actions: [

@@ -26,7 +26,7 @@ test('current release spotlight keeps the package version explicit', () => {
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
-    ['notebook', 'reminders', 'quiet', 'away'],
+    ['packaged_voice', 'interrupt', 'takeover', 'memory'],
   )
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.actions.map((item) => [item.id, item.targetSectionId]),
@@ -37,7 +37,7 @@ test('current release spotlight keeps the package version explicit', () => {
   )
   assert.ok(
     getReleaseSpotlightTranslationKeys().includes(
-      'about.release_spotlight.bullet.notebook.title',
+      'about.release_spotlight.bullet.packaged_voice.title',
     ),
   )
 })
@@ -61,16 +61,16 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes what 0.5.0 brings and keeps historical keys', async () => {
+test('current release spotlight describes what 0.5.1 brings and keeps historical keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'She lives on your computer.')
-  assert.match(en['about.release_spotlight.summary'], /writes it down/i)
-  assert.match(en['about.release_spotlight.bullet.notebook.body'], /notebook/i)
-  assert.match(en['about.release_spotlight.bullet.reminders.body'], /key point/i)
-  assert.match(en['about.release_spotlight.bullet.quiet.body'], /never reads keys/i)
-  assert.match(en['about.release_spotlight.bullet.away.body'], /Daily log/i)
+  assert.equal(en['about.release_spotlight.title'], 'A smoother patch.')
+  assert.match(en['about.release_spotlight.summary'], /packaged voice/i)
+  assert.match(en['about.release_spotlight.bullet.packaged_voice.body'], /Qwen3 Python voice script/i)
+  assert.match(en['about.release_spotlight.bullet.interrupt.body'], /current line/i)
+  assert.match(en['about.release_spotlight.bullet.takeover.body'], /panel takes over reminders/i)
+  assert.match(en['about.release_spotlight.bullet.memory.body'], /120 MiB/i)
   assert.match(en['about.release_spotlight.bullet.gaze.body'], /follows your cursor/i)
   assert.match(en['about.release_spotlight.bullet.messages.body'], /Telegram and Discord/i)
   assert.match(en['about.release_spotlight.bullet.voice.body'], /suggest a voice for this computer/i)
@@ -89,12 +89,12 @@ test('current release spotlight describes what 0.5.0 brings and keeps historical
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
-  assert.equal(zhCN['about.release_spotlight.title'], '她活在你的电脑里。')
-  assert.match(zhCN['about.release_spotlight.summary'], /先记下/)
-  assert.match(zhCN['about.release_spotlight.bullet.notebook.body'], /小本子/)
-  assert.match(zhCN['about.release_spotlight.bullet.reminders.body'], /最要紧/)
-  assert.match(zhCN['about.release_spotlight.bullet.quiet.body'], /不记你按了什么/)
-  assert.match(zhCN['about.release_spotlight.bullet.away.body'], /每日记录/)
+  assert.equal(zhCN['about.release_spotlight.title'], '把毛边收一收。')
+  assert.match(zhCN['about.release_spotlight.summary'], /打包版语音/)
+  assert.match(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Qwen3 Python 语音脚本/)
+  assert.match(zhCN['about.release_spotlight.bullet.interrupt.body'], /当前这句/)
+  assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /面板会接手提醒/)
+  assert.match(zhCN['about.release_spotlight.bullet.memory.body'], /120 MiB/)
   assert.match(zhCN['about.release_spotlight.bullet.gaze.body'], /看向哪里/)
   assert.match(zhCN['about.release_spotlight.bullet.messages.body'], /Telegram 和 Discord/)
   assert.match(zhCN['about.release_spotlight.bullet.voice.body'], /推荐语音/)
@@ -117,14 +117,14 @@ test('current release spotlight describes what 0.5.0 brings and keeps historical
 test('current release spotlight stays plain and does not claim a stable version', async () => {
   const devSpeak = /稳定版|安定版|안정 버전|current stable|Moc|烟测|煙霧|smoke report|Cubism|WebGL|Pixi|probe|pipeline|链路|鏈路|自检|自檢/i
   const highlights = [
-    ['en-US', /writes it down/i, /key point/i],
-    ['zh-CN', /小本子/, /重点/],
-    ['zh-TW', /小本子/, /重點/],
-    ['ja', /手帳/, /要点/],
-    ['ko', /수첩/, /핵심/],
+    ['en-US', /Qwen3 Python voice script/i, /reminders/i],
+    ['zh-CN', /Qwen3 Python 语音脚本/, /提醒/],
+    ['zh-TW', /Qwen3 Python 語音腳本/, /提醒/],
+    ['ja', /Qwen3 Python/, /リマインダー/],
+    ['ko', /Qwen3 Python/, /알림/],
   ] as const
 
-  for (const [locale, gazePattern, messagePattern] of highlights) {
+  for (const [locale, voicePattern, reminderPattern] of highlights) {
     const dictionary = await ensureLocaleLoaded(locale)
     const copy = [
       dictionary['about.release_spotlight.title'],
@@ -134,10 +134,10 @@ test('current release spotlight stays plain and does not claim a stable version'
         dictionary[item.bodyKey],
       ]),
     ].join(' ')
-    assert.match(copy, gazePattern, `${locale} must describe the notebook`)
-    assert.match(copy, messagePattern, `${locale} must describe reminder key points`)
+    assert.match(copy, voicePattern, `${locale} must describe the packaged voice fix`)
+    assert.match(copy, reminderPattern, `${locale} must describe reminder takeover`)
     assert.doesNotMatch(copy, devSpeak, `${locale} spotlight must stay plain`)
-    assert.doesNotMatch(copy, /v0\.4\.[0-9]/, `${locale} spotlight must not pin a version claim`)
+    assert.doesNotMatch(copy, /v\d+\.\d+\.\d+/, `${locale} spotlight must not pin a version claim`)
   }
 })
 
@@ -263,8 +263,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.5\.0/)
-  assert.match(rootReadme, /上一公开版本 — v0\.4\.8/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.5\.1/)
+  assert.match(rootReadme, /上一公开版本 — v0\.5\.0/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)

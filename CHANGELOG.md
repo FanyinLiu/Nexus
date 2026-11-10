@@ -6,9 +6,35 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
+v0.5.1 is the current stable release. It is a patch on 0.5.0: packaged Qwen3
+voice, interrupt handling, reminder takeover when the pet is offline, and
+reclaiming the first-use panel. Full detail in
+[`docs/RELEASE-NOTES-v0.5.1.md`](docs/RELEASE-NOTES-v0.5.1.md).
+
+- Packaged builds include the Qwen3 Python voice path again (broken in 0.5.0).
+- Typing, barge-in, or a new voice chat only cuts the current line; queued
+  reminders and letters resume after the pet finishes its reply and is idle,
+  and an interrupted reminder is read again once. Ending a voice chat with
+  the button waits ~15s of quiet before continuing.
+- When the pet window is gone or frozen, the panel takes over reminders
+  (one-shot, daily, weekly, repeating), including after a long hide.
+  Weather, search, and scheduled-chat tasks stay with the pet window; after
+  a freeze the most recent missed run catches up, after a restart runs
+  overdue by more than ~30s are skipped.
+  Reminders (incl. repeating) due within ~30s before launch are delivered.
+- After a new user finishes onboarding, the first hidden panel is released
+  (about 120 MiB less while it stays closed); first reopen is about 0.25 s
+  slower, first time only. Existing users are unaffected.
+- Same unsigned / manual-download profile as 0.5.0; no Windows/Linux
+  auto-update for this version.
+
+The release commit is published only through the protected stable-tag workflow.
+
 ## [0.5.0] - 2026-11-05
 
-v0.5.0 is the current stable release. The owner recorded a version-scoped
+v0.5.0 is the previous stable release. The owner recorded a version-scoped
 maintainer exception and waived the beta window. Full detail in
 [`docs/RELEASE-NOTES-v0.5.0.md`](docs/RELEASE-NOTES-v0.5.0.md).
 

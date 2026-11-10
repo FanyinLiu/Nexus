@@ -5,6 +5,56 @@ broken builds to installed users. Every feature-bearing release MUST pass
 through the beta stage unless an explicit, version-scoped maintainer exception
 is recorded below.
 
+### v0.5.1 maintainer exception — 2026-11-10
+
+For v0.5.1 only, the owner (音梵) explicitly accepted a direct stable patch
+release without a beta window, after reviewing the merged fixes on `main`
+(#245–#248: packaged Qwen3 Python voice script, interrupting speech stops only
+the current line, the panel takes over reminders when the pet is offline, and
+the first-use panel is reclaimed after onboarding), team review, and the
+complete automated release gate. No multi-day conversation evidence or
+cross-platform physical-device validation is claimed. Final v0.5.1 binaries
+must be rebuilt from the merged release commit by `.github/workflows/release.yml`,
+pass the clean remote asset/checksum closure gate, and only then become public.
+This exception does not change the default policy for v0.5.2 or later releases.
+
+### v0.5.1 unsigned update channel exception — 2026-11-10
+
+For v0.5.1 only, 音梵 (the owner) explicitly authorized publishing the stable
+release without the `NEXUS_UPDATE_SIGNING_KEY` secret, keeping the same
+`unsigned-manual` profile as v0.5.0. This does not waive any gate: tag
+provenance, `release:unsigned:gate`, `prerelease-check`, packaging, per-platform
+checksum generation, remote asset closure, and draft publication still run
+unchanged.
+
+- Windows and Linux publish installers and `SHA256SUMS-*.txt` only. Their
+  `latest.yml` / `latest-linux*.yml` and `.sig` files are removed before the
+  checksum and upload steps and are never published.
+- Windows and Linux therefore have **no automatic update** for v0.5.1. Users
+  must download the next version manually from the official GitHub Release.
+  Release notes and support replies must not claim Windows/Linux auto-update.
+- The macOS arm64 build stays ad-hoc signed and manual-download. Its
+  `latest-mac.yml` is produced but not consumed by the unsigned macOS runtime.
+- The Windows x64 installer stays `NotSigned`; the SmartScreen warning is
+  expected.
+- A missing key must never be replaced by a fabricated signature, a new key
+  introduced during the release, or an unsigned manifest upload.
+
+This exception ends with v0.5.1. v0.5.2 and later must publish the signed
+profile by configuring `NEXUS_UPDATE_SIGNING_KEY`, or record a new
+version-scoped exception before tagging.
+
+### v0.5.1 stable record — 2026-11-10
+
+v0.5.1 is the current stable release. It is a patch on 0.5.0: the packaged
+Qwen3 Python voice script is back, interrupting only cuts the current line,
+the panel takes over reminders when the pet is offline, and the first-use
+panel is reclaimed after onboarding. The stable handoff lives in
+`RELEASE-CANDIDATE-v0.5.1-HANDOFF.md`. Full notes live in
+`RELEASE-NOTES-v0.5.1.md`. Official binaries must still be rebuilt from the
+release commit by the protected workflow; no physical-device evidence is
+claimed.
+
 ### v0.5.0 maintainer exception — 2026-11-05
 
 For v0.5.0 only, the owner explicitly accepted a direct stable promotion after
@@ -21,7 +71,7 @@ policy for v0.5.1 or later releases.
 
 ### v0.5.0 stable record — 2026-11-05
 
-v0.5.0 is the current stable release. She lives on the computer: a notebook
+v0.5.0 was the current stable release before v0.5.1. She lives on the computer: a notebook
 for things she could not say yet, reminder key points and an optional strip,
 one mouse-near glance, quiet-while-typing off by default, an away summary
 count, and daily-log copy. The stable handoff lives in
