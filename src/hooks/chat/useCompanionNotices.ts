@@ -9,7 +9,7 @@ import { getSpeechOutputErrorMessage } from './support.ts'
 import type { ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
 
 type CompanionNoticeDependencies = {
-  ctx: Pick<ChatVoiceDeps, 'speakAssistantReply' | 'voiceStateRef'>
+  ctx: Pick<ChatVoiceDeps, 'speakAssistantReply' | 'voiceStateRef' | 'continuousVoiceActiveRef'>
   t: Translator
   busyRef: { current: boolean }
   appendChatMessage: (message: ChatMessage) => void
@@ -174,11 +174,24 @@ export function useCompanionNotices({
     return playCompanionNoticeSpeech(options)
   }, [appendChatMessage, playCompanionNoticeSpeech, presentPetDialogBubble])
 
-  const canDeliverDeferredCompanionNotice = useCallback(() => (
-    !busyRef.current
-    && ctxRef.current.voiceStateRef.current !== 'processing'
-    && ctxRef.current.voiceStateRef.current !== 'speaking'
-  ), [busyRef])
+  const canDeliverDeferredCompanionNotice = useCallback(() => {
+    const voiceState = ctxRef.current.voiceStateRef.current
+    // A listening turn owns the microphone: speaking a reminder here would
+    // talk over the user and can make the voice session drop the utterance.
+    if (
+      busyRef.current
+      || voiceState === 'processing'
+      || voiceState === 'speaking'
+      || voiceState === 'listening'
+    ) {
+      return false
+    }
+    // Continuous voice leaves a short idle gap between turns (for example
+    // right after tts:completed) before it reopens listening. The voice state
+    // alone cannot distinguish that gap from a truly idle pet, so hold the
+    // queue until the whole continuous session ends.
+    return ctxRef.current.continuousVoiceActiveRef?.current !== true
+  }, [busyRef])
 
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
     // A notice that arrives mid-reply must not start speaking over the pet.
@@ -222,5 +235,6 @@ export function useCompanionNotices({
     pushCompanionNotice,
     flushDeferredCompanionNotices,
     discardDeferredCompanionNotices,
+    canDeliverDeferredCompanionNotice,
   }
 }

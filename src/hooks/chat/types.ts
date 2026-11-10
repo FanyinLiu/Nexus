@@ -65,6 +65,11 @@ type ChatMemoryDeps = {
 /** Voice session state, TTS control, and the voice event bus. */
 export type ChatVoiceDeps = {
   voiceStateRef: RefObject<VoiceState>
+  /**
+   * True while a click- or voice-owned continuous conversation is running,
+   * including the brief idle gap between its listening and speaking turns.
+   */
+  continuousVoiceActiveRef?: RefObject<boolean>
   suppressVoiceReplyRef: RefObject<boolean>
   setVoiceState: (state: VoiceState) => void
   setLiveTranscript: (text: string) => void

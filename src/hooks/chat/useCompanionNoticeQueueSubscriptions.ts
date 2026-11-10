@@ -29,11 +29,17 @@ export function useCompanionNoticeStopSubscription(discard: () => number): void 
  * the queue when no further voice event arrives. The bus transition runs
  * before useVoice syncs its ref, so each release is one microtask late and
  * `flush` re-checks its own busy/speaking guard.
+ *
+ * `canRelease` lets the host hold the queue through an active listening turn
+ * or continuous-voice session. Events such as tts:completed and
+ * session:completed arrive between continuous turns, so releasing on them
+ * would replay a reminder into an open microphone.
  */
 export function useCompanionNoticeIdleFlush(
   voiceBus: VoiceBus | undefined,
   flush: () => Promise<void>,
   timers: IdleFlushTimers = {},
+  canRelease: () => boolean = () => true,
 ): void {
   const idleTimeoutMs = timers.idleTimeoutMs ?? COMPANION_NOTICE_IDLE_FALLBACK_MS
   const setTimeoutFn = timers.setTimeoutFn
@@ -44,6 +50,10 @@ export function useCompanionNoticeIdleFlush(
   const flushRef = useRef(flush)
   useEffect(() => {
     flushRef.current = flush
+  })
+  const canReleaseRef = useRef(canRelease)
+  useEffect(() => {
+    canReleaseRef.current = canRelease
   })
 
   useEffect(() => {
@@ -67,6 +77,12 @@ export function useCompanionNoticeIdleFlush(
       timer = schedule(() => {
         timer = null
         if (disposed) return
+        // Keep retrying while listening/continuous voice is still active; the
+        // session end or listening stop will otherwise arrive as a later event.
+        if (!canReleaseRef.current()) {
+          armFallback()
+          return
+        }
         void flushRef.current()
       }, idleTimeoutMs)
     }
@@ -74,6 +90,12 @@ export function useCompanionNoticeIdleFlush(
       clearTimer()
       queueMicrotask(() => {
         if (disposed) return
+        // A completion event can belong to a continuous-voice turn. Do not
+        // flush into the microphone that is about to reopen; wait for idle.
+        if (!canReleaseRef.current()) {
+          armFallback()
+          return
+        }
         void flushRef.current().finally(() => {
           if (!disposed) armFallback()
         })

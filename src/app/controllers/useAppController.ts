@@ -180,6 +180,7 @@ export function useAppController() {
     setMemories: memory.setMemories,
     appendDailyMemoryEntries: memory.appendDailyMemoryEntries,
     voiceStateRef: voice.voiceStateRef,
+    continuousVoiceActiveRef: voice.continuousVoiceActiveRef,
     suppressVoiceReplyRef: voice.suppressVoiceReplyRef,
     setVoiceState: voice.setVoiceState,
     setLiveTranscript: voice.setLiveTranscript,

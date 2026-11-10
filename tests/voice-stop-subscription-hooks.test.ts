@@ -198,6 +198,44 @@ test('ending the listening session releases the deferred queue', async () => {
   session.unmount()
 })
 
+test('completion events wait for an active listening or continuous session to end', async () => {
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  let canRelease = false
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+    () => canRelease,
+  ))
+
+  bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
+  bus.emit({ type: 'tts:completed', speechGeneration: 1, shouldResumeContinuousVoice: true })
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(flushes, 0, 'a completion inside continuous voice does not release')
+
+  bus.emit({ type: 'session:started', sessionId: 'continuous-1', transport: 'api' })
+  bus.emit({ type: 'session:completed' })
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(flushes, 0, 'session completion mid-continuous does not release')
+
+  timers.advance(15_000)
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(flushes, 0, 'the fallback also waits while the session is active')
+
+  canRelease = true
+  bus.emit({ type: 'session:completed' })
+  await Promise.resolve()
+  await Promise.resolve()
+  assert.equal(flushes, 1, 'the queue releases once the session is truly idle')
+
+  session.unmount()
+})
+
 test('the idle fallback releases the queue when no voice event arrives', async () => {
   const bus = new VoiceBus()
   const timers = fakeTimers()

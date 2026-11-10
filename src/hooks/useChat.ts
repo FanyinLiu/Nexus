@@ -187,6 +187,7 @@ export function useChat(ctx: UseChatContext) {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
     discardDeferredCompanionNotices,
+    canDeliverDeferredCompanionNotice,
   } = useCompanionNotices({
     ctx,
     t,
@@ -199,7 +200,12 @@ export function useChat(ctx: UseChatContext) {
   // The Stop button lives in the voice hook; this queue lives here, so a
   // user-initiated stop-all clears the busy-deferred notices.
   useCompanionNoticeStopSubscription(discardDeferredCompanionNotices)
-  useCompanionNoticeIdleFlush(ctx.voiceBus, flushDeferredCompanionNotices)
+  useCompanionNoticeIdleFlush(
+    ctx.voiceBus,
+    flushDeferredCompanionNotices,
+    undefined,
+    canDeliverDeferredCompanionNotice,
+  )
 
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(
