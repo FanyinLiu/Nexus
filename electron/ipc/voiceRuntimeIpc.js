@@ -15,6 +15,9 @@ import { validateVoiceRuntimeSyncPayload } from './payloadSchemas.js'
  * }} [options]
  */
 export function register({ voiceSidecarSupervisor, mediaPermissionLifecycle } = {}) {
+  if (!mediaPermissionLifecycle) {
+    throw new Error('mediaPermissionLifecycle is required for voice runtime IPC')
+  }
   ipcMain.handle('voice-runtime:sync', (event, payload) => {
     requireTrustedSender(event)
     payload = validateVoiceRuntimeSyncPayload(payload)
@@ -23,7 +26,7 @@ export function register({ voiceSidecarSupervisor, mediaPermissionLifecycle } = 
     voiceSidecarSupervisor?.applySettings(payload)
     // Turning voice input on is the user action that may ask for the mic.
     // The first sync after launch is a baseline and never prompts.
-    mediaPermissionLifecycle?.observeVoiceRuntime(payload)
+    mediaPermissionLifecycle.observeVoiceRuntime(payload)
     return { ok: Boolean(voiceSidecarSupervisor) }
   })
 }

@@ -72,7 +72,7 @@ export const REQUIRED_PHRASES = [
     file: 'electron/services/macPermissions.js',
     phrases: [
       "import { getRedactedErrorMessage } from './errorRedaction.js'",
-      "console.warn('[mac-perm] failed to open settings:', getRedactedErrorMessage(err))",
+      "console.warn('[mac-perm] failed to open settings')",
       "console.warn('[mac-perm] microphone check failed:', getRedactedErrorMessage(err))",
       "console.warn('[mac-perm] screen check failed:', getRedactedErrorMessage(err))",
     ],
@@ -82,7 +82,7 @@ export const REQUIRED_PHRASES = [
     file: 'electron/services/windowsPermissions.js',
     phrases: [
       "import { getRedactedErrorMessage } from './errorRedaction.js'",
-      "console.warn('[windows-perm] failed to open settings:', getRedactedErrorMessage(err))",
+      "console.warn('[windows-perm] failed to open settings')",
       'console.warn(`[windows-perm] ${kind} check failed:`, getRedactedErrorMessage(err))',
     ],
   },

@@ -300,7 +300,7 @@ async function runLocalSettingsMutation(
           '[settingsStore] Persisted settings hydration failed; using stored settings:',
           getRedactedLogErrorMessage(err),
         )
-        committed = loadSettings()
+        committed = carryHydratedSettingsSecrets(loadSettings(), nextSettings)
       }
 
       commitSettingsCache(committed)

@@ -31,8 +31,8 @@ async function promptOpenSettings({ title, message, detail, settingsUrl }, deps)
     noLink: true,
   })
   if (response === 0) {
-    shellApi.openExternal(settingsUrl).catch((err) => {
-      console.warn('[windows-perm] failed to open settings:', getRedactedErrorMessage(err))
+    shellApi.openExternal(settingsUrl).catch(() => {
+      console.warn('[windows-perm] failed to open settings')
     })
   }
 }

@@ -36,10 +36,13 @@ export function validateMediaPermissionStatusPayload(payload) {
  * } }} [options]
  */
 export function register({ mediaPermissionLifecycle } = {}) {
+  if (!mediaPermissionLifecycle) {
+    throw new Error('mediaPermissionLifecycle is required for media permission IPC')
+  }
   ipcMain.handle('media-permission:status', async (event, payload) => {
     requireTrustedSender(event)
     const enabled = validateMediaPermissionStatusPayload(payload)
-    return mediaPermissionLifecycle?.inspectReadOnly({
+    return mediaPermissionLifecycle.inspectReadOnly({
       microphone: enabled.microphoneEnabled,
       screenContextActive: enabled.screenContextActive,
     })

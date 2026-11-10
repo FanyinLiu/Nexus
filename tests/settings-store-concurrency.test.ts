@@ -153,8 +153,8 @@ test('local persisted hydration failure resolves with the stored settings and re
     const unsubscribe = store.subscribeToSettings((settings) => { seen.push(settings.apiKey) })
     const nextSettings = {
       ...loadSettings(),
-      apiKey: 'authoritative-secret',
-      companionName: 'authoritative next',
+      apiKey: 'sk-test-SECRET-123',
+      companionName: 'must-not-log-whole-settings',
     }
 
     const result = await store.setSettingsSnapshot(nextSettings)
@@ -164,20 +164,21 @@ test('local persisted hydration failure resolves with the stored settings and re
       settingsRevision?: number
     }
 
-    assert.equal(result.apiKey, '')
-    assert.equal(result.companionName, 'authoritative next')
+    assert.equal(result.apiKey, 'sk-test-SECRET-123')
+    assert.equal(result.companionName, 'must-not-log-whole-settings')
     assert.equal(result.settingsRevision, stored.settingsRevision)
-    assert.equal(store.getSettingsSnapshot().apiKey, '')
-    assert.equal(store.getSettingsSnapshot().companionName, 'authoritative next')
-    assert.deepEqual(seen, [''])
+    assert.equal(store.getSettingsSnapshot().apiKey, 'sk-test-SECRET-123')
+    assert.equal(store.getSettingsSnapshot().companionName, 'must-not-log-whole-settings')
+    assert.deepEqual(seen, ['sk-test-SECRET-123'])
     assert.equal(policySyncCalls, 1)
     assert.equal(vaultReads, 2)
     assert.equal(stored.apiKey, '')
-    assert.equal(stored.companionName, 'authoritative next')
+    assert.equal(stored.companionName, 'must-not-log-whole-settings')
     assert.equal(errors.length, 1)
     const serializedErrors = JSON.stringify(errors)
-    assert.doesNotMatch(serializedErrors, /local-secret/)
-    assert.doesNotMatch(serializedErrors, /authoritative-secret/)
+    assert.doesNotMatch(serializedErrors, /sk-test-SECRET-123/)
+    assert.doesNotMatch(serializedErrors, /must-not-log-whole-settings/)
+    assert.doesNotMatch(serializedErrors, /settingsRevision/)
 
     unsubscribe()
   } finally {
@@ -538,15 +539,22 @@ test('hydration failure after save re-reads value and revision from storage', as
     const committed = await store.setSettingsSnapshot({
       ...loadSettings(),
       companionName: 'stored after hydration failure',
+      apiKey: 'sk-test-SECRET-123',
+      voiceTriggerMode: 'wake_word',
+      wakeWordEnabled: false,
     })
     const persisted = JSON.parse(
       environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
-    ) as { settingsRevision?: number; companionName?: string }
+    ) as { settingsRevision?: number; companionName?: string; apiKey?: string; wakeWordEnabled?: boolean }
 
+    assert.equal(committed.apiKey, 'sk-test-SECRET-123')
     assert.equal(committed.companionName, 'stored after hydration failure')
     assert.equal(committed.companionName, persisted.companionName)
     assert.equal(committed.settingsRevision, persisted.settingsRevision)
     assert.equal(committed.settingsRevision, 1)
+    assert.equal(committed.wakeWordEnabled, true)
+    assert.equal(persisted.wakeWordEnabled, true)
+    assert.equal(persisted.apiKey, '')
   } finally {
     environment.restore()
   }

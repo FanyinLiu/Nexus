@@ -140,9 +140,48 @@ test('the real voice handler baseline then off → on produces exactly one guide
   assert.equal(calls.filter((call) => call.type === 'dialog').length, 1)
 })
 
+test('registerPermissionConsumers rejects a missing or invalid lifecycle', () => {
+  const consumer = { register() {} }
+  const base = {
+    voiceSidecarSupervisor: { applySettings() {} },
+    voiceRuntimeIpc: consumer,
+    externalActionPolicyIpc: consumer,
+    mediaPermissionIpc: consumer,
+  }
+  assert.throws(
+    () => registerPermissionConsumers({ ...base, mediaPermissionLifecycle: undefined }),
+    /permission lifecycle is required/,
+  )
+  assert.throws(
+    () => registerPermissionConsumers({ ...base, mediaPermissionLifecycle: {} }),
+    /permission lifecycle is required/,
+  )
+})
+
+test('handlers reject a missing lifecycle instead of silently doing nothing', async () => {
+  assert.throws(
+    () => voiceRuntimeIpc.register({ voiceSidecarSupervisor: { applySettings() {} } }),
+    /mediaPermissionLifecycle is required/,
+  )
+  assert.throws(
+    () => externalActionPolicyIpc.register({}),
+    /mediaPermissionLifecycle is required/,
+  )
+  const mediaPermissionIpc = await import('../electron/ipc/mediaPermissionIpc.js')
+  assert.throws(
+    () => mediaPermissionIpc.register({}),
+    /mediaPermissionLifecycle is required/,
+  )
+})
+
 test('ipcRegistry hands the same lifecycle instance to all three permission consumers', () => {
   const seen: Array<{ consumer: string, lifecycle: unknown }> = []
-  const lifecycle = { marker: 'shared' }
+  const lifecycle = {
+    marker: 'shared',
+    observeVoiceRuntime: () => false,
+    observeDesktopContext: () => false,
+    inspectReadOnly: async () => ({ platform: 'darwin', microphone: 'unknown', screenRecording: 'unknown' }),
+  }
   const consumer = (name: string) => ({
     register(options: { mediaPermissionLifecycle?: unknown }) {
       seen.push({ consumer: name, lifecycle: options.mediaPermissionLifecycle })

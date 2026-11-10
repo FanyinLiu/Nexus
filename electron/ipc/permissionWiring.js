@@ -7,7 +7,11 @@
 
 /**
  * @param {{
- *   mediaPermissionLifecycle: object,
+ *   mediaPermissionLifecycle: {
+ *     observeVoiceRuntime: (payload: unknown) => boolean,
+ *     observeDesktopContext: (flags: unknown) => boolean,
+ *     inspectReadOnly: (enabled: unknown) => Promise<unknown>,
+ *   },
  *   voiceSidecarSupervisor?: object,
  *   voiceRuntimeIpc: { register: (options: object) => void },
  *   externalActionPolicyIpc: { register: (options: object) => void },
@@ -21,6 +25,14 @@ export function registerPermissionConsumers({
   externalActionPolicyIpc,
   mediaPermissionIpc,
 }) {
+  if (
+    !mediaPermissionLifecycle
+    || typeof mediaPermissionLifecycle.observeVoiceRuntime !== 'function'
+    || typeof mediaPermissionLifecycle.observeDesktopContext !== 'function'
+    || typeof mediaPermissionLifecycle.inspectReadOnly !== 'function'
+  ) {
+    throw new Error('permission lifecycle is required for IPC permission consumers')
+  }
   externalActionPolicyIpc.register({ mediaPermissionLifecycle })
   voiceRuntimeIpc.register({ voiceSidecarSupervisor, mediaPermissionLifecycle })
   mediaPermissionIpc.register({ mediaPermissionLifecycle })

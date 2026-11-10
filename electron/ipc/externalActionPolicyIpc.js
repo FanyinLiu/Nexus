@@ -33,6 +33,9 @@ function summarizePolicySyncPayload(payload = {}) {
  * } }} [options]
  */
 export function register({ mediaPermissionLifecycle } = {}) {
+  if (!mediaPermissionLifecycle) {
+    throw new Error('mediaPermissionLifecycle is required for external action policy IPC')
+  }
   ipcMain.handle('external-action-policy:get', async (event) => {
     requireTrustedSender(event)
     return getExternalActionPolicySnapshot()
@@ -48,7 +51,7 @@ export function register({ mediaPermissionLifecycle } = {}) {
       const saved = saveDesktopContextFlags(payload.desktopContext)
       // Only an off → on transition is a user action; the initial settings
       // hydrate is a baseline and never prompts.
-      mediaPermissionLifecycle?.observeDesktopContext({
+      mediaPermissionLifecycle.observeDesktopContext({
         settingsRevision: payload.settingsRevision,
         screenshot: saved.screenshot,
       })
