@@ -516,7 +516,7 @@ export const koCore = {
   'about.release_spotlight.bullet.interrupt.title': '끼어들기는 한 문장만',
   'about.release_spotlight.bullet.interrupt.body': '입력하거나 끼어들면 지금 문장만 끊어요. 기다리던 알림과 편지는 한가해지면 이어집니다.',
   'about.release_spotlight.bullet.takeover.title': '알림은 계속 와요',
-  'about.release_spotlight.bullet.takeover.body': '펫 창이 사라지거나 멈춰도 패널이 대신 맡고, 알림은 제시간에 와요.',
+  'about.release_spotlight.bullet.takeover.body': '펫 창이 사라지거나 멈춰도 패널이 일반 알림을 대신 맡아요.',
   'about.release_spotlight.bullet.memory.title': '신규 사용자만 메모리 절약',
   'about.release_spotlight.bullet.memory.body': '신규 사용자만: 첫 안내를 마친 뒤 처음 숨긴 패널을 정리해요. 닫아 두는 동안 약 120 MiB 덜 써요.',
   'about.release_spotlight.bullet.notebook.title': '먼저 수첩에 적어요',

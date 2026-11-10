@@ -516,7 +516,7 @@ export const enCore = {
   'about.release_spotlight.bullet.interrupt.title': 'Interrupt just one line',
   'about.release_spotlight.bullet.interrupt.body': 'Typing or talking over her cuts only the current line. Queued reminders and letters continue once she is idle.',
   'about.release_spotlight.bullet.takeover.title': 'Reminders keep coming',
-  'about.release_spotlight.bullet.takeover.body': 'If the pet window is gone or frozen, the panel takes over and reminders still arrive on time.',
+  'about.release_spotlight.bullet.takeover.body': 'If the pet window is gone or frozen, the panel takes over regular reminders.',
   'about.release_spotlight.bullet.memory.title': 'Lighter for new users',
   'about.release_spotlight.bullet.memory.body': 'New installs only: After onboarding, the first hidden panel is released. That is about 120 MiB less while it stays closed.',
   'about.release_spotlight.bullet.notebook.title': 'She writes it down',

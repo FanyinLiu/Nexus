@@ -514,7 +514,7 @@ export const zhCNCore = {
   'about.release_spotlight.bullet.interrupt.title': '打断只切一句',
   'about.release_spotlight.bullet.interrupt.body': '打字或插话只打断当前这句。排队的提醒和信，等她空闲了接着念。',
   'about.release_spotlight.bullet.takeover.title': '提醒照样到',
-  'about.release_spotlight.bullet.takeover.body': '宠物窗口没了或卡住，面板会接手，提醒照样按时到。',
+  'about.release_spotlight.bullet.takeover.body': '宠物窗口没了或卡住时，面板会接手普通提醒。',
   'about.release_spotlight.bullet.memory.title': '新用户更省内存',
   'about.release_spotlight.bullet.memory.body': '新用户引导完，第一次收起面板会释放掉；一直收着时大约少用 120 MiB。',
   'about.release_spotlight.bullet.notebook.title': '先记进小本子',

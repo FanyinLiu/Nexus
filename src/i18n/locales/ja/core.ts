@@ -516,7 +516,7 @@ export const jaCore = {
   'about.release_spotlight.bullet.interrupt.title': '割り込みは一文だけ',
   'about.release_spotlight.bullet.interrupt.body': '入力や割り込みは今の一文だけ切ります。待っているリマインダーと手紙は、空いてから続きます。',
   'about.release_spotlight.bullet.takeover.title': 'リマインダーは届く',
-  'about.release_spotlight.bullet.takeover.body': 'ペットの窓が消えたか固まっても、パネルが引き継ぎ、リマインダーは時間どおり届きます。',
+  'about.release_spotlight.bullet.takeover.body': 'ペットの窓が消えたか固まっても、パネルが通常のリマインダーを引き継ぎます。',
   'about.release_spotlight.bullet.memory.title': '新規ユーザーはメモリを節約',
   'about.release_spotlight.bullet.memory.body': '新規ユーザーのみ: 初回案内のあと、最初に隠したパネルを解放します。閉じている間は約 120 MiB 減ります。',
   'about.release_spotlight.bullet.notebook.title': 'まず手帳に残す',

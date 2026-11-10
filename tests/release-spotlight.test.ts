@@ -79,8 +79,9 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   assert.doesNotMatch(en['about.release_spotlight.bullet.interrupt.body'], /barge-in/i)
   assert.match(
     en['about.release_spotlight.bullet.takeover.body'],
-    /panel takes over and reminders still arrive on time/i,
+    /panel takes over regular reminders/i,
   )
+  assert.doesNotMatch(en['about.release_spotlight.bullet.takeover.body'], /on time/i)
   assert.equal(en['about.release_spotlight.bullet.memory.title'], 'Lighter for new users')
   assert.match(en['about.release_spotlight.bullet.memory.body'], /^New installs only: /)
   assert.match(en['about.release_spotlight.bullet.memory.body'], /120 MiB/i)
@@ -112,7 +113,8 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   assert.match(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /安装版里的 Qwen3 语音又能用了/)
   assert.doesNotMatch(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Python/)
   assert.match(zhCN['about.release_spotlight.bullet.interrupt.body'], /当前这句/)
-  assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /提醒照样按时到/)
+  assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /面板会接手普通提醒/)
+  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.takeover.body'], /按时|准时/)
   assert.equal(zhCN['about.release_spotlight.bullet.memory.title'], '新用户更省内存')
   assert.match(zhCN['about.release_spotlight.bullet.memory.body'], /120 MiB/)
   assert.match(zhCN['about.release_spotlight.bullet.gaze.body'], /看向哪里/)
@@ -158,6 +160,23 @@ test('current release spotlight stays plain and does not claim a stable version'
     assert.match(copy, reminderPattern, `${locale} must describe reminder takeover`)
     assert.doesNotMatch(copy, devSpeak, `${locale} spotlight must stay plain`)
     assert.doesNotMatch(copy, /v\d+\.\d+\.\d+/, `${locale} spotlight must not pin a version claim`)
+  }
+})
+
+test('takeover copy names regular reminders without promising on-time delivery', async () => {
+  const contracts = [
+    ['en-US', /panel takes over regular reminders/i, /on time/i],
+    ['zh-CN', /面板会接手普通提醒/, /按时|准时/],
+    ['zh-TW', /面板會接手普通提醒/, /按時|準時/],
+    ['ja', /通常のリマインダーを引き継ぎます/, /時間どおり/],
+    ['ko', /일반 알림을 대신 맡아요/, /제시간/],
+  ] as const
+
+  for (const [locale, regularReminders, onTimePromise] of contracts) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    const takeover = dictionary['about.release_spotlight.bullet.takeover.body']
+    assert.match(takeover, regularReminders, `${locale} must describe regular reminder takeover`)
+    assert.doesNotMatch(takeover, onTimePromise, `${locale} must not promise on-time delivery`)
   }
 })
 
