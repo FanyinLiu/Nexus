@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 안정 버전:** v0.5.1. 자세한 내용은 [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md). 설치된 앱의 Qwen3 음성이 다시 작동하고, 끼어들기는 지금 문장만 끊으며, 펫이 꺼져도 패널이 일반 알림을 대신 맡고, 첫 안내 뒤 패널은 더 가볍게 닫힙니다. 공식 설치 패키지는 보호된 tag 워크플로로만 GitHub Releases에 게시됩니다.
+> **현재 안정 버전:** v0.5.1. 자세한 내용은 [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md). 설치된 앱의 Qwen3 음성이 정상적으로 시작되고, 끼어들기는 지금 문장만 끊으며, 펫이 꺼져도 패널이 일반 알림을 대신 맡고, 첫 안내 뒤 패널은 더 가볍게 닫힙니다. 공식 설치 패키지는 보호된 tag 워크플로로만 GitHub Releases에 게시됩니다.
 
 > **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 현재 공개 안정 버전은 v0.5.1입니다. 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)이 기준입니다. Phase 1 최소 데스크톱 동반 루프는 이미 공개되었습니다. 성문 깨우기, 카메라, 서명된 설치 패키지는 이 버전에 없습니다.
 
@@ -32,7 +32,7 @@
 
 ## 이번 안정 업데이트 — v0.5.1
 
-> **주제: 0.5.0의 작은 문제 몇 가지를 고쳤어요.** 설치된 앱의 Qwen3 음성이 다시 작동하고, 끼어들기는 지금 문장만 끊어요. 펫 창이 사라지거나 멈춰도 패널이 일반 알림을 대신 맡고, 신규 사용자만 첫 안내 뒤 처음 숨긴 패널이 정리됩니다. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.5.1.md) 와 [중문 릴리스 노트](RELEASE-NOTES-v0.5.1.zh-CN.md).
+> **주제: 0.5.0의 작은 문제 몇 가지를 고쳤어요.** 설치된 앱의 Qwen3 음성이 정상적으로 시작되고, 끼어들기는 지금 문장만 끊어요. 펫 창이 사라지거나 멈춰도 패널이 일반 알림을 대신 맡고, 신규 사용자만 첫 안내 뒤 처음 숨긴 패널이 정리됩니다. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.5.1.md) 와 [중문 릴리스 노트](RELEASE-NOTES-v0.5.1.zh-CN.md).
 
 ## 이전 공개 버전 — v0.5.0
 

@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前稳定版：** v0.5.1，稳定入口见 [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md)（[中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md)）。本版让安装版里的 Qwen3 语音又能用了，打断只切当前句，宠物掉线时面板接手普通提醒，新用户引导后收起面板更省内存。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
+> **当前稳定版：** v0.5.1，稳定入口见 [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md)（[中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md)）。本版让安装版里的 Qwen3 语音能正常启动了，打断只切当前句，宠物掉线时面板接手普通提醒，新用户引导后收起面板更省内存。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
 
 > **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前公开稳定版是 v0.5.1。根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 说明：Phase 1 最小桌面伙伴闭环已经发布；声纹唤醒、摄像头和签名安装包仍不属于本版。
 
@@ -32,7 +32,7 @@
 
 ## 本次稳定更新 — v0.5.1
 
-> **主题：修好了几处小毛病。** 安装版里的 Qwen3 语音又能用了；打断只切当前这一句，排队的提醒和信会接着说；宠物窗口没了或卡住时，面板接手普通提醒；新用户第一次收起面板更省内存。详见 [中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.5.1.md)。
+> **主题：修好了几处小毛病。** 安装版里的 Qwen3 语音能正常启动了；打断只切当前这一句，排队的提醒和信会接着说；宠物窗口没了或卡住时，面板接手普通提醒；新用户第一次收起面板更省内存。详见 [中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.5.1.md)。
 
 ## 上一公开版本 — v0.5.0
 

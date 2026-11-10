@@ -66,24 +66,29 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
   assert.equal(en['about.release_spotlight.title'], 'A few fixes for 0.5.0.')
-  assert.match(en['about.release_spotlight.summary'], /Qwen3 voice works again in the installed app/i)
-  assert.match(en['about.release_spotlight.summary'], /new users save memory with the panel closed/i)
-  assert.equal(
-    en['about.release_spotlight.bullet.packaged_voice.title'],
-    'Qwen3 voice works again in the installed app.',
+  assert.match(en['about.release_spotlight.summary'], /Qwen3 voice starts normally in the installed app/i)
+  assert.match(
+    en['about.release_spotlight.summary'],
+    /the panel covers regular reminders when the pet is offline/i,
   )
-  assert.match(en['about.release_spotlight.bullet.packaged_voice.body'], /installed app/i)
-  assert.doesNotMatch(en['about.release_spotlight.bullet.packaged_voice.body'], /Python/i)
+  assert.match(en['about.release_spotlight.summary'], /new users save memory with the panel closed/i)
+  assert.equal(en['about.release_spotlight.bullet.packaged_voice.title'], 'Qwen3 voice fixed')
+  assert.match(
+    en['about.release_spotlight.bullet.packaged_voice.body'],
+    /In the 0\.5\.0 installer this voice couldn't start\. It starts normally now\./,
+  )
+  assert.doesNotMatch(en['about.release_spotlight.bullet.packaged_voice.body'], /Python|works again/i)
   assert.match(en['about.release_spotlight.bullet.interrupt.body'], /talking over her/i)
   assert.match(en['about.release_spotlight.bullet.interrupt.body'], /current line/i)
   assert.doesNotMatch(en['about.release_spotlight.bullet.interrupt.body'], /barge-in/i)
+  assert.equal(en['about.release_spotlight.bullet.takeover.title'], 'The panel covers for the pet')
   assert.match(
     en['about.release_spotlight.bullet.takeover.body'],
     /panel takes over regular reminders/i,
   )
   assert.doesNotMatch(en['about.release_spotlight.bullet.takeover.body'], /on time/i)
   assert.equal(en['about.release_spotlight.bullet.memory.title'], 'Lighter for new users')
-  assert.match(en['about.release_spotlight.bullet.memory.body'], /^New installs only: /)
+  assert.match(en['about.release_spotlight.bullet.memory.body'], /^New installs only: after /)
   assert.match(en['about.release_spotlight.bullet.memory.body'], /120 MiB/i)
   assert.match(en['about.release_spotlight.bullet.gaze.body'], /follows your cursor/i)
   assert.match(en['about.release_spotlight.bullet.messages.body'], /Telegram and Discord/i)
@@ -104,15 +109,17 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
   assert.equal(zhCN['about.release_spotlight.title'], '修好了几处小毛病。')
-  assert.match(zhCN['about.release_spotlight.summary'], /安装版里的 Qwen3 语音又能用了/)
+  assert.match(zhCN['about.release_spotlight.summary'], /安装版里的 Qwen3 语音能正常启动了/)
+  assert.match(zhCN['about.release_spotlight.summary'], /宠物掉线时面板接手普通提醒/)
   assert.match(zhCN['about.release_spotlight.summary'], /新用户第一次收起面板更省内存/)
-  assert.equal(
-    zhCN['about.release_spotlight.bullet.packaged_voice.title'],
-    '安装版里的 Qwen3 语音又能用了。',
+  assert.equal(zhCN['about.release_spotlight.bullet.packaged_voice.title'], 'Qwen3 语音修好了')
+  assert.match(
+    zhCN['about.release_spotlight.bullet.packaged_voice.body'],
+    /0\.5\.0 安装版里这条语音起不来，这版能正常启动了。/,
   )
-  assert.match(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /安装版里的 Qwen3 语音又能用了/)
-  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Python/)
+  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Python|又能用了/)
   assert.match(zhCN['about.release_spotlight.bullet.interrupt.body'], /当前这句/)
+  assert.equal(zhCN['about.release_spotlight.bullet.takeover.title'], '宠物卡住时，面板来接手')
   assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /面板会接手普通提醒/)
   assert.doesNotMatch(zhCN['about.release_spotlight.bullet.takeover.body'], /按时|准时/)
   assert.equal(zhCN['about.release_spotlight.bullet.memory.title'], '新用户更省内存')
@@ -139,11 +146,11 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
 test('current release spotlight stays plain and does not claim a stable version', async () => {
   const devSpeak = /稳定版|安定版|안정 버전|current stable|Moc|烟测|煙霧|smoke report|Cubism|WebGL|Pixi|probe|pipeline|链路|鏈路|自检|自檢/i
   const highlights = [
-    ['en-US', /Qwen3 voice works again in the installed app/i, /reminders/i],
-    ['zh-CN', /安装版里的 Qwen3 语音又能用了/, /提醒/],
-    ['zh-TW', /安裝版裡的 Qwen3 語音又能用了/, /提醒/],
-    ['ja', /インストール版の Qwen3 音声が再び使えます/, /リマインダー/],
-    ['ko', /설치된 앱의 Qwen3 음성이 다시 작동해요/, /알림/],
+    ['en-US', /Qwen3 voice starts normally in the installed app/i, /reminders/i],
+    ['zh-CN', /安装版里的 Qwen3 语音能正常启动了/, /提醒/],
+    ['zh-TW', /安裝版裡的 Qwen3 語音能正常啟動了/, /提醒/],
+    ['ja', /インストール版の Qwen3 音声が正常に起動し/, /リマインダー/],
+    ['ko', /설치된 앱의 Qwen3 음성이 정상적으로 시작되고/, /알림/],
   ] as const
 
   for (const [locale, voicePattern, reminderPattern] of highlights) {
@@ -165,18 +172,127 @@ test('current release spotlight stays plain and does not claim a stable version'
 
 test('takeover copy names regular reminders without promising on-time delivery', async () => {
   const contracts = [
-    ['en-US', /panel takes over regular reminders/i, /on time/i],
-    ['zh-CN', /面板会接手普通提醒/, /按时|准时/],
-    ['zh-TW', /面板會接手普通提醒/, /按時|準時/],
-    ['ja', /通常のリマインダーを引き継ぎます/, /時間どおり/],
-    ['ko', /일반 알림을 대신 맡아요/, /제시간/],
+    [
+      'en-US',
+      'The panel covers for the pet',
+      /panel takes over regular reminders/i,
+      /the panel covers regular reminders when the pet is offline/i,
+      /on time/i,
+    ],
+    [
+      'zh-CN',
+      '宠物卡住时，面板来接手',
+      /面板会接手普通提醒/,
+      /宠物掉线时面板接手普通提醒/,
+      /按时|准时/,
+    ],
+    [
+      'zh-TW',
+      '寵物卡住時，面板來接手',
+      /面板會接手普通提醒/,
+      /寵物離線時面板接手普通提醒/,
+      /按時|準時/,
+    ],
+    [
+      'ja',
+      'ペットが固まったら、パネルが引き継ぎます',
+      /通常のリマインダーを引き継ぎます/,
+      /ペットが落ちてもパネルが通常のリマインダーを引き継ぎ/,
+      /時間どおり/,
+    ],
+    [
+      'ko',
+      '펫이 멈추면 패널이 대신 맡아요',
+      /일반 알림을 대신 맡아요/,
+      /펫이 꺼져도 패널이 일반 알림을 대신 맡고/,
+      /제시간/,
+    ],
   ] as const
 
-  for (const [locale, regularReminders, onTimePromise] of contracts) {
+  for (const [locale, title, regularReminders, summaryTakeover, onTimePromise] of contracts) {
     const dictionary = await ensureLocaleLoaded(locale)
     const takeover = dictionary['about.release_spotlight.bullet.takeover.body']
+    assert.equal(
+      dictionary['about.release_spotlight.bullet.takeover.title'],
+      title,
+      `${locale} must use the final takeover title`,
+    )
     assert.match(takeover, regularReminders, `${locale} must describe regular reminder takeover`)
+    assert.match(
+      dictionary['about.release_spotlight.summary'],
+      summaryTakeover,
+      `${locale} summary must describe regular reminder takeover`,
+    )
     assert.doesNotMatch(takeover, onTimePromise, `${locale} must not promise on-time delivery`)
+  }
+})
+
+test('packaged voice copy only claims normal startup', async () => {
+  const contracts = [
+    [
+      'en-US',
+      'Qwen3 voice fixed',
+      /starts normally now/i,
+      /Qwen3 voice starts normally in the installed app/i,
+      /works again|Python/i,
+    ],
+    [
+      'zh-CN',
+      'Qwen3 语音修好了',
+      /这版能正常启动了/,
+      /安装版里的 Qwen3 语音能正常启动了/,
+      /又能用了|Python/,
+    ],
+    [
+      'zh-TW',
+      'Qwen3 語音修好了',
+      /這版能正常啟動了/,
+      /安裝版裡的 Qwen3 語音能正常啟動了/,
+      /又能用了|Python/,
+    ],
+    [
+      'ja',
+      'Qwen3 音声を修正しました',
+      /この版では正常に起動します/,
+      /インストール版の Qwen3 音声が正常に起動し/,
+      /再び使え|Python/,
+    ],
+    [
+      'ko',
+      'Qwen3 음성 문제를 고쳤어요',
+      /이번 버전에서는 정상적으로 시작돼요/,
+      /설치된 앱의 Qwen3 음성이 정상적으로 시작되고/,
+      /다시 작동|Python/,
+    ],
+  ] as const
+
+  for (const [locale, title, startupCopy, summaryStartup, oldClaim] of contracts) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    assert.equal(
+      dictionary['about.release_spotlight.bullet.packaged_voice.title'],
+      title,
+      `${locale} must use the final packaged voice title`,
+    )
+    assert.match(
+      dictionary['about.release_spotlight.bullet.packaged_voice.body'],
+      startupCopy,
+      `${locale} must only claim the voice starts normally`,
+    )
+    assert.match(
+      dictionary['about.release_spotlight.summary'],
+      summaryStartup,
+      `${locale} summary must claim the voice starts normally`,
+    )
+    assert.doesNotMatch(
+      dictionary['about.release_spotlight.bullet.packaged_voice.body'],
+      oldClaim,
+      `${locale} packaged voice body must not use the old availability claim`,
+    )
+    assert.doesNotMatch(
+      dictionary['about.release_spotlight.summary'],
+      oldClaim,
+      `${locale} spotlight summary must not use the old availability claim`,
+    )
   }
 })
 
@@ -211,7 +327,7 @@ test('five locales keep natural presence and boundary vocabulary', async () => {
 test('English Spotlight copy stays concise and product-facing', async () => {
   const dictionary = await ensureLocaleLoaded('en-US')
   const summaryWords = dictionary['about.release_spotlight.summary'].trim().split(/\s+/)
-  assert.ok(summaryWords.length <= 30)
+  assert.ok(summaryWords.length <= 33)
   for (const item of CURRENT_RELEASE_SPOTLIGHT.bullets) {
     const words = dictionary[item.bodyKey].trim().split(/\s+/)
     assert.ok(words.length <= 24, `${item.id} must stay within the concise English body budget`)

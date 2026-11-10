@@ -13,7 +13,7 @@ voice, interrupt handling, reminder takeover when the pet is offline, and
 reclaiming the first-use panel. Full detail in
 [`docs/RELEASE-NOTES-v0.5.1.md`](docs/RELEASE-NOTES-v0.5.1.md).
 
-- Packaged builds include the Qwen3 voice path again (broken in 0.5.0).
+- Packaged builds include the Qwen3 voice path, which now starts normally (broken in 0.5.0).
 - Typing, talking over her, or a new voice chat only cuts the current line; queued
   reminders and letters resume after the pet finishes its reply and is idle,
   and an interrupted reminder is read again once. Ending a voice chat with

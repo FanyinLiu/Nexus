@@ -13,9 +13,9 @@ around after a new user's first setup.
 
 ## What changed
 
-- **Qwen3 voice is back in packaged builds.** 0.5.0 left the Qwen3 voice files
-  out of the installer; this build includes them again, so that voice path can
-  start.
+- **Qwen3 voice starts normally in packaged builds.** 0.5.0 left the Qwen3
+  voice files out of the installer; this build includes them again, so this
+  voice path starts normally now.
 - **Interrupting the pet no longer loses reminders.**
   - Typing a message, talking over her, or starting a new voice chat only cuts
     the current line. Queued reminders and letters wait until the pet finishes its

@@ -24,7 +24,7 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在の安定版：** v0.5.1。詳細は [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md)。インストール版の Qwen3 音声が再び使え、割り込みは今の一文だけ、ペットが落ちてもパネルが通常のリマインダーを引き継ぎ、初回案内後のパネルは軽く閉じます。正式パッケージは保護された tag ワークフローからのみ GitHub Releases に公開されます。
+> **現在の安定版：** v0.5.1。詳細は [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md)。インストール版の Qwen3 音声が正常に起動し、割り込みは今の一文だけ、ペットが落ちてもパネルが通常のリマインダーを引き継ぎ、初回案内後のパネルは軽く閉じます。正式パッケージは保護された tag ワークフローからのみ GitHub Releases に公開されます。
 
 > **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。現在の公開安定版は v0.5.1 です。ルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) が基準です。Phase 1 の最小デスクトップ同伴ループは公開済みです。声紋での起動、カメラ、署名付きインストーラーは本版に含まれません。
 
@@ -32,7 +32,7 @@
 
 ## 今回の安定更新 — v0.5.1
 
-> **テーマ：0.5.0 の小さな不具合をいくつか直しました。** インストール版の Qwen3 音声が再び使え、割り込みは今の一文だけ。ペットの窓が消えても固まってもパネルが通常のリマインダーを引き継ぎ、新規ユーザーのみ、初回案内のあと最初に隠したパネルが解放されます。詳しくは [English release notes](RELEASE-NOTES-v0.5.1.md) と [中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md)。
+> **テーマ：0.5.0 の小さな不具合をいくつか直しました。** インストール版の Qwen3 音声が正常に起動し、割り込みは今の一文だけ。ペットの窓が消えても固まってもパネルが通常のリマインダーを引き継ぎ、新規ユーザーのみ、初回案内のあと最初に隠したパネルが解放されます。詳しくは [English release notes](RELEASE-NOTES-v0.5.1.md) と [中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md)。
 
 ## 一つ前の公開版 — v0.5.0
 
