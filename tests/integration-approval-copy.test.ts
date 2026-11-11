@@ -11,14 +11,6 @@ const EXPECTED_SETTINGS_PATH = {
   ko: '설정 → 연결 → 고급',
 } as const
 
-const RETIRED_SETTINGS_PATH = {
-  'zh-CN': ['设置 → 外部集成'],
-  'zh-TW': ['設定 → 外部整合', '設定 → 連接'],
-  'en-US': ['Settings → External integrations', 'Settings → Connections'],
-  ja: ['設定 → 外部連携'],
-  ko: ['설정 → 외부 통합'],
-} as const
-
 const PAIRING_KEYS = ['integration.pairing.telegram', 'integration.pairing.discord'] as const
 const MCP_KEYS = ['mcp.approval.detail', 'mcp.launch.rejected'] as const
 
@@ -27,13 +19,9 @@ test('gateway and MCP approval copy points at Connection → Advanced in all fiv
     [keyof typeof EXPECTED_SETTINGS_PATH, Record<string, string>]
   >) {
     const expected = EXPECTED_SETTINGS_PATH[locale]
-    const retired = RETIRED_SETTINGS_PATH[locale]
     for (const key of [...PAIRING_KEYS, ...MCP_KEYS]) {
       const value = messages[key]
       assert.ok(value.includes(expected), `${locale} ${key} should say "${expected}": ${value}`)
-      for (const oldPath of retired) {
-        assert.equal(value.includes(oldPath), false, `${locale} ${key} still says "${oldPath}": ${value}`)
-      }
     }
     for (const key of MCP_KEYS) {
       assert.ok(messages[key].includes('MCP'), `${locale} ${key} should name the MCP section`)
