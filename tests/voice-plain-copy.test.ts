@@ -7,6 +7,34 @@ import type { AppLocale, AppSettings, TranslationKey, TranslationParams } from '
 
 const DEV_SPEAK = /链路|鏈路|自检|自檢|烟测|パイプライン|経路|자가\s*점검|자가진단|파이프라인|pipeline|self-check|recording chain|Whisper environment|Whisper 环境|Whisper 環境/i
 
+/** Engine names that should stay out of what the user reads. */
+const ENGINE_TERMS = /\bVAD\b|\bTTS\b|\bPCM\b|\bASR\b|Silero|主进程 VAD|主行程 VAD/
+
+/** Status lines, errors, and settings labels the user can see. */
+const PLAIN_ENGINE_COPY_KEYS = [
+  'voice.provider.tencent.connect_required',
+  'voice.provider.tencent.credentials_invalid',
+  'voice.provider.tencent.configure_credentials',
+  'voice.provider.tencent.failed_retry',
+  'voice.provider.tencent.start_failed',
+  'voice.provider.tencent.audio_error',
+  'voice.provider.vad.start_failed',
+  'voice.provider.vad.silero_fallback',
+  'voice.streaming_tts.first_audio_timeout',
+  'voice.pipeline.vad_end_transcribing',
+  'voice.pipeline.vad_local_continuous',
+  'voice.pipeline.vad_local_listening',
+  'voice.pipeline.vad_api_continuous',
+  'voice.pipeline.vad_api_listening',
+  'voice.audio.stream_mono_only',
+  'voice.vad.unavailable',
+  'voice.vad.start_failed',
+  'settings.voice.enable_vad',
+  'settings.voice.vad_sensitivity',
+  'settings.speech_output.volume_hint',
+  'settings.speech_output.edge_tts_hint',
+] as const satisfies readonly TranslationKey[]
+
 const VOICE_COPY_KEYS = [
   'voice.smoke.output_text',
   'voice.diagnostics.generic_ready',
@@ -58,6 +86,17 @@ const SPOKEN_PREVIEW: Record<AppLocale, string> = {
   ja: 'こんにちは。Maoだよ。今の声はこんな感じ。',
   ko: '안녕하세요, Mao이에요. 지금 제 목소리는 이래요.',
 }
+
+test('voice status and error copy avoids engine terms in every locale', async () => {
+  for (const locale of AVAILABLE_LOCALES) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    for (const key of PLAIN_ENGINE_COPY_KEYS) {
+      const value = dictionary[key]
+      assert.equal(typeof value, 'string', `${locale}:${key}`)
+      assert.doesNotMatch(value, ENGINE_TERMS, `${locale}:${key} — ${value}`)
+    }
+  }
+})
 
 test('voice copy the user hears and reads stays plain in every locale', async () => {
   for (const locale of AVAILABLE_LOCALES) {
