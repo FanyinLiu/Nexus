@@ -51,6 +51,13 @@ export const BrowserWindow = {
 export const dialog = {
   showMessageBox: async () => ({ response: 1 }),
 }
+export const shell = {
+  openExternal: async () => undefined,
+}
+export const systemPreferences = {
+  getMediaAccessStatus: () => 'not-determined',
+  askForMediaAccess: async () => false,
+}
 export const powerMonitor = {
   on() {},
   getSystemIdleTime: () => 0,
@@ -132,6 +139,19 @@ const AUDIT_LOG_STUB = `
 export function audit() {}
 `
 
+const DESKTOP_CONTEXT_POLICY_STUB = `
+export function getSavedDesktopContextFlags() {
+  return { activeWindow: false, clipboard: false, screenshot: false }
+}
+export function saveDesktopContextFlags(flags) {
+  return {
+    activeWindow: flags?.activeWindow === true,
+    clipboard: flags?.clipboard === true,
+    screenshot: flags?.screenshot === true,
+  }
+}
+`
+
 const SYSTEM_VIBRANCY_STUB = `
 export function applySystemVibrancy() { return false }
 `
@@ -148,6 +168,7 @@ const MODULE_STUBS = new Map([
   ['/electron/services/petModelService.js', PET_MODEL_SERVICE_STUB],
   ['/electron/tools/toolRegistry.js', TOOL_REGISTRY_STUB],
   ['/electron/services/desktopContextService.js', DESKTOP_CONTEXT_SERVICE_STUB],
+  ['/electron/services/desktopContextPolicy.js', DESKTOP_CONTEXT_POLICY_STUB],
   ['/electron/mediaSessionRuntime.js', MEDIA_SESSION_RUNTIME_STUB],
   ['/electron/integrationRuntime.js', INTEGRATION_RUNTIME_STUB],
   ['/electron/services/auditLog.js', AUDIT_LOG_STUB],

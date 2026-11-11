@@ -686,6 +686,7 @@ test('IPC external action policy schema accepts modes and active flags only', ()
         minecraft: { mode: 'read-only' },
         mcp: { mode: 'auto', active: true },
       },
+      settingsRevision: 0,
     },
   )
 
@@ -735,6 +736,7 @@ test('IPC external action policy schema accepts modes and active flags only', ()
         clipboard: false,
         screenshot: false,
       },
+      settingsRevision: 0,
     },
   )
   assert.deepEqual(
@@ -745,6 +747,7 @@ test('IPC external action policy schema accepts modes and active flags only', ()
     }),
     {
       policies: {},
+      settingsRevision: 0,
       toolOpenExternalRequiresConfirmation: false,
       uiLanguage: 'ja',
     },

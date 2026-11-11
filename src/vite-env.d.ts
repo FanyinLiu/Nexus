@@ -30,6 +30,7 @@ import type {
   IntegrationInspectResponse,
   LocalServiceProbeRequest,
   LocalServiceProbeResult,
+  MediaPermissionStatusSnapshot,
   MediaSessionControlRequest,
   MediaSessionControlResponse,
   MediaSessionSnapshot,
@@ -663,6 +664,7 @@ declare global {
           clipboard: boolean
           screenshot: boolean
         }
+        settingsRevision: number
         toolOpenExternalRequiresConfirmation?: boolean
         uiLanguage?: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja' | 'ko'
       }) => Promise<{
@@ -670,6 +672,10 @@ declare global {
         changes: Array<{ integration: string; from: string; to: string; active: boolean }>
         rejected: Array<{ integration: string; from: string; to: string; active: boolean }>
       }>
+      getMediaPermissionStatus: (payload: {
+        microphoneEnabled: boolean
+        screenContextActive: boolean
+      }) => Promise<MediaPermissionStatusSnapshot>
       voiceRuntimeSync: DesktopPetGeneratedBridge['voiceRuntimeSync']
       localDataStatus: () => Promise<LocalDataStatus>
       localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>

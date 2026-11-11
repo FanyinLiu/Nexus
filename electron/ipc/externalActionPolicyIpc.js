@@ -27,7 +27,15 @@ function summarizePolicySyncPayload(payload = {}) {
   }
 }
 
-export function register() {
+/**
+ * @param {{ mediaPermissionLifecycle?: {
+ *   observeDesktopContext: (flags: unknown) => boolean,
+ * } }} [options]
+ */
+export function register({ mediaPermissionLifecycle } = {}) {
+  if (!mediaPermissionLifecycle) {
+    throw new Error('mediaPermissionLifecycle is required for external action policy IPC')
+  }
   ipcMain.handle('external-action-policy:get', async (event) => {
     requireTrustedSender(event)
     return getExternalActionPolicySnapshot()
@@ -40,7 +48,13 @@ export function register() {
     // Panel-only channel. Persist the user's desktop-context flags here so
     // desktop-context:get cannot honor a pet-supplied enablement.
     if (payload?.desktopContext) {
-      saveDesktopContextFlags(payload.desktopContext)
+      const saved = saveDesktopContextFlags(payload.desktopContext)
+      // Only an off → on transition is a user action; the initial settings
+      // hydrate is a baseline and never prompts.
+      mediaPermissionLifecycle.observeDesktopContext({
+        settingsRevision: payload.settingsRevision,
+        screenshot: saved.screenshot,
+      })
     }
     if (
       typeof payload?.toolOpenExternalRequiresConfirmation === 'boolean'

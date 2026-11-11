@@ -13,12 +13,14 @@ export function SimpleRow({
   tone = 'accent',
   title,
   hint,
+  status,
   children,
 }: {
   icon: SettingsCardIconKey
   tone?: SimpleTone
   title: string
   hint?: string
+  status?: string
   children?: ReactNode
 }) {
   return (
@@ -29,6 +31,7 @@ export function SimpleRow({
       <div className="settings-v3-row__copy">
         <strong>{title}</strong>
         {hint ? <span>{hint}</span> : null}
+        {status ? <span role="status">{status}</span> : null}
       </div>
       {children ? <div className="settings-v3-row__control">{children}</div> : null}
     </div>

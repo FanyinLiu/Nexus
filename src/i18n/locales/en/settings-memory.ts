@@ -167,6 +167,7 @@ export const enSettingsMemory = {
   'settings.memory.context.clipboard': 'Read clipboard context',
   'settings.memory.context.active_window': 'Read active window context',
   'settings.memory.context.screen_ocr': 'Read on-screen text (OCR)',
+  'settings.memory.context.screen_permission_denied': 'Screen recording access is off. Open System Settings to allow it.',
   'settings.memory.context.ocr_language': 'Screen OCR language',
   'settings.memory.context.vlm_enable': 'Enable VLM screen understanding',
   'settings.memory.context.vlm_note': 'Use a vision-language model (VLM) to analyze screenshots for richer scene understanding than OCR alone. Requires a vision-capable model (e.g. GPT-4o, Qwen-VL).',

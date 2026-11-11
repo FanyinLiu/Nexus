@@ -23,8 +23,8 @@ import { registerIpc } from './ipcRegistry.js'
 import { autoStartPlugins } from './services/pluginHost.js'
 import { initAutoUpdater } from './services/updaterService.js'
 import { closeAuditLog } from './services/auditLog.js'
-import { runMacPermissionChecks } from './services/macPermissions.js'
-import { runWindowsPermissionChecks } from './services/windowsPermissions.js'
+import { runStartupPermissionChecks } from './services/mediaPermissionLifecycle.js'
+import { getSavedDesktopContextFlags } from './services/desktopContextPolicy.js'
 import { initModelManager } from './services/modelManager.js'
 import { createDefaultVoiceSidecarHost } from './services/voiceSidecarHost.js'
 import { initializeLocalDataStore } from './services/localDataStore.js'
@@ -301,10 +301,13 @@ app.whenReady()
     initAutoUpdater({
       getWindows: () => [mainWindow, panelWindow].filter(Boolean),
     })
-    // macOS 隐私权限自检:未授权时主动弹 OS 对话框,已拒绝时弹 Electron 对话框
-    // 引导用户打开系统设置。非阻塞,失败不影响其他启动流程。
-    runMacPermissionChecks().catch((err) => console.warn('[mac-perm] auto-check error:', getRedactedErrorMessage(err)))
-    runWindowsPermissionChecks().catch((err) => console.warn('[windows-perm] auto-check error:', getRedactedErrorMessage(err)))
+    // Privacy permissions are user-initiated. At boot we only inspect features
+    // the main process knows are enabled (screen recording via the saved
+    // desktop-context flags) and never prompt or open Settings. Microphone and
+    // Windows checks run lazily when the user turns voice input on.
+    runStartupPermissionChecks({
+      getDesktopContextFlags: getSavedDesktopContextFlags,
+    }).catch((err) => console.warn('[permission] startup check error:', getRedactedErrorMessage(err)))
     autoStartPlugins().catch((err) => console.warn('[pluginHost] auto-start error:', getRedactedErrorMessage(err)))
 
     app.on('activate', () => {

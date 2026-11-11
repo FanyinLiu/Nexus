@@ -16,8 +16,8 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 214)
-  assert.equal(report.counts.mainHandlerChannels, 214)
+  assert.equal(report.counts.preloadInvokeChannels, 215)
+  assert.equal(report.counts.mainHandlerChannels, 215)
   assert.equal(report.counts.preloadSubscriptionChannels, 28)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)
@@ -35,6 +35,12 @@ test('IPC contract audit inventories the current preload and main handler surfac
   assert.equal(localDataStatus?.riskLevel, 'low')
   assert.equal(localDataStatus?.rendererPayload, false)
   assert.equal(localDataStatus?.trustedSender, true)
+
+  const mediaPermissionStatus = findChannel(report, 'media-permission:status')
+  assert.equal(mediaPermissionStatus?.riskLevel, 'low')
+  assert.equal(mediaPermissionStatus?.rendererPayload, true)
+  assert.equal(mediaPermissionStatus?.payloadValidation, 'schema')
+  assert.equal(mediaPermissionStatus?.trustedSender, true)
 
   const localDataOnboardingMirror = findChannel(report, 'local-data:mirror-onboarding')
   assert.equal(localDataOnboardingMirror?.riskLevel, 'low')
