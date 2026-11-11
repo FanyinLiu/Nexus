@@ -18,6 +18,22 @@ type HarnessOptions = {
   shouldReclaimPanel?: (snapshot: Record<string, unknown>) => boolean
 }
 
+type Deferred = {
+  promise: Promise<unknown>
+  resolve: (win: unknown) => void
+  reject: (error: unknown) => void
+}
+
+function createDeferred(): Deferred {
+  let resolve!: (win: unknown) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<unknown>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
 function createHarness(options: HarnessOptions = {}) {
   let now = 1_000_000
   let snapshot: Snapshot = { petOnline: options.petOnline ?? false }
@@ -32,7 +48,29 @@ function createHarness(options: HarnessOptions = {}) {
     hasPanelWindow: () => panelExists,
     createHiddenPanel: () => {
       created += 1
-      return createResult()
+      // Production assigns panelWindow as soon as the BrowserWindow exists,
+      // before did-finish-load, so a tick during the load already sees it.
+      panelExists = true
+      let result: Promise<unknown> | unknown
+      try {
+        result = createResult()
+      } catch (error) {
+        // A build that throws synchronously never leaves a live window behind.
+        panelExists = false
+        throw error
+      }
+      // A failed build destroys its window before the takeover observes null,
+      // so the fixture must stop reporting the panel as present as well.
+      return Promise.resolve(result).then(
+        (win) => {
+          if (!win) panelExists = false
+          return win
+        },
+        (error) => {
+          panelExists = false
+          throw error
+        },
+      )
     },
     onHiddenPanelReady: () => {
       ready += 1
@@ -51,6 +89,7 @@ function createHarness(options: HarnessOptions = {}) {
   return {
     takeover,
     get now() { return now },
+    get panelExists() { return panelExists },
     setNow: (value: number) => { now = value },
     setPetOnline: (value: boolean) => { snapshot = { petOnline: value } },
     setPanelExists: (value: boolean) => { panelExists = value },
@@ -181,6 +220,161 @@ test('the pet coming back online resets the failure backoff', async () => {
     assert.equal(harness.created, 4)
   } finally {
     harness.takeover.stop()
+  }
+})
+
+test('a tick while a rebuilt panel is loading keeps the backoff and steps to 10s', async () => {
+  const harness = createHarness()
+  try {
+    harness.takeover.start()
+    await flushMicrotasks()
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 1)
+
+    // Production assigns the window at creation, so every retry is observable
+    // as panel_present while its renderer is still loading. Such a tick must
+    // neither duplicate the build nor reset the accumulated failure count.
+    const delays = [5_000, 10_000, 20_000, 40_000]
+    let pending: ((win: unknown) => void) | null = null
+    for (const [index, delay] of delays.entries()) {
+      const retryAt = harness.now + delay
+      harness.setNow(retryAt - 1)
+      assert.equal(harness.takeover.tick(), 'backoff', `retry waits ${delay}ms`)
+
+      harness.setNow(retryAt)
+      harness.setCreateResult(() => new Promise((resolve) => { pending = resolve }))
+      assert.equal(harness.takeover.tick(), 'created', `retry starts after ${delay}ms`)
+      assert.equal(harness.panelExists, true, 'the window exists before its renderer is ready')
+
+      assert.equal(harness.takeover.tick(), 'panel_present', 'the loading build is not duplicated')
+      assert.equal(harness.created, index + 2)
+      assert.equal(harness.takeover.debugState().consecutiveCreateFailures, index + 1)
+
+      pending?.(null)
+      await flushMicrotasks()
+      assert.equal(harness.panelExists, false, 'a failed build drops its window')
+      assert.equal(harness.takeover.debugState().consecutiveCreateFailures, index + 2)
+      const nextDelay = delays[index + 1] ?? 80_000
+      assert.equal(
+        harness.takeover.debugState().nextCreateAt,
+        harness.now + nextDelay,
+        `failure ${index + 2} backs off for ${nextDelay}ms, not ${delay}ms`,
+      )
+    }
+  } finally {
+    harness.takeover.stop()
+  }
+})
+
+test('stop clears the pending create backoff', async () => {
+  const harness = createHarness()
+  try {
+    harness.takeover.start()
+    await flushMicrotasks()
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 1)
+    assert.notEqual(harness.takeover.debugState().nextCreateAt, null)
+
+    harness.takeover.stop()
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 0)
+    assert.equal(harness.takeover.debugState().nextCreateAt, null)
+
+    harness.takeover.start()
+    assert.equal(harness.created, 2, 'a fresh run creates on its first tick')
+    await flushMicrotasks()
+  } finally {
+    harness.takeover.stop()
+  }
+})
+
+test('a synchronous create throw is recorded as a failure', () => {
+  const harness = createHarness({
+    createResult: () => { throw new Error('synthetic create throw') },
+  })
+  try {
+    harness.takeover.start()
+    assert.equal(harness.created, 1)
+    assert.equal(harness.panelExists, false, 'the thrown build leaves no window behind')
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 1)
+    assert.equal(harness.takeover.debugState().nextCreateAt, harness.now + 5_000)
+    assert.equal(harness.takeover.tick(), 'backoff', 'the failure is not retried immediately')
+    assert.equal(harness.created, 1)
+  } finally {
+    harness.takeover.stop()
+  }
+})
+
+test('a rejected create promise is recorded as a failure', async () => {
+  const harness = createHarness()
+  const pending = createDeferred()
+  try {
+    harness.setCreateResult(() => pending.promise)
+    harness.takeover.start()
+    assert.equal(harness.panelExists, true)
+
+    pending.reject(new Error('synthetic create rejection'))
+    await flushMicrotasks()
+    assert.equal(harness.panelExists, false, 'the rejected build drops its window')
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 1)
+    assert.equal(harness.takeover.debugState().nextCreateAt, harness.now + 5_000)
+    assert.equal(harness.takeover.tick(), 'backoff', 'the rejection is not retried immediately')
+    assert.equal(harness.created, 1)
+  } finally {
+    harness.takeover.stop()
+  }
+})
+
+test('a rejection from a stopped run does not record a failure', async () => {
+  const harness = createHarness()
+  const stale = createDeferred()
+  try {
+    harness.setCreateResult(() => stale.promise)
+    harness.takeover.start()
+    harness.takeover.stop()
+
+    stale.reject(new Error('synthetic late rejection'))
+    await flushMicrotasks()
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 0)
+    assert.equal(harness.takeover.debugState().nextCreateAt, null)
+
+    harness.setCreateResult(() => Promise.resolve(null))
+    harness.takeover.start()
+    assert.equal(harness.created, 2, 'a stale failure does not block the next run')
+    await flushMicrotasks()
+  } finally {
+    harness.takeover.stop()
+  }
+})
+
+test('a late settle from a stopped run does not clear the creating flag of a new run', async () => {
+  const harness = createHarness()
+  const stale = createDeferred()
+  const fresh = createDeferred()
+  try {
+    harness.setCreateResult(() => stale.promise)
+    harness.takeover.start()
+    assert.equal(harness.takeover.debugState().creating, true)
+
+    // The stale build fails, production destroys its window, and the driver
+    // restarts with a new build before the stale callbacks run.
+    stale.resolve(null)
+    harness.setPanelExists(false)
+    harness.takeover.stop()
+    harness.setCreateResult(() => fresh.promise)
+    harness.takeover.start()
+    assert.equal(harness.created, 2)
+    assert.equal(harness.takeover.debugState().creating, true)
+
+    await flushMicrotasks()
+    assert.equal(
+      harness.takeover.debugState().creating,
+      true,
+      'the stale settle must not release the new build',
+    )
+    assert.equal(harness.takeover.tick(), 'creating')
+    assert.equal(harness.created, 2, 'no duplicate build while the new one is pending')
+  } finally {
+    harness.takeover.stop()
+    fresh.resolve(null)
+    await flushMicrotasks()
   }
 })
 
