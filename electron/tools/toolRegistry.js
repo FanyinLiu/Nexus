@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { BrowserWindow, dialog, shell } from 'electron'
+import { mainT } from '../mainMessages.js'
 import { searchWeb } from './webSearch.js'
 import { lookupWeatherByLocation } from './weatherTool.js'
 import { normalizeExternalUrl } from './toolRegistryUtils.js'
@@ -23,17 +24,7 @@ function assertRendererToolAllowed(toolDefinition, payload) {
   const policy = normalizeRendererToolPolicy(payload?.policy)
 
   if (!policy.enabled) {
-    if (toolDefinition.id === 'weather_lookup') {
-      const weatherDisabledMessages = {
-        'zh-CN': '天气查询已在当前设置中禁用。',
-        'zh-TW': '天氣查詢已在目前設定中停用。',
-        'en-US': 'Weather lookup is disabled in the current settings.',
-        ja: '天気検索は現在の設定で無効になっています。',
-        ko: '현재 설정에서 날씨 조회가 꺼져 있습니다.',
-      }
-      throw new Error(weatherDisabledMessages[payload?.locale] ?? weatherDisabledMessages['zh-CN'])
-    }
-    throw new Error(`${toolDefinition.label} 已在当前设置中禁用。`)
+    throw new Error(mainT('tool.disabled', { tool: toolDefinition.label() }))
   }
 
   return policy
@@ -43,43 +34,43 @@ async function openExternalLinkWithShell(payload, context = {}) {
   const url = normalizeExternalUrl(payload?.url)
   const dialogOptions = {
     type: 'question',
-    buttons: ['打开', '取消'],
+    buttons: [mainT('tool.openLink.open'), mainT('tool.openLink.cancel')],
     defaultId: 1,
     cancelId: 1,
-    message: '即将打开外部链接',
+    message: mainT('tool.openLink.title'),
     detail: url,
   }
   const { response } = context.sourceWindow
     ? await dialog.showMessageBox(context.sourceWindow, dialogOptions)
     : await dialog.showMessageBox(dialogOptions)
   if (response !== 0) {
-    throw new Error('已取消打开外部链接。')
+    throw new Error(mainT('tool.openLink.cancelled'))
   }
   await shell.openExternal(url)
   return {
     ok: true,
     url,
-    message: `已在系统浏览器中打开 ${url}`,
+    message: mainT('tool.openLink.opened', { url }),
   }
 }
 
 const BUILT_IN_TOOL_REGISTRY = Object.freeze({
   web_search: {
     id: 'web_search',
-    label: '网页搜索',
+    label: () => mainT('tool.webSearch.label'),
     riskLevel: 'low',
     secretFields: ['apiKey'],
     handler: (payload) => searchWeb(payload),
   },
   weather_lookup: {
     id: 'weather_lookup',
-    label: '天气查询',
+    label: () => mainT('tool.weatherLookup.label'),
     riskLevel: 'low',
     handler: (payload) => lookupWeatherByLocation(payload?.location, payload?.fallbackLocation, payload?.locale),
   },
   open_external_link: {
     id: 'open_external_link',
-    label: '打开外部链接',
+    label: () => mainT('tool.openExternalLink.label'),
     riskLevel: 'medium',
     handler: (payload, context) => openExternalLinkWithShell(payload, context),
   },
@@ -88,7 +79,7 @@ const BUILT_IN_TOOL_REGISTRY = Object.freeze({
 export async function invokeRegisteredTool(event, toolId, payload = {}) {
   const toolDefinition = BUILT_IN_TOOL_REGISTRY[toolId]
   if (!toolDefinition) {
-    throw new Error(`未知工具：${toolId}`)
+    throw new Error(mainT('tool.unknown', { tool: toolId }))
   }
 
   const sourceWindow = BrowserWindow.fromWebContents(event.sender)

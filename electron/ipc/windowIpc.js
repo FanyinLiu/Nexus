@@ -1,6 +1,7 @@
 // @ts-check
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import path from 'node:path'
+import { mainT } from '../mainMessages.js'
 import {
   mainWindow,
   panelWindow,
@@ -154,7 +155,7 @@ async function runAuditedPetModelAction(event, channel, payload, action, options
   try {
     const approved = await confirmPetModelAction(event, channel, payload)
     if (!approved) {
-      throw new Error('宠物工件操作已取消。')
+      throw new Error(mainT('petModel.actionCancelled'))
     }
     const result = await action()
     audit('pet-model', 'result', summarizePetModelResult(channel, result))

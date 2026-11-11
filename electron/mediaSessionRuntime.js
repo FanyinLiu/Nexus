@@ -3,9 +3,12 @@ import { execFile } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { app } from 'electron'
+import { createLogger } from './logger.js'
+import { mainT } from './mainMessages.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const log = createLogger('media.session')
 
 const MEDIA_SESSION_SCRIPT_PATH = app.isPackaged
   ? path.join(process.resourcesPath, 'app.asar.unpacked', 'electron', 'mediaSession.ps1')
@@ -440,7 +443,8 @@ function parseMediaSessionJson(stdout) {
   try {
     return JSON.parse(String(stdout ?? '').trim() || '{}')
   } catch (error) {
-    throw new Error(`系统媒体会话返回的内容没看懂。${error instanceof Error ? ` ${error.message}` : ''}`, { cause: error })
+    log.warn(`invalid media session response: ${error instanceof Error ? error.message : String(error)}`)
+    throw new Error(mainT('mediaSession.invalidResponse'), { cause: error })
   }
 }
 

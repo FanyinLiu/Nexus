@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
+import { translateMainMessage } from '../electron/mainMessages.js'
 import { normalizeExternalUrl } from '../electron/tools/toolRegistryUtils.js'
+
+const LINK_PROTOCOL = translateMainMessage('tool.linkProtocol', undefined, 'en-US')
+const LINK_UNSAFE = translateMainMessage('tool.linkUnsafe', undefined, 'en-US')
 
 describe('toolRegistryUtils.normalizeExternalUrl', () => {
   test('normalizes bare domains to https URLs', () => {
@@ -16,7 +20,7 @@ describe('toolRegistryUtils.normalizeExternalUrl', () => {
   test('rejects non-http schemes', () => {
     assert.throws(
       () => normalizeExternalUrl('file:///etc/passwd'),
-      /目前只支持打开 http 或 https 链接/,
+      new RegExp(LINK_PROTOCOL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     )
   })
 
@@ -30,7 +34,7 @@ describe('toolRegistryUtils.normalizeExternalUrl', () => {
     ]) {
       assert.throws(
         () => normalizeExternalUrl(url),
-        /拒绝打开不安全链接/,
+        new RegExp(LINK_UNSAFE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
       )
     }
   })

@@ -11,6 +11,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
+import { mainT } from '../mainMessages.js'
 import { findModelDir } from './modelPaths.js'
 
 const require = createRequire(import.meta.url)
@@ -31,11 +32,11 @@ let _creating = null
 
 async function getTts() {
   if (!sherpa?.OfflineTts) {
-    throw new Error('本地语音合成组件好像没装好，试试重新安装应用？')
+    throw new Error(mainT('localTts.missingComponent'))
   }
   const dir = findModelDir(LOCAL_TTS_MODEL_DIR)
   if (!dir || !fs.existsSync(path.join(dir, 'model.onnx'))) {
-    throw new Error('本地语音模型还没安装，请到 设置 → 本地模型 下载「本地语音合成」。')
+    throw new Error(mainT('localTts.modelNotInstalled'))
   }
   if (_tts && _ttsModelDir === dir) return _tts
   if (_creating) return _creating
