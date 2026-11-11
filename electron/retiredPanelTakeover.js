@@ -111,10 +111,9 @@ export function createRetiredPanelTakeover({
       return 'quitting'
     }
     if (hasPanelWindow()) {
-      creating = false
-      // A live panel proves creation works (or a manual open replaced the
-      // fallback), so any pending retry delay is obsolete.
-      clearCreateBackoff()
+      // A build in flight already owns a window (load retries reuse it); it is
+      // not a ready panel, so the creating flag and retry schedule stay with
+      // the async creation path. Only the ready callback clears the backoff.
       const snapshot = getSnapshot()
       const petOnline = Boolean(snapshot?.petOnline)
       lastPetOnline = petOnline

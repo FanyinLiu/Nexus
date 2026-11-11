@@ -362,6 +362,9 @@ test('a hidden takeover panel is reclaimed only after 60s online, and the latch 
     reason: 'already_retired',
   }, 'the first-use one-way latch is untouched')
 
+  // The reclaimed build was still loading; let its async failure settle before
+  // the next pet fall so the takeover driver is free to rebuild.
+  await new Promise<void>((resolve) => setImmediate(resolve))
   const beforeFall = state.windows.length
   state.snapshot.petOnline = false
   t.mock.timers.tick(5_000)

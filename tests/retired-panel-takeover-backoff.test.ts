@@ -121,6 +121,39 @@ test('a successful rebuild resets the failure backoff', async () => {
   }
 })
 
+test('a panel present while its build is pending keeps the failure backoff', async () => {
+  const harness = createHarness()
+  try {
+    harness.takeover.start()
+    await flushMicrotasks()
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 1)
+
+    // The retry build is in flight while its window already exists, as during
+    // an A17-style load retry: a tick must not mistake it for a ready panel.
+    harness.setNow(harness.now + 5_000)
+    let failPending: ((win: unknown) => void) | null = null
+    harness.setCreateResult(() => new Promise((resolve) => { failPending = resolve }))
+    assert.equal(harness.takeover.tick(), 'created')
+    harness.setPanelExists(true)
+    harness.takeover.tick()
+    assert.equal(harness.created, 2, 'the loading build is not duplicated')
+
+    failPending?.(null)
+    await flushMicrotasks()
+    harness.setPanelExists(false)
+
+    // The second failure backs off for 10s; a reset counter would allow 5s.
+    harness.setNow(harness.now + 9_999)
+    assert.equal(harness.takeover.tick(), 'backoff', 'the second failure waits 10s')
+    harness.setNow(harness.now + 1)
+    assert.equal(harness.takeover.tick(), 'created')
+    assert.equal(harness.created, 3)
+    assert.equal(harness.takeover.debugState().consecutiveCreateFailures, 2)
+  } finally {
+    harness.takeover.stop()
+  }
+})
+
 test('the pet coming back online resets the failure backoff', async () => {
   const harness = createHarness()
   try {
