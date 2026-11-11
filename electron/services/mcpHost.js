@@ -294,7 +294,10 @@ class McpInstance {
     }
 
     const child = spawn(spawnCommand, spawnArgs, {
-      stdio: ['pipe', 'pipe', 'inherit'],
+      // MCP transports JSON-RPC over stdin/stdout. stderr is diagnostics only:
+      // pipe it so a server that echoes tokens, paths, or user text cannot
+      // write straight into the app run log unredacted.
+      stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       env: buildMcpSpawnEnv(process.env, serverEnv),
     })
@@ -305,6 +308,12 @@ class McpInstance {
 
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk) => this._drainLineBuffer(chunk))
+
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk) => {
+      const text = getRedactedErrorMessage(chunk).trim()
+      if (text) console.warn(`${mcpLogScope(this.id)} stderr: ${text}`)
+    })
 
     await new Promise((resolve, reject) => {
       child.once('error', (err) => {
