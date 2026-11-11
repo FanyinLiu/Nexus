@@ -240,11 +240,15 @@ README에는 현재 안정 버전 v0.5.1과 이전 공개 버전 v0.5.0의 핵�
 - **.deb**: `sudo dpkg -i Nexus-<버전>.deb` (또는 배포판의 패키지 매니저로 열기).
 - **다운로드 검증**: Linux x64 아티팩트에는 `SHA256SUMS-linux.txt`가 포함됩니다. 패키지 형식 하나만 내려받았다면 다운로드 디렉터리에서 `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`를 실행하고 대상 파일이 `OK`인지 확인하세요. 체크섬 파일도 같은 공식 release에서 받아야 합니다.
 
-#### macOS unsigned auto-update limitation
+#### 자동 업데이트 안내(Windows / Linux)
+
+v0.5.1의 Windows와 Linux에는 자동 업데이트가 없습니다. 새 버전은 공식 GitHub Releases에서 설치 파일을 직접 내려받고, 같은 release의 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt`로 SHA-256을 확인한 뒤 설치해야 합니다. 앱이 자동으로 내려받거나 교체하거나 다시 시작하지 않습니다.
+
+#### macOS 미서명 빌드의 자동 업데이트 제한
 
 macOS arm64 미서명 빌드는 새 버전을 확인하고 공식 release 페이지만 엽니다. 앱을 자동으로 내려받거나 교체하지 않습니다. 업데이트할 때 새 `.dmg` / `.zip`을 수동으로 내려받고 Gatekeeper 확인 후 `/Applications/Nexus.app`을 교체해야 합니다.
 
-#### Windows unsigned installer limitation
+#### Windows 미서명 설치 프로그램 제한
 
 Windows x64 설치 프로그램은 `NotSigned`이며 게시자 신원 확인이나 안정적인 SmartScreen 평판을 제공하지 못합니다. 공식 GitHub Releases에서 받은 파일인지 확인한 뒤 위 SmartScreen 절차로 수동 실행하세요.
 
