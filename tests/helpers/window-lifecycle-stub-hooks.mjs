@@ -246,6 +246,7 @@ export function trackWindow() {}
 `
 
 const WINDOW_NAVIGATION_STUB = `
+export function createExternalWindowOpenHandler() { return async () => {} }
 export function externalWindowOpenNeedsConfirmation() { return false }
 export function isAllowedRendererNavigation() { return true }
 export function normalizeExternalWindowOpenUrl(url) { return url }

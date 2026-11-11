@@ -73,7 +73,7 @@ export const ToolsSectionV3 = memo(function ToolsSectionV3({ active, draft, setD
 
       {!draft.toolOpenExternalRequiresConfirmation && draft.toolOpenExternalEnabled ? (
         <SettingsV3Notice tone="warning" title={ti('settings.tools.confirm_before_open')}>
-          {ti('settings.tools.confirm_before_open_hint')}
+          {ti('settings.tools.confirm_before_open_off_warning')}
         </SettingsV3Notice>
       ) : null}
 

@@ -170,3 +170,43 @@ export function externalWindowOpenNeedsConfirmation(rawUrl, requiresConfirmation
   if (isAllowlistedExternalWindowOpenUrl(rawUrl)) return false
   return requiresConfirmation !== false
 }
+
+/**
+ * Build the external-open pipeline with URL normalization and safety ahead of
+ * the confirmation preference. Keeping the safety gate first means turning
+ * confirmation off can never widen the accepted scheme or host set: a
+ * non-http URL or an unsafe host is dropped before shell.openExternal is
+ * even considered.
+ *
+ * @param {{
+ *   normalizeUrl: (url: unknown) => string,
+ *   getRequiresConfirmation: () => unknown,
+ *   confirmOpen: (parent: unknown, url: string) => Promise<boolean>,
+ *   openExternal: (url: string) => unknown,
+ *   reportBlocked: (label: string, url: unknown, error: unknown) => void,
+ *   reportOpenFailed: (label: string, safeUrl: string, error: unknown) => void,
+ * }} deps
+ * @returns {(url: unknown, label: string, parent?: unknown) => Promise<void>}
+ */
+export function createExternalWindowOpenHandler(deps) {
+  return async function openExternalUrlFromWindow(url, label, parent) {
+    let safeUrl
+    try {
+      safeUrl = deps.normalizeUrl(url)
+    } catch (err) {
+      deps.reportBlocked(label, url, err)
+      return
+    }
+
+    const requiresConfirmation = deps.getRequiresConfirmation()
+    if (externalWindowOpenNeedsConfirmation(safeUrl, requiresConfirmation)) {
+      const accepted = await deps.confirmOpen(parent, safeUrl)
+      if (!accepted) return
+    }
+
+    const pending = deps.openExternal(safeUrl)
+    if (pending && typeof pending.catch === 'function') {
+      pending.catch((err) => deps.reportOpenFailed(label, safeUrl, err))
+    }
+  }
+}
