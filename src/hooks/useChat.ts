@@ -12,6 +12,8 @@ import {
   useCompanionNoticeStopSubscription,
 } from './chat/useCompanionNoticeQueueSubscriptions.ts'
 import { noteUserTyping } from '../features/autonomy/userTyping.ts'
+import { loadProactiveEtiquetteState } from '../features/autonomy/proactiveEtiquette.ts'
+import { shouldDropDeferredReminderNotice } from '../features/reminders/deferredNotice.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
@@ -36,6 +38,7 @@ import type {
   ChatMessage,
   ChatMessageTone,
 } from '../types/index.ts'
+import type { CompanionNoticePayload } from './chat/types.ts'
 
 export type { UseChatContext } from './chat/index.ts'
 
@@ -181,10 +184,29 @@ export function useChat(ctx: UseChatContext) {
     })
   }, [appendChatMessage])
 
+  const shouldDropDeferredCompanionNotice = useCallback((payload: CompanionNoticePayload) => {
+    const current = ctxRef.current
+    // This predicate only runs while dropping the deferred queue; an idle
+    // push keeps main's original immediate-delivery behaviour even during DND.
+    // A paused reminder row must not replay after the session ends. Local
+    // reminders have no separate global switch; pausing the task is the user's
+    // "reminders off" for that item. The companion "leave me alone" span is the
+    // renderer's Do-Not-Disturb signal; queued reminders are dropped rather
+    // than delivered late.
+    return shouldDropDeferredReminderNotice({
+      reminderId: payload.reminderId,
+      tasks: current.reminderTasksRef.current,
+      quietUntil: loadProactiveEtiquetteState().quietUntil,
+      now: Date.now(),
+    })
+  }, [])
+
   const {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
     discardDeferredCompanionNotices,
+    hasDeferredCompanionNotices,
+    canDeliverDeferredCompanionNotice,
   } = useCompanionNotices({
     ctx,
     t,
@@ -192,12 +214,24 @@ export function useChat(ctx: UseChatContext) {
     appendChatMessage,
     presentPetDialogBubble,
     setError,
+    shouldDropDeferredNotice: shouldDropDeferredCompanionNotice,
   })
 
   // The Stop button lives in the voice hook; this queue lives here, so a
   // user-initiated stop-all clears the busy-deferred notices.
   useCompanionNoticeStopSubscription(discardDeferredCompanionNotices)
-  useCompanionNoticeIdleFlush(ctx.voiceBus, flushDeferredCompanionNotices)
+  useCompanionNoticeIdleFlush(
+    ctx.voiceBus,
+    flushDeferredCompanionNotices,
+    undefined,
+    canDeliverDeferredCompanionNotice,
+    {
+      canForceRelease: () => canDeliverDeferredCompanionNotice({ force: true }),
+      forceFlush: () => flushDeferredCompanionNotices({ force: true }),
+      onStuckFallback: () => ctxRef.current.setContinuousVoiceSession(false),
+      hasPending: hasDeferredCompanionNotices,
+    },
+  )
 
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(

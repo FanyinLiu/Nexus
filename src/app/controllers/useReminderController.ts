@@ -42,6 +42,8 @@ type ChatBridge = {
     dedupeKey?: string
     toolResult?: ReturnType<typeof toChatToolResult>
     proactiveTitle?: string
+    reminderId?: string
+    reminderDueAt?: string
   }) => Promise<void>
   appendSystemMessage: (content: string, tone?: ChatMessageTone) => void
   sendMessage: (text: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification' }) => Promise<unknown>
@@ -181,6 +183,8 @@ export function useReminderController({
             speechContent: plan.speech ? defaultSpeechText : '',
             autoHideMs: PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
             dedupeKey: message.id,
+            reminderId: task.id,
+            reminderDueAt: task.nextRunAt,
           })
         } else {
           // Legacy path: a reminder must never be lost when routing is
@@ -193,6 +197,8 @@ export function useReminderController({
             bubbleContent: displayText,
             speechContent: defaultSpeechText,
             proactiveTitle: message.title,
+            reminderId: task.id,
+            reminderDueAt: task.nextRunAt,
           })
         }
 

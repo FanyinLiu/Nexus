@@ -10,6 +10,7 @@
     "tests/benchmarks.bench.ts",
     "tests/fixtures/settingsSurfaceAuditBaseline.ts",
     "tests/helpers/bundler-import-hooks.mjs",
+    "tests/helpers/companionNoticeHarness.ts",
     "tests/helpers/directNotificationHookHarness.ts",
     "tests/helpers/electron-main-stub-hooks.mjs",
     "tests/helpers/electron-net-stub-hooks.mjs",
