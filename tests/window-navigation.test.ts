@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { pathToFileURL } from 'node:url'
 import { describe, test } from 'node:test'
 
+import { translateMainMessage } from '../electron/mainMessages.js'
 import {
   isAllowedRendererNavigation,
   normalizeExternalWindowOpenUrl,
@@ -12,6 +13,8 @@ import {
   PET_LOAD_FALLBACK_PATH,
   PET_LOAD_FALLBACK_RETRY_URL,
 } from '../electron/windowLoadFallback.js'
+
+const LINK_UNSAFE = translateMainMessage('tool.linkUnsafe', undefined, 'en-US')
 
 describe('windowNavigation.isAllowedRendererNavigation', () => {
   const rendererEntry = 'http://127.0.0.1:47822/?view=pet'
@@ -138,7 +141,7 @@ describe('windowNavigation.normalizeExternalWindowOpenUrl', () => {
     assert.equal(normalizeExternalWindowOpenUrl('example.com'), 'https://example.com/')
     assert.throws(
       () => normalizeExternalWindowOpenUrl('http://127.0.0.1:11434'),
-      /拒绝打开不安全链接/,
+      new RegExp(LINK_UNSAFE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     )
   })
 })

@@ -77,7 +77,7 @@ export function register() {
     requireTrustedSender(event)
     const profileId = String(payload?.profileId ?? '').trim()
     if (!profileId) {
-      throw new Error('persona:load-profile 需要非空的 profileId。')
+      throw new Error('PERSONA_PROFILE_ID_REQUIRED')
     }
     return personaLoader.loadPersonaProfile(profileId)
   })
@@ -86,7 +86,7 @@ export function register() {
     requireTrustedSender(event)
     const profileId = String(payload?.profileId ?? '').trim()
     if (!profileId) {
-      throw new Error('persona:profile-dir 需要非空的 profileId。')
+      throw new Error('PERSONA_PROFILE_ID_REQUIRED')
     }
     return { dir: personaLoader.getPersonaProfileDisplayDir(profileId) }
   })

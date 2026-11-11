@@ -86,6 +86,16 @@ export function setConsolePassthrough(enabled: boolean): void {
   consolePassthrough = enabled
 }
 
+/**
+ * Print one redacted diagnostic line to the console. Copy sites use this
+ * instead of a bare console.warn so the raw error stays out of the UI while
+ * still reaching the log; the console-usage audit deliberately does not count
+ * calls made from this module.
+ */
+export function warnRedacted(context: string, value: unknown): void {
+  console.warn(context, redactSensitiveLogText(value))
+}
+
 function summarizePrivateValue(value: unknown): Record<string, unknown> {
   if (typeof value === 'string') return { redacted: true, type: 'string', length: value.length }
   if (Array.isArray(value)) return { redacted: true, type: 'array', length: value.length }

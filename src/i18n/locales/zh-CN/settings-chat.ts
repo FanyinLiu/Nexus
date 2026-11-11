@@ -23,7 +23,7 @@ export const zhCNSettingsChat = {
   'settings.chat.import_card': '导入角色卡',
   'settings.chat.importing_card': '导入中...',
   'settings.chat.import_card_success': '已导入角色「{name}」，含 {count} 条关键词背景。',
-  'settings.chat.import_card_error': '角色卡没能导入：{error}',
+  'settings.chat.import_card_error': '角色卡没能导入，换一张再试试？',
   'settings.chat.vts_title': 'VTube Studio 集成',
   'settings.chat.vts_hint': '通过 WebSocket API 控制 VTube Studio 中的角色模型，Nexus 提供 AI 对话和情绪驱动。',
   'settings.chat.vts_enabled': '启用 VTube Studio 桥接',

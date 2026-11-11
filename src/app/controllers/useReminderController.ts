@@ -28,7 +28,7 @@ import { isUserTypingAnywhere } from '../../features/autonomy/userTyping.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
-import { createLogger } from '../../lib/logger.ts'
+import { createLogger, warnRedacted } from '../../lib/logger.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 
 const reminderLog = createLogger('reminders.notice')
@@ -42,6 +42,8 @@ type ChatBridge = {
     dedupeKey?: string
     toolResult?: ReturnType<typeof toChatToolResult>
     proactiveTitle?: string
+    reminderId?: string
+    reminderDueAt?: string
   }) => Promise<void>
   appendSystemMessage: (content: string, tone?: ChatMessageTone) => void
   sendMessage: (text: string, options?: { source?: 'text' | 'voice' | 'telegram' | 'discord' | 'notification' }) => Promise<unknown>
@@ -181,6 +183,8 @@ export function useReminderController({
             speechContent: plan.speech ? defaultSpeechText : '',
             autoHideMs: PROACTIVE_BUBBLE_AUTO_COLLAPSE_MS,
             dedupeKey: message.id,
+            reminderId: task.id,
+            reminderDueAt: task.nextRunAt,
           })
         } else {
           // Legacy path: a reminder must never be lost when routing is
@@ -193,6 +197,8 @@ export function useReminderController({
             bubbleContent: displayText,
             speechContent: defaultSpeechText,
             proactiveTitle: message.title,
+            reminderId: task.id,
+            reminderDueAt: task.nextRunAt,
           })
         }
 
@@ -309,7 +315,8 @@ export function useReminderController({
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t('chat.reminder_task.execution_failed')
-      chat.appendSystemMessage(t('chat.reminder_task.execution_failed_system', { title: task.title, error: errorMessage }), 'error')
+      warnRedacted('[reminder] automated task failed:', errorMessage)
+      chat.appendSystemMessage(t('chat.reminder_task.execution_failed_system', { title: task.title }), 'error')
       pet.updatePetStatus(t('chat.reminder_task.execution_failed_pet', { title: task.title }), 3200)
       debugConsole.appendDebugConsoleEvent({
         source: 'tool',
