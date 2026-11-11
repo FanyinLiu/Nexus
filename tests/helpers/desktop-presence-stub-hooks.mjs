@@ -9,11 +9,19 @@
 // events through it and can make start() throw. Nothing here touches a real
 // keyboard hook, a real window, or the user's settings.
 //
+// 'shared/typingActivity.js' resolves to a wrapper around the real module that
+// records the opaque token each keydown/keyup passes into the machine. The
+// wrapper forwards every other export unchanged, so the state machine itself
+// still runs for real. Tokens live on globalThis.__nexusDesktopPresenceMachine
+// and let a test pin that the handler tokenizes on event.keycode, not
+// event.key, without adding a production seam.
+//
 // Registered via `register(new URL('./helpers/desktop-presence-stub-hooks.mjs',
 // import.meta.url))` before the dynamic import of the module under test.
 
 const ELECTRON_STUB_URL = 'desktop-presence-stub:electron'
 const UIOHOOK_STUB_URL = 'desktop-presence-stub:uiohook'
+const TYPING_ACTIVITY_STUB_PREFIX = 'desktop-presence-stub:typing-activity?real='
 
 // 'electron' is a static import of the module under test, but 'uiohook-napi'
 // is loaded lazily on the first typing refresh. Create both state bags here so
@@ -119,6 +127,29 @@ state.emit = (event, payload) => {
 }
 `
 
+function typingActivityWrapperSource(realUrl) {
+  return `
+const state = globalThis.__nexusDesktopPresenceMachine ??= { tokens: { down: [], up: [] } }
+state.tokens ??= { down: [], up: [] }
+export * from ${JSON.stringify(realUrl)}
+import { createTypingActivityMachine as createRealMachine } from ${JSON.stringify(realUrl)}
+export function createTypingActivityMachine(options) {
+  const machine = createRealMachine(options)
+  return {
+    ...machine,
+    keyDown(token, now) {
+      state.tokens.down.push(token)
+      return machine.keyDown(token, now)
+    },
+    keyUp(token, now) {
+      state.tokens.up.push(token)
+      return machine.keyUp(token, now)
+    },
+  }
+}
+`
+}
+
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === 'electron') {
     return { url: ELECTRON_STUB_URL, shortCircuit: true }
@@ -126,7 +157,21 @@ export async function resolve(specifier, context, nextResolve) {
   if (specifier === 'uiohook-napi') {
     return { url: UIOHOOK_STUB_URL, shortCircuit: true }
   }
-  return nextResolve(specifier, context)
+  const resolved = await nextResolve(specifier, context)
+  // The wrapper imports the real module by absolute URL, so specifier and
+  // resolved URL match there. Only the relative import from the module under
+  // test is wrapped, which keeps the wrapper from wrapping itself.
+  if (
+    resolved.url !== specifier
+    && resolved.url.includes('/shared/typingActivity.js')
+    && !resolved.url.startsWith('desktop-presence-stub:')
+  ) {
+    return {
+      url: `${TYPING_ACTIVITY_STUB_PREFIX}${encodeURIComponent(resolved.url)}`,
+      shortCircuit: true,
+    }
+  }
+  return resolved
 }
 
 export async function load(url, context, nextLoad) {
@@ -135,6 +180,14 @@ export async function load(url, context, nextLoad) {
   }
   if (url === UIOHOOK_STUB_URL) {
     return { format: 'module', shortCircuit: true, source: UIOHOOK_SOURCE }
+  }
+  if (url.startsWith(TYPING_ACTIVITY_STUB_PREFIX)) {
+    const realUrl = decodeURIComponent(url.slice(TYPING_ACTIVITY_STUB_PREFIX.length))
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source: typingActivityWrapperSource(realUrl),
+    }
   }
   return nextLoad(url, context)
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { register } from 'node:module'
+import fs from 'node:fs'
+import { register, syncBuiltinESMExports } from 'node:module'
 import { after, afterEach, beforeEach, test } from 'node:test'
 
 // desktopPresence.js owns the state machine that turns global key events into
@@ -155,6 +156,131 @@ function captureWarnings(): { warnings: string[]; restore: () => void } {
   }
 }
 
+type SinkCapture = {
+  logged: string[]
+  written: string[]
+  restore: () => void
+}
+
+type MachineTokenState = {
+  tokens: { down: unknown[]; up: unknown[] }
+}
+
+function sinkText(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value instanceof Uint8Array) return new TextDecoder().decode(value)
+  if (value instanceof Error) return `${value.name}: ${value.message}`
+  if (value && typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
+  return String(value)
+}
+
+function sinkTextMany(values: unknown[]): string {
+  return values.map(sinkText).join(' ')
+}
+
+// Intercept the process-local sinks a key character could escape through: every
+// console method, direct stdout/stderr writes, and the fs write/append family.
+// Node's ESM named imports of node:fs are patched via syncBuiltinESMExports, so
+// an `import { writeFileSync } from 'node:fs'` mutation is caught as well. The
+// wrappers call through to the real functions, so nothing below a test's own
+// synthetic payload is suppressed.
+function captureLoggerAndDiskSinks(): SinkCapture {
+  const logged: string[] = []
+  const written: string[] = []
+  const restores: Array<() => void> = []
+
+  const consoleSink = console as unknown as Record<string, (...args: unknown[]) => void>
+  for (const method of ['log', 'info', 'warn', 'error', 'debug', 'trace']) {
+    const original = consoleSink[method]
+    if (typeof original !== 'function') continue
+    consoleSink[method] = (...args: unknown[]) => {
+      logged.push(sinkTextMany(args))
+      original.apply(consoleSink, args)
+    }
+    restores.push(() => {
+      consoleSink[method] = original
+    })
+  }
+
+  const streams = [
+    process.stdout as unknown as { write: (...args: unknown[]) => boolean },
+    process.stderr as unknown as { write: (...args: unknown[]) => boolean },
+  ]
+  for (const stream of streams) {
+    const original = stream.write
+    stream.write = (chunk: unknown, ...rest: unknown[]) => {
+      logged.push(sinkText(chunk))
+      return original.call(stream, chunk, ...rest)
+    }
+    restores.push(() => {
+      stream.write = original
+    })
+  }
+
+  const fsSink = fs as unknown as Record<string, (...args: unknown[]) => unknown>
+  for (const name of [
+    'writeFileSync',
+    'appendFileSync',
+    'writeSync',
+    'writevSync',
+    'writeFile',
+    'appendFile',
+    'write',
+    'writev',
+  ]) {
+    const original = fsSink[name]
+    if (typeof original !== 'function') continue
+    fsSink[name] = (...args: unknown[]) => {
+      written.push(sinkTextMany(args))
+      return original(...args)
+    }
+    restores.push(() => {
+      fsSink[name] = original
+    })
+  }
+
+  const promiseSink = fs.promises as unknown as Record<
+    string,
+    (...args: unknown[]) => Promise<unknown>
+  >
+  for (const name of ['writeFile', 'appendFile']) {
+    const original = promiseSink[name]
+    if (typeof original !== 'function') continue
+    promiseSink[name] = (...args: unknown[]) => {
+      written.push(sinkTextMany(args))
+      return original(...args)
+    }
+    restores.push(() => {
+      promiseSink[name] = original
+    })
+  }
+
+  syncBuiltinESMExports()
+
+  return {
+    logged,
+    written,
+    restore: () => {
+      for (const restore of [...restores].reverse()) restore()
+      syncBuiltinESMExports()
+    },
+  }
+}
+
+function machineTokenState(): MachineTokenState {
+  const state = (globalThis as unknown as {
+    __nexusDesktopPresenceMachine?: MachineTokenState
+  }).__nexusDesktopPresenceMachine
+  assert.ok(state, 'the typing-activity wrapper must record machine tokens')
+  return state
+}
+
 async function enableTyping(): Promise<void> {
   presence.applyDesktopPresencePreferences({
     gazeFollowEnabled: false,
@@ -258,6 +384,61 @@ test('typing IPC carries only aggregate phase and rate, never a key token', asyn
     'the quiet subscriber sees only a boolean, never a key or event object',
   )
   unsubscribe()
+})
+
+test('key handlers tokenize on keycode and never log or persist the character', async () => {
+  const sent = installWindow()
+  await enableTyping()
+
+  const distinctiveKey = 'qZ_marker_key_character_9f3c'
+  const machine = machineTokenState()
+  machine.tokens.down.length = 0
+  machine.tokens.up.length = 0
+
+  const capture = captureLoggerAndDiskSinks()
+  try {
+    // uiohook's event carries both the numeric keycode and the printable
+    // character. Only the keycode may become the opaque machine token.
+    emitKey('keydown', { keycode: 30, key: distinctiveKey })
+    emitKey('keyup', { keycode: 30, key: distinctiveKey })
+    // A missing keycode must fall back to 'unknown', never to the character.
+    emitKey('keydown', { key: distinctiveKey })
+    emitKey('keyup', { key: distinctiveKey })
+
+    await waitFor(
+      () => typingPayloads(sent).some((payload) => payload.phase === 'start'),
+      'the start signal',
+    )
+    await waitFor(
+      () => typingPayloads(sent).some((payload) => payload.phase === 'stop'),
+      'the idle stop signal',
+      3_000,
+    )
+  } finally {
+    capture.restore()
+  }
+
+  assert.deepEqual(
+    machine.tokens.down,
+    [30, 'unknown'],
+    'keydown must pass event.keycode, or "unknown" when it is missing',
+  )
+  assert.deepEqual(
+    machine.tokens.up,
+    [30, 'unknown'],
+    'keyup must pass event.keycode, or "unknown" when it is missing',
+  )
+
+  assert.equal(
+    capture.logged.some((line) => line.includes(distinctiveKey)),
+    false,
+    'event.key must never be passed to a logger',
+  )
+  assert.equal(
+    capture.written.some((line) => line.includes(distinctiveKey)),
+    false,
+    'event.key must never be written to disk',
+  )
 })
 
 test('stop unloads the typing hook, drops activity, and can start again', async () => {
