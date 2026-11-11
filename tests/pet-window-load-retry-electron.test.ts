@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { register } from 'node:module'
 import test from 'node:test'
+import { pathToFileURL } from 'node:url'
 
 import { windowLifecycleState } from './helpers/window-lifecycle-stub-hooks.mjs'
 
@@ -279,6 +280,67 @@ test('the fallback retry control reloads the pet and the normal window appears',
   pet.hide()
   pet.show()
   assert.equal(pet.loadCount, 5, 'a normal show after recovery does not reload')
+})
+
+test('a normal pet page cannot navigate to the retry marker and trigger a reload', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  const entryUrl = pet.url
+  pet.emitWebContents('did-finish-load')
+  await flushMicrotasks()
+  assert.equal(pet.visible, true, 'the pet finished its real load')
+
+  const loadCount = pet.loadCount
+  let prevented = false
+  const navigationEvent = {
+    defaultPrevented: false,
+    preventDefault() {
+      prevented = true
+      this.defaultPrevented = true
+    },
+  }
+  pet.emitWebContents('will-navigate', navigationEvent, PET_LOAD_FALLBACK_RETRY_URL)
+  assert.equal(prevented, true, 'the guard blocks the retry marker outside the fallback')
+  t.mock.timers.tick(10_000)
+  assert.equal(pet.loadCount, loadCount, 'a blocked marker never starts a retry load')
+  assert.equal(pet.url, entryUrl, 'the page stays on the pet entry URL')
+})
+
+test('a normal pet page cannot load the packaged fallback file as its current page', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  const entryUrl = pet.url
+  const fallbackUrl = pathToFileURL(PET_LOAD_FALLBACK_PATH)
+  const targets = [fallbackUrl.toString()]
+  fallbackUrl.searchParams.set('lang', 'zh-CN')
+  targets.push(fallbackUrl.toString())
+
+  for (const target of targets) {
+    let prevented = false
+    const navigationEvent = {
+      defaultPrevented: false,
+      preventDefault() {
+        prevented = true
+        this.defaultPrevented = true
+      },
+    }
+    pet.emitWebContents('will-navigate', navigationEvent, target)
+    assert.equal(prevented, true, 'the guarded page cannot navigate to the fallback file')
+  }
+
+  assert.equal(pet.loadCount, 1, 'the blocked fallback navigation does not load anything')
+  assert.equal(pet.url, entryUrl, 'the pet entry stays the current page')
+  assert.equal(pet.loadFileCalls.length, 0, 'the fallback is only ever loaded by app-initiated loadFile')
+  assert.equal(pet.visible, false, 'the blocked navigation is not treated as ready')
+  assert.equal(pet.focused, false, 'the blocked navigation does not take the ready path')
 })
 
 test('an exhausted pet reloads when the user shows it again', async (t) => {

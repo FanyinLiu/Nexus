@@ -63,25 +63,25 @@ describe('windowNavigation.isAllowedRendererNavigation', () => {
     )
   })
 
-  test('allows only the app fallback file and pet retry marker', () => {
+  test('blocks the packaged pet fallback file and the pet retry marker', () => {
     const packagedEntry = 'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=pet'
     const fallbackUrl = pathToFileURL(PET_LOAD_FALLBACK_PATH)
     fallbackUrl.searchParams.set('lang', 'zh-CN')
 
     assert.equal(
       isAllowedRendererNavigation(fallbackUrl.toString(), packagedEntry),
-      true,
-      'the packaged fallback file with ?lang= is app-initiated',
+      false,
+      'a page-initiated fallback file load is blocked; the app loads it with loadFile',
     )
     assert.equal(
       isAllowedRendererNavigation(PET_LOAD_FALLBACK_RETRY_URL, packagedEntry),
-      true,
-      'the fixed retry marker is app-initiated',
+      false,
+      'a page-initiated retry marker is blocked; the pet listener handles it first',
     )
     assert.equal(
       isAllowedRendererNavigation(PET_LOAD_FALLBACK_RETRY_URL, 'http://127.0.0.1:47822/?view=panel'),
       false,
-      'the pet fallback marker does not apply to the panel',
+      'the pet retry marker is never allowed, including for the panel',
     )
     assert.equal(
       isAllowedRendererNavigation('file:///tmp/pet-load-fallback.html?lang=zh-CN', packagedEntry),
@@ -91,7 +91,7 @@ describe('windowNavigation.isAllowedRendererNavigation', () => {
     assert.equal(
       isAllowedRendererNavigation('nexus-retry://panel', packagedEntry),
       false,
-      'only the fixed pet marker is allowlisted',
+      'the pet retry scheme stays blocked for every target',
     )
     assert.equal(
       isAllowedRendererNavigation('https://evil.example/pet-load-fallback.html', packagedEntry),

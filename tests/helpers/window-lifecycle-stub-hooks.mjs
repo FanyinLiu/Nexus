@@ -256,14 +256,6 @@ export function getSavedBounds() { return null }
 export function trackWindow() {}
 `
 
-const WINDOW_NAVIGATION_STUB = `
-export function externalWindowOpenNeedsConfirmation() { return false }
-export function isAllowedRendererNavigation() { return true }
-export function normalizeExternalWindowOpenUrl(url) { return url }
-export function summarizeWindowNavigationErrorForLog() { return '' }
-export function summarizeWindowNavigationUrlForLog() { return '' }
-`
-
 const USER_FACING_DIALOGS_STUB = `
 export function externalOpenDialogCopy() { return { title: '', message: '', detail: '' } }
 export function normalizeDialogLocale(locale) {
@@ -303,7 +295,6 @@ const MODULE_STUBS = new Map([
   ['/electron/windowRuntimeState.js', WINDOW_RUNTIME_STATE_STUB],
   ['/electron/rendererServer.js', RENDERER_SERVER_STUB],
   ['/electron/services/windowBoundsStore.js', WINDOW_BOUNDS_STORE_STUB],
-  ['/electron/windowNavigation.js', WINDOW_NAVIGATION_STUB],
   ['/electron/userFacingDialogs.js', USER_FACING_DIALOGS_STUB],
   ['/electron/services/externalOpenConfirmation.js', EXTERNAL_OPEN_CONFIRMATION_STUB],
   ['/electron/ipc/windowCapabilities.js', WINDOW_CAPABILITIES_STUB],
