@@ -82,10 +82,10 @@ test('pet stuck fallback clears its own flag so the panel eventually releases on
 })
 
 test('useAppController wires merged and own continuous refs into chat', async () => {
-  const source = await readFile(
+  const source = (await readFile(
     new URL('../src/app/controllers/useAppController.ts', import.meta.url),
     'utf8',
-  )
+  )).replace(/\r\n/g, '\n')
   const chatBlock = source.match(/const chat = useChat\(\{[\s\S]*?\n[ ]{2}\}\)/u)?.[0] ?? ''
   assert.match(chatBlock, /\n[ ]{4}continuousVoiceActiveRef,\n/u)
   assert.match(chatBlock, /\n[ ]{4}ownContinuousVoiceActiveRef: voice\.continuousVoiceActiveRef,\n/u)
