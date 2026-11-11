@@ -68,8 +68,14 @@ export type ChatVoiceDeps = {
   /**
    * True while a click- or voice-owned continuous conversation is running,
    * including the brief idle gap between its listening and speaking turns.
+   * This may be inherited from the pet window when the panel is the host.
    */
   continuousVoiceActiveRef?: RefObject<boolean>
+  /**
+   * This window's own continuous-voice value, without the panel's inherited
+   * pet flag. The 30 s stuck fallback may only override this value.
+   */
+  ownContinuousVoiceActiveRef?: RefObject<boolean>
   suppressVoiceReplyRef: RefObject<boolean>
   setVoiceState: (state: VoiceState) => void
   setLiveTranscript: (text: string) => void

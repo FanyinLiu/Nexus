@@ -22,6 +22,7 @@ function copyFor(messages: Record<string, string>): DeferredReminderCopy {
     more: (count) => messages['companion.notice.deferred_more'].replace('{count}', String(count)),
     moreOne: () => messages['companion.notice.deferred_more_one'],
     moreJoiner: separator.endsWith(' ') ? ' ' : '',
+    lowercaseFirstItem: separator === '; ',
   }
 }
 
@@ -206,6 +207,41 @@ test('source punctuation is stripped before the one sentence end', () => {
     item('single', 1, 0, '该去开会了。'),
   ], zh, { now: 0 })
   assert.equal(single?.speechContent, '该去开会了。')
+})
+
+test('English prefix lowercases a sentence start but keeps acronyms', () => {
+  const en = copyFor(enMessages)
+  const sentence = mergeDeferredReminders([
+    item('water', 1, 0, 'Time to drink water'),
+  ], en, { now: 60_000 })
+  assert.equal(
+    sentence?.speechContent,
+    'While we were chatting, it was time for: time to drink water.',
+  )
+
+  const acronym = mergeDeferredReminders([
+    item('tv', 1, 0, 'TV time'),
+  ], en, { now: 60_000 })
+  assert.equal(
+    acronym?.speechContent,
+    'While we were chatting, it was time for: TV time.',
+  )
+})
+
+test('multi-line items use only their title line for chat and speech', () => {
+  const en = copyFor(enMessages)
+  const multiLine: DeferredReminderItem = {
+    reminderId: 'auto',
+    dueAt: 1,
+    enqueuedAt: 0,
+    chatContent: '【自动任务】标题\n内容正文',
+    bubbleContent: '【自动任务】标题\n内容正文',
+    speechContent: '【自动任务】标题\n内容正文',
+  }
+  const merged = mergeDeferredReminders([multiLine], en, { now: 0 })
+  assert.equal(merged?.chatContent, '【自动任务】标题.')
+  assert.equal(merged?.speechContent, '【自动任务】标题.')
+  assert.equal(merged?.bubbleContent, '【自动任务】标题\n内容正文.')
 })
 
 test('punctuation-only items keep a non-empty sensible fallback', () => {

@@ -182,6 +182,7 @@ export function useAppController() {
     appendDailyMemoryEntries: memory.appendDailyMemoryEntries,
     voiceStateRef: voice.voiceStateRef,
     continuousVoiceActiveRef,
+    ownContinuousVoiceActiveRef: voice.continuousVoiceActiveRef,
     suppressVoiceReplyRef: voice.suppressVoiceReplyRef,
     setVoiceState: voice.setVoiceState,
     setLiveTranscript: voice.setLiveTranscript,

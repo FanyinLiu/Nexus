@@ -187,6 +187,8 @@ export function useChat(ctx: UseChatContext) {
 
   const shouldDropDeferredCompanionNotice = useCallback((payload: CompanionNoticePayload) => {
     const current = ctxRef.current
+    // This predicate only runs while dropping the deferred queue; an idle
+    // push keeps main's original immediate-delivery behaviour even during DND.
     // A paused reminder row must not replay after the session ends. Local
     // reminders have no separate global switch; pausing the task is the user's
     // "reminders off" for that item.
@@ -227,6 +229,7 @@ export function useChat(ctx: UseChatContext) {
     {
       canForceRelease: () => canDeliverDeferredCompanionNotice({ force: true }),
       forceFlush: () => flushDeferredCompanionNotices({ force: true }),
+      onStuckFallback: () => ctxRef.current.setContinuousVoiceSession(false),
       hasPending: hasDeferredCompanionNotices,
     },
   )

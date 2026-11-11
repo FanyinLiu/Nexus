@@ -21,6 +21,8 @@ type IdleFlushOptions = {
   canForceRelease?: () => boolean
   /** Force flush used only by the stuck-session fallback. */
   forceFlush?: () => Promise<void>
+  /** Called when the stuck fallback accepts a stale session as ended. */
+  onStuckFallback?: () => void
   /** False after a successful release lets us clear every timer. */
   hasPending?: () => boolean
 }
@@ -87,6 +89,10 @@ export function useCompanionNoticeIdleFlush(
   useEffect(() => {
     forceFlushRef.current = options.forceFlush ?? flush
   })
+  const onStuckFallbackRef = useRef(options.onStuckFallback)
+  useEffect(() => {
+    onStuckFallbackRef.current = options.onStuckFallback
+  })
   const hasPendingRef = useRef(options.hasPending)
   useEffect(() => {
     hasPendingRef.current = options.hasPending
@@ -133,7 +139,12 @@ export function useCompanionNoticeIdleFlush(
 
     const runFlush = (force: boolean) => {
       const pendingFlush = force ? forceFlushRef.current : flushRef.current
-      void pendingFlush().finally(afterRelease)
+      const pending = pendingFlush()
+      // Clear the owning window's stale flag only after the force flush has
+      // started (it still needs the own flag to pass its force guard). The
+      // synced runtime state then tells the panel to release on its next tick.
+      if (force) onStuckFallbackRef.current?.()
+      void pending.finally(afterRelease)
     }
 
     const armFallback = () => {

@@ -32,6 +32,8 @@ export type DeferredReminderCopy = {
   moreOne: () => string
   /** Locale-appropriate gap before the "more" sentence. */
   moreJoiner: string
+  /** English lowers a sentence-style first item after the "time for:" prefix. */
+  lowercaseFirstItem?: boolean
 }
 
 export type MergedDeferredReminder = {
@@ -70,6 +72,20 @@ function appendSentenceEnd(text: string, sentenceEnd: string) {
   return `${text}${sentenceEnd}`
 }
 
+/**
+ * Lowercase only a sentence-style opening (`Time` → `time`). Acronyms such as
+ * `TV` or a standalone `I` keep their case because the second character is not
+ * a lowercase letter.
+ */
+function lowercaseSentenceStart(text: string) {
+  return text.replace(/^([A-Z])(?=[a-z])/u, (letter) => letter.toLowerCase())
+}
+
+/** Chat summaries and speech use the title line of multi-line reminder copy. */
+function firstLine(value: string) {
+  return value.split(/\r?\n/u, 1)[0] ?? value
+}
+
 function compareDeferredReminders(left: DeferredReminderItem, right: DeferredReminderItem) {
   if (left.dueAt !== right.dueAt) return left.dueAt - right.dueAt
   if (left.enqueuedAt !== right.enqueuedAt) return left.enqueuedAt - right.enqueuedAt
@@ -95,8 +111,11 @@ function channelText(
   channel: 'chatContent' | 'bubbleContent' | 'speechContent',
   copy: DeferredReminderCopy,
 ) {
+  const titleLineOnly = channel === 'chatContent' || channel === 'speechContent'
   return items
-    .map((item) => normalizeDeferredReminderText(item[channel]))
+    .map((item) => normalizeDeferredReminderText(
+      titleLineOnly ? firstLine(item[channel]) : item[channel],
+    ))
     .filter(Boolean)
     .join(copy.separator)
 }
@@ -140,7 +159,10 @@ export function mergeDeferredReminders(
   const buildChannel = (channel: 'chatContent' | 'bubbleContent' | 'speechContent') => {
     const joined = channelText(selected, channel, copy)
     const ended = appendSentenceEnd(joined, copy.sentenceEnd)
-    const prefixed = usedPrefix ? copy.prefix(ended) : ended
+    const cased = usedPrefix && copy.lowercaseFirstItem
+      ? lowercaseSentenceStart(ended)
+      : ended
+    const prefixed = usedPrefix ? copy.prefix(cased) : cased
     return appendMoreLine(prefixed, copy, extraCount)
   }
 

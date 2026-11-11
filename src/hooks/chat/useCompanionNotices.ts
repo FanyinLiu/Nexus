@@ -14,7 +14,10 @@ import { getSpeechOutputErrorMessage } from './support.ts'
 import type { ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
 
 type CompanionNoticeDependencies = {
-  ctx: Pick<ChatVoiceDeps, 'speakAssistantReply' | 'voiceStateRef' | 'continuousVoiceActiveRef'>
+  ctx: Pick<
+    ChatVoiceDeps,
+    'speakAssistantReply' | 'voiceStateRef' | 'continuousVoiceActiveRef' | 'ownContinuousVoiceActiveRef'
+  >
   t: Translator
   busyRef: { current: boolean }
   appendChatMessage: (message: ChatMessage) => void
@@ -236,9 +239,16 @@ export function useCompanionNotices({
     // right after tts:completed) before it reopens listening. The voice state
     // alone cannot distinguish that gap from a truly idle pet, so hold the
     // queue until the whole continuous session ends. A stuck flag can only be
-    // overridden by the explicit idle-timeout force path.
-    return options.force === true
-      || ctxRef.current.continuousVoiceActiveRef?.current !== true
+    // overridden by the explicit idle-timeout force path, and only by the
+    // window that owns the continuous session — the panel's inherited pet flag
+    // must wait for the pet to sync false.
+    if (options.force === true) {
+      const ownRef = ctxRef.current.ownContinuousVoiceActiveRef
+      return ownRef
+        ? ownRef.current === true
+        : ctxRef.current.continuousVoiceActiveRef?.current === true
+    }
+    return ctxRef.current.continuousVoiceActiveRef?.current !== true
   }, [busyRef])
 
   const buildDeferredReminderCopy = useCallback((): DeferredReminderCopy => {
@@ -252,6 +262,10 @@ export function useCompanionNotices({
       // Latin locales need a space before the "more" sentence; zh/ja use the
       // punctuation from the item text directly.
       moreJoiner: separator.endsWith(' ') ? ' ' : '',
+      // The en separator is the only one that is a bare semicolon + space;
+      // its prefix ends with a colon, so a sentence-style first item should
+      // continue in lowercase.
+      lowercaseFirstItem: separator === '; ',
     }
   }, [t])
 
@@ -285,7 +299,6 @@ export function useCompanionNotices({
   }, [buildDeferredReminderCopy])
 
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
-    if (shouldDropDeferredNoticeRef.current?.(options)) return
     const queue = deferredCompanionNoticesRef.current
     // Deduplicate a reminder that was already queued by id before it can grow
     // the queue or produce a second merged item.
