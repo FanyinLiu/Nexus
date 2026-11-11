@@ -139,7 +139,7 @@ test('merged playback never resumes continuous voice', async () => {
   harness.unmount()
 })
 
-test('an empty queue never clears a stuck continuous session', async () => {
+test('N14 an empty queue never clears a stuck continuous session', async () => {
   let stuckFallbackCalls = 0
   let clearContinuousCalls = 0
   const ownContinuous = { current: true }
@@ -169,6 +169,58 @@ test('an empty queue never clears a stuck continuous session', async () => {
   assert.equal(stuckFallbackCalls, 1, 'the stuck fallback runs once with queued work')
   assert.equal(clearContinuousCalls, 1)
   harness.unmount()
+})
+
+test('N16 force fallback never bypasses listening or speaking', async () => {
+  for (const voiceState of ['listening', 'speaking'] as const) {
+    let stuckFallbackCalls = 0
+    const harness = createHarness({
+      voiceStateRef: { current: voiceState },
+      continuousVoiceActiveRef: { current: true },
+      ownContinuousVoiceActiveRef: { current: true },
+      onStuckFallback: () => { stuckFallbackCalls += 1 },
+    })
+    await harness.api.pushCompanionNotice(reminder(`n16-${voiceState}`, 'n16'))
+    harness.advance(90_000)
+    await flushMicrotasks()
+    assert.deepEqual(harness.spoken, [], `${voiceState}: no forced speech`)
+    assert.equal(stuckFallbackCalls, 0, `${voiceState}: no stuck release`)
+    harness.unmount()
+  }
+})
+
+test('M3c useAppController keeps the pet runtime flag in the merged ref', async () => {
+  const source = (await readFile(
+    new URL('../src/app/controllers/useAppController.ts', import.meta.url),
+    'utf8',
+  )).replace(/\r\n/g, '\n')
+  assert.match(
+    source,
+    /mergeContinuousVoiceActive\(\{\n[ ]{6}view,\n[ ]{6}localActive: voice\.continuousVoiceActive,\n[ ]{6}petRuntimeActive: petRuntimeContinuousVoiceActive,\n[ ]{4}\}\)/u,
+  )
+  assert.doesNotMatch(source, /petRuntimeActive:\s*false/u)
+})
+
+test('N2 onStuckFallback clears the continuous voice session', async () => {
+  const source = (await readFile(
+    new URL('../src/hooks/useChat.ts', import.meta.url),
+    'utf8',
+  )).replace(/\r\n/g, '\n')
+  assert.match(
+    source,
+    /onStuckFallback: \(\) => ctxRef\.current\.setContinuousVoiceSession\(false\)/u,
+  )
+})
+
+test('N13 start failure clears the continuous voice session', async () => {
+  const source = (await readFile(
+    new URL('../src/hooks/voice/voiceLifecycleControls.ts', import.meta.url),
+    'utf8',
+  )).replace(/\r\n/g, '\n')
+  assert.match(
+    source,
+    /catch \(err\) \{[\s\S]*?bindings\.setContinuousVoiceSession\(false\)/u,
+  )
 })
 
 test('stop-all keeps y when x is paused through the reminder task store', async () => {

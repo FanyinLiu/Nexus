@@ -232,6 +232,34 @@ test('all punctuation-only reminders produce only a chat line', async () => {
   harness.unmount()
 })
 
+test('E8 all-empty reminders with a prefix produce only the chat line', async () => {
+  const harness = createHarness()
+  await harness.api.pushCompanionNotice({
+    chatContent: '。',
+    bubbleContent: '。',
+    speechContent: '。',
+    reminderId: 'dots',
+    reminderDueAt: 1,
+  })
+  await harness.api.pushCompanionNotice({
+    chatContent: '!!',
+    bubbleContent: '!!',
+    speechContent: '!!',
+    reminderId: 'bangs',
+    reminderDueAt: 2,
+  })
+  harness.advance(60_000)
+  harness.voiceStateRef.current = 'idle'
+  harness.continuousVoiceActiveRef.current = false
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+
+  assert.deepEqual(harness.messages, ['While we were chatting, a reminder came up:\n。\n!!'])
+  assert.deepEqual(harness.spoken, [], 'no prefix-only TTS')
+  assert.deepEqual(harness.bubbles, [], 'no prefix-only bubble')
+  harness.unmount()
+})
+
 test('stop-all keeps a deliverable reminder when another queued reminder is dropped', async () => {
   const dropped = new Set(['x'])
   const harness = createHarness({

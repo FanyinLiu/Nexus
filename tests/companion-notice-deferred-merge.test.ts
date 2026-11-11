@@ -391,6 +391,32 @@ test('all punctuation-only items produce chat text but no speech or bubble', () 
   assert.equal(merged?.extraCount, 0)
 })
 
+test('E8 all-empty items with a prefix keep speech and bubble empty', () => {
+  const en = copyFor(enMessages)
+  const zh = copyFor(zhCNMessages)
+  const enMerged = mergeDeferredReminders([
+    rawItem('dots', 1, '。'),
+    rawItem('bangs', 2, '!!'),
+  ], en, { now: 60_000 })
+  assert.equal(enMerged?.speechContent, '')
+  assert.equal(enMerged?.bubbleContent, '')
+  assert.equal(
+    enMerged?.chatContent,
+    'While we were chatting, a reminder came up:\n。\n!!',
+  )
+
+  const zhMerged = mergeDeferredReminders([
+    rawItem('dots', 1, '。'),
+    rawItem('bangs', 2, '！！'),
+  ], zh, { now: 60_000 })
+  assert.equal(zhMerged?.speechContent, '')
+  assert.equal(zhMerged?.bubbleContent, '')
+  assert.equal(
+    zhMerged?.chatContent,
+    '刚才聊天的时候到点了：\n。\n！！',
+  )
+})
+
 test('English keeps casing in chat, speech and bubble', () => {
   const en = copyFor(enMessages)
   const merged = mergeDeferredReminders([

@@ -203,6 +203,9 @@ export function mergeDeferredReminders(
 
   const buildSpokenChannel = (channel: 'bubbleContent' | 'speechContent') => {
     const joined = channelText(selected, channel, copy)
+    // Never speak/bubble a prefix or more-line on its own when every selected
+    // item was empty after punctuation stripping.
+    if (!joined) return ''
     const ended = appendSentenceEnd(joined, copy.sentenceEnd)
     const prefixed = usedPrefix ? copy.prefix(ended) : ended
     return appendMoreLine(prefixed, copy, extraCount)
