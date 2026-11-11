@@ -18,11 +18,12 @@ const CONSOLE_CALL_PATTERN = /console\.(?:log|info|warn|error|debug|trace)\(/g
 
 // Hardcoded ceiling, measured after moving the Sherpa dependency-failure
 // warnings onto electron/logger.js, then re-measured after merging the S3/S4
-// MCP-confirmation and updater-gate warnings (+8), then +1 for piping MCP child
-// stderr through the redacting logger. Lower it whenever the count drops.
-const BASELINE_TOTAL = 437
+// MCP-confirmation and updater-gate warnings (+8). MCP child stderr is now
+// logged through electron/logger.js, so it no longer counts here. Lower it
+// whenever the count drops.
+const BASELINE_TOTAL = 436
 const BASELINE_BY_ROOT = {
-  electron: 283,
+  electron: 282,
   src: 154,
 }
 

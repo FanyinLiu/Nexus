@@ -21,8 +21,13 @@ import {
 } from './mcpHostUtils.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { runConfirmedMcpToolCall } from './mcpToolConfirmation.js'
+import { createLogger } from '../logger.js'
 
+const log = createLogger('mcpHost')
 const REQUEST_TIMEOUT_MS = 15_000
+// Keeps an unterminated stderr line from growing without bound. The whole
+// accumulated buffer is redacted and flushed when it crosses this size.
+const MAX_STDERR_BUFFER_CHARS = 64 * 1024
 
 // Shell metacharacters that could enable command injection when shell: true is used.
 // We reject commands containing these to allow safe spawning without a shell.
@@ -61,6 +66,7 @@ class McpInstance {
     /** @type {Map<number, { resolve: Function, reject: Function, timeoutId: ReturnType<typeof setTimeout> }>} */
     this.pending = new Map()
     this.lineBuffer = ''
+    this.stderrBuffer = ''
 
     // ── Per-instance resource metrics ──
     this.metrics = {
@@ -148,6 +154,33 @@ class McpInstance {
     this.lineBuffer = lines.pop() ?? ''
     for (const line of lines) {
       this._handleLine(line)
+    }
+  }
+
+  _logStderrLine(line) {
+    // Redact the assembled line first: a secret split across two `data`
+    // chunks only matches a rule once both fragments are joined.
+    const text = getRedactedErrorMessage(line).trim()
+    if (text) log.warn(`${mcpLogScope(this.id)} stderr: ${text}`)
+  }
+
+  _flushStderrBuffer() {
+    const buffered = this.stderrBuffer
+    this.stderrBuffer = ''
+    if (buffered) this._logStderrLine(buffered)
+  }
+
+  _drainStderrBuffer(chunk) {
+    this.stderrBuffer += chunk
+    const lines = this.stderrBuffer.split('\n')
+    this.stderrBuffer = lines.pop() ?? ''
+    for (const line of lines) {
+      this._logStderrLine(line)
+    }
+    // An unterminated line larger than the cap must not be dropped or written
+    // raw, so redact and flush the whole buffer without waiting for a newline.
+    if (this.stderrBuffer.length >= MAX_STDERR_BUFFER_CHARS) {
+      this._flushStderrBuffer()
     }
   }
 
@@ -273,6 +306,7 @@ class McpInstance {
     this.state = 'starting'
     this.tools.clear()
     this.lineBuffer = ''
+    this.stderrBuffer = ''
     this._rejectAllPending('MCP host restarting')
 
     console.info(`${mcpLogScope(this.id)} spawning: ${summarizeMcpCommandForLog(command, args)}`)
@@ -296,9 +330,10 @@ class McpInstance {
     const child = spawn(spawnCommand, spawnArgs, {
       // MCP transports JSON-RPC over stdin/stdout. stderr is diagnostics only:
       // pipe it so a server that echoes tokens, paths, or user text cannot
-      // write straight into the app run log unredacted. Leftover stderr text is
-      // not dropped: it is logged with console.warn only after passing through
-      // getRedactedErrorMessage (see the stderr handler below).
+      // write straight into the app run log unredacted. stderr is buffered by
+      // line (with a 64KB cap on a partial line) and redacted before the
+      // main-process logger writes it, so secrets split across chunks are
+      // still caught (see the stderr handler below).
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       env: buildMcpSpawnEnv(process.env, serverEnv),
@@ -312,10 +347,10 @@ class McpInstance {
     child.stdout.on('data', (chunk) => this._drainLineBuffer(chunk))
 
     child.stderr.setEncoding('utf8')
-    child.stderr.on('data', (chunk) => {
-      const text = getRedactedErrorMessage(chunk).trim()
-      if (text) console.warn(`${mcpLogScope(this.id)} stderr: ${text}`)
-    })
+    child.stderr.on('data', (chunk) => this._drainStderrBuffer(chunk))
+    // Exit and stream close can both fire; _flushStderrBuffer is idempotent and
+    // redacts any partial line before it is written.
+    child.stderr.once('close', () => this._flushStderrBuffer())
 
     await new Promise((resolve, reject) => {
       child.once('error', (err) => {
@@ -328,6 +363,7 @@ class McpInstance {
 
     // Register exit listener BEFORE handshake to avoid missing early exits
     child.once('exit', (code, signal) => {
+      this._flushStderrBuffer()
       console.warn(`${mcpLogScope(this.id)} process exited (code=${code}, signal=${signal})`)
       this.process = null
       this.pid = null
@@ -339,6 +375,8 @@ class McpInstance {
         this._scheduleRestart()
       }
     })
+
+    child.once('close', () => this._flushStderrBuffer())
 
     try {
       await this._performHandshake()

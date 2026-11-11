@@ -5,7 +5,13 @@ import path from 'node:path'
 import { register } from 'node:module'
 import { test } from 'node:test'
 
+import { clearLogs, getLogEntries, setConsolePassthrough } from '../electron/logger.js'
+
 register(new URL('./helpers/mcp-host-hooks.mjs', import.meta.url))
+
+// The logger is asserted through its ring buffer; silence its console
+// passthrough so the node:test reporter stays readable.
+setConsolePassthrough(false)
 
 type FakeStderr = {
   emit: (event: string, chunk: string) => boolean
@@ -16,7 +22,10 @@ type SpawnRecord = {
   command: string
   args: string[]
   options: { stdio?: string[] }
-  child: { stderr: FakeStderr }
+  child: {
+    stderr: FakeStderr
+    emit: (event: string, ...args: unknown[]) => boolean
+  }
 }
 
 type McpTestGlobals = typeof globalThis & {
@@ -26,52 +35,115 @@ type McpTestGlobals = typeof globalThis & {
 
 const testGlobals = globalThis as McpTestGlobals
 
-test('MCP child stderr is piped through the redacting logger, never inherited', async () => {
+function stderrLogText(): string {
+  return getLogEntries({ module: 'mcpHost' })
+    .map((entry) => entry.message)
+    .join('\n')
+}
+
+async function withSpawnedServer(id: string, run: (record: SpawnRecord) => Promise<void>): Promise<void> {
   const userDataPath = await fs.mkdtemp(path.join(os.tmpdir(), 'nexus-mcp-stderr-'))
   const spawns: SpawnRecord[] = []
   testGlobals.__nexusMcpTestUserData = userDataPath
   testGlobals.__nexusMcpTestSpawn = spawns
 
-  const captured: string[] = []
-  const originalWarn = console.warn
+  const { syncFromSettings, stopAll } = await import('../electron/services/mcpHost.js')
   try {
-    const { syncFromSettings, stopAll } = await import('../electron/services/mcpHost.js')
     await syncFromSettings([{
-      id: 'srv-stderr',
+      id,
       command: 'node',
       args: '--serve',
       enabled: true,
     }])
-
     assert.equal(spawns.length, 1)
-    const record = spawns[0]
+    await run(spawns[0])
+  } finally {
+    try {
+      await stopAll()
+    } finally {
+      delete testGlobals.__nexusMcpTestUserData
+      delete testGlobals.__nexusMcpTestSpawn
+      await fs.rm(userDataPath, { recursive: true, force: true })
+    }
+  }
+}
 
+test('MCP child stderr is piped through the redacting logger, never inherited', async () => {
+  await withSpawnedServer('srv-stderr', async (record) => {
     // stdin/stdout stay pipes for JSON-RPC; stderr must not be inherited.
     assert.deepEqual(record.options.stdio, ['pipe', 'pipe', 'pipe'])
     assert.notEqual(record.options.stdio?.[2], 'inherit')
     assert.ok(record.child.stderr.listenerCount('data') > 0)
 
-    console.warn = (...args: unknown[]) => {
-      captured.push(args.map((value) => String(value)).join(' '))
-    }
+    clearLogs()
     record.child.stderr.emit(
       'data',
       'token=xai-testdeadbeefsecret\nhttps://user:s3cret-pass@host/path\n',
     )
 
-    const output = captured.join('\n')
+    const output = stderrLogText()
     assert.match(output, /stderr:/)
     assert.doesNotMatch(output, /xai-testdeadbeefsecret/)
     assert.doesNotMatch(output, /s3cret-pass/)
     assert.doesNotMatch(output, /user:s3cret-pass/)
     assert.match(output, /token=\*\*\*/)
     assert.match(output, /https:\/\/\*\*\*:\*\*\*@host\/path/)
+  })
+})
 
-    await stopAll()
-  } finally {
-    console.warn = originalWarn
-    delete testGlobals.__nexusMcpTestUserData
-    delete testGlobals.__nexusMcpTestSpawn
-    await fs.rm(userDataPath, { recursive: true, force: true })
-  }
+test('a token split across stderr chunks is redacted as one line', async () => {
+  await withSpawnedServer('srv-split-token', async (record) => {
+    clearLogs()
+    record.child.stderr.emit('data', 'token=xai-test')
+    record.child.stderr.emit('data', 'deadbeefsecret\n')
+
+    const output = stderrLogText()
+    assert.doesNotMatch(output, /deadbeefsecret/)
+    assert.doesNotMatch(output, /xai-testdeadbeefsecret/)
+    assert.match(output, /token=\*\*\*/)
+  })
+})
+
+test('userinfo split across stderr chunks is redacted as one line', async () => {
+  await withSpawnedServer('srv-split-userinfo', async (record) => {
+    clearLogs()
+    record.child.stderr.emit('data', 'https://user:s3cr')
+    record.child.stderr.emit('data', 'et-pass@host/path\n')
+
+    const output = stderrLogText()
+    assert.doesNotMatch(output, /et-pass/)
+    assert.doesNotMatch(output, /s3cret-pass/)
+    assert.doesNotMatch(output, /user:s3cret-pass/)
+    assert.match(output, /https:\/\/\*\*\*:\*\*\*@host\/path/)
+  })
+})
+
+test('process exit flushes and redacts a leftover partial stderr line', async () => {
+  await withSpawnedServer('srv-partial-on-exit', async (record) => {
+    clearLogs()
+    record.child.stderr.emit('data', 'token=xai-partialdeadbeefsecret')
+    // The partial line is buffered until exit, not logged raw in the meantime.
+    assert.equal(stderrLogText(), '')
+
+    record.child.emit('exit', 0, null)
+
+    const output = stderrLogText()
+    assert.doesNotMatch(output, /deadbeefsecret/)
+    assert.doesNotMatch(output, /xai-partialdeadbeefsecret/)
+    assert.match(output, /token=\*\*\*/)
+  })
+})
+
+test('an oversized stderr line without a newline is flushed and redacted', async () => {
+  await withSpawnedServer('srv-overflow', async (record) => {
+    clearLogs()
+    const oversized = `token=xai-deadbeefsecret${'A '.repeat(33_000)}`
+    assert.ok(oversized.length > 64 * 1024)
+    record.child.stderr.emit('data', oversized)
+
+    const output = stderrLogText()
+    assert.doesNotMatch(output, /deadbeefsecret/)
+    assert.doesNotMatch(output, /xai-deadbeefsecret/)
+    assert.match(output, /token=\*\*\*/)
+  })
 })
