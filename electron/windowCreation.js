@@ -46,6 +46,10 @@ import {
   markPanelNavigationFailed,
 } from './panelContentReady.js'
 import { createWindowLoadRetry } from './windowLoadRetry.js'
+import {
+  PET_LOAD_FALLBACK_RETRY_URL,
+  buildPetLoadFallbackUrl,
+} from './windowLoadFallback.js'
 
 let getMainWindow = () => null
 let getPanelWindow = () => null
@@ -198,6 +202,10 @@ function attachNavigationGuards(win, label, view) {
   // the other window's view role. If an attacker manages to redirect the
   // webContents, the preload bridge would be exposed to an untrusted page.
   contents.on('will-navigate', (event, url) => {
+    // A caller-owned listener that ran first may have handled an app-initiated
+    // navigation (for example the pet's local fallback retry). It never allows
+    // an outside URL, so the guard's remaining checks do not apply.
+    if (event.defaultPrevented) return
     if (leavesEntryRole(url)) {
       console.warn(`[security] blocked ${label} navigation to`, summarizeWindowNavigationUrlForLog(url))
       event.preventDefault()
@@ -300,20 +308,31 @@ export function createMainWindow({ showOnReady = true } = {}) {
   applyWindowIcon(win)
   win.setAlwaysOnTop(true, PET_ALWAYS_ON_TOP_LEVEL)
 
-  attachNavigationGuards(win, 'main-window', 'pet')
-
   const inst = registerPetInstance(win)
 
+  const getPetEntryUrl = () => getRendererEntry('pet')
   let hasLoadedOnce = false
   let fallbackShowPending = false
+  let showingFallback = false
+
+  // Both the tray show and the fallback page's retry control end up here, so an
+  // exhausted pet always gets one fresh navigation through the same budget.
+  const retryIfShowingFallback = () => {
+    if (!showingFallback) return false
+    if (!loadRetry.retryIfExhausted()) return false
+    showingFallback = false
+    return true
+  }
 
   const loadRetry = createWindowLoadRetry({
     win,
-    loadUrl: () => getRendererEntry('pet'),
+    loadUrl: getPetEntryUrl,
     log: petLog,
     retryLimit: WINDOW_LOAD_RETRY_LIMIT,
     baseDelayMs: WINDOW_LOAD_RETRY_BASE_DELAY_MS,
+    shouldIgnoreFinish: () => showingFallback,
     onReady: () => {
+      showingFallback = false
       hasLoadedOnce = true
       // Keep the companion visible across workspaces where the platform supports
       // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
@@ -341,7 +360,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
       inst.loco.start()
     },
     onExhausted: () => {
-      if (win.isDestroyed()) return
+      if (win.isDestroyed() || showingFallback) return
       if (hasLoadedOnce) {
         // Destroying the pet clears mainWindow and no create path rebuilds it
         // automatically; on Linux without a tray it also quits the app. Hide the
@@ -351,11 +370,26 @@ export function createMainWindow({ showOnReady = true } = {}) {
         return
       }
       // First launch never completed: hiding would leave Linux without a tray
-      // with nothing visible and no way back. Show the window as a fallback.
+      // with nothing visible and no way back. Show a local retry page instead
+      // of Electron's error page or a blank view.
+      showingFallback = true
+      win.loadURL(buildPetLoadFallbackUrl()).catch(() => undefined)
       fallbackShowPending = true
       win.show()
     },
   })
+
+  // The fallback page's retry control navigates to this sentinel. Cancel the
+  // navigation and run the normal recovery path instead. Registered before the
+  // security guard so an app-initiated retry is not reported as a blocked
+  // external navigation.
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!showingFallback || url !== PET_LOAD_FALLBACK_RETRY_URL) return
+    event.preventDefault()
+    retryIfShowingFallback()
+  })
+
+  attachNavigationGuards(win, 'main-window', 'pet')
 
   // Tray, Dock, app-menu, and second-instance shows all land here. An exhausted
   // window gets one fresh navigation instead of re-exposing the error page. The
@@ -365,6 +399,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
       fallbackShowPending = false
       return
     }
+    if (retryIfShowingFallback()) return
     loadRetry.retryIfExhausted()
   })
 

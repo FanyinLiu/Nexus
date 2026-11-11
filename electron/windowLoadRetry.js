@@ -41,6 +41,7 @@ const DEFAULT_BASE_DELAY_MS = 250
  * @property {() => void} [onErrorPageFinish]
  * @property {() => void} [onReady]
  * @property {(errorCode: number) => void} [onExhausted]
+ * @property {() => boolean} [shouldIgnoreFinish]
  */
 
 /**
@@ -49,6 +50,8 @@ const DEFAULT_BASE_DELAY_MS = 250
  * The returned handlers are meant to be registered directly on webContents:
  * callers that need extra per-navigation state use the optional callbacks.
  * `retryIfExhausted` is the caller's recovery hook for a user-initiated show.
+ * `shouldIgnoreFinish` lets a caller load its own fallback document without
+ * that finish resetting the budget or reporting the window ready.
  *
  * @param {WindowLoadRetryOptions} options
  */
@@ -62,6 +65,7 @@ export function createWindowLoadRetry({
   onErrorPageFinish,
   onReady,
   onExhausted,
+  shouldIgnoreFinish,
 }) {
   let attempts = 0
   let timer = /** @type {ReturnType<typeof setTimeout> | null} */ (null)
@@ -117,6 +121,9 @@ export function createWindowLoadRetry({
       onErrorPageFinish?.()
       return
     }
+    // A caller-owned fallback document is not the app becoming ready: keep the
+    // exhausted state so the recovery hook can still grant a fresh budget.
+    if (shouldIgnoreFinish?.()) return
     clearTimer()
     attempts = 0
     exhausted = false

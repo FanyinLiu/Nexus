@@ -78,11 +78,12 @@ test('pet load retries with backoff and does not treat the error page as ready',
   pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', failureUrl, true)
   pet.emitWebContents('did-finish-load')
   await flushMicrotasks()
-  assert.equal(pet.loadCount, 3, 'the retry budget is bounded')
+  assert.equal(pet.loadCount, 4, 'the retry budget is bounded; only the local fallback loads after it')
   assert.equal(pet.destroyed, false, 'the only companion window is kept alive')
   assert.equal(pet.visible, true, 'a first-launch failure shows the window instead of hiding it')
+  assert.match(pet.url ?? '', /^data:text\/html/u, 'the visible surface is the local fallback, not the error page')
   t.mock.timers.tick(10_000)
-  assert.equal(pet.loadCount, 3, 'no retry is scheduled after the budget')
+  assert.equal(pet.loadCount, 4, 'no retry is scheduled after the budget')
 
   const petLogs = getLogEntries({ module: 'pet.window' })
   assert.ok(petLogs.length > 0, 'the retry path records a structured log')
@@ -156,7 +157,7 @@ test('a visible pet is hidden instead of destroyed after the retry limit', async
   assert.equal(pet.visible, false, 'the raw error page is hidden from the user')
 })
 
-test('first-launch exhaustion shows the window instead of hiding it', async (t) => {
+test('first-launch exhaustion shows the local retry page instead of the raw error page', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   t.after(() => {
     destroyPet()
@@ -177,11 +178,71 @@ test('first-launch exhaustion shows the window instead of hiding it', async (t) 
   fail()
   await flushMicrotasks()
 
-  assert.equal(pet.loadCount, 3)
+  assert.equal(pet.loadCount, 4, 'three failed navigations plus one local fallback')
   assert.equal(pet.destroyed, false, 'the only companion window is kept alive')
   assert.equal(pet.visible, true, 'a first-launch failure leaves something visible even without a tray')
+
+  const fallbackHtml = decodeURIComponent((pet.url ?? '').replace(/^data:text\/html;charset=utf-8,/u, ''))
+  assert.match(pet.url ?? '', /^data:text\/html;charset=utf-8,/u, 'the fallback is a self-contained local page')
+  assert.ok(fallbackHtml.includes('id="nexus-pet-retry"'), 'the page has a retry control')
+  assert.ok(!fallbackHtml.includes('ERR_'), 'the page never renders an Electron error code')
   t.mock.timers.tick(10_000)
-  assert.equal(pet.loadCount, 3, 'the fallback show does not start another load')
+  assert.equal(pet.loadCount, 4, 'the fallback show does not start another load')
+})
+
+test('the fallback retry control reloads the pet and the normal window appears', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  const entryUrl = 'file:///fake/index.html?view=pet'
+  const fail = () => {
+    pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entryUrl, true)
+    pet.emitWebContents('did-finish-load')
+  }
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  fail()
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 4)
+  assert.equal(pet.visible, true, 'the fallback is on screen')
+
+  // The fallback document finishing must not count as the pet becoming ready.
+  pet.emitWebContents('did-finish-load')
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 4, 'the fallback finish does not start a navigation')
+  assert.equal(pet.focused, false, 'the fallback finish does not take the ready path')
+
+  // The button navigates to the custom-scheme sentinel; the window must cancel
+  // that navigation and take the normal recovery path instead.
+  let prevented = false
+  const navigationEvent = {
+    defaultPrevented: false,
+    preventDefault() {
+      prevented = true
+      this.defaultPrevented = true
+    },
+  }
+  pet.emitWebContents('will-navigate', navigationEvent, 'nexus-retry://pet')
+  assert.equal(prevented, true, 'the sentinel navigation never leaves the fallback page')
+  assert.equal(pet.loadCount, 5, 'retry grants one fresh load of the real pet entry')
+  assert.equal(pet.url, entryUrl, 'the retry loads the renderer entry, not the fallback')
+
+  pet.emitWebContents('did-finish-load')
+  await flushMicrotasks()
+  assert.equal(pet.visible, true, 'the successful retry shows the pet through the normal ready path')
+  assert.equal(pet.focused, true, 'the ready path takes focus again')
+
+  pet.hide()
+  pet.show()
+  assert.equal(pet.loadCount, 5, 'a normal show after recovery does not reload')
 })
 
 test('an exhausted pet reloads when the user shows it again', async (t) => {
