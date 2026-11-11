@@ -92,6 +92,40 @@ test('packaged resolution warns with an actionable asarUnpack hint', () => {
   assert.match(warnings[0], /asarUnpack/u)
 })
 
+/**
+ * The warning is written to a log the user may share, so it must name the
+ * script by its bundled relative path instead of leaking the install location
+ * (which embeds the user's home directory on macOS and Windows).
+ */
+test('asar warning names the sidecar by relative path only', () => {
+  const resourcesPath = path.join(path.sep, 'Users', 'synthetic-user', 'Applications', 'Nexus.app', 'Contents', 'Resources')
+  const appRoot = path.join(resourcesPath, 'app.asar')
+  const asarPath = path.join(appRoot, QWEN3_SCRIPT)
+  const warnings: string[] = []
+
+  const resolved = resolveVoiceSidecarScriptPath({
+    isPackaged: true,
+    resourcesPath,
+    appRoot,
+    relativePath: QWEN3_SCRIPT,
+    existsSync: (filePath: string) => filePath === asarPath,
+    warn: (message: string) => warnings.push(message),
+  })
+
+  assert.equal(resolved, null)
+  assert.equal(warnings.length, 1)
+  const warning = warnings[0]
+
+  assert.ok(warning.includes(QWEN3_SCRIPT), 'warning must still point at the failing script')
+  for (const leaked of [resourcesPath, appRoot, asarPath, path.dirname(asarPath), 'synthetic-user']) {
+    assert.equal(warning.includes(leaked), false, `warning leaked an absolute path: ${leaked}`)
+  }
+  for (const token of warning.split(/\s+/u)) {
+    assert.equal(path.posix.isAbsolute(token), false, `warning contains absolute path token: ${token}`)
+    assert.equal(/^[A-Za-z]:[\\/]/u.test(token), false, `warning contains absolute path token: ${token}`)
+  }
+})
+
 test('packaged resolution prefers app.asar.unpacked when both copies exist', () => {
   const { resourcesPath, appRoot } = packagedLayout()
   const unpacked = path.join(resourcesPath, 'app.asar.unpacked', QWEN3_SCRIPT)
