@@ -301,6 +301,25 @@ test('stop-all appends one merged chat line without speaking or bubbling', async
   harness.unmount()
 })
 
+test('R1935 stop-all chat lists more than three items without a more-line', async () => {
+  const harness = createHarness()
+  await harness.api.pushCompanionNotice(reminder('a', 'a'))
+  await harness.api.pushCompanionNotice(reminder('b', 'b'))
+  await harness.api.pushCompanionNotice(reminder('c', 'c'))
+  await harness.api.pushCompanionNotice(reminder('d', 'd'))
+
+  emitSpeechStopAll()
+  await flushMicrotasks()
+
+  assert.deepEqual(
+    harness.messages,
+    ['title-a: a\ntitle-b: b\ntitle-c: c\ntitle-d: d'],
+  )
+  assert.deepEqual(harness.spoken, [])
+  assert.deepEqual(harness.bubbles, [])
+  harness.unmount()
+})
+
 test('stop-all skips a speech-only replay and keeps only the normal reminder line', async () => {
   const pending = pendingSpeech()
   const harness = createHarness({ speakAssistantReply: pending.speak })

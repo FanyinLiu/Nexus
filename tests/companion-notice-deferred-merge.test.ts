@@ -260,7 +260,7 @@ test('multi-line chat keeps full text while speech and bubble use the title line
   assert.equal(merged?.bubbleContent, '【自动任务】标题.')
 })
 
-test('chat content uses prefix, item and more lines without separators or punctuation', () => {
+test('chat content uses a prefix line and every item line without separators or punctuation', () => {
   const zh = copyFor(zhCNMessages)
   const en = copyFor(enMessages)
   const makeItems = (first: string, second: string, third: string, fourth?: string) => [
@@ -311,7 +311,7 @@ test('chat content uses prefix, item and more lines without separators or punctu
   const zhFour = mergeDeferredReminders(makeItems('喝水', '拿快递', '给妈打电话。', '买牛奶'), zh, { now: 60_000 })
   assert.equal(
     zhFour?.chatContent,
-    '刚才聊天的时候到点了：\n喝水\nfull details\n拿快递\n给妈打电话。\n还有 1 条提醒。',
+    '刚才聊天的时候到点了：\n喝水\nfull details\n拿快递\n给妈打电话。\n买牛奶',
   )
   assert.equal(
     zhFour?.speechContent,
@@ -335,7 +335,7 @@ test('chat content uses prefix, item and more lines without separators or punctu
   const enFour = mergeDeferredReminders(makeItems('Drink water', 'Pick up parcel', 'Call Mom!', 'Buy milk'), en, { now: 60_000 })
   assert.equal(
     enFour?.chatContent,
-    'While we were chatting, a reminder came up:\nDrink water\nfull details\nPick up parcel\nCall Mom!\n1 more reminder.',
+    'While we were chatting, a reminder came up:\nDrink water\nfull details\nPick up parcel\nCall Mom!\nBuy milk',
   )
   assert.equal(
     enFour?.speechContent,
@@ -359,7 +359,7 @@ test('punctuation-only items are skipped from speech and do not count toward the
 
   assert.equal(merged?.speechContent, 'a; b; c. 1 more reminder.')
   assert.equal(merged?.bubbleContent, 'a; b; c. 1 more reminder.')
-  assert.equal(merged?.chatContent, 'a\n。\nb\nc\n1 more reminder.')
+  assert.equal(merged?.chatContent, 'a\n。\nb\nc\nd')
   assert.equal(merged?.extraCount, 1, 'the empty item is not counted in the more line')
 })
 
@@ -414,6 +414,52 @@ test('E8 all-empty items with a prefix keep speech and bubble empty', () => {
   assert.equal(
     zhMerged?.chatContent,
     '刚才聊天的时候到点了：\n。\n！！',
+  )
+})
+
+test('R1935 chat lists all six zh-CN items without a more-line', () => {
+  const zh = copyFor(zhCNMessages)
+  const merged = mergeDeferredReminders([
+    rawItem('dots', 1, '。'),
+    rawItem('water', 2, '喝水'),
+    rawItem('bangs', 3, '！！'),
+    rawItem('parcel', 4, '拿快递'),
+    rawItem('mom', 5, '给妈打电话'),
+    rawItem('groceries', 6, '买菜'),
+  ], zh, { now: 60_000 })
+
+  assert.equal(
+    merged?.chatContent,
+    '刚才聊天的时候到点了：\n。\n喝水\n！！\n拿快递\n给妈打电话\n买菜',
+  )
+  assert.equal(
+    merged?.speechContent,
+    '刚才聊天的时候到点了：喝水；拿快递；给妈打电话。还有 1 条提醒。',
+  )
+  assert.equal(
+    merged?.bubbleContent,
+    '刚才聊天的时候到点了：喝水；拿快递；给妈打电话。还有 1 条提醒。',
+  )
+})
+
+test('R1935 chat lists all six en items without a more-line', () => {
+  const en = copyFor(enMessages)
+  const merged = mergeDeferredReminders([
+    rawItem('dots', 1, '。'),
+    rawItem('water', 2, 'Drink water'),
+    rawItem('bangs', 3, '!!'),
+    rawItem('parcel', 4, 'Pick up parcel'),
+    rawItem('mom', 5, 'Call Mom'),
+    rawItem('groceries', 6, 'Buy milk'),
+  ], en, { now: 60_000 })
+
+  assert.equal(
+    merged?.chatContent,
+    'While we were chatting, a reminder came up:\n。\nDrink water\n!!\nPick up parcel\nCall Mom\nBuy milk',
+  )
+  assert.equal(
+    merged?.speechContent,
+    'While we were chatting, a reminder came up: Drink water; Pick up parcel; Call Mom. 1 more reminder.',
   )
 })
 

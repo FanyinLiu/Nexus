@@ -138,24 +138,20 @@ function channelText(
 }
 
 /**
- * Chat history keeps every selected reminder as its own full-text line, with
- * its original internal line breaks. The prefix and "more" sentence are also
- * separate lines; no separator, punctuation stripping, or final period.
+ * Chat history keeps every deduplicated reminder as its own full-text line,
+ * with its original internal line breaks. It is not capped and has no "more"
+ * line; only the prefix can be its own line.
  */
 function chatText(
   items: readonly DeferredReminderItem[],
   copy: DeferredReminderCopy,
   usedPrefix: boolean,
-  extraCount: number,
 ) {
   const lines: string[] = []
   if (usedPrefix) lines.push(copy.prefixLabel)
   for (const item of items) {
     const text = item.chatContent.trim()
     if (text) lines.push(text)
-  }
-  if (extraCount > 0) {
-    lines.push(extraCount === 1 ? copy.moreOne() : copy.more(extraCount))
   }
   return lines.join('\n')
 }
@@ -198,8 +194,6 @@ export function mergeDeferredReminders(
   const selected = speakable.slice(0, maxItems)
   const extraCount = Math.max(0, speakable.length - selected.length)
   const usedPrefix = deduped.some((item) => now - item.enqueuedAt >= prefixThresholdMs)
-  const selectedSet = new Set(selected)
-  const chatItems = deduped.filter((item) => selectedSet.has(item) || !hasSpokenContent(item))
 
   const buildSpokenChannel = (channel: 'bubbleContent' | 'speechContent') => {
     const joined = channelText(selected, channel, copy)
@@ -216,7 +210,7 @@ export function mergeDeferredReminders(
     selected,
     extraCount,
     usedPrefix,
-    chatContent: chatText(chatItems, copy, usedPrefix, extraCount),
+    chatContent: chatText(deduped, copy, usedPrefix),
     bubbleContent: buildSpokenChannel('bubbleContent'),
     speechContent: buildSpokenChannel('speechContent'),
   }
