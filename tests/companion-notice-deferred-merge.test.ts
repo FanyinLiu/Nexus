@@ -23,7 +23,6 @@ function copyFor(messages: Record<string, string>): DeferredReminderCopy {
     more: (count) => messages['companion.notice.deferred_more'].replace('{count}', String(count)),
     moreOne: () => messages['companion.notice.deferred_more_one'],
     moreJoiner: separator.endsWith(' ') ? ' ' : '',
-    lowercaseFirstItem: separator === '; ',
   }
 }
 
@@ -225,22 +224,23 @@ test('source punctuation is stripped before the one sentence end', () => {
   assert.equal(single?.speechContent, '该去开会了。')
 })
 
-test('English prefix lowercases a sentence start but keeps acronyms', () => {
+test('English prefix preserves item casing and acronyms', () => {
   const en = copyFor(enMessages)
   const sentence = mergeDeferredReminders([
     item('water', 1, 0, 'Time to drink water'),
   ], en, { now: 60_000 })
   assert.equal(
     sentence?.speechContent,
-    'While we were chatting, a reminder came up: time to drink water.',
+    'While we were chatting, a reminder came up: Time to drink water.',
   )
 
   const acronym = mergeDeferredReminders([
     item('tv', 1, 0, 'TV time'),
+    item('me', 2, 0, 'I will call'),
   ], en, { now: 60_000 })
   assert.equal(
     acronym?.speechContent,
-    'While we were chatting, a reminder came up: TV time.',
+    'While we were chatting, a reminder came up: TV time; I will call.',
   )
 })
 
@@ -318,24 +318,28 @@ test('chat content uses prefix, item and more lines without separators or punctu
     '刚才聊天的时候到点了：喝水；拿快递；给妈打电话。还有 1 条提醒。',
   )
 
-  const enThree = mergeDeferredReminders(makeItems('drink water', 'pick up parcel', 'call mom!'), en, { now: 60_000 })
+  const enThree = mergeDeferredReminders(makeItems('Drink water', 'Pick up parcel', 'Call Mom!'), en, { now: 60_000 })
   assert.equal(
     enThree?.chatContent,
-    'While we were chatting, a reminder came up:\ndrink water\nfull details\npick up parcel\ncall mom!',
+    'While we were chatting, a reminder came up:\nDrink water\nfull details\nPick up parcel\nCall Mom!',
   )
   assert.equal(
     enThree?.speechContent,
-    'While we were chatting, a reminder came up: drink water; pick up parcel; call mom.',
+    'While we were chatting, a reminder came up: Drink water; Pick up parcel; Call Mom.',
+  )
+  assert.equal(
+    enThree?.bubbleContent,
+    'While we were chatting, a reminder came up: Drink water; Pick up parcel; Call Mom.',
   )
 
-  const enFour = mergeDeferredReminders(makeItems('drink water', 'pick up parcel', 'call mom!', 'buy milk'), en, { now: 60_000 })
+  const enFour = mergeDeferredReminders(makeItems('Drink water', 'Pick up parcel', 'Call Mom!', 'Buy milk'), en, { now: 60_000 })
   assert.equal(
     enFour?.chatContent,
-    'While we were chatting, a reminder came up:\ndrink water\nfull details\npick up parcel\ncall mom!\n1 more reminder.',
+    'While we were chatting, a reminder came up:\nDrink water\nfull details\nPick up parcel\nCall Mom!\n1 more reminder.',
   )
   assert.equal(
     enFour?.speechContent,
-    'While we were chatting, a reminder came up: drink water; pick up parcel; call mom. 1 more reminder.',
+    'While we were chatting, a reminder came up: Drink water; Pick up parcel; Call Mom. 1 more reminder.',
   )
 
   const noPrefix = mergeDeferredReminders(makeItems('喝水', '拿快递', '给妈打电话。'), zh, { now: 0 })
@@ -387,24 +391,25 @@ test('all punctuation-only items produce chat text but no speech or bubble', () 
   assert.equal(merged?.extraCount, 0)
 })
 
-test('English chat keeps casing while only the first speech item is lowercased', () => {
+test('English keeps casing in chat, speech and bubble', () => {
   const en = copyFor(enMessages)
   const merged = mergeDeferredReminders([
     rawItem('one', 1, 'Drink water'),
-    rawItem('two', 2, 'Call Mom'),
+    rawItem('two', 2, 'Pick up parcel'),
+    rawItem('three', 3, 'Call Mom'),
   ], en, { now: 60_000 })
 
   assert.equal(
     merged?.chatContent,
-    'While we were chatting, a reminder came up:\nDrink water\nCall Mom',
+    'While we were chatting, a reminder came up:\nDrink water\nPick up parcel\nCall Mom',
   )
   assert.equal(
     merged?.speechContent,
-    'While we were chatting, a reminder came up: drink water; Call Mom.',
+    'While we were chatting, a reminder came up: Drink water; Pick up parcel; Call Mom.',
   )
   assert.equal(
     merged?.bubbleContent,
-    'While we were chatting, a reminder came up: drink water; Call Mom.',
+    'While we were chatting, a reminder came up: Drink water; Pick up parcel; Call Mom.',
   )
 })
 

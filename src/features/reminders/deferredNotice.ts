@@ -34,8 +34,6 @@ export type DeferredReminderCopy = {
   moreOne: () => string
   /** Locale-appropriate gap before the "more" sentence. */
   moreJoiner: string
-  /** English lowers a sentence-style first item after the "time for:" prefix. */
-  lowercaseFirstItem?: boolean
 }
 
 export type MergedDeferredReminder = {
@@ -69,15 +67,6 @@ function normalizeDeferredReminderText(value: string) {
 function appendSentenceEnd(text: string, sentenceEnd: string) {
   if (!text || SENTENCE_ENDING.test(text)) return text
   return `${text}${sentenceEnd}`
-}
-
-/**
- * Lowercase only a sentence-style opening (`Time` → `time`). Acronyms such as
- * `TV` or a standalone `I` keep their case because the second character is not
- * a lowercase letter.
- */
-function lowercaseSentenceStart(text: string) {
-  return text.replace(/^([A-Z])(?=[a-z])/u, (letter) => letter.toLowerCase())
 }
 
 /** Speech and bubble use the title line of multi-line reminder copy. */
@@ -196,10 +185,7 @@ export function mergeDeferredReminders(
   const buildSpokenChannel = (channel: 'bubbleContent' | 'speechContent') => {
     const joined = channelText(selected, channel, copy)
     const ended = appendSentenceEnd(joined, copy.sentenceEnd)
-    const cased = usedPrefix && copy.lowercaseFirstItem
-      ? lowercaseSentenceStart(ended)
-      : ended
-    const prefixed = usedPrefix ? copy.prefix(cased) : cased
+    const prefixed = usedPrefix ? copy.prefix(ended) : ended
     return appendMoreLine(prefixed, copy, extraCount)
   }
 

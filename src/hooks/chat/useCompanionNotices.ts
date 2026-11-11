@@ -264,10 +264,6 @@ export function useCompanionNotices({
       // Latin locales need a space before the "more" sentence; zh/ja use the
       // punctuation from the item text directly.
       moreJoiner: separator.endsWith(' ') ? ' ' : '',
-      // The en separator is the only one that is a bare semicolon + space;
-      // its prefix ends with a colon, so a sentence-style first item should
-      // continue in lowercase.
-      lowercaseFirstItem: separator === '; ',
     }
   }, [t])
 

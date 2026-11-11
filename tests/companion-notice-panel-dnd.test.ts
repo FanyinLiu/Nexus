@@ -92,7 +92,7 @@ test('useAppController wires merged and own continuous refs into chat', async ()
   assert.doesNotMatch(chatBlock, /\n[ ]{4}continuousVoiceActiveRef: voice\.continuousVoiceActiveRef,\n/u)
 })
 
-test('English merged playback lowercases a sentence start after the prefix', async () => {
+test('English merged playback preserves item casing', async () => {
   const harness = createHarness()
   await harness.api.pushCompanionNotice(reminder('time', 'Time to drink water', 1))
   harness.advance(60_000)
@@ -102,7 +102,7 @@ test('English merged playback lowercases a sentence start after the prefix', asy
   await flushMicrotasks()
   assert.deepEqual(
     harness.spoken,
-    ['While we were chatting, a reminder came up: time to drink water.'],
+    ['While we were chatting, a reminder came up: Time to drink water.'],
   )
   harness.unmount()
 })
