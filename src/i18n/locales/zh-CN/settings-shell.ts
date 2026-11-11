@@ -56,7 +56,7 @@ export const zhCNSettingsShell = {
   'settings.return_to_companion': '返回陪伴',
   'settings.unsaved_changes': '有未保存的更改',
   'settings.save_failed_fallback': '设置没能保存，稍后再试试？',
-  'settings.save_failed_system': '设置没能保存：{error}',
+  'settings.save_failed_system': '设置没能保存，稍后再试试？',
   'settings.import_pet_model_unsupported': '当前环境暂不支持本地形象模型导入。',
   'settings.list_speech_voices.unsupported': '当前环境不支持拉取在线音色列表。',
   'settings.preview.busy_error': '上一轮对话还在处理中，等一下再试听吧。',

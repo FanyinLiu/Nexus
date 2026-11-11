@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict'
+import { pathToFileURL } from 'node:url'
 import { describe, test } from 'node:test'
 
+import { translateMainMessage } from '../electron/mainMessages.js'
 import {
   isAllowedRendererNavigation,
   normalizeExternalWindowOpenUrl,
   summarizeWindowNavigationErrorForLog,
   summarizeWindowNavigationUrlForLog,
 } from '../electron/windowNavigation.js'
+import {
+  PET_LOAD_FALLBACK_PATH,
+  PET_LOAD_FALLBACK_RETRY_URL,
+} from '../electron/windowLoadFallback.js'
+
+const LINK_UNSAFE = translateMainMessage('tool.linkUnsafe', undefined, 'en-US')
 
 describe('windowNavigation.isAllowedRendererNavigation', () => {
   const rendererEntry = 'http://127.0.0.1:47822/?view=pet'
@@ -58,6 +66,43 @@ describe('windowNavigation.isAllowedRendererNavigation', () => {
     )
   })
 
+  test('blocks the packaged pet fallback file and the pet retry marker', () => {
+    const packagedEntry = 'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=pet'
+    const fallbackUrl = pathToFileURL(PET_LOAD_FALLBACK_PATH)
+    fallbackUrl.searchParams.set('lang', 'zh-CN')
+
+    assert.equal(
+      isAllowedRendererNavigation(fallbackUrl.toString(), packagedEntry),
+      false,
+      'a page-initiated fallback file load is blocked; the app loads it with loadFile',
+    )
+    assert.equal(
+      isAllowedRendererNavigation(PET_LOAD_FALLBACK_RETRY_URL, packagedEntry),
+      false,
+      'a page-initiated retry marker is blocked; the pet listener handles it first',
+    )
+    assert.equal(
+      isAllowedRendererNavigation(PET_LOAD_FALLBACK_RETRY_URL, 'http://127.0.0.1:47822/?view=panel'),
+      false,
+      'the pet retry marker is never allowed, including for the panel',
+    )
+    assert.equal(
+      isAllowedRendererNavigation('file:///tmp/pet-load-fallback.html?lang=zh-CN', packagedEntry),
+      false,
+      'a same-named file outside the app path is not allowlisted',
+    )
+    assert.equal(
+      isAllowedRendererNavigation('nexus-retry://panel', packagedEntry),
+      false,
+      'the pet retry scheme stays blocked for every target',
+    )
+    assert.equal(
+      isAllowedRendererNavigation('https://evil.example/pet-load-fallback.html', packagedEntry),
+      false,
+      'an unrelated external URL stays blocked',
+    )
+  })
+
   test('allows the same packaged file entry and blocks other file paths or view roles', () => {
     const packagedEntry = 'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=pet'
     assert.equal(
@@ -96,7 +141,7 @@ describe('windowNavigation.normalizeExternalWindowOpenUrl', () => {
     assert.equal(normalizeExternalWindowOpenUrl('example.com'), 'https://example.com/')
     assert.throws(
       () => normalizeExternalWindowOpenUrl('http://127.0.0.1:11434'),
-      /拒绝打开不安全链接/,
+      new RegExp(LINK_UNSAFE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     )
   })
 })

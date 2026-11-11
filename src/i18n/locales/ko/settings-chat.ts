@@ -25,7 +25,7 @@ export const koSettingsChat = {
   'settings.chat.import_card': '캐릭터 카드 가져오기',
   'settings.chat.importing_card': '가져오는 중...',
   'settings.chat.import_card_success': '"{name}" 가져오기 완료 (키워드 배경 {count}건).',
-  'settings.chat.import_card_error': '캐릭터 카드 가져오기가 안 됐어요: {error}',
+  'settings.chat.import_card_error': '캐릭터 카드를 가져오지 못했어요. 다른 카드로 다시 해볼까요?',
   'settings.chat.vts_title': 'VTube Studio 연동',
   'settings.chat.vts_hint': 'WebSocket API로 VTube Studio 모델을 제어합니다. Nexus가 AI 대화와 감정을 구동합니다.',
   'settings.chat.vts_enabled': 'VTube Studio 브릿지 활성화',

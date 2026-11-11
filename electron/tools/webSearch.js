@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { createLogger } from '../logger.js'
+import { mainT } from '../mainMessages.js'
 import { performNetworkRequest, readJsonSafe, extractResponseErrorMessage, readTextSafe } from '../net.js'
 import { collectSearchContentBodyLines, extractPagePreviewFromHtml } from '../searchContentExtract.js'
 import { tryLookupLyricsSearch } from '../lyricsSearch.js'
@@ -19,6 +21,7 @@ import { decodeHtmlEntities, normalizeSearchableText } from '../textNormalize.js
 
 const TOOL_SEARCH_TIMEOUT_MS = 12_000
 const SEARCH_PREVIEW_MAX_REDIRECTS = 4
+const log = createLogger('tools.webSearch')
 
 function decodeXmlEntities(value) {
   return decodeHtmlEntities(String(value ?? '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')).trim()
@@ -215,12 +218,13 @@ async function fetchBingRssItems(query, limit = 5) {
     {
       method: 'GET',
       timeoutMs: TOOL_SEARCH_TIMEOUT_MS,
-      timeoutMessage: '网页搜索超时，请稍后再试。',
+      timeoutMessage: mainT('webSearch.timeout'),
     },
   )
 
   if (!response.ok) {
-    throw new Error(`网页搜索没通（状态码 ${response.status}），稍后再试试？`)
+    log.warn(`RSS request failed with status ${response.status}`)
+    throw new Error(mainT('webSearch.statusFailed'))
   }
 
   const rssText = await readTextSafe(response)
@@ -253,14 +257,15 @@ async function fetchSearchPreviewResponse(rawUrl) {
   for (let redirectCount = 0; redirectCount <= SEARCH_PREVIEW_MAX_REDIRECTS; redirectCount += 1) {
     const safety = await checkUrlSafetyWithDns(currentUrl, { allowHttp: true })
     if (!safety.ok) {
-      throw new Error(safety.reason)
+      log.warn(`preview target rejected: ${safety.reason}`)
+      throw new Error(mainT('tool.linkUnsafe'))
     }
 
     const response = await performNetworkRequest(currentUrl, {
       method: 'GET',
       redirect: 'manual',
       timeoutMs: Math.min(TOOL_SEARCH_TIMEOUT_MS, 5000),
-      timeoutMessage: '正文抓取超时。',
+      timeoutMessage: mainT('webSearch.previewTimeout'),
       headers: {
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
       },
@@ -514,7 +519,7 @@ function buildSearchDisplay(query, items, options = {}) {
 export async function searchWeb(payload = {}) {
   const trimmedQuery = String(payload?.query ?? '').trim()
   if (!trimmedQuery) {
-    throw new Error('搜索内容不能为空。')
+    throw new Error(mainT('webSearch.emptyQuery'))
   }
 
   const limit = Math.max(1, Math.min(Number(payload?.limit) || 5, 8))
@@ -589,7 +594,7 @@ export async function searchWeb(payload = {}) {
 
   const providerAnswer = typeof searchResult.answer === 'string' ? searchResult.answer.trim() : ''
   if (!searchResult.items.length && !providerAnswer) {
-    throw new Error('没有找到可用的网页结果。')
+    throw new Error(mainT('webSearch.noResults'))
   }
 
   const dedupedItems = dedupeSearchItems(searchResult.items)
