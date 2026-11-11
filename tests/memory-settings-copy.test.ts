@@ -18,12 +18,31 @@ import { zhTWCore } from '../src/i18n/locales/zh-TW/core.ts'
 import { zhTWSettingsMemory } from '../src/i18n/locales/zh-TW/settings-memory.ts'
 
 const locales = [
-  { memory: zhCNSettingsMemory, core: zhCNCore, chat: zhCNChat },
-  { memory: zhTWSettingsMemory, core: zhTWCore, chat: zhTWChat },
-  { memory: enSettingsMemory, core: enCore, chat: enChat },
-  { memory: jaSettingsMemory, core: jaCore, chat: jaChat },
-  { memory: koSettingsMemory, core: koCore, chat: koChat },
-]
+  { language: 'zh-CN', memory: zhCNSettingsMemory, core: zhCNCore, chat: zhCNChat },
+  { language: 'zh-TW', memory: zhTWSettingsMemory, core: zhTWCore, chat: zhTWChat },
+  { language: 'en-US', memory: enSettingsMemory, core: enCore, chat: enChat },
+  { language: 'ja', memory: jaSettingsMemory, core: jaCore, chat: jaChat },
+  { language: 'ko', memory: koSettingsMemory, core: koCore, chat: koChat },
+] as const
+
+/** The notebook name the rest of the app already uses. */
+const NOTEBOOK_NAME: Record<(typeof locales)[number]['language'], string> = {
+  'zh-CN': '小本子',
+  'zh-TW': '小本子',
+  'en-US': 'Notebook',
+  ja: 'メモ帳',
+  ko: '수첩',
+}
+
+/** The retired inbox name that clearing memory used to mention. */
+const RETIRED_INBOX_NAME: Record<(typeof locales)[number]['language'], string> = {
+  'zh-CN': '收件箱',
+  'zh-TW': '收件匣',
+  'en-US': 'inbox messages',
+  ja: '受信箱',
+  ko: '받은 메시지함',
+}
+
 
 test('memory controls use stable labels and keep the count with its unit', () => {
   assert.equal(zhCNSettingsMemory['settings.memory.transparency.pause'], '暂停所有记忆')
@@ -70,5 +89,21 @@ test('memory controls use stable labels and keep the count with its unit', () =>
       locale.memory['settings.memory.long_term.archive_note'],
     ), false)
     assert.equal(locale.core['memory_search.hybrid.hint'].endsWith('.') || locale.core['memory_search.hybrid.hint'].endsWith('。'), false)
+  }
+})
+
+test('clearing memory calls the inbox the notebook in all five locales', () => {
+  for (const locale of locales) {
+    const notebook = NOTEBOOK_NAME[locale.language]
+    const retired = RETIRED_INBOX_NAME[locale.language]
+    const copy = [locale.core['memory.clear.success'], locale.memory['settings.memory.clear_confirm']]
+    for (const line of copy) {
+      assert.ok(line.includes(notebook), `${locale.language} should say "${notebook}": ${line}`)
+      assert.equal(
+        line.toLowerCase().includes(retired.toLowerCase()),
+        false,
+        `${locale.language} still says "${retired}": ${line}`,
+      )
+    }
   }
 })

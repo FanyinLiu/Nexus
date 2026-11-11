@@ -374,7 +374,7 @@ export const koCore = {
   'memory.export.title': '기억 아카이브 내보내기',
   'memory.import.title': '기억 아카이브 가져오기',
   'memory.import.success': '장기 기억 {memoryCount}건과 일일 기록 {dayCount}일치를 가져왔어요.',
-  'memory.clear.success': '장기 기억, 일일 기록, 받은 메시지함을 모두 지웠어요.',
+  'memory.clear.success': '장기 기억, 일일 기록, 수첩 메시지를 모두 지웠어요.',
   'memory.title.project': '프로젝트',
   'memory.title.goal': '목표',
   'memory.title.habit': '습관',
