@@ -26,6 +26,7 @@ export const MAIN_MESSAGES_RELATIVE_PATH = 'electron/mainMessages.js'
 export const MAIN_COVERED_FILES = Object.freeze([
   'electron/ipc/audioIpc.js',
   'electron/ipc/personaIpc.js',
+  'electron/ipc/windowIpc.js',
   'electron/services/ttsService.js',
   'electron/services/ttsVolcengine.js',
   'electron/windowManager.js',
