@@ -193,27 +193,35 @@ class McpInstance {
     // middle of a token; fall back to the exact overlap when none is near.
     const windowStart = Math.max(0, nominalCut - STDERR_OVERFLOW_OVERLAP_CHARS)
     const window = this.stderrBuffer.slice(windowStart, nominalCut)
-    const lastBreak = Math.max(
-      window.lastIndexOf(' '),
-      window.lastIndexOf('\t'),
-      window.lastIndexOf('\r'),
-      window.lastIndexOf('\n'),
-    )
+    const isBreak = (ch) => ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n'
+    let lastBreak = -1
+    for (let i = window.length - 1; i >= 0; i -= 1) {
+      if (isBreak(window[i])) {
+        lastBreak = i
+        break
+      }
+    }
     let cut = lastBreak >= 0 ? windowStart + lastBreak + 1 : nominalCut
-    // A prefix redaction rule needs the word before the break as well (e.g.
-    // `Bearer <token>`), otherwise the keyword is flushed alone and the token
-    // in the tail no longer matches. Walk back over that preceding word. The
-    // search stays inside the same 512-char window, so the retained tail is
-    // bounded at ~1024 chars and a huge preceding word simply keeps the
-    // single whitespace cut.
-    if (lastBreak > 0) {
-      const prevBreak = Math.max(
-        window.lastIndexOf(' ', lastBreak - 1),
-        window.lastIndexOf('\t', lastBreak - 1),
-        window.lastIndexOf('\r', lastBreak - 1),
-        window.lastIndexOf('\n', lastBreak - 1),
-      )
-      if (prevBreak >= 0) cut = windowStart + prevBreak + 1
+    if (lastBreak >= 0) {
+      // A prefix redaction rule needs the keyword before the break as well
+      // (e.g. `Bearer <token>` or `api_key = <value>`), otherwise the keyword
+      // is flushed alone and the value in the tail no longer matches. Skip the
+      // whole whitespace run (two spaces in `Bearer  <token>`), then walk back
+      // two words so the keyword and any `=` separator stay with the value.
+      // The search stays inside the same 512-char window, so the retained tail
+      // is bounded at ~1024 chars; a huge preceding word that does not fit
+      // keeps the whole window buffered instead of splitting a secret.
+      let pos = lastBreak
+      while (pos >= 0 && isBreak(window[pos])) pos -= 1
+      const firstWordEnd = pos
+      while (pos >= 0 && !isBreak(window[pos])) pos -= 1
+      while (pos >= 0 && isBreak(window[pos])) pos -= 1
+      if (firstWordEnd >= 0 && pos >= 0) {
+        while (pos >= 0 && !isBreak(window[pos])) pos -= 1
+        cut = windowStart + pos + 1
+      } else {
+        cut = windowStart
+      }
     }
     const flushable = this.stderrBuffer.slice(0, cut)
     this.stderrBuffer = this.stderrBuffer.slice(cut)

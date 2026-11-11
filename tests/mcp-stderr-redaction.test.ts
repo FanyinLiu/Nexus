@@ -43,12 +43,21 @@ function stderrLogText(): string {
 
 const BEARER_STRADDLE_TAIL_CHARS = 512
 const BEARER_STRADDLE_PREFIX_CHARS = 64 * 1024
+const API_KEY_STRADDLE_TAIL_CHARS = 512
 
 function syntheticBearerToken(tailMarker: string): string {
   // Synthetic only: matches the Bearer character class and is long enough to
   // fill the overlap tail, but is not a live-looking credential.
   const base = 'syntok.deadbeefSECRET99'
   const targetLength = BEARER_STRADDLE_TAIL_CHARS - 1 - tailMarker.length
+  return base + 'Q'.repeat(targetLength - base.length)
+}
+
+function syntheticApiKeyValue(tailMarker: string): string {
+  // Synthetic only: deliberately not token-shaped, so only the key=value
+  // prefix rules can redact it once the key stays in the retained tail.
+  const base = 'syndeadbeefSECRET99'
+  const targetLength = API_KEY_STRADDLE_TAIL_CHARS - 1 - tailMarker.length
   return base + 'Q'.repeat(targetLength - base.length)
 }
 
@@ -63,6 +72,27 @@ function buildBearerStraddleLine(token: string, headMarker: string, tailMarker: 
   // 64KB run of word characters backtracks quadratically in the key=value pass.
   const prefix = (headMarker + 'A '.repeat(BEARER_STRADDLE_PREFIX_CHARS)).slice(0, BEARER_STRADDLE_PREFIX_CHARS)
   return `${prefix}Authorization: Bearer ${tail}`
+}
+
+function buildDoubleSpaceBearerStraddleLine(token: string, headMarker: string, tailMarker: string): string {
+  // `Authorization: Bearer  ` is 23 chars, so with the same 512-char tail the
+  // last whitespace in the overflow window is the second of the two spaces
+  // after `Bearer`. A one-word walk-back flushes `Bearer ` and leaves
+  // ` <token>` in the tail, which no longer matches the Bearer rule.
+  const tail = `${token} ${tailMarker}`
+  assert.equal(tail.length, BEARER_STRADDLE_TAIL_CHARS)
+  const prefix = (headMarker + 'A '.repeat(BEARER_STRADDLE_PREFIX_CHARS)).slice(0, BEARER_STRADDLE_PREFIX_CHARS)
+  return `${prefix}Authorization: Bearer  ${tail}`
+}
+
+function buildApiKeyStraddleLine(value: string, headMarker: string, tailMarker: string): string {
+  // `api_key = ` is 10 chars, so the space after `=` lands on `nominalCut - 1`.
+  // A one-word walk-back flushes `api_key ` and leaves `= <value>` in the
+  // tail, where neither key=value rule can match it.
+  const tail = `${value} ${tailMarker}`
+  assert.equal(tail.length, API_KEY_STRADDLE_TAIL_CHARS)
+  const prefix = (headMarker + 'A '.repeat(BEARER_STRADDLE_PREFIX_CHARS)).slice(0, BEARER_STRADDLE_PREFIX_CHARS)
+  return `${prefix}api_key = ${tail}`
 }
 
 function countOccurrences(haystack: string, needle: string): number {
@@ -210,6 +240,44 @@ test('a Bearer token straddling the 64KB overflow cut is redacted as one piece',
     assert.match(output, /Bearer \*\*\*/)
     assert.doesNotMatch(output, /deadbeefSECRET99/)
     assert.ok(!output.includes(token))
+  })
+})
+
+test('a Bearer token after two spaces straddling the 64KB overflow cut is redacted as one piece', async () => {
+  await withSpawnedServer('srv-overflow-bearer-double-space', async (record) => {
+    clearLogs()
+    const tailMarker = 'TAILSPACE9f3c'
+    const token = syntheticBearerToken(tailMarker)
+    const line = buildDoubleSpaceBearerStraddleLine(token, 'HEADSPACE7a2b', tailMarker)
+    assert.ok(line.length > BEARER_STRADDLE_PREFIX_CHARS)
+
+    record.child.stderr.emit('data', line)
+    // Flush the retained tail so the token is logged through the normal path.
+    record.child.stderr.emit('data', '\n')
+
+    const output = stderrLogText()
+    assert.match(output, /Bearer \*\*\*/)
+    assert.doesNotMatch(output, /deadbeefSECRET99/)
+    assert.ok(!output.includes(token))
+  })
+})
+
+test('an api_key value after spaces around the equals sign straddling the 64KB overflow cut is redacted as one piece', async () => {
+  await withSpawnedServer('srv-overflow-api-key-spaces', async (record) => {
+    clearLogs()
+    const tailMarker = 'TAILKEY9f3c'
+    const value = syntheticApiKeyValue(tailMarker)
+    const line = buildApiKeyStraddleLine(value, 'HEADKEY7a2b', tailMarker)
+    assert.ok(line.length > BEARER_STRADDLE_PREFIX_CHARS)
+
+    record.child.stderr.emit('data', line)
+    // Flush the retained tail so the value is logged through the normal path.
+    record.child.stderr.emit('data', '\n')
+
+    const output = stderrLogText()
+    assert.match(output, /api_key = \*\*\*/)
+    assert.doesNotMatch(output, /deadbeefSECRET99/)
+    assert.ok(!output.includes(value))
   })
 })
 
