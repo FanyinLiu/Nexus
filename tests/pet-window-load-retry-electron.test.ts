@@ -282,6 +282,68 @@ test('the fallback retry control reloads the pet and the normal window appears',
   assert.equal(pet.loadCount, 5, 'a normal show after recovery does not reload')
 })
 
+test('the fallback retry control keeps the full retry budget when the fresh load fails again', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  const entryUrl = 'file:///fake/index.html?view=pet'
+  const fail = () => {
+    pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entryUrl, true)
+    pet.emitWebContents('did-finish-load')
+  }
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  fail()
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 4)
+  assert.equal(pet.loadFileCalls.length, 1, 'the first-launch fallback is on screen')
+
+  // The fallback document is not the app becoming ready, so its finish must not
+  // touch the budget: a recovered load has to prove it was given a fresh one.
+  pet.emitWebContents('did-finish-load')
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 4)
+
+  const navigationEvent = {
+    defaultPrevented: false,
+    preventDefault() {
+      this.defaultPrevented = true
+    },
+  }
+  pet.emitWebContents('will-navigate', navigationEvent, PET_LOAD_FALLBACK_RETRY_URL)
+  assert.equal(navigationEvent.defaultPrevented, true)
+  assert.equal(pet.loadCount, 5, 'the button grants one fresh load of the pet entry')
+  assert.equal(pet.url, entryUrl)
+
+  // Fail the fresh load before any successful finish. Recovery must restart the
+  // automatic budget instead of inheriting the exhausted one, otherwise the
+  // fallback comes back after a single attempt.
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  assert.equal(pet.loadCount, 6, 'the fresh load still gets its first retry')
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  assert.equal(pet.loadCount, 7, 'the fresh load still gets its second retry')
+
+  fail()
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 8, 'only the local fallback loads after the fresh budget is spent')
+  assert.equal(pet.loadFileCalls.length, 2, 'the fallback is shown again only after both retries')
+  assert.equal(pet.loadFileCalls[1]?.filePath, PET_LOAD_FALLBACK_PATH)
+  assert.equal(pet.visible, true, 'the first-launch failure still leaves something visible')
+})
+
 test('a normal pet page cannot navigate to the retry marker and trigger a reload', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   t.after(() => {
@@ -381,6 +443,60 @@ test('an exhausted pet reloads when the user shows it again', async (t) => {
   pet.hide()
   pet.show()
   assert.equal(pet.loadCount, 4, 'a normal show after recovery does not reload')
+})
+
+test('an exhausted pet granted one fresh load retries twice before hiding again', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  const entryUrl = 'file:///fake/index.html?view=pet'
+  pet.emitWebContents('did-finish-load')
+  await flushMicrotasks()
+  assert.equal(pet.visible, true, 'the first successful load shows the pet')
+
+  const fail = () => {
+    pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entryUrl, true)
+    pet.emitWebContents('did-finish-load')
+  }
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  fail()
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 3)
+  assert.equal(pet.visible, false, 'the later failure hides the error page')
+
+  pet.show()
+  assert.equal(pet.loadCount, 4, 'showing an exhausted pet grants one fresh load')
+  assert.equal(pet.visible, true)
+
+  // Fail the fresh load before a successful finish. The show recovery must
+  // restore the automatic budget instead of inheriting the spent one, otherwise
+  // the pet hides again after a single attempt.
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  assert.equal(pet.loadCount, 5, 'the fresh load still gets its first retry')
+  assert.equal(pet.visible, true)
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  assert.equal(pet.loadCount, 6, 'the fresh load still gets its second retry')
+  assert.equal(pet.visible, true)
+
+  fail()
+  await flushMicrotasks()
+  assert.equal(pet.loadCount, 6, 'no retry is scheduled after the fresh budget')
+  assert.equal(pet.visible, false, 'a pet that already loaded hides once the fresh budget is spent')
+  assert.equal(pet.loadFileCalls.length, 0, 'a previously loaded pet never gets the first-launch page')
 })
 
 function createRetryHarness({ retryLimit = 2, baseDelayMs = 100 } = {}) {
