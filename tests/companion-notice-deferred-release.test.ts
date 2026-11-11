@@ -205,6 +205,50 @@ test('an interrupted merged replay keeps one prefix and one more line', async ()
   harness.unmount()
 })
 
+test('all punctuation-only reminders produce only a chat line', async () => {
+  const harness = createHarness()
+  await harness.api.pushCompanionNotice({
+    chatContent: '。',
+    bubbleContent: '。',
+    speechContent: '。',
+    reminderId: 'dots',
+    reminderDueAt: 1,
+  })
+  await harness.api.pushCompanionNotice({
+    chatContent: '!!',
+    bubbleContent: '!!',
+    speechContent: '!!',
+    reminderId: 'bangs',
+    reminderDueAt: 2,
+  })
+  harness.voiceStateRef.current = 'idle'
+  harness.continuousVoiceActiveRef.current = false
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+
+  assert.deepEqual(harness.messages, ['。\n!!'])
+  assert.deepEqual(harness.spoken, [], 'no TTS for punctuation-only reminders')
+  assert.deepEqual(harness.bubbles, [], 'no bubble for punctuation-only reminders')
+  harness.unmount()
+})
+
+test('stop-all keeps a deliverable reminder when another queued reminder is dropped', async () => {
+  const dropped = new Set(['x'])
+  const harness = createHarness({
+    shouldDropDeferredNotice: (payload) => dropped.has(payload.reminderId ?? ''),
+  })
+  await harness.api.pushCompanionNotice(reminder('x', 'x'))
+  await harness.api.pushCompanionNotice(reminder('y', 'y'))
+
+  emitSpeechStopAll()
+  await flushMicrotasks()
+
+  assert.deepEqual(harness.messages, ['title-y: y'])
+  assert.doesNotMatch(harness.messages[0], /title-x/u)
+  assert.deepEqual(harness.spoken, [])
+  harness.unmount()
+})
+
 test('stop-all appends one merged chat line without speaking or bubbling', async () => {
   const harness = createHarness()
   await harness.api.pushCompanionNotice(reminder('a', 'a'))

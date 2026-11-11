@@ -43,6 +43,21 @@ function item(
   }
 }
 
+function rawItem(
+  reminderId: string,
+  dueAt: number,
+  text: string,
+): DeferredReminderItem {
+  return {
+    reminderId,
+    dueAt,
+    enqueuedAt: 0,
+    chatContent: text,
+    bubbleContent: text,
+    speechContent: text,
+  }
+}
+
 test('merged reminders are ordered by due time and deduplicated by id', () => {
   const merged = mergeDeferredReminders([
     item('late', 300, 0, 'late'),
@@ -328,16 +343,68 @@ test('chat content uses prefix, item and more lines without separators or punctu
   assert.equal(noPrefix?.speechContent, '喝水；拿快递；给妈打电话。')
 })
 
-test('punctuation-only items keep a non-empty sensible fallback', () => {
-  const zh = copyFor(zhCNMessages)
+test('punctuation-only items are skipped from speech and do not count toward the cap', () => {
   const en = copyFor(enMessages)
+  const merged = mergeDeferredReminders([
+    rawItem('a', 1, 'a'),
+    rawItem('empty', 2, '。'),
+    rawItem('b', 3, 'b'),
+    rawItem('c', 4, 'c'),
+    rawItem('d', 5, 'd'),
+  ], en, { now: 0 })
+
+  assert.equal(merged?.speechContent, 'a; b; c. 1 more reminder.')
+  assert.equal(merged?.bubbleContent, 'a; b; c. 1 more reminder.')
+  assert.equal(merged?.chatContent, 'a\n。\nb\nc\n1 more reminder.')
+  assert.equal(merged?.extraCount, 1, 'the empty item is not counted in the more line')
+})
+
+test('punctuation-only items are skipped when fewer than three real items remain', () => {
+  const en = copyFor(enMessages)
+  const merged = mergeDeferredReminders([
+    rawItem('a', 1, 'a'),
+    rawItem('empty', 2, '。'),
+    rawItem('b', 3, 'b'),
+  ], en, { now: 0 })
+
+  assert.equal(merged?.speechContent, 'a; b.')
+  assert.equal(merged?.bubbleContent, 'a; b.')
+  assert.equal(merged?.chatContent, 'a\n。\nb')
+  assert.equal(merged?.extraCount, 0)
+})
+
+test('all punctuation-only items produce chat text but no speech or bubble', () => {
+  const en = copyFor(enMessages)
+  const merged = mergeDeferredReminders([
+    rawItem('dots', 1, '。'),
+    rawItem('bangs', 2, '!!'),
+  ], en, { now: 0 })
+
+  assert.equal(merged?.speechContent, '')
+  assert.equal(merged?.bubbleContent, '')
+  assert.equal(merged?.chatContent, '。\n!!')
+  assert.equal(merged?.selected.length, 0)
+  assert.equal(merged?.extraCount, 0)
+})
+
+test('English chat keeps casing while only the first speech item is lowercased', () => {
+  const en = copyFor(enMessages)
+  const merged = mergeDeferredReminders([
+    rawItem('one', 1, 'Drink water'),
+    rawItem('two', 2, 'Call Mom'),
+  ], en, { now: 60_000 })
+
   assert.equal(
-    mergeDeferredReminders([item('dots', 1, 0, '。')], zh, { now: 0 })?.speechContent,
-    '。',
+    merged?.chatContent,
+    'While we were chatting, a reminder came up:\nDrink water\nCall Mom',
   )
   assert.equal(
-    mergeDeferredReminders([item('bangs', 1, 0, '!!')], en, { now: 0 })?.speechContent,
-    '!!',
+    merged?.speechContent,
+    'While we were chatting, a reminder came up: drink water; Call Mom.',
+  )
+  assert.equal(
+    merged?.bubbleContent,
+    'While we were chatting, a reminder came up: drink water; Call Mom.',
   )
 })
 

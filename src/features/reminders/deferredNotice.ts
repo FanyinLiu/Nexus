@@ -58,14 +58,11 @@ const SENTENCE_ENDING = /[。．.！!？?]$/u
 
 /**
  * Remove punctuation that belongs to the item itself so the merge can add one
- * sentence end for the whole utterance. A punctuation-only item falls back to
- * its trimmed source instead of becoming an empty slot.
+ * sentence end for the whole utterance. Speech/bubble items that become empty
+ * are skipped instead of keeping a punctuation-only fallback.
  */
 function normalizeDeferredReminderText(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  const stripped = trimmed.replace(TRAILING_ITEM_PUNCTUATION, '').trim()
-  return stripped || trimmed
+  return value.trim().replace(TRAILING_ITEM_PUNCTUATION, '').trim()
 }
 
 /** Add the locale sentence end unless the fallback item already carries one. */
@@ -108,13 +105,26 @@ export function dedupeDeferredReminders(
   return [...byId.values()].sort(compareDeferredReminders)
 }
 
+function spokenItemText(
+  item: DeferredReminderItem,
+  channel: 'bubbleContent' | 'speechContent',
+) {
+  return normalizeDeferredReminderText(firstLine(item[channel]))
+}
+
+/** An item is speakable if either spoken surface survives punctuation stripping. */
+function hasSpokenContent(item: DeferredReminderItem) {
+  return Boolean(spokenItemText(item, 'speechContent'))
+    || Boolean(spokenItemText(item, 'bubbleContent'))
+}
+
 function channelText(
   items: readonly DeferredReminderItem[],
   channel: 'bubbleContent' | 'speechContent',
   copy: DeferredReminderCopy,
 ) {
   return items
-    .map((item) => normalizeDeferredReminderText(firstLine(item[channel])))
+    .map((item) => spokenItemText(item, channel))
     .filter(Boolean)
     .join(copy.separator)
 }
@@ -174,9 +184,14 @@ export function mergeDeferredReminders(
   const now = options.now ?? Date.now()
   const maxItems = Math.max(1, options.maxItems ?? DEFERRED_REMINDER_MAX_ITEMS)
   const prefixThresholdMs = options.prefixThresholdMs ?? DEFERRED_REMINDER_PREFIX_THRESHOLD_MS
-  const selected = deduped.slice(0, maxItems)
-  const extraCount = Math.max(0, deduped.length - selected.length)
+  // Punctuation-only/blank items are not spoken, not capped, and not counted
+  // in the "more" line. Their original chat text still appears in due order.
+  const speakable = deduped.filter(hasSpokenContent)
+  const selected = speakable.slice(0, maxItems)
+  const extraCount = Math.max(0, speakable.length - selected.length)
   const usedPrefix = deduped.some((item) => now - item.enqueuedAt >= prefixThresholdMs)
+  const selectedSet = new Set(selected)
+  const chatItems = deduped.filter((item) => selectedSet.has(item) || !hasSpokenContent(item))
 
   const buildSpokenChannel = (channel: 'bubbleContent' | 'speechContent') => {
     const joined = channelText(selected, channel, copy)
@@ -193,7 +208,7 @@ export function mergeDeferredReminders(
     selected,
     extraCount,
     usedPrefix,
-    chatContent: chatText(selected, copy, usedPrefix, extraCount),
+    chatContent: chatText(chatItems, copy, usedPrefix, extraCount),
     bubbleContent: buildSpokenChannel('bubbleContent'),
     speechContent: buildSpokenChannel('speechContent'),
   }
