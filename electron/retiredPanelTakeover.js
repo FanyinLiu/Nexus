@@ -10,6 +10,11 @@
  */
 
 export const RETIRED_PANEL_TAKEOVER_INTERVAL_MS = 5_000
+export const RETIRED_PANEL_RESUME_GRACE_MS = 30_000
+// A tick gap this large is not event-loop jitter: the process was suspended or
+// the wall clock moved. Both make the pet heartbeat look stale even though the
+// companion may reconnect moments after wake.
+export const RETIRED_PANEL_CLOCK_JUMP_THRESHOLD_MS = 60_000
 
 /**
  * @typedef {Object} RetiredPanelTakeoverDeps
@@ -27,6 +32,10 @@ export const RETIRED_PANEL_TAKEOVER_INTERVAL_MS = 5_000
  * @property {(callback: () => void, ms: number) => unknown} [setIntervalFn]
  * @property {(timer: unknown) => void} [clearIntervalFn]
  * @property {number} [intervalMs]
+ * @property {number} [resumeGraceMs] How long an offline pet is spared after a
+ *   resume or wall-clock jump; heartbeats cannot arrive while suspended.
+ * @property {number} [clockJumpThresholdMs] Minimum tick-to-tick skew treated
+ *   as suspend/clock jump rather than ordinary timer delay.
  */
 
 /**
@@ -45,6 +54,8 @@ export function createRetiredPanelTakeover({
   setIntervalFn = (callback, ms) => setInterval(callback, ms),
   clearIntervalFn = (timer) => clearInterval(/** @type {any} */ (timer)),
   intervalMs = RETIRED_PANEL_TAKEOVER_INTERVAL_MS,
+  resumeGraceMs = RETIRED_PANEL_RESUME_GRACE_MS,
+  clockJumpThresholdMs = RETIRED_PANEL_CLOCK_JUMP_THRESHOLD_MS,
 }) {
   /** @type {unknown} */
   let timer = null
@@ -55,6 +66,14 @@ export function createRetiredPanelTakeover({
   /** @type {number | null} */
   let petOnlineSince = null
   let lastActionAt = 0
+  /** @type {number | null} */
+  let lastTickAt = null
+  let graceUntil = 0
+
+  const enterResumeGrace = (at = now()) => {
+    graceUntil = at + resumeGraceMs
+    return graceUntil
+  }
 
   const stop = () => {
     if (timer !== null) {
@@ -64,6 +83,8 @@ export function createRetiredPanelTakeover({
     lastPetOnline = null
     petOnlineSince = null
     lastActionAt = 0
+    lastTickAt = null
+    graceUntil = 0
   }
 
   const tick = () => {
@@ -73,6 +94,13 @@ export function createRetiredPanelTakeover({
       armed = false
       return 'quitting'
     }
+    const nowMs = now()
+    if (lastTickAt !== null && Math.abs(nowMs - lastTickAt) >= clockJumpThresholdMs) {
+      // Resume and clock jump share the same grace: in both cases the pet
+      // heartbeat could not be refreshed on schedule.
+      enterResumeGrace(nowMs)
+    }
+    lastTickAt = nowMs
     if (hasPanelWindow()) {
       creating = false
       const snapshot = getSnapshot()
@@ -82,7 +110,6 @@ export function createRetiredPanelTakeover({
         petOnlineSince = null
         return 'panel_present'
       }
-      const nowMs = now()
       if (petOnlineSince === null) petOnlineSince = nowMs
       if (nowMs - petOnlineSince >= reclaimAfterMs && shouldReclaimPanel(snapshot)) {
         // Destroy only the never-shown takeover panel; the first-use latch
@@ -101,6 +128,7 @@ export function createRetiredPanelTakeover({
     petOnlineSince = null
     if (petOnline) return 'pet_online'
     if (creating) return 'creating'
+    if (nowMs < graceUntil) return 'grace'
 
     creating = true
     lastActionAt = now()
@@ -142,15 +170,19 @@ export function createRetiredPanelTakeover({
     lastPetOnline = null
     petOnlineSince = null
     lastActionAt = 0
+    lastTickAt = null
+    graceUntil = 0
   }
 
   return {
     start,
     stop,
     tick,
+    noteSystemResume: () => enterResumeGrace(),
+    noteClockJump: () => enterResumeGrace(),
     isArmed: () => armed,
     isRunning: () => timer !== null,
-    debugState: () => ({ armed, creating, lastPetOnline, petOnlineSince, lastActionAt }),
+    debugState: () => ({ armed, creating, lastPetOnline, petOnlineSince, lastActionAt, lastTickAt, graceUntil }),
     resetForTests,
   }
 }

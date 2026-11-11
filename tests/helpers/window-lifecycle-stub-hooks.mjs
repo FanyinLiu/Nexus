@@ -44,6 +44,10 @@ export const screen = {
   getDisplayMatching: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }),
   getCursorScreenPoint: () => ({ x: 0, y: 0 }),
 }
+export const powerMonitor = {
+  on() {},
+  removeListener() {},
+}
 export const Menu = {
   buildFromTemplate: () => ({ popup: (_options, callback) => callback?.() }),
   setApplicationMenu() {},
