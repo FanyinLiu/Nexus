@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
+import { warnRedacted } from '../../lib/logger.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import { isInterruptedError, isStopAllInterrupted } from '../../features/voice/interruptedError.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
-import { getSpeechOutputErrorMessage } from './support.ts'
 import type { ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
 
 type CompanionNoticeDependencies = {
@@ -87,8 +87,8 @@ export function useCompanionNotices({
         }
         return 'interrupted'
       }
-      const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-      setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
+      warnRedacted('[companionNotice] speech playback failed:', speechError)
+      setError(t('chat.error.speech_with_detail'))
       return 'played'
     }
   }, [setError, t])

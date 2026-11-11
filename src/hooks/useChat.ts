@@ -3,6 +3,7 @@ import {
   createId,
   shorten,
 } from '../lib/index.ts'
+import { warnRedacted } from '../lib/logger.ts'
 import { emitPetNotify } from '../lib/petNotifyBus.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import {
@@ -231,6 +232,7 @@ export function useChat(ctx: UseChatContext) {
     shouldResumeContinuousVoice: boolean
   }) => {
     const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
+    warnRedacted('[useChat] speech playback failed:', speechError)
     logVoiceEvent('assistant reply speech output failed', {
       source: options.source,
       errorPresent: Boolean(speechErrorMessage),
@@ -240,7 +242,7 @@ export function useChat(ctx: UseChatContext) {
       ctx.appendVoiceTrace(t('chat.voice.playback_failed_label'), `#${options.traceLabel} ${shorten(speechErrorMessage, 48)}`, 'error')
     }
 
-    setError(options.fromVoice ? t('chat.error.playback_with_reply', { error: speechErrorMessage }) : speechErrorMessage)
+    setError(options.fromVoice ? t('chat.error.playback_with_reply') : speechErrorMessage)
     // Bus drives voiceState → 'idle' + restart_voice + setMood('idle')
     ctx.busEmit({
       type: 'tts:error',

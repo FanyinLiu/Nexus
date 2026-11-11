@@ -25,7 +25,7 @@ export const jaSettingsChat = {
   'settings.chat.import_card': 'キャラクターカードをインポート',
   'settings.chat.importing_card': 'インポート中...',
   'settings.chat.import_card_success': '「{name}」をインポートしました（キーワード背景 {count} 件）。',
-  'settings.chat.import_card_error': 'カードのインポートがうまくいかなかった：{error}',
+  'settings.chat.import_card_error': 'キャラクターカードを読み込めませんでした。別のカードで試してみてください。',
   'settings.chat.vts_title': 'VTube Studio 連携',
   'settings.chat.vts_hint': 'WebSocket API で VTube Studio のモデルを制御。Nexus が AI 会話と感情を駆動します。',
   'settings.chat.vts_enabled': 'VTube Studio ブリッジを有効化',
