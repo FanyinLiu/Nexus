@@ -20,6 +20,7 @@ import { useDesktopPresence } from '../../hooks/useDesktopPresence.ts'
 import { useKeyPointScheduler } from '../../hooks/useKeyPointScheduler.ts'
 import { usePetBehavior } from '../../hooks/usePetBehavior.ts'
 import { useVoice } from '../../hooks/useVoice.ts'
+import { mergeContinuousVoiceActive } from '../../hooks/voice/continuousVoice.ts'
 import { useReminderController } from './useReminderController.ts'
 import { getSettingsSnapshot } from '../store/settingsStore.ts'
 import { useAutonomyController } from './useAutonomyController.ts'
@@ -180,7 +181,7 @@ export function useAppController() {
     setMemories: memory.setMemories,
     appendDailyMemoryEntries: memory.appendDailyMemoryEntries,
     voiceStateRef: voice.voiceStateRef,
-    continuousVoiceActiveRef: voice.continuousVoiceActiveRef,
+    continuousVoiceActiveRef,
     suppressVoiceReplyRef: voice.suppressVoiceReplyRef,
     setVoiceState: voice.setVoiceState,
     setLiveTranscript: voice.setLiveTranscript,
@@ -303,10 +304,11 @@ export function useAppController() {
   }, [platformProfile])
 
   useEffect(() => {
-    continuousVoiceActiveRef.current = (
-      voice.continuousVoiceActive
-      || (view === 'panel' && petRuntimeContinuousVoiceActive && !voice.continuousVoiceActive)
-    )
+    continuousVoiceActiveRef.current = mergeContinuousVoiceActive({
+      view,
+      localActive: voice.continuousVoiceActive,
+      petRuntimeActive: petRuntimeContinuousVoiceActive,
+    })
   }, [petRuntimeContinuousVoiceActive, view, voice.continuousVoiceActive])
 
   // ── Autonomy subsystem ──────────────────────────────────────────────────────

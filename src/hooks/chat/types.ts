@@ -245,6 +245,10 @@ export type CompanionNoticePayload = {
   bubbleContent?: string
   speechContent?: string
   dedupeKey?: string
+  /** Stable reminder task id; deferred reminders with the same id collapse. */
+  reminderId?: string
+  /** Reminder occurrence due instant used to order a merged replay. */
+  reminderDueAt?: string | number
   autoHideMs?: number
   /**
    * Marks the notice bubble as router-driven. The bubble then joins the shared

@@ -3,6 +3,11 @@ import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import { isInterruptedError, isStopAllInterrupted } from '../../features/voice/interruptedError.ts'
+import {
+  mergeDeferredReminders,
+  type DeferredReminderCopy,
+  type DeferredReminderItem,
+} from '../../features/reminders/deferredNotice.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
 import { getSpeechOutputErrorMessage } from './support.ts'
@@ -18,6 +23,10 @@ type CompanionNoticeDependencies = {
     options?: { autoHideMs?: number },
   ) => void
   setError: (value: string | null) => void
+  /** Injectable clock keeps the 60 s prefix threshold testable. */
+  now?: () => number
+  /** Settings/DND gate: true drops a queued reminder instead of replaying it. */
+  shouldDropDeferredNotice?: (payload: CompanionNoticePayload) => boolean
 }
 
 /**
@@ -40,9 +49,18 @@ type DeferredCompanionNotice = {
   payload: CompanionNoticePayload
   /** A replay must not duplicate the chat line/bubble already shown. */
   speechOnly: boolean
+  /** Queue entry time drives the "waited >= 60 s" prefix rule. */
+  enqueuedAt: number
 }
 
 type CompanionNoticeSpeechResult = 'played' | 'interrupted' | 'cleared'
+
+function parseReminderDueAt(value: CompanionNoticePayload['reminderDueAt']): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return null
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 export function useCompanionNotices({
   ctx,
@@ -51,6 +69,8 @@ export function useCompanionNotices({
   appendChatMessage,
   presentPetDialogBubble,
   setError,
+  now = Date.now,
+  shouldDropDeferredNotice,
 }: CompanionNoticeDependencies) {
   const deferredCompanionNoticesRef = useRef<DeferredCompanionNotice[]>([])
   const flushingDeferredCompanionNoticesRef = useRef(false)
@@ -62,6 +82,14 @@ export function useCompanionNotices({
   useEffect(() => {
     ctxRef.current = ctx
   }, [ctx])
+  const nowRef = useRef(now)
+  useEffect(() => {
+    nowRef.current = now
+  })
+  const shouldDropDeferredNoticeRef = useRef(shouldDropDeferredNotice)
+  useEffect(() => {
+    shouldDropDeferredNoticeRef.current = shouldDropDeferredNotice
+  })
   // A notice interrupted while it was already in the shared player gets one
   // replay. The WeakSet keeps a second interruption from queueing it forever.
   const replayedCompanionNoticesRef = useRef(new WeakSet<CompanionNoticePayload>())
@@ -83,7 +111,11 @@ export function useCompanionNotices({
         const replayed = replayedCompanionNoticesRef.current
         if (!replayed.has(options)) {
           replayed.add(options)
-          deferredCompanionNoticesRef.current.push({ payload: options, speechOnly: true })
+          deferredCompanionNoticesRef.current.push({
+            payload: options,
+            speechOnly: true,
+            enqueuedAt: nowRef.current(),
+          })
         }
         return 'interrupted'
       }
@@ -174,7 +206,7 @@ export function useCompanionNotices({
     return playCompanionNoticeSpeech(options)
   }, [appendChatMessage, playCompanionNoticeSpeech, presentPetDialogBubble])
 
-  const canDeliverDeferredCompanionNotice = useCallback(() => {
+  const canDeliverDeferredCompanionNotice = useCallback((options: { force?: boolean } = {}) => {
     const voiceState = ctxRef.current.voiceStateRef.current
     // A listening turn owns the microphone: speaking a reminder here would
     // talk over the user and can make the voice session drop the utterance.
@@ -189,15 +221,54 @@ export function useCompanionNotices({
     // Continuous voice leaves a short idle gap between turns (for example
     // right after tts:completed) before it reopens listening. The voice state
     // alone cannot distinguish that gap from a truly idle pet, so hold the
-    // queue until the whole continuous session ends.
-    return ctxRef.current.continuousVoiceActiveRef?.current !== true
+    // queue until the whole continuous session ends. A stuck flag can only be
+    // overridden by the explicit idle-timeout force path.
+    return options.force === true
+      || ctxRef.current.continuousVoiceActiveRef?.current !== true
   }, [busyRef])
 
+  const buildDeferredReminderCopy = useCallback((): DeferredReminderCopy => {
+    const separator = t('companion.notice.deferred_separator')
+    return {
+      separator,
+      prefix: (items) => t('companion.notice.deferred_prefix', { items }),
+      more: (count) => t('companion.notice.deferred_more', { count }),
+      moreOne: () => t('companion.notice.deferred_more_one'),
+      // Latin locales need a space before the "more" sentence; zh/ja use the
+      // punctuation from the item text directly.
+      moreJoiner: separator.endsWith(' ') ? ' ' : '',
+    }
+  }, [t])
+
+  const dropQueuedCompanionNotices = useCallback(() => {
+    const queue = deferredCompanionNoticesRef.current
+    const shouldDrop = shouldDropDeferredNoticeRef.current
+    if (!shouldDrop || queue.length === 0) return 0
+    const kept = queue.filter((entry) => !shouldDrop(entry.payload))
+    const dropped = queue.length - kept.length
+    if (dropped > 0) {
+      queue.splice(0, queue.length, ...kept)
+    }
+    return dropped
+  }, [])
+
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
+    if (shouldDropDeferredNoticeRef.current?.(options)) return
+    const queue = deferredCompanionNoticesRef.current
+    // Deduplicate a reminder that was already queued by id before it can grow
+    // the queue or produce a second merged item.
+    if (options.reminderId && queue.some((entry) => entry.payload.reminderId === options.reminderId)) {
+      return
+    }
     // A notice that arrives mid-reply must not start speaking over the pet.
     // Queue it instead; flush only runs once the turn and its speech are done.
-    if (!canDeliverDeferredCompanionNotice()) {
-      deferredCompanionNoticesRef.current.push({ payload: options, speechOnly: false })
+    // Reminders already waiting also keep a newcomer in the same merge batch.
+    if (!canDeliverDeferredCompanionNotice() || (options.reminderId && queue.length > 0)) {
+      queue.push({
+        payload: options,
+        speechOnly: false,
+        enqueuedAt: nowRef.current(),
+      })
       return
     }
     await deliverCompanionNotice(options)
@@ -207,16 +278,65 @@ export function useCompanionNotices({
     clearDeferredCompanionNotices(deferredCompanionNoticesRef.current)
   ), [])
 
-  const flushDeferredCompanionNotices = useCallback(async () => {
-    if (flushingDeferredCompanionNoticesRef.current || !canDeliverDeferredCompanionNotice()) {
+  const hasDeferredCompanionNotices = useCallback(
+    () => deferredCompanionNoticesRef.current.length > 0,
+    [],
+  )
+
+  const flushDeferredCompanionNotices = useCallback(async (options: { force?: boolean } = {}) => {
+    dropQueuedCompanionNotices()
+    if (
+      flushingDeferredCompanionNoticesRef.current
+      || !canDeliverDeferredCompanionNotice(options)
+    ) {
       return
     }
 
     flushingDeferredCompanionNoticesRef.current = true
 
     try {
-      while (deferredCompanionNoticesRef.current.length && canDeliverDeferredCompanionNotice()) {
-        const nextNotice = deferredCompanionNoticesRef.current.shift()
+      const queue = deferredCompanionNoticesRef.current
+      const reminderEntries = queue.filter((entry) => entry.payload.reminderId)
+      if (reminderEntries.length > 0) {
+        // Remove every reminder in one pass so the merged utterance is the
+        // only delivery for this batch, even when new reminders arrived while
+        // earlier ones waited.
+        const remaining = queue.filter((entry) => !entry.payload.reminderId)
+        queue.splice(0, queue.length, ...remaining)
+
+        const reminderItems: DeferredReminderItem[] = reminderEntries.map((entry) => ({
+          reminderId: entry.payload.reminderId as string,
+          dueAt: parseReminderDueAt(entry.payload.reminderDueAt) ?? entry.enqueuedAt,
+          enqueuedAt: entry.enqueuedAt,
+          chatContent: entry.payload.chatContent,
+          bubbleContent: entry.payload.bubbleContent ?? entry.payload.chatContent,
+          speechContent: entry.payload.speechContent ?? entry.payload.bubbleContent ?? entry.payload.chatContent,
+        }))
+        const merged = mergeDeferredReminders(reminderItems, buildDeferredReminderCopy(), {
+          now: nowRef.current(),
+        })
+        if (merged) {
+          const firstPayload = reminderEntries[0].payload
+          const mergedPayload: CompanionNoticePayload = {
+            ...firstPayload,
+            chatContent: merged.chatContent,
+            bubbleContent: merged.bubbleContent,
+            speechContent: merged.speechContent,
+            // One batch has one delivery key; the per-reminder ids stay in the
+            // queue metadata only, never in the user-visible copy.
+            dedupeKey: `deferred-reminders:${merged.items.map((item) => item.reminderId).join('|')}`,
+            shouldResumeContinuousVoice: false,
+          }
+          const speechOnly = reminderEntries.every((entry) => entry.speechOnly)
+          const result = await deliverCompanionNotice(mergedPayload, speechOnly)
+          // An interrupted replay is requeued by the speech layer; do not
+          // continue into the non-reminder tail in the same pass.
+          if (result !== 'played') return
+        }
+      }
+
+      while (queue.length && canDeliverDeferredCompanionNotice(options)) {
+        const nextNotice = queue.shift()
         if (!nextNotice) {
           continue
         }
@@ -229,12 +349,18 @@ export function useCompanionNotices({
     } finally {
       flushingDeferredCompanionNoticesRef.current = false
     }
-  }, [canDeliverDeferredCompanionNotice, deliverCompanionNotice])
+  }, [
+    buildDeferredReminderCopy,
+    canDeliverDeferredCompanionNotice,
+    deliverCompanionNotice,
+    dropQueuedCompanionNotices,
+  ])
 
   return {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
     discardDeferredCompanionNotices,
+    hasDeferredCompanionNotices,
     canDeliverDeferredCompanionNotice,
   }
 }

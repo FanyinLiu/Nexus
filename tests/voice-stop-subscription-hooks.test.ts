@@ -236,6 +236,44 @@ test('completion events wait for an active listening or continuous session to en
   session.unmount()
 })
 
+test('a hidden window neither forces a release nor blocks a later one', async () => {
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    writable: true,
+    value: { hidden: true, visibilityState: 'hidden' },
+  })
+  const bus = new VoiceBus()
+  const timers = fakeTimers()
+  let flushes = 0
+  let canRelease = false
+  const session = renderHook(() => useCompanionNoticeIdleFlush(
+    bus,
+    async () => { flushes += 1 },
+    timers,
+    () => canRelease,
+  ))
+  try {
+    bus.emit({ type: 'tts:completed', speechGeneration: 1, shouldResumeContinuousVoice: true })
+    await Promise.resolve()
+    await Promise.resolve()
+    timers.advance(15_000)
+    await Promise.resolve()
+    await Promise.resolve()
+    assert.equal(flushes, 0, 'hidden alone must not force a release')
+
+    canRelease = true
+    bus.emit({ type: 'session:completed' })
+    await Promise.resolve()
+    await Promise.resolve()
+    assert.equal(flushes, 1, 'session end still releases while hidden')
+  } finally {
+    session.unmount()
+    if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument)
+    else Reflect.deleteProperty(globalThis, 'document')
+  }
+})
+
 test('the idle fallback releases the queue when no voice event arrives', async () => {
   const bus = new VoiceBus()
   const timers = fakeTimers()
@@ -322,7 +360,7 @@ test('vad:no_speech_timeout releases the queue immediately', async () => {
   session.unmount()
 })
 
-test('a non-no-speech STT error still waits for the fallback window', async () => {
+test('any STT error releases the deferred queue', async () => {
   const bus = new VoiceBus()
   const timers = fakeTimers()
   let flushes = 0
@@ -334,12 +372,8 @@ test('a non-no-speech STT error still waits for the fallback window', async () =
 
   bus.emit({ type: 'stt:error', code: 'network', message: 'network failed' })
   await Promise.resolve()
-  assert.equal(flushes, 0, 'only no-speech is an immediate release')
-
-  timers.advance(15_000)
   await Promise.resolve()
-  await Promise.resolve()
-  assert.equal(flushes, 1)
+  assert.equal(flushes, 1, 'a transcription/ASR failure ends the session')
   session.unmount()
 })
 
