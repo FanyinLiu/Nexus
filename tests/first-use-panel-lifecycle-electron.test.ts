@@ -20,6 +20,7 @@ type FakeWindow = {
   show: () => void
   hide: () => void
   destroy: () => void
+  isVisible: () => boolean
   emit: (event: string) => void
   emitWebContents: (event: string, ...args: unknown[]) => void
   url?: string
@@ -449,4 +450,109 @@ test('speaking or busy takeover panels are not reclaimed until idle', async (t) 
   state.snapshot.assistantActivity = 'idle'
   t.mock.timers.tick(5_000)
   assert.equal(hidden.destroyed, true, 'idle reclaims once the online window is already satisfied')
+})
+
+test('a takeover panel that becomes visible after the reclaim check is not destroyed', async (t) => {
+  destroyAllPanels()
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const state = windowLifecycleState()
+  state.snapshot.petOnline = false
+  const sender = { id: 7014 }
+  const firstUsePanel = createHiddenPanel()
+  state.bySender.set(sender, firstUsePanel)
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  windowManager.confirmFirstUsePanelRetire(sender, lastSentNonce())
+  const hidden = state.windows.at(-1) as FakeWindow
+
+  state.snapshot.petOnline = true
+  t.mock.timers.tick(5_000) // start the online clock
+  for (let index = 0; index < 11; index += 1) t.mock.timers.tick(5_000)
+  assert.equal(hidden.destroyed, false, '55s online is not enough')
+
+  // Simulate showPanelWindow landing between shouldReclaimPanel() and
+  // reclaimPanel(): the predicate still reads "hidden" on its visibility
+  // check, but the pre-destroy re-check must observe the now-visible window.
+  let visibilityReads = 0
+  hidden.isVisible = () => {
+    visibilityReads += 1
+    if (visibilityReads === 1) {
+      hidden.visible = true
+      return false
+    }
+    return hidden.visible
+  }
+
+  t.mock.timers.tick(5_000)
+  assert.equal(visibilityReads >= 2, true, 'reclaim re-checks visibility before destroying')
+  assert.equal(hidden.destroyed, false, 'a panel the user can see is never destroyed')
+})
+
+test('a takeover panel marked shown after the reclaim check is not destroyed', async (t) => {
+  destroyAllPanels()
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const state = windowLifecycleState()
+  state.snapshot.petOnline = false
+  const sender = { id: 7015 }
+  const firstUsePanel = createHiddenPanel()
+  state.bySender.set(sender, firstUsePanel)
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  windowManager.confirmFirstUsePanelRetire(sender, lastSentNonce())
+  const hidden = state.windows.at(-1) as FakeWindow
+
+  state.snapshot.petOnline = true
+  t.mock.timers.tick(5_000) // start the online clock
+  for (let index = 0; index < 11; index += 1) t.mock.timers.tick(5_000)
+  assert.equal(hidden.destroyed, false, '55s online is not enough')
+
+  let visibilityReads = 0
+  hidden.isVisible = () => {
+    visibilityReads += 1
+    if (visibilityReads === 1) {
+      // A show event can also land after the predicate already checked the
+      // shown set; the panel stays hidden but must still survive.
+      hidden.emit('show')
+      return false
+    }
+    return hidden.visible
+  }
+
+  t.mock.timers.tick(5_000)
+  assert.equal(hidden.destroyed, false, 'a panel the user has seen is never destroyed')
+})
+
+test('an active continuous voice session blocks takeover reclamation until it ends', async (t) => {
+  destroyAllPanels()
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const state = windowLifecycleState()
+  state.snapshot.petOnline = false
+  const sender = { id: 7016 }
+  const firstUsePanel = createHiddenPanel()
+  state.bySender.set(sender, firstUsePanel)
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  windowManager.confirmFirstUsePanelRetire(sender, lastSentNonce())
+  const hidden = state.windows.at(-1) as FakeWindow
+
+  state.snapshot.petOnline = true
+  state.snapshot.continuousVoiceActive = true
+  for (let index = 0; index < 13; index += 1) t.mock.timers.tick(5_000)
+  assert.equal(hidden.destroyed, false, 'continuous voice blocks reclamation even when otherwise idle')
+
+  state.snapshot.continuousVoiceActive = false
+  t.mock.timers.tick(5_000)
+  assert.equal(hidden.destroyed, true, 'reclaim resumes once the continuous session ends')
 })
