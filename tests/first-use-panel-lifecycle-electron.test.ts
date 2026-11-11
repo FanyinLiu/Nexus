@@ -155,7 +155,8 @@ test('closing a pending panel clears the request instead of retiring it later', 
 
 test('retiring the panel arms the hidden takeover driver and rebuilds after load failure', async (t) => {
   destroyAllPanels()
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] })
+  // Date is mocked so the failed build's retry delay advances with the ticks.
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
   t.after(() => {
     t.mock.timers.reset()
     destroyAllPanels()
