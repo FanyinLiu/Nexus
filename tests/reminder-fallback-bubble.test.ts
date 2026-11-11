@@ -609,7 +609,7 @@ test('an interrupted companion notice requeues and replays once instead of being
   }
 })
 
-test('a real companion speech failure still sets the error state', async () => {
+test('a companion notice speech failure stays silent and keeps the notice on screen', async () => {
   const errors: Array<string | null> = []
   const session = createControllerSession({
     speakAssistantReply: async () => { throw new Error('real playback failure') },
@@ -617,7 +617,33 @@ test('a real companion speech failure still sets the error state', async () => {
   })
   try {
     await session.push({ chatContent: '', bubbleContent: 'Failed notice', speechContent: 'Failed speech', dedupeKey: 'stop-fail' })
-    assert.equal(errors.length, 1)
+    assert.deepEqual(errors, [], 'a notice voice failure is log-only')
+    assert.equal(session.bubble?.content, 'Failed notice', 'the delivered bubble survives the voice failure')
+  } finally {
+    session.unmount()
+  }
+})
+
+test('a reminder whose speech fails keeps chat and bubble without surfacing an error', async () => {
+  const errors: Array<string | null> = []
+  const chatLines: string[] = []
+  const speeches: string[] = []
+  const session = createControllerSession({
+    speakAssistantReply: async (text) => {
+      speeches.push(text)
+      throw new Error('real playback failure')
+    },
+    onError: (value) => errors.push(value),
+    appendChatMessage: (message) => { chatLines.push(message.content) },
+  })
+  try {
+    await session.trigger(makeTask())
+    assert.equal(speeches.length, 1, 'the reminder used the ordinary playback path')
+    assert.match(speeches[0] ?? '', /Time to move/)
+    assert.equal(chatLines.length, 1, 'the reminder chat line survives the voice failure')
+    assert.match(chatLines[0] ?? '', /Time to move/)
+    assert.equal(session.bubble?.content, 'Time to move', 'the reminder bubble survives the voice failure')
+    assert.deepEqual(errors, [], 'a reminder voice failure is log-only')
   } finally {
     session.unmount()
   }

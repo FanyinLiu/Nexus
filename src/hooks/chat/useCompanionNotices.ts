@@ -46,11 +46,9 @@ type CompanionNoticeSpeechResult = 'played' | 'interrupted' | 'cleared'
 
 export function useCompanionNotices({
   ctx,
-  t,
   busyRef,
   appendChatMessage,
   presentPetDialogBubble,
-  setError,
 }: CompanionNoticeDependencies) {
   const deferredCompanionNoticesRef = useRef<DeferredCompanionNotice[]>([])
   const flushingDeferredCompanionNoticesRef = useRef(false)
@@ -87,11 +85,12 @@ export function useCompanionNotices({
         }
         return 'interrupted'
       }
+      // Product decision: a notice keeps its delivered chat line and bubble,
+      // and a failed voice is log-only — only normal reply TTS surfaces errors.
       warnRedacted('[companionNotice] speech playback failed:', speechError)
-      setError(t('chat.error.speech_with_detail'))
       return 'played'
     }
-  }, [setError, t])
+  }, [])
 
   const deliverCompanionNotice = useCallback(async (
     options: CompanionNoticePayload,
