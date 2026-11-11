@@ -1,6 +1,7 @@
 // @ts-check
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import path from 'node:path'
+import { mainT } from '../mainMessages.js'
 import {
   mainWindow,
   panelWindow,
@@ -127,15 +128,13 @@ async function confirmPetModelAction(event, channel, payload) {
   audit('pet-model', 'confirmation-request', summarizePetModelRequest(channel, payload))
   const { response } = await dialog.showMessageBox(parentWindow, {
     type: 'warning',
-    buttons: ['继续', '取消'],
+    buttons: [mainT('petModel.confirmContinue'), mainT('common.cancel')],
     defaultId: 1,
     cancelId: 1,
     noLink: true,
-    title: '确认本地宠物工件操作',
-    message: '允许 Nexus 执行这个宠物工件操作吗？',
-    detail:
-      '该操作可能读取本地制作包、写入本地宠物目录、下载社区宠物包，或打开本地路径。'
-      + ' 审计日志只会记录元数据，不记录路径、URL、slug 或宠物内容。',
+    title: mainT('petModel.confirmTitle'),
+    message: mainT('petModel.confirmMessage'),
+    detail: mainT('petModel.confirmDetail'),
   })
   const approved = response === 0
   audit('pet-model', approved ? 'confirmation-approved' : 'confirmation-rejected', summarizePetModelRequest(channel, payload))
@@ -154,7 +153,7 @@ async function runAuditedPetModelAction(event, channel, payload, action, options
   try {
     const approved = await confirmPetModelAction(event, channel, payload)
     if (!approved) {
-      throw new Error('宠物工件操作已取消。')
+      throw new Error(mainT('petModel.actionCancelled'))
     }
     const result = await action()
     audit('pet-model', 'result', summarizePetModelResult(channel, result))
@@ -432,7 +431,7 @@ export function register() {
     )
     const { response } = await dialog.showMessageBox(parentWindow, {
       type: 'question',
-      buttons: ['确定', '取消'],
+      buttons: [mainT('common.ok'), mainT('common.cancel')],
       defaultId: 0,
       cancelId: 1,
       message: String(message ?? ''),

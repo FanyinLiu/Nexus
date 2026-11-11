@@ -27,6 +27,7 @@ import type { HeardSpeechSnapshot } from '../../../features/voice/heardSpeech.ts
 import { isInterruptedError } from '../../../features/voice/interruptedError.ts'
 import { shorten } from '../../../lib/common.ts'
 import { humanizeError } from '../../../lib/humanizeError.ts'
+import { warnRedacted } from '../../../lib/logger.ts'
 import { createId } from '../../../lib/index.ts'
 import { emitPetNotify } from '../../../lib/petNotifyBus.ts'
 import { t } from '../../../i18n/runtime.ts'
@@ -607,6 +608,9 @@ export function handleAssistantTurnFailure(
     // never mask the original failure
   }
   const friendlyMessage = humanizeError(caught, 'chat')
+  // The bubble and system message are fixed sentences now; the redacted
+  // original stays in the log for diagnostics only.
+  warnRedacted('[assistantReply] reply failed:', errorMessage)
   logVoiceEvent('assistant reply failed', {
     source,
     errorPresent: Boolean(errorMessage),
@@ -624,7 +628,7 @@ export function handleAssistantTurnFailure(
   emitPetNotify({ type: 'mood', mood: 'confused' })
   dependencies.presentPetDialogBubble(
     {
-      content: t('chat.assistant.failure_bubble', { error: friendlyMessage }),
+      content: t('chat.assistant.failure_bubble'),
       streaming: false,
     },
     { autoHideMs: 9_000 },
@@ -634,12 +638,12 @@ export function handleAssistantTurnFailure(
     dependencies.ctx.updateVoicePipeline('reply_failed', t('chat.assistant.voice_send_failed_status', { preview: shorten(friendlyMessage, 40) }), content)
     dependencies.ctx.appendVoiceTrace(t('chat.assistant.voice_request_failed_label'), `#${traceLabel} ${shorten(errorMessage, 48)}`, 'error')
     dependencies.appendSystemMessage(
-      t('chat.assistant.voice_send_failed_system', { error: friendlyMessage }),
+      t('chat.assistant.voice_send_failed_system'),
       'error',
     )
   }
 
-  dependencies.setError(fromVoice ? t('chat.assistant.voice_send_failed_summary', { error: friendlyMessage }) : friendlyMessage)
+  dependencies.setError(fromVoice ? t('chat.assistant.voice_send_failed_summary') : friendlyMessage)
   // Bus drives voiceState → 'idle'
   dependencies.ctx.busEmit({
     type: 'session:aborted',

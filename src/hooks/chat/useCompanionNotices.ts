@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { COMPANION_NOTICE_AUTO_HIDE_MS } from '../../features/uiV2/caption.ts'
 import { createId } from '../../lib/index.ts'
+import { warnRedacted } from '../../lib/logger.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import { isInterruptedError, isStopAllInterrupted } from '../../features/voice/interruptedError.ts'
 import {
@@ -10,7 +11,6 @@ import {
 } from '../../features/reminders/deferredNotice.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type { ChatMessage, PetDialogBubbleState } from '../../types/index.ts'
-import { getSpeechOutputErrorMessage } from './support.ts'
 import type { ChatVoiceDeps, CompanionNoticePayload } from './types.ts'
 
 type CompanionNoticeDependencies = {
@@ -71,7 +71,6 @@ export function useCompanionNotices({
   busyRef,
   appendChatMessage,
   presentPetDialogBubble,
-  setError,
   now = Date.now,
   shouldDropDeferredNotice,
 }: CompanionNoticeDependencies) {
@@ -136,11 +135,12 @@ export function useCompanionNotices({
         }
         return 'interrupted'
       }
-      const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-      setError(t('chat.error.speech_with_detail', { error: speechErrorMessage }))
+      // Product decision: a notice keeps its delivered chat line and bubble,
+      // and a failed voice is log-only — only normal reply TTS surfaces errors.
+      warnRedacted('[companionNotice] speech playback failed:', speechError)
       return 'played'
     }
-  }, [setError, t])
+  }, [])
 
   const deliverCompanionNotice = useCallback(async (
     options: CompanionNoticePayload,

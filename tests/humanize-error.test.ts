@@ -20,6 +20,16 @@ before(async () => {
   setLocale('en-US')
 })
 
+function captureWarnings() {
+  const lines: string[] = []
+  const originalWarn = console.warn
+  console.warn = (...args: unknown[]) => { lines.push(args.map(String).join(' ')) }
+  return {
+    lines,
+    restore: () => { console.warn = originalWarn },
+  }
+}
+
 describe('humanizeError — common patterns', () => {
   test('401 errors become friendly auth-failed message', () => {
     const out = humanizeError('Request failed: 401 Unauthorized')
@@ -325,10 +335,16 @@ describe('humanizeError — chat IPC error codes', () => {
     assert.match(out, /(provider|trouble|usually)/i)
   })
 
-  test('unbucketed status code → generic fallback keeping the status detail', () => {
-    const out = humanizeError('NEXUS_ERR_CHAT_PROVIDER_STATUS: provider returned HTTP 302 without an error body', 'chat')
-    assert.match(out, /Something went wrong/)
-    assert.match(out, /302/)
+  test('unbucketed status code → generic fallback; status stays in the log', () => {
+    const captured = captureWarnings()
+    try {
+      const out = humanizeError('NEXUS_ERR_CHAT_PROVIDER_STATUS: provider returned HTTP 302 without an error body', 'chat')
+      assert.match(out, /Something went wrong/)
+      assert.doesNotMatch(out, /302/)
+      assert.ok(captured.lines.some((line) => line.includes('302')), 'status detail must reach the log')
+    } finally {
+      captured.restore()
+    }
   })
 
   test('unreachable code → reachability advice, raw host dropped', () => {
@@ -361,9 +377,15 @@ describe('humanizeError — chat IPC error codes', () => {
   })
 
   test('unknown NEXUS codes fall through to the generic fallback', () => {
-    const out = humanizeError('NEXUS_ERR_CHAT_FUTURE_CODE: something new happened', 'chat')
-    assert.match(out, /Something went wrong/)
-    assert.match(out, /something new happened/)
+    const captured = captureWarnings()
+    try {
+      const out = humanizeError('NEXUS_ERR_CHAT_FUTURE_CODE: something new happened', 'chat')
+      assert.match(out, /Something went wrong/)
+      assert.doesNotMatch(out, /something new happened/)
+      assert.ok(captured.lines.some((line) => line.includes('something new happened')))
+    } finally {
+      captured.restore()
+    }
   })
 
   test('empty-content code → compatibility advice', () => {
@@ -372,17 +394,28 @@ describe('humanizeError — chat IPC error codes', () => {
     assert.doesNotMatch(out, /Something went wrong/)
   })
 
-  test('unsafe-base-url code keeps the redacted detail in the fallback', () => {
-    const out = humanizeError('NEXUS_ERR_CHAT_UNSAFE_BASE_URL: API base URL rejected (private-network)', 'chat')
-    assert.match(out, /Something went wrong/)
-    assert.match(out, /private-network/)
+  test('unsafe-base-url code keeps the detail only in the log', () => {
+    const captured = captureWarnings()
+    try {
+      const out = humanizeError('NEXUS_ERR_CHAT_UNSAFE_BASE_URL: API base URL rejected (private-network)', 'chat')
+      assert.match(out, /Something went wrong/)
+      assert.doesNotMatch(out, /private-network/)
+      assert.ok(captured.lines.some((line) => line.includes('private-network')))
+    } finally {
+      captured.restore()
+    }
   })
 
   test('a provider body merely containing "terminated" is not misread as a dropped connection', () => {
-    const out = humanizeError(new Error('Your account has been terminated for violating our usage policies.'), 'chat')
-    assert.doesNotMatch(out, /dropped/i)
-    // The real (redacted) reason stays visible via the fallback.
-    assert.match(out, /terminated for violating/)
+    const captured = captureWarnings()
+    try {
+      const out = humanizeError(new Error('Your account has been terminated for violating our usage policies.'), 'chat')
+      assert.doesNotMatch(out, /dropped/i)
+      assert.doesNotMatch(out, /terminated for violating/)
+      assert.ok(captured.lines.some((line) => line.includes('terminated for violating')))
+    } finally {
+      captured.restore()
+    }
   })
 
   test('unreachable code maps to reachability advice even without an ASCII errno', () => {
@@ -396,11 +429,18 @@ describe('humanizeError — chat IPC error codes', () => {
     assert.match(out, /(dropped|connection|try again)/i)
   })
 
-  test('unmatched chat error redacts an API secret in the fallback', () => {
-    const out = humanizeError(new Error('upstream blew up token sk-ABCDEF1234567890XYZ tail'), 'chat')
-    assert.match(out, /Something went wrong/)
-    assert.match(out, /sk-\*\*\*/)
-    assert.doesNotMatch(out, /sk-ABCDEF1234567890XYZ/)
+  test('unmatched chat error redacts an API secret in the log', () => {
+    const captured = captureWarnings()
+    try {
+      const out = humanizeError(new Error('upstream blew up token sk-ABCDEF1234567890XYZ tail'), 'chat')
+      assert.match(out, /Something went wrong/)
+      assert.doesNotMatch(out, /sk-/)
+      const logged = captured.lines.join('\n')
+      assert.match(logged, /sk-\*\*\*/)
+      assert.doesNotMatch(logged, /sk-ABCDEF1234567890XYZ/)
+    } finally {
+      captured.restore()
+    }
   })
 
   test('chat path does not classify leftover Chinese timeout copy as the contract', () => {
@@ -481,34 +521,50 @@ describe('humanizeError — secret redaction in the fallback path', () => {
 
   for (const { name, input, leaked, redacted } of cases) {
     test(`${name} never reaches the user verbatim`, () => {
-      const out = humanizeError(new Error(input), 'chat')
-      assert.doesNotMatch(out, leaked)
-      assert.match(out, redacted)
+      const captured = captureWarnings()
+      try {
+        const out = humanizeError(new Error(input), 'chat')
+        assert.doesNotMatch(out, leaked)
+        assert.doesNotMatch(out, redacted)
+        const logged = captured.lines.join('\n')
+        assert.doesNotMatch(logged, leaked)
+        assert.match(logged, redacted)
+      } finally {
+        captured.restore()
+      }
     })
   }
 })
 
 describe('humanizeError — fallbacks', () => {
   test('missing key never returns the raw error detail', () => {
-    const out = lookupTranslation(
-      'humanize.__missing_key__' as TranslationKey,
-      'ECONNREFUSED 127.0.0.1:11434',
-    )
+    const out = lookupTranslation('humanize.__missing_key__' as TranslationKey)
     assert.equal(out, 'Something went wrong. Please try again.')
-    assert.doesNotMatch(out, /ECONNREFUSED|127\.0\.0\.1/)
   })
 
-  test('unknown error wrapped friendly with raw text in parens', () => {
-    const out = humanizeError(new Error('Some weird internal thing happened'))
-    assert.match(out, /Something went wrong/)
-    assert.match(out, /Some weird internal thing happened/)
+  test('unknown error shows the friendly fallback and logs the raw text', () => {
+    const captured = captureWarnings()
+    try {
+      const out = humanizeError(new Error('Some weird internal thing happened'))
+      assert.match(out, /Something went wrong/)
+      assert.doesNotMatch(out, /Some weird internal thing happened/)
+      assert.ok(captured.lines.some((line) => line.includes('Some weird internal thing happened')))
+    } finally {
+      captured.restore()
+    }
   })
 
   test('non-Error values handled', () => {
-    assert.match(humanizeError('plain string error'), /plain string error/)
-    assert.match(humanizeError({ obj: 'thing' } as unknown), /Something went wrong/)
-    assert.match(humanizeError(null), /Something went wrong/)
-    assert.match(humanizeError(undefined), /Something went wrong/)
+    const captured = captureWarnings()
+    try {
+      assert.match(humanizeError('plain string error'), /Something went wrong/)
+      assert.match(humanizeError({ obj: 'thing' } as unknown), /Something went wrong/)
+      assert.match(humanizeError(null), /Something went wrong/)
+      assert.match(humanizeError(undefined), /Something went wrong/)
+      assert.ok(captured.lines.some((line) => line.includes('plain string error')))
+    } finally {
+      captured.restore()
+    }
   })
 
   test('empty error message gets a placeholder, not a blank screen', () => {

@@ -22,6 +22,7 @@
     "tests/helpers/proactive-notification-hooks.mjs",
     "tests/helpers/realReactRoot.ts",
     "tests/helpers/reminder-strip-runtime-hooks.mjs",
+    "tests/helpers/reminderControllerHarness.ts",
     "tests/helpers/tsx-test-loader.mjs",
     "tests/helpers/tts-net-request-mock-hooks.mjs",
     "tests/helpers/tts-net-request-mock.mjs",

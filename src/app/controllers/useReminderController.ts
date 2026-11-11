@@ -28,7 +28,7 @@ import { isUserTypingAnywhere } from '../../features/autonomy/userTyping.ts'
 import { useReminderScheduler } from '../../hooks/useReminderScheduler.ts'
 import { broadcastToChannels } from '../../features/integrations/channelBroadcast.ts'
 import { useTranslation } from '../../i18n/useTranslation.ts'
-import { createLogger } from '../../lib/logger.ts'
+import { createLogger, warnRedacted } from '../../lib/logger.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
 
 const reminderLog = createLogger('reminders.notice')
@@ -315,7 +315,8 @@ export function useReminderController({
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t('chat.reminder_task.execution_failed')
-      chat.appendSystemMessage(t('chat.reminder_task.execution_failed_system', { title: task.title, error: errorMessage }), 'error')
+      warnRedacted('[reminder] automated task failed:', errorMessage)
+      chat.appendSystemMessage(t('chat.reminder_task.execution_failed_system', { title: task.title }), 'error')
       pet.updatePetStatus(t('chat.reminder_task.execution_failed_pet', { title: task.title }), 3200)
       debugConsole.appendDebugConsoleEvent({
         source: 'tool',

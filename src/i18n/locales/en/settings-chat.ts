@@ -25,7 +25,7 @@ export const enSettingsChat = {
   'settings.chat.import_card': 'Import Character Card',
   'settings.chat.importing_card': 'Importing...',
   'settings.chat.import_card_success': 'Imported "{name}" with {count} keyword context entries.',
-  'settings.chat.import_card_error': 'Couldn\'t import the character card: {error}',
+  'settings.chat.import_card_error': 'Couldn’t import the character card. Try another one?',
   'settings.chat.vts_title': 'VTube Studio Integration',
   'settings.chat.vts_hint': 'Drive a VTube Studio model via WebSocket API — Nexus handles AI chat and emotion while VTS renders the character.',
   'settings.chat.vts_enabled': 'Enable VTube Studio bridge',

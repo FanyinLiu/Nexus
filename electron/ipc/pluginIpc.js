@@ -1,5 +1,6 @@
 // @ts-check
 import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { mainT } from '../mainMessages.js'
 import * as pluginHost from '../services/pluginHost.js'
 import * as mcpHost from '../services/mcpHost.js'
 import * as messageBus from '../services/pluginMessageBus.js'
@@ -68,7 +69,7 @@ async function runAuditedPluginAction(event, channel, payload, action) {
   try {
     const approved = await confirmPluginAction(event, channel, payload)
     if (!approved) {
-      throw new Error('插件操作已取消。')
+      throw new Error(mainT('plugin.actionCancelled'))
     }
     const result = await action()
     audit(category, 'result', summarizePluginResult(channel, result))

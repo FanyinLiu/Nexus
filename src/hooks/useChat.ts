@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createId,
-  shorten,
 } from '../lib/index.ts'
 import { emitPetNotify } from '../lib/petNotifyBus.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import {
   markRecalled,
 } from '../features/memory/index.ts'
-import { logVoiceEvent } from '../features/voice/index.ts'
 import {
   useCompanionNoticeIdleFlush,
   useCompanionNoticeStopSubscription,
@@ -20,10 +18,10 @@ import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
   createPendingReminderDraft,
+  createSpeechPlaybackFailureHandler,
   getFreshPendingReminderDraft,
   PENDING_REMINDER_DRAFT_TTL_MS,
   cancelActiveTurn as cancelActiveTurnRuntime,
-  getSpeechOutputErrorMessage,
   type PendingReminderDraft,
   type PendingReminderDraftInput,
   type UseChatContext,
@@ -257,32 +255,12 @@ export function useChat(ctx: UseChatContext) {
     pendingReminderDraftRef.current = null
   }, [])
 
-  const handleSpeechPlaybackFailure = useCallback((speechError: unknown, options: {
-    traceId?: string
-    traceLabel?: string
-    source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
-    fromVoice: boolean
-    shouldResumeContinuousVoice: boolean
-  }) => {
-    const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-    logVoiceEvent('assistant reply speech output failed', {
-      source: options.source,
-      errorPresent: Boolean(speechErrorMessage),
-    })
-
-    if (options.fromVoice && options.traceLabel) {
-      ctx.appendVoiceTrace(t('chat.voice.playback_failed_label'), `#${options.traceLabel} ${shorten(speechErrorMessage, 48)}`, 'error')
-    }
-
-    setError(options.fromVoice ? t('chat.error.playback_with_reply', { error: speechErrorMessage }) : speechErrorMessage)
-    // Bus drives voiceState → 'idle' + restart_voice + setMood('idle')
-    ctx.busEmit({
-      type: 'tts:error',
-      message: speechErrorMessage,
-      speechGeneration: 0,
-      shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
-    })
-  }, [ctx, setError, t])
+  // eslint-disable-next-line react-hooks/refs -- factory receives ctx (which holds refs) but only dereferences them inside the returned failure handler, never during this render
+  const handleSpeechPlaybackFailure = useMemo(() => createSpeechPlaybackFailureHandler({
+      ctx,
+      setError,
+      t,
+    }), [ctx, setError, t])
 
   const syncAssistantActivity = useCallback(() => {
     setAssistantActivity(busyRef.current ? 'thinking' : 'idle')
