@@ -45,6 +45,25 @@ function destroyAllPanels() {
   }
 }
 
+// Retire the first-use panel and return the hidden takeover panel the driver
+// rebuilds in its place. Each call starts from a clean panel lifecycle.
+function retireFirstUsePanel(senderId: number): FakeWindow {
+  windowManager.resetPanelLifecycleForTests()
+  destroyAllPanels()
+  const state = windowLifecycleState()
+  state.snapshot.petOnline = false
+  const sender = { id: senderId }
+  const firstUsePanel = createHiddenPanel()
+  state.bySender.set(sender, firstUsePanel)
+
+  assert.deepEqual(windowManager.requestFirstUsePanelRetire(sender), { requested: true })
+  assert.deepEqual(windowManager.confirmFirstUsePanelRetire(sender, lastSentNonce()), {
+    retired: true,
+    reason: null,
+  })
+  return state.windows.at(-1) as FakeWindow
+}
+
 // Even when an assertion fails, stop the takeover interval and release any
 // pending did-finish-load/closed waiters so the runner can exit promptly.
 test.afterEach(() => {
@@ -528,6 +547,75 @@ test('a takeover panel marked shown after the reclaim check is not destroyed', a
 
   t.mock.timers.tick(5_000)
   assert.equal(hidden.destroyed, false, 'a panel the user has seen is never destroyed')
+})
+
+test('reclaim re-checks takeover membership, never-shown, and visibility immediately before destroy', (t) => {
+  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout', 'Date'] })
+  t.after(() => {
+    t.mock.timers.reset()
+    destroyAllPanels()
+  })
+  const state = windowLifecycleState()
+  const reachReclaimWindow = () => {
+    t.mock.timers.tick(5_000) // start the online clock
+    for (let index = 0; index < 11; index += 1) t.mock.timers.tick(5_000)
+    assert.equal(state.windows.at(-1)?.destroyed, false, '55s online is not enough')
+    t.mock.timers.tick(5_000)
+  }
+
+  // The predicate passes because the panel is still hidden, then the window
+  // becomes visible before reclaim. The pre-destroy re-check must see it.
+  let hidden = retireFirstUsePanel(7017)
+  state.snapshot.petOnline = true
+  let visibilityReads = 0
+  hidden.isVisible = () => {
+    visibilityReads += 1
+    if (visibilityReads === 1) {
+      hidden.visible = true
+      return false
+    }
+    return hidden.visible
+  }
+  reachReclaimWindow()
+  assert.equal(visibilityReads >= 2, true, 'reclaim re-reads visibility before destroying')
+  assert.equal(hidden.destroyed, false, 'a visible takeover panel is never destroyed')
+
+  // A show event can land after the predicate but before the destroy even when
+  // the panel is hidden again; the never-shown re-check must still block.
+  hidden = retireFirstUsePanel(7018)
+  state.snapshot.petOnline = true
+  visibilityReads = 0
+  hidden.isVisible = () => {
+    visibilityReads += 1
+    if (visibilityReads === 1) {
+      hidden.emit('show')
+      return false
+    }
+    return hidden.visible
+  }
+  reachReclaimWindow()
+  assert.equal(hidden.destroyed, false, 'a takeover panel the user has shown is never destroyed')
+
+  // The panel can also stop being the takeover panel between the predicate and
+  // the destroy. Reclaim must not tear down the replacement user panel.
+  hidden = retireFirstUsePanel(7019)
+  state.snapshot.petOnline = true
+  let replacement: FakeWindow | undefined
+  visibilityReads = 0
+  hidden.isVisible = () => {
+    visibilityReads += 1
+    if (visibilityReads === 1) {
+      hidden.destroy()
+      replacement = windowCreation.createPanelWindowWithOptions({
+        startWakeMonitor: false,
+      }) as unknown as FakeWindow
+      return false
+    }
+    return hidden.visible
+  }
+  reachReclaimWindow()
+  assert.ok(replacement, 'the panel was replaced while the reclaim predicate ran')
+  assert.equal(replacement.destroyed, false, 'a panel that is no longer a takeover panel is never destroyed')
 })
 
 test('an active continuous voice session blocks takeover reclamation until it ends', async (t) => {
