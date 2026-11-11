@@ -58,11 +58,11 @@ const DAILY_LOG_LABEL = {
 } as const
 
 const CLEAR_SUCCESS = {
-  en: 'Long-term memory, daily logs and inbox messages are all cleared.',
-  'zh-CN': '长期记忆、每日记录和收件箱消息都已清空。',
-  'zh-TW': '長期記憶、每日紀錄和收件匣訊息都已清除。',
-  ja: '長期記憶、毎日の記録、受信箱のメッセージをすべて消去しました。',
-  ko: '장기 기억, 일일 기록, 받은 메시지함을 모두 지웠어요.',
+  en: 'Long-term memory, daily logs and Notebook messages are all cleared.',
+  'zh-CN': '长期记忆、每日记录和小本子里的消息都已清空。',
+  'zh-TW': '長期記憶、每日紀錄和小本子裡的訊息都已清除。',
+  ja: '長期記憶、毎日の記録、メモ帳のメッセージをすべて消去しました。',
+  ko: '장기 기억, 일일 기록, 수첩 메시지를 모두 지웠어요.',
 } as const
 
 const FORBIDDEN_MIGRATION_TERMS = [
