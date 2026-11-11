@@ -16,8 +16,14 @@ import {
   isVoiceSpeechOutputAvailable,
 } from '../../lib/platformProfile.ts'
 import { keepTalkingPatch, voiceTriggerPatch } from '../../features/settingsSimplify/index.ts'
+import { isMicrophoneFeatureEnabled } from '../../features/voice/microphoneFeature.ts'
+import {
+  detectVoicePermissionPlatform,
+  pickMicrophonePermissionKey,
+} from '../../features/voice/runtimeSupport.ts'
 import { pickTranslatedUiTextOrFallback } from '../../lib/uiLanguage.ts'
-import type { AppSettings, PlatformProfile, SpeechVoiceOption } from '../../types/index.ts'
+import type { AppSettings, MediaPermissionStatusSnapshot, PlatformProfile, SpeechVoiceOption } from '../../types/index.ts'
+import { isMediaPermissionDenied } from '../../types/permissions.ts'
 import { SettingsV3Field, SettingsV3Switch } from '../../features/settingsV3/SettingsV3Primitives.tsx'
 import { simpleTranslate } from './settingsSimpleCopy.ts'
 import { SimpleChoices, SimpleRow } from './settingsSimpleShared.tsx'
@@ -28,6 +34,8 @@ type VoiceSimplePageProps = {
   platformProfile: PlatformProfile
   speechVoiceOptions: SpeechVoiceOption[]
   onLoadSpeechVoices: () => void
+  mediaPermissionStatus?: MediaPermissionStatusSnapshot | null
+  permissionPlatform?: string
 }
 
 export function VoiceSimplePage({
@@ -36,10 +44,19 @@ export function VoiceSimplePage({
   platformProfile,
   speechVoiceOptions,
   onLoadSpeechVoices,
+  mediaPermissionStatus,
+  permissionPlatform,
 }: VoiceSimplePageProps) {
   const ti = simpleTranslate(draft.uiLanguage)
   const inputAvailable = isVoiceSpeechInputAvailable(platformProfile)
   const outputAvailable = isVoiceSpeechOutputAvailable(platformProfile)
+  const microphoneEnabled = isMicrophoneFeatureEnabled(draft)
+  const permissionDeniedKey = pickMicrophonePermissionKey(
+    'settings.voice.permission_denied',
+    permissionPlatform ?? detectVoicePermissionPlatform(),
+  )
+  const microphoneDenied = microphoneEnabled
+    && isMediaPermissionDenied(mediaPermissionStatus?.microphone)
   const configured = useMemo(() => configuredVoiceLanguages({
     uiLanguage: draft.uiLanguage,
     speechRecognitionLang: draft.speechRecognitionLang,
@@ -92,7 +109,7 @@ export function VoiceSimplePage({
       </section>
 
       <section className="settings-v3-section__body">
-        <SimpleRow icon="voice" title={ti('settings.simple.voice_listen')} hint={ti('settings.simple.voice_listen_hint')}>
+        <SimpleRow icon="voice" title={ti('settings.simple.voice_listen')} hint={ti('settings.simple.voice_listen_hint')} status={microphoneDenied ? ti(permissionDeniedKey) : undefined}>
           <SettingsV3Switch
             checked={draft.speechInputEnabled}
             disabled={!inputAvailable}

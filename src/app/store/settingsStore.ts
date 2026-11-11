@@ -4,6 +4,7 @@ import {
   loadSettings,
   onStorageChange,
   saveSettings,
+  stripInternalSettingsFields,
 } from '../../lib/storage.ts'
 import {
   carryHydratedSettingsSecrets,
@@ -114,8 +115,8 @@ const SETTINGS_PROFILE_FIELDS = [
   'speechOutputProviderProfiles',
 ] as const
 
-function settingsPersistenceComparable(settings: AppSettings): string {
-  const comparable = { ...settings } as Record<string, unknown>
+export function settingsPersistenceComparable(settings: AppSettings): string {
+  const comparable = stripInternalSettingsFields(settings) as Record<string, unknown>
   for (const field of SETTINGS_SECRET_FIELDS) {
     comparable[field] = ''
   }
@@ -296,10 +297,10 @@ async function runLocalSettingsMutation(
           : loadSettings()
       } catch (err) {
         console.error(
-          '[settingsStore] Persisted settings hydration failed; using in-memory settings:',
+          '[settingsStore] Persisted settings hydration failed; using stored settings:',
           getRedactedLogErrorMessage(err),
         )
-        committed = nextSettings
+        committed = carryHydratedSettingsSecrets(loadSettings(), nextSettings)
       }
 
       commitSettingsCache(committed)

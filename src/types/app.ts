@@ -430,6 +430,8 @@ export type CompanionInitiative = 'quiet' | 'sometimes' | 'often' | 'custom'
 
 interface SettingsSchema {
   settingsSchemaVersion: number
+  /** Monotonic write revision; only saveSettings creates a new value. */
+  settingsRevision: number
   /** Pace chosen on the appearance page; AppearanceSimplePage.choosePace maps it onto the legacy switches. */
   companionInitiative: CompanionInitiative
 }

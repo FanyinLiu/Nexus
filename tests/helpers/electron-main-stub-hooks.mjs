@@ -48,6 +48,11 @@ export async function load(url, context, nextLoad) {
       }\n`,
     }
   }
+  if (url.endsWith('/electron/ipc/permissionWiring.js')) {
+    // Pure wiring helper, not an IPC handler module. Keep the real export so
+    // ipcRegistry can import it under the test loader.
+    return nextLoad(url, context)
+  }
   if (url.includes('/electron/ipc/')) {
     return { format: 'module', shortCircuit: true, source: 'export function register() {}\n' }
   }

@@ -335,6 +335,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
   externalActionPolicyGet: () => ipcRenderer.invoke('external-action-policy:get'),
   externalActionPolicySync: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('external-action-policy:sync', payload),
 
+  // Read-only OS media-permission status for Settings permission lines
+  getMediaPermissionStatus: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('media-permission:status', payload),
+
   // On-demand local voice sidecars (engine ids + switches only)
   voiceRuntimeSync: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('voice-runtime:sync', payload),
 
