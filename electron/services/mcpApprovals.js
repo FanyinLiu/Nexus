@@ -27,6 +27,11 @@ import path from 'node:path'
 import { hashMcpCommand } from './mcpApprovalsHash.js'
 import { createAsyncLock } from './asyncLock.js'
 import { createAsyncJsonFileStore } from './jsonFileStore.js'
+import { readMainUiLocale } from '../mainMessages.js'
+import {
+  buildMcpStartApprovalDialog,
+  buildMcpToolApprovalDialog,
+} from './approvalDialogCopy.js'
 
 export { hashMcpCommand }
 
@@ -196,23 +201,16 @@ async function recordToolApproval(serverId, toolName) {
 export async function promptMcpToolApproval(serverId, toolName, toolDescription = '') {
   const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null
 
+  const dialogOptions = buildMcpToolApprovalDialog({
+    serverId,
+    toolName,
+    toolDescription,
+    locale: readMainUiLocale(),
+  })
+
   let result
   try {
-    result = await dialog.showMessageBox(parent ?? undefined, {
-      type: 'warning',
-      title: 'Approve new MCP tool',
-      message: `MCP server "${serverId}" wants to expose a new tool: "${toolName}"`,
-      detail:
-        (toolDescription ? `Description (from server):\n  ${toolDescription}\n\n` : '')
-        + 'This tool was NOT in the set the server advertised when you first '
-        + 'approved it. That usually means the server has been updated. '
-        + 'Approve only if you intentionally updated this server. If you '
-        + 'didn\'t, this could indicate the server binary was tampered with.',
-      buttons: ['Reject', 'Approve'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true,
-    })
+    result = await dialog.showMessageBox(parent ?? undefined, dialogOptions)
   } catch (error) {
     console.warn('[mcpApprovals] Failed to show tool approval dialog:', error?.message ?? error)
     return false
@@ -235,30 +233,22 @@ export async function promptMcpToolApproval(serverId, toolName, toolDescription 
  */
 export async function promptMcpApproval(serverId, command, args = []) {
   const argsArr = Array.isArray(args) ? args : []
-  const argsLine = argsArr.length > 0 ? argsArr.join(' ') : '(no arguments)'
 
   // Try to anchor the dialog to the focused window so it's modal-correct
   // on macOS / Linux. If no window is up yet (early startup), fall back to
   // a parent-less dialog — still blocks until the user responds.
   const parent = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null
 
+  const dialogOptions = buildMcpStartApprovalDialog({
+    serverId,
+    command,
+    args: argsArr,
+    locale: readMainUiLocale(),
+  })
+
   let result
   try {
-    result = await dialog.showMessageBox(parent ?? undefined, {
-      type: 'warning',
-      title: 'Approve MCP server launch',
-      message: `Allow Nexus to launch the MCP server "${serverId}"?`,
-      detail:
-        `Command:\n  ${command}\n\nArguments:\n  ${argsLine}\n\n`
-        + 'MCP servers run as local subprocesses with full access to your '
-        + 'files and network. Only approve commands you have configured '
-        + 'yourself or that you fully trust. You can revoke approval later '
-        + 'from Settings → Integrations → MCP.',
-      buttons: ['Reject', 'Approve'],
-      defaultId: 0,
-      cancelId: 0,
-      noLink: true,
-    })
+    result = await dialog.showMessageBox(parent ?? undefined, dialogOptions)
   } catch (error) {
     console.warn('[mcpApprovals] Failed to show approval dialog:', error?.message ?? error)
     return false
