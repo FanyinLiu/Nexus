@@ -296,7 +296,9 @@ class McpInstance {
     const child = spawn(spawnCommand, spawnArgs, {
       // MCP transports JSON-RPC over stdin/stdout. stderr is diagnostics only:
       // pipe it so a server that echoes tokens, paths, or user text cannot
-      // write straight into the app run log unredacted.
+      // write straight into the app run log unredacted. Leftover stderr text is
+      // not dropped: it is logged with console.warn only after passing through
+      // getRedactedErrorMessage (see the stderr handler below).
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       env: buildMcpSpawnEnv(process.env, serverEnv),
