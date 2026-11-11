@@ -13,6 +13,7 @@ import WebSocket from 'ws'
 import { isAllowedSender } from './allowlistPolicy.js'
 import { createPairingManager } from './pairingManager.js'
 import { getRedactedErrorMessage, redactSensitiveErrorText } from './errorRedaction.js'
+import { mainT } from '../mainMessages.js'
 
 /** @type {'disconnected'|'connecting'|'connected'|'error'} */
 let _state = 'disconnected'
@@ -61,10 +62,7 @@ let _onMessage = null
 let _onPairingRequest = null
 const _pairing = createPairingManager()
 
-const PAIRING_REPLY = (code) =>
-  `Nexus pairing code 配对码: ${code}\n` +
-  'Approve this channel in Nexus → Settings → Integrations to start talking.\n' +
-  '在 Nexus 的 设置 → 集成 里批准这个频道即可开始聊天（1 小时内有效）。'
+const PAIRING_REPLY = (code) => mainT('integration.pairing.discord', { code })
 
 // ── Discord REST API helpers ────────────────────────────────────────────────
 

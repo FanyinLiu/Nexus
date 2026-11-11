@@ -27,6 +27,7 @@ import path from 'node:path'
 import { hashMcpCommand } from './mcpApprovalsHash.js'
 import { createAsyncLock } from './asyncLock.js'
 import { createAsyncJsonFileStore } from './jsonFileStore.js'
+import { mainT } from '../mainMessages.js'
 
 export { hashMcpCommand }
 
@@ -246,15 +247,10 @@ export async function promptMcpApproval(serverId, command, args = []) {
   try {
     result = await dialog.showMessageBox(parent ?? undefined, {
       type: 'warning',
-      title: 'Approve MCP server launch',
-      message: `Allow Nexus to launch the MCP server "${serverId}"?`,
-      detail:
-        `Command:\n  ${command}\n\nArguments:\n  ${argsLine}\n\n`
-        + 'MCP servers run as local subprocesses with full access to your '
-        + 'files and network. Only approve commands you have configured '
-        + 'yourself or that you fully trust. You can revoke approval later '
-        + 'from Settings → Integrations → MCP.',
-      buttons: ['Reject', 'Approve'],
+      title: mainT('mcp.approval.title'),
+      message: mainT('mcp.approval.message', { server: serverId }),
+      detail: mainT('mcp.approval.detail', { command, args: argsLine }),
+      buttons: [mainT('mcp.approval.reject'), mainT('mcp.approval.approve')],
       defaultId: 0,
       cancelId: 0,
       noLink: true,

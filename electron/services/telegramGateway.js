@@ -12,6 +12,7 @@ import { createRequire } from 'node:module'
 import { isAllowedSender } from './allowlistPolicy.js'
 import { createPairingManager } from './pairingManager.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { mainT } from '../mainMessages.js'
 
 // Electron's net.fetch when running inside the app; plain global fetch under
 // node:test (requiring 'electron' outside the runtime yields the binary path
@@ -66,10 +67,7 @@ let _onMessage = null
 let _onPairingRequest = null
 const _pairing = createPairingManager()
 
-const PAIRING_REPLY = (code) =>
-  `Nexus pairing code 配对码: ${code}\n` +
-  'Approve this chat in Nexus → Settings → Integrations to start talking.\n' +
-  '在 Nexus 的 设置 → 集成 里批准这个对话即可开始聊天（1 小时内有效）。'
+const PAIRING_REPLY = (code) => mainT('integration.pairing.telegram', { code })
 
 // Non-text message payload keys we recognise, in priority order. A message that
 // carries one of these (and no text) is forwarded as a generic media message.
