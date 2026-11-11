@@ -147,3 +147,22 @@ test('an oversized stderr line without a newline is flushed and redacted', async
     assert.match(output, /token=\*\*\*/)
   })
 })
+
+test('a secret straddling the 64KB overflow boundary is redacted as one piece', async () => {
+  await withSpawnedServer('srv-overflow-straddle', async (record) => {
+    clearLogs()
+    // The 64KB mark lands inside `user:s3cret-pass`, so the overflow split would
+    // cut the token in half. Whitespace padding trims away, keeping the
+    // completed token visible in the log message.
+    const padding = ' '.repeat(64 * 1024 - 13)
+    record.child.stderr.emit('data', `${padding}https://user:s3cr`)
+    record.child.stderr.emit('data', 'et-pass@host/path\n')
+
+    const output = stderrLogText()
+    assert.doesNotMatch(output, /s3cr/)
+    assert.doesNotMatch(output, /et-pass/)
+    assert.doesNotMatch(output, /s3cret-pass/)
+    assert.doesNotMatch(output, /user:s3cret-pass/)
+    assert.match(output, /https:\/\/\*\*\*:\*\*\*@host\/path/)
+  })
+})

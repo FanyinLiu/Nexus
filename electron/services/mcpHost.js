@@ -25,9 +25,11 @@ import { createLogger } from '../logger.js'
 
 const log = createLogger('mcpHost')
 const REQUEST_TIMEOUT_MS = 15_000
-// Keeps an unterminated stderr line from growing without bound. The whole
-// accumulated buffer is redacted and flushed when it crosses this size.
+// Keeps an unterminated stderr line from growing without bound. On overflow,
+// redact and flush everything except the trailing overlap, which stays buffered
+// so a token straddling the cap can still be redacted as one piece.
 const MAX_STDERR_BUFFER_CHARS = 64 * 1024
+const STDERR_OVERFLOW_OVERLAP_CHARS = 512
 
 // Shell metacharacters that could enable command injection when shell: true is used.
 // We reject commands containing these to allow safe spawning without a shell.
@@ -178,10 +180,29 @@ class McpInstance {
       this._logStderrLine(line)
     }
     // An unterminated line larger than the cap must not be dropped or written
-    // raw, so redact and flush the whole buffer without waiting for a newline.
+    // raw, so spill the redacted prefix without waiting for a newline while
+    // keeping the tail buffered for the next chunk.
     if (this.stderrBuffer.length >= MAX_STDERR_BUFFER_CHARS) {
-      this._flushStderrBuffer()
+      this._spillStderrOverflow()
     }
+  }
+
+  _spillStderrOverflow() {
+    const nominalCut = this.stderrBuffer.length - STDERR_OVERFLOW_OVERLAP_CHARS
+    // Prefer a whitespace boundary so the flushed prefix does not end in the
+    // middle of a token; fall back to the exact overlap when none is near.
+    const windowStart = Math.max(0, nominalCut - STDERR_OVERFLOW_OVERLAP_CHARS)
+    const window = this.stderrBuffer.slice(windowStart, nominalCut)
+    const lastBreak = Math.max(
+      window.lastIndexOf(' '),
+      window.lastIndexOf('\t'),
+      window.lastIndexOf('\r'),
+      window.lastIndexOf('\n'),
+    )
+    const cut = lastBreak >= 0 ? windowStart + lastBreak + 1 : nominalCut
+    const flushable = this.stderrBuffer.slice(0, cut)
+    this.stderrBuffer = this.stderrBuffer.slice(cut)
+    if (flushable) this._logStderrLine(flushable)
   }
 
   async _performHandshake() {
