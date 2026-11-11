@@ -18,6 +18,7 @@ function testState() {
       bySender: new Map(),
       monitorStarts: 0,
       monitorStops: 0,
+      powerMonitorListeners: {},
       panelWindowSetter: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
@@ -45,7 +46,11 @@ export const screen = {
   getCursorScreenPoint: () => ({ x: 0, y: 0 }),
 }
 export const powerMonitor = {
-  on() {},
+  on(event, listener) {
+    const listeners = testState().powerMonitorListeners
+    if (!listeners[event]) listeners[event] = []
+    listeners[event].push(listener)
+  },
   removeListener() {},
 }
 export const Menu = {
@@ -302,6 +307,7 @@ export function windowLifecycleState() {
       bySender: new Map(),
       monitorStarts: 0,
       monitorStops: 0,
+      powerMonitorListeners: {},
       panelWindowSetter: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
