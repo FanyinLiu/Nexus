@@ -25,7 +25,7 @@ export const jaSettingsVoice = {
   'settings.voice.permission_denied_windows': 'マイクが許可されていません。Windows の設定で許可してください。',
   'settings.voice.enable_output': '音声出力を有効化',
   'settings.voice.enable_continuous': '連続音声を有効化',
-  'settings.voice.enable_vad': '話し終わったら自動で停止',
+  'settings.voice.enable_vad': '話し終わったら自動で区切る',
   'settings.voice.vad_sensitivity': '聞き取り判定の感度',
   'settings.voice.vad.low': '低（誤反応が少ない）',
   'settings.voice.vad.medium': '中（推奨）',

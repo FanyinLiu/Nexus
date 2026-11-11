@@ -25,7 +25,7 @@ export const koSettingsVoice = {
   'settings.voice.permission_denied_windows': '마이크 권한이 없어요. Windows 설정에서 허용해 주세요.',
   'settings.voice.enable_output': '음성 출력 활성화',
   'settings.voice.enable_continuous': '연속 음성 활성화',
-  'settings.voice.enable_vad': '말이 끝나면 자동으로 멈춤',
+  'settings.voice.enable_vad': '말이 끝나면 자동으로 끊기',
   'settings.voice.vad_sensitivity': '말끝 감지 민감도',
   'settings.voice.vad.low': '낮음 (오작동 적음)',
   'settings.voice.vad.medium': '중간 (권장)',

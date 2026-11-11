@@ -25,7 +25,7 @@ export const enSettingsVoice = {
   'settings.voice.permission_denied_windows': 'Microphone access is off. Open Windows Settings to allow it.',
   'settings.voice.enable_output': 'Enable speech output',
   'settings.voice.enable_continuous': 'Enable continuous voice',
-  'settings.voice.enable_vad': 'Stop after you finish speaking',
+  'settings.voice.enable_vad': 'Detect when you stop talking',
   'settings.voice.vad_sensitivity': 'Speech detection sensitivity',
   'settings.voice.vad.low': 'Low (fewer false triggers)',
   'settings.voice.vad.medium': 'Medium (recommended)',

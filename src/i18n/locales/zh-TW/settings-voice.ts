@@ -25,7 +25,7 @@ export const zhTWSettingsVoice = {
   'settings.voice.permission_denied_windows': '麥克風沒授權，到 Windows 設定開啟',
   'settings.voice.enable_output': '啟用語音播報',
   'settings.voice.enable_continuous': '啟用連續語音',
-  'settings.voice.enable_vad': '說完後自動停',
+  'settings.voice.enable_vad': '說完自動斷句',
   'settings.voice.vad_sensitivity': '斷句靈敏度',
   'settings.voice.vad.low': '低（較少誤觸發）',
   'settings.voice.vad.medium': '中（推薦）',

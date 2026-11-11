@@ -67,6 +67,7 @@ const PLAIN_VOICE_ROWS: Partial<Record<AppLocale, Record<string, string>>> = {
     'settings.speech_input.hint': '自动（推荐）',
     'voice.mic.not_found': '没找到麦克风，连上或打开录音设备后再试',
     'settings.section_desc.console': '看看各项是否正常',
+    'settings.voice.enable_vad': '说完自动断句',
   },
   'en-US': {
     'settings.voice.status_input_ready': 'It can hear you',
@@ -76,8 +77,20 @@ const PLAIN_VOICE_ROWS: Partial<Record<AppLocale, Record<string, string>>> = {
     'settings.speech_input.hint': 'Automatic (recommended)',
     'voice.mic.not_found': 'Couldn\'t find a microphone. Plug one in or turn recording on, then try again.',
     'settings.section_desc.console': 'See if everything looks all right',
+    'settings.voice.enable_vad': 'Detect when you stop talking',
   },
 }
+
+/** The VAD toggle tells the user we notice the end of speech, not that we keep talking. */
+const VAD_LABEL_COPY: Record<AppLocale, string> = {
+  'zh-CN': '说完自动断句',
+  'zh-TW': '說完自動斷句',
+  'en-US': 'Detect when you stop talking',
+  ja: '話し終わったら自動で区切る',
+  ko: '말이 끝나면 자동으로 끊기',
+}
+
+const RETIRED_VAD_LABEL_COPY = ['说完后自动停', 'Stop after you finish speaking'] as const
 
 const SPOKEN_PREVIEW: Record<AppLocale, string> = {
   'zh-CN': '你好，我是Mao。这是我现在的声音。',
@@ -95,6 +108,18 @@ test('voice status and error copy avoids engine terms in every locale', async ()
       assert.equal(typeof value, 'string', `${locale}:${key}`)
       assert.doesNotMatch(value, ENGINE_TERMS, `${locale}:${key} — ${value}`)
     }
+  }
+})
+
+test('the speech-end toggle says it detects the end of speech', async () => {
+  for (const locale of AVAILABLE_LOCALES) {
+    const dictionary = await ensureLocaleLoaded(locale)
+    const value = dictionary['settings.voice.enable_vad']
+    assert.equal(value, VAD_LABEL_COPY[locale], `${locale}:settings.voice.enable_vad`)
+    for (const retired of RETIRED_VAD_LABEL_COPY) {
+      assert.equal(value.includes(retired), false, `${locale}:settings.voice.enable_vad still says "${retired}"`)
+    }
+    assert.doesNotMatch(value, /VAD|Silero/i, `${locale}:settings.voice.enable_vad — ${value}`)
   }
 })
 

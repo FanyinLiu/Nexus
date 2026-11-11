@@ -23,7 +23,7 @@ export const zhCNSettingsVoice = {
   'settings.voice.permission_denied_windows': '麦克风没授权，去 Windows 设置打开',
   'settings.voice.enable_output': '启用语音播报',
   'settings.voice.enable_continuous': '启用连续语音',
-  'settings.voice.enable_vad': '说完后自动停',
+  'settings.voice.enable_vad': '说完自动断句',
   'settings.voice.vad_sensitivity': '断句灵敏度',
   'settings.voice.vad.low': '低（更少误触发）',
   'settings.voice.vad.medium': '中（推荐）',
