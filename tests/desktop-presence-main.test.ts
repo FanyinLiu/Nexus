@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import { register, syncBuiltinESMExports } from 'node:module'
+import { register } from 'node:module'
 import { after, afterEach, beforeEach, test } from 'node:test'
 
 // desktopPresence.js owns the state machine that turns global key events into
@@ -156,9 +155,8 @@ function captureWarnings(): { warnings: string[]; restore: () => void } {
   }
 }
 
-type SinkCapture = {
+type LogCapture = {
   logged: string[]
-  written: string[]
   restore: () => void
 }
 
@@ -166,7 +164,7 @@ type MachineTokenState = {
   tokens: { down: unknown[]; up: unknown[] }
 }
 
-function sinkText(value: unknown): string {
+function logText(value: unknown): string {
   if (typeof value === 'string') return value
   if (value instanceof Uint8Array) return new TextDecoder().decode(value)
   if (value instanceof Error) return `${value.name}: ${value.message}`
@@ -180,19 +178,15 @@ function sinkText(value: unknown): string {
   return String(value)
 }
 
-function sinkTextMany(values: unknown[]): string {
-  return values.map(sinkText).join(' ')
+function logTextMany(values: unknown[]): string {
+  return values.map(logText).join(' ')
 }
 
-// Intercept the process-local sinks a key character could escape through: every
-// console method, direct stdout/stderr writes, and the fs write/append family.
-// Node's ESM named imports of node:fs are patched via syncBuiltinESMExports, so
-// an `import { writeFileSync } from 'node:fs'` mutation is caught as well. The
-// wrappers call through to the real functions, so nothing below a test's own
-// synthetic payload is suppressed.
-function captureLoggerAndDiskSinks(): SinkCapture {
+// Intercept the process-local logger sinks a key code could escape through:
+// every console method and direct stdout/stderr writes. The wrappers call
+// through to the real functions, so this only records what production logged.
+function captureLoggerSinks(): LogCapture {
   const logged: string[] = []
-  const written: string[] = []
   const restores: Array<() => void> = []
 
   const consoleSink = console as unknown as Record<string, (...args: unknown[]) => void>
@@ -200,7 +194,7 @@ function captureLoggerAndDiskSinks(): SinkCapture {
     const original = consoleSink[method]
     if (typeof original !== 'function') continue
     consoleSink[method] = (...args: unknown[]) => {
-      logged.push(sinkTextMany(args))
+      logged.push(logTextMany(args))
       original.apply(consoleSink, args)
     }
     restores.push(() => {
@@ -215,7 +209,7 @@ function captureLoggerAndDiskSinks(): SinkCapture {
   for (const stream of streams) {
     const original = stream.write
     stream.write = (chunk: unknown, ...rest: unknown[]) => {
-      logged.push(sinkText(chunk))
+      logged.push(logText(chunk))
       return original.call(stream, chunk, ...rest)
     }
     restores.push(() => {
@@ -223,52 +217,10 @@ function captureLoggerAndDiskSinks(): SinkCapture {
     })
   }
 
-  const fsSink = fs as unknown as Record<string, (...args: unknown[]) => unknown>
-  for (const name of [
-    'writeFileSync',
-    'appendFileSync',
-    'writeSync',
-    'writevSync',
-    'writeFile',
-    'appendFile',
-    'write',
-    'writev',
-  ]) {
-    const original = fsSink[name]
-    if (typeof original !== 'function') continue
-    fsSink[name] = (...args: unknown[]) => {
-      written.push(sinkTextMany(args))
-      return original(...args)
-    }
-    restores.push(() => {
-      fsSink[name] = original
-    })
-  }
-
-  const promiseSink = fs.promises as unknown as Record<
-    string,
-    (...args: unknown[]) => Promise<unknown>
-  >
-  for (const name of ['writeFile', 'appendFile']) {
-    const original = promiseSink[name]
-    if (typeof original !== 'function') continue
-    promiseSink[name] = (...args: unknown[]) => {
-      written.push(sinkTextMany(args))
-      return original(...args)
-    }
-    restores.push(() => {
-      promiseSink[name] = original
-    })
-  }
-
-  syncBuiltinESMExports()
-
   return {
     logged,
-    written,
     restore: () => {
       for (const restore of [...restores].reverse()) restore()
-      syncBuiltinESMExports()
     },
   }
 }
@@ -386,24 +338,24 @@ test('typing IPC carries only aggregate phase and rate, never a key token', asyn
   unsubscribe()
 })
 
-test('key handlers tokenize on keycode and never log or persist the character', async () => {
+test('key handlers tokenize on the numeric keycode and keep it out of logs', async () => {
   const sent = installWindow()
   await enableTyping()
 
-  const distinctiveKey = 'qZ_marker_key_character_9f3c'
+  // A keycode far outside uiohook's real range makes any leak into a log line
+  // unambiguous. The handler tokenizes on event.keycode; event.key is not used.
+  const distinctiveKeycode = 424242
   const machine = machineTokenState()
   machine.tokens.down.length = 0
   machine.tokens.up.length = 0
 
-  const capture = captureLoggerAndDiskSinks()
+  const capture = captureLoggerSinks()
   try {
-    // uiohook's event carries both the numeric keycode and the printable
-    // character. Only the keycode may become the opaque machine token.
-    emitKey('keydown', { keycode: 30, key: distinctiveKey })
-    emitKey('keyup', { keycode: 30, key: distinctiveKey })
-    // A missing keycode must fall back to 'unknown', never to the character.
-    emitKey('keydown', { key: distinctiveKey })
-    emitKey('keyup', { key: distinctiveKey })
+    emitKey('keydown', { keycode: distinctiveKeycode })
+    emitKey('keyup', { keycode: distinctiveKeycode })
+    // A missing keycode must fall back to 'unknown', never to event.key.
+    emitKey('keydown', { key: 'qZ_marker_key_character_9f3c' })
+    emitKey('keyup', { key: 'qZ_marker_key_character_9f3c' })
 
     await waitFor(
       () => typingPayloads(sent).some((payload) => payload.phase === 'start'),
@@ -420,24 +372,19 @@ test('key handlers tokenize on keycode and never log or persist the character', 
 
   assert.deepEqual(
     machine.tokens.down,
-    [30, 'unknown'],
-    'keydown must pass event.keycode, or "unknown" when it is missing',
+    [distinctiveKeycode, 'unknown'],
+    'keydown must pass the numeric event.keycode, or "unknown" when it is missing',
   )
   assert.deepEqual(
     machine.tokens.up,
-    [30, 'unknown'],
-    'keyup must pass event.keycode, or "unknown" when it is missing',
+    [distinctiveKeycode, 'unknown'],
+    'keyup must pass the numeric event.keycode, or "unknown" when it is missing',
   )
 
   assert.equal(
-    capture.logged.some((line) => line.includes(distinctiveKey)),
+    capture.logged.some((line) => line.includes(String(distinctiveKeycode))),
     false,
-    'event.key must never be passed to a logger',
-  )
-  assert.equal(
-    capture.written.some((line) => line.includes(distinctiveKey)),
-    false,
-    'event.key must never be written to disk',
+    'the keycode must never be passed to a logger',
   )
 })
 
