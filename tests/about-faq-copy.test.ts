@@ -88,6 +88,23 @@ const RETIRED_FAQ_COPY: Record<(typeof LOCALES)[number]['language'], readonly st
   ],
 }
 
+/** a.1 is written for non-technical readers, so transport jargon must not creep back in. */
+const A1_JARGON = [
+  'endpoint',
+  '端點',
+  'エンドポイント',
+  '엔드포인트',
+  'model id',
+  'api url',
+  'protocol',
+  '協議',
+  'プロトコル',
+  '프로토콜',
+] as const
+
+/** a.1 was rewritten in these locales only; zh-CN keeps its original wording. */
+const PLAIN_A1_LOCALES = ['zh-TW', 'en-US', 'ja', 'ko'] as const
+
 test('about FAQ points at the current settings names in all five locales', () => {
   for (const { language, messages } of LOCALES) {
     const copy = FAQ_KEYS.map((key) => messages[key]).join('\n')
@@ -158,4 +175,21 @@ test('about FAQ points at the current settings names in all five locales', () =>
     )
     assert.ok(messages['about.faq.a.6'].includes('OpenAI Compatible'), `${language} a.6 provider option`)
   }
+
+  for (const { language, messages } of LOCALES) {
+    if (!PLAIN_A1_LOCALES.includes(language)) continue
+    const a1 = messages['about.faq.a.1'].toLowerCase()
+    for (const jargon of A1_JARGON) {
+      assert.equal(
+        a1.includes(jargon.toLowerCase()),
+        false,
+        `${language} a.1 still uses jargon "${jargon}"`,
+      )
+    }
+  }
+
+  assert.ok(
+    zhTWMessages['about.faq.a.3'].includes(zhTWMessages['settings.simple.connect_key']),
+    'zh-TW a.3 key label',
+  )
 })

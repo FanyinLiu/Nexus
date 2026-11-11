@@ -529,7 +529,7 @@ export const enCore = {
   'about.release_spotlight.bullet.away.body': 'She can say how many items piled up while you were away. The daily page is now Daily log.',
   'about.faq.title': 'Frequently Asked Questions',
   'about.faq.q.1': 'Why does she give an empty response?',
-  'about.faq.a.1': 'Usually because the model endpoint or model ID is wrong, or the chosen model isn\'t compatible with the chat protocol. Go to Settings → Connection and click "Try it" — it will tell you which step fails.',
+  'about.faq.a.1': 'Usually the address or the model name is wrong, or this model doesn\'t support chat. Go to Settings → Connection and click "Try it" — it will tell you which step fails.',
   'about.faq.q.2': 'How do I switch the language she speaks in?',
   'about.faq.a.2': 'To choose the language she speaks, open Settings → Look and character → Advanced and edit "Personality and speaking style" (e.g. "Reply in Japanese unless asked otherwise"). To change the interface language, go to Settings → About → Language; you can also pick it on the first screen of onboarding on first launch.',
   'about.faq.q.3': 'Voice doesn\'t work — no sound when she speaks.',
