@@ -304,6 +304,9 @@ export function createMainWindow({ showOnReady = true } = {}) {
 
   const inst = registerPetInstance(win)
 
+  let hasLoadedOnce = false
+  let fallbackShowPending = false
+
   const loadRetry = createWindowLoadRetry({
     win,
     loadUrl: () => getRendererEntry('pet'),
@@ -311,6 +314,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
     retryLimit: WINDOW_LOAD_RETRY_LIMIT,
     baseDelayMs: WINDOW_LOAD_RETRY_BASE_DELAY_MS,
     onReady: () => {
+      hasLoadedOnce = true
       // Keep the companion visible across workspaces where the platform supports
       // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
       // that option. Windows does not support this API.
@@ -337,12 +341,35 @@ export function createMainWindow({ showOnReady = true } = {}) {
       inst.loco.start()
     },
     onExhausted: () => {
-      // Destroying the pet clears mainWindow and no create path rebuilds it
-      // automatically; on Linux without a tray it also quits the app. Hide the
-      // raw Electron error page instead and leave the process/tray alive so a
-      // user-initiated show can recover once the renderer is available.
-      if (!win.isDestroyed()) win.hide()
+      if (win.isDestroyed()) return
+      if (hasLoadedOnce) {
+        // Destroying the pet clears mainWindow and no create path rebuilds it
+        // automatically; on Linux without a tray it also quits the app. Hide the
+        // raw Electron error page instead and leave the process/tray alive so a
+        // user-initiated show can reload it once the renderer is available.
+        win.hide()
+        return
+      }
+      // First launch never completed: hiding would leave Linux without a tray
+      // with nothing visible and no way back. Show the window as a fallback.
+      fallbackShowPending = true
+      win.show()
     },
+  })
+
+  // Tray, Dock, app-menu, and second-instance shows all land here. An exhausted
+  // window gets one fresh navigation instead of re-exposing the error page. The
+  // fallback show above is not a user request for a reload.
+  win.on('show', () => {
+    if (fallbackShowPending) {
+      fallbackShowPending = false
+      return
+    }
+    loadRetry.retryIfExhausted()
+  })
+
+  win.on('hide', () => {
+    fallbackShowPending = false
   })
 
   win.on('close', (event) => {

@@ -80,7 +80,7 @@ test('pet load retries with backoff and does not treat the error page as ready',
   await flushMicrotasks()
   assert.equal(pet.loadCount, 3, 'the retry budget is bounded')
   assert.equal(pet.destroyed, false, 'the only companion window is kept alive')
-  assert.equal(pet.visible, false, 'the failed window stays hidden')
+  assert.equal(pet.visible, true, 'a first-launch failure shows the window instead of hiding it')
   t.mock.timers.tick(10_000)
   assert.equal(pet.loadCount, 3, 'no retry is scheduled after the budget')
 
@@ -154,4 +154,72 @@ test('a visible pet is hidden instead of destroyed after the retry limit', async
   assert.equal(pet.loadCount, 3)
   assert.equal(pet.destroyed, false, 'destroying the pet would leave no companion and no recreate path')
   assert.equal(pet.visible, false, 'the raw error page is hidden from the user')
+})
+
+test('first-launch exhaustion shows the window instead of hiding it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  const fail = () => {
+    pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///fake/index.html?view=pet', true)
+    pet.emitWebContents('did-finish-load')
+  }
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  fail()
+  await flushMicrotasks()
+
+  assert.equal(pet.loadCount, 3)
+  assert.equal(pet.destroyed, false, 'the only companion window is kept alive')
+  assert.equal(pet.visible, true, 'a first-launch failure leaves something visible even without a tray')
+  t.mock.timers.tick(10_000)
+  assert.equal(pet.loadCount, 3, 'the fallback show does not start another load')
+})
+
+test('an exhausted pet reloads when the user shows it again', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  const pet = createPet()
+  pet.emitWebContents('did-finish-load')
+  assert.equal(pet.visible, true, 'the first successful load shows the pet')
+
+  const fail = () => {
+    pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///fake/index.html?view=pet', true)
+    pet.emitWebContents('did-finish-load')
+  }
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  fail()
+  await flushMicrotasks()
+
+  assert.equal(pet.loadCount, 3)
+  assert.equal(pet.visible, false, 'the later failure hides the error page')
+
+  pet.show()
+  assert.equal(pet.loadCount, 4, 'showing an exhausted pet grants one fresh load')
+
+  pet.emitWebContents('did-finish-load')
+  await flushMicrotasks()
+  assert.equal(pet.visible, true, 'the reload appears through the normal ready path')
+  assert.equal(pet.focused, true, 'the ready path takes focus again')
+
+  pet.hide()
+  pet.show()
+  assert.equal(pet.loadCount, 4, 'a normal show after recovery does not reload')
 })
