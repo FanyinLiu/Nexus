@@ -111,11 +111,25 @@ export function useCompanionNotices({
         const replayed = replayedCompanionNoticesRef.current
         if (!replayed.has(options)) {
           replayed.add(options)
-          deferredCompanionNoticesRef.current.push({
-            payload: options,
-            speechOnly: true,
-            enqueuedAt: nowRef.current(),
-          })
+          const originalEntries = options.deferredReplayEntries
+          if (originalEntries?.length) {
+            // A merged utterance was interrupted. Put the original reminders
+            // back with their own ids/timestamps so the next flush merges them
+            // again instead of re-prefixing already-merged text.
+            for (const entry of originalEntries) {
+              deferredCompanionNoticesRef.current.push({
+                payload: entry.payload,
+                speechOnly: true,
+                enqueuedAt: entry.enqueuedAt,
+              })
+            }
+          } else {
+            deferredCompanionNoticesRef.current.push({
+              payload: options,
+              speechOnly: true,
+              enqueuedAt: nowRef.current(),
+            })
+          }
         }
         return 'interrupted'
       }
@@ -327,6 +341,10 @@ export function useCompanionNotices({
             // queue metadata only, never in the user-visible copy.
             dedupeKey: `deferred-reminders:${merged.items.map((item) => item.reminderId).join('|')}`,
             shouldResumeContinuousVoice: false,
+            deferredReplayEntries: reminderEntries.map((entry) => ({
+              payload: entry.payload,
+              enqueuedAt: entry.enqueuedAt,
+            })),
           }
           const speechOnly = reminderEntries.every((entry) => entry.speechOnly)
           const result = await deliverCompanionNotice(mergedPayload, speechOnly)

@@ -249,6 +249,15 @@ export type CompanionNoticePayload = {
   reminderId?: string
   /** Reminder occurrence due instant used to order a merged replay. */
   reminderDueAt?: string | number
+  /**
+   * Internal replay metadata for a merged reminder utterance: on interruption,
+   * re-enqueue these original queue entries instead of the merged text so the
+   * next merge keeps one prefix, one "more" line, and the original ids.
+   */
+  deferredReplayEntries?: Array<{
+    payload: CompanionNoticePayload
+    enqueuedAt: number
+  }>
   autoHideMs?: number
   /**
    * Marks the notice bubble as router-driven. The bubble then joins the shared

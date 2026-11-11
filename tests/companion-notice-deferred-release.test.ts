@@ -7,6 +7,7 @@ import { useCompanionNotices } from '../src/hooks/chat/useCompanionNotices.ts'
 import { useCompanionNoticeIdleFlush } from '../src/hooks/chat/useCompanionNoticeQueueSubscriptions.ts'
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
 import { VoiceBus } from '../src/features/voice/bus.ts'
+import { InterruptedError } from '../src/features/voice/interruptedError.ts'
 import { mergeContinuousVoiceActive } from '../src/hooks/voice/continuousVoice.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import type { VoiceState } from '../src/types/index.ts'
@@ -135,6 +136,7 @@ type HarnessOptions = {
   continuousVoiceActiveRef?: { current: boolean }
   busyRef?: { current: boolean }
   shouldDropDeferredNotice?: (payload: CompanionNoticePayload) => boolean
+  speakAssistantReply?: (text: string) => Promise<void>
 }
 
 function createHarness(options: HarnessOptions = {}) {
@@ -153,7 +155,10 @@ function createHarness(options: HarnessOptions = {}) {
     const ctx = {
       voiceStateRef,
       continuousVoiceActiveRef,
-      speakAssistantReply: async (text: string) => { spoken.push(text) },
+      speakAssistantReply: async (text: string) => {
+        spoken.push(text)
+        await options.speakAssistantReply?.(text)
+      },
     }
     api = useCompanionNotices({
       ctx,
@@ -197,6 +202,25 @@ function createHarness(options: HarnessOptions = {}) {
     },
     render: () => renderer.render(),
     unmount: () => renderer.unmount(),
+  }
+}
+
+function pendingSpeech() {
+  const pending: Array<{ resolve: () => void; reject: (error: unknown) => void }> = []
+  return {
+    speak: () => new Promise<void>((resolve, reject) => {
+      pending.push({ resolve, reject })
+    }),
+    interruptLatest: () => {
+      const entry = pending.shift()
+      assert.ok(entry, 'no pending speech to interrupt')
+      entry.reject(new InterruptedError('interrupt'))
+    },
+    resolveLatest: () => {
+      const entry = pending.shift()
+      assert.ok(entry, 'no pending speech to finish')
+      entry.resolve()
+    },
   }
 }
 
@@ -254,15 +278,62 @@ for (const endCase of END_CASES) {
   })
 }
 
-test('a terminal ASR error releases even if the continuous flag has not cleared yet', async () => {
-  const harness = createHarness()
-  await harness.api.pushCompanionNotice(reminder('error', 'error reminder'))
-  harness.voiceStateRef.current = 'idle'
-  harness.bus.emit({ type: 'stt:error', code: 'network', message: 'network failed' })
-  await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['error reminder.'])
-  harness.unmount()
-})
+const CONTINUOUS_MID_SESSION_EVENTS: Array<{
+  name: string
+  event: Parameters<VoiceBus['emit']>[0]
+}> = [
+  {
+    name: 'vad no-speech',
+    event: { type: 'vad:no_speech_timeout', waitedMs: 2_000 },
+  },
+  {
+    name: 'tts error with resume',
+    event: {
+      type: 'tts:error',
+      message: 'tts failed',
+      speechGeneration: 1,
+      shouldResumeContinuousVoice: true,
+    },
+  },
+  {
+    name: 'session aborted with reopen',
+    event: { type: 'session:aborted', abortReason: 'session_aborted' },
+  },
+]
+
+for (const midSession of CONTINUOUS_MID_SESSION_EVENTS) {
+  test(`continuous mode does not release on ${midSession.name}`, async () => {
+    const harness = createHarness()
+    await harness.api.pushCompanionNotice(reminder('mid', 'mid reminder'))
+    harness.voiceStateRef.current = 'idle'
+    harness.bus.emit(midSession.event)
+    await flushMicrotasks()
+    assert.deepEqual(harness.spoken, [], 'continuous voice will reopen the microphone')
+
+    harness.continuousVoiceActiveRef.current = false
+    harness.bus.emit({ type: 'session:completed' })
+    await flushMicrotasks()
+    assert.deepEqual(harness.spoken, ['mid reminder.'], 'releases once the flag clears')
+    harness.unmount()
+  })
+}
+
+for (const singleTurn of [
+  { name: 'normal end', event: { type: 'session:completed' } },
+  { name: 'error', event: { type: 'stt:error', code: 'network', message: 'network failed' } },
+] as const) {
+  test(`single-turn ${singleTurn.name} releases once`, async () => {
+    const harness = createHarness({
+      continuousVoiceActiveRef: { current: false },
+    })
+    await harness.api.pushCompanionNotice(reminder('single', 'single reminder'))
+    harness.voiceStateRef.current = 'idle'
+    harness.bus.emit(singleTurn.event)
+    await flushMicrotasks()
+    assert.deepEqual(harness.spoken, ['single reminder.'])
+    harness.unmount()
+  })
+}
 
 test('hide alone keeps waiting, and session end while hidden still releases', async () => {
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
@@ -312,6 +383,53 @@ test('new reminders merge by due time, dedupe by id, and speak once with one pre
   )
   assert.equal(harness.bubbles.length, 1, 'one bubble for the whole batch')
   assert.equal(harness.messages.length, 1, 'one chat line for the whole batch')
+  harness.unmount()
+})
+
+test('an interrupted merged replay keeps one prefix and one more line', async () => {
+  const pending = pendingSpeech()
+  const harness = createHarness({ speakAssistantReply: pending.speak })
+  await harness.api.pushCompanionNotice(reminder('late', 'late reminder', 300))
+  await harness.api.pushCompanionNotice(reminder('early', 'early reminder', 100))
+  await harness.api.pushCompanionNotice(reminder('early', 'duplicate early reminder', 90))
+  await harness.api.pushCompanionNotice(reminder('middle', 'middle reminder', 200))
+  await harness.api.pushCompanionNotice(reminder('extra', 'extra reminder', 400))
+
+  harness.advance(60_000)
+  harness.voiceStateRef.current = 'idle'
+  harness.continuousVoiceActiveRef.current = false
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+
+  const expected = 'While we were chatting, it was time for: early reminder; middle reminder; late reminder. 1 more reminder.'
+  assert.deepEqual(harness.spoken, [expected])
+  assert.equal(harness.messages.length, 1)
+  assert.equal(harness.bubbles.length, 1)
+
+  pending.interruptLatest()
+  await flushMicrotasks()
+
+  // Wait another prefix-sized window while the session is still active so a
+  // merged-text replay would re-add the prefix, then release normally.
+  harness.continuousVoiceActiveRef.current = true
+  harness.voiceStateRef.current = 'listening'
+  harness.advance(60_000)
+  harness.continuousVoiceActiveRef.current = false
+  harness.voiceStateRef.current = 'idle'
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  assert.deepEqual(harness.spoken, [expected, expected], 'replay uses the original reminders')
+  assert.equal(
+    (harness.spoken[1].match(/1 more reminder\./gu) ?? []).length,
+    1,
+    'the replay does not nest the more line',
+  )
+  assert.equal((harness.spoken[1].match(/While we were chatting/gu) ?? []).length, 1)
+  assert.equal(harness.messages.length, 1, 'replay does not duplicate the chat line')
+  assert.equal(harness.bubbles.length, 1, 'replay does not duplicate the bubble')
+
+  pending.resolveLatest()
+  await flushMicrotasks()
   harness.unmount()
 })
 

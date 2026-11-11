@@ -232,6 +232,9 @@ export function createVoiceLifecycleControls(bag: VoiceRuntimeBag): VoiceLifecyc
     } catch (err) {
       console.error('[Voice] startVoiceConversation failed:', err)
       ctx.setError(humanizeVoiceError(err, { ti }))
+      // A failed start is a genuine end: the merged continuous flag must not
+      // stay true and hold deferred reminders until the stuck fallback.
+      bindings.setContinuousVoiceSession(false)
       setters.setVoiceState('idle')
       bindings.resetSpeechLevel()
     }

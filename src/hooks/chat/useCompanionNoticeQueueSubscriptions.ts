@@ -169,20 +169,15 @@ export function useCompanionNoticeIdleFlush(
         runFlush(true)
       }, stuckTimeoutMs)
     }
-    const releaseNow = (force = false) => {
+    const releaseNow = () => {
       clearAllTimers()
       queueMicrotask(() => {
         if (disposed) return
-        // A completion event can belong to a continuous-voice turn. Do not
-        // flush into the microphone that is about to reopen; wait for idle.
+        // A completion or error event can belong to a continuous-voice turn.
+        // Do not flush into the microphone that is about to reopen; wait until
+        // the merged continuous flag actually clears. The 30 s stuck timer is
+        // the only path allowed to override a stale flag.
         if (!canReleaseRef.current()) {
-          // Terminal failures/aborts end the session even if a continuous
-          // flag has not cleared yet; a normal completion must wait because
-          // continuous voice may reopen the microphone.
-          if (force && canForceReleaseRef.current()) {
-            runFlush(true)
-            return
-          }
           armFallback()
           armStuck()
           return
@@ -200,11 +195,6 @@ export function useCompanionNoticeIdleFlush(
         armFallback()
         return
       }
-      const forceEnd = event.type === 'stt:error'
-        || event.type === 'mic:error'
-        || event.type === 'vad:no_speech_timeout'
-        || event.type === 'tts:error'
-        || event.type === 'session:aborted'
       if (
         event.type === 'vad:no_speech_timeout'
         || event.type === 'stt:error'
@@ -214,7 +204,7 @@ export function useCompanionNoticeIdleFlush(
         || event.type === 'tts:error'
         || event.type === 'session:aborted'
       ) {
-        releaseNow(forceEnd)
+        releaseNow()
         return
       }
       armFallback()
