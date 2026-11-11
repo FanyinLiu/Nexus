@@ -281,6 +281,25 @@ test('an api_key value after spaces around the equals sign straddling the 64KB o
   })
 })
 
+test('oversized stderr text is capped before redaction and keeps the head', async () => {
+  const { capMcpStderrForLog } = await import('../electron/services/mcpHost.js')
+  const head = 'token=xai-synthetic-head'
+  const tailMarker = 'TAILMARKER9f3c'
+  const line = `${head} ${'B '.repeat(3_000)}${tailMarker}`
+
+  const capped = capMcpStderrForLog(line)
+
+  assert.ok(capped.length <= 2 * 1024)
+  assert.ok(capped.startsWith(head))
+  assert.ok(!capped.includes(tailMarker))
+  // The cap stops at a whitespace boundary instead of splitting the last token.
+  assert.match(line[capped.length], /\s/)
+  // Short text is passed through untouched so normal lines keep full context.
+  assert.equal(capMcpStderrForLog('token=xai-synthetic-short'), 'token=xai-synthetic-short')
+  // A single token longer than the cap still has to be cut somewhere.
+  assert.equal(capMcpStderrForLog('C'.repeat(4_096)).length, 2 * 1024)
+})
+
 test('the overflow walk-back logs each side of the split exactly once', async () => {
   await withSpawnedServer('srv-overflow-bearer-once', async (record) => {
     clearLogs()

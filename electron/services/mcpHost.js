@@ -30,6 +30,29 @@ const REQUEST_TIMEOUT_MS = 15_000
 // so a token straddling the cap can still be redacted as one piece.
 const MAX_STDERR_BUFFER_CHARS = 64 * 1024
 const STDERR_OVERFLOW_OVERLAP_CHARS = 512
+// A forced overflow flush can hand the logger tens of KB, but the logger keeps
+// only 160 chars, so redacting the whole buffer is wasted work. Cap the text
+// first; the discarded tail is dropped, never logged raw.
+const MAX_STDERR_LOG_CHARS = 2 * 1024
+
+/**
+ * Cap stderr text to the amount the logger can actually use before redaction
+ * runs. Cuts at the last whitespace inside the cap when there is one so a
+ * token is not split in half; falls back to a hard cut for a single huge token.
+ * @param {string} text
+ * @returns {string}
+ */
+export function capMcpStderrForLog(text) {
+  if (text.length <= MAX_STDERR_LOG_CHARS) return text
+  const slice = text.slice(0, MAX_STDERR_LOG_CHARS)
+  const boundary = Math.max(
+    slice.lastIndexOf(' '),
+    slice.lastIndexOf('\t'),
+    slice.lastIndexOf('\n'),
+    slice.lastIndexOf('\r'),
+  )
+  return boundary > 0 ? slice.slice(0, boundary) : slice
+}
 
 // Shell metacharacters that could enable command injection when shell: true is used.
 // We reject commands containing these to allow safe spawning without a shell.
@@ -161,8 +184,9 @@ class McpInstance {
 
   _logStderrLine(line) {
     // Redact the assembled line first: a secret split across two `data`
-    // chunks only matches a rule once both fragments are joined.
-    const text = getRedactedErrorMessage(line).trim()
+    // chunks only matches a rule once both fragments are joined. Cap first so
+    // a forced overflow flush redacts ~2KB instead of the whole 64KB buffer.
+    const text = getRedactedErrorMessage(capMcpStderrForLog(line)).trim()
     if (text) log.warn(`${mcpLogScope(this.id)} stderr: ${text}`)
   }
 
