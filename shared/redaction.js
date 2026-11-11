@@ -14,17 +14,24 @@ export function redactSensitiveText(value) {
     .replace(/\/Users\/[^/\s'"]+/g, '~')
     .replace(/\/home\/[^/\s'"]+/g, '~')
     .replace(/[A-Z]:\\Users\\[^\\\s'"]+/gi, '~')
-    .replace(/(\w+:\/\/)[^/\s:@]+:[^/\s@]+@/g, '$1***:***@')
+    // The `(?<!\w)` word-start anchor keeps the scheme scan linear: without it
+    // `\w+` retries at every offset inside a long unmatched run and the rule is
+    // O(n²), which dominates the 64KB-letters budget (see the perf test).
+    .replace(/(?<!\w)(\w+:\/\/)[^/\s:@]+:[^/\s@]+@/g, '$1***:***@')
     .replace(/Bearer\s+[A-Za-z0-9._~+/-]{16,}=*/gi, 'Bearer ***')
     .replace(/sk-[A-Za-z0-9_-]{16,}/g, 'sk-***')
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, 'AIza***')
     .replace(/\bxai-[A-Za-z0-9_-]{16,}/g, 'xai-***')
     .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g, 'jwt***')
     .replace(/\b(?:settings|profile)(?::[A-Za-z0-9_-]+)*:[A-Za-z0-9_-]*(?:key|token|secret|password|passwd|pwd)[A-Za-z0-9_-]*\b/gi, '[vault-slot]')
-    .replace(/(["']?)([A-Za-z0-9_-]*(?:key|token|secret|password|passwd|pwd))\1(\s*[:=]\s*)(["']?)[^&\s'",}]+(\4)/gi, '$1$2$1$3$4***$4')
+    .replace(/(["']?)(?<![A-Za-z0-9_-])([A-Za-z0-9_-]*(?:key|token|secret|password|passwd|pwd))\1(\s*[:=]\s*)(["']?)[^&\s'",}]+(\4)/gi, '$1$2$1$3$4***$4')
     // Query/body parameter echoes (api_key=…, client_secret=…). Suffix-based
     // because \b fails after '_' — client_secret / refresh_token must match.
-    .replace(/([A-Za-z0-9_-]*(?:key|token|secret))=[^&\s'"]+/gi, '$1=***')
+    // The lookbehind anchors both rules to a word start: without it the
+    // `[A-Za-z0-9_-]*` run retries at every offset and a long unmatched token
+    // costs O(n²) (a 64KB run measured ~6s). Prefixed forms still match because
+    // the `*` covers the prefix before backtracking to the keyword suffix.
+    .replace(/(?<![A-Za-z0-9_-])([A-Za-z0-9_-]*(?:key|token|secret))=[^&\s'"]+/gi, '$1=***')
 }
 
 export function getRedactedMessage(error) {

@@ -481,8 +481,8 @@ export const REQUIRED_PHRASES = [
     id: 'chat-studio-redacts-character-card-errors',
     file: 'src/features/settingsV3/ChatStudioV3.tsx',
     phrases: [
-      "import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'",
-      'error: getRedactedLogErrorMessage(error)',
+      "import { warnRedacted } from '../../lib/logger.ts'",
+      "warnRedacted('[settings] character card import failed:', error)",
     ],
   },
   {

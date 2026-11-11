@@ -135,7 +135,7 @@ export const zhCNVoice = {
   'voice.pipeline.session_stopped': '语音已停止',
   'voice.pipeline.wake_word_detected': '检测到唤醒词“{keyword}”，正在进入收音',
   'voice.wakeword.unavailable_with_reason': '唤醒词不可用：{reason}',
-  'voice.wakeword.listener_error_with_reason': '唤醒词监听异常：{error}',
+  'voice.wakeword.listener_error_with_reason': '唤醒词监听出了点问题，稍后再试试？',
   'voice.diagnostics.no_mic_api': '当前环境没有暴露麦克风录音能力，无法启动语音输入。',
   'voice.diagnostics.no_media_recorder': '当前环境不支持 MediaRecorder，无法完成语音输入录音。',
   'voice.diagnostics.no_audio_tracks': '已经拿到录音流，但没有发现可用的音频轨道。',

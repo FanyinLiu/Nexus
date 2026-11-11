@@ -1,27 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createId,
-  shorten,
 } from '../lib/index.ts'
 import { emitPetNotify } from '../lib/petNotifyBus.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
 import {
   markRecalled,
 } from '../features/memory/index.ts'
-import { logVoiceEvent } from '../features/voice/index.ts'
 import {
   useCompanionNoticeIdleFlush,
   useCompanionNoticeStopSubscription,
 } from './chat/useCompanionNoticeQueueSubscriptions.ts'
 import { noteUserTyping } from '../features/autonomy/userTyping.ts'
+import { loadProactiveEtiquetteState } from '../features/autonomy/proactiveEtiquette.ts'
+import { shouldDropDeferredReminderNotice } from '../features/reminders/deferredNotice.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
   createPendingReminderDraft,
+  createSpeechPlaybackFailureHandler,
   getFreshPendingReminderDraft,
   PENDING_REMINDER_DRAFT_TTL_MS,
   cancelActiveTurn as cancelActiveTurnRuntime,
-  getSpeechOutputErrorMessage,
   type PendingReminderDraft,
   type PendingReminderDraftInput,
   type UseChatContext,
@@ -38,6 +38,7 @@ import type {
   ChatMessage,
   ChatMessageTone,
 } from '../types/index.ts'
+import type { CompanionNoticePayload } from './chat/types.ts'
 
 export type { UseChatContext } from './chat/index.ts'
 
@@ -183,10 +184,29 @@ export function useChat(ctx: UseChatContext) {
     })
   }, [appendChatMessage])
 
+  const shouldDropDeferredCompanionNotice = useCallback((payload: CompanionNoticePayload) => {
+    const current = ctxRef.current
+    // This predicate only runs while dropping the deferred queue; an idle
+    // push keeps main's original immediate-delivery behaviour even during DND.
+    // A paused reminder row must not replay after the session ends. Local
+    // reminders have no separate global switch; pausing the task is the user's
+    // "reminders off" for that item. The companion "leave me alone" span is the
+    // renderer's Do-Not-Disturb signal; queued reminders are dropped rather
+    // than delivered late.
+    return shouldDropDeferredReminderNotice({
+      reminderId: payload.reminderId,
+      tasks: current.reminderTasksRef.current,
+      quietUntil: loadProactiveEtiquetteState().quietUntil,
+      now: Date.now(),
+    })
+  }, [])
+
   const {
     pushCompanionNotice,
     flushDeferredCompanionNotices,
     discardDeferredCompanionNotices,
+    hasDeferredCompanionNotices,
+    canDeliverDeferredCompanionNotice,
   } = useCompanionNotices({
     ctx,
     t,
@@ -194,12 +214,24 @@ export function useChat(ctx: UseChatContext) {
     appendChatMessage,
     presentPetDialogBubble,
     setError,
+    shouldDropDeferredNotice: shouldDropDeferredCompanionNotice,
   })
 
   // The Stop button lives in the voice hook; this queue lives here, so a
   // user-initiated stop-all clears the busy-deferred notices.
   useCompanionNoticeStopSubscription(discardDeferredCompanionNotices)
-  useCompanionNoticeIdleFlush(ctx.voiceBus, flushDeferredCompanionNotices)
+  useCompanionNoticeIdleFlush(
+    ctx.voiceBus,
+    flushDeferredCompanionNotices,
+    undefined,
+    canDeliverDeferredCompanionNotice,
+    {
+      canForceRelease: () => canDeliverDeferredCompanionNotice({ force: true }),
+      forceFlush: () => flushDeferredCompanionNotices({ force: true }),
+      onStuckFallback: () => ctxRef.current.setContinuousVoiceSession(false),
+      hasPending: hasDeferredCompanionNotices,
+    },
+  )
 
   function getPendingReminderDraft() {
     const draft = getFreshPendingReminderDraft(
@@ -223,32 +255,12 @@ export function useChat(ctx: UseChatContext) {
     pendingReminderDraftRef.current = null
   }, [])
 
-  const handleSpeechPlaybackFailure = useCallback((speechError: unknown, options: {
-    traceId?: string
-    traceLabel?: string
-    source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
-    fromVoice: boolean
-    shouldResumeContinuousVoice: boolean
-  }) => {
-    const speechErrorMessage = getSpeechOutputErrorMessage(speechError)
-    logVoiceEvent('assistant reply speech output failed', {
-      source: options.source,
-      errorPresent: Boolean(speechErrorMessage),
-    })
-
-    if (options.fromVoice && options.traceLabel) {
-      ctx.appendVoiceTrace(t('chat.voice.playback_failed_label'), `#${options.traceLabel} ${shorten(speechErrorMessage, 48)}`, 'error')
-    }
-
-    setError(options.fromVoice ? t('chat.error.playback_with_reply', { error: speechErrorMessage }) : speechErrorMessage)
-    // Bus drives voiceState → 'idle' + restart_voice + setMood('idle')
-    ctx.busEmit({
-      type: 'tts:error',
-      message: speechErrorMessage,
-      speechGeneration: 0,
-      shouldResumeContinuousVoice: options.shouldResumeContinuousVoice,
-    })
-  }, [ctx, setError, t])
+  // eslint-disable-next-line react-hooks/refs -- factory receives ctx (which holds refs) but only dereferences them inside the returned failure handler, never during this render
+  const handleSpeechPlaybackFailure = useMemo(() => createSpeechPlaybackFailureHandler({
+      ctx,
+      setError,
+      t,
+    }), [ctx, setError, t])
 
   const syncAssistantActivity = useCallback(() => {
     setAssistantActivity(busyRef.current ? 'thinking' : 'idle')

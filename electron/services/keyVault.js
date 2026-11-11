@@ -155,7 +155,7 @@ function markSafeStorageAccessBlocked(error, operation) {
 
 function assertSafeStorageAccessAllowed() {
   if (safeStorageAccessBlocked) {
-    throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。')
+    throw new Error(mainT('vault.unavailable'))
   }
 }
 
@@ -166,7 +166,7 @@ function encryptWithSafeStorage(value) {
     return /** @type {import('electron').SafeStorage} */ (getSafeStorageApi()).encryptString(value)
   } catch (error) {
     markSafeStorageAccessBlocked(error, 'encryption')
-    throw new Error('系统钥匙串暂时不可用。本次启动不会重复请求钥匙串权限。', { cause: error })
+    throw new Error(mainT('vault.unavailable'), { cause: error })
   }
 }
 
@@ -232,7 +232,7 @@ async function quarantineCorruptVaultFile(parseError) {
 async function persistVault() {
   if (vaultWriteBlocked) {
     const error = /** @type {Error & { code?: string }} */ (new Error(
-      '密钥库文件已损坏，为保护已存密钥，本次启动已禁止写入。请重启应用后重新设置密钥。',
+      mainT('vault.corruptWriteBlocked'),
     ))
     error.code = 'VAULT_CORRUPT_WRITE_BLOCKED'
     throw error

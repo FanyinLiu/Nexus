@@ -16,13 +16,17 @@ const IGNORED_DIRECTORIES = new Set(['node_modules', 'dist', 'release', 'release
 const EXCLUDED_FILES = new Set(['src/lib/logger.ts', 'electron/logger.js'])
 const CONSOLE_CALL_PATTERN = /console\.(?:log|info|warn|error|debug|trace)\(/g
 
-// Hardcoded ceiling, measured after moving the Sherpa dependency-failure
-// warnings onto electron/logger.js, then re-measured after merging the S3/S4
-// MCP-confirmation and updater-gate warnings (+8). Lower it whenever the count drops.
+// Hardcoded ceiling, re-measured after moving the Sherpa dependency-failure
+// warnings and MCP child stderr onto electron/logger.js, then after merging the
+// S3/S4 MCP-confirmation and updater-gate warnings (+8). The src bucket carries
+// the media-permission status warning added in #253, which replaced an electron
+// permission call, so the total stayed at 436. MCP stderr is now logged through
+// electron/logger.js and is not counted here. Lower the total whenever the
+// count drops.
 const BASELINE_TOTAL = 436
 const BASELINE_BY_ROOT = {
-  electron: 283,
-  src: 153,
+  electron: 282,
+  src: 154,
 }
 
 function countConsoleCalls(source) {

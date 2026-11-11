@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nexus</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+    background: #1c1c22;
+    color: #f4f4f7;
+    font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  p { margin: 0; }
+  button {
+    cursor: pointer;
+    padding: 8px 20px;
+    border: 1px solid #5a5a68;
+    border-radius: 8px;
+    background: #2b2b35;
+    color: inherit;
+    font: inherit;
+  }
+  button:hover:enabled { background: #363642; }
+  button:disabled { cursor: default; opacity: 0.7; }
+</style>
+</head>
+<body>
+<main>
+  <p id="nexus-pet-message">Nexus didn't load. Click to try again.</p>
+  <button type="button" id="nexus-pet-retry">Try again</button>
+</main>
+<script>
+  (function () {
+    'use strict'
+
+    // The fallback retry never uses preload or IPC: the button navigates to a
+    // fixed marker that the main process intercepts before the page leaves.
+    var RETRY_URL = 'nexus-retry://pet'
+
+    // Copy is intentionally duplicated from the product-approved sheet so this
+    // page keeps working when the renderer and i18n bundles cannot load.
+    var COPY = {
+      'zh-CN': {
+        message: 'Nexus 没能加载出来，点一下重试',
+        retry: '重试',
+        retrying: '重试中…'
+      },
+      'zh-TW': {
+        message: 'Nexus 沒能載入，點一下重試',
+        retry: '重試',
+        retrying: '重試中…'
+      },
+      'en-US': {
+        message: 'Nexus didn\'t load. Click to try again.',
+        retry: 'Try again',
+        retrying: 'Trying…'
+      },
+      ja: {
+        message: 'Nexus を読み込めませんでした。クリックしてもう一度試してください。',
+        retry: 'もう一度試す',
+        retrying: '再試行中…'
+      },
+      ko: {
+        message: 'Nexus를 불러오지 못했어요. 눌러서 다시 시도해 주세요.',
+        retry: '다시 시도',
+        retrying: '다시 시도하는 중…'
+      }
+    }
+
+    function normalizeLocale(value) {
+      var locale = String(value || '').toLowerCase().replace(/_/g, '-')
+      if (locale === 'zh-tw' || locale === 'zh-hk' || locale.indexOf('zh-hant') === 0) return 'zh-TW'
+      if (locale.indexOf('zh') === 0) return 'zh-CN'
+      if (locale.indexOf('ja') === 0) return 'ja'
+      if (locale.indexOf('ko') === 0) return 'ko'
+      if (locale === 'en' || locale.indexOf('en-') === 0) return 'en-US'
+      return 'en-US'
+    }
+
+    function readLocale() {
+      var fromQuery = ''
+      try {
+        fromQuery = new URLSearchParams(window.location.search).get('lang') || ''
+      } catch (error) {
+        fromQuery = ''
+      }
+      if (fromQuery) return normalizeLocale(fromQuery)
+      try {
+        return normalizeLocale(window.navigator.language)
+      } catch (error) {
+        return 'en-US'
+      }
+    }
+
+    var locale = readLocale()
+    var copy = COPY[locale] || COPY['en-US']
+    var message = document.getElementById('nexus-pet-message')
+    var button = document.getElementById('nexus-pet-retry')
+
+    document.documentElement.lang = locale
+    message.textContent = copy.message
+    button.textContent = copy.retry
+    button.addEventListener('click', function () {
+      button.disabled = true
+      button.textContent = copy.retrying
+      window.location.href = RETRY_URL
+    })
+  })()
+</script>
+</body>
+</html>

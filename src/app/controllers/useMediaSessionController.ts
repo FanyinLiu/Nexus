@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from '../../i18n/useTranslation.ts'
+import { warnRedacted } from '../../lib/logger.ts'
 import { isMediaSessionAvailable } from '../../lib/platformProfile.ts'
 import type { ChatMessageTone, MediaSessionSnapshot, PlatformProfile } from '../../types'
 
@@ -55,7 +56,8 @@ export function useMediaSessionController({
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t('chat.media_session.control_failed_generic')
-      appendSystemMessage(t('chat.media_session.control_failed_system', { error: errorMessage }), 'error')
+      warnRedacted('[mediaSession] control failed:', errorMessage)
+      appendSystemMessage(t('chat.media_session.control_failed_system'), 'error')
     } finally {
       const snapshot = await refreshMediaSession()
       setMediaSession(snapshot)
