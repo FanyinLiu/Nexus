@@ -5,6 +5,10 @@ import { acceptPersonaSoulContent } from '../services/personaProfileLoader.js'
 import { parseCharacterCard } from '../services/characterCardParser.js'
 import { mapCardToPersona } from '../services/characterCardMapper.js'
 import { requireTrustedSender } from './validate.js'
+import {
+  validatePersonaInitPayload,
+  validatePersonaSaveMemoryPayload,
+} from './payloadSchemas.js'
 
 export function register() {
   ipcMain.handle('persona:load-soul', async (event) => {
@@ -38,7 +42,8 @@ export function register() {
 
   ipcMain.handle('persona:save-memory', async (event, payload) => {
     requireTrustedSender(event)
-    await personaLoader.savePersonaMemory(String(payload?.content ?? ''))
+    payload = validatePersonaSaveMemoryPayload(payload)
+    await personaLoader.savePersonaMemory(payload.content ?? '')
     return { ok: true }
   })
 
@@ -69,7 +74,8 @@ export function register() {
 
   ipcMain.handle('persona:init', async (event, payload) => {
     requireTrustedSender(event)
-    return personaLoader.ensurePersonaDir(String(payload?.defaultSoul ?? ''))
+    payload = validatePersonaInitPayload(payload)
+    return personaLoader.ensurePersonaDir(payload.defaultSoul ?? '')
   })
 
   // ── v2 per-profile persona (soul/memory/examples/style/voice/tools) ──

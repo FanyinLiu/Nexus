@@ -63,20 +63,24 @@ import {
 import { applySystemVibrancy } from '../systemVibrancy.js'
 import { requireTrustedSender } from './validate.js'
 import {
+  validateClosePanelPayload,
+  validateConfirmDialogPayload,
   validateDesktopContextRequestPayload,
   validateExternalLinkToolPayload,
   validateIntegrationInspectPayload,
+  validateLaunchOnStartupPayload,
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
   validateModelSetupResolvePayload,
   validateOpenPanelPayload,
-  validateClosePanelPayload,
   validatePanelWindowStatePayload,
+  validatePetFreeModePayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
   validateSpeechStopPlaybackPayload,
+  validateSystemVibrancyPayload,
   validateTextFileOpenPayload,
   validateTextFileSavePayload,
   validateWeatherToolPayload,
@@ -240,7 +244,8 @@ export function register() {
 
   ipcMain.handle('pet-window:set-free-mode', (event, payload) => {
     requireTrustedSender(event)
-    return setPetFreeModeForEvent(event, Boolean(payload?.freeMode))
+    payload = validatePetFreeModePayload(payload)
+    return setPetFreeModeForEvent(event, Boolean(payload.freeMode))
   })
 
   ipcMain.handle('window:open-panel', (event, section) => {
@@ -326,7 +331,8 @@ export function register() {
 
   ipcMain.handle('window:set-system-vibrancy', (event, payload) => {
     requireTrustedSender(event)
-    const enabled = Boolean(payload && payload.enabled)
+    payload = validateSystemVibrancyPayload(payload)
+    const enabled = Boolean(payload.enabled)
     const win = BrowserWindow.fromWebContents(event.sender)
     return { applied: applySystemVibrancy(win, enabled) }
   })
@@ -395,7 +401,8 @@ export function register() {
 
   ipcMain.handle('app:set-launch-on-startup', (event, value) => {
     requireTrustedSender(event)
-    return setLaunchOnStartupState(Boolean(value))
+    value = validateLaunchOnStartupPayload(value)
+    return setLaunchOnStartupState(value)
   })
 
   ipcMain.handle('app:get-platform-profile', (event) => {
@@ -426,6 +433,7 @@ export function register() {
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
     requireTrustedSender(event)
+    message = validateConfirmDialogPayload(message)
     // Electron dialogs accept an undefined parent window at runtime.
     const parentWindow = /** @type {Electron.BrowserWindow} */ (
       BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
@@ -435,7 +443,7 @@ export function register() {
       buttons: ['确定', '取消'],
       defaultId: 0,
       cancelId: 1,
-      message: String(message ?? ''),
+      message,
     })
     return response === 0
   })
