@@ -27,7 +27,7 @@ test('panel never self-releases on the inherited flag, then releases after pet s
   await flushMicrotasks()
   assert.deepEqual(
     panel.spoken,
-    ['While we were chatting, it was time for: panel wait.'],
+    ['While we were chatting, a reminder came up: panel wait.'],
     'the panel releases within 15 s after pet sync',
   )
   panel.unmount()
@@ -67,14 +67,14 @@ test('pet stuck fallback clears its own flag so the panel eventually releases on
   await flushMicrotasks()
   assert.deepEqual(
     panel.spoken,
-    ['While we were chatting, it was time for: panel after stuck.'],
+    ['While we were chatting, a reminder came up: panel after stuck.'],
     'panel releases exactly once',
   )
   panel.advance(30_000)
   await flushMicrotasks()
   assert.deepEqual(
     panel.spoken,
-    ['While we were chatting, it was time for: panel after stuck.'],
+    ['While we were chatting, a reminder came up: panel after stuck.'],
     'panel does not replay',
   )
   pet.unmount()
@@ -102,7 +102,7 @@ test('English merged playback lowercases a sentence start after the prefix', asy
   await flushMicrotasks()
   assert.deepEqual(
     harness.spoken,
-    ['While we were chatting, it was time for: time to drink water.'],
+    ['While we were chatting, a reminder came up: time to drink water.'],
   )
   harness.unmount()
 })

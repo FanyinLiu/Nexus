@@ -19,6 +19,7 @@ function copyFor(messages: Record<string, string>): DeferredReminderCopy {
     separator,
     sentenceEnd: messages['companion.notice.deferred_end'],
     prefix: (items) => messages['companion.notice.deferred_prefix'].replace('{items}', items),
+    prefixLabel: messages['companion.notice.deferred_prefix'].split('{items}', 1)[0].trimEnd(),
     more: (count) => messages['companion.notice.deferred_more'].replace('{count}', String(count)),
     moreOne: () => messages['companion.notice.deferred_more_one'],
     moreJoiner: separator.endsWith(' ') ? ' ' : '',
@@ -71,7 +72,7 @@ test('prefix appears only when any reminder waited at least 60 seconds', () => {
   assert.equal(at(60_000)?.usedPrefix, true)
   assert.equal(
     at(60_000)?.speechContent,
-    'While we were chatting, it was time for: drink water.',
+    'While we were chatting, a reminder came up: drink water.',
   )
   assert.equal(at(61_000)?.usedPrefix, true)
 })
@@ -142,7 +143,7 @@ test('every locale has exact five-item and single-item output', () => {
     {
       name: 'en',
       messages: enMessages,
-      five: 'While we were chatting, it was time for: a; b; c. 2 more reminders.',
+      five: 'While we were chatting, a reminder came up: a; b; c. 2 more reminders.',
       single: 'take out the trash.',
       singleItem: 'take out the trash',
     },
@@ -216,7 +217,7 @@ test('English prefix lowercases a sentence start but keeps acronyms', () => {
   ], en, { now: 60_000 })
   assert.equal(
     sentence?.speechContent,
-    'While we were chatting, it was time for: time to drink water.',
+    'While we were chatting, a reminder came up: time to drink water.',
   )
 
   const acronym = mergeDeferredReminders([
@@ -224,11 +225,11 @@ test('English prefix lowercases a sentence start but keeps acronyms', () => {
   ], en, { now: 60_000 })
   assert.equal(
     acronym?.speechContent,
-    'While we were chatting, it was time for: TV time.',
+    'While we were chatting, a reminder came up: TV time.',
   )
 })
 
-test('multi-line items use only their title line for chat and speech', () => {
+test('multi-line chat keeps full text while speech and bubble use the title line', () => {
   const en = copyFor(enMessages)
   const multiLine: DeferredReminderItem = {
     reminderId: 'auto',
@@ -239,9 +240,92 @@ test('multi-line items use only their title line for chat and speech', () => {
     speechContent: '【自动任务】标题\n内容正文',
   }
   const merged = mergeDeferredReminders([multiLine], en, { now: 0 })
-  assert.equal(merged?.chatContent, '【自动任务】标题.')
+  assert.equal(merged?.chatContent, '【自动任务】标题\n内容正文')
   assert.equal(merged?.speechContent, '【自动任务】标题.')
-  assert.equal(merged?.bubbleContent, '【自动任务】标题\n内容正文.')
+  assert.equal(merged?.bubbleContent, '【自动任务】标题.')
+})
+
+test('chat content uses prefix, item and more lines without separators or punctuation', () => {
+  const zh = copyFor(zhCNMessages)
+  const en = copyFor(enMessages)
+  const makeItems = (first: string, second: string, third: string, fourth?: string) => [
+    {
+      reminderId: 'first',
+      dueAt: 1,
+      enqueuedAt: 0,
+      chatContent: `${first}\nfull details`,
+      bubbleContent: `${first}\nfull details`,
+      speechContent: `${first}\nfull details`,
+    },
+    {
+      reminderId: 'second',
+      dueAt: 2,
+      enqueuedAt: 0,
+      chatContent: second,
+      bubbleContent: second,
+      speechContent: second,
+    },
+    {
+      reminderId: 'third',
+      dueAt: 3,
+      enqueuedAt: 0,
+      chatContent: third,
+      bubbleContent: third,
+      speechContent: third,
+    },
+    ...(fourth ? [{
+      reminderId: 'fourth',
+      dueAt: 4,
+      enqueuedAt: 0,
+      chatContent: fourth,
+      bubbleContent: fourth,
+      speechContent: fourth,
+    }] : []),
+  ]
+
+  const zhThree = mergeDeferredReminders(makeItems('喝水', '拿快递', '给妈打电话。'), zh, { now: 60_000 })
+  assert.equal(
+    zhThree?.chatContent,
+    '刚才聊天的时候到点了：\n喝水\nfull details\n拿快递\n给妈打电话。',
+  )
+  assert.equal(
+    zhThree?.speechContent,
+    '刚才聊天的时候到点了：喝水；拿快递；给妈打电话。',
+  )
+
+  const zhFour = mergeDeferredReminders(makeItems('喝水', '拿快递', '给妈打电话。', '买牛奶'), zh, { now: 60_000 })
+  assert.equal(
+    zhFour?.chatContent,
+    '刚才聊天的时候到点了：\n喝水\nfull details\n拿快递\n给妈打电话。\n还有 1 条提醒。',
+  )
+  assert.equal(
+    zhFour?.speechContent,
+    '刚才聊天的时候到点了：喝水；拿快递；给妈打电话。还有 1 条提醒。',
+  )
+
+  const enThree = mergeDeferredReminders(makeItems('drink water', 'pick up parcel', 'call mom!'), en, { now: 60_000 })
+  assert.equal(
+    enThree?.chatContent,
+    'While we were chatting, a reminder came up:\ndrink water\nfull details\npick up parcel\ncall mom!',
+  )
+  assert.equal(
+    enThree?.speechContent,
+    'While we were chatting, a reminder came up: drink water; pick up parcel; call mom.',
+  )
+
+  const enFour = mergeDeferredReminders(makeItems('drink water', 'pick up parcel', 'call mom!', 'buy milk'), en, { now: 60_000 })
+  assert.equal(
+    enFour?.chatContent,
+    'While we were chatting, a reminder came up:\ndrink water\nfull details\npick up parcel\ncall mom!\n1 more reminder.',
+  )
+  assert.equal(
+    enFour?.speechContent,
+    'While we were chatting, a reminder came up: drink water; pick up parcel; call mom. 1 more reminder.',
+  )
+
+  const noPrefix = mergeDeferredReminders(makeItems('喝水', '拿快递', '给妈打电话。'), zh, { now: 0 })
+  assert.equal(noPrefix?.chatContent, '喝水\nfull details\n拿快递\n给妈打电话。')
+  assert.equal(noPrefix?.speechContent, '喝水；拿快递；给妈打电话。')
 })
 
 test('punctuation-only items keep a non-empty sensible fallback', () => {

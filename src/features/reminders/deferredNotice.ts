@@ -28,6 +28,8 @@ export type DeferredReminderCopy = {
   sentenceEnd: string
   /** Prefix added once when at least one queued item waited long enough. */
   prefix: (items: string) => string
+  /** Prefix text without `{items}`, used as its own chat-record line. */
+  prefixLabel: string
   more: (count: number) => string
   moreOne: () => string
   /** Locale-appropriate gap before the "more" sentence. */
@@ -81,7 +83,7 @@ function lowercaseSentenceStart(text: string) {
   return text.replace(/^([A-Z])(?=[a-z])/u, (letter) => letter.toLowerCase())
 }
 
-/** Chat summaries and speech use the title line of multi-line reminder copy. */
+/** Speech and bubble use the title line of multi-line reminder copy. */
 function firstLine(value: string) {
   return value.split(/\r?\n/u, 1)[0] ?? value
 }
@@ -108,16 +110,36 @@ export function dedupeDeferredReminders(
 
 function channelText(
   items: readonly DeferredReminderItem[],
-  channel: 'chatContent' | 'bubbleContent' | 'speechContent',
+  channel: 'bubbleContent' | 'speechContent',
   copy: DeferredReminderCopy,
 ) {
-  const titleLineOnly = channel === 'chatContent' || channel === 'speechContent'
   return items
-    .map((item) => normalizeDeferredReminderText(
-      titleLineOnly ? firstLine(item[channel]) : item[channel],
-    ))
+    .map((item) => normalizeDeferredReminderText(firstLine(item[channel])))
     .filter(Boolean)
     .join(copy.separator)
+}
+
+/**
+ * Chat history keeps every selected reminder as its own full-text line, with
+ * its original internal line breaks. The prefix and "more" sentence are also
+ * separate lines; no separator, punctuation stripping, or final period.
+ */
+function chatText(
+  items: readonly DeferredReminderItem[],
+  copy: DeferredReminderCopy,
+  usedPrefix: boolean,
+  extraCount: number,
+) {
+  const lines: string[] = []
+  if (usedPrefix) lines.push(copy.prefixLabel)
+  for (const item of items) {
+    const text = item.chatContent.trim()
+    if (text) lines.push(text)
+  }
+  if (extraCount > 0) {
+    lines.push(extraCount === 1 ? copy.moreOne() : copy.more(extraCount))
+  }
+  return lines.join('\n')
 }
 
 function appendMoreLine(
@@ -156,7 +178,7 @@ export function mergeDeferredReminders(
   const extraCount = Math.max(0, deduped.length - selected.length)
   const usedPrefix = deduped.some((item) => now - item.enqueuedAt >= prefixThresholdMs)
 
-  const buildChannel = (channel: 'chatContent' | 'bubbleContent' | 'speechContent') => {
+  const buildSpokenChannel = (channel: 'bubbleContent' | 'speechContent') => {
     const joined = channelText(selected, channel, copy)
     const ended = appendSentenceEnd(joined, copy.sentenceEnd)
     const cased = usedPrefix && copy.lowercaseFirstItem
@@ -171,8 +193,8 @@ export function mergeDeferredReminders(
     selected,
     extraCount,
     usedPrefix,
-    chatContent: buildChannel('chatContent'),
-    bubbleContent: buildChannel('bubbleContent'),
-    speechContent: buildChannel('speechContent'),
+    chatContent: chatText(selected, copy, usedPrefix, extraCount),
+    bubbleContent: buildSpokenChannel('bubbleContent'),
+    speechContent: buildSpokenChannel('speechContent'),
   }
 }

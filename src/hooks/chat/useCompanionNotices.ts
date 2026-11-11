@@ -253,10 +253,12 @@ export function useCompanionNotices({
 
   const buildDeferredReminderCopy = useCallback((): DeferredReminderCopy => {
     const separator = t('companion.notice.deferred_separator')
+    const prefixTemplate = t('companion.notice.deferred_prefix')
     return {
       separator,
       sentenceEnd: t('companion.notice.deferred_end'),
-      prefix: (items) => t('companion.notice.deferred_prefix', { items }),
+      prefix: (items) => prefixTemplate.replace('{items}', items),
+      prefixLabel: prefixTemplate.split('{items}', 1)[0].trimEnd(),
       more: (count) => t('companion.notice.deferred_more', { count }),
       moreOne: () => t('companion.notice.deferred_more_one'),
       // Latin locales need a space before the "more" sentence; zh/ja use the

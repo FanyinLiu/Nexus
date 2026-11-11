@@ -151,7 +151,7 @@ test('new reminders merge by due time, dedupe by id, and speak once with one pre
   assert.equal(harness.spoken.length, 1, 'one TTS call for the whole batch')
   assert.equal(
     harness.spoken[0],
-    'While we were chatting, it was time for: early reminder; middle reminder; late reminder. 1 more reminder.',
+    'While we were chatting, a reminder came up: early reminder; middle reminder; late reminder. 1 more reminder.',
   )
   assert.equal(harness.bubbles.length, 1, 'one bubble for the whole batch')
   assert.equal(harness.messages.length, 1, 'one chat line for the whole batch')
@@ -173,7 +173,7 @@ test('an interrupted merged replay keeps one prefix and one more line', async ()
   harness.bus.emit({ type: 'session:completed' })
   await flushMicrotasks()
 
-  const expected = 'While we were chatting, it was time for: early reminder; middle reminder; late reminder. 1 more reminder.'
+  const expected = 'While we were chatting, a reminder came up: early reminder; middle reminder; late reminder. 1 more reminder.'
   assert.deepEqual(harness.spoken, [expected])
   assert.equal(harness.messages.length, 1)
   assert.equal(harness.bubbles.length, 1)
@@ -214,7 +214,7 @@ test('stop-all appends one merged chat line without speaking or bubbling', async
   emitSpeechStopAll()
   await flushMicrotasks()
 
-  assert.deepEqual(harness.messages, ['title-a: a; title-b: b.'])
+  assert.deepEqual(harness.messages, ['title-a: a\ntitle-b: b'])
   assert.deepEqual(harness.spoken, [], 'stop-all never speaks the queued reminders')
   assert.deepEqual(harness.bubbles, [], 'stop-all never opens a pet bubble')
   assert.equal(harness.api.hasDeferredCompanionNotices(), false)
@@ -225,7 +225,7 @@ test('stop-all appends one merged chat line without speaking or bubbling', async
   harness.bus.emit({ type: 'session:completed' })
   await flushMicrotasks()
   assert.deepEqual(harness.spoken, [], 'nothing replays after stop-all')
-  assert.deepEqual(harness.messages, ['title-a: a; title-b: b.'])
+  assert.deepEqual(harness.messages, ['title-a: a\ntitle-b: b'])
   harness.unmount()
 })
 
@@ -255,7 +255,7 @@ test('stop-all skips a speech-only replay and keeps only the normal reminder lin
   await flushMicrotasks()
 
   assert.equal(harness.messages.length, 2, 'only one new line is appended')
-  assert.equal(harness.messages[1], 'title-normal: normal.')
+  assert.equal(harness.messages[1], 'title-normal: normal')
   assert.doesNotMatch(harness.messages[1], /replayed/u, 'the speech-only replay is not duplicated')
   assert.equal(harness.spoken.length, spokenBeforeStop, 'stop-all does not speak')
   assert.equal(harness.bubbles.length, bubblesBeforeStop, 'stop-all does not bubble')

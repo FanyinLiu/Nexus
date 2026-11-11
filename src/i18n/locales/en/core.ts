@@ -37,7 +37,7 @@ export const enCore = {
   'ui_v2.chat.view_new_messages': 'View new messages',
   'ui_v2.chat.open_reply': 'Open chat: {reply}',
   'common.none': 'None',
-  'companion.notice.deferred_prefix': 'While we were chatting, it was time for: {items}',
+  'companion.notice.deferred_prefix': 'While we were chatting, a reminder came up: {items}',
   'companion.notice.deferred_more': '{count} more reminders.',
   'companion.notice.deferred_more_one': '1 more reminder.',
   'companion.notice.deferred_separator': '; ',
