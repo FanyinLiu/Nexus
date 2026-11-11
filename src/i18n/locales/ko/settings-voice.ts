@@ -30,7 +30,7 @@ export const koSettingsVoice = {
   'settings.voice.vad.low': '낮음 (오작동 적음)',
   'settings.voice.vad.medium': '중간 (권장)',
   'settings.voice.vad.high': '높음 (더 민감)',
-  'settings.voice.allow_interruption': '발화로 끊기 허용',
+  'settings.voice.allow_interruption': '끼어들기 허용',
   'settings.voice.interrupt_hint': '그녀가 말하는 동안 보통 목소리로 말하면 멈춥니다.',
   'settings.voice.backchannel': '말하는 동안 작게 맞장구쳐요',
   'settings.voice.backchannel_hint': '말하는 중 잠깐 쉬는 순간에 작게 「응」 하고 맞장구쳐요. 말을 끊지 않고, 직접 음성을 시작했을 때만 동작해요.',
