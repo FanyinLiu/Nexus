@@ -275,7 +275,7 @@ README 顶部只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重
 
 ### 自动更新说明
 
-目前 Windows 和 Linux 没有自动更新。新版本需要从官方 GitHub Releases 手动下载安装包，并用同一 release 的 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` 校验 SHA-256 后再安装；应用不会自动下载、替换或重启安装。这是因为发版时不上传 `latest.yml` / `latest-linux*.yml` 这类自动更新清单（见 [docs/RELEASING.md](docs/RELEASING.md)）；代码路径在有清单时仍可能自动下载，所以现在没有自动更新靠的是这套发版做法。以后如果改了这种发版做法，README 和 `docs/RELEASING.md` 要在同一版本里一起改。macOS arm64 未签名包同样不会自动替换应用，只会检查新版本并打开官方 release 页面，仍需手动下载新的 `.dmg` / `.zip` 并替换应用。
+目前 Windows 和 Linux 没有自动更新。新版本需要从官方 GitHub Releases 手动下载安装包，并用同一 release 的 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` 校验 SHA-256 后再安装；应用不会自动下载、替换或重启安装。macOS arm64 未签名包同样不会自动替换应用，只会检查新版本并打开官方 release 页面，仍需手动下载新的 `.dmg` / `.zip` 并替换应用。
 
 ### 未签名安装提示与发行边界（macOS / Windows）
 

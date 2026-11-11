@@ -241,7 +241,7 @@ README には現在の安定版 v0.5.1 と一つ前の公開版 v0.5.0 の要点
 
 #### 自動更新について（Windows / Linux）
 
-現在、Windows と Linux には自動更新がありません。新しいバージョンは公式 GitHub Releases からインストーラーを手動でダウンロードし、同じ release の `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` で SHA-256 を確認してからインストールしてください。アプリが自動でダウンロード・置換・再起動することはありません。これはリリース時に `latest.yml` / `latest-linux*.yml` のような自動更新マニフェストをアップロードしないためです（`RELEASING.md` を参照）。マニフェストがあるとコード経路が自動ダウンロードすることはまだありますが、今自動更新がないのはこのリリース運用によります。今後この運用を変える場合は、README と `RELEASING.md` を同じバージョンで一緒に更新してください。
+現在、Windows と Linux には自動更新がありません。新しいバージョンは公式 GitHub Releases からインストーラーを手動でダウンロードし、同じ release の `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` で SHA-256 を確認してからインストールしてください。アプリが自動でダウンロード・置換・再起動することはありません。
 
 #### macOS 未署名ビルドの自動更新制限
 

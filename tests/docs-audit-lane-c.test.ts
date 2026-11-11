@@ -58,6 +58,8 @@ test('RELEASING.md describes the current unsigned-manual posture without a versi
   assert.ok(!releasing.includes('v0.5.1 and later must publish the signed profile'))
   assert.ok(!releasing.includes('v0.5.2 and later must publish'))
   assert.match(releasing, /currently still ships the unsigned-manual update posture/)
+  assert.match(releasing, /`latest\.yml` \/ `latest-linux\*\.yml`/)
+  assert.match(releasing, /never published/)
   assert.match(releasing, /update README and RELEASING in the same version/)
 })
 
@@ -71,4 +73,7 @@ test('README.md localizes the unsigned install headings and keeps the no-auto-up
   assert.match(readme, /^### 自动更新说明$/m)
   assert.ok(!readme.includes('### 自动更新说明（Windows / Linux）'))
   assert.match(readme, /目前 Windows 和 Linux 没有自动更新/)
+  assert.match(readme, /应用不会自动下载、替换或重启安装/)
+  assert.ok(!readme.includes('latest.yml'))
+  assert.ok(!readme.includes('要在同一版本里一起改'))
 })
