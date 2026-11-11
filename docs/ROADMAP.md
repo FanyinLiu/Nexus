@@ -658,7 +658,8 @@ For the active Phase 1 path, prioritize:
 Make the smallest usable Nexus experience work end to end.
 
 - Launch a small always-on desktop companion window.
-- Use the default `nexus-mini` static avatar; keep full Live2D optional.
+- Use Live2D as the character path, with the bundled official samples Mao
+  (default), Haru, and Hiyori.
 - Support Ollama (`http://127.0.0.1:11434/v1`, `qwen3:8b`) and DeepSeek
   (`deepseek-flash`) for simple text chat.
 - Keep onboarding focused on text model, identity, and window basics.
@@ -779,11 +780,12 @@ Until then:
 - README per locale: clear "first-launch warning is expected, here's
   why and how to bypass" section (xattr -dr on macOS, SmartScreen
   "More info → Run anyway" on Windows). Currently buried.
-- Linux: add detached GPG signature + SHA-256 alongside AppImage / deb.
-  This is free and orthogonal to platform code-signing.
+- Linux: releases use the `SHA256SUMS-linux.txt` SHA-256 manifest;
+  detached GPG signatures are not provided yet.
 - Release notes: keep the install workaround visible at the top.
 
-Estimate: ~1 day for docs + GPG, no recurring cost.
+Estimate: ~1 day for docs; no recurring cost. GPG signing is not currently
+provided.
 
 ## Tier 2 — Quality polish (worth doing while around)
 
@@ -846,22 +848,15 @@ default change.
 
 Estimate: 1-2 weeks for the engine; rollout spans three patch versions.
 
-### 2.3 Minimal MCP client — gated companion ability
+### 2.3 MCP tools — shipped, gated companion ability
 
-Open-LLM-VTuber and SillyTavern both speak MCP now; it's becoming the
-standard way to give a chat companion access to tools. Nexus has an MCP
-host stub and approval gate but doesn't actually consume MCP servers
-beyond the bare host.
+MCP is already available in chat. Nexus connects to configured MCP servers,
+exposes their tools alongside built-in tools, and keeps a per-tool approval
+gate. Users configure servers in Settings → Connections (`integrations`), and
+each tool call needs approval before it runs.
 
-**Scope:**
-- Renderer-side MCP client that connects to a stdio or HTTP server given
-  a config file path.
-- Surface available tools alongside built-in tools in the prompt.
-- Keep the per-tool approval gate from the v0.3.0 audit (M2).
-- Keep it behind an explicit setting and present it as "abilities" rather
-  than a generic workbench/plugin marketplace.
-
-Estimate: 1 week.
+Status: shipped. Remaining work is maintenance of the existing host and
+approval path, not a new client surface.
 
 ## Experimental surfaces
 
@@ -925,8 +920,9 @@ New decision 2026-04-30:
 All four open questions resolved 2026-04-28:
 
 1. **Code signing** — deferred indefinitely. No $220/year right now.
-   Improve the unsigned-install README + add Linux GPG signatures
-   instead. Reversible if reasons change. (See 1.2.)
+   Improve the unsigned-install README; Linux releases use SHA-256
+   manifests, and detached GPG signatures are not provided yet.
+   Reversible if reasons change. (See 1.2.)
 2. **Crisis-response tone** — hybrid. Persona stays in character with an
    empathic reframing; a separate hotline panel slides over the
    conversation. (See 1.1.)

@@ -80,22 +80,23 @@ count, and daily-log copy. The stable handoff lives in
 release commit by the protected workflow; no physical-device evidence is
 claimed.
 
-### v0.5.0 unsigned update channel exception — 2026-11-06
+### v0.5.0–v0.5.1 unsigned update channel exception — 2026-11-06
 
-For v0.5.0 only, 音梵 (the owner) explicitly authorized publishing the stable
-release without the `NEXUS_UPDATE_SIGNING_KEY` secret. This does not waive any
-gate: tag provenance, `release:unsigned:gate`, `prerelease-check`, packaging,
-per-platform checksum generation, remote asset closure, and draft publication
-still run unchanged.
+For v0.5.0 and v0.5.1, 音梵 (the owner) explicitly authorized publishing the
+stable release without the `NEXUS_UPDATE_SIGNING_KEY` secret. This does not
+waive any gate: tag provenance, `release:unsigned:gate`, `prerelease-check`,
+packaging, per-platform checksum generation, remote asset closure, and draft
+publication still run unchanged.
 
 The accepted profile is `unsigned-manual`:
 
 - Windows and Linux publish installers and `SHA256SUMS-*.txt` only. Their
   `latest.yml` / `latest-linux*.yml` and `.sig` files are removed before the
   checksum and upload steps and are never published.
-- Windows and Linux therefore have **no automatic update** for v0.5.0. Users
-  must download the next version manually from the official GitHub Release.
-  Release notes and support replies must not claim Windows/Linux auto-update.
+- Windows and Linux therefore have **no automatic update** for v0.5.0 and
+  v0.5.1. Users must download the next version manually from the official
+  GitHub Release. Release notes and support replies must not claim
+  Windows/Linux auto-update.
 - The macOS arm64 build stays ad-hoc signed and manual-download. Its
   `latest-mac.yml` is produced but not consumed by the unsigned macOS runtime.
 - The Windows x64 installer stays `NotSigned`; the SmartScreen warning is
@@ -103,9 +104,10 @@ The accepted profile is `unsigned-manual`:
 - A missing key must never be replaced by a fabricated signature, a new key
   introduced during the release, or an unsigned manifest upload.
 
-This exception ends with v0.5.0. v0.5.1 and later must publish the signed
-profile by configuring `NEXUS_UPDATE_SIGNING_KEY`, or record a new
-version-scoped exception before tagging.
+v0.5.1 continues the same unsigned-manual exception. A future version that
+requires the signed profile must configure `NEXUS_UPDATE_SIGNING_KEY`, or
+record a new version-scoped exception before tagging; that change has not
+happened for v0.5.1.
 
 ### v0.4.3 maintainer exception — 2026-07-16
 

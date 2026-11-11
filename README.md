@@ -284,11 +284,11 @@ v0.5.1 的 Windows 和 Linux 没有自动更新。新版本需要从官方 GitHu
 - **macOS / Gatekeeper**：v0.5.1 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
 - **Windows / SmartScreen**：v0.5.1 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
 
-#### macOS unsigned auto-update limitation
+#### macOS 未签名自动更新限制
 
 macOS arm64 未签名包只会检查新版本并打开官方 release 页面；它不会静默下载、替换或重启安装。每次升级都需要用户手动下载新 `.dmg` / `.zip`、重新确认 Gatekeeper 提示并替换应用。
 
-#### Windows unsigned installer limitation
+#### Windows 未签名安装器限制
 
 Windows x64 安装器会以 `NotSigned` 发布，无法提供发布者身份验证或稳定的 SmartScreen 声誉。用户必须从官方 GitHub Releases 手动确认并运行安装器；不要把 SmartScreen 绕过说明理解为安全背书。
 
