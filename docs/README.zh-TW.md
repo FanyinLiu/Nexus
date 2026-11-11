@@ -242,7 +242,7 @@ README 只保留目前穩定版 v0.5.1 和上一公開版本 v0.5.0 的重點；
 
 #### 自動更新說明（Windows / Linux）
 
-v0.5.1 的 Windows 和 Linux 沒有自動更新。新版本需要從官方 GitHub Releases 手動下載安裝包，並用同一個 release 的 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` 校驗 SHA-256 後再安裝；應用程式不會自動下載、替換或重新啟動安裝。
+目前 Windows 和 Linux 沒有自動更新。新版本需要從官方 GitHub Releases 手動下載安裝包，並用同一個 release 的 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` 校驗 SHA-256 後再安裝；應用程式不會自動下載、替換或重新啟動安裝。
 
 #### macOS 未簽署自動更新限制
 

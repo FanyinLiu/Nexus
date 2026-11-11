@@ -59,5 +59,7 @@ test('README.md localizes the unsigned install headings and keeps the no-auto-up
   assert.ok(!readme.includes('Windows unsigned installer limitation'))
   assert.match(readme, /#### macOS 未签名自动更新限制/)
   assert.match(readme, /#### Windows 未签名安装器限制/)
-  assert.match(readme, /Windows 和 Linux 没有自动更新/)
+  assert.match(readme, /^### 自动更新说明$/m)
+  assert.ok(!readme.includes('### 自动更新说明（Windows / Linux）'))
+  assert.match(readme, /目前 Windows 和 Linux 没有自动更新/)
 })

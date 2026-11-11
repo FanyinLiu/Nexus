@@ -13,7 +13,8 @@ test('README installation section documents the manual Windows/Linux update path
   const readme = readDoc('README.md')
 
   assert.match(readme, /## 安装与更新/)
-  assert.match(readme, /Windows 和 Linux 没有自动更新/)
+  assert.match(readme, /目前 Windows 和 Linux 没有自动更新/)
+  assert.ok(!readme.includes('v0.5.1 的 Windows 和 Linux'))
   assert.match(readme, /官方 GitHub Releases 手动下载/)
   assert.match(readme, /SHA256SUMS-windows\.txt/)
   assert.match(readme, /SHA256SUMS-linux\.txt/)
@@ -25,17 +26,18 @@ test('README keeps the authorized-assistance sentence unchanged', () => {
 })
 
 const LOCALIZED_MANUAL_UPDATE_LABELS = [
-  ['docs/README.zh-CN.md', '没有自动更新'],
-  ['docs/README.zh-TW.md', '沒有自動更新'],
-  ['docs/README.ja.md', '自動更新がありません'],
-  ['docs/README.ko.md', '자동 업데이트가 없습니다'],
+  ['docs/README.zh-CN.md', '目前 Windows 和 Linux 没有自动更新', 'v0.5.1 的 Windows 和 Linux'],
+  ['docs/README.zh-TW.md', '目前 Windows 和 Linux 沒有自動更新', 'v0.5.1 的 Windows 和 Linux'],
+  ['docs/README.ja.md', '現在、Windows と Linux には自動更新がありません', 'v0.5.1 の Windows と Linux'],
+  ['docs/README.ko.md', '현재 Windows와 Linux에는 자동 업데이트가 없습니다', 'v0.5.1의 Windows와 Linux'],
 ] as const
 
-for (const [file, noAutoUpdateLabel] of LOCALIZED_MANUAL_UPDATE_LABELS) {
+for (const [file, noAutoUpdateLabel, staleVersionLabel] of LOCALIZED_MANUAL_UPDATE_LABELS) {
   test(`${file} documents the manual Windows/Linux update path`, () => {
     const readme = readDoc(file)
 
     assert.ok(readme.includes(noAutoUpdateLabel))
+    assert.ok(!readme.includes(staleVersionLabel))
     assert.match(readme, /SHA256SUMS-windows\.txt/)
     assert.match(readme, /SHA256SUMS-linux\.txt/)
   })
