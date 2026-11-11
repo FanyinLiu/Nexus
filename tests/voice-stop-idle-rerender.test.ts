@@ -8,6 +8,7 @@ import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
 import { useCompanionNoticeIdleFlush } from '../src/hooks/chat/useCompanionNoticeQueueSubscriptions.ts'
 import { VoiceBus } from '../src/features/voice/bus.ts'
 import { InterruptedError } from '../src/features/voice/interruptedError.ts'
+import type { VoiceState } from '../src/types/index.ts'
 
 type ReactInternals = { H: unknown }
 const reactInternals = (React as unknown as {
@@ -195,6 +196,77 @@ test('heartbeat rerenders do not postpone the user-button fallback', async () =>
   timers.advance(30_000)
   await flushMicrotasks()
   assert.deepEqual(spoken, ['drink water'], 'the replay is not repeated')
+
+  renderer.unmount()
+  assert.equal(timers.pending(), 0)
+})
+
+test('continuous listening holds a deferred reminder until the session ends', async () => {
+  const timers = fakeTimers()
+  const bus = new VoiceBus()
+  const spoken: string[] = []
+  const voiceStateRef = { current: 'listening' as VoiceState }
+  const continuousVoiceActiveRef = { current: true }
+  const busyRef = { current: false }
+  const stable = {
+    t: (key: string) => key,
+    appendChatMessage: () => undefined,
+    presentPetDialogBubble: () => undefined,
+    setError: () => undefined,
+  }
+  let api: ReturnType<typeof useCompanionNotices> | null = null
+
+  const renderer = createHookRenderer(() => {
+    const ctx = {
+      voiceStateRef,
+      continuousVoiceActiveRef,
+      speakAssistantReply: async (text: string) => { spoken.push(text) },
+    }
+    api = useCompanionNotices({
+      ctx,
+      t: stable.t as never,
+      busyRef,
+      appendChatMessage: stable.appendChatMessage,
+      presentPetDialogBubble: stable.presentPetDialogBubble,
+      setError: stable.setError,
+    })
+    useCompanionNoticeIdleFlush(
+      bus,
+      api.flushDeferredCompanionNotices,
+      timers,
+      api.canDeliverDeferredCompanionNotice,
+    )
+  })
+
+  renderer.render()
+  assert.ok(api)
+
+  await api!.pushCompanionNotice(NOTICE)
+  assert.deepEqual(spoken, [], 'the reminder waits for the listening turn to end')
+
+  bus.emit({ type: 'tts:started', text: 'reply', speechGeneration: 1 })
+  bus.emit({ type: 'tts:completed', speechGeneration: 1, shouldResumeContinuousVoice: true })
+  await flushMicrotasks()
+  assert.deepEqual(spoken, [], 'a completed reply does not release into continuous listening')
+
+  bus.emit({ type: 'session:started', sessionId: 'continuous-1', transport: 'api' })
+  bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  assert.deepEqual(spoken, [], 'a completed listening session does not release while continuous voice continues')
+
+  timers.advance(15_000)
+  await flushMicrotasks()
+  assert.deepEqual(spoken, [], 'the fallback also waits for the continuous session to end')
+
+  continuousVoiceActiveRef.current = false
+  voiceStateRef.current = 'idle'
+  bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  assert.deepEqual(spoken, ['drink water'], 'the reminder plays once after the session ends')
+
+  bus.emit({ type: 'tts:completed', speechGeneration: 2, shouldResumeContinuousVoice: false })
+  await flushMicrotasks()
+  assert.deepEqual(spoken, ['drink water'], 'the reminder is not replayed twice')
 
   renderer.unmount()
   assert.equal(timers.pending(), 0)
