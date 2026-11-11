@@ -4,12 +4,6 @@ import { searchWeb } from './webSearch.js'
 import { lookupWeatherByLocation } from './weatherTool.js'
 import { normalizeExternalUrl } from './toolRegistryUtils.js'
 import { resolveVaultRefsForSender } from '../services/vaultRefs.js'
-import { readMainUiLocale } from '../mainMessages.js'
-import {
-  buildExternalLinkConfirmDialog,
-  externalLinkCancelledMessage,
-  externalLinkOpenedMessage,
-} from '../services/approvalDialogCopy.js'
 
 function normalizeRendererToolPolicy(policy) {
   if (!policy || typeof policy !== 'object') {
@@ -47,19 +41,25 @@ function assertRendererToolAllowed(toolDefinition, payload) {
 
 async function openExternalLinkWithShell(payload, context = {}) {
   const url = normalizeExternalUrl(payload?.url)
-  const locale = readMainUiLocale()
-  const dialogOptions = buildExternalLinkConfirmDialog({ url, locale })
+  const dialogOptions = {
+    type: 'question',
+    buttons: ['打开', '取消'],
+    defaultId: 1,
+    cancelId: 1,
+    message: '即将打开外部链接',
+    detail: url,
+  }
   const { response } = context.sourceWindow
     ? await dialog.showMessageBox(context.sourceWindow, dialogOptions)
     : await dialog.showMessageBox(dialogOptions)
   if (response !== 0) {
-    throw new Error(externalLinkCancelledMessage(locale))
+    throw new Error('已取消打开外部链接。')
   }
   await shell.openExternal(url)
   return {
     ok: true,
     url,
-    message: externalLinkOpenedMessage(url, locale),
+    message: `已在系统浏览器中打开 ${url}`,
   }
 }
 

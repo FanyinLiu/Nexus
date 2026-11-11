@@ -11,7 +11,6 @@
  */
 
 import { translateMainMessage } from '../mainMessages.js'
-import { externalOpenDialogCopy } from '../userFacingDialogs.js'
 
 /**
  * @param {{ command?: unknown, args?: unknown[] }} plugin
@@ -152,43 +151,4 @@ export function buildBatchPluginApprovalDialog(input) {
       : translateMainMessage('approval.plugin.batch.message.other', { count }, locale),
     detail: `${listing}\n\n${translateMainMessage('approval.plugin.batch.detail', undefined, locale)}`,
   }
-}
-
-/**
- * Build the AI-tool external-link confirmation. Reuses the polished
- * window-open copy so browser opens speak the same language everywhere.
- * Cancel stays the default (defaultId 1), matching the window path.
- * @param {{ url: string, locale?: unknown }} input
- * @returns {Record<string, unknown>}
- */
-export function buildExternalLinkConfirmDialog(input) {
-  const { url, locale } = input ?? {}
-  const copy = externalOpenDialogCopy(locale)
-  return {
-    type: 'question',
-    buttons: [copy.open, copy.cancel],
-    defaultId: 1,
-    cancelId: 1,
-    title: copy.title,
-    message: copy.message,
-    detail: url,
-    noLink: true,
-  }
-}
-
-/**
- * @param {unknown} locale
- * @returns {string}
- */
-export function externalLinkCancelledMessage(locale) {
-  return translateMainMessage('approval.externalOpen.cancelled', undefined, locale)
-}
-
-/**
- * @param {string} url
- * @param {unknown} locale
- * @returns {string}
- */
-export function externalLinkOpenedMessage(url, locale) {
-  return translateMainMessage('approval.externalOpen.opened', { url }, locale)
 }

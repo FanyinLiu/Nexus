@@ -3,12 +3,9 @@ import { test } from 'node:test'
 
 import {
   buildBatchPluginApprovalDialog,
-  buildExternalLinkConfirmDialog,
   buildMcpStartApprovalDialog,
   buildMcpToolApprovalDialog,
   buildPluginApprovalDialog,
-  externalLinkCancelledMessage,
-  externalLinkOpenedMessage,
 } from '../electron/services/approvalDialogCopy.js'
 
 const LOCALES = ['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko'] as const
@@ -19,7 +16,7 @@ const MCP_START: Record<string, Copy> = {
   'zh-CN': {
     title: '要启动 MCP 服务吗',
     message: '允许 Nexus 启动「server-x」吗？',
-    suffix: '允许后，它会在你的电脑上运行，能读写你的文件、上网，权限和你自己一样。只批准你自己配的、或者完全信得过的。之后可以在「设置 → 外部集成」里撤销。',
+    suffix: '允许后，它会在你的电脑上运行，能读写你的文件、上网，权限和你自己一样。只批准你自己配的、或者完全信得过的。之后可以在「设置 → 连接」里撤销。',
     deny: '拒绝',
     allow: '允许',
     commandLabel: '命令：',
@@ -29,7 +26,7 @@ const MCP_START: Record<string, Copy> = {
   'zh-TW': {
     title: '要啟動 MCP 服務嗎',
     message: '允許 Nexus 啟動「server-x」嗎？',
-    suffix: '允許後，它會在你的電腦上執行，能讀寫你的檔案、上網，權限跟你自己一樣。只批准你自己設定的、或完全信得過的。之後可以在「設定 → 外部整合」裡撤銷。',
+    suffix: '允許後，它會在你的電腦上執行，能讀寫你的檔案、上網，權限跟你自己一樣。只批准你自己設定的、或完全信得過的。之後可以在「設定 → 連線」裡撤銷。',
     deny: '拒絕',
     allow: '允許',
     commandLabel: '指令：',
@@ -39,7 +36,7 @@ const MCP_START: Record<string, Copy> = {
   'en-US': {
     title: 'Start this MCP service?',
     message: 'Allow Nexus to start "server-x"?',
-    suffix: 'Once allowed, it runs on your computer and can read and change your files and use the internet, just like you can. Only allow ones you set up yourself or fully trust. You can take this back anytime in Settings → External integrations.',
+    suffix: 'Once allowed, it runs on your computer and can read and change your files and use the internet, just like you can. Only allow ones you set up yourself or fully trust. You can take this back anytime in Settings → Connection.',
     deny: "Don't allow",
     allow: 'Allow',
     commandLabel: 'Command:',
@@ -49,7 +46,7 @@ const MCP_START: Record<string, Copy> = {
   ja: {
     title: 'MCP サービスを起動しますか',
     message: '「server-x」の起動を許可しますか？',
-    suffix: '許可すると、このパソコン上で動き、あなたと同じようにファイルの読み書きやネット接続ができます。自分で設定したもの、または十分信頼できるものだけ許可してください。あとから「設定 → 外部連携」で取り消せます。',
+    suffix: '許可すると、このパソコン上で動き、あなたと同じようにファイルの読み書きやネット接続ができます。自分で設定したもの、または十分信頼できるものだけ許可してください。あとから「設定 → 接続」で取り消せます。',
     deny: '許可しない',
     allow: '許可',
     commandLabel: 'コマンド:',
@@ -59,7 +56,7 @@ const MCP_START: Record<string, Copy> = {
   ko: {
     title: 'MCP 서비스를 시작할까요?',
     message: 'Nexus가 "server-x"을(를) 시작해도 될까요?',
-    suffix: '허용하면 이 컴퓨터에서 실행되고, 당신처럼 파일을 읽고 바꾸거나 인터넷을 쓸 수 있어요. 직접 설정했거나 충분히 믿을 수 있는 것만 허용하세요. 나중에 설정 → 외부 통합에서 취소할 수 있어요.',
+    suffix: '허용하면 이 컴퓨터에서 실행되고, 당신처럼 파일을 읽고 바꾸거나 인터넷을 쓸 수 있어요. 직접 설정했거나 충분히 믿을 수 있는 것만 허용하세요. 나중에 설정 → 연결에서 취소할 수 있어요.',
     deny: '허용 안 함',
     allow: '허용',
     commandLabel: '명령:',
@@ -235,60 +232,12 @@ const PLUGIN_BATCH: Record<string, Copy> = {
   },
 }
 
-const EXTERNAL_OPEN: Record<string, Copy> = {
-  'zh-CN': {
-    title: '打开这个链接？',
-    message: 'Nexus 会在浏览器里打开它。',
-    open: '打开',
-    cancel: '取消',
-    cancelled: '没有打开外部链接。',
-    opened: '已在系统浏览器中打开 https://example.com/',
-  },
-  'zh-TW': {
-    title: '開啟這個連結？',
-    message: 'Nexus 會在瀏覽器裡開啟它。',
-    open: '開啟',
-    cancel: '取消',
-    cancelled: '沒有開啟外部連結。',
-    opened: '已在系統瀏覽器中開啟 https://example.com/',
-  },
-  'en-US': {
-    title: 'Open this link?',
-    message: 'Nexus will open it in your browser.',
-    open: 'Open',
-    cancel: 'Cancel',
-    cancelled: 'The external link was not opened.',
-    opened: 'Opened https://example.com/ in your browser.',
-  },
-  ja: {
-    title: 'このリンクを開きますか？',
-    message: 'ブラウザで開きます。',
-    open: '開く',
-    cancel: 'キャンセル',
-    cancelled: '外部リンクは開きませんでした。',
-    opened: 'https://example.com/ をブラウザで開きました。',
-  },
-  ko: {
-    title: '이 링크를 열까요?',
-    message: '브라우저에서 엽니다.',
-    open: '열기',
-    cancel: '취소',
-    cancelled: '외부 링크를 열지 않았어요.',
-    opened: 'https://example.com/을(를) 브라우저에서 열었어요.',
-  },
-}
-
 const DROPPED_BATCH_POINTERS = [
   '一个个开',
   '一個個開',
   'one by one',
   'ひとつずつ',
   '하나씩',
-  '设置 → 外部集成',
-  '設定 → 外部整合',
-  'Settings → External integrations',
-  '設定 → 外部連携',
-  '설정 → 외부 통합',
 ]
 
 type DialogOptions = {
@@ -467,40 +416,5 @@ test('batch-plugin dialog uses the singular _one wording instead of "1 plugins"'
     assert.ok(!options.title.includes('{count}'), locale)
     assert.ok(!options.message.includes('{count}'), locale)
     assert.ok(!options.title.includes('1 plugins'), locale)
-  }
-})
-
-test('AI-tool external-link confirm uses the five-locale window-open copy', () => {
-  const url = 'https://example.com/'
-
-  for (const locale of LOCALES) {
-    const expected = EXTERNAL_OPEN[locale]
-    const options = optionsOf(buildExternalLinkConfirmDialog({ url, locale }))
-
-    assert.equal(options.type, 'question', locale)
-    assert.equal(options.title, expected.title, locale)
-    assert.equal(options.message, expected.message, locale)
-    assert.deepEqual(options.buttons, [expected.open, expected.cancel], locale)
-    assert.equal(options.defaultId, 1, `${locale}: Cancel must stay the default`)
-    assert.equal(options.cancelId, 1, locale)
-    assert.equal(options.detail, url, locale)
-    assert.equal(options.noLink, true, locale)
-
-    assert.equal(externalLinkCancelledMessage(locale), expected.cancelled, locale)
-    assert.equal(externalLinkOpenedMessage(url, locale), expected.opened, locale)
-  }
-})
-
-test('AI-tool external-link confirm no longer hardcodes Chinese-only copy', () => {
-  const url = 'https://example.com/'
-  const chinese = optionsOf(buildExternalLinkConfirmDialog({ url, locale: 'zh-CN' }))
-
-  for (const locale of ['en-US', 'ja', 'ko']) {
-    const options = optionsOf(buildExternalLinkConfirmDialog({ url, locale }))
-    assert.notEqual(options.title, chinese.title, locale)
-    assert.notEqual(options.message, chinese.message, locale)
-    assert.notEqual(options.buttons[0], chinese.buttons[0], locale)
-    assert.notEqual(options.buttons[1], chinese.buttons[1], locale)
-    assert.notEqual(externalLinkCancelledMessage(locale), externalLinkCancelledMessage('zh-CN'), locale)
   }
 })
