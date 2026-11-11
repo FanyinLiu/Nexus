@@ -1,5 +1,6 @@
 import type { AppSettings, IntegrationPermissionMode } from '../../types'
 import { canUsePanelOnlyBridge } from '../../lib/windowCapability.ts'
+import { isScreenContextActive } from '../context/mediaPermissionStatus.ts'
 
 type ExternalActionIntegrationId = 'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp'
 
@@ -17,6 +18,7 @@ export type ExternalActionPolicySyncPayload = {
     clipboard: boolean
     screenshot: boolean
   }
+  settingsRevision: number
   toolOpenExternalRequiresConfirmation: boolean
   uiLanguage?: ExternalOpenUiLanguage
 }
@@ -36,8 +38,11 @@ export function buildExternalActionPolicySyncPayload(settings: AppSettings): Ext
     desktopContext: {
       activeWindow: contextAwarenessEnabled && settings.activeWindowContextEnabled === true,
       clipboard: contextAwarenessEnabled && settings.clipboardContextEnabled === true,
-      screenshot: contextAwarenessEnabled && settings.screenContextEnabled === true,
+      screenshot: isScreenContextActive(settings),
     },
+    settingsRevision: Number.isFinite(settings.settingsRevision)
+      ? Math.max(0, Math.floor(settings.settingsRevision))
+      : 0,
     policies: {
       telegram: {
         mode: settings.telegramPermissionMode,

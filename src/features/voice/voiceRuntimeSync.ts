@@ -1,32 +1,46 @@
 /**
  * Renderer → main sync for the on-demand voice sidecars.
  *
- * Sends only the selected engine ids and the two voice switches. The main
- * process owns the Python probe/spawn lifecycle; keeping this payload free of
- * keys and user text also keeps it safe to send from the pet window, which is
- * the only renderer guaranteed to load at launch.
+ * Sends only the selected engine ids and voice switches. The main process owns
+ * the Python probe/spawn lifecycle; keeping this payload free of keys and user
+ * text also keeps it safe to send from the pet window, which is the only
+ * renderer guaranteed to load at launch.
  */
 
 import type { AppSettings } from '../../types/app.ts'
 import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { isMicrophoneFeatureEnabled } from './microphoneFeature.ts'
 
 export type VoiceRuntimeSyncPayload = {
   speechInputEnabled: boolean
   speechInputProviderId: string
   speechOutputEnabled: boolean
   speechOutputProviderId: string
+  microphoneActive: boolean
+  settingsRevision: number
 }
 
 /**
  * Build the compact payload the main-process sidecar supervisor consumes.
  *
- * @param {Pick<AppSettings, 'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' | 'speechOutputProviderId'>} settings
+ * @param {Pick<AppSettings,
+ *   'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' |
+ *   'speechOutputProviderId' | 'wakeWordEnabled' | 'continuousVoiceModeEnabled' |
+ *   'wakewordAlwaysOn' | 'settingsRevision'
+ * >} settings
  * @returns {VoiceRuntimeSyncPayload}
  */
 export function buildVoiceRuntimeSyncPayload(
   settings: Pick<
     AppSettings,
-    'speechInputEnabled' | 'speechInputProviderId' | 'speechOutputEnabled' | 'speechOutputProviderId'
+    | 'speechInputEnabled'
+    | 'speechInputProviderId'
+    | 'speechOutputEnabled'
+    | 'speechOutputProviderId'
+    | 'wakeWordEnabled'
+    | 'continuousVoiceModeEnabled'
+    | 'wakewordAlwaysOn'
+    | 'settingsRevision'
   >,
 ): VoiceRuntimeSyncPayload {
   return {
@@ -34,6 +48,10 @@ export function buildVoiceRuntimeSyncPayload(
     speechInputProviderId: String(settings.speechInputProviderId ?? ''),
     speechOutputEnabled: settings.speechOutputEnabled === true,
     speechOutputProviderId: String(settings.speechOutputProviderId ?? ''),
+    microphoneActive: isMicrophoneFeatureEnabled(settings),
+    settingsRevision: Number.isFinite(settings.settingsRevision)
+      ? Math.max(0, Math.floor(settings.settingsRevision))
+      : 0,
   }
 }
 

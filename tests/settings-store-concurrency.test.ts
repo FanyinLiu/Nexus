@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 import { loadSettings, SETTINGS_STORAGE_KEY, SETTINGS_UPDATED_EVENT } from '../src/lib/storage.ts'
+import { CURRENT_SETTINGS_SCHEMA_VERSION } from '../src/lib/settingsMigrations.ts'
+import type { AppSettings } from '../src/types/app.ts'
 
 type LocalStorageMock = {
   getItem: (key: string) => string | null
@@ -128,7 +130,7 @@ test('identity no-op completes without persistence, hydration, policy, or notifi
   }
 })
 
-test('local persisted hydration failure resolves with the authoritative next settings', async () => {
+test('local persisted hydration failure resolves with the stored settings and revision', async () => {
   const errors: unknown[][] = []
   const originalError = console.error
   console.error = (...args: unknown[]) => { errors.push(args) }
@@ -151,22 +153,34 @@ test('local persisted hydration failure resolves with the authoritative next set
     const unsubscribe = store.subscribeToSettings((settings) => { seen.push(settings.apiKey) })
     const nextSettings = {
       ...loadSettings(),
-      apiKey: 'authoritative-secret',
-      companionName: 'authoritative next',
+      apiKey: 'sk-test-SECRET-123',
+      companionName: 'must-not-log-whole-settings',
     }
 
     const result = await store.setSettingsSnapshot(nextSettings)
+    const stored = JSON.parse(environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}') as {
+      apiKey?: string
+      companionName?: string
+      settingsRevision?: number
+    }
 
-    assert.equal(result.apiKey, 'authoritative-secret')
-    assert.equal(store.getSettingsSnapshot().apiKey, 'authoritative-secret')
-    assert.deepEqual(seen, ['authoritative-secret'])
+    assert.equal(result.apiKey, 'sk-test-SECRET-123')
+    assert.equal(result.companionName, 'must-not-log-whole-settings')
+    assert.equal(result.settingsRevision, stored.settingsRevision)
+    assert.equal(store.getSettingsSnapshot().apiKey, 'sk-test-SECRET-123')
+    assert.equal(store.getSettingsSnapshot().companionName, 'must-not-log-whole-settings')
+    assert.deepEqual(seen, ['sk-test-SECRET-123'])
     assert.equal(policySyncCalls, 1)
     assert.equal(vaultReads, 2)
-    assert.equal(JSON.parse(environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}').apiKey, '')
+    assert.equal(stored.apiKey, '')
+    assert.equal(stored.companionName, 'must-not-log-whole-settings')
     assert.equal(errors.length, 1)
     const serializedErrors = JSON.stringify(errors)
+    assert.doesNotMatch(serializedErrors, /sk-test-SECRET-123/)
+    assert.doesNotMatch(serializedErrors, /must-not-log-whole-settings/)
+    assert.doesNotMatch(serializedErrors, /settingsRevision/)
     assert.doesNotMatch(serializedErrors, /local-secret/)
-    assert.doesNotMatch(serializedErrors, /authoritative-secret/)
+    assert.doesNotMatch(serializedErrors, /\/Users\/|[A-Z]:\\/)
 
     unsubscribe()
   } finally {
@@ -396,6 +410,178 @@ test('a rejected mutation does not poison the queued tail', async () => {
     assert.equal(store.getSettingsSnapshot().userName, 'tail survives')
     assert.deepEqual(seen, ['tail survives'])
     unsubscribe()
+  } finally {
+    environment.restore()
+  }
+})
+
+test('hydration and identity re-commit carry the stored revision without bumping it', async () => {
+  const environment = installWindow({
+    vaultRetrieveMany: async () => ({}),
+    externalActionPolicySync: async () => undefined,
+    voiceRuntimeSync: async () => undefined,
+  })
+  environment.win.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      settingsRevision: 12,
+      companionName: 'Nexus revision',
+    }),
+  )
+
+  try {
+    const store = await importFreshSettingsStore()
+    const initialized = await store.initializeSettingsWithVault()
+    assert.equal(initialized.settingsRevision, 12)
+
+    const persistedAfterHydration = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number }
+    assert.equal(persistedAfterHydration.settingsRevision, 12)
+
+    const recommitted = await store.updateSettingsSnapshot((current) => current)
+    assert.equal(recommitted.settingsRevision, 12)
+    const persistedAfterRecommit = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number }
+    assert.equal(persistedAfterRecommit.settingsRevision, 12)
+  } finally {
+    environment.restore()
+  }
+})
+
+test('broadcast re-commit takes both value and revision from storage', async () => {
+  const environment = installWindow({
+    vaultStore: async () => undefined,
+    vaultRetrieveMany: async () => ({}),
+    externalActionPolicySync: async () => undefined,
+    voiceRuntimeSync: async () => undefined,
+  })
+  environment.win.localStorage.setItem(
+    SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+      settingsRevision: 1,
+      companionName: 'cached old',
+    }),
+  )
+
+  try {
+    const store = await importFreshSettingsStore()
+    const seen: AppSettings[] = []
+    const unsubscribe = store.subscribeToSettings((settings) => { seen.push(settings) })
+    assert.equal(store.getSettingsSnapshot().companionName, 'cached old')
+    assert.equal(store.getSettingsSnapshot().settingsRevision, 1)
+
+    environment.win.localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        settingsSchemaVersion: CURRENT_SETTINGS_SCHEMA_VERSION,
+        settingsRevision: 5,
+        companionName: 'stored new',
+      }),
+    )
+    environment.win.dispatchEvent(new Event(SETTINGS_UPDATED_EVENT))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const latest = store.getSettingsSnapshot()
+    const persisted = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as { settingsRevision?: number; companionName?: string }
+    assert.equal(latest.companionName, 'stored new')
+    assert.equal(latest.settingsRevision, 5)
+    assert.equal(persisted.companionName, 'stored new')
+    assert.equal(persisted.settingsRevision, 5)
+    assert.deepEqual(seen.at(-1), latest)
+    unsubscribe()
+  } finally {
+    environment.restore()
+  }
+})
+
+test('settings persistence comparison ignores the write revision', async () => {
+  const store = await importFreshSettingsStore()
+  const first = {
+    settingsRevision: 1,
+    companionName: 'same content',
+    textProviderProfiles: {},
+    speechInputProviderProfiles: {},
+    speechOutputProviderProfiles: {},
+  } as unknown as AppSettings
+  const second = {
+    settingsRevision: 2,
+    companionName: 'same content',
+    textProviderProfiles: {},
+    speechInputProviderProfiles: {},
+    speechOutputProviderProfiles: {},
+  } as unknown as AppSettings
+  assert.equal(
+    store.settingsPersistenceComparable(first),
+    store.settingsPersistenceComparable(second),
+  )
+})
+
+test('hydration failure after save re-reads value and revision from storage', async () => {
+  let vaultReads = 0
+  const environment = installWindow({
+    vaultStore: async () => undefined,
+    vaultStoreMany: async () => undefined,
+    vaultRetrieveMany: async () => {
+      vaultReads += 1
+      if (vaultReads >= 2) throw new Error('post-save vault read failed')
+      return {}
+    },
+    externalActionPolicySync: async () => undefined,
+    voiceRuntimeSync: async () => undefined,
+  })
+
+  try {
+    const store = await importFreshSettingsStore()
+    const base = loadSettings()
+    const providerId = base.apiProviderId
+    const draftProfile = {
+      apiBaseUrl: 'https://draft.invalid/v1',
+      apiKey: 'sk-profile-SECRET-456',
+      model: 'draft-profile-model',
+    }
+    const committed = await store.setSettingsSnapshot({
+      ...base,
+      companionName: 'stored after hydration failure',
+      apiKey: 'sk-test-SECRET-123',
+      voiceTriggerMode: 'wake_word',
+      wakeWordEnabled: false,
+      textProviderProfiles: {
+        ...base.textProviderProfiles,
+        [providerId]: draftProfile,
+      },
+    })
+    const persisted = JSON.parse(
+      environment.win.localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as {
+      settingsRevision?: number
+      companionName?: string
+      apiKey?: string
+      wakeWordEnabled?: boolean
+      textProviderProfiles?: Record<string, { apiBaseUrl?: string; apiKey?: string; model?: string }>
+    }
+
+    const committedProfile = committed.textProviderProfiles[providerId]
+    const storedProfile = persisted.textProviderProfiles?.[providerId]
+    assert.equal(committed.apiKey, 'sk-test-SECRET-123')
+    assert.equal(committed.companionName, 'stored after hydration failure')
+    assert.equal(committed.companionName, persisted.companionName)
+    assert.equal(committed.settingsRevision, persisted.settingsRevision)
+    assert.equal(committed.settingsRevision, 1)
+    assert.equal(committed.wakeWordEnabled, true)
+    assert.equal(persisted.wakeWordEnabled, true)
+    assert.equal(persisted.apiKey, '')
+    assert.equal(committedProfile?.apiKey, 'sk-profile-SECRET-456')
+    assert.equal(committedProfile?.apiBaseUrl, base.apiBaseUrl)
+    assert.equal(committedProfile?.model, base.model)
+    assert.equal(storedProfile?.apiKey, '')
+    assert.equal(storedProfile?.apiBaseUrl, base.apiBaseUrl)
+    assert.equal(storedProfile?.model, base.model)
   } finally {
     environment.restore()
   }

@@ -35,6 +35,8 @@ function flagEnabled(value) {
 
 /**
  * Missing or malformed input fails closed. Only an explicit true is on.
+ * `screenshot` is the combined result of the context-awareness master switch
+ * and the screen-context sub-switch.
  * @param {unknown} flags
  * @returns {{ activeWindow: boolean, clipboard: boolean, screenshot: boolean }}
  */

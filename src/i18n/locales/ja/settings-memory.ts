@@ -167,6 +167,7 @@ export const jaSettingsMemory = {
   'settings.memory.context.clipboard': 'クリップボードコンテキストを読み取る',
   'settings.memory.context.active_window': 'アクティブウィンドウのコンテキストを読み取る',
   'settings.memory.context.screen_ocr': '画面上のテキストを読み取る（OCR）',
+  'settings.memory.context.screen_permission_denied': '画面収録が許可されていません。システム設定で許可してください。',
   'settings.memory.context.ocr_language': '画面 OCR 言語',
   'settings.memory.context.vlm_enable': 'VLM 画面理解を有効化',
   'settings.memory.context.vlm_note': '視覚言語モデル（VLM）でスクリーンショットを解析し、OCRだけより豊かな画面理解を行います。視覚対応モデル（例: GPT-4o、Qwen-VL）が必要です。',

@@ -77,6 +77,8 @@ import {
  * @property {string} speechInputProviderId
  * @property {boolean} speechOutputEnabled
  * @property {string} speechOutputProviderId
+ * @property {boolean} microphoneActive
+ * @property {number} [settingsRevision]
  */
 
 const modelDownloadSchema = {
@@ -337,6 +339,8 @@ const voiceRuntimeSyncSchema = {
     speechInputProviderId: { type: 'string', maxLength: SHORT_TEXT_MAX },
     speechOutputEnabled: { type: 'boolean' },
     speechOutputProviderId: { type: 'string', maxLength: SHORT_TEXT_MAX },
+    microphoneActive: { type: 'boolean' },
+    settingsRevision: { type: 'number', optional: true, default: 0, integer: true, min: 0 },
   },
 }
 

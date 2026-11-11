@@ -167,6 +167,7 @@ export const zhTWSettingsMemory = {
   'settings.memory.context.clipboard': '讀取剪貼簿上下文',
   'settings.memory.context.active_window': '讀取目前視窗上下文',
   'settings.memory.context.screen_ocr': '讀取螢幕文字（OCR）',
+  'settings.memory.context.screen_permission_denied': '螢幕錄製沒授權，到系統設定開啟',
   'settings.memory.context.ocr_language': '螢幕 OCR 語言',
   'settings.memory.context.vlm_enable': '啟用 VLM 螢幕理解',
   'settings.memory.context.vlm_note': '使用視覺語言模型（VLM）分析螢幕截圖，獲得比 OCR 更豐富的畫面理解。需要支援視覺的模型（如 GPT-4o、Qwen-VL 等）。',

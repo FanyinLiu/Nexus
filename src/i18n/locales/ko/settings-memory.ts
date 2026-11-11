@@ -167,6 +167,7 @@ export const koSettingsMemory = {
   'settings.memory.context.clipboard': '클립보드 컨텍스트 읽기',
   'settings.memory.context.active_window': '활성 창 컨텍스트 읽기',
   'settings.memory.context.screen_ocr': '화면 텍스트 읽기 (OCR)',
+  'settings.memory.context.screen_permission_denied': '화면 기록 권한이 없어요. 시스템 설정에서 허용해 주세요.',
   'settings.memory.context.ocr_language': '화면 OCR 언어',
   'settings.memory.context.vlm_enable': 'VLM 화면 이해 활성화',
   'settings.memory.context.vlm_note': '비전-언어 모델(VLM)로 스크린샷을 분석해 OCR보다 더 풍부한 장면 이해를 합니다. 비전 지원 모델(예: GPT-4o, Qwen-VL)이 필요합니다.',
