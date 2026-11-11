@@ -18,6 +18,9 @@ test('README installation section documents the manual Windows/Linux update path
   assert.match(readme, /官方 GitHub Releases 手动下载/)
   assert.match(readme, /SHA256SUMS-windows\.txt/)
   assert.match(readme, /SHA256SUMS-linux\.txt/)
+  assert.match(readme, /latest\.yml/)
+  assert.match(readme, /docs\/RELEASING\.md/)
+  assert.match(readme, /README 和 `docs\/RELEASING\.md` 要在同一版本里一起改/)
   assert.match(readme, /macOS arm64 未签名包同样不会自动替换应用/)
 })
 
@@ -40,5 +43,7 @@ for (const [file, noAutoUpdateLabel, staleVersionLabel] of LOCALIZED_MANUAL_UPDA
     assert.ok(!readme.includes(staleVersionLabel))
     assert.match(readme, /SHA256SUMS-windows\.txt/)
     assert.match(readme, /SHA256SUMS-linux\.txt/)
+    assert.match(readme, /latest\.yml/)
+    assert.match(readme, /RELEASING\.md/)
   })
 }

@@ -852,7 +852,7 @@ Estimate: 1-2 weeks for the engine; rollout spans three patch versions.
 
 MCP is already available in chat. Nexus connects to configured MCP servers,
 exposes their tools alongside built-in tools, and keeps a per-tool approval
-gate. Users configure servers in Settings → Connections (`integrations`), and
+gate. Users configure servers in Settings → Connection (`integrations`), and
 each tool call needs approval before it runs.
 
 Status: shipped. Remaining work is maintenance of the existing host and

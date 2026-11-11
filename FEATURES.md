@@ -234,7 +234,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 | Feature | Description |
 |---|---|
-| Settings Drawer | 12 user-facing entries: Model, Desktop, Profile, Diagnostics, History, Letters, Voice, Memory, Background & Phrases, Connections, Proactive, Tools |
+| Settings Drawer | The drawer opens on five default cards: Look and character, Voice, Memory and privacy, Connection, About. Each card has an Advanced section, and the 12 settings sections live there: Model, Desktop, Profile, Diagnostics, History, Letters, Voice, Memory, Background & Phrases, Connection, Proactive, Tools |
 | Tool Settings | Web search, weather, and safe tool controls stay behind the Tools entry |
 | Debug Console | Runtime event log with source filtering |
 | Onboarding | First-run setup flow |

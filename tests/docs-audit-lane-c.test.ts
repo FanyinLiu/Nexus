@@ -16,14 +16,20 @@ test('FEATURES.md drops unimplemented voice, deleted UI, and unshipped auto-skil
   }
 })
 
-test('FEATURES.md reports the current 12 settings entries and section count', () => {
+test('FEATURES.md describes the five default cards and the 12 Advanced sections', () => {
   const features = readDoc('FEATURES.md')
 
   assert.match(
     features,
-    /12 user-facing entries: Model, Desktop, Profile, Diagnostics, History, Letters, Voice, Memory, Background & Phrases, Connections, Proactive, Tools/,
+    /five default cards: Look and character, Voice, Memory and privacy, Connection, About/,
+  )
+  assert.match(features, /Each card has an Advanced section/)
+  assert.match(
+    features,
+    /12 settings sections live there: Model, Desktop, Profile, Diagnostics, History, Letters, Voice, Memory, Background & Phrases, Connection, Proactive, Tools/,
   )
   assert.match(features, /\| Settings Sections \| 12 \|/)
+  assert.ok(!features.includes('Connections'))
   assert.ok(!features.includes('8 user-facing entries'))
 })
 
@@ -34,7 +40,7 @@ test('ROADMAP.md uses the shipped Live2D default and no longer calls MCP a stub'
   assert.ok(!roadmap.includes('MCP host stub'))
   assert.ok(!roadmap.includes("doesn't actually consume MCP servers"))
   assert.match(roadmap, /MCP is already available in chat/)
-  assert.match(roadmap, /Settings → Connections/)
+  assert.match(roadmap, /Settings → Connection/)
 })
 
 test('ROADMAP.md describes SHA-256 manifests without claiming GPG signatures', () => {
@@ -44,12 +50,15 @@ test('ROADMAP.md describes SHA-256 manifests without claiming GPG signatures', (
   assert.match(roadmap, /GPG signatures are not provided yet/)
 })
 
-test('RELEASING.md keeps the unsigned-manual exception valid for v0.5.1', () => {
+test('RELEASING.md describes the current unsigned-manual posture without a version cutoff', () => {
   const releasing = readDoc('docs/RELEASING.md')
 
   assert.ok(!releasing.includes('This exception ends with v0.5.0'))
+  assert.ok(!releasing.includes('This exception ends with v0.5.1'))
   assert.ok(!releasing.includes('v0.5.1 and later must publish the signed profile'))
-  assert.match(releasing, /v0.5.1 continues the same unsigned-manual exception/)
+  assert.ok(!releasing.includes('v0.5.2 and later must publish'))
+  assert.match(releasing, /currently still ships the unsigned-manual update posture/)
+  assert.match(releasing, /update README and RELEASING in the same version/)
 })
 
 test('README.md localizes the unsigned install headings and keeps the no-auto-update fact', () => {

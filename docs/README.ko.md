@@ -242,7 +242,7 @@ README에는 현재 안정 버전 v0.5.1과 이전 공개 버전 v0.5.0의 핵�
 
 #### 자동 업데이트 안내(Windows / Linux)
 
-현재 Windows와 Linux에는 자동 업데이트가 없습니다. 새 버전은 공식 GitHub Releases에서 설치 파일을 직접 내려받고, 같은 release의 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt`로 SHA-256을 확인한 뒤 설치해야 합니다. 앱이 자동으로 내려받거나 교체하거나 다시 시작하지 않습니다.
+현재 Windows와 Linux에는 자동 업데이트가 없습니다. 새 버전은 공식 GitHub Releases에서 설치 파일을 직접 내려받고, 같은 release의 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt`로 SHA-256을 확인한 뒤 설치해야 합니다. 앱이 자동으로 내려받거나 교체하거나 다시 시작하지 않습니다. 릴리스할 때 `latest.yml` / `latest-linux*.yml` 같은 자동 업데이트 매니페스트를 업로드하지 않기 때문입니다(`RELEASING.md` 참고). 매니페스트가 있으면 코드 경로가 자동으로 내려받을 수는 있지만, 지금 자동 업데이트가 없는 것은 이 릴리스 방식 덕분입니다. 앞으로 이 방식을 바꾸면 README와 `RELEASING.md`를 같은 버전에서 함께 고쳐야 합니다.
 
 #### macOS 미서명 빌드의 자동 업데이트 제한
 
