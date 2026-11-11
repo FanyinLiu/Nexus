@@ -195,7 +195,7 @@ export function applyPetWindowInstances() {}
 export function configurePetWindowInstances() {}
 export function getPetInstanceForWindow() { return null }
 export function destroyPetInstance() {}
-export function registerPetInstance() {}
+export function registerPetInstance() { return { loco: { start() {}, stop() {} } } }
 export function getPetWindowStateForEvent() { return { isPinned: false, clickThrough: false, petHotspotActive: false } }
 export function updatePetWindowStateForEvent() {}
 export function setPetFreeModeForEvent() {}

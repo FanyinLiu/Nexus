@@ -45,6 +45,7 @@ import {
   clearPanelNavigationFailure,
   markPanelNavigationFailed,
 } from './panelContentReady.js'
+import { createWindowLoadRetry } from './windowLoadRetry.js'
 
 let getMainWindow = () => null
 let getPanelWindow = () => null
@@ -74,13 +75,14 @@ let settingsReturnFocus = {
 
 // A panel whose main frame never loaded cannot render a second open. Retry a
 // bounded number of times, then destroy it so the next open creates a fresh
-// window. Only the numeric error code is logged: URLs and page content never
-// reach the console.
-const PANEL_LOAD_RETRY_LIMIT = 2
-const PANEL_LOAD_RETRY_BASE_DELAY_MS = 250
+// window. The pet uses the same budget but cannot be destroyed: there is no
+// automatic recreate path, and on Linux without a tray the app quits when its
+// last window closes. Only the numeric error code is logged: URLs and page
+// content never reach the console.
+const WINDOW_LOAD_RETRY_LIMIT = 2
+const WINDOW_LOAD_RETRY_BASE_DELAY_MS = 250
 const panelLog = createLogger('panel.window')
-/** @type {WeakMap<object, { attempts: number, timer: ReturnType<typeof setTimeout> | null, failedThisNavigation: boolean }>} */
-const panelLoadRetries = new WeakMap()
+const petLog = createLogger('pet.window')
 
 // macOS Dock overlaps transparent windows near the bottom edge even within
 // workArea bounds. Use a larger bottom margin on macOS to keep the pet's
@@ -302,6 +304,47 @@ export function createMainWindow({ showOnReady = true } = {}) {
 
   const inst = registerPetInstance(win)
 
+  const loadRetry = createWindowLoadRetry({
+    win,
+    loadUrl: () => getRendererEntry('pet'),
+    log: petLog,
+    retryLimit: WINDOW_LOAD_RETRY_LIMIT,
+    baseDelayMs: WINDOW_LOAD_RETRY_BASE_DELAY_MS,
+    onReady: () => {
+      // Keep the companion visible across workspaces where the platform supports
+      // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
+      // that option. Windows does not support this API.
+      if (process.platform === 'darwin') {
+        try {
+          win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+        } catch (err) {
+          console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
+        }
+      } else if (process.platform === 'linux') {
+        try {
+          win.setVisibleOnAllWorkspaces(true)
+        } catch (err) {
+          console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
+        }
+      }
+      if (showOnReady) {
+        win.show()
+        win.focus()
+        win.moveTop()
+      }
+      syncRuntimeState()
+      syncPetWindowState()
+      inst.loco.start()
+    },
+    onExhausted: () => {
+      // Destroying the pet clears mainWindow and no create path rebuilds it
+      // automatically; on Linux without a tray it also quits the app. Hide the
+      // raw Electron error page instead and leave the process/tray alive so a
+      // user-initiated show can recover once the renderer is available.
+      if (!win.isDestroyed()) win.hide()
+    },
+  })
+
   win.on('close', (event) => {
     const canHideToBackground = process.platform === 'darwin' || hasSystemTray()
     if (app.isQuitting || !canHideToBackground) return
@@ -310,6 +353,7 @@ export function createMainWindow({ showOnReady = true } = {}) {
   })
 
   win.on('closed', () => {
+    loadRetry.dispose()
     destroyPetInstance(inst)
     _setMainWindow(null)
     // The panel may be the surviving window; tell it immediately instead of
@@ -317,37 +361,9 @@ export function createMainWindow({ showOnReady = true } = {}) {
     checkReminderPanelWakeNow()
   })
 
-  win.webContents.on('did-finish-load', () => {
-    // Keep the companion visible across workspaces where the platform supports
-    // it. macOS uses visibleOnFullScreen; Linux maps to the same API without
-    // that option. Windows does not support this API.
-    if (process.platform === 'darwin') {
-      try {
-        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-      } catch (err) {
-        console.warn('[pet-window] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
-      }
-    } else if (process.platform === 'linux') {
-      try {
-        win.setVisibleOnAllWorkspaces(true)
-      } catch (err) {
-        console.warn('[pet-window:linux] setVisibleOnAllWorkspaces failed:', getRedactedErrorMessage(err))
-      }
-    }
-    if (showOnReady) {
-      win.show()
-      win.focus()
-      win.moveTop()
-    }
-    syncRuntimeState()
-    syncPetWindowState()
-    inst.loco.start()
-  })
+  win.webContents.on('did-finish-load', loadRetry.handleDidFinishLoad)
 
-  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
-    console.error('Renderer failed to load:', errorCode, errorDescription)
-    win.show()
-  })
+  win.webContents.on('did-fail-load', loadRetry.handleDidFailLoad)
 
   win.webContents.on('console-message', (details) => {
     if (details.level === 'warning' || details.level === 'error') {
@@ -467,6 +483,28 @@ export function createPanelWindowWithOptions(options = {}) {
 
   attachDevToolsShortcut(win)
 
+  const loadRetry = createWindowLoadRetry({
+    win,
+    loadUrl: () => getRendererEntry('panel'),
+    log: panelLog,
+    retryLimit: WINDOW_LOAD_RETRY_LIMIT,
+    baseDelayMs: WINDOW_LOAD_RETRY_BASE_DELAY_MS,
+    onNavigationFailed: () => markPanelNavigationFailed(win),
+    onErrorPageFinish: () => queueMicrotask(() => clearPanelNavigationFailure(win)),
+    onReady: () => {
+      clearPanelNavigationFailure(win)
+      syncRuntimeState()
+      syncPetWindowState()
+      emitPanelWindowState()
+      emitPanelSection()
+      options.onRendererReady?.(win)
+    },
+    onExhausted: () => {
+      options.onRendererFailed?.(win)
+      if (!win.isDestroyed()) win.destroy()
+    },
+  })
+
   // Track dock refcount for this panel window: acquire when it becomes
   // visible, release when it hides or is closed. This restores a dock icon
   // during "app-like" interactions (chat / settings panel) and pulls it back
@@ -512,9 +550,7 @@ export function createPanelWindowWithOptions(options = {}) {
   })
 
   win.on('closed', () => {
-    const retry = panelLoadRetries.get(win)
-    if (retry?.timer) clearTimeout(retry.timer)
-    panelLoadRetries.delete(win)
+    loadRetry.dispose()
     cancelFirstUsePanelRetirement()
     stopReminderPanelWakeMonitor()
     if (getPanelBlurTimer()) {
@@ -560,49 +596,9 @@ export function createPanelWindowWithOptions(options = {}) {
     rememberPanelWindowBounds()
   })
 
-  win.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, _validatedURL, isMainFrame) => {
-    // -3 is ERR_ABORTED: a navigation was superseded, not a broken renderer.
-    if (isMainFrame === false || errorCode === -3) return
-    const retry = panelLoadRetries.get(win)
-      ?? { attempts: 0, timer: null, failedThisNavigation: false }
-    retry.failedThisNavigation = true
-    panelLoadRetries.set(win, retry)
-    markPanelNavigationFailed(win)
-    if (retry.attempts < PANEL_LOAD_RETRY_LIMIT) {
-      const delay = PANEL_LOAD_RETRY_BASE_DELAY_MS * (2 ** retry.attempts)
-      retry.attempts += 1
-      panelLoadRetries.set(win, retry)
-      panelLog.warn(`renderer load failed; retrying code=${errorCode}`)
-      retry.timer = setTimeout(() => {
-        retry.timer = null
-        if (win.isDestroyed()) return
-        win.loadURL(getRendererEntry('panel')).catch(() => undefined)
-      }, delay)
-      return
-    }
-    panelLog.error(`renderer load failed after retries code=${errorCode}`)
-    options.onRendererFailed?.(win)
-    if (!win.isDestroyed()) win.destroy()
-  })
+  win.webContents.on('did-fail-load', loadRetry.handleDidFailLoad)
 
-  win.webContents.on('did-finish-load', () => {
-    const retry = panelLoadRetries.get(win)
-    if (retry?.failedThisNavigation) {
-      // The error page also fires did-finish-load. Do not clear the retry
-      // timer and never treat this navigation as ready.
-      retry.failedThisNavigation = false
-      queueMicrotask(() => clearPanelNavigationFailure(win))
-      return
-    }
-    if (retry?.timer) clearTimeout(retry.timer)
-    panelLoadRetries.delete(win)
-    clearPanelNavigationFailure(win)
-    syncRuntimeState()
-    syncPetWindowState()
-    emitPanelWindowState()
-    emitPanelSection()
-    options.onRendererReady?.(win)
-  })
+  win.webContents.on('did-finish-load', loadRetry.handleDidFinishLoad)
 
   win.loadURL(getRendererEntry('panel'))
 
