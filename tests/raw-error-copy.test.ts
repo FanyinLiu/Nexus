@@ -3,6 +3,7 @@ import { before, test } from 'node:test'
 
 import {
   classifyVoiceError,
+  humanizeError,
   humanizeVoiceError,
 } from '../src/lib/humanizeError.ts'
 import { getSpeechOutputErrorMessage } from '../src/hooks/chat/support.ts'
@@ -104,6 +105,36 @@ test('raw-error keys are fixed sentences in all five locales', () => {
       dictionary['chat.reminder_task.execution_failed_system']?.includes('{title}'),
       'reminder task copy must keep the task title',
     )
+  }
+})
+
+test('humanize.fallback is a friendly sentence in all five locales', () => {
+  const dictionaries: Array<Record<string, string>> = [
+    zhCNMessages,
+    zhTWMessages,
+    enMessages,
+    jaMessages,
+    koMessages,
+  ]
+  for (const dictionary of dictionaries) {
+    const text = dictionary['humanize.fallback']
+    assert.ok(text?.trim(), 'missing humanize.fallback')
+    assert.equal(text.includes('{detail}'), false, 'humanize.fallback must not interpolate raw detail')
+  }
+})
+
+test('humanizeError returns the friendly sentence and logs the raw marker', () => {
+  const raw = `${MARKER} provider internals sk-ABCDEF1234567890XYZ`
+  const captured = captureWarnings()
+  try {
+    const message = humanizeError(new Error(raw), 'chat')
+    assert.equal(message.includes(MARKER), false)
+    assert.equal(message.includes('sk-ABCDEF1234567890XYZ'), false)
+    const logged = captured.lines.join('\n')
+    assert.ok(logged.includes(MARKER), 'raw error must reach the log')
+    assert.equal(logged.includes('sk-ABCDEF1234567890XYZ'), false, 'log must be redacted')
+  } finally {
+    captured.restore()
   }
 })
 

@@ -453,7 +453,7 @@ export const enCore = {
   'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
-  'humanize.fallback': 'Something went wrong. ({detail})',
+  'humanize.fallback': 'Something went wrong. Please try again.',
   'about.title': 'About Nexus',
   'about.tagline': 'A desktop AI companion who remembers you and grows with you.',
   'about.version_label': 'Version',

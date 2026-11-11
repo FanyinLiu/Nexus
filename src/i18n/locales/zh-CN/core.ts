@@ -451,7 +451,7 @@ export const zhCNCore = {
   'humanize.stt.model_missing': '语音还没装好，去「{settings} → {voice} → {advanced}」里下载。',
   'humanize.model.no_disk_space': '硬盘空间不够下载。腾点空间再试。',
   'humanize.model.hf_unreachable': '连不上模型库。检查一下网络或者换个镜像。',
-  'humanize.fallback': '出错了。({detail})',
+  'humanize.fallback': '出错了，稍后再试试？',
   'about.title': '关于 Nexus',
   'about.tagline': '一个会记住你、跟你一起成长的桌面 AI 伙伴。',
   'about.version_label': '版本',

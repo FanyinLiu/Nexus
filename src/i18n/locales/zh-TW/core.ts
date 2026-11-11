@@ -453,7 +453,7 @@ export const zhTWCore = {
   'humanize.stt.model_missing': '語音還沒裝好，去「{settings} → {voice} → {advanced}」裡下載。',
   'humanize.model.no_disk_space': '硬碟空間不夠下載。騰點空間再試。',
   'humanize.model.hf_unreachable': '連不上模型庫。檢查一下網路或者換個鏡像。',
-  'humanize.fallback': '出錯了。({detail})',
+  'humanize.fallback': '出錯了，稍後再試試？',
   'about.title': '關於 Nexus',
   'about.tagline': '一個會記住你、跟你一起成長的桌面 AI 夥伴。',
   'about.version_label': '版本',

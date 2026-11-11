@@ -453,7 +453,7 @@ export const koCore = {
   'humanize.stt.model_missing': '음성이 아직 준비되지 않았어요. 「{settings} → {voice} → {advanced}」에서 다운로드해 주세요.',
   'humanize.model.no_disk_space': '다운로드할 디스크 공간이 부족해요 — 공간을 확보하고 다시 해볼래요?',
   'humanize.model.hf_unreachable': '모델 저장소에 접근할 수 없어요. 네트워크를 확인하거나 미러를 시도해 보세요.',
-  'humanize.fallback': '문제가 있었어요. ({detail})',
+  'humanize.fallback': '문제가 있었어요. 잠시 뒤에 다시 해볼까요?',
   'about.title': 'Nexus 소개',
   'about.tagline': '당신을 기억하고 함께 성장하는 데스크톱 AI 동반자.',
   'about.version_label': '버전',
