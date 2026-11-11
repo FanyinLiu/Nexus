@@ -267,6 +267,23 @@ export function useCompanionNotices({
     return dropped
   }, [])
 
+  const buildMergedReminderBatch = useCallback((entries: DeferredCompanionNotice[]) => {
+    const reminderEntries = entries.filter((entry) => entry.payload.reminderId)
+    if (reminderEntries.length === 0) return null
+    const reminderItems: DeferredReminderItem[] = reminderEntries.map((entry) => ({
+      reminderId: entry.payload.reminderId as string,
+      dueAt: parseReminderDueAt(entry.payload.reminderDueAt) ?? entry.enqueuedAt,
+      enqueuedAt: entry.enqueuedAt,
+      chatContent: entry.payload.chatContent,
+      bubbleContent: entry.payload.bubbleContent ?? entry.payload.chatContent,
+      speechContent: entry.payload.speechContent ?? entry.payload.bubbleContent ?? entry.payload.chatContent,
+    }))
+    const merged = mergeDeferredReminders(reminderItems, buildDeferredReminderCopy(), {
+      now: nowRef.current(),
+    })
+    return merged ? { merged, reminderEntries } : null
+  }, [buildDeferredReminderCopy])
+
   const pushCompanionNotice = useCallback(async (options: CompanionNoticePayload) => {
     if (shouldDropDeferredNoticeRef.current?.(options)) return
     const queue = deferredCompanionNoticesRef.current
@@ -289,9 +306,24 @@ export function useCompanionNotices({
     await deliverCompanionNotice(options)
   }, [canDeliverDeferredCompanionNotice, deliverCompanionNotice])
 
-  const discardDeferredCompanionNotices = useCallback(() => (
-    clearDeferredCompanionNotices(deferredCompanionNoticesRef.current)
-  ), [])
+  const discardDeferredCompanionNotices = useCallback(() => {
+    const queue = deferredCompanionNoticesRef.current
+    // A stop-all must respect the same DND/paused-reminder drop rule; dropped
+    // items disappear instead of becoming a chat line.
+    dropQueuedCompanionNotices()
+    // Replays already have their chat line. Merge only the never-shown normal
+    // reminders into one visible line; stop-all must not speak or bubble.
+    const batch = buildMergedReminderBatch(queue.filter((entry) => !entry.speechOnly))
+    if (batch) {
+      appendChatMessage({
+        id: createId('msg'),
+        role: 'assistant',
+        content: batch.merged.chatContent,
+        createdAt: new Date().toISOString(),
+      })
+    }
+    return clearDeferredCompanionNotices(queue)
+  }, [appendChatMessage, buildMergedReminderBatch, dropQueuedCompanionNotices])
 
   const hasDeferredCompanionNotices = useCallback(
     () => deferredCompanionNoticesRef.current.length > 0,
@@ -311,47 +343,35 @@ export function useCompanionNotices({
 
     try {
       const queue = deferredCompanionNoticesRef.current
-      const reminderEntries = queue.filter((entry) => entry.payload.reminderId)
-      if (reminderEntries.length > 0) {
+      const batch = buildMergedReminderBatch(queue)
+      if (batch) {
         // Remove every reminder in one pass so the merged utterance is the
         // only delivery for this batch, even when new reminders arrived while
         // earlier ones waited.
         const remaining = queue.filter((entry) => !entry.payload.reminderId)
         queue.splice(0, queue.length, ...remaining)
 
-        const reminderItems: DeferredReminderItem[] = reminderEntries.map((entry) => ({
-          reminderId: entry.payload.reminderId as string,
-          dueAt: parseReminderDueAt(entry.payload.reminderDueAt) ?? entry.enqueuedAt,
-          enqueuedAt: entry.enqueuedAt,
-          chatContent: entry.payload.chatContent,
-          bubbleContent: entry.payload.bubbleContent ?? entry.payload.chatContent,
-          speechContent: entry.payload.speechContent ?? entry.payload.bubbleContent ?? entry.payload.chatContent,
-        }))
-        const merged = mergeDeferredReminders(reminderItems, buildDeferredReminderCopy(), {
-          now: nowRef.current(),
-        })
-        if (merged) {
-          const firstPayload = reminderEntries[0].payload
-          const mergedPayload: CompanionNoticePayload = {
-            ...firstPayload,
-            chatContent: merged.chatContent,
-            bubbleContent: merged.bubbleContent,
-            speechContent: merged.speechContent,
-            // One batch has one delivery key; the per-reminder ids stay in the
-            // queue metadata only, never in the user-visible copy.
-            dedupeKey: `deferred-reminders:${merged.items.map((item) => item.reminderId).join('|')}`,
-            shouldResumeContinuousVoice: false,
-            deferredReplayEntries: reminderEntries.map((entry) => ({
-              payload: entry.payload,
-              enqueuedAt: entry.enqueuedAt,
-            })),
-          }
-          const speechOnly = reminderEntries.every((entry) => entry.speechOnly)
-          const result = await deliverCompanionNotice(mergedPayload, speechOnly)
-          // An interrupted replay is requeued by the speech layer; do not
-          // continue into the non-reminder tail in the same pass.
-          if (result !== 'played') return
+        const { merged, reminderEntries } = batch
+        const firstPayload = reminderEntries[0].payload
+        const mergedPayload: CompanionNoticePayload = {
+          ...firstPayload,
+          chatContent: merged.chatContent,
+          bubbleContent: merged.bubbleContent,
+          speechContent: merged.speechContent,
+          // One batch has one delivery key; the per-reminder ids stay in the
+          // queue metadata only, never in the user-visible copy.
+          dedupeKey: `deferred-reminders:${merged.items.map((item) => item.reminderId).join('|')}`,
+          shouldResumeContinuousVoice: false,
+          deferredReplayEntries: reminderEntries.map((entry) => ({
+            payload: entry.payload,
+            enqueuedAt: entry.enqueuedAt,
+          })),
         }
+        const speechOnly = reminderEntries.every((entry) => entry.speechOnly)
+        const result = await deliverCompanionNotice(mergedPayload, speechOnly)
+        // An interrupted replay is requeued by the speech layer; do not
+        // continue into the non-reminder tail in the same pass.
+        if (result !== 'played') return
       }
 
       while (queue.length && canDeliverDeferredCompanionNotice(options)) {
@@ -369,7 +389,7 @@ export function useCompanionNotices({
       flushingDeferredCompanionNoticesRef.current = false
     }
   }, [
-    buildDeferredReminderCopy,
+    buildMergedReminderBatch,
     canDeliverDeferredCompanionNotice,
     deliverCompanionNotice,
     dropQueuedCompanionNotices,

@@ -210,12 +210,17 @@ export function useCompanionNoticeIdleFlush(
       armFallback()
     })
 
+    // Stop-all clears the queue in the chat hook; drop the release timers in
+    // the same tick so nothing can flush a stale batch later.
+    const unsubscribeStopAll = subscribeSpeechStopAll(clearAllTimers)
+
     armFallback()
     armStuck()
     return () => {
       disposed = true
       clearAllTimers()
       unsubscribe()
+      unsubscribeStopAll()
     }
   }, [voiceBus, idleTimeoutMs, setTimeoutFn, clearTimeoutFn, stuckTimeoutMs])
 }

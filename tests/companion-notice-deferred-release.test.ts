@@ -4,10 +4,14 @@ import { test } from 'node:test'
 import React from 'react'
 
 import { useCompanionNotices } from '../src/hooks/chat/useCompanionNotices.ts'
-import { useCompanionNoticeIdleFlush } from '../src/hooks/chat/useCompanionNoticeQueueSubscriptions.ts'
+import {
+  useCompanionNoticeIdleFlush,
+  useCompanionNoticeStopSubscription,
+} from '../src/hooks/chat/useCompanionNoticeQueueSubscriptions.ts'
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
 import { VoiceBus } from '../src/features/voice/bus.ts'
 import { InterruptedError } from '../src/features/voice/interruptedError.ts'
+import { emitSpeechStopAll } from '../src/features/voice/speechStopBus.ts'
 import { mergeContinuousVoiceActive } from '../src/hooks/voice/continuousVoice.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
 import type { VoiceState } from '../src/types/index.ts'
@@ -170,6 +174,7 @@ function createHarness(options: HarnessOptions = {}) {
       now: () => nowMs,
       shouldDropDeferredNotice: options.shouldDropDeferredNotice,
     })
+    useCompanionNoticeStopSubscription(api.discardDeferredCompanionNotices)
     useCompanionNoticeIdleFlush(
       bus,
       api.flushDeferredCompanionNotices,
@@ -430,6 +435,104 @@ test('an interrupted merged replay keeps one prefix and one more line', async ()
 
   pending.resolveLatest()
   await flushMicrotasks()
+  harness.unmount()
+})
+
+test('stop-all appends one merged chat line without speaking or bubbling', async () => {
+  const harness = createHarness()
+  await harness.api.pushCompanionNotice(reminder('a', 'a'))
+  await harness.api.pushCompanionNotice(reminder('b', 'b'))
+  assert.deepEqual(harness.messages, [])
+
+  emitSpeechStopAll()
+  await flushMicrotasks()
+
+  assert.deepEqual(harness.messages, ['title-a: a; title-b: b.'])
+  assert.deepEqual(harness.spoken, [], 'stop-all never speaks the queued reminders')
+  assert.deepEqual(harness.bubbles, [], 'stop-all never opens a pet bubble')
+  assert.equal(harness.api.hasDeferredCompanionNotices(), false)
+  assert.equal(harness.timers.pending(), 0, 'stop-all clears the release timers')
+
+  harness.voiceStateRef.current = 'idle'
+  harness.continuousVoiceActiveRef.current = false
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  assert.deepEqual(harness.spoken, [], 'nothing replays after stop-all')
+  assert.deepEqual(harness.messages, ['title-a: a; title-b: b.'])
+  harness.unmount()
+})
+
+test('stop-all skips a speech-only replay and keeps only the normal reminder line', async () => {
+  const pending = pendingSpeech()
+  const harness = createHarness({ speakAssistantReply: pending.speak })
+  await harness.api.pushCompanionNotice(reminder('replayed', 'replayed'))
+
+  harness.voiceStateRef.current = 'idle'
+  harness.continuousVoiceActiveRef.current = false
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  assert.equal(harness.messages.length, 1)
+  assert.equal(harness.bubbles.length, 1)
+  assert.equal(harness.spoken.length, 1)
+
+  pending.interruptLatest()
+  await flushMicrotasks()
+
+  harness.continuousVoiceActiveRef.current = true
+  harness.voiceStateRef.current = 'listening'
+  await harness.api.pushCompanionNotice(reminder('normal', 'normal'))
+  const spokenBeforeStop = harness.spoken.length
+  const bubblesBeforeStop = harness.bubbles.length
+
+  emitSpeechStopAll()
+  await flushMicrotasks()
+
+  assert.equal(harness.messages.length, 2, 'only one new line is appended')
+  assert.equal(harness.messages[1], 'title-normal: normal.')
+  assert.doesNotMatch(harness.messages[1], /replayed/u, 'the speech-only replay is not duplicated')
+  assert.equal(harness.spoken.length, spokenBeforeStop, 'stop-all does not speak')
+  assert.equal(harness.bubbles.length, bubblesBeforeStop, 'stop-all does not bubble')
+  assert.equal(harness.api.hasDeferredCompanionNotices(), false)
+
+  harness.continuousVoiceActiveRef.current = false
+  harness.voiceStateRef.current = 'idle'
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  assert.equal(harness.spoken.length, spokenBeforeStop, 'the speech-only replay is gone for good')
+  harness.unmount()
+})
+
+test('stop-all appends nothing when every queued entry is a speech-only replay', async () => {
+  const pending = pendingSpeech()
+  const harness = createHarness({ speakAssistantReply: pending.speak })
+  await harness.api.pushCompanionNotice(reminder('replayed-only', 'replayed only'))
+  harness.voiceStateRef.current = 'idle'
+  harness.continuousVoiceActiveRef.current = false
+  harness.bus.emit({ type: 'session:completed' })
+  await flushMicrotasks()
+  pending.interruptLatest()
+  await flushMicrotasks()
+
+  const messagesBeforeStop = harness.messages.length
+  const spokenBeforeStop = harness.spoken.length
+  emitSpeechStopAll()
+  await flushMicrotasks()
+
+  assert.equal(harness.messages.length, messagesBeforeStop, 'no duplicate chat line')
+  assert.equal(harness.spoken.length, spokenBeforeStop, 'no replay speech')
+  assert.equal(harness.api.hasDeferredCompanionNotices(), false)
+  harness.unmount()
+})
+
+test('stop-all does not append reminders dropped by DND or a paused row', async () => {
+  let dnd = false
+  const harness = createHarness({ shouldDropDeferredNotice: () => dnd })
+  await harness.api.pushCompanionNotice(reminder('dnd-stop', 'dnd stop'))
+  dnd = true
+  emitSpeechStopAll()
+  await flushMicrotasks()
+  assert.deepEqual(harness.messages, [], 'dropped reminders never become a chat line')
+  assert.deepEqual(harness.spoken, [])
   harness.unmount()
 })
 
