@@ -1,5 +1,13 @@
 // @ts-nocheck
+import { pathToFileURL } from 'node:url'
+
 import { normalizeExternalUrl } from './tools/toolRegistryUtils.js'
+import {
+  PET_LOAD_FALLBACK_PATH,
+  PET_LOAD_FALLBACK_RETRY_URL,
+} from './windowLoadFallback.js'
+
+const PET_LOAD_FALLBACK_FILE_URL = pathToFileURL(PET_LOAD_FALLBACK_PATH)
 
 function parseUrl(value) {
   try {
@@ -104,6 +112,22 @@ export function summarizeWindowNavigationErrorForLog(error) {
 }
 
 /**
+ * The pet fallback document and its retry marker are app-initiated targets
+ * outside the renderer entry path. Allow only the exact packaged file (query
+ * ignored) and the exact sentinel, and only for the pet view role.
+ * @param {URL} target
+ * @param {unknown} rendererEntryUrl
+ */
+function isAppInitiatedPetFallbackTarget(target, rendererEntryUrl) {
+  if (target.username || target.password) return false
+  const entryRoles = explicitViewRoles(rendererEntryUrl)
+  if (!entryRoles || entryRoles.length !== 1 || entryRoles[0] !== 'pet') return false
+  if (target.protocol === 'nexus-retry:') return target.href === PET_LOAD_FALLBACK_RETRY_URL
+  if (target.protocol === 'file:') return target.pathname === PET_LOAD_FALLBACK_FILE_URL.pathname
+  return false
+}
+
+/**
  * Same-origin, same-path navigations are allowed only when they keep the
  * window's view role. `will-navigate` does not see `history.replaceState`,
  * so callers also apply this check to in-page URL updates.
@@ -114,6 +138,8 @@ export function isAllowedRendererNavigation(targetUrl, rendererEntryUrl) {
   const target = parseUrl(targetUrl)
   const rendererEntry = parseUrl(rendererEntryUrl)
   if (!target || !rendererEntry) return false
+
+  if (isAppInitiatedPetFallbackTarget(target, rendererEntryUrl)) return true
 
   if (target.protocol !== rendererEntry.protocol) return false
   if (target.username || target.password) return false

@@ -105,8 +105,6 @@ export const MAIN_MESSAGES = Object.freeze({
     'permission.mac.screenDetail': 'Nexus 使用屏幕录制来感知屏幕上的内容，让 AI 伙伴能根据画面做出反应。\n\n请在系统设置 → 隐私与安全性 → 屏幕录制与系统音频 中勾选 Nexus，然后重新启动应用。',
     'permission.windows.microphoneMessage': 'Windows 的麦克风访问当前被禁用。',
     'permission.windows.microphoneDetail': '请在 Windows 设置 → 隐私和安全性 → 麦克风 中允许桌面应用访问麦克风。',
-    'petLoadFallback.message': 'Nexus 没能加载出来，点一下重试',
-    'petLoadFallback.retry': '重试',
   }),
   'zh-TW': Object.freeze({
     'audio.outputBaseUrlMissing': '請先填寫語音輸出的 API Base URL。',
@@ -202,8 +200,6 @@ export const MAIN_MESSAGES = Object.freeze({
     'permission.mac.screenDetail': 'Nexus 使用螢幕錄製來感知螢幕上的內容，讓 AI 夥伴能根據畫面做出反應。\n\n請在系統設定 → 隱私權與安全性 → 螢幕錄製與系統音訊 中勾選 Nexus，然後重新啟動應用程式。',
     'permission.windows.microphoneMessage': 'Windows 的麥克風存取目前被停用。',
     'permission.windows.microphoneDetail': '請在 Windows 設定 → 隱私權和安全性 → 麥克風 中允許桌面應用程式存取麥克風。',
-    'petLoadFallback.message': 'Nexus 沒能載入出來，點一下重試',
-    'petLoadFallback.retry': '重試',
   }),
   'en-US': Object.freeze({
     'audio.outputBaseUrlMissing': 'Fill in the speech output API Base URL first.',
@@ -299,8 +295,6 @@ export const MAIN_MESSAGES = Object.freeze({
     'permission.mac.screenDetail': 'Nexus uses screen recording to understand what is on screen so your AI companion can react to it.\n\nGo to System Settings → Privacy & Security → Screen Recording & System Audio, enable Nexus, then restart the app.',
     'permission.windows.microphoneMessage': 'Microphone access is currently disabled in Windows.',
     'permission.windows.microphoneDetail': 'In Windows Settings → Privacy & security → Microphone, allow desktop apps to access the microphone.',
-    'petLoadFallback.message': 'Nexus could not load. Click to retry.',
-    'petLoadFallback.retry': 'Retry',
   }),
   ja: Object.freeze({
     'audio.outputBaseUrlMissing': '先に音声出力の API Base URL を入力してください。',
@@ -396,8 +390,6 @@ export const MAIN_MESSAGES = Object.freeze({
     'permission.mac.screenDetail': 'Nexus は画面収録を使って画面の内容を把握し、AI コンパニオンがそれに反応できるようにします。\n\nシステム設定 → プライバシーとセキュリティ → 画面収録とシステムオーディオ で Nexus をオンにして、アプリを再起動してください。',
     'permission.windows.microphoneMessage': 'Windows でマイクへのアクセスが現在無効になっています。',
     'permission.windows.microphoneDetail': 'Windows の設定 → プライバシーとセキュリティ → マイク でデスクトップアプリにマイクへのアクセスを許可してください。',
-    'petLoadFallback.message': 'Nexus を読み込めませんでした。クリックして再試行してください。',
-    'petLoadFallback.retry': '再試行',
   }),
   ko: Object.freeze({
     'audio.outputBaseUrlMissing': '먼저 음성 출력 API Base URL을 입력해 주세요.',
@@ -493,7 +485,5 @@ export const MAIN_MESSAGES = Object.freeze({
     'permission.mac.screenDetail': 'Nexus는 화면 기록을 사용해 화면 내용을 파악하고, AI 컴패니언이 그에 반응할 수 있게 해요.\n\n시스템 설정 → 개인정보 보호 및 보안 → 화면 기록 및 시스템 오디오에서 Nexus를 체크한 뒤 앱을 다시 시작해 주세요.',
     'permission.windows.microphoneMessage': 'Windows에서 마이크 접근이 현재 비활성화되어 있어요.',
     'permission.windows.microphoneDetail': 'Windows 설정 → 개인정보 및 보안 → 마이크에서 데스크톱 앱이 마이크에 접근하도록 허용해 주세요.',
-    'petLoadFallback.message': 'Nexus를 불러오지 못했어요. 클릭해서 다시 시도해 주세요.',
-    'petLoadFallback.retry': '다시 시도',
   }),
 })

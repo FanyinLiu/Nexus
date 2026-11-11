@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { pathToFileURL } from 'node:url'
 import { describe, test } from 'node:test'
 
 import {
@@ -7,6 +8,10 @@ import {
   summarizeWindowNavigationErrorForLog,
   summarizeWindowNavigationUrlForLog,
 } from '../electron/windowNavigation.js'
+import {
+  PET_LOAD_FALLBACK_PATH,
+  PET_LOAD_FALLBACK_RETRY_URL,
+} from '../electron/windowLoadFallback.js'
 
 describe('windowNavigation.isAllowedRendererNavigation', () => {
   const rendererEntry = 'http://127.0.0.1:47822/?view=pet'
@@ -55,6 +60,43 @@ describe('windowNavigation.isAllowedRendererNavigation', () => {
     assert.equal(
       isAllowedRendererNavigation('http://127.0.0.1:47822/admin', rendererEntry),
       false,
+    )
+  })
+
+  test('allows only the app fallback file and pet retry marker', () => {
+    const packagedEntry = 'file:///Applications/Nexus.app/Contents/Resources/app/dist/index.html?view=pet'
+    const fallbackUrl = pathToFileURL(PET_LOAD_FALLBACK_PATH)
+    fallbackUrl.searchParams.set('lang', 'zh-CN')
+
+    assert.equal(
+      isAllowedRendererNavigation(fallbackUrl.toString(), packagedEntry),
+      true,
+      'the packaged fallback file with ?lang= is app-initiated',
+    )
+    assert.equal(
+      isAllowedRendererNavigation(PET_LOAD_FALLBACK_RETRY_URL, packagedEntry),
+      true,
+      'the fixed retry marker is app-initiated',
+    )
+    assert.equal(
+      isAllowedRendererNavigation(PET_LOAD_FALLBACK_RETRY_URL, 'http://127.0.0.1:47822/?view=panel'),
+      false,
+      'the pet fallback marker does not apply to the panel',
+    )
+    assert.equal(
+      isAllowedRendererNavigation('file:///tmp/pet-load-fallback.html?lang=zh-CN', packagedEntry),
+      false,
+      'a same-named file outside the app path is not allowlisted',
+    )
+    assert.equal(
+      isAllowedRendererNavigation('nexus-retry://panel', packagedEntry),
+      false,
+      'only the fixed pet marker is allowlisted',
+    )
+    assert.equal(
+      isAllowedRendererNavigation('https://evil.example/pet-load-fallback.html', packagedEntry),
+      false,
+      'an unrelated external URL stays blocked',
     )
   })
 

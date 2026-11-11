@@ -19,6 +19,7 @@ function testState() {
       monitorStarts: 0,
       monitorStops: 0,
       panelWindowSetter: null,
+      uiLanguage: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
     }
@@ -29,6 +30,7 @@ function testState() {
 
 const ELECTRON_STUB = `
 import { EventEmitter } from 'node:events'
+import { pathToFileURL } from 'node:url'
 ${STATE_PRELUDE}
 export const app = {
   isPackaged: false,
@@ -72,6 +74,7 @@ export class BrowserWindow extends EventEmitter {
     this.minimized = false
     this.bounds = { x: options.x ?? 0, y: options.y ?? 0, width: options.width ?? 400, height: options.height ?? 600 }
     this.loadCount = 0
+    this.loadFileCalls = []
     this.webContents = {
       id: this.id,
       loading: true,
@@ -132,6 +135,14 @@ export class BrowserWindow extends EventEmitter {
     this.loadCount += 1
     this.webContents.loading = true
     return Promise.resolve()
+  }
+  loadFile(filePath, options = {}) {
+    this.loadFileCalls.push({ filePath, options })
+    const url = pathToFileURL(filePath)
+    for (const [key, value] of Object.entries(options.query ?? {})) {
+      url.searchParams.set(key, String(value))
+    }
+    return this.loadURL(url.toString())
   }
   destroy() {
     if (this.destroyed) return
@@ -255,10 +266,20 @@ export function summarizeWindowNavigationUrlForLog() { return '' }
 
 const USER_FACING_DIALOGS_STUB = `
 export function externalOpenDialogCopy() { return { title: '', message: '', detail: '' } }
+export function normalizeDialogLocale(locale) {
+  const value = String(locale ?? '').trim().toLowerCase().replace(/_/g, '-')
+  if (value === 'zh-tw' || value === 'zh-hk' || value.startsWith('zh-hant')) return 'zh-TW'
+  if (value.startsWith('zh')) return 'zh-CN'
+  if (value.startsWith('ja')) return 'ja'
+  if (value.startsWith('ko')) return 'ko'
+  return 'en-US'
+}
 `
 
 const EXTERNAL_OPEN_CONFIRMATION_STUB = `
-export function getExternalOpenConfirmation() { return { confirmed: true } }
+export function getExternalOpenConfirmation() {
+  return { confirmed: true, requiresConfirmation: true, uiLanguage: globalThis.${STATE_KEY}?.uiLanguage ?? null }
+}
 `
 
 const WINDOW_CAPABILITIES_STUB = `
@@ -299,6 +320,7 @@ export function windowLifecycleState() {
       monitorStarts: 0,
       monitorStops: 0,
       panelWindowSetter: null,
+      uiLanguage: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
     }

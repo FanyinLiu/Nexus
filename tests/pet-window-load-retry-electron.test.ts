@@ -8,7 +8,9 @@ register(new URL('./helpers/window-lifecycle-stub-hooks.mjs', import.meta.url))
 
 const windowManager = await import('../electron/windowManager.js')
 const windowCreation = await import('../electron/windowCreation.js')
+const windowLoadRetry = await import('../electron/windowLoadRetry.js')
 const { clearLogs, getLogEntries } = await import('../electron/logger.js')
+const { PET_LOAD_FALLBACK_PATH, PET_LOAD_FALLBACK_RETRY_URL } = await import('../electron/windowLoadFallback.js')
 
 type FakeWindow = {
   id: number
@@ -22,6 +24,7 @@ type FakeWindow = {
   emitWebContents: (event: string, ...args: unknown[]) => void
   url?: string
   loadCount: number
+  loadFileCalls: Array<{ filePath: string; options: { query?: Record<string, string> } }>
 }
 
 let currentPet: FakeWindow | null = null
@@ -46,6 +49,7 @@ test.afterEach(() => {
   const state = windowLifecycleState()
   state.sends.length = 0
   state.bySender.clear()
+  state.uiLanguage = null
 })
 
 test('pet load retries with backoff and does not treat the error page as ready', async (t) => {
@@ -81,7 +85,11 @@ test('pet load retries with backoff and does not treat the error page as ready',
   assert.equal(pet.loadCount, 4, 'the retry budget is bounded; only the local fallback loads after it')
   assert.equal(pet.destroyed, false, 'the only companion window is kept alive')
   assert.equal(pet.visible, true, 'a first-launch failure shows the window instead of hiding it')
-  assert.match(pet.url ?? '', /^data:text\/html/u, 'the visible surface is the local fallback, not the error page')
+  assert.equal(pet.loadFileCalls.length, 1, 'the visible surface is the packaged fallback file')
+  assert.equal(pet.loadFileCalls[0]?.filePath, PET_LOAD_FALLBACK_PATH)
+  assert.equal(pet.loadFileCalls[0]?.options.query?.lang, 'en-US')
+  assert.match(pet.url ?? '', /\/pet-load-fallback\.html\?lang=en-US$/u, 'the fallback is not a data URL')
+  assert.doesNotMatch(pet.url ?? '', /^data:text\/html/u)
   t.mock.timers.tick(10_000)
   assert.equal(pet.loadCount, 4, 'no retry is scheduled after the budget')
 
@@ -182,12 +190,40 @@ test('first-launch exhaustion shows the local retry page instead of the raw erro
   assert.equal(pet.destroyed, false, 'the only companion window is kept alive')
   assert.equal(pet.visible, true, 'a first-launch failure leaves something visible even without a tray')
 
-  const fallbackHtml = decodeURIComponent((pet.url ?? '').replace(/^data:text\/html;charset=utf-8,/u, ''))
-  assert.match(pet.url ?? '', /^data:text\/html;charset=utf-8,/u, 'the fallback is a self-contained local page')
-  assert.ok(fallbackHtml.includes('id="nexus-pet-retry"'), 'the page has a retry control')
-  assert.ok(!fallbackHtml.includes('ERR_'), 'the page never renders an Electron error code')
+  assert.equal(pet.loadFileCalls.length, 1, 'the fallback is loaded with BrowserWindow.loadFile')
+  assert.equal(pet.loadFileCalls[0]?.filePath, PET_LOAD_FALLBACK_PATH)
+  assert.equal(pet.loadFileCalls[0]?.options.query?.lang, 'en-US', 'the UI locale rides along as ?lang=')
+  assert.match(pet.url ?? '', /^file:\/\/.*\/pet-load-fallback\.html\?lang=en-US$/u)
+  assert.doesNotMatch(pet.url ?? '', /^data:text\/html/u, 'the fallback is never a data URL')
   t.mock.timers.tick(10_000)
   assert.equal(pet.loadCount, 4, 'the fallback show does not start another load')
+})
+
+test('first-launch exhaustion passes the saved UI language to the fallback file', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => {
+    destroyPet()
+    t.mock.timers.reset()
+  })
+  windowLifecycleState().uiLanguage = 'zh-CN'
+  const pet = createPet()
+  const fail = () => {
+    pet.emitWebContents('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', 'file:///fake/index.html?view=pet', true)
+    pet.emitWebContents('did-finish-load')
+  }
+
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(250)
+  fail()
+  await flushMicrotasks()
+  t.mock.timers.tick(500)
+  fail()
+  await flushMicrotasks()
+
+  assert.equal(pet.loadFileCalls[0]?.filePath, PET_LOAD_FALLBACK_PATH)
+  assert.equal(pet.loadFileCalls[0]?.options.query?.lang, 'zh-CN')
+  assert.match(pet.url ?? '', /\?lang=zh-CN$/u)
 })
 
 test('the fallback retry control reloads the pet and the normal window appears', async (t) => {
@@ -230,7 +266,7 @@ test('the fallback retry control reloads the pet and the normal window appears',
       this.defaultPrevented = true
     },
   }
-  pet.emitWebContents('will-navigate', navigationEvent, 'nexus-retry://pet')
+  pet.emitWebContents('will-navigate', navigationEvent, PET_LOAD_FALLBACK_RETRY_URL)
   assert.equal(prevented, true, 'the sentinel navigation never leaves the fallback page')
   assert.equal(pet.loadCount, 5, 'retry grants one fresh load of the real pet entry')
   assert.equal(pet.url, entryUrl, 'the retry loads the renderer entry, not the fallback')
@@ -283,4 +319,111 @@ test('an exhausted pet reloads when the user shows it again', async (t) => {
   pet.hide()
   pet.show()
   assert.equal(pet.loadCount, 4, 'a normal show after recovery does not reload')
+})
+
+function createRetryHarness({ retryLimit = 2, baseDelayMs = 100 } = {}) {
+  const loads: string[] = []
+  const state = { destroyed: false }
+  const win = {
+    isDestroyed: () => state.destroyed,
+    loadURL: (url: string) => {
+      loads.push(url)
+      return Promise.resolve()
+    },
+  }
+  const log = { warn: () => {}, error: () => {} }
+  const retry = windowLoadRetry.createWindowLoadRetry({
+    win,
+    loadUrl: () => 'file:///entry/index.html?view=pet',
+    log,
+    retryLimit,
+    baseDelayMs,
+  })
+  return { retry, loads, state }
+}
+
+test('window load retry doubles the backoff delay', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => t.mock.timers.reset())
+  const { retry, loads } = createRetryHarness({ retryLimit: 3, baseDelayMs: 100 })
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  t.mock.timers.tick(99)
+  assert.equal(loads.length, 0)
+  t.mock.timers.tick(1)
+  assert.equal(loads.length, 1, 'the first retry waits 100ms')
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  t.mock.timers.tick(199)
+  assert.equal(loads.length, 1)
+  t.mock.timers.tick(1)
+  assert.equal(loads.length, 2, 'the second retry waits 200ms')
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  t.mock.timers.tick(399)
+  assert.equal(loads.length, 2)
+  t.mock.timers.tick(1)
+  assert.equal(loads.length, 3, 'the third retry waits 400ms')
+})
+
+test('window load retry resets the attempt count after a successful load', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => t.mock.timers.reset())
+  const { retry, loads } = createRetryHarness({ retryLimit: 3, baseDelayMs: 100 })
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  t.mock.timers.tick(100)
+  assert.equal(loads.length, 1)
+
+  retry.handleDidFinishLoad()
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  t.mock.timers.tick(99)
+  assert.equal(loads.length, 1, 'the next retry starts at the base delay again')
+  t.mock.timers.tick(1)
+  assert.equal(loads.length, 2)
+})
+
+test('window load retry clears a scheduled retry when a load succeeds first', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => t.mock.timers.reset())
+  const { retry, loads } = createRetryHarness({ baseDelayMs: 100 })
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  retry.handleDidFinishLoad()
+  t.mock.timers.tick(10_000)
+  assert.equal(loads.length, 0, 'the pending retry timer is cleared by the successful finish')
+})
+
+test('window load retry dispose cancels scheduled work', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => t.mock.timers.reset())
+  const { retry, loads } = createRetryHarness({ baseDelayMs: 100 })
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  retry.dispose()
+  t.mock.timers.tick(10_000)
+  assert.equal(loads.length, 0, 'dispose clears the retry timer')
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  t.mock.timers.tick(10_000)
+  assert.equal(loads.length, 0, 'a disposed retry never schedules new work')
+})
+
+test('window load retry does not load after the window is destroyed', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  t.after(() => t.mock.timers.reset())
+  const { retry, loads, state } = createRetryHarness({ baseDelayMs: 100 })
+
+  retry.handleDidFailLoad({}, -105, '', '', true)
+  retry.handleDidFinishLoad()
+  state.destroyed = true
+  t.mock.timers.tick(10_000)
+  assert.equal(loads.length, 0, 'the scheduled callback checks the window before loadURL')
 })

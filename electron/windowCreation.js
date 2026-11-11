@@ -19,7 +19,7 @@ import {
   summarizeWindowNavigationErrorForLog,
   summarizeWindowNavigationUrlForLog,
 } from './windowNavigation.js'
-import { externalOpenDialogCopy } from './userFacingDialogs.js'
+import { externalOpenDialogCopy, normalizeDialogLocale } from './userFacingDialogs.js'
 import { getExternalOpenConfirmation } from './services/externalOpenConfirmation.js'
 import { bindWindowCapability, unbindWindowCapability } from './ipc/windowCapabilities.js'
 import {
@@ -48,7 +48,7 @@ import {
 import { createWindowLoadRetry } from './windowLoadRetry.js'
 import {
   PET_LOAD_FALLBACK_RETRY_URL,
-  buildPetLoadFallbackUrl,
+  getPetLoadFallbackPath,
 } from './windowLoadFallback.js'
 
 let getMainWindow = () => null
@@ -126,6 +126,14 @@ function readExternalOpenLocale() {
   if (saved) return saved
   try {
     return app.getLocale()
+  } catch {
+    return 'en-US'
+  }
+}
+
+function readPetLoadFallbackLocale() {
+  try {
+    return normalizeDialogLocale(readExternalOpenLocale())
   } catch {
     return 'en-US'
   }
@@ -370,11 +378,15 @@ export function createMainWindow({ showOnReady = true } = {}) {
         return
       }
       // First launch never completed: hiding would leave Linux without a tray
-      // with nothing visible and no way back. Show a local retry page instead
-      // of Electron's error page or a blank view.
+      // with nothing visible and no way back. Show the packaged static retry
+      // page instead of Electron's error page, a blank view, or a data URL.
+      // The UI-language setting rides along as `?lang=`, and the page itself
+      // falls back to navigator.language when it cannot read the query.
       showingFallback = true
-      win.loadURL(buildPetLoadFallbackUrl()).catch(() => undefined)
       fallbackShowPending = true
+      win.loadFile(getPetLoadFallbackPath(), {
+        query: { lang: readPetLoadFallbackLocale() },
+      }).catch(() => undefined)
       win.show()
     },
   })
