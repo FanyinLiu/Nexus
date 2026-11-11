@@ -65,9 +65,10 @@ class FakeChild extends EventEmitter {
 }
 
 export function spawn(command, args, options) {
+  const child = new FakeChild()
   const record = globalThis.__nexusMcpTestSpawn
-  if (Array.isArray(record)) record.push({ command, args, options })
-  return new FakeChild()
+  if (Array.isArray(record)) record.push({ command, args, options, child })
+  return child
 }
 
 export default { spawn }
