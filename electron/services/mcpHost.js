@@ -199,7 +199,22 @@ class McpInstance {
       window.lastIndexOf('\r'),
       window.lastIndexOf('\n'),
     )
-    const cut = lastBreak >= 0 ? windowStart + lastBreak + 1 : nominalCut
+    let cut = lastBreak >= 0 ? windowStart + lastBreak + 1 : nominalCut
+    // A prefix redaction rule needs the word before the break as well (e.g.
+    // `Bearer <token>`), otherwise the keyword is flushed alone and the token
+    // in the tail no longer matches. Walk back over that preceding word. The
+    // search stays inside the same 512-char window, so the retained tail is
+    // bounded at ~1024 chars and a huge preceding word simply keeps the
+    // single whitespace cut.
+    if (lastBreak > 0) {
+      const prevBreak = Math.max(
+        window.lastIndexOf(' ', lastBreak - 1),
+        window.lastIndexOf('\t', lastBreak - 1),
+        window.lastIndexOf('\r', lastBreak - 1),
+        window.lastIndexOf('\n', lastBreak - 1),
+      )
+      if (prevBreak >= 0) cut = windowStart + prevBreak + 1
+    }
     const flushable = this.stderrBuffer.slice(0, cut)
     this.stderrBuffer = this.stderrBuffer.slice(cut)
     if (flushable) this._logStderrLine(flushable)
