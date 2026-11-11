@@ -4,25 +4,25 @@ import { test } from 'node:test'
 import { MAIN_MESSAGES } from '../electron/mainMessagesTable.js'
 
 const EXPECTED_SETTINGS_PATH = {
-  'zh-CN': '设置 → 连接',
-  'zh-TW': '設定 → 連接',
-  'en-US': 'Settings → Connections',
-  ja: '設定 → 接続',
-  ko: '설정 → 연결',
+  'zh-CN': '设置 → 连接 → 高级',
+  'zh-TW': '設定 → 連線 → 進階',
+  'en-US': 'Settings → Connection → Advanced',
+  ja: '設定 → 接続 → 詳細',
+  ko: '설정 → 연결 → 고급',
 } as const
 
 const RETIRED_SETTINGS_PATH = {
-  'zh-CN': '设置 → 外部集成',
-  'zh-TW': '設定 → 外部整合',
-  'en-US': 'Settings → External integrations',
-  ja: '設定 → 外部連携',
-  ko: '설정 → 외부 통합',
+  'zh-CN': ['设置 → 外部集成'],
+  'zh-TW': ['設定 → 外部整合', '設定 → 連接'],
+  'en-US': ['Settings → External integrations', 'Settings → Connections'],
+  ja: ['設定 → 外部連携'],
+  ko: ['설정 → 외부 통합'],
 } as const
 
 const PAIRING_KEYS = ['integration.pairing.telegram', 'integration.pairing.discord'] as const
 const MCP_KEYS = ['mcp.approval.detail', 'mcp.launch.rejected'] as const
 
-test('gateway and MCP approval copy points at Connections in all five locales', () => {
+test('gateway and MCP approval copy points at Connection → Advanced in all five locales', () => {
   for (const [locale, messages] of Object.entries(MAIN_MESSAGES) as Array<
     [keyof typeof EXPECTED_SETTINGS_PATH, Record<string, string>]
   >) {
@@ -31,7 +31,12 @@ test('gateway and MCP approval copy points at Connections in all five locales', 
     for (const key of [...PAIRING_KEYS, ...MCP_KEYS]) {
       const value = messages[key]
       assert.ok(value.includes(expected), `${locale} ${key} should say "${expected}": ${value}`)
-      assert.equal(value.includes(retired), false, `${locale} ${key} still says "${retired}": ${value}`)
+      for (const oldPath of retired) {
+        assert.equal(value.includes(oldPath), false, `${locale} ${key} still says "${oldPath}": ${value}`)
+      }
+    }
+    for (const key of MCP_KEYS) {
+      assert.ok(messages[key].includes('MCP'), `${locale} ${key} should name the MCP section`)
     }
   }
 })
