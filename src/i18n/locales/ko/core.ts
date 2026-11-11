@@ -41,6 +41,7 @@ export const koCore = {
   'companion.notice.deferred_more': '리마인더가 {count}개 더 있어요.',
   'companion.notice.deferred_more_one': '리마인더가 1개 더 있어요.',
   'companion.notice.deferred_separator': ', ',
+  'companion.notice.deferred_end': '.',
   'companion_awareness.prompt.heading': '조용한 동반 인식',
   'companion_awareness.prompt.not_interacted': 'Nexus는 열려 있지만 사용자가 {elapsedLabel} 동안 Nexus와 상호 작용하지 않았습니다.',
   'companion_awareness.prompt.activity_prefix': '최근 데스크톱 활동은',

@@ -242,13 +242,13 @@ for (const endCase of END_CASES) {
     harness.bus.emit(endCase.event)
     await flushMicrotasks()
 
-    assert.deepEqual(harness.spoken, ['drink water'], 'released once on session end')
+    assert.deepEqual(harness.spoken, ['drink water.'], 'released once on session end')
     assert.equal(harness.timers.pending(), 0, 'release clears all timers')
 
     harness.bus.emit(endCase.event)
     harness.bus.emit(endCase.event)
     await flushMicrotasks()
-    assert.deepEqual(harness.spoken, ['drink water'], 'multiple end signals cannot double release')
+    assert.deepEqual(harness.spoken, ['drink water.'], 'multiple end signals cannot double release')
     assert.equal(harness.timers.pending(), 0, 'extra end signals leave no timer behind')
     harness.unmount()
   })
@@ -260,7 +260,7 @@ test('a terminal ASR error releases even if the continuous flag has not cleared 
   harness.voiceStateRef.current = 'idle'
   harness.bus.emit({ type: 'stt:error', code: 'network', message: 'network failed' })
   await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['error reminder'])
+  assert.deepEqual(harness.spoken, ['error reminder.'])
   harness.unmount()
 })
 
@@ -282,7 +282,7 @@ test('hide alone keeps waiting, and session end while hidden still releases', as
     harness.continuousVoiceActiveRef.current = false
     harness.bus.emit({ type: 'session:completed' })
     await flushMicrotasks()
-    assert.deepEqual(harness.spoken, ['take a break'], 'session end releases while hidden')
+    assert.deepEqual(harness.spoken, ['take a break.'], 'session end releases while hidden')
   } finally {
     harness.unmount()
     if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument)
@@ -308,7 +308,7 @@ test('new reminders merge by due time, dedupe by id, and speak once with one pre
   assert.equal(harness.spoken.length, 1, 'one TTS call for the whole batch')
   assert.equal(
     harness.spoken[0],
-    'While we were chatting, it was time for: early reminder; middle reminder; late reminder 1 more reminder.',
+    'While we were chatting, it was time for: early reminder; middle reminder; late reminder. 1 more reminder.',
   )
   assert.equal(harness.bubbles.length, 1, 'one bubble for the whole batch')
   assert.equal(harness.messages.length, 1, 'one chat line for the whole batch')
@@ -332,12 +332,12 @@ test('session:completed before tts:completed and the 15 s fallback never flush m
   harness.continuousVoiceActiveRef.current = false
   harness.bus.emit({ type: 'session:completed' })
   await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['gap reminder'], 'release after the session ends')
+  assert.deepEqual(harness.spoken, ['gap reminder.'], 'release after the session ends')
   assert.equal(harness.timers.pending(), 0, 'all timers are cleared after release')
 
   harness.advance(30_000)
   await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['gap reminder'], 'no late extra flush')
+  assert.deepEqual(harness.spoken, ['gap reminder.'], 'no late extra flush')
   harness.unmount()
 })
 
@@ -353,7 +353,7 @@ test('the 15 s fallback releases within 15 s once the continuous flag goes false
   harness.continuousVoiceActiveRef.current = false
   harness.advance(15_000)
   await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['fallback reminder'])
+  assert.deepEqual(harness.spoken, ['fallback reminder.'])
   harness.unmount()
 })
 
@@ -373,12 +373,12 @@ test('a 5 s gap does not trip the stuck fallback, and a voice event resets the 3
 
   harness.advance(1_000)
   await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['stuck reminder'], '30 s with no event releases once')
+  assert.deepEqual(harness.spoken, ['stuck reminder.'], '30 s with no event releases once')
   assert.equal(harness.timers.pending(), 0)
 
   harness.advance(30_000)
   await flushMicrotasks()
-  assert.deepEqual(harness.spoken, ['stuck reminder'], 'the stuck fallback never double releases')
+  assert.deepEqual(harness.spoken, ['stuck reminder.'], 'the stuck fallback never double releases')
   harness.unmount()
 })
 

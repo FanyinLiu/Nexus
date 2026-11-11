@@ -41,6 +41,7 @@ export const enCore = {
   'companion.notice.deferred_more': '{count} more reminders.',
   'companion.notice.deferred_more_one': '1 more reminder.',
   'companion.notice.deferred_separator': '; ',
+  'companion.notice.deferred_end': '.',
   'companion_awareness.prompt.heading': 'Quiet companion awareness',
   'companion_awareness.prompt.not_interacted': 'Nexus is open, and the user has not interacted with Nexus for {elapsedLabel}.',
   'companion_awareness.prompt.activity_prefix': 'Recent desktop activity looks like',

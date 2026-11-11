@@ -39,6 +39,7 @@ export const zhCNCore = {
   'companion.notice.deferred_more': '还有 {count} 条提醒。',
   'companion.notice.deferred_more_one': '还有 1 条提醒。',
   'companion.notice.deferred_separator': '；',
+  'companion.notice.deferred_end': '。',
   'companion_awareness.prompt.heading': '陪伴感知摘要',
   'companion_awareness.prompt.not_interacted': 'Nexus 保持开启，但用户已超过 {elapsedLabel} 未与 Nexus 交互。',
   'companion_awareness.prompt.activity_prefix': '近期桌面活动偏向',

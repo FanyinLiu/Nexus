@@ -231,6 +231,7 @@ export function useCompanionNotices({
     const separator = t('companion.notice.deferred_separator')
     return {
       separator,
+      sentenceEnd: t('companion.notice.deferred_end'),
       prefix: (items) => t('companion.notice.deferred_prefix', { items }),
       more: (count) => t('companion.notice.deferred_more', { count }),
       moreOne: () => t('companion.notice.deferred_more_one'),

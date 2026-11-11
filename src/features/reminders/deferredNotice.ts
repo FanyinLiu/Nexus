@@ -24,6 +24,8 @@ export type DeferredReminderItem = {
 export type DeferredReminderCopy = {
   /** Joined between items; includes the locale's trailing space when needed. */
   separator: string
+  /** Sentence end appended once after the joined items. */
+  sentenceEnd: string
   /** Prefix added once when at least one queued item waited long enough. */
   prefix: (items: string) => string
   more: (count: number) => string
@@ -46,6 +48,27 @@ export type MergedDeferredReminder = {
 
 export const DEFERRED_REMINDER_PREFIX_THRESHOLD_MS = 60_000
 export const DEFERRED_REMINDER_MAX_ITEMS = 3
+
+const TRAILING_ITEM_PUNCTUATION = /[。．.！!？?；;、，,\s]+$/u
+const SENTENCE_ENDING = /[。．.！!？?]$/u
+
+/**
+ * Remove punctuation that belongs to the item itself so the merge can add one
+ * sentence end for the whole utterance. A punctuation-only item falls back to
+ * its trimmed source instead of becoming an empty slot.
+ */
+function normalizeDeferredReminderText(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  const stripped = trimmed.replace(TRAILING_ITEM_PUNCTUATION, '').trim()
+  return stripped || trimmed
+}
+
+/** Add the locale sentence end unless the fallback item already carries one. */
+function appendSentenceEnd(text: string, sentenceEnd: string) {
+  if (!text || SENTENCE_ENDING.test(text)) return text
+  return `${text}${sentenceEnd}`
+}
 
 function compareDeferredReminders(left: DeferredReminderItem, right: DeferredReminderItem) {
   if (left.dueAt !== right.dueAt) return left.dueAt - right.dueAt
@@ -70,12 +93,12 @@ export function dedupeDeferredReminders(
 function channelText(
   items: readonly DeferredReminderItem[],
   channel: 'chatContent' | 'bubbleContent' | 'speechContent',
-  separator: string,
+  copy: DeferredReminderCopy,
 ) {
   return items
-    .map((item) => item[channel].trim())
+    .map((item) => normalizeDeferredReminderText(item[channel]))
     .filter(Boolean)
-    .join(separator)
+    .join(copy.separator)
 }
 
 function appendMoreLine(
@@ -115,8 +138,9 @@ export function mergeDeferredReminders(
   const usedPrefix = deduped.some((item) => now - item.enqueuedAt >= prefixThresholdMs)
 
   const buildChannel = (channel: 'chatContent' | 'bubbleContent' | 'speechContent') => {
-    const joined = channelText(selected, channel, copy.separator)
-    const prefixed = usedPrefix ? copy.prefix(joined) : joined
+    const joined = channelText(selected, channel, copy)
+    const ended = appendSentenceEnd(joined, copy.sentenceEnd)
+    const prefixed = usedPrefix ? copy.prefix(ended) : ended
     return appendMoreLine(prefixed, copy, extraCount)
   }
 

@@ -8,12 +8,16 @@ import {
   type DeferredReminderItem,
 } from '../src/features/reminders/deferredNotice.ts'
 import { enMessages } from '../src/i18n/locales/en/index.ts'
+import { jaMessages } from '../src/i18n/locales/ja/index.ts'
+import { koMessages } from '../src/i18n/locales/ko/index.ts'
 import { zhCNMessages } from '../src/i18n/locales/zh-CN/index.ts'
+import { zhTWMessages } from '../src/i18n/locales/zh-TW/index.ts'
 
 function copyFor(messages: Record<string, string>): DeferredReminderCopy {
   const separator = messages['companion.notice.deferred_separator']
   return {
     separator,
+    sentenceEnd: messages['companion.notice.deferred_end'],
     prefix: (items) => messages['companion.notice.deferred_prefix'].replace('{items}', items),
     more: (count) => messages['companion.notice.deferred_more'].replace('{count}', String(count)),
     moreOne: () => messages['companion.notice.deferred_more_one'],
@@ -62,11 +66,11 @@ test('prefix appears only when any reminder waited at least 60 seconds', () => {
   ], en, { now: 1_000 + waitedMs })
 
   assert.equal(at(59_000)?.usedPrefix, false)
-  assert.equal(at(59_000)?.speechContent, 'drink water')
+  assert.equal(at(59_000)?.speechContent, 'drink water.')
   assert.equal(at(60_000)?.usedPrefix, true)
   assert.equal(
     at(60_000)?.speechContent,
-    'While we were chatting, it was time for: drink water',
+    'While we were chatting, it was time for: drink water.',
   )
   assert.equal(at(61_000)?.usedPrefix, true)
 })
@@ -79,7 +83,7 @@ test('the merged utterance caps at three items and appends the singular/plural m
     item('c', 3, 0, 'c'),
   ], en, { now: 0 })
   assert.equal(three?.extraCount, 0)
-  assert.equal(three?.speechContent, 'a; b; c')
+  assert.equal(three?.speechContent, 'a; b; c.')
 
   const four = mergeDeferredReminders([
     item('a', 1, 0, 'a'),
@@ -89,7 +93,7 @@ test('the merged utterance caps at three items and appends the singular/plural m
   ], en, { now: 0 })
   assert.equal(four?.extraCount, 1)
   assert.equal(four?.selected.length, 3)
-  assert.equal(four?.speechContent, 'a; b; c 1 more reminder.')
+  assert.equal(four?.speechContent, 'a; b; c. 1 more reminder.')
 
   const five = mergeDeferredReminders([
     item('a', 1, 0, 'a'),
@@ -99,7 +103,7 @@ test('the merged utterance caps at three items and appends the singular/plural m
     item('e', 5, 0, 'e'),
   ], en, { now: 0 })
   assert.equal(five?.extraCount, 2)
-  assert.equal(five?.speechContent, 'a; b; c 2 more reminders.')
+  assert.equal(five?.speechContent, 'a; b; c. 2 more reminders.')
 })
 
 test('zh-CN and en use their own separator and prefix copy', () => {
@@ -110,11 +114,110 @@ test('zh-CN and en use their own separator and prefix copy', () => {
     item('parcel', 2, 0, '拿快递'),
   ]
 
-  assert.equal(mergeDeferredReminders(items, zh, { now: 0 })?.speechContent, '喝水；拿快递')
-  assert.equal(mergeDeferredReminders(items, en, { now: 0 })?.speechContent, '喝水; 拿快递')
+  assert.equal(mergeDeferredReminders(items, zh, { now: 0 })?.speechContent, '喝水；拿快递。')
+  assert.equal(mergeDeferredReminders(items, en, { now: 0 })?.speechContent, '喝水; 拿快递.')
   assert.equal(
     mergeDeferredReminders(items, zh, { now: 60_000 })?.speechContent,
-    '刚才聊天的时候到点了：喝水；拿快递',
+    '刚才聊天的时候到点了：喝水；拿快递。',
+  )
+})
+
+test('every locale has exact five-item and single-item output', () => {
+  const cases = [
+    {
+      name: 'zh-CN',
+      messages: zhCNMessages,
+      five: '刚才聊天的时候到点了：喝水；拿快递；给妈打电话。还有 2 条提醒。',
+      single: '该去开会了。',
+      singleItem: '该去开会了',
+    },
+    {
+      name: 'zh-TW',
+      messages: zhTWMessages,
+      five: '剛才聊天的時候到點了：喝水；拿快遞；給媽打電話。還有 2 則提醒。',
+      single: '該去開會了。',
+      singleItem: '該去開會了',
+    },
+    {
+      name: 'en',
+      messages: enMessages,
+      five: 'While we were chatting, it was time for: a; b; c. 2 more reminders.',
+      single: 'take out the trash.',
+      singleItem: 'take out the trash',
+    },
+    {
+      name: 'ja',
+      messages: jaMessages,
+      five: 'さっき話している間に時間になりました：水を飲む、荷物を受け取る、母に電話する。ほかにもリマインダーが 2 件あります。',
+      single: '会議に行く。',
+      singleItem: '会議に行く',
+    },
+    {
+      name: 'ko',
+      messages: koMessages,
+      five: '아까 대화하는 동안 시간이 됐어요: 물 마시기, 택배 찾기, 엄마에게 전화하기. 리마인더가 2개 더 있어요.',
+      single: '회의에 가기.',
+      singleItem: '회의에 가기',
+    },
+  ]
+
+  for (const localeCase of cases) {
+    const copy = copyFor(localeCase.messages)
+    const fiveItems = localeCase.name === 'zh-CN' || localeCase.name === 'zh-TW'
+      ? ['喝水', '拿快递', '给妈打电话', '第四', '第五']
+      : localeCase.name === 'ja'
+        ? ['水を飲む', '荷物を受け取る', '母に電話する', '第四', '第五']
+        : localeCase.name === 'ko'
+          ? ['물 마시기', '택배 찾기', '엄마에게 전화하기', '네 번째', '다섯 번째']
+          : ['a', 'b', 'c', 'd', 'e']
+    const zhTWItems = ['喝水', '拿快遞', '給媽打電話', '第四', '第五']
+    const items = localeCase.name === 'zh-TW' ? zhTWItems : fiveItems
+    const merged = mergeDeferredReminders(
+      items.map((speech, index) => item(`r${index}`, index, 0, speech)),
+      copy,
+      { now: 60_000 },
+    )
+    assert.equal(merged?.speechContent, localeCase.five, localeCase.name)
+
+    const single = mergeDeferredReminders([
+      item('single', 1, 0, localeCase.singleItem),
+    ], copy, { now: 0 })
+    assert.equal(single?.speechContent, localeCase.single, `${localeCase.name} single`)
+  }
+})
+
+test('source punctuation is stripped before the one sentence end', () => {
+  const zh = copyFor(zhCNMessages)
+  const en = copyFor(enMessages)
+  const zhMerged = mergeDeferredReminders([
+    item('meeting', 1, 0, '该去开会了。'),
+    item('parcel', 2, 0, '拿快递'),
+  ], zh, { now: 60_000 })
+  assert.equal(zhMerged?.speechContent, '刚才聊天的时候到点了：该去开会了；拿快递。')
+
+  const enMerged = mergeDeferredReminders([
+    item('a', 1, 0, 'a.'),
+    item('b', 2, 0, 'b!'),
+    item('c', 3, 0, 'c！'),
+  ], en, { now: 0 })
+  assert.equal(enMerged?.speechContent, 'a; b; c.')
+
+  const single = mergeDeferredReminders([
+    item('single', 1, 0, '该去开会了。'),
+  ], zh, { now: 0 })
+  assert.equal(single?.speechContent, '该去开会了。')
+})
+
+test('punctuation-only items keep a non-empty sensible fallback', () => {
+  const zh = copyFor(zhCNMessages)
+  const en = copyFor(enMessages)
+  assert.equal(
+    mergeDeferredReminders([item('dots', 1, 0, '。')], zh, { now: 0 })?.speechContent,
+    '。',
+  )
+  assert.equal(
+    mergeDeferredReminders([item('bangs', 1, 0, '!!')], en, { now: 0 })?.speechContent,
+    '!!',
   )
 })
 

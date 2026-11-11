@@ -41,6 +41,7 @@ export const zhTWCore = {
   'companion.notice.deferred_more': '還有 {count} 則提醒。',
   'companion.notice.deferred_more_one': '還有 1 則提醒。',
   'companion.notice.deferred_separator': '；',
+  'companion.notice.deferred_end': '。',
   'companion_awareness.prompt.heading': '陪伴感知摘要',
   'companion_awareness.prompt.not_interacted': 'Nexus 保持開啟，但使用者已超過 {elapsedLabel} 未與 Nexus 交互。',
   'companion_awareness.prompt.activity_prefix': '近期桌面活動偏向',

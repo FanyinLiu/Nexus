@@ -41,6 +41,7 @@ export const jaCore = {
   'companion.notice.deferred_more': 'ほかにもリマインダーが {count} 件あります。',
   'companion.notice.deferred_more_one': 'ほかにもリマインダーが 1 件あります。',
   'companion.notice.deferred_separator': '、',
+  'companion.notice.deferred_end': '。',
   'companion_awareness.prompt.heading': '静かな付き添い認識',
   'companion_awareness.prompt.not_interacted': 'Nexus は起動中ですが、ユーザーは {elapsedLabel} 以上 Nexus とやりとりしていません。',
   'companion_awareness.prompt.activity_prefix': '最近のデスクトップ活動は',
