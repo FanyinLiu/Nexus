@@ -3,11 +3,28 @@ import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 import type { CompanionNoticePayload } from '../src/hooks/chat/types.ts'
+import { shouldDropDeferredReminderNotice } from '../src/features/reminders/deferredNotice.ts'
+import { emitSpeechStopAll } from '../src/features/voice/speechStopBus.ts'
+import { updateReminderTaskInCollection } from '../src/features/reminders/schedule.ts'
+import type { ReminderTask } from '../src/types/index.ts'
 import {
   createHarness,
   flushMicrotasks,
   reminder,
 } from './helpers/companionNoticeHarness.ts'
+
+function reminderTask(id: string): ReminderTask {
+  return {
+    id,
+    title: `title-${id}`,
+    prompt: `prompt-${id}`,
+    action: { kind: 'notice' },
+    enabled: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    schedule: { kind: 'at', at: '2026-01-01T00:00:00.000Z' },
+  }
+}
 
 test('panel never self-releases on the inherited flag, then releases after pet sync false', async () => {
   const sharedContinuous = { current: true }
@@ -119,6 +136,65 @@ test('merged playback never resumes continuous voice', async () => {
   await flushMicrotasks()
   assert.deepEqual(harness.spoken, ['resume reminder.'])
   assert.deepEqual(harness.resumeFlags, [false], 'merged reminders never restart the mic')
+  harness.unmount()
+})
+
+test('an empty queue never clears a stuck continuous session', async () => {
+  let stuckFallbackCalls = 0
+  let clearContinuousCalls = 0
+  const ownContinuous = { current: true }
+  const mergedContinuous = { current: true }
+  const harness = createHarness({
+    voiceStateRef: { current: 'idle' },
+    continuousVoiceActiveRef: mergedContinuous,
+    ownContinuousVoiceActiveRef: ownContinuous,
+    onStuckFallback: () => {
+      stuckFallbackCalls += 1
+      clearContinuousCalls += 1
+      ownContinuous.current = false
+      mergedContinuous.current = false
+    },
+  })
+
+  harness.advance(90_000)
+  await flushMicrotasks()
+  assert.equal(stuckFallbackCalls, 0, 'an empty queue must not trigger the stuck fallback')
+  assert.equal(clearContinuousCalls, 0, 'an empty queue must not clear continuous voice')
+  assert.deepEqual(harness.spoken, [])
+
+  await harness.api.pushCompanionNotice(reminder('later', 'later'))
+  harness.advance(30_000)
+  await flushMicrotasks()
+  assert.deepEqual(harness.spoken, ['later.'], 'the queued reminder releases once')
+  assert.equal(stuckFallbackCalls, 1, 'the stuck fallback runs once with queued work')
+  assert.equal(clearContinuousCalls, 1)
+  harness.unmount()
+})
+
+test('stop-all keeps y when x is paused through the reminder task store', async () => {
+  const pausedTasks = updateReminderTaskInCollection(
+    [reminderTask('x'), reminderTask('y')],
+    'x',
+    { enabled: false },
+  ).tasks
+  const harness = createHarness({
+    shouldDropDeferredNotice: (payload) => shouldDropDeferredReminderNotice({
+      reminderId: payload.reminderId,
+      tasks: pausedTasks,
+      quietUntil: null,
+      now: Date.now(),
+    }),
+  })
+  await harness.api.pushCompanionNotice(reminder('x', 'x'))
+  await harness.api.pushCompanionNotice(reminder('y', 'y'))
+
+  emitSpeechStopAll()
+  await flushMicrotasks()
+
+  assert.deepEqual(harness.messages, ['title-y: y'])
+  assert.doesNotMatch(harness.messages[0], /title-x/u)
+  assert.deepEqual(harness.spoken, [], 'stop-all does not speak')
+  assert.deepEqual(harness.bubbles, [], 'stop-all does not bubble')
   harness.unmount()
 })
 

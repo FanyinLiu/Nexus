@@ -172,8 +172,9 @@ export function useCompanionNoticeIdleFlush(
           runFlush(false)
           return
         }
-        // Only a truly idle voice state may override a stale continuous flag.
-        if (!canForceReleaseRef.current()) {
+        // Only a truly idle voice state with queued work may override a stale
+        // continuous flag. An empty queue must never clear the voice session.
+        if (!canForceReleaseRef.current() || !hasPending()) {
           armStuck()
           return
         }

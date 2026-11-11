@@ -10,6 +10,8 @@
  * React, storage, or the voice bus. The hook owns timestamps and delivery.
  */
 
+import type { ReminderTask } from '../../types/index.ts'
+
 export type DeferredReminderItem = {
   reminderId: string
   /** Due instant used for ordering; falls back to enqueue time upstream. */
@@ -50,6 +52,23 @@ export type MergedDeferredReminder = {
 
 export const DEFERRED_REMINDER_PREFIX_THRESHOLD_MS = 60_000
 export const DEFERRED_REMINDER_MAX_ITEMS = 3
+
+/**
+ * Whether a queued notice should be dropped instead of delivered: a paused
+ * reminder row or the companion's "leave me alone" DND span.
+ */
+export function shouldDropDeferredReminderNotice(options: {
+  reminderId?: string
+  tasks: readonly Pick<ReminderTask, 'id' | 'enabled'>[]
+  quietUntil: number | null
+  now: number
+}) {
+  if (options.reminderId) {
+    const task = options.tasks.find((entry) => entry.id === options.reminderId)
+    if (task && !task.enabled) return true
+  }
+  return options.quietUntil != null && options.quietUntil > options.now
+}
 
 const TRAILING_ITEM_PUNCTUATION = /[。．.！!？?；;、，,\s]+$/u
 const SENTENCE_ENDING = /[。．.！!？?]$/u

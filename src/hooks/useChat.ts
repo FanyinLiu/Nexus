@@ -15,6 +15,7 @@ import {
 } from './chat/useCompanionNoticeQueueSubscriptions.ts'
 import { noteUserTyping } from '../features/autonomy/userTyping.ts'
 import { loadProactiveEtiquetteState } from '../features/autonomy/proactiveEtiquette.ts'
+import { shouldDropDeferredReminderNotice } from '../features/reminders/deferredNotice.ts'
 import {
   createAssistantReplyRunner,
   createLocalReminderActionRunner,
@@ -191,15 +192,15 @@ export function useChat(ctx: UseChatContext) {
     // push keeps main's original immediate-delivery behaviour even during DND.
     // A paused reminder row must not replay after the session ends. Local
     // reminders have no separate global switch; pausing the task is the user's
-    // "reminders off" for that item.
-    if (payload.reminderId) {
-      const task = current.reminderTasksRef.current.find((entry) => entry.id === payload.reminderId)
-      if (task && !task.enabled) return true
-    }
-    // The companion "leave me alone" span is the renderer's Do-Not-Disturb
-    // signal; queued reminders are dropped rather than delivered late.
-    const quietUntil = loadProactiveEtiquetteState().quietUntil
-    return quietUntil != null && quietUntil > Date.now()
+    // "reminders off" for that item. The companion "leave me alone" span is the
+    // renderer's Do-Not-Disturb signal; queued reminders are dropped rather
+    // than delivered late.
+    return shouldDropDeferredReminderNotice({
+      reminderId: payload.reminderId,
+      tasks: current.reminderTasksRef.current,
+      quietUntil: loadProactiveEtiquetteState().quietUntil,
+      now: Date.now(),
+    })
   }, [])
 
   const {
