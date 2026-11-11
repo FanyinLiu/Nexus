@@ -1,14 +1,26 @@
 import assert from 'node:assert/strict'
+import { join } from 'node:path'
 import test from 'node:test'
 
 import {
   buildIpcContractReport,
+  listMainHandlerFiles,
   summarizeIpcContractReport,
 } from '../scripts/ipc-contract-audit.mjs'
 
 function findChannel(report: ReturnType<typeof buildIpcContractReport>, channel: string) {
   return report.channels.find((item) => item.channel === channel)
 }
+
+test('IPC contract audit scans every electron JavaScript file for main handlers', () => {
+  const files = listMainHandlerFiles()
+
+  assert.ok(files.includes(join('electron', 'main.js')), 'electron/main.js must be in the handler scan set')
+  assert.ok(files.includes(join('electron', 'preload.js')), 'electron/preload.js must be in the handler scan set')
+  assert.ok(files.includes(join('electron', 'ipc', 'memoryIpc.js')), 'electron/ipc modules must stay in the handler scan set')
+  assert.ok(files.every((file) => file.endsWith('.js')))
+  assert.ok(files.every((file) => !file.includes(`${join('electron', 'node_modules')}`)))
+})
 
 test('IPC contract audit inventories the current preload and main handler surface', () => {
   const report = buildIpcContractReport()
