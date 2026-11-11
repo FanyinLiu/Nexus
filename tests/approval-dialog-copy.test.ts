@@ -16,7 +16,7 @@ const MCP_START: Record<string, Copy> = {
   'zh-CN': {
     title: '要启动 MCP 服务吗',
     message: '允许 Nexus 启动「server-x」吗？',
-    suffix: '允许后，它会在你的电脑上运行，能读写你的文件、上网，权限和你自己一样。只批准你自己配的、或者完全信得过的。之后可以在「设置 → 连接」里撤销。',
+    suffix: '允许后，它会在你的电脑上运行，能读写你的文件、上网，权限和你自己一样。只批准你自己配的、或者完全信得过的。之后可以在「设置 → 连接 → 高级 → MCP」里撤销。',
     deny: '拒绝',
     allow: '允许',
     commandLabel: '命令：',
@@ -26,7 +26,7 @@ const MCP_START: Record<string, Copy> = {
   'zh-TW': {
     title: '要啟動 MCP 服務嗎',
     message: '允許 Nexus 啟動「server-x」嗎？',
-    suffix: '允許後，它會在你的電腦上執行，能讀寫你的檔案、上網，權限跟你自己一樣。只批准你自己設定的、或完全信得過的。之後可以在「設定 → 連線」裡撤銷。',
+    suffix: '允許後，它會在你的電腦上執行，能讀寫你的檔案、上網，權限跟你自己一樣。只批准你自己設定的、或完全信得過的。之後可以在「設定 → 連線 → 進階 → MCP」裡撤銷。',
     deny: '拒絕',
     allow: '允許',
     commandLabel: '指令：',
@@ -36,7 +36,7 @@ const MCP_START: Record<string, Copy> = {
   'en-US': {
     title: 'Start this MCP service?',
     message: 'Allow Nexus to start "server-x"?',
-    suffix: 'Once allowed, it runs on your computer and can read and change your files and use the internet, just like you can. Only allow ones you set up yourself or fully trust. You can take this back anytime in Settings → Connection.',
+    suffix: 'Once allowed, it runs on your computer and can read and change your files and use the internet, just like you can. Only allow ones you set up yourself or fully trust. You can take this back anytime in Settings → Connection → Advanced → MCP.',
     deny: "Don't allow",
     allow: 'Allow',
     commandLabel: 'Command:',
@@ -46,7 +46,7 @@ const MCP_START: Record<string, Copy> = {
   ja: {
     title: 'MCP サービスを起動しますか',
     message: '「server-x」の起動を許可しますか？',
-    suffix: '許可すると、このパソコン上で動き、あなたと同じようにファイルの読み書きやネット接続ができます。自分で設定したもの、または十分信頼できるものだけ許可してください。あとから「設定 → 接続」で取り消せます。',
+    suffix: '許可すると、このパソコン上で動き、あなたと同じようにファイルの読み書きやネット接続ができます。自分で設定したもの、または十分信頼できるものだけ許可してください。あとから「設定 → 接続 → 詳細 → MCP」で取り消せます。',
     deny: '許可しない',
     allow: '許可',
     commandLabel: 'コマンド:',
@@ -56,7 +56,7 @@ const MCP_START: Record<string, Copy> = {
   ko: {
     title: 'MCP 서비스를 시작할까요?',
     message: 'Nexus가 "server-x"을(를) 시작해도 될까요?',
-    suffix: '허용하면 이 컴퓨터에서 실행되고, 당신처럼 파일을 읽고 바꾸거나 인터넷을 쓸 수 있어요. 직접 설정했거나 충분히 믿을 수 있는 것만 허용하세요. 나중에 설정 → 연결에서 취소할 수 있어요.',
+    suffix: '허용하면 이 컴퓨터에서 실행되고, 당신처럼 파일을 읽고 바꾸거나 인터넷을 쓸 수 있어요. 직접 설정했거나 충분히 믿을 수 있는 것만 허용하세요. 나중에 설정 → 연결 → 고급 → MCP에서 취소할 수 있어요.',
     deny: '허용 안 함',
     allow: '허용',
     commandLabel: '명령:',
@@ -217,7 +217,7 @@ const PLUGIN_BATCH: Record<string, Copy> = {
     titleOther: '2 個のプラグインが許可を待っています',
     messageOne: 'このプラグインを動かしますか？',
     messageOther: '2 個すべて動かしますか？',
-    detail: '許可すると、すべてこのパソコン上であなたと同じ権限で動きます。迷ったら一度すべて許可しないでください。',
+    detail: '許可すると、すべてこのパソコン上であなたと同じ権限で動きます。迷ったら、いったん全部許可しないでおきましょう。',
     denyAll: 'すべて許可しない',
     allowAll: 'すべて許可',
   },
