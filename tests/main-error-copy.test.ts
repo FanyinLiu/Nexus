@@ -90,6 +90,20 @@ const SETTINGS_VOICE_COPY = {
   },
 } as const
 
+const PET_CONFIRM_DETAIL: Record<string, string> = {
+  'zh-CN':
+    '可能会读取本地的宠物文件、写进宠物文件夹、下载社区宠物，或者打开本地文件夹。记录里不会存路径、链接或宠物内容。',
+  'zh-TW':
+    '可能會讀取本機的寵物檔案、寫進寵物資料夾、下載社群寵物，或開啟本機資料夾。記錄裡不會存路徑、連結或寵物內容。',
+  'en-US':
+    'This may read local pet files, write to your pet folder, download community pets, or open a local folder. The record never keeps paths, links, or pet content.',
+  ja: 'ローカルのペットファイルを読み込んだり、ペットフォルダーに書き込んだり、コミュニティのペットをダウンロードしたり、ローカルフォルダーを開いたりすることがあります。記録にはパス、リンク、ペットの内容は残りません。',
+  ko: '로컬 펫 파일을 읽거나, 펫 폴더에 쓰거나, 커뮤니티 펫을 내려받거나, 로컬 폴더를 열 수 있어요. 기록에는 경로, 링크, 펫 내용이 남지 않아요.',
+}
+
+const PET_CONFIRM_DETAIL_JARGON =
+  /审计日志|稽核記錄|audit log|監査ログ|감사 로그|元数据|中繼資料|metadata|メタデータ|메타데이터|slug|制作包|製作包|creation pack|制作パッケージ|제작 패키지/i
+
 const PET_APPEARANCE_TERMS: Record<string, RegExp> = {
   'zh-CN': /宠物形象/,
   'zh-TW': /寵物形象/,
@@ -161,6 +175,14 @@ test('pet action copy says pet appearance, never a pet artifact', () => {
       assert.match(text, PET_APPEARANCE_TERMS[locale], `${locale} ${key} lost the appearance wording: ${text}`)
       assert.doesNotMatch(text, /工件|artifact/i, `${locale} ${key} still says artifact: ${text}`)
     }
+  }
+})
+
+test('pet appearance confirm detail states the data boundary without audit jargon', () => {
+  for (const locale of MAIN_MESSAGE_LOCALES) {
+    const text = translateMainMessage('petModel.confirmDetail', undefined, locale)
+    assert.equal(text, PET_CONFIRM_DETAIL[locale], `${locale} confirm detail drifted from the product copy: ${text}`)
+    assert.doesNotMatch(text, PET_CONFIRM_DETAIL_JARGON, `${locale} confirm detail still uses audit jargon: ${text}`)
   }
 })
 
