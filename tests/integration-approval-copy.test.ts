@@ -4,6 +4,14 @@ import { test } from 'node:test'
 import { MAIN_MESSAGES } from '../electron/mainMessagesTable.js'
 
 const EXPECTED_SETTINGS_PATH = {
+  'zh-CN': '设置 → 连接',
+  'zh-TW': '設定 → 連接',
+  'en-US': 'Settings → Connections',
+  ja: '設定 → 接続',
+  ko: '설정 → 연결',
+} as const
+
+const RETIRED_SETTINGS_PATH = {
   'zh-CN': '设置 → 外部集成',
   'zh-TW': '設定 → 外部整合',
   'en-US': 'Settings → External integrations',
@@ -11,18 +19,10 @@ const EXPECTED_SETTINGS_PATH = {
   ko: '설정 → 외부 통합',
 } as const
 
-const RETIRED_SETTINGS_PATH = {
-  'zh-CN': '设置 → 集成',
-  'zh-TW': '設定 → 整合',
-  'en-US': 'Settings → Integrations',
-  ja: '設定 → 連携',
-  ko: '설정 → 통합',
-} as const
-
 const PAIRING_KEYS = ['integration.pairing.telegram', 'integration.pairing.discord'] as const
 const MCP_KEYS = ['mcp.approval.detail', 'mcp.launch.rejected'] as const
 
-test('gateway and MCP approval copy points at External integrations in all five locales', () => {
+test('gateway and MCP approval copy points at Connections in all five locales', () => {
   for (const [locale, messages] of Object.entries(MAIN_MESSAGES) as Array<
     [keyof typeof EXPECTED_SETTINGS_PATH, Record<string, string>]
   >) {
