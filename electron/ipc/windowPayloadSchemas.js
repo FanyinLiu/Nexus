@@ -204,6 +204,36 @@ const modelSetupRequestSchema = {
   },
 }
 
+const petFreeModeSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    freeMode: optionalBoolean,
+  },
+}
+
+const systemVibrancySchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    enabled: optionalBoolean,
+  },
+}
+
+const launchOnStartupSchema = {
+  type: 'boolean',
+  optional: true,
+  default: false,
+}
+
+const confirmDialogSchema = {
+  type: 'string',
+  optional: true,
+  default: '',
+}
+
 /**
  * @param {unknown} payload
  * @returns {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean, roamCapable?: boolean }}
@@ -339,5 +369,45 @@ export function validateModelSetupReminderPayload(payload) {
 export function validateModelSetupResolvePayload(payload) {
   return /** @type {{ reason: 'shown'|'dismissed'|'installed' }} */ (
     validateIpcPayload('window:resolve-model-setup-request', payload, modelSetupResolveSchema)
+  )
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ freeMode?: boolean }}
+ */
+export function validatePetFreeModePayload(payload) {
+  return /** @type {{ freeMode?: boolean }} */ (
+    validateIpcPayload('pet-window:set-free-mode', payload, petFreeModeSchema)
+  )
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ enabled?: boolean }}
+ */
+export function validateSystemVibrancyPayload(payload) {
+  return /** @type {{ enabled?: boolean }} */ (
+    validateIpcPayload('window:set-system-vibrancy', payload, systemVibrancySchema)
+  )
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function validateLaunchOnStartupPayload(value) {
+  return /** @type {boolean} */ (
+    validateIpcPayload('app:set-launch-on-startup', value, launchOnStartupSchema)
+  )
+}
+
+/**
+ * @param {unknown} message
+ * @returns {string}
+ */
+export function validateConfirmDialogPayload(message) {
+  return /** @type {string} */ (
+    validateIpcPayload('dialog:confirm', message, confirmDialogSchema)
   )
 }

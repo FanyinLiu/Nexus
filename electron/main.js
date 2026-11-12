@@ -32,6 +32,7 @@ import { getRedactedErrorMessage } from './services/errorRedaction.js'
 import { createRendererReloadGuard, shouldReloadAfterRendererGone } from './crashRecovery.js'
 import { crashDialogCopy, rendererStuckDialogCopy } from './userFacingDialogs.js'
 import { getExternalOpenConfirmation } from './services/externalOpenConfirmation.js'
+import { installWebviewAttachGuard } from './webviewGuard.js'
 
 // ── Console safety: suppress broken-pipe errors on stdout/stderr ──
 
@@ -270,6 +271,10 @@ initRendererServer({
 })
 
 // ── App lifecycle ──
+
+// Must run before the first BrowserWindow exists so every webContents gets the
+// deny-all listener attached at creation.
+installWebviewAttachGuard(app)
 
 app.whenReady()
   .then(async () => {

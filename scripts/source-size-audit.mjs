@@ -44,8 +44,10 @@ const FILE_BUDGETS = {
   'src/hooks/voice/streamingSpeechOutput.ts': 942,
   // Generated from electron/preload by scripts/generate-ipc-types.mjs (ipc:types:check).
   // Grows with every added bridge channel, including the cross-window speech
-  // stop invoke/subscription and the model-setup acknowledgement invoke.
-  'src/types/generated/desktopPetBridge.generated.ts': 1085,
+  // stop invoke/subscription and the model-setup acknowledgement invoke, plus
+  // the trivial-payload schemas that made previously untyped bridge methods
+  // renderable.
+  'src/types/generated/desktopPetBridge.generated.ts': 1091,
   'src/vite-env.d.ts': 1196,
   'tests/fixtures/settingsSurfaceAuditBaseline.ts': 1197,
   // IPC payload schema suite keeps one test per domain plus the high-risk

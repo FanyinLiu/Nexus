@@ -16,7 +16,11 @@
 import { createHmac } from 'node:crypto'
 import { BrowserWindow } from 'electron'
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
+import { createLogger } from '../logger.js'
+import { mainT } from '../mainMessages.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+
+const log = createLogger('voice.tencentAsr')
 
 /** @type {'disconnected'|'connecting'|'ready'|'streaming'} */
 let _state = 'disconnected'
@@ -113,7 +117,7 @@ function handleMessage(rawData) {
       console.error('[TencentASR] server error:', data.code, getRedactedErrorMessage(data.message))
       sendToRenderer('tencent-asr:result', {
         type: 'error',
-        text: data.message || `腾讯云语音识别遇到了点问题（${data.code}）`,
+        text: mainT('tencentAsr.recognitionError'),
       })
       return
     }
@@ -191,7 +195,7 @@ export async function connect(credentials) {
   }
 
   if (!_credentials || !_credentials.appId || !_credentials.secretId || !_credentials.secretKey) {
-    throw new Error('腾讯云语音识别缺少必要凭证 (AppID / SecretId / SecretKey)。请在设置中填写。')
+    throw new Error(mainT('tencentAsr.missingCredentials'))
   }
 
   _state = 'connecting'
@@ -221,7 +225,8 @@ export async function connect(credentials) {
     } catch (err) {
       clearTimeout(timeoutId)
       _state = 'disconnected'
-      reject(new Error(`WebSocket 没能建起来：${err.message}`))
+      log.warn(`websocket construction failed: ${getRedactedErrorMessage(err)}`)
+      reject(new Error(mainT('tencentAsr.connectionFailed')))
       return
     }
 
@@ -248,7 +253,8 @@ export async function connect(credentials) {
           }
           clearTimeout(timeoutId)
           _state = 'disconnected'
-          reject(new Error(data.message || `腾讯云连接没成功（${data.code}）`))
+          log.warn(`connection rejected (${data.code}): ${getRedactedErrorMessage(data.message)}`)
+          reject(new Error(mainT('tencentAsr.connectionRejected')))
           return
         } catch {
           // silent-catch-ok: non-JSON frames are expected on this stream and carry no result
@@ -277,7 +283,8 @@ export async function connect(credentials) {
       }
 
       if (wasConnecting) {
-        reject(new Error(`腾讯云 WebSocket 在连接过程中关闭 (code=${event.code})`))
+        log.warn(`websocket closed while connecting (code=${event.code})`)
+        reject(new Error(mainT('tencentAsr.connectionClosed')))
       }
     })
   })

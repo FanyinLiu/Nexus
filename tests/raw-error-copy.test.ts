@@ -3,6 +3,7 @@ import { before, test } from 'node:test'
 
 import {
   classifyVoiceError,
+  humanizeError,
   humanizeVoiceError,
 } from '../src/lib/humanizeError.ts'
 import { getSpeechOutputErrorMessage } from '../src/hooks/chat/support.ts'
@@ -34,6 +35,28 @@ function captureWarnings() {
   }
 }
 
+// User-facing failures that used to interpolate `{error}`. The UI now shows
+// only these fixed sentences; the redacted original stays in the log.
+const RAW_ERROR_KEYS = [
+  'chat.assistant.failure_bubble',
+  'chat.assistant.voice_send_failed_system',
+  'chat.assistant.voice_send_failed_summary',
+  'chat.error.speech_with_detail',
+  'chat.error.playback_with_reply',
+  'chat.reminder_task.execution_failed_system',
+  'chat.media_session.control_failed_system',
+  'settings.chat.import_card_error',
+  'settings.memory.migration.backup_error',
+  'settings.memory.migration.status_error',
+  'settings.memory.migration.apply_error',
+  'settings.memory.migration.rollback_error',
+  'settings.memory.companionMigration.status_error',
+  'settings.memory.companionMigration.apply_error',
+  'settings.memory.companionMigration.rollback_error',
+  'settings.save_failed_system',
+  'voice.wakeword.listener_error_with_reason',
+] as const
+
 const VOICE_ERROR_KEYS = [
   'voice.error.engine',
   'voice.error.device',
@@ -59,6 +82,59 @@ test('every new voice/onboarding key exists in all five locales', () => {
     for (const dictionary of dictionaries) {
       assert.ok(dictionary[key]?.trim(), `missing ${key}`)
     }
+  }
+})
+
+test('raw-error keys are fixed sentences in all five locales', () => {
+  const dictionaries: Array<Record<string, string>> = [
+    zhCNMessages,
+    zhTWMessages,
+    enMessages,
+    jaMessages,
+    koMessages,
+  ]
+  for (const key of RAW_ERROR_KEYS) {
+    for (const dictionary of dictionaries) {
+      const text = dictionary[key]
+      assert.ok(text?.trim(), `missing ${key}`)
+      assert.equal(text.includes('{error}'), false, `${key} still interpolates {error}`)
+    }
+  }
+  for (const dictionary of dictionaries) {
+    assert.ok(
+      dictionary['chat.reminder_task.execution_failed_system']?.includes('{title}'),
+      'reminder task copy must keep the task title',
+    )
+  }
+})
+
+test('humanize.fallback is a friendly sentence in all five locales', () => {
+  const dictionaries: Array<Record<string, string>> = [
+    zhCNMessages,
+    zhTWMessages,
+    enMessages,
+    jaMessages,
+    koMessages,
+  ]
+  for (const dictionary of dictionaries) {
+    const text = dictionary['humanize.fallback']
+    assert.ok(text?.trim(), 'missing humanize.fallback')
+    assert.equal(text.includes('{detail}'), false, 'humanize.fallback must not interpolate raw detail')
+  }
+})
+
+test('humanizeError returns the friendly sentence and logs the raw marker', () => {
+  const raw = `${MARKER} provider internals sk-ABCDEF1234567890XYZ`
+  const captured = captureWarnings()
+  try {
+    const message = humanizeError(new Error(raw), 'chat')
+    assert.equal(message.includes(MARKER), false)
+    assert.equal(message.includes('sk-ABCDEF1234567890XYZ'), false)
+    const logged = captured.lines.join('\n')
+    assert.ok(logged.includes(MARKER), 'raw error must reach the log')
+    assert.equal(logged.includes('sk-ABCDEF1234567890XYZ'), false, 'log must be redacted')
+  } finally {
+    captured.restore()
   }
 })
 

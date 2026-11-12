@@ -58,7 +58,7 @@ export const zhTWSettingsShell = {
   'settings.return_to_companion': '返回陪伴',
   'settings.unsaved_changes': '有未儲存的變更',
   'settings.save_failed_fallback': '設定沒能保存，稍後再試試？',
-  'settings.save_failed_system': '設定沒能保存：{error}',
+  'settings.save_failed_system': '設定沒能保存，稍後再試試？',
   'settings.import_pet_model_unsupported': '目前環境暫不支援本地形象模型匯入。',
   'settings.list_speech_voices.unsupported': '目前環境不支援拉取線上音色列表。',
   'settings.preview.busy_error': '上一輪對話還在處理中，等一下再試聽吧。',

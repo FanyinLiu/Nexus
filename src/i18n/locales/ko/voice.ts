@@ -137,7 +137,7 @@ export const koVoice = {
   'voice.pipeline.session_stopped': '음성을 중지했습니다',
   'voice.pipeline.wake_word_detected': '웨이크 워드 "{keyword}" 감지 — 녹음 모드로 전환 중',
   'voice.wakeword.unavailable_with_reason': '웨이크 워드를 사용할 수 없음: {reason}',
-  'voice.wakeword.listener_error_with_reason': '웨이크 워드 청취에 문제가 있었어요: {error}',
+  'voice.wakeword.listener_error_with_reason': '웨이크 워드 청취에 문제가 생겼어요. 잠시 뒤에 다시 해볼까요?',
   'voice.diagnostics.no_mic_api': '현재 환경에서는 마이크 녹음 기능이 노출되어 있지 않아 음성 입력을 시작할 수 없습니다.',
   'voice.diagnostics.no_media_recorder': '현재 환경은 MediaRecorder 를 지원하지 않아 음성 입력 녹음을 완료할 수 없습니다.',
   'voice.diagnostics.no_audio_tracks': '녹음 스트림은 받았지만 사용 가능한 오디오 트랙을 찾지 못했습니다.',

@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import type { ConfirmFn } from '../../components/useConfirm.ts'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { warnRedacted } from '../../lib/logger.ts'
 import {
   buildCompanionLocalDataComparisonSource,
   buildCompanionLocalDataMigrationPackage,
@@ -32,8 +32,8 @@ type MemoryStatus = Awaited<ReturnType<NonNullable<Window['desktopPet']>['localD
 type CompanionStatus = Awaited<ReturnType<NonNullable<Window['desktopPet']>['localDataCompanionMigrationStatus']>>
 type CompanionComparison = Awaited<ReturnType<NonNullable<Window['desktopPet']>['localDataCompareCompanion']>>
 
-function errorText(error: unknown) {
-  return getRedactedLogErrorMessage(error).trim() || 'unknown'
+function logMigrationError(scope: string, error: unknown) {
+  warnRedacted(`[settings] ${scope} failed:`, error)
 }
 
 export const MemoryMigrationAdapterV3 = memo(function MemoryMigrationAdapterV3({
@@ -65,7 +65,8 @@ export const MemoryMigrationAdapterV3 = memo(function MemoryMigrationAdapterV3({
       setRemote(result)
       return result
     } catch (error) {
-      setStatus({ ok: false, message: ti('settings.memory.migration.status_error', { error: errorText(error) }) })
+      logMigrationError('memory migration status', error)
+      setStatus({ ok: false, message: ti('settings.memory.migration.status_error') })
       return null
     } finally {
       setBusy(null)
@@ -80,15 +81,17 @@ export const MemoryMigrationAdapterV3 = memo(function MemoryMigrationAdapterV3({
     setBusy('apply')
     try {
       const result = await run({ confirmed: true, migrationPackage: buildMemoryLocalDataMigrationPackage() })
+      if (!result.ok) logMigrationError('memory migration apply', result.errorMessage || result.errorKind)
       setStatus(result.ok
         ? { ok: true, message: ti('settings.memory.migration.apply_success', { longTerm: result.longTermRecordCount ?? report.totals.longTermMemoryCount, daily: result.dailyEntryCount ?? report.totals.dailyEntryCount }) }
-        : { ok: false, message: ti('settings.memory.migration.apply_error', { error: errorText(result.errorMessage || result.errorKind) }) })
+        : { ok: false, message: ti('settings.memory.migration.apply_error') })
       if (result.ok) {
         setConfirmed(false)
         await refreshStatus()
       }
     } catch (error) {
-      setStatus({ ok: false, message: ti('settings.memory.migration.apply_error', { error: errorText(error) }) })
+      logMigrationError('memory migration apply', error)
+      setStatus({ ok: false, message: ti('settings.memory.migration.apply_error') })
     } finally {
       setBusy(null)
     }
@@ -114,9 +117,10 @@ export const MemoryMigrationAdapterV3 = memo(function MemoryMigrationAdapterV3({
     setBusy('rollback')
     try {
       const result = await run({ confirmed: true })
+      if (!result.ok) logMigrationError('memory migration rollback', result.errorMessage || result.errorKind)
       setStatus(result.ok
         ? { ok: true, message: ti('settings.memory.migration.rollback_success', { records: result.recordsDeleted }) }
-        : { ok: false, message: ti('settings.memory.migration.rollback_error', { error: errorText(result.errorMessage || result.errorKind) }) })
+        : { ok: false, message: ti('settings.memory.migration.rollback_error') })
       if (result.ok) {
         setMemoryLocalDataAuthorityConsent(false)
         setAuthority(false)
@@ -124,7 +128,8 @@ export const MemoryMigrationAdapterV3 = memo(function MemoryMigrationAdapterV3({
         await refreshStatus()
       }
     } catch (error) {
-      setStatus({ ok: false, message: ti('settings.memory.migration.rollback_error', { error: errorText(error) }) })
+      logMigrationError('memory migration rollback', error)
+      setStatus({ ok: false, message: ti('settings.memory.migration.rollback_error') })
     } finally {
       setBusy(null)
     }
@@ -179,7 +184,8 @@ export const CompanionMigrationAdapterV3 = memo(function CompanionMigrationAdapt
       setRemote(result)
       return result
     } catch (error) {
-      setStatus({ ok: false, message: ti('settings.memory.companionMigration.status_error', { error: errorText(error) }) })
+      logMigrationError('companion migration status', error)
+      setStatus({ ok: false, message: ti('settings.memory.companionMigration.status_error') })
       return null
     } finally { setBusy(null) }
   }, [ti])
@@ -193,8 +199,12 @@ export const CompanionMigrationAdapterV3 = memo(function CompanionMigrationAdapt
     try {
       const result = await run({ confirmed: true, source: buildCompanionLocalDataComparisonSource() })
       setComparison(result)
-      setStatus({ ok: result.ok, message: result.ok ? ti('settings.memory.companionMigration.compare_result', { status: result.status, matched: result.matchedDatasetCount }) : ti('settings.memory.companionMigration.status_error', { error: result.errorMessage || result.errorKind || 'unknown' }) })
-    } catch (error) { setStatus({ ok: false, message: ti('settings.memory.companionMigration.status_error', { error: errorText(error) }) }) }
+      if (!result.ok) logMigrationError('companion migration compare', result.errorMessage || result.errorKind)
+      setStatus({ ok: result.ok, message: result.ok ? ti('settings.memory.companionMigration.compare_result', { status: result.status, matched: result.matchedDatasetCount }) : ti('settings.memory.companionMigration.status_error') })
+    } catch (error) {
+      logMigrationError('companion migration compare', error)
+      setStatus({ ok: false, message: ti('settings.memory.companionMigration.status_error') })
+    }
     finally { setBusy(null) }
   }, [busy, confirm, confirmed, hasData, ti])
 
@@ -206,9 +216,13 @@ export const CompanionMigrationAdapterV3 = memo(function CompanionMigrationAdapt
     setBusy('apply')
     try {
       const result = await run({ confirmed: true, migrationPackage: buildCompanionLocalDataMigrationPackage() })
-      setStatus({ ok: result.ok, message: result.ok ? ti('settings.memory.companionMigration.apply_success', { records: result.recordsWritten }) : ti('settings.memory.companionMigration.apply_error', { error: result.errorMessage || result.errorKind || 'unknown' }) })
+      if (!result.ok) logMigrationError('companion migration apply', result.errorMessage || result.errorKind)
+      setStatus({ ok: result.ok, message: result.ok ? ti('settings.memory.companionMigration.apply_success', { records: result.recordsWritten }) : ti('settings.memory.companionMigration.apply_error') })
       if (result.ok) { setConfirmed(false); await refreshStatus() }
-    } catch (error) { setStatus({ ok: false, message: ti('settings.memory.companionMigration.apply_error', { error: errorText(error) }) }) }
+    } catch (error) {
+      logMigrationError('companion migration apply', error)
+      setStatus({ ok: false, message: ti('settings.memory.companionMigration.apply_error') })
+    }
     finally { setBusy(null) }
   }, [busy, confirm, confirmed, hasData, refreshStatus, ti])
 
@@ -229,9 +243,13 @@ export const CompanionMigrationAdapterV3 = memo(function CompanionMigrationAdapt
     setBusy('rollback')
     try {
       const result = await run({ confirmed: true })
-      setStatus({ ok: result.ok, message: result.ok ? ti('settings.memory.companionMigration.rollback_success', { records: result.recordsDeleted }) : ti('settings.memory.companionMigration.rollback_error', { error: result.errorMessage || result.errorKind || 'unknown' }) })
+      if (!result.ok) logMigrationError('companion migration rollback', result.errorMessage || result.errorKind)
+      setStatus({ ok: result.ok, message: result.ok ? ti('settings.memory.companionMigration.rollback_success', { records: result.recordsDeleted }) : ti('settings.memory.companionMigration.rollback_error') })
       if (result.ok) { setCompanionLocalDataAuthorityConsent(false); setAuthority(false); setRollbackConfirmed(false); await refreshStatus() }
-    } catch (error) { setStatus({ ok: false, message: ti('settings.memory.companionMigration.rollback_error', { error: errorText(error) }) }) }
+    } catch (error) {
+      logMigrationError('companion migration rollback', error)
+      setStatus({ ok: false, message: ti('settings.memory.companionMigration.rollback_error') })
+    }
     finally { setBusy(null) }
   }, [busy, confirm, refreshStatus, rollbackConfirmed, ti])
 

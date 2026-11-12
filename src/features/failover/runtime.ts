@@ -94,7 +94,7 @@ export function isFailoverEligibleError(error: unknown) {
   }
 
   if (
-    /aborterror|aborted|已取消|已中止|cancell?ed/u.test(message)
+    /aborterror|aborted|已取消|已中止|キャンセルしました|취소했어요|cancell?ed/u.test(message)
   ) {
     return false
   }
