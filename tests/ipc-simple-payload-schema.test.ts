@@ -7,19 +7,11 @@ import {
   validateNotificationWatcherSetPayload,
   validatePersonaInitPayload,
   validatePersonaSaveMemoryPayload,
-  validatePetFreeModePayload,
   validateProactiveShowNotificationPayload,
   validateSystemVibrancyPayload,
 } from '../electron/ipc/payloadSchemas.js'
 
 test('IPC boolean toggle schemas accept only booleans and strip stray fields', () => {
-  assert.deepEqual(validatePetFreeModePayload({ freeMode: true, rogue: true }), { freeMode: true })
-  assert.deepEqual(validatePetFreeModePayload(undefined), {})
-  assert.throws(
-    () => validatePetFreeModePayload({ freeMode: 'true' }),
-    /Invalid IPC payload for pet-window:set-free-mode: payload\.freeMode must be a boolean/,
-  )
-
   assert.deepEqual(validateSystemVibrancyPayload({ enabled: false }), { enabled: false })
   assert.deepEqual(validateSystemVibrancyPayload(undefined), {})
   assert.throws(

@@ -27,6 +27,7 @@ function createProvider(options: {
   panelFocused?: boolean
   focusState?: FocusState
   activeWindow?: { title?: string | null; appName?: string | null } | null
+  isActiveWindowAllowed?: boolean
   onActiveWindowRead?: () => void
 }) {
   return createProactiveDeliveryContextProvider({
@@ -36,6 +37,7 @@ function createProvider(options: {
       options.onActiveWindowRead?.()
       return options.activeWindow ?? null
     },
+    isActiveWindowAllowed: () => options.isActiveWindowAllowed !== false,
     getPreferences: () => options.preferences ?? null,
     now: () => options.nowMs ?? atLocal(12),
   })
@@ -60,6 +62,42 @@ test('a fullscreen-looking active window only counts when desktop awareness is a
   })
   const disallowedContext = await disallowed.getDeliveryContext()
   assert.equal(disallowedContext.fullscreen, false)
+  assert.equal(reads, 0)
+})
+
+test('the saved main-process switch also gates the active-window read', async () => {
+  // Both gates must be open: the renderer preference only mirrors the
+  // settings panel, the saved flag is the copy main trusts.
+  let reads = 0
+  const savedOff = createProvider({
+    preferences: preferences({ desktopAwarenessAllowed: true }),
+    isActiveWindowAllowed: false,
+    activeWindow: { title: 'YouTube — Fullscreen', appName: 'Safari' },
+    onActiveWindowRead: () => { reads += 1 },
+  })
+  const savedOffContext = await savedOff.getDeliveryContext()
+  assert.equal(savedOffContext.fullscreen, false)
+  assert.equal(reads, 0)
+
+  reads = 0
+  const savedOn = createProvider({
+    preferences: preferences({ desktopAwarenessAllowed: true }),
+    isActiveWindowAllowed: true,
+    activeWindow: { title: 'YouTube — Fullscreen', appName: 'Safari' },
+    onActiveWindowRead: () => { reads += 1 },
+  })
+  const savedOnContext = await savedOn.getDeliveryContext()
+  assert.equal(savedOnContext.fullscreen, true)
+  assert.equal(reads, 1)
+
+  reads = 0
+  const preferenceOff = createProvider({
+    preferences: preferences({ desktopAwarenessAllowed: false }),
+    isActiveWindowAllowed: true,
+    activeWindow: { title: 'YouTube — Fullscreen', appName: 'Safari' },
+    onActiveWindowRead: () => { reads += 1 },
+  })
+  assert.equal((await preferenceOff.getDeliveryContext()).fullscreen, false)
   assert.equal(reads, 0)
 })
 

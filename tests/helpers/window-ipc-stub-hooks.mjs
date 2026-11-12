@@ -86,7 +86,6 @@ export function buildRuntimeStateSnapshot() { return {} }
 export function updateHeartbeat() {}
 export function updateRuntimeState() {}
 export function updatePetWindowStateForEvent() {}
-export function setPetFreeModeForEvent() {}
 export function updatePanelWindowState() {}
 export function showPanelWindow(section, options) {
   testState().panelShown.push({ section, options })

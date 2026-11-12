@@ -167,6 +167,7 @@ test('main keeps the strip on when it has no preferences and follows a sent fals
     isPanelFocused: () => false,
     getFocusState: () => 'active',
     getActiveWindow: async () => null,
+    isActiveWindowAllowed: () => true,
     getPreferences: () => null,
     now: () => NOW,
   })
@@ -176,6 +177,7 @@ test('main keeps the strip on when it has no preferences and follows a sent fals
     isPanelFocused: () => false,
     getFocusState: () => 'active',
     getActiveWindow: async () => null,
+    isActiveWindowAllowed: () => true,
     getPreferences: () => makePreferences({ stripEnabled: false }),
     now: () => NOW,
   })
@@ -185,6 +187,7 @@ test('main keeps the strip on when it has no preferences and follows a sent fals
     isPanelFocused: () => false,
     getFocusState: () => 'active',
     getActiveWindow: async () => null,
+    isActiveWindowAllowed: () => true,
     getPreferences: () => makePreferences({ stripEnabled: undefined }),
     now: () => NOW,
   })

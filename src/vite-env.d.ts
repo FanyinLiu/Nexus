@@ -404,7 +404,6 @@ declare global {
     desktopPet?: {
       updatePetWindowState: (state: Partial<PetWindowState>) => Promise<PetWindowState>
       getPetWindowState: () => Promise<PetWindowState>
-      setPetFreeMode: (freeMode: boolean) => Promise<PetWindowState | null>
       subscribePetWindowState: (listener: (state: PetWindowState) => void) => () => void
       dragBy: DesktopPetGeneratedBridge['dragBy']
       openPanel: DesktopPetGeneratedBridge['openPanel']

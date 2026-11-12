@@ -117,7 +117,6 @@ export const DESKTOP_PET_BRIDGE_SURFACE = {
   setLaunchOnStartup: { conditional: false, invoke: ['app:set-launch-on-startup'], events: [] },
   setNotificationChannels: { conditional: false, invoke: ['notification:set-channels'], events: [] },
   setPanelWindowState: { conditional: false, invoke: ['panel-window:set-state'], events: [] },
-  setPetFreeMode: { conditional: false, invoke: ['pet-window:set-free-mode'], events: [] },
   setSystemVibrancy: { conditional: false, invoke: ['window:set-system-vibrancy'], events: [] },
   showConfirmDialog: { conditional: false, invoke: ['dialog:confirm'], events: [] },
   showProactiveNotification: { conditional: false, invoke: ['proactive:show-notification'], events: [] },
@@ -303,7 +302,6 @@ export type DesktopPetInvokeChannel =
   | 'pet-model:import'
   | 'pet-model:list'
   | 'pet-window:get-state'
-  | 'pet-window:set-free-mode'
   | 'pet-window:update-state'
   | 'plugin:list'
   | 'proactive:deliver'
@@ -520,7 +518,6 @@ export interface DesktopPetBridgeMethodArguments {
   setLaunchOnStartup: readonly [value?: boolean]
   setNotificationChannels: unknown
   setPanelWindowState: readonly [state?: { collapsed?: boolean }]
-  setPetFreeMode: unknown
   setSystemVibrancy: unknown
   showConfirmDialog: readonly [message?: string]
   showProactiveNotification: readonly [payload?: { title?: string; body?: string }]
@@ -577,7 +574,7 @@ export interface DesktopPetBridgeMethodArguments {
   turnEndProbe: readonly [payload?: { sessionId?: number }]
   turnEndStart: readonly []
   turnEndStop: readonly [payload?: { sessionId?: number }]
-  updatePetWindowState: readonly [state?: { isPinned?: boolean; clickThrough?: boolean; petHotspotActive?: boolean; roamCapable?: boolean }]
+  updatePetWindowState: readonly [state?: { isPinned?: boolean; clickThrough?: boolean; petHotspotActive?: boolean }]
   updateProactiveInboxEntry: readonly [payload: { id: string; status: 'done' | 'unread' | 'read' | 'dismissed' }]
   updateRuntimeState: unknown
   updaterCheck: readonly []
@@ -716,7 +713,6 @@ export interface DesktopPetBridgeMethodResults {
   setLaunchOnStartup: boolean
   setNotificationChannels: void
   setPanelWindowState: { collapsed: boolean }
-  setPetFreeMode: unknown
   setSystemVibrancy: { applied: boolean }
   showConfirmDialog: boolean
   showProactiveNotification: { ok: boolean }

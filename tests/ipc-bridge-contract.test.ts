@@ -180,6 +180,7 @@ test('the narrowed preload no longer exposes removed bridge methods', () => {
     'pluginStatus',
     'pluginStop',
     'probeLocalServices',
+    'setPetFreeMode',
     'skillGet',
     'skillList',
     'skillRemove',
@@ -199,10 +200,6 @@ test('the narrowed preload no longer exposes removed bridge methods', () => {
       assert.equal(desktopPet[method], undefined, `${view} preload still exposes ${method}`)
     }
   }
-
-  // setPetFreeMode belongs to the separate D1 change; this audit must not
-  // silently drop it here.
-  assert.equal(typeof loadPreloadDesktopPetApi('pet').desktopPet.setPetFreeMode, 'function')
 })
 
 test('the pet preload exposes the request entry point and the reminder claim for model setup', () => {

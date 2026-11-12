@@ -36,7 +36,9 @@ export function buildExternalActionPolicySyncPayload(settings: AppSettings): Ext
   const uiLanguage = readExternalOpenUiLanguage(settings.uiLanguage)
   return {
     desktopContext: {
-      activeWindow: contextAwarenessEnabled && settings.activeWindowContextEnabled === true,
+      activeWindow: contextAwarenessEnabled
+        && settings.activeWindowContextEnabled === true
+        && !settings.companionAwarenessPaused,
       clipboard: contextAwarenessEnabled && settings.clipboardContextEnabled === true,
       screenshot: isScreenContextActive(settings),
     },

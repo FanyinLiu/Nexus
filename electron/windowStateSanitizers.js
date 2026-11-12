@@ -17,9 +17,6 @@ const PET_WINDOW_STATE_SCHEMA = {
   isPinned: 'boolean',
   clickThrough: 'boolean',
   petHotspotActive: 'boolean',
-  locomotionActivity: 'string',
-  freeMode: 'boolean',
-  roamCapable: 'boolean',
 }
 
 const PANEL_WINDOW_STATE_SCHEMA = {
