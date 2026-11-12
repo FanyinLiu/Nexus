@@ -108,7 +108,7 @@ export const enChat = {
   'chat.voice.blocked_label': 'Send blocked',
   'chat.voice.blocked_error': 'The previous reply is not finished yet; this voice message is parked in the input.',
   'chat.voice.blocked_pet_status': 'Previous turn is not done — parking this one in the input.',
-  'chat.voice.no_interrupt_error': 'Speech interruption is off; wait for the current playback to finish before sending.',
+  'chat.voice.no_interrupt_error': 'Speech interruption is off — wait until I finish talking before sending.',
   'chat.voice.no_interrupt_pet_status': 'Speech interruption is off — please wait until I finish talking.',
   'chat.voice.sent_trace': '#{label} user message written to chat history',
   'chat.voice.sent_label': 'Voice sent',

@@ -42,6 +42,9 @@ export const MAIN_COVERED_FILES = Object.freeze([
   'electron/tools/toolRegistryUtils.js',
   'electron/mediaSessionRuntime.js',
   'electron/net.js',
+  'electron/services/telegramGateway.js',
+  'electron/services/discordGateway.js',
+  'electron/services/mcpHost.js',
 ])
 
 const HAN_PATTERN = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/

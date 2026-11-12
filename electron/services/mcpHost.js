@@ -21,6 +21,7 @@ import {
 } from './mcpHostUtils.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { runConfirmedMcpToolCall } from './mcpToolConfirmation.js'
+import { mainT } from '../mainMessages.js'
 import { createLogger } from '../logger.js'
 
 const log = createLogger('mcpHost')
@@ -358,8 +359,7 @@ class McpInstance {
         this.pendingStartArgs = args
         this.pendingStartEnv = normalizeMcpServerEnv(env)
         throw new Error(
-          `MCP server [${this.id}] launch was rejected by the user. `
-          + 'Re-enable from Settings → Integrations → MCP after reviewing the command.',
+          mainT('mcp.launch.rejected', { server: this.id }),
         )
       }
     }
