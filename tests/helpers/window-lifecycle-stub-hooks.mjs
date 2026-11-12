@@ -271,12 +271,28 @@ export function trackWindow() {}
 `
 
 const WINDOW_NAVIGATION_STUB = `
+// Load the real module through a query-suffixed URL: the suffix match below
+// would otherwise intercept the plain path and keep the role guard stubbed.
+import {
+  isAllowedRendererNavigation,
+  isAllowlistedExternalWindowOpenUrl,
+  normalizeExternalWindowOpenUrl,
+  summarizeWindowNavigationErrorForLog,
+  summarizeWindowNavigationUrlForLog,
+} from './windowNavigation.js?window-lifecycle-real'
+
+export {
+  isAllowedRendererNavigation,
+  isAllowlistedExternalWindowOpenUrl,
+  normalizeExternalWindowOpenUrl,
+  summarizeWindowNavigationErrorForLog,
+  summarizeWindowNavigationUrlForLog,
+}
+
+// External-open confirmation remains test-controlled so lifecycle tests never
+// touch the saved preference or a real dialog.
 export function createExternalWindowOpenHandler() { return async () => {} }
 export function externalWindowOpenNeedsConfirmation() { return false }
-export function isAllowedRendererNavigation() { return true }
-export function normalizeExternalWindowOpenUrl(url) { return url }
-export function summarizeWindowNavigationErrorForLog() { return '' }
-export function summarizeWindowNavigationUrlForLog() { return '' }
 `
 
 const USER_FACING_DIALOGS_STUB = `
