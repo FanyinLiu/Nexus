@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../../types/i18n.ts'
 
 export type ReleaseSpotlightBullet = {
-  id: 'packaged_voice' | 'interrupt' | 'takeover' | 'memory'
+  id: 'privacy_switches' | 'deferred_reminders' | 'deleted_memory' | 'permissions'
   titleKey: TranslationKey
   bodyKey: TranslationKey
 }
@@ -22,30 +22,30 @@ export type ReleaseSpotlight = {
 }
 
 export const CURRENT_RELEASE_SPOTLIGHT: ReleaseSpotlight = {
-  version: '0.5.1',
+  version: '0.5.2',
   eyebrowKey: 'about.release_spotlight.eyebrow',
   titleKey: 'about.release_spotlight.title',
   summaryKey: 'about.release_spotlight.summary',
   bullets: [
     {
-      id: 'packaged_voice',
-      titleKey: 'about.release_spotlight.bullet.packaged_voice.title',
-      bodyKey: 'about.release_spotlight.bullet.packaged_voice.body',
+      id: 'privacy_switches',
+      titleKey: 'about.release_spotlight.bullet.privacy_switches.title',
+      bodyKey: 'about.release_spotlight.bullet.privacy_switches.body',
     },
     {
-      id: 'interrupt',
-      titleKey: 'about.release_spotlight.bullet.interrupt.title',
-      bodyKey: 'about.release_spotlight.bullet.interrupt.body',
+      id: 'deferred_reminders',
+      titleKey: 'about.release_spotlight.bullet.deferred_reminders.title',
+      bodyKey: 'about.release_spotlight.bullet.deferred_reminders.body',
     },
     {
-      id: 'takeover',
-      titleKey: 'about.release_spotlight.bullet.takeover.title',
-      bodyKey: 'about.release_spotlight.bullet.takeover.body',
+      id: 'deleted_memory',
+      titleKey: 'about.release_spotlight.bullet.deleted_memory.title',
+      bodyKey: 'about.release_spotlight.bullet.deleted_memory.body',
     },
     {
-      id: 'memory',
-      titleKey: 'about.release_spotlight.bullet.memory.title',
-      bodyKey: 'about.release_spotlight.bullet.memory.body',
+      id: 'permissions',
+      titleKey: 'about.release_spotlight.bullet.permissions.title',
+      bodyKey: 'about.release_spotlight.bullet.permissions.body',
     },
   ],
   actions: [

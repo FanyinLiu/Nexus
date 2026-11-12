@@ -26,7 +26,7 @@ test('current release spotlight keeps the package version explicit', () => {
   assert.equal(CURRENT_RELEASE_SPOTLIGHT.version, packageJson.version)
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.bullets.map((item) => item.id),
-    ['packaged_voice', 'interrupt', 'takeover', 'memory'],
+    ['privacy_switches', 'deferred_reminders', 'deleted_memory', 'permissions'],
   )
   assert.deepEqual(
     CURRENT_RELEASE_SPOTLIGHT.actions.map((item) => [item.id, item.targetSectionId]),
@@ -37,7 +37,7 @@ test('current release spotlight keeps the package version explicit', () => {
   )
   assert.ok(
     getReleaseSpotlightTranslationKeys().includes(
-      'about.release_spotlight.bullet.packaged_voice.title',
+      'about.release_spotlight.bullet.privacy_switches.title',
     ),
   )
 })
@@ -61,35 +61,41 @@ test('current release spotlight translation keys are registered for every locale
   }
 })
 
-test('current release spotlight describes what 0.5.1 brings and keeps historical keys', async () => {
+test('current release spotlight describes what 0.5.2 brings and keeps historical keys', async () => {
   const en = await ensureLocaleLoaded('en-US')
   const zhCN = await ensureLocaleLoaded('zh-CN')
 
-  assert.equal(en['about.release_spotlight.title'], 'A few fixes for 0.5.0.')
-  assert.match(en['about.release_spotlight.summary'], /Qwen3 voice starts normally in the installed app/i)
+  assert.equal(en['about.release_spotlight.title'], 'A quieter, safer patch.')
+  assert.match(en['about.release_spotlight.summary'], /privacy switches are respected/i)
+  assert.match(en['about.release_spotlight.summary'], /queued reminders wait their turn/i)
+  assert.match(en['about.release_spotlight.summary'], /deleted memories stay deleted/i)
+  assert.match(en['about.release_spotlight.summary'], /startup permission prompts are gone/i)
+  assert.equal(en['about.release_spotlight.bullet.privacy_switches.title'], 'Switches stay off')
   assert.match(
-    en['about.release_spotlight.summary'],
-    /the panel covers regular reminders when the pet is offline/i,
+    en['about.release_spotlight.bullet.privacy_switches.body'],
+    /no longer read the window title/i,
   )
-  assert.match(en['about.release_spotlight.summary'], /new users save memory with the panel closed/i)
-  assert.equal(en['about.release_spotlight.bullet.packaged_voice.title'], 'Qwen3 voice fixed')
+  assert.equal(
+    en['about.release_spotlight.bullet.deferred_reminders.title'],
+    'Reminders wait their turn',
+  )
   assert.match(
-    en['about.release_spotlight.bullet.packaged_voice.body'],
-    /In the 0\.5\.0 installer this voice couldn't start\. It starts normally now\./,
+    en['about.release_spotlight.bullet.deferred_reminders.body'],
+    /when the voice chat ends, they continue once/i,
   )
-  assert.doesNotMatch(en['about.release_spotlight.bullet.packaged_voice.body'], /Python|works again/i)
-  assert.match(en['about.release_spotlight.bullet.interrupt.body'], /talking over her/i)
-  assert.match(en['about.release_spotlight.bullet.interrupt.body'], /current line/i)
-  assert.doesNotMatch(en['about.release_spotlight.bullet.interrupt.body'], /barge-in/i)
-  assert.equal(en['about.release_spotlight.bullet.takeover.title'], 'The panel covers for the pet')
+  assert.equal(
+    en['about.release_spotlight.bullet.deleted_memory.title'],
+    'Deleted memories stay deleted',
+  )
   assert.match(
-    en['about.release_spotlight.bullet.takeover.body'],
-    /panel takes over regular reminders/i,
+    en['about.release_spotlight.bullet.deleted_memory.body'],
+    /not learned again from later conversations/i,
   )
-  assert.doesNotMatch(en['about.release_spotlight.bullet.takeover.body'], /on time/i)
-  assert.equal(en['about.release_spotlight.bullet.memory.title'], 'Lighter for new users')
-  assert.match(en['about.release_spotlight.bullet.memory.body'], /^New installs only: after /)
-  assert.match(en['about.release_spotlight.bullet.memory.body'], /120 MiB/i)
+  assert.equal(en['about.release_spotlight.bullet.permissions.title'], 'Fewer permission pop-ups')
+  assert.match(
+    en['about.release_spotlight.bullet.permissions.body'],
+    /no longer asks for microphone or screen access at startup/i,
+  )
   assert.match(en['about.release_spotlight.bullet.gaze.body'], /follows your cursor/i)
   assert.match(en['about.release_spotlight.bullet.messages.body'], /Telegram and Discord/i)
   assert.match(en['about.release_spotlight.bullet.voice.body'], /suggest a voice for this computer/i)
@@ -108,22 +114,30 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /main window has no voice button/)
   assert.match(en['about.release_spotlight.bullet.voice_settings.body'], /frameless companions and desktop pets/)
 
-  assert.equal(zhCN['about.release_spotlight.title'], '修好了几处小毛病。')
-  assert.match(zhCN['about.release_spotlight.summary'], /安装版里的 Qwen3 语音能正常启动了/)
-  assert.match(zhCN['about.release_spotlight.summary'], /宠物掉线时面板接手普通提醒/)
-  assert.match(zhCN['about.release_spotlight.summary'], /新用户第一次收起面板更省内存/)
-  assert.equal(zhCN['about.release_spotlight.bullet.packaged_voice.title'], 'Qwen3 语音修好了')
+  assert.equal(zhCN['about.release_spotlight.title'], '更安静，也更稳妥。')
+  assert.match(zhCN['about.release_spotlight.summary'], /隐私开关会被遵守/)
+  assert.match(zhCN['about.release_spotlight.summary'], /排队的提醒会等你说完/)
+  assert.match(zhCN['about.release_spotlight.summary'], /删掉的记忆不会被重新学回来/)
+  assert.equal(zhCN['about.release_spotlight.bullet.privacy_switches.title'], '关掉的开关会守住')
   assert.match(
-    zhCN['about.release_spotlight.bullet.packaged_voice.body'],
-    /0\.5\.0 安装版里这条语音起不来，这版能正常启动了。/,
+    zhCN['about.release_spotlight.bullet.privacy_switches.body'],
+    /不会再去读窗口标题/,
   )
-  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.packaged_voice.body'], /Python|又能用了/)
-  assert.match(zhCN['about.release_spotlight.bullet.interrupt.body'], /当前这句/)
-  assert.equal(zhCN['about.release_spotlight.bullet.takeover.title'], '宠物卡住时，面板来接手')
-  assert.match(zhCN['about.release_spotlight.bullet.takeover.body'], /面板会接手普通提醒/)
-  assert.doesNotMatch(zhCN['about.release_spotlight.bullet.takeover.body'], /按时|准时/)
-  assert.equal(zhCN['about.release_spotlight.bullet.memory.title'], '新用户更省内存')
-  assert.match(zhCN['about.release_spotlight.bullet.memory.body'], /120 MiB/)
+  assert.equal(zhCN['about.release_spotlight.bullet.deferred_reminders.title'], '提醒会等你说完')
+  assert.match(
+    zhCN['about.release_spotlight.bullet.deferred_reminders.body'],
+    /语音结束后再接着念一次/,
+  )
+  assert.equal(zhCN['about.release_spotlight.bullet.deleted_memory.title'], '删掉的记忆不会回来')
+  assert.match(
+    zhCN['about.release_spotlight.bullet.deleted_memory.body'],
+    /不会从之后的对话里又被学回来/,
+  )
+  assert.equal(zhCN['about.release_spotlight.bullet.permissions.title'], '启动时少弹权限提示')
+  assert.match(
+    zhCN['about.release_spotlight.bullet.permissions.body'],
+    /不再主动要麦克风或屏幕权限/,
+  )
   assert.match(zhCN['about.release_spotlight.bullet.gaze.body'], /看向哪里/)
   assert.match(zhCN['about.release_spotlight.bullet.messages.body'], /Telegram 和 Discord/)
   assert.match(zhCN['about.release_spotlight.bullet.voice.body'], /推荐语音/)
@@ -146,11 +160,11 @@ test('current release spotlight describes what 0.5.1 brings and keeps historical
 test('current release spotlight stays plain and does not claim a stable version', async () => {
   const devSpeak = /稳定版|安定版|안정 버전|current stable|Moc|烟测|煙霧|smoke report|Cubism|WebGL|Pixi|probe|pipeline|链路|鏈路|自检|自檢/i
   const highlights = [
-    ['en-US', /Qwen3 voice starts normally in the installed app/i, /reminders/i],
-    ['zh-CN', /安装版里的 Qwen3 语音能正常启动了/, /提醒/],
-    ['zh-TW', /安裝版裡的 Qwen3 語音能正常啟動了/, /提醒/],
-    ['ja', /インストール版の Qwen3 音声が正常に起動し/, /リマインダー/],
-    ['ko', /설치된 앱의 Qwen3 음성이 정상적으로 시작되고/, /알림/],
+    ['en-US', /privacy switches are respected/i, /reminders/i],
+    ['zh-CN', /隐私开关会被遵守/, /提醒/],
+    ['zh-TW', /隱私開關會被遵守/, /提醒/],
+    ['ja', /プライバシー設定が守られ/, /リマインダー/],
+    ['ko', /개인정보 스위치가 지켜지고/, /알림/],
   ] as const
 
   for (const [locale, voicePattern, reminderPattern] of highlights) {
@@ -163,135 +177,60 @@ test('current release spotlight stays plain and does not claim a stable version'
         dictionary[item.bodyKey],
       ]),
     ].join(' ')
-    assert.match(copy, voicePattern, `${locale} must describe the packaged voice fix`)
-    assert.match(copy, reminderPattern, `${locale} must describe reminder takeover`)
+    assert.match(copy, voicePattern, `${locale} must describe the privacy fix`)
+    assert.match(copy, reminderPattern, `${locale} must describe reminder waiting`)
     assert.doesNotMatch(copy, devSpeak, `${locale} spotlight must stay plain`)
     assert.doesNotMatch(copy, /v\d+\.\d+\.\d+/, `${locale} spotlight must not pin a version claim`)
   }
 })
 
-test('takeover copy names regular reminders without promising on-time delivery', async () => {
+test('privacy copy names saved switches and the window title in every locale', async () => {
   const contracts = [
-    [
-      'en-US',
-      'The panel covers for the pet',
-      /panel takes over regular reminders/i,
-      /the panel covers regular reminders when the pet is offline/i,
-      /on time/i,
-    ],
-    [
-      'zh-CN',
-      '宠物卡住时，面板来接手',
-      /面板会接手普通提醒/,
-      /宠物掉线时面板接手普通提醒/,
-      /按时|准时/,
-    ],
-    [
-      'zh-TW',
-      '寵物卡住時，面板來接手',
-      /面板會接手普通提醒/,
-      /寵物離線時面板接手普通提醒/,
-      /按時|準時/,
-    ],
-    [
-      'ja',
-      'ペットが固まったら、パネルが引き継ぎます',
-      /通常のリマインダーを引き継ぎます/,
-      /ペットが落ちてもパネルが通常のリマインダーを引き継ぎ/,
-      /時間どおり/,
-    ],
-    [
-      'ko',
-      '펫이 멈추면 패널이 대신 맡아요',
-      /일반 알림을 대신 맡아요/,
-      /펫이 꺼져도 패널이 일반 알림을 대신 맡고/,
-      /제시간/,
-    ],
+    ['en-US', 'Switches stay off', /switch is off or awareness is paused/i, /window title/i],
+    ['zh-CN', '关掉的开关会守住', /隐私开关关着或陪伴感知暂停/, /窗口标题/],
+    ['zh-TW', '關掉的開關會守住', /隱私開關關著或陪伴感知暫停/, /視窗標題/],
+    ['ja', 'オフの設定は守られます', /プライバシー設定がオフ、または気配りが一時停止中/, /ウィンドウのタイトル/],
+    ['ko', '꺼 둔 설정은 지켜져요', /개인정보 스위치가 꺼져 있거나 인지가 일시중지되면/, /창 제목/],
   ] as const
 
-  for (const [locale, title, regularReminders, summaryTakeover, onTimePromise] of contracts) {
+  for (const [locale, title, switchGate, windowTitle] of contracts) {
     const dictionary = await ensureLocaleLoaded(locale)
-    const takeover = dictionary['about.release_spotlight.bullet.takeover.body']
+    const privacy = dictionary['about.release_spotlight.bullet.privacy_switches.body']
     assert.equal(
-      dictionary['about.release_spotlight.bullet.takeover.title'],
+      dictionary['about.release_spotlight.bullet.privacy_switches.title'],
       title,
-      `${locale} must use the final takeover title`,
+      `${locale} must use the privacy switch title`,
     )
-    assert.match(takeover, regularReminders, `${locale} must describe regular reminder takeover`)
-    assert.match(
-      dictionary['about.release_spotlight.summary'],
-      summaryTakeover,
-      `${locale} summary must describe regular reminder takeover`,
-    )
-    assert.doesNotMatch(takeover, onTimePromise, `${locale} must not promise on-time delivery`)
+    assert.match(privacy, switchGate, `${locale} must tie the change to the saved switch`)
+    assert.match(privacy, windowTitle, `${locale} must name the window title it no longer reads`)
   }
 })
 
-test('packaged voice copy only claims normal startup', async () => {
+test('deleted memory copy only promises that deleted memories are not learned again', async () => {
   const contracts = [
-    [
-      'en-US',
-      'Qwen3 voice fixed',
-      /starts normally now/i,
-      /Qwen3 voice starts normally in the installed app/i,
-      /works again|Python/i,
-    ],
-    [
-      'zh-CN',
-      'Qwen3 语音修好了',
-      /这版能正常启动了/,
-      /安装版里的 Qwen3 语音能正常启动了/,
-      /又能用了|Python/,
-    ],
-    [
-      'zh-TW',
-      'Qwen3 語音修好了',
-      /這版能正常啟動了/,
-      /安裝版裡的 Qwen3 語音能正常啟動了/,
-      /又能用了|Python/,
-    ],
-    [
-      'ja',
-      'Qwen3 音声を修正しました',
-      /この版では正常に起動します/,
-      /インストール版の Qwen3 音声が正常に起動し/,
-      /再び使え|Python/,
-    ],
-    [
-      'ko',
-      'Qwen3 음성 문제를 고쳤어요',
-      /이번 버전에서는 정상적으로 시작돼요/,
-      /설치된 앱의 Qwen3 음성이 정상적으로 시작되고/,
-      /다시 작동|Python/,
-    ],
+    ['en-US', 'Deleted memories stay deleted', /not learned again from later conversations/i],
+    ['zh-CN', '删掉的记忆不会回来', /不会从之后的对话里又被学回来/],
+    ['zh-TW', '刪掉的記憶不會回來', /不會從之後的對話裡又被學回來/],
+    ['ja', '削除した記憶は戻りません', /その後の会話からもう一度覚え直されることはありません/],
+    ['ko', '삭제한 기억은 돌아오지 않아요', /이후 대화에서 다시 배우지 않아요/],
   ] as const
 
-  for (const [locale, title, startupCopy, summaryStartup, oldClaim] of contracts) {
+  for (const [locale, title, body] of contracts) {
     const dictionary = await ensureLocaleLoaded(locale)
     assert.equal(
-      dictionary['about.release_spotlight.bullet.packaged_voice.title'],
+      dictionary['about.release_spotlight.bullet.deleted_memory.title'],
       title,
-      `${locale} must use the final packaged voice title`,
+      `${locale} must use the deleted memory title`,
     )
     assert.match(
-      dictionary['about.release_spotlight.bullet.packaged_voice.body'],
-      startupCopy,
-      `${locale} must only claim the voice starts normally`,
-    )
-    assert.match(
-      dictionary['about.release_spotlight.summary'],
-      summaryStartup,
-      `${locale} summary must claim the voice starts normally`,
+      dictionary['about.release_spotlight.bullet.deleted_memory.body'],
+      body,
+      `${locale} must describe deleted memories staying deleted`,
     )
     assert.doesNotMatch(
-      dictionary['about.release_spotlight.bullet.packaged_voice.body'],
-      oldClaim,
-      `${locale} packaged voice body must not use the old availability claim`,
-    )
-    assert.doesNotMatch(
-      dictionary['about.release_spotlight.summary'],
-      oldClaim,
-      `${locale} spotlight summary must not use the old availability claim`,
+      dictionary['about.release_spotlight.bullet.deleted_memory.body'],
+      /guarantee|always|forever|保证|永遠|永久|保証|항상|영원/i,
+      `${locale} must not overpromise memory deletion`,
     )
   }
 })
@@ -418,8 +357,8 @@ test('human-facing v0.3.6 docs keep foundation wrap-up aligned', () => {
     readWorkspaceFile('docs/RELEASE-NOTES-v0.3.6.zh-CN.md'),
   )
 
-  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.5\.1/)
-  assert.match(rootReadme, /上一公开版本 — v0\.5\.0/)
+  assert.match(rootReadme, /当前稳定版：\*{0,2}\s*v0\.5\.2/)
+  assert.match(rootReadme, /上一公开版本 — v0\.5\.1/)
   assert.doesNotMatch(rootReadme, /## 上次更新 — v0\.3\.6/)
 
   assert.match(englishReleaseNotes, /The foundation is ready for the next companion step\./)

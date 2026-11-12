@@ -21,7 +21,7 @@
 import { execFileSync, execSync } from 'node:child_process'
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 
 import {
   compareRuntimeToBaseline,
@@ -81,6 +81,40 @@ function shJson(cmd, opts = {}) {
 
 function readPkg() {
   return JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+}
+
+/** Recursively list files under `dir` whose name ends with `ext`. */
+function listFilesWithExt(dir, ext) {
+  const out = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...listFilesWithExt(full, ext))
+    else if (entry.name.endsWith(ext)) out.push(full)
+  }
+  return out
+}
+
+/**
+ * Extract the balanced `{ ... }` literal at the start of `text`, skipping
+ * quoted sections so braces inside paths or copy do not affect nesting.
+ * Returns `''` when `text` does not open with an object literal.
+ */
+function extractBraceLiteral(text) {
+  const start = text.search(/\S/)
+  if (start === -1 || text[start] !== '{') return ''
+  let depth = 0
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i]
+    if (ch === "'" || ch === '"' || ch === '`') {
+      for (i += 1; i < text.length && text[i] !== ch; i += 1) {
+        if (text[i] === '\\') i += 1
+      }
+      continue
+    }
+    if (ch === '{') depth += 1
+    else if (ch === '}' && --depth === 0) return text.slice(start, i + 1)
+  }
+  return ''
 }
 
 // ── Args ────────────────────────────────────────────────────────────────────
@@ -338,11 +372,52 @@ stage('C', 'Security', () => {
   })
 
   check('C', 'Electron webPreferences: contextIsolation+sandbox+!nodeIntegration+webSecurity', () => {
-    const wm = readFileSync(join(ROOT, 'electron/windowManager.js'), 'utf8')
-      + readFileSync(join(ROOT, 'electron/windowCreation.js'), 'utf8')
-    const required = ['contextIsolation: true', 'sandbox: true', 'nodeIntegration: false', 'webSecurity: true']
-    const missing = required.filter((r) => !wm.includes(r))
-    if (missing.length > 0) throw new Error(`missing in windowManager.js/windowCreation.js: ${missing.join(', ')}`)
+    const prefsFile = 'electron/webPreferences.js'
+    const prefs = readFileSync(join(ROOT, prefsFile), 'utf8')
+    const required = ['contextIsolation: true', 'sandbox: true', 'nodeIntegration: false', 'webSecurity: true', 'webviewTag: false']
+    const missing = required.filter((flag) => !prefs.includes(flag))
+    if (missing.length > 0) throw new Error(`missing in ${prefsFile}: ${missing.join(', ')}`)
+
+    // The shared builders are the only sanctioned source of that baseline, so
+    // every `webPreferences:` literal must call one. A copy-pasted literal
+    // would otherwise pass the flag scan while drifting from the contract.
+    const builders = [...prefs.matchAll(/export function (\w+WebPreferences)\s*\(/g)].map((m) => m[1])
+    if (builders.length === 0) throw new Error(`no webPreferences builders exported by ${prefsFile}`)
+
+    const sites = listFilesWithExt(join(ROOT, 'electron'), '.js')
+      .filter((file) => readFileSync(file, 'utf8').includes('webPreferences:'))
+    if (sites.length === 0) throw new Error('no BrowserWindow webPreferences sites found under electron/')
+
+    // Anchored on a real import statement so a commented-out import cannot
+    // satisfy it, multi-line import lists included.
+    const builderImport = /^[ \t]*import\s*\{[^}]*\b\w+WebPreferences\b[^}]*\}\s*from\s+['"]\.{1,2}\/(?:[\w.-]+\/)*webPreferences\.js['"]/m
+
+    for (const file of sites) {
+      const rel = relative(ROOT, file)
+      const src = readFileSync(file, 'utf8')
+      if (!builderImport.test(src)) {
+        throw new Error(`${rel}: does not import the shared webPreferences builders`)
+      }
+      // Full-line comments are dropped so commented-out sites cannot vouch for
+      // a live BrowserWindow that bypasses the builders.
+      const live = src.replace(/^[ \t]*\/\/.*$/gm, '')
+      for (let cursor = live.indexOf('webPreferences:'); cursor !== -1; cursor = live.indexOf('webPreferences:', cursor + 1)) {
+        const value = live.slice(cursor + 'webPreferences:'.length).trimStart()
+        const call = /^([\w$]+)\s*\(/.exec(value)
+        if (call) {
+          if (!builders.includes(call[1])) {
+            throw new Error(`${rel}: webPreferences uses ${call[1]}() instead of a shared builder`)
+          }
+          continue
+        }
+        const inlineMissing = required.filter((flag) => !extractBraceLiteral(value).includes(flag))
+        if (inlineMissing.length > 0) {
+          throw new Error(`${rel}: inline webPreferences missing ${inlineMissing.join(', ')}`)
+        }
+      }
+    }
+
+    return `${prefsFile} + ${sites.length} site(s)`
   })
 
   check('C', 'electron ≥ 43.5 (43.x security rollups through preload cache)', () => {

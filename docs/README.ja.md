@@ -24,17 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **現在の安定版：** v0.5.1。詳細は [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md)。インストール版の Qwen3 音声が正常に起動し、割り込みは今の一文だけ、ペットが落ちてもパネルが通常のリマインダーを引き継ぎ、初回案内後のパネルは軽く閉じます。正式パッケージは保護された tag ワークフローからのみ GitHub Releases に公開されます。
+> **現在の安定版：** v0.5.2。詳細は [RELEASE-NOTES-v0.5.2.md](RELEASE-NOTES-v0.5.2.md)。プライバシー設定がメインプロセスで守られ、ログと MCP 出力は伏字化され、リマインダーとウィンドウが安定し、削除した記憶は再び覚えられず、エラーと承認ダイアログは日常の言葉になりました。正式パッケージは保護された tag ワークフローからのみ GitHub Releases に公開されます。
 
-> **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。現在の公開安定版は v0.5.1 です。ルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) が基準です。Phase 1 の最小デスクトップ同伴ループは公開済みです。声紋での起動、カメラ、署名付きインストーラーは本版に含まれません。
+> **開発スコープの注記：** この多言語 README は長期的な機能一覧を残しています。現在の公開安定版は v0.5.2 です。ルートの [README](../README.md) と [Nexus アップグレード統合計画](NEXUS_UPGRADE_INTEGRATION_PLAN.md) が基準です。Phase 1 の最小デスクトップ同伴ループは公開済みです。声紋での起動、カメラ、署名付きインストーラーは本版に含まれません。
 
 ---
 
-## 今回の安定更新 — v0.5.1
+## 今回の安定更新 — v0.5.2
+
+> **テーマ：静かで、少し安定した更新。** プライバシー設定がメインプロセスで守られ、話している間や聞いている間は待機中のリマインダーが待ち、削除した記憶は再び覚えられず、起動時の権限確認も減り、エラーと承認ダイアログは日常の言葉になりました。詳しくは [English release notes](RELEASE-NOTES-v0.5.2.md) と [中文发行说明](RELEASE-NOTES-v0.5.2.zh-CN.md)。
+
+## 一つ前の公開版 — v0.5.1
 
 > **テーマ：0.5.0 の小さな不具合をいくつか直しました。** インストール版の Qwen3 音声が正常に起動し、割り込みは今の一文だけ。ペットのウィンドウが消えても固まってもパネルが通常のリマインダーを引き継ぎ、新規ユーザーのみ、初回案内のあと最初に隠したパネルが解放されます。詳しくは [English release notes](RELEASE-NOTES-v0.5.1.md) と [中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md)。
 
-## 一つ前の公開版 — v0.5.0
+## 以前のアップデート — v0.5.0
 
 > **テーマ：このパソコンの中にいます。** 忙しいときは静かにメモし、手が空いたら話します。手帳、要点だけのリマインダー、小さな帯、マウスが近づいたときの一目、入力中の静けさ、戻ったときの件数、毎日の記録。詳しくは [English release notes](RELEASE-NOTES-v0.5.0.md) と [中文发行说明](RELEASE-NOTES-v0.5.0.zh-CN.md)。
 
@@ -78,7 +82,7 @@ Nexus はまず静かでいることを優先し、短期で粗い、一時停�
 
 ## 旧バージョンの記録
 
-README には現在の安定版 v0.5.1 と一つ前の公開版 v0.5.0 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
+README には現在の安定版 v0.5.2 と一つ前の公開版 v0.5.1 の要点だけを載せます。より古い履歴は [CHANGELOG](../CHANGELOG.md) と [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases) に集約し、README 上部で古いバージョン番号を更新し続けません。
 
 ---
 
@@ -93,7 +97,7 @@ README には現在の安定版 v0.5.1 と一つ前の公開版 v0.5.0 の要点
 | 安全性とプライバシーを確認 | [セーフティとサポート](#セーフティとサポート) |
 | コミュニティに参加 | [コミュニティ](#コミュニティ) · [Community Guide](COMMUNITY.md) |
 | 0.4 の方向を理解 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 現在の安定版を見る | [v0.5.1 Release Notes](RELEASE-NOTES-v0.5.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 現在の安定版を見る | [v0.5.2 Release Notes](RELEASE-NOTES-v0.5.2.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## なぜ Nexus なのか？
 
@@ -188,7 +192,7 @@ README には現在の安定版 v0.5.1 と一つ前の公開版 v0.5.0 の要点
 
 [release ページ](https://github.com/FanyinLiu/Nexus/releases/latest) から最新インストーラーをダウンロード：
 
-> 次の表は v0.5.1 の正式リリース契約です。インストーラーは、保護された tag ワークフローが GitHub Releases へ正常に公開した実在アセットだけを基準にしてください。ローカル包や第三者の再配布物は使用しないでください。
+> 次の表は v0.5.2 の正式リリース契約です。インストーラーは、保護された tag ワークフローが GitHub Releases へ正常に公開した実在アセットだけを基準にしてください。ローカル包や第三者の再配布物は使用しないでください。
 
 | プラットフォーム | ファイル |
 |---|---|
@@ -197,7 +201,7 @@ README には現在の安定版 v0.5.1 と一つ前の公開版 v0.5.0 の要点
 | Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **初回起動時にセキュリティ警告が表示されますが、これは想定内です。**
-> Nexus v0.5.1 は Apple Developer ID / notarization または Windows
+> Nexus v0.5.2 は Apple Developer ID / notarization または Windows
 > コード署名を使用しません。macOS の ad-hoc 署名は Apple の信頼を
 > 意味せず、Windows インストーラーは `NotSigned` と表示されます。
 > システム警告は安全性の結論ではないため、配布元と SHA-256 を確認してください。
@@ -310,7 +314,7 @@ npm run package:win     # または package:mac / package:linux
 
 Nexus は個人メンテナンスのプロジェクトです。issue や PR の対応速度はトリアージの精度に左右されます：
 
-コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップ上の振る舞いへ進みました。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、現在の安定版の説明は [v0.5.1 Release Notes](RELEASE-NOTES-v0.5.1.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
+コミュニティ文書は特定の 1 リリースだけのものではなく、全バージョンをまたぐ入口です。0.3 は安全性、メモリ、設定の土台を締め、0.4 はデスクトップ・コンパニオン認識へ進み、0.5 はデスクトップ上の振る舞いへ進みました。長期入口は [Community Guide](COMMUNITY.md)、0.4 の方向は [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)、現在の安定版の説明は [v0.5.2 Release Notes](RELEASE-NOTES-v0.5.2.md)、リリース hardening は [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) です。
 
 - 🐛 **バグを見つけた？** → [バグ報告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **明確な機能アイデア？** → [機能リクエスト](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)
