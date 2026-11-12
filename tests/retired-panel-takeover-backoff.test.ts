@@ -84,6 +84,7 @@ function createHarness(options: HarnessOptions = {}) {
     now: () => now,
     setIntervalFn: () => 1,
     clearIntervalFn: () => {},
+    clockJumpThresholdMs: Infinity,
   })
 
   return {

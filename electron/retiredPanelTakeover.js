@@ -10,6 +10,11 @@
  */
 
 export const RETIRED_PANEL_TAKEOVER_INTERVAL_MS = 5_000
+export const RETIRED_PANEL_RESUME_GRACE_MS = 30_000
+// A tick gap this large is not event-loop jitter: the process was suspended or
+// the wall clock moved. Both make the pet heartbeat look stale even though the
+// companion may reconnect moments after wake.
+export const RETIRED_PANEL_CLOCK_JUMP_THRESHOLD_MS = 60_000
 
 /**
  * First retry delay after a failed takeover build. It matches the normal poll
@@ -41,6 +46,10 @@ export const RETIRED_PANEL_TAKEOVER_BACKOFF_MAX_MS = 120_000
  * @property {(callback: () => void, ms: number) => unknown} [setIntervalFn]
  * @property {(timer: unknown) => void} [clearIntervalFn]
  * @property {number} [intervalMs]
+ * @property {number} [resumeGraceMs] How long an offline pet is spared after a
+ *   resume or wall-clock jump; heartbeats cannot arrive while suspended.
+ * @property {number} [clockJumpThresholdMs] Minimum tick-to-tick skew treated
+ *   as suspend/clock jump rather than ordinary timer delay.
  */
 
 /**
@@ -59,6 +68,8 @@ export function createRetiredPanelTakeover({
   setIntervalFn = (callback, ms) => setInterval(callback, ms),
   clearIntervalFn = (timer) => clearInterval(/** @type {any} */ (timer)),
   intervalMs = RETIRED_PANEL_TAKEOVER_INTERVAL_MS,
+  resumeGraceMs = RETIRED_PANEL_RESUME_GRACE_MS,
+  clockJumpThresholdMs = RETIRED_PANEL_CLOCK_JUMP_THRESHOLD_MS,
 }) {
   /** @type {unknown} */
   let timer = null
@@ -69,12 +80,20 @@ export function createRetiredPanelTakeover({
   /** @type {number | null} */
   let petOnlineSince = null
   let lastActionAt = 0
+  /** @type {number | null} */
+  let lastTickAt = null
+  let graceUntil = 0
   let consecutiveCreateFailures = 0
   /** @type {number | null} */
   let nextCreateAt = null
   // Invalidates callbacks from a build that was still pending when the driver
   // stopped, so a late failure cannot poison the next run's backoff state.
   let creationEpoch = 0
+
+  const enterResumeGrace = (at = now()) => {
+    graceUntil = at + resumeGraceMs
+    return graceUntil
+  }
 
   const clearCreateBackoff = () => {
     consecutiveCreateFailures = 0
@@ -100,6 +119,8 @@ export function createRetiredPanelTakeover({
     lastPetOnline = null
     petOnlineSince = null
     lastActionAt = 0
+    lastTickAt = null
+    graceUntil = 0
     clearCreateBackoff()
   }
 
@@ -110,6 +131,13 @@ export function createRetiredPanelTakeover({
       armed = false
       return 'quitting'
     }
+    const nowMs = now()
+    if (lastTickAt !== null && Math.abs(nowMs - lastTickAt) >= clockJumpThresholdMs) {
+      // Resume and clock jump share the same grace: in both cases the pet
+      // heartbeat could not be refreshed on schedule.
+      enterResumeGrace(nowMs)
+    }
+    lastTickAt = nowMs
     if (hasPanelWindow()) {
       // A build in flight already owns a window (load retries reuse it); it is
       // not a ready panel, so the creating flag and retry schedule stay with
@@ -121,7 +149,6 @@ export function createRetiredPanelTakeover({
         petOnlineSince = null
         return 'panel_present'
       }
-      const nowMs = now()
       if (petOnlineSince === null) petOnlineSince = nowMs
       if (nowMs - petOnlineSince >= reclaimAfterMs && shouldReclaimPanel(snapshot)) {
         // Destroy only the never-shown takeover panel; the first-use latch
@@ -144,8 +171,7 @@ export function createRetiredPanelTakeover({
       return 'pet_online'
     }
     if (creating) return 'creating'
-
-    const nowMs = now()
+    if (nowMs < graceUntil) return 'grace'
     if (nextCreateAt !== null && nowMs < nextCreateAt) return 'backoff'
 
     creating = true
@@ -200,6 +226,8 @@ export function createRetiredPanelTakeover({
     lastPetOnline = null
     petOnlineSince = null
     lastActionAt = 0
+    lastTickAt = null
+    graceUntil = 0
     clearCreateBackoff()
   }
 
@@ -207,6 +235,8 @@ export function createRetiredPanelTakeover({
     start,
     stop,
     tick,
+    noteSystemResume: () => enterResumeGrace(),
+    noteClockJump: () => enterResumeGrace(),
     isArmed: () => armed,
     isRunning: () => timer !== null,
     debugState: () => ({
@@ -215,6 +245,8 @@ export function createRetiredPanelTakeover({
       lastPetOnline,
       petOnlineSince,
       lastActionAt,
+      lastTickAt,
+      graceUntil,
       consecutiveCreateFailures,
       nextCreateAt,
     }),
