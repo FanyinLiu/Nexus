@@ -9,8 +9,8 @@ import ts from 'typescript6'
 import { isWindowCapabilityClassified, getRequiredWindowCapability } from '../electron/ipc/windowCapabilities.js'
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const IPC_DIR = join('electron', 'ipc')
-const PRELOAD_PATH = join('electron', 'preload.js')
+const ELECTRON_DIR = 'electron'
+const PRELOAD_PATH = join(ELECTRON_DIR, 'preload.js')
 
 function readText(root, path) {
   return readFileSync(join(root, path), 'utf8')
@@ -20,6 +20,7 @@ function walkJsFiles(root, path) {
   const directory = join(root, path)
   const files = []
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === 'node_modules') continue
     const fullPath = join(directory, entry.name)
     const relativePath = relative(root, fullPath)
     if (entry.isDirectory()) {
@@ -178,10 +179,21 @@ function classifyRisk(channel) {
   return { level: 'low', domain: 'app-state' }
 }
 
+/**
+ * Lists the JavaScript files whose `ipcMain.handle` calls feed the handler inventory.
+ * Scanning all of `electron/` keeps handlers registered in `main.js` or a non-IPC
+ * module visible to the every-channel pin test.
+ * @param {string} [root] Repository root override for fixture scans.
+ * @returns {string[]} Repository-relative JavaScript file paths, sorted.
+ */
+export function listMainHandlerFiles(root = DEFAULT_ROOT) {
+  return walkJsFiles(resolve(root), ELECTRON_DIR)
+}
+
 function extractMainHandlers(root) {
   const handlers = []
 
-  for (const file of walkJsFiles(root, IPC_DIR)) {
+  for (const file of listMainHandlerFiles(root)) {
     const source = readText(root, file)
     const sourceFile = parseSource(file, source)
 
@@ -327,7 +339,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     repoRoot,
     sources: {
       preload: PRELOAD_PATH,
-      ipcDirectory: IPC_DIR,
+      handlerScanRoot: ELECTRON_DIR,
     },
     counts: {
       preloadInvokeChannels: invokeChannels.length,

@@ -25,6 +25,8 @@ export const MAIN_MESSAGES_RELATIVE_PATH = 'electron/mainMessages.js'
 
 export const MAIN_COVERED_FILES = Object.freeze([
   'electron/ipc/audioIpc.js',
+  'electron/ipc/personaIpc.js',
+  'electron/ipc/windowIpc.js',
   'electron/services/ttsService.js',
   'electron/services/ttsVolcengine.js',
   'electron/windowManager.js',
@@ -32,6 +34,14 @@ export const MAIN_COVERED_FILES = Object.freeze([
   'electron/services/windowsPermissions.js',
   'electron/services/mcpApprovals.js',
   'electron/services/pluginHost.js',
+  'electron/services/localTts.js',
+  'electron/services/tencentAsr.js',
+  'electron/services/edgeTts.js',
+  'electron/services/keyVault.js',
+  'electron/tools/toolRegistry.js',
+  'electron/tools/toolRegistryUtils.js',
+  'electron/mediaSessionRuntime.js',
+  'electron/net.js',
 ])
 
 const HAN_PATTERN = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/

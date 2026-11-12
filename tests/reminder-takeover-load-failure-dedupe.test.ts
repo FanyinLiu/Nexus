@@ -65,7 +65,9 @@ test('a takeover panel load failure rebuilds on the next tick and the due remind
     resolveFirst?.(null)
     await flushMicrotasks()
     now = dueAt
-    assert.equal(takeover.tick(), 'created', 'the next tick rebuilds instead of staying panel_present')
+    assert.equal(takeover.tick(), 'backoff', 'a failed build waits for its retry delay')
+    now = 1_005_000
+    assert.equal(takeover.tick(), 'created', 'the next allowed tick rebuilds instead of staying panel_present')
     await flushMicrotasks()
 
     assert.equal(ready, 1)

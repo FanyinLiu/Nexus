@@ -192,6 +192,20 @@ export function shouldKeepContinuousVoiceSession(
   return shouldKeepContinuousSession({ settings: options.settingsRef.current })
 }
 
+/**
+ * Merge this window's continuous-voice state with the pet runtime's state.
+ * The panel has no local voice session, so it must inherit the pet's flag to
+ * hold deferred reminders while the pet is in a continuous conversation.
+ */
+export function mergeContinuousVoiceActive(options: {
+  view: 'pet' | 'panel'
+  localActive: boolean
+  petRuntimeActive: boolean
+}) {
+  return options.localActive
+    || (options.view === 'panel' && options.petRuntimeActive && !options.localActive)
+}
+
 export function canInterruptSpeech(options: ContinuousVoiceOptions) {
   return policyCanInterruptSpeech(options.settingsRef.current)
 }

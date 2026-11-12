@@ -23,6 +23,7 @@ const reactInternals = (React as unknown as {
 function renderCompanionNotices(options: {
   busyRef: { current: boolean }
   voiceStateRef: { current: VoiceState }
+  continuousVoiceActiveRef?: { current: boolean }
   speakAssistantReply?: (text: string) => Promise<void>
 }) {
   const speech: string[] = []
@@ -55,6 +56,7 @@ function renderCompanionNotices(options: {
             : Promise.resolve()
         },
         voiceStateRef: options.voiceStateRef,
+        continuousVoiceActiveRef: options.continuousVoiceActiveRef,
       },
       t: (key) => String(key),
       busyRef: options.busyRef,
@@ -109,6 +111,51 @@ test('notices that arrive during a reply wait for idle and keep their order', as
 
   assert.deepEqual(speech, ['speech-a', 'speech-b'], 'queued notices play once, in order')
   assert.deepEqual(messages.map((message) => message.content), ['chat-a', 'chat-b'])
+})
+
+test('a deferred notice waits while the assistant is listening and plays once after listening stops', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'listening' as VoiceState }
+  const { api, speech } = renderCompanionNotices({ busyRef, voiceStateRef })
+
+  await api.pushCompanionNotice(notice('listening'))
+  assert.deepEqual(speech, [], 'no reminder speaks into an open microphone')
+
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, [], 'the idle flush respects the open microphone')
+
+  voiceStateRef.current = 'idle'
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, ['speech-listening'], 'plays once when listening stops')
+
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, ['speech-listening'], 'the notice is not replayed twice')
+})
+
+test('a deferred notice waits for an active continuous session even in its idle gap', async () => {
+  const busyRef = { current: false }
+  const voiceStateRef = { current: 'idle' as VoiceState }
+  const continuousVoiceActiveRef = { current: true }
+  const { api, speech } = renderCompanionNotices({
+    busyRef,
+    voiceStateRef,
+    continuousVoiceActiveRef,
+  })
+
+  await api.pushCompanionNotice(notice('continuous'))
+  assert.deepEqual(speech, [], 'continuous voice keeps the mic for the next turn')
+
+  // tts:completed/session:completed can report idle before continuous voice
+  // reopens the microphone; that gap is not a truly idle pet.
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, [], 'the continuous idle gap is not a true idle pet')
+
+  continuousVoiceActiveRef.current = false
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, ['speech-continuous'], 'plays once after the session ends')
+
+  await api.flushDeferredCompanionNotices()
+  assert.deepEqual(speech, ['speech-continuous'], 'the notice is not replayed twice')
 })
 
 test('an idle pet delivers a notice immediately and a later queue resumes in order', async () => {

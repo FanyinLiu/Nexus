@@ -107,6 +107,12 @@ export function summarizeWindowNavigationErrorForLog(error) {
  * Same-origin, same-path navigations are allowed only when they keep the
  * window's view role. `will-navigate` does not see `history.replaceState`,
  * so callers also apply this check to in-page URL updates.
+ *
+ * The pet fallback document and its retry marker are not renderer entry
+ * navigations: `BrowserWindow.loadFile` does not emit `will-navigate`, and the
+ * pet's own listener cancels the retry marker before this guard runs. Allowing
+ * either target here would only enable page-initiated navigations that break
+ * the retry budget or load the fallback as a ready page.
  * @param {unknown} targetUrl
  * @param {unknown} rendererEntryUrl
  */
@@ -169,4 +175,44 @@ export function isAllowlistedExternalWindowOpenUrl(rawUrl) {
 export function externalWindowOpenNeedsConfirmation(rawUrl, requiresConfirmation) {
   if (isAllowlistedExternalWindowOpenUrl(rawUrl)) return false
   return requiresConfirmation !== false
+}
+
+/**
+ * Build the external-open pipeline with URL normalization and safety ahead of
+ * the confirmation preference. Keeping the safety gate first means turning
+ * confirmation off can never widen the accepted scheme or host set: a
+ * non-http URL or an unsafe host is dropped before shell.openExternal is
+ * even considered.
+ *
+ * @param {{
+ *   normalizeUrl: (url: unknown) => string,
+ *   getRequiresConfirmation: () => unknown,
+ *   confirmOpen: (parent: unknown, url: string) => Promise<boolean>,
+ *   openExternal: (url: string) => unknown,
+ *   reportBlocked: (label: string, url: unknown, error: unknown) => void,
+ *   reportOpenFailed: (label: string, safeUrl: string, error: unknown) => void,
+ * }} deps
+ * @returns {(url: unknown, label: string, parent?: unknown) => Promise<void>}
+ */
+export function createExternalWindowOpenHandler(deps) {
+  return async function openExternalUrlFromWindow(url, label, parent) {
+    let safeUrl
+    try {
+      safeUrl = deps.normalizeUrl(url)
+    } catch (err) {
+      deps.reportBlocked(label, url, err)
+      return
+    }
+
+    const requiresConfirmation = deps.getRequiresConfirmation()
+    if (externalWindowOpenNeedsConfirmation(safeUrl, requiresConfirmation)) {
+      const accepted = await deps.confirmOpen(parent, safeUrl)
+      if (!accepted) return
+    }
+
+    const pending = deps.openExternal(safeUrl)
+    if (pending && typeof pending.catch === 'function') {
+      pending.catch((err) => deps.reportOpenFailed(label, safeUrl, err))
+    }
+  }
 }

@@ -1,6 +1,7 @@
 // @ts-check
 import { app, BrowserWindow, dialog, ipcMain, powerMonitor } from 'electron'
 import path from 'node:path'
+import { mainT } from '../mainMessages.js'
 import {
   mainWindow,
   panelWindow,
@@ -63,20 +64,24 @@ import {
 import { applySystemVibrancy } from '../systemVibrancy.js'
 import { requireTrustedSender } from './validate.js'
 import {
+  validateClosePanelPayload,
+  validateConfirmDialogPayload,
   validateDesktopContextRequestPayload,
   validateExternalLinkToolPayload,
   validateIntegrationInspectPayload,
+  validateLaunchOnStartupPayload,
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
   validateModelSetupResolvePayload,
   validateOpenPanelPayload,
-  validateClosePanelPayload,
   validatePanelWindowStatePayload,
+  validatePetFreeModePayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
   validateSpeechStopPlaybackPayload,
+  validateSystemVibrancyPayload,
   validateTextFileOpenPayload,
   validateTextFileSavePayload,
   validateWeatherToolPayload,
@@ -127,15 +132,13 @@ async function confirmPetModelAction(event, channel, payload) {
   audit('pet-model', 'confirmation-request', summarizePetModelRequest(channel, payload))
   const { response } = await dialog.showMessageBox(parentWindow, {
     type: 'warning',
-    buttons: ['继续', '取消'],
+    buttons: [mainT('petModel.confirmContinue'), mainT('common.cancel')],
     defaultId: 1,
     cancelId: 1,
     noLink: true,
-    title: '确认本地宠物工件操作',
-    message: '允许 Nexus 执行这个宠物工件操作吗？',
-    detail:
-      '该操作可能读取本地制作包、写入本地宠物目录、下载社区宠物包，或打开本地路径。'
-      + ' 审计日志只会记录元数据，不记录路径、URL、slug 或宠物内容。',
+    title: mainT('petModel.confirmTitle'),
+    message: mainT('petModel.confirmMessage'),
+    detail: mainT('petModel.confirmDetail'),
   })
   const approved = response === 0
   audit('pet-model', approved ? 'confirmation-approved' : 'confirmation-rejected', summarizePetModelRequest(channel, payload))
@@ -154,7 +157,7 @@ async function runAuditedPetModelAction(event, channel, payload, action, options
   try {
     const approved = await confirmPetModelAction(event, channel, payload)
     if (!approved) {
-      throw new Error('宠物工件操作已取消。')
+      throw new Error(mainT('petModel.actionCancelled'))
     }
     const result = await action()
     audit('pet-model', 'result', summarizePetModelResult(channel, result))
@@ -240,7 +243,8 @@ export function register() {
 
   ipcMain.handle('pet-window:set-free-mode', (event, payload) => {
     requireTrustedSender(event)
-    return setPetFreeModeForEvent(event, Boolean(payload?.freeMode))
+    payload = validatePetFreeModePayload(payload)
+    return setPetFreeModeForEvent(event, Boolean(payload.freeMode))
   })
 
   ipcMain.handle('window:open-panel', (event, section) => {
@@ -326,7 +330,8 @@ export function register() {
 
   ipcMain.handle('window:set-system-vibrancy', (event, payload) => {
     requireTrustedSender(event)
-    const enabled = Boolean(payload && payload.enabled)
+    payload = validateSystemVibrancyPayload(payload)
+    const enabled = Boolean(payload.enabled)
     const win = BrowserWindow.fromWebContents(event.sender)
     return { applied: applySystemVibrancy(win, enabled) }
   })
@@ -395,7 +400,8 @@ export function register() {
 
   ipcMain.handle('app:set-launch-on-startup', (event, value) => {
     requireTrustedSender(event)
-    return setLaunchOnStartupState(Boolean(value))
+    value = validateLaunchOnStartupPayload(value)
+    return setLaunchOnStartupState(value)
   })
 
   ipcMain.handle('app:get-platform-profile', (event) => {
@@ -426,16 +432,17 @@ export function register() {
 
   ipcMain.handle('dialog:confirm', async (event, message) => {
     requireTrustedSender(event)
+    message = validateConfirmDialogPayload(message)
     // Electron dialogs accept an undefined parent window at runtime.
     const parentWindow = /** @type {Electron.BrowserWindow} */ (
       BrowserWindow.fromWebContents(event.sender) ?? panelWindow ?? mainWindow ?? undefined
     )
     const { response } = await dialog.showMessageBox(parentWindow, {
       type: 'question',
-      buttons: ['确定', '取消'],
+      buttons: [mainT('common.ok'), mainT('common.cancel')],
       defaultId: 0,
       cancelId: 1,
-      message: String(message ?? ''),
+      message,
     })
     return response === 0
   })

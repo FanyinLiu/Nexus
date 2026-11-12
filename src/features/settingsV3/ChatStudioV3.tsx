@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { applyCharacterProfile, createCharacterProfile, removeCharacterProfile, syncCurrentToProfile, updateCharacterProfile } from '../character/profiles.ts'
 import { syncWakeWordWithCompanionNameChange } from '../hearing/companionWakeWordSync.ts'
-import { getRedactedLogErrorMessage } from '../../lib/logRedaction.ts'
+import { warnRedacted } from '../../lib/logger.ts'
 import { loadLorebookEntries, saveLorebookEntries } from '../../lib/storage/lorebooks.ts'
 import { savePendingGreeting } from '../../lib/storage/pendingGreeting.ts'
 import { pickTranslatedUiText } from '../../lib/uiLanguage.ts'
@@ -64,7 +64,8 @@ export function ChatStudioV3(props: ChatSectionV3Props) {
       if (result.greeting) savePendingGreeting(result.greeting)
       setCardStatus({ ok: true, message: ti('settings.chat.import_card_success', { name: profile.companionName, count: result.lorebookEntries.length }) })
     } catch (error) {
-      setCardStatus({ ok: false, message: ti('settings.chat.import_card_error', { error: getRedactedLogErrorMessage(error) }) })
+      warnRedacted('[settings] character card import failed:', error)
+      setCardStatus({ ok: false, message: ti('settings.chat.import_card_error') })
     } finally {
       setImportingCard(false)
     }

@@ -273,6 +273,10 @@ README 顶部只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重
   sha256sum --ignore-missing -c SHA256SUMS-linux.txt
   ```
 
+### 自动更新说明
+
+目前 Windows 和 Linux 没有自动更新。新版本需要从官方 GitHub Releases 手动下载安装包，并用同一 release 的 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` 校验 SHA-256 后再安装；应用不会自动下载、替换或重启安装。macOS arm64 未签名包同样不会自动替换应用，只会检查新版本并打开官方 release 页面，仍需手动下载新的 `.dmg` / `.zip` 并替换应用。
+
 ### 未签名安装提示与发行边界（macOS / Windows）
 
 当前桌面安装包还没有 Apple Developer ID、公证和 Windows 代码签名证书，所以首次启动会看到系统信任提示。这是当前发行策略，不代表系统已经信任安装包。官方 GitHub Releases 是唯一下载来源；如果你不确定文件来源，删除它并从 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 重新下载，不要从镜像或转载压缩包安装。
@@ -280,17 +284,17 @@ README 顶部只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重
 - **macOS / Gatekeeper**：v0.5.1 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
 - **Windows / SmartScreen**：v0.5.1 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
 
-#### macOS unsigned auto-update limitation
+#### macOS 未签名自动更新限制
 
 macOS arm64 未签名包只会检查新版本并打开官方 release 页面；它不会静默下载、替换或重启安装。每次升级都需要用户手动下载新 `.dmg` / `.zip`、重新确认 Gatekeeper 提示并替换应用。
 
-#### Windows unsigned installer limitation
+#### Windows 未签名安装器限制
 
 Windows x64 安装器会以 `NotSigned` 发布，无法提供发布者身份验证或稳定的 SmartScreen 声誉。用户必须从官方 GitHub Releases 手动确认并运行安装器；不要把 SmartScreen 绕过说明理解为安全背书。
 
 预发布版本只用于 Beta → Validation，不会把稳定版用户自动升级到 beta；完成验证后才会晋升 stable。每个平台使用独立校验清单：Windows 是 `SHA256SUMS-windows.txt`，macOS 是 `SHA256SUMS-macos.txt`，Linux 是 `SHA256SUMS-linux.txt`。
 
-npm 不是普通用户的安装主路径。这个仓库的 npm 命令只给开发者使用：启动开发环境、打包安装包、运行自检和发布前检查。普通用户通过对应平台的发布路径获得后续版本；其中未签名 macOS arm64 包只检查新版本并打开官方 release 页面，升级仍需手动下载和替换应用。
+npm 不是普通用户的安装主路径。这个仓库的 npm 命令只给开发者使用：启动开发环境、打包安装包、运行自检和发布前检查。后续版本没有自动更新：Windows 和 Linux 需要从官方 GitHub Releases 手动下载新安装包并校验 SHA-256；未签名 macOS arm64 包只检查新版本并打开官方 release 页面，升级同样需要手动下载和替换应用。
 
 ## 已知限制与适用人群
 

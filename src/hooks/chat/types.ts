@@ -65,6 +65,17 @@ type ChatMemoryDeps = {
 /** Voice session state, TTS control, and the voice event bus. */
 export type ChatVoiceDeps = {
   voiceStateRef: RefObject<VoiceState>
+  /**
+   * True while a click- or voice-owned continuous conversation is running,
+   * including the brief idle gap between its listening and speaking turns.
+   * This may be inherited from the pet window when the panel is the host.
+   */
+  continuousVoiceActiveRef?: RefObject<boolean>
+  /**
+   * This window's own continuous-voice value, without the panel's inherited
+   * pet flag. The 30 s stuck fallback may only override this value.
+   */
+  ownContinuousVoiceActiveRef?: RefObject<boolean>
   suppressVoiceReplyRef: RefObject<boolean>
   setVoiceState: (state: VoiceState) => void
   setLiveTranscript: (text: string) => void
@@ -240,6 +251,19 @@ export type CompanionNoticePayload = {
   bubbleContent?: string
   speechContent?: string
   dedupeKey?: string
+  /** Stable reminder task id; deferred reminders with the same id collapse. */
+  reminderId?: string
+  /** Reminder occurrence due instant used to order a merged replay. */
+  reminderDueAt?: string | number
+  /**
+   * Internal replay metadata for a merged reminder utterance: on interruption,
+   * re-enqueue these original queue entries instead of the merged text so the
+   * next merge keeps one prefix, one "more" line, and the original ids.
+   */
+  deferredReplayEntries?: Array<{
+    payload: CompanionNoticePayload
+    enqueuedAt: number
+  }>
   autoHideMs?: number
   /**
    * Marks the notice bubble as router-driven. The bubble then joins the shared

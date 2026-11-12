@@ -58,7 +58,7 @@ export const koSettingsShell = {
   'settings.return_to_companion': '컴패니언으로 돌아가기',
   'settings.unsaved_changes': '저장하지 않은 변경 사항',
   'settings.save_failed_fallback': '설정 저장이 안 됐어요, 잠시 후 다시 해볼까요?',
-  'settings.save_failed_system': '설정 저장이 안 됐어요: {error}',
+  'settings.save_failed_system': '설정을 저장하지 못했어요. 잠시 뒤에 다시 해볼까요?',
   'settings.import_pet_model_unsupported': '현재 환경에서는 로컬 Live2D 모델 가져오기를 지원하지 않아요.',
   'settings.list_speech_voices.unsupported': '현재 환경에서는 온라인 음성 목록 가져오기를 지원하지 않아요.',
   'settings.preview.busy_error': '이전 대화가 아직 처리 중이에요. 잠시 후에 다시 들어볼까요?',
