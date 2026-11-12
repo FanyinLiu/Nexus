@@ -1,7 +1,5 @@
 // @ts-nocheck
 import { BrowserWindow } from 'electron'
-import { createPetLocomotion } from './petLocomotion.js'
-import { getSavedPetPref, savePetPref } from './services/petPrefsStore.js'
 import { sanitizePetWindowStatePatch } from './windowStateSanitizers.js'
 
 const petInstances = new Map()
@@ -25,35 +23,18 @@ function makePetWindowState() {
     isPinned: true,
     clickThrough: false,
     petHotspotActive: false,
-    locomotionActivity: 'idle',
-    // Default to fixed mode (keeps the scene backdrop) — free mode / no-backdrop
-    // roaming is opt-in via the settings toggle or the right-click menu, not the
-    // out-of-box default. Users who explicitly chose free mode keep it (saved in
-    // pet-prefs.json); only the unset default changed.
-    freeMode: getSavedPetPref('freeMode') ?? false,
-    roamCapable: false,
   }
 }
 
 export function registerPetInstance(win) {
   const id = win.webContents.id
-  const inst = { id, win, state: makePetWindowState(), loco: null }
-  inst.loco = createPetLocomotion({
-    getWin: () => inst.win,
-    getState: () => inst.state,
-    patchState: (patch) => {
-      inst.state = { ...inst.state, ...patch }
-      if ('freeMode' in patch) savePetPref('freeMode', patch.freeMode)
-      syncPetInstance(inst)
-    },
-  })
+  const inst = { id, win, state: makePetWindowState() }
   petInstances.set(id, inst)
   return inst
 }
 
 export function destroyPetInstance(inst) {
   if (!inst) return
-  inst.loco.stop()
   petInstances.delete(inst.id)
 }
 
@@ -112,15 +93,5 @@ export function updatePetWindowStateForEvent(event, partialState = {}) {
   inst.state = { ...inst.state, ...safe }
   applyPetInstance(inst)
   syncPetInstance(inst)
-  return inst.state
-}
-
-// Toggle free mode through the locomotion controller (not a raw state patch),
-// so it persists to pet-prefs.json and resets locomotion exactly the way the
-// right-click context-menu toggle does. Used by the settings-page toggle.
-export function setPetFreeModeForEvent(event, freeMode) {
-  const inst = petInstanceForEvent(event) ?? mainPetInstance()
-  if (!inst) return null
-  inst.loco.setFreeMode(Boolean(freeMode))
   return inst.state
 }

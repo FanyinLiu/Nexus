@@ -28,8 +28,8 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 215)
-  assert.equal(report.counts.mainHandlerChannels, 215)
+  assert.equal(report.counts.preloadInvokeChannels, 214)
+  assert.equal(report.counts.mainHandlerChannels, 214)
   assert.equal(report.counts.preloadSubscriptionChannels, 28)
   assert.equal(report.errors.missingHandlers.length, 0)
   assert.equal(report.errors.duplicateHandlers.length, 0)
@@ -208,6 +208,7 @@ test('IPC contract audit distinguishes schema, manual, and no-payload handlers',
   assert.equal(findChannel(report, 'vts-auth-token:get'), undefined)
   assert.equal(findChannel(report, 'vts-auth-token:store'), undefined)
   assert.equal(findChannel(report, 'vts-auth-token:delete'), undefined)
+  assert.equal(findChannel(report, 'pet-window:set-free-mode'), undefined)
 })
 
 test('IPC contract audit keeps file dialog channels out of warning buckets', () => {
@@ -522,7 +523,6 @@ test('IPC contract audit pins payload validation and renderer payload for every 
     'panel-window:set-state',
     'persona:init',
     'persona:save-memory',
-    'pet-window:set-free-mode',
     'pet-window:update-state',
     'plugin-bus:publish',
     'plugin-bus:recent',

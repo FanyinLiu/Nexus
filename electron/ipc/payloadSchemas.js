@@ -10,7 +10,6 @@ export {
   validateModelSetupResolvePayload,
   validateOpenPanelPayload,
   validatePanelWindowStatePayload,
-  validatePetFreeModePayload,
   validatePetWindowStatePayload,
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
