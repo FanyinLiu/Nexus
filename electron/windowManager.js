@@ -452,6 +452,9 @@ function isTakeoverPanelReclaimable(snapshot) {
 function reclaimHiddenTakeoverPanel() {
   const win = panelWindow
   if (!win || win.isDestroyed() || !takeoverPanels.has(win)) return
+  // A user open can land between shouldReclaimPanel() and this call; never tear
+  // down a window the user has seen or can currently see.
+  if (shownTakeoverPanels.has(win) || win.isVisible()) return
   win.destroy()
 }
 
