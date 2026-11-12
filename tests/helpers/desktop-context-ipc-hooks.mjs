@@ -34,14 +34,22 @@ function testState() {
 `
 
 const ELECTRON_STUB = `
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 ${STATE_PRELUDE}
 export const app = {
   getPath() {
     const state = testState()
-    if (!state.userData) state.userData = mkdtempSync(join(tmpdir(), 'nexus-desktop-context-ipc-'))
+    if (!state.userData) {
+      state.userData = mkdtempSync(join(tmpdir(), 'nexus-desktop-context-ipc-'))
+      // windowIpc reads userData while it registers, so the directory has to
+      // exist; nothing here persists user data, and a leftover empty dir per
+      // test run is not acceptable.
+      process.once('exit', () => {
+        rmSync(state.userData, { recursive: true, force: true })
+      })
+    }
     return state.userData
   },
   isPackaged: false,
