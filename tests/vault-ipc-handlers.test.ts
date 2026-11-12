@@ -271,6 +271,46 @@ test('vault audit entries and console output never contain stored secret values'
   ))
 })
 
+// The schema unit test pins the message; this pins the ceiling at the IPC
+// boundary that the renderer actually talks to, so loosening
+// VAULT_BULK_MAX_ITEMS is caught by the handler suite as well.
+test('bulk vault payloads are capped at 256 items at the IPC boundary', async () => {
+  const event = trustedEvent(51)
+  const entries = Array.from({ length: 257 }, (_, index) => ({
+    slot: `settings:syntheticBulk${index}`,
+    plaintext: `SYNTHETIC_BULK_PLACEHOLDER_${index}`,
+  }))
+  const slots = entries.map((entry) => entry.slot)
+
+  await assert.rejects(
+    () => invoke('vault:store-many', event, { entries }),
+    /payload\.entries must contain at most 256 items/,
+    'store-many must reject 257 entries',
+  )
+  await assert.rejects(
+    () => invoke('vault:retrieve-many', event, { slots }),
+    /payload\.slots must contain at most 256 items/,
+    'retrieve-many must reject 257 slots',
+  )
+
+  assert.deepEqual(state().calls, emptyCalls())
+  assert.deepEqual(state().auditEntries, [])
+  assert.deepEqual([...state().vault.keys()], [])
+
+  // The ceiling caps the batch rather than rejecting the largest legitimate
+  // one: exactly 256 entries still validate and reach the fake backend.
+  await invoke('vault:store-many', event, { entries: entries.slice(0, 256) })
+  assert.equal(state().calls.storeMany.length, 1)
+  assert.equal(Object.keys(state().calls.storeMany[0]).length, 256)
+  assert.equal(state().vault.size, 256)
+
+  const refs = await invoke('vault:retrieve-many', event, { slots: slots.slice(0, 256) }) as Record<string, string>
+  assert.equal(Object.keys(refs).length, 256)
+  for (const issuedRef of Object.values(refs)) {
+    assert.match(issuedRef, /^nexus-vault-ref:/)
+  }
+})
+
 test('invalid vault payloads are rejected before the backend is touched', async () => {
   const event = trustedEvent(41)
 
