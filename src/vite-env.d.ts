@@ -21,15 +21,12 @@ import type {
   AudioTranscriptionResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
-  ChatModelListRequest,
   DesktopContextRequest,
   DesktopContextSnapshot,
   ExternalLinkRequest,
   ExternalLinkResponse,
   IntegrationInspectRequest,
   IntegrationInspectResponse,
-  LocalServiceProbeRequest,
-  LocalServiceProbeResult,
   MediaPermissionStatusSnapshot,
   MediaSessionControlRequest,
   MediaSessionControlResponse,
@@ -41,7 +38,6 @@ import type {
   TextFileSaveResponse,
   PanelWindowState,
   PetWindowState,
-  ProviderHealthResult,
   ServiceConnectionRequest,
   ServiceConnectionResponse,
   SmartTurnProbeResult,
@@ -224,19 +220,6 @@ type ModelProgressEvent = {
   message?: string
 }
 
-type LocalDataStatus = {
-  initialized: boolean
-  healthy: boolean
-  backend: 'sqlite'
-  schemaVersion: number
-  targetSchemaVersion: number
-  migrationCount: number
-  lastMigrationId: string | null
-  storageDirectoryName: 'local-data'
-  errorKind: string | null
-  errorMessage: string | null
-}
-
 type LocalDataOnboardingMirrorState = {
   completedAt: string
   firstConversationAt?: string
@@ -272,58 +255,6 @@ type LocalDataChatMigrationSession = {
   messages: LocalDataChatMigrationMessage[]
 }
 
-type LocalDataChatMigrationPackage = {
-  schemaVersion: 1
-  createdAt: string
-  source: {
-    sessionsKeyPresent: boolean
-    legacyFlatChatKeyPresent: boolean
-    legacyFlatChatUsed: boolean
-  }
-  dryRunReport?: unknown
-  sessions: LocalDataChatMigrationSession[]
-}
-
-type LocalDataChatMigrationApplyResult = {
-  ok: boolean
-  targetDomainId: 'chat-sessions'
-  schemaVersion?: number
-  sessionCount?: number
-  messageCount?: number
-  payloadBytes?: number
-  legacyFlatChatUsed?: boolean
-  requiresConfirmation?: boolean
-  writesData?: boolean
-  applied: boolean
-  recordsWritten: number
-  auditRecordId: string | null
-  errorKind: string | null
-  errorMessage: string | null
-}
-
-type LocalDataChatMigrationRollbackResult = {
-  ok: boolean
-  targetDomainId: 'chat-sessions'
-  recordsDeleted: number
-  auditRecordId: string | null
-  errorKind: string | null
-  errorMessage: string | null
-}
-
-type LocalDataChatMigrationStatusResult = {
-  ok: boolean
-  targetDomainId: 'chat-sessions'
-  schemaVersion?: number
-  recordCount: number
-  messageCount: number
-  recordPayloadsIncluded: false
-  lastAuditRecordId: string | null
-  lastAuditAction: 'chat-sessions-migration-applied' | 'chat-sessions-migration-rolled-back' | null
-  lastAuditAt: string | null
-  errorKind: string | null
-  errorMessage: string | null
-}
-
 type LocalDataChatRuntimeMirrorResult = {
   ok: boolean
   targetDomainId: 'chat-sessions'
@@ -348,51 +279,6 @@ type LocalDataChatSessionsReadResult = {
   messageCount: number
   malformedRecordCount: number
   sessions: LocalDataChatMigrationSession[]
-  errorKind: string | null
-  errorMessage: string | null
-}
-
-type LocalDataChatComparisonSourceSession = {
-  id: string
-  startedAt: number
-  lastActiveAt: number
-  messageCount: number
-  payloadBytes: number
-}
-
-type LocalDataChatComparisonSource = {
-  schemaVersion: 1
-  generatedAt: string
-  source: {
-    sessionsKeyPresent: boolean
-    legacyFlatChatKeyPresent: boolean
-    legacyFlatChatUsed: boolean
-  }
-  sessions: LocalDataChatComparisonSourceSession[]
-}
-
-type LocalDataChatComparisonResult = {
-  ok: boolean
-  targetDomainId: 'chat-sessions'
-  schemaVersion?: number
-  compared: boolean
-  recordPayloadsIncluded: false
-  status: 'aligned' | 'differences' | 'empty' | 'blocked'
-  sourceSessionCount: number
-  sqliteSessionCount: number
-  matchedRecordCount: number
-  metadataAlignedRecordCount: number
-  metadataMismatchCount: number
-  missingSqliteRecordCount: number
-  extraSqliteRecordCount: number
-  malformedSqliteRecordCount: number
-  sourceMessageCount: number
-  sqliteMessageCount: number
-  messageCountDelta: number
-  sourcePayloadBytes: number
-  sqlitePayloadBytes: number
-  issueCodes: string[]
-  auditRecordId: string | null
   errorKind: string | null
   errorMessage: string | null
 }
@@ -578,11 +464,7 @@ declare global {
         apiKey: string
         model?: string
       }) => Promise<ServiceConnectionResponse>
-      listChatModels: (payload: ChatModelListRequest) => Promise<ProviderHealthResult>
       testServiceConnection: (payload: ServiceConnectionRequest) => Promise<ServiceConnectionResponse>
-      probeLocalServices: (
-        payload: LocalServiceProbeRequest[],
-      ) => Promise<LocalServiceProbeResult[]>
       inspectIntegrations: (
         payload: IntegrationInspectRequest,
       ) => Promise<IntegrationInspectResponse>
@@ -602,25 +484,19 @@ declare global {
 
       // Tencent Cloud Real-Time ASR
       tencentAsrConnect: (payload: { apiKey?: string; appId: string; secretId: string; secretKey: string; engineModelType?: string; hotwordList?: string }) => Promise<{ state: string }>
-      tencentAsrDisconnect: DesktopPetGeneratedBridge['tencentAsrDisconnect']
       tencentAsrFeed: (payload: { samples: number[] | Float32Array; sampleRate?: number }) => Promise<{ ok: boolean }>
       tencentAsrFinish: () => Promise<{ text: string }>
       tencentAsrAbort: DesktopPetGeneratedBridge['tencentAsrAbort']
-      tencentAsrStatus: DesktopPetGeneratedBridge['tencentAsrStatus']
       subscribeTencentAsrResult: (listener: (event: { type: 'partial' | 'final' | 'error'; text: string }) => void) => () => void
 
       // Minecraft Gateway
       minecraftConnect: (payload: { address: string; port: number; username: string }) => Promise<MinecraftGatewayStatus>
       minecraftDisconnect: DesktopPetGeneratedBridge['minecraftDisconnect']
-      minecraftSendCommand: (payload: { command: string }) => Promise<{ ok: boolean }>
-      minecraftStatus: DesktopPetGeneratedBridge['minecraftStatus']
       minecraftGameContext: () => Promise<MinecraftGameContext>
 
       // Factorio RCON
       factorioConnect: (payload: { address: string; port: number; password: string }) => Promise<FactorioRconStatus>
       factorioDisconnect: DesktopPetGeneratedBridge['factorioDisconnect']
-      factorioExecute: (payload: { command: string }) => Promise<{ response: string }>
-      factorioStatus: DesktopPetGeneratedBridge['factorioStatus']
       factorioGameContext: () => Promise<FactorioGameContext>
 
       // Telegram Gateway
@@ -646,13 +522,11 @@ declare global {
       subscribeDiscordMessage: (listener: (msg: DiscordIncomingMessage) => void) => () => void
 
       // MCP Host (multi-server) — start/stop/restart restricted to main process only
-      mcpStatus: (payload?: { id: string }) => Promise<McpHostStatus | McpHostStatus[]>
       mcpListTools: (payload?: { id: string }) => Promise<McpToolDescriptor[]>
       mcpCallTool: (payload: { serverId?: string; name: string; arguments?: Record<string, unknown> }) => Promise<unknown>
       mcpSyncServers: (payload: { servers: Array<{ id: string; label?: string; command: string; args?: string; enabled: boolean }> }) => Promise<McpHostStatus[]>
 
       // External action permission policy
-      externalActionPolicyGet: () => Promise<Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', 'read-only' | 'confirm' | 'auto'>>
       externalActionPolicySync: (payload: {
         policies: Record<'telegram' | 'discord' | 'minecraft' | 'factorio' | 'mcp', {
           mode: 'read-only' | 'confirm' | 'auto'
@@ -676,23 +550,12 @@ declare global {
         screenContextActive: boolean
       }) => Promise<MediaPermissionStatusSnapshot>
       voiceRuntimeSync: DesktopPetGeneratedBridge['voiceRuntimeSync']
-      localDataStatus: () => Promise<LocalDataStatus>
       localDataMirrorOnboarding: (payload?: { state?: LocalDataOnboardingMirrorState }) => Promise<LocalDataOnboardingMirrorResult>
-      localDataChatMigrationStatus: () => Promise<LocalDataChatMigrationStatusResult>
       localDataReadChatSessions: () => Promise<LocalDataChatSessionsReadResult>
       localDataMirrorChatSession: (payload: {
         confirmed: boolean
         session: LocalDataChatMigrationSession
       }) => Promise<LocalDataChatRuntimeMirrorResult>
-      localDataCompareChatSessions: (payload: {
-        confirmed: boolean
-        source: LocalDataChatComparisonSource
-      }) => Promise<LocalDataChatComparisonResult>
-      localDataApplyChatMigration: (payload: {
-        confirmed: boolean
-        migrationPackage: LocalDataChatMigrationPackage
-      }) => Promise<LocalDataChatMigrationApplyResult>
-      localDataRollbackChatMigration: (payload: { confirmed: boolean }) => Promise<LocalDataChatMigrationRollbackResult>
       localDataMemoryMigrationStatus: () => Promise<LocalDataMemoryMigrationStatusResult>
       localDataReadMemory: () => Promise<LocalDataMemoryReadResult>
       localDataApplyMemoryMigration: (payload: {
@@ -718,33 +581,9 @@ declare global {
       localDataRollbackCompanionMigration: (payload: { confirmed: boolean }) => Promise<LocalDataCompanionMigrationRollbackResult>
 
       // Plugin Host
-      pluginScan: () => Promise<PluginStatus[]>
       pluginList: () => Promise<PluginStatus[]>
-      pluginStart: (payload: { id: string }) => Promise<McpHostStatus>
-      pluginStop: (payload: { id: string }) => Promise<{ ok: boolean }>
-      pluginRestart: (payload: { id: string }) => Promise<McpHostStatus>
-      pluginEnable: (payload: { id: string }) => Promise<PluginStatus>
-      pluginDisable: (payload: { id: string }) => Promise<PluginStatus>
-      pluginStatus: (payload: { id: string }) => Promise<PluginStatus | null>
-      pluginDir: DesktopPetGeneratedBridge['pluginDir']
-      pluginApprove: (payload: { id: string }) => Promise<PluginStatus | null>
-      pluginRevoke: (payload: { id: string }) => Promise<PluginStatus | null>
-
-      // Plugin Message Bus
-      pluginBusPublish: (payload: { serverId: string; topic: string; data?: unknown }) => Promise<{ delivered: number }>
-      pluginBusSubscribe: (payload: { serverId: string; topic: string }) => Promise<{ accepted: boolean }>
-      pluginBusUnsubscribe: (payload: { serverId: string; topic: string }) => Promise<void>
-      pluginBusSubscriptions: () => Promise<Record<string, string[]>>
-      pluginBusRecent: (payload?: { limit?: number }) => Promise<Array<{
-        topic: string
-        payload: unknown
-        from: string
-        timestamp: string
-      }>>
-      pluginBusStats: DesktopPetGeneratedBridge['pluginBusStats']
 
       // Memory Vector Store
-      memoryVectorIndex: DesktopPetGeneratedBridge['memoryVectorIndex']
       memoryVectorIndexBatch: (payload: Array<{
         id: string
         content: string
@@ -768,13 +607,9 @@ declare global {
       memoryVectorRemove: DesktopPetGeneratedBridge['memoryVectorRemove']
       /**
        * Clear-all hook the renderer purge calls: vector snapshot plus
-       * local-data vacuum. Same channel as memoryClearUserData.
+       * local-data vacuum.
        */
       memoryVectorClear: DesktopPetGeneratedBridge['memoryVectorClear']
-      /** Alias of memoryVectorClear. */
-      memoryClearUserData: DesktopPetGeneratedBridge['memoryClearUserData']
-      memoryVectorStats: DesktopPetGeneratedBridge['memoryVectorStats']
-      memoryKeywordSearch: DesktopPetGeneratedBridge['memoryKeywordSearch']
       memoryHybridSearch: (payload: {
         queryEmbedding: number[]
         queryText: string
@@ -845,11 +680,7 @@ declare global {
         lastUsedAt: string | null
       }>
       skillSearch: DesktopPetGeneratedBridge['skillSearch']
-      skillList: DesktopPetGeneratedBridge['skillList']
-      skillGet: DesktopPetGeneratedBridge['skillGet']
-      skillRemove: (payload: { id: string }) => Promise<boolean>
       skillMarkUsed: DesktopPetGeneratedBridge['skillMarkUsed']
-      skillStats: DesktopPetGeneratedBridge['skillStats']
 
       // Persona (SOUL.md file-based identity)
       personaLoadSoul: () => Promise<string>
@@ -871,9 +702,6 @@ declare global {
           markdownOk?: boolean
         }
       }) => Promise<{ ok: boolean }>
-      personaPaths: DesktopPetGeneratedBridge['personaPaths']
-      personaOpenDir: DesktopPetGeneratedBridge['personaOpenDir']
-      personaInit: (payload: { defaultSoul: string }) => Promise<{ personaDir: string; soulPath: string; memoryPath: string }>
       /**
        * Load a v2 per-profile persona (userData/personas/<id>/soul.md etc.).
        * Every file on disk is optional; missing files become empty strings /
@@ -926,7 +754,6 @@ declare global {
         /** mtime of soul.md; lets the renderer tell cached profiles apart. */
         soulMtimeMs?: number
       }>
-      personaProfileDir: (profileId: string) => Promise<{ dir: string }>
       personaImportCard: () => Promise<{
         profile: {
           id: string
@@ -1007,7 +834,6 @@ declare global {
       ) => Promise<{ keyword: string | null }>
       kwsStop: DesktopPetGeneratedBridge['kwsStop']
 
-      vadStatus: DesktopPetGeneratedBridge['vadStatus']
       vadStart: DesktopPetGeneratedBridge['vadStart']
       vadFeed: (
         payload: { samples: number[] | Float32Array },
@@ -1073,11 +899,7 @@ declare global {
 
       // Key vault (safeStorage encryption). Retrieval returns opaque
       // nexus-vault-ref tokens; plaintext is resolved only in the main process.
-      vaultIsAvailable: () => Promise<boolean>
       vaultStore: (slot: string, plaintext: string) => Promise<void>
-      vaultRetrieve: (slot: string) => Promise<string>
-      vaultDelete: (slot: string) => Promise<void>
-      vaultListSlots: () => Promise<string[]>
       vaultStoreMany: (entries: Record<string, string>) => Promise<void>
       vaultRetrieveMany: (slots: string[]) => Promise<Record<string, string>>
       // VTube Studio bridge. Renderer sends companion state only; token
