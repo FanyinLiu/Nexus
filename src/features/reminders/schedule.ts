@@ -254,14 +254,26 @@ export function refreshReminderTask(task: ReminderTask, from = new Date()) {
   }
 }
 
-/** Whether `stored` already fired at or after the due instant held by `task`. */
+/**
+ * Whether `stored` already fired at or after the due instant held by `task`.
+ *
+ * A trigger stamp later than `now` cannot describe a real delivery of this
+ * occurrence: it was written while the system clock was ahead and then
+ * corrected backwards. Ignoring it lets the corrected schedule deliver the
+ * occurrences between the rolled-back time and the old ahead-of-time stamp
+ * instead of skipping them until wall time catches up.
+ */
 export function reminderAlreadyTriggered(
   task: ReminderTask,
   stored: ReminderTask | undefined,
+  now = new Date(),
 ): boolean {
   const dueAt = Date.parse(task.nextRunAt ?? '')
   const triggeredAt = Date.parse(stored?.lastTriggeredAt ?? '')
-  return Number.isFinite(dueAt) && Number.isFinite(triggeredAt) && triggeredAt >= dueAt
+  return Number.isFinite(dueAt)
+    && Number.isFinite(triggeredAt)
+    && triggeredAt <= now.getTime()
+    && triggeredAt >= dueAt
 }
 
 /**
@@ -272,8 +284,9 @@ export function reminderAlreadyTriggered(
 export function reconcileTriggeredTaskWithPersisted(
   task: ReminderTask,
   stored: ReminderTask | undefined,
+  now = new Date(),
 ): ReminderTask {
-  if (!reminderAlreadyTriggered(task, stored)) return task
+  if (!reminderAlreadyTriggered(task, stored, now)) return task
   return {
     ...task,
     ...(stored?.lastTriggeredAt ? { lastTriggeredAt: stored.lastTriggeredAt } : {}),
@@ -330,12 +343,8 @@ export function refreshReminderTaskForHandoff(
   const from = options.now ?? new Date()
   const refreshed = refreshReminderTask(task, from)
   const previousRunAt = Date.parse(task.nextRunAt ?? '')
-  const lastTriggeredAt = Date.parse(task.lastTriggeredAt ?? '')
-  const alreadyTriggered = Number.isFinite(previousRunAt)
-    && Number.isFinite(lastTriggeredAt)
-    && lastTriggeredAt >= previousRunAt
   if (
-    alreadyTriggered
+    reminderAlreadyTriggered(task, task, from)
     || !isReminderDueEligibleForHandoff(
       task,
       from,

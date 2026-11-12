@@ -181,16 +181,18 @@ test('a persisted trigger at or after the due instant suppresses a stale copy', 
     schedule: { kind: 'at', at: '2026-01-01T00:00:30.000Z' },
     nextRunAt: '2026-01-01T00:00:30.000Z',
   })
+  // Explicit `now` keeps the assertion independent of the wall clock.
+  const now = new Date('2026-01-01T00:01:00.000Z')
 
   assert.equal(
-    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: '2026-01-01T00:00:30.500Z' }),
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: '2026-01-01T00:00:30.500Z' }, now),
     true,
   )
   assert.equal(
-    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: '2026-01-01T00:00:29.000Z' }),
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: '2026-01-01T00:00:29.000Z' }, now),
     false,
   )
-  assert.equal(reminderAlreadyTriggered(task, { ...task }), false)
+  assert.equal(reminderAlreadyTriggered(task, { ...task }, now), false)
 })
 
 test('external delivery drains the stale row and preserves its next recurrence', () => {
