@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { promises as fsp } from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import { app, BrowserWindow, Menu, nativeImage, screen, Tray } from 'electron'
+import { app, BrowserWindow, Menu, nativeImage, powerMonitor, screen, Tray } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { buildPlatformProfile } from './platformProfile.js'
@@ -452,6 +452,9 @@ function isTakeoverPanelReclaimable(snapshot) {
 function reclaimHiddenTakeoverPanel() {
   const win = panelWindow
   if (!win || win.isDestroyed() || !takeoverPanels.has(win)) return
+  // A user open can land between shouldReclaimPanel() and this call; never tear
+  // down a window the user has seen or can currently see.
+  if (shownTakeoverPanels.has(win) || win.isVisible()) return
   win.destroy()
 }
 
@@ -467,6 +470,29 @@ const retiredPanelTakeover = createRetiredPanelTakeover({
     startReminderPanelWakeMonitor()
   },
 })
+
+// A sleeping/locked machine cannot heartbeat, so wake events get the same
+// grace as a detected wall-clock jump; otherwise the stale heartbeat would
+// immediately rebuild a hidden panel that is reclaimed moments later.
+let retiredPanelPowerListenersRegistered = false
+
+/**
+ * Subscribe the takeover grace to wake events. Electron forbids touching
+ * powerMonitor before 'ready', so this runs either immediately (already ready)
+ * or from the one-shot ready callback, and never subscribes twice.
+ */
+export function registerRetiredPanelPowerListeners() {
+  if (retiredPanelPowerListenersRegistered) return
+  retiredPanelPowerListenersRegistered = true
+  powerMonitor?.on?.('resume', () => retiredPanelTakeover.noteSystemResume())
+  powerMonitor?.on?.('unlock-screen', () => retiredPanelTakeover.noteSystemResume())
+}
+
+if (app.isReady?.()) {
+  registerRetiredPanelPowerListeners()
+} else {
+  app.once?.('ready', registerRetiredPanelPowerListeners)
+}
 
 /** Test-only: clear module singletons so a failed test cannot leak timers. */
 export function resetPanelLifecycleForTests() {

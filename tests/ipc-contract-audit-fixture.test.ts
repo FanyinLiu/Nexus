@@ -99,6 +99,43 @@ ipcMain.handle('app:ping', () => true)
   })
 })
 
+test('IPC contract audit scans electron/main.js for handlers outside the IPC directory', () => {
+  withIpcContractFixture({
+    'electron/main.js': `const { ipcMain } = require('electron')
+
+function requireTrustedSender() {}
+
+ipcMain.handle('unlisted:from-main', (event) => {
+  requireTrustedSender(event)
+  return true
+})
+`,
+  }, (root) => {
+    const report = buildIpcContractReport(root)
+    const mainHandler = report.channels.find((item) => item.channel === 'unlisted:from-main')
+
+    assert.ok(mainHandler, 'handler registered in electron/main.js must be discovered')
+    assert.equal(mainHandler.location.file, join('electron', 'main.js'))
+    assert.deepEqual(
+      report.channels.map((item) => item.channel).sort(),
+      ['app:ping', 'unlisted:from-main'],
+    )
+
+    function assertPinnedInventory(expectedChannels: string[]) {
+      assert.deepEqual(
+        report.channels.map((item) => item.channel).sort(),
+        [...expectedChannels].sort(),
+      )
+    }
+
+    assert.throws(
+      () => assertPinnedInventory(['app:ping']),
+      (error: unknown) => (error as { code?: string }).code === 'ERR_ASSERTION',
+      'an inventory that omits the electron/main.js handler must fail the pin check',
+    )
+  })
+})
+
 test('IPC contract audit warns on high-risk renderer payloads without validation, audit, or permission boundary', () => {
   withIpcContractFixture({
     'electron/preload.js': `

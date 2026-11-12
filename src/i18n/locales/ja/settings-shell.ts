@@ -58,7 +58,7 @@ export const jaSettingsShell = {
   'settings.return_to_companion': 'コンパニオンに戻る',
   'settings.unsaved_changes': '未保存の変更があります',
   'settings.save_failed_fallback': '設定の保存がうまくいきませんでした。少し待ってからもう一度お試しください。',
-  'settings.save_failed_system': '設定が保存できなかった：{error}',
+  'settings.save_failed_system': '設定を保存できませんでした。あとでもう一度試してみてください。',
   'settings.import_pet_model_unsupported': '現在の環境ではローカル Live2D モデルのインポートをサポートしていません。',
   'settings.list_speech_voices.unsupported': '現在の環境ではオンライン音色一覧の取得をサポートしていません。',
   'settings.preview.busy_error': '前の会話がまだ処理中です。少し待ってからもう一度お試しください。',

@@ -18,7 +18,11 @@ function testState() {
       bySender: new Map(),
       monitorStarts: 0,
       monitorStops: 0,
+      powerMonitorListeners: {},
+      appReady: false,
+      appReadyListeners: [],
       panelWindowSetter: null,
+      uiLanguage: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
     }
@@ -29,20 +33,32 @@ function testState() {
 
 const ELECTRON_STUB = `
 import { EventEmitter } from 'node:events'
+import { pathToFileURL } from 'node:url'
 ${STATE_PRELUDE}
 export const app = {
   isPackaged: false,
   isQuitting: false,
   dock: { show() {}, hide() {} },
   getPath: () => process.cwd(),
+  isReady: () => testState().appReady,
   on() {},
-  once() {},
+  once(event, listener) {
+    if (event === 'ready') testState().appReadyListeners.push(listener)
+  },
   quit() {},
 }
 export const screen = {
   getPrimaryDisplay: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }),
   getDisplayMatching: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }),
   getCursorScreenPoint: () => ({ x: 0, y: 0 }),
+}
+export const powerMonitor = {
+  on(event, listener) {
+    const listeners = testState().powerMonitorListeners
+    if (!listeners[event]) listeners[event] = []
+    listeners[event].push(listener)
+  },
+  removeListener() {},
 }
 export const Menu = {
   buildFromTemplate: () => ({ popup: (_options, callback) => callback?.() }),
@@ -72,6 +88,7 @@ export class BrowserWindow extends EventEmitter {
     this.minimized = false
     this.bounds = { x: options.x ?? 0, y: options.y ?? 0, width: options.width ?? 400, height: options.height ?? 600 }
     this.loadCount = 0
+    this.loadFileCalls = []
     this.webContents = {
       id: this.id,
       loading: true,
@@ -132,6 +149,14 @@ export class BrowserWindow extends EventEmitter {
     this.loadCount += 1
     this.webContents.loading = true
     return Promise.resolve()
+  }
+  loadFile(filePath, options = {}) {
+    this.loadFileCalls.push({ filePath, options })
+    const url = pathToFileURL(filePath)
+    for (const [key, value] of Object.entries(options.query ?? {})) {
+      url.searchParams.set(key, String(value))
+    }
+    return this.loadURL(url.toString())
   }
   destroy() {
     if (this.destroyed) return
@@ -195,7 +220,7 @@ export function applyPetWindowInstances() {}
 export function configurePetWindowInstances() {}
 export function getPetInstanceForWindow() { return null }
 export function destroyPetInstance() {}
-export function registerPetInstance() {}
+export function registerPetInstance() { return { loco: { start() {}, stop() {} } } }
 export function getPetWindowStateForEvent() { return { isPinned: false, clickThrough: false, petHotspotActive: false } }
 export function updatePetWindowStateForEvent() {}
 export function setPetFreeModeForEvent() {}
@@ -245,20 +270,22 @@ export function getSavedBounds() { return null }
 export function trackWindow() {}
 `
 
-const WINDOW_NAVIGATION_STUB = `
-export function externalWindowOpenNeedsConfirmation() { return false }
-export function isAllowedRendererNavigation() { return true }
-export function normalizeExternalWindowOpenUrl(url) { return url }
-export function summarizeWindowNavigationErrorForLog() { return '' }
-export function summarizeWindowNavigationUrlForLog() { return '' }
-`
-
 const USER_FACING_DIALOGS_STUB = `
 export function externalOpenDialogCopy() { return { title: '', message: '', detail: '' } }
+export function normalizeDialogLocale(locale) {
+  const value = String(locale ?? '').trim().toLowerCase().replace(/_/g, '-')
+  if (value === 'zh-tw' || value === 'zh-hk' || value.startsWith('zh-hant')) return 'zh-TW'
+  if (value.startsWith('zh')) return 'zh-CN'
+  if (value.startsWith('ja')) return 'ja'
+  if (value.startsWith('ko')) return 'ko'
+  return 'en-US'
+}
 `
 
 const EXTERNAL_OPEN_CONFIRMATION_STUB = `
-export function getExternalOpenConfirmation() { return { confirmed: true } }
+export function getExternalOpenConfirmation() {
+  return { confirmed: true, requiresConfirmation: true, uiLanguage: globalThis.${STATE_KEY}?.uiLanguage ?? null }
+}
 `
 
 const WINDOW_CAPABILITIES_STUB = `
@@ -282,7 +309,6 @@ const MODULE_STUBS = new Map([
   ['/electron/windowRuntimeState.js', WINDOW_RUNTIME_STATE_STUB],
   ['/electron/rendererServer.js', RENDERER_SERVER_STUB],
   ['/electron/services/windowBoundsStore.js', WINDOW_BOUNDS_STORE_STUB],
-  ['/electron/windowNavigation.js', WINDOW_NAVIGATION_STUB],
   ['/electron/userFacingDialogs.js', USER_FACING_DIALOGS_STUB],
   ['/electron/services/externalOpenConfirmation.js', EXTERNAL_OPEN_CONFIRMATION_STUB],
   ['/electron/ipc/windowCapabilities.js', WINDOW_CAPABILITIES_STUB],
@@ -298,12 +324,29 @@ export function windowLifecycleState() {
       bySender: new Map(),
       monitorStarts: 0,
       monitorStops: 0,
+      powerMonitorListeners: {},
+      appReady: false,
+      appReadyListeners: [],
       panelWindowSetter: null,
+      uiLanguage: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
       nextWindowId: 1,
     }
   }
   return globalThis[STATE_KEY]
+}
+
+// Test controls for the app 'ready' boundary: the fake app starts not ready,
+// so tests can import production modules first and emit ready afterwards.
+export function setAppReady(ready) {
+  windowLifecycleState().appReady = ready === true
+}
+
+export function emitAppReady() {
+  const state = windowLifecycleState()
+  state.appReady = true
+  const listeners = state.appReadyListeners.splice(0)
+  for (const listener of listeners) listener()
 }
 
 export async function resolve(specifier, context, nextResolve) {

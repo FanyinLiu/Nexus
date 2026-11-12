@@ -1,5 +1,6 @@
 import type { MutableRefObject, RefObject } from 'react'
 import { detectVoicePermissionPlatform } from '../../features/voice/runtimeSupport.ts'
+import { warnRedacted } from '../../lib/logger.ts'
 import {
   createWakewordRuntime,
   type WakewordRuntimeController,
@@ -294,12 +295,12 @@ export function handleWakewordRuntimeStateChangeRuntime(
     // get the signal — they just don't get spammed every 5s.
     if (_lastLoggedListenerError !== message) {
       _lastLoggedListenerError = message
-      console.warn('[Voice] Wake word listener error:', message)
+      warnRedacted('[Voice] Wake word listener error:', message)
       options.appendVoiceTrace('Wake word listener error', message, 'error')
       options.showPetStatus(
         isHumanizedMicSentence(options.ti, message)
           ? message
-          : options.ti('voice.wakeword.listener_error_with_reason', { error: message }),
+          : options.ti('voice.wakeword.listener_error_with_reason'),
         4_200,
         4_500,
       )
