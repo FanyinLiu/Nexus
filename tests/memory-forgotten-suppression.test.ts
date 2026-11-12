@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { test } from 'node:test'
 
 import {
@@ -9,7 +10,11 @@ import {
 } from '../src/features/memory/forgottenMemories.ts'
 import { extractMemoriesFromMessage } from '../src/features/memory/memory.ts'
 import { consolidateDailyMemory } from '../src/features/memory/dailyConsolidation.ts'
-import { planTurnMemoryWrite, reconcileFromModelText } from '../src/features/memory/reconcile.ts'
+import {
+  applyReconcileOps,
+  planTurnMemoryWrite,
+  reconcileFromModelText,
+} from '../src/features/memory/reconcile.ts'
 import type { ChatMessage, DailyMemoryEntry, MemoryItem } from '../src/types/index.ts'
 import { MEMORY_FORGOTTEN_STORAGE_KEY } from '../src/lib/storage/core.ts'
 import {
@@ -17,7 +22,7 @@ import {
   loadForgottenMemoryFingerprints,
   rememberForgottenMemory,
 } from '../src/lib/storage/forgottenMemory.ts'
-import { purgeDeletedMemory } from '../src/lib/storage/purgeMemoryStores.ts'
+import { purgeClearedMemories, purgeDeletedMemory } from '../src/lib/storage/purgeMemoryStores.ts'
 
 const NOW = '2026-10-15T00:00:00.000Z'
 const DELETED = 'I like green tea with jasmine.'
@@ -61,6 +66,12 @@ function userMessage(content: string): ChatMessage {
 
 function diaryEntry(content: string): DailyMemoryEntry {
   return { id: 'diary-1', day: '2026-10-15', role: 'user', content, source: 'chat', createdAt: NOW }
+}
+
+/** Same truncation as the production fingerprint, computed with node:crypto. */
+function expectedFingerprint(content: string): string {
+  const digest = createHash('sha256').update(normalizeForgottenMemoryText(content), 'utf8').digest('hex')
+  return `v2:${digest.slice(0, 32)}`
 }
 
 test('deleting a memory leaves a fingerprint that blocks re-extraction', () => {
@@ -127,9 +138,41 @@ test('persisted suppression data contains no plaintext of the deleted memory', (
 
   const raw = storage.getItem(MEMORY_FORGOTTEN_STORAGE_KEY)
   assert.ok(raw, 'delete must persist a tombstone list')
-  assert.equal(raw.toLowerCase().includes('green tea'), false)
-  assert.equal(raw.toLowerCase().includes(normalizeForgottenMemoryText(DELETED)), false)
-  assert.deepEqual(JSON.parse(raw), [fingerprintForgottenMemoryText(DELETED)])
+  const stored: unknown = JSON.parse(raw)
+  assert.ok(Array.isArray(stored) && stored.length > 0, 'delete must persist at least one tombstone')
+  for (const entry of stored) {
+    assert.ok(typeof entry === 'string')
+    assert.match(entry, /^v2:[0-9a-f]{32}$/, 'tombstones must be hash-only entries')
+  }
+
+  const normalized = normalizeForgottenMemoryText(DELETED)
+  const lower = raw.toLowerCase()
+  assert.equal(lower.includes(normalized), false)
+  for (const token of normalized.split(' ')) {
+    if (token.length < 4) continue
+    assert.equal(lower.includes(token), false, `persisted blob must not contain "${token}"`)
+  }
+  assert.deepEqual(stored, [fingerprintForgottenMemoryText(DELETED)])
+})
+
+test('new fingerprints are a versioned 128-bit SHA-256, not the old 32-bit hash', () => {
+  const fingerprint = fingerprintForgottenMemoryText(DELETED)
+  assert.match(fingerprint, /^v2:[0-9a-f]{32}$/)
+  assert.equal(fingerprint.length, 'v2:'.length + 32)
+  assert.equal(fingerprint, expectedFingerprint(DELETED))
+  assert.equal(fingerprint.includes('green tea'), false)
+})
+
+test('legacy unprefixed and v1 fingerprints are dropped on read', () => {
+  const storage = installStorage()
+  const current = fingerprintForgottenMemoryText(DELETED)
+  storage.setItem(MEMORY_FORGOTTEN_STORAGE_KEY, JSON.stringify([
+    '1a2b3c4d',
+    'v1:deadbeef',
+    current,
+  ]))
+
+  assert.deepEqual(loadForgottenMemoryFingerprints(), [current])
 })
 
 test('the tombstone list keeps only the newest capped entries', () => {
@@ -182,6 +225,80 @@ test('a model ADD of deleted text is refused even when it bypasses candidate fil
   )
   assert.deepEqual(result.memories, [])
   assert.equal(result.ops[0]?.reason, 'forgotten')
+})
+
+test('a model UPDATE to forgotten text is blocked', () => {
+  const existing = [memory({ id: 'mem-old', content: 'I drink coffee.' })]
+  const result = applyReconcileOps(existing, [{
+    op: 'UPDATE',
+    targetIds: ['mem-old'],
+    content: DELETED,
+    reason: 'refined',
+    evidenceQuote: DELETED,
+    messageRef: 'msg-1',
+  }], {
+    now: NOW,
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+  })
+
+  assert.equal(result.ops[0]?.op, 'NOOP')
+  assert.equal(result.ops[0]?.reason, 'forgotten')
+  assert.equal(result.memories[0]?.content, 'I drink coffee.')
+})
+
+test('a model SUPERSEDE with forgotten text is blocked', () => {
+  const existing = [memory({ id: 'mem-old', content: 'I drink coffee.' })]
+  const result = applyReconcileOps(existing, [{
+    op: 'SUPERSEDE',
+    targetIds: ['mem-old'],
+    content: DELETED,
+    reason: 'changed',
+    evidenceQuote: DELETED,
+    messageRef: 'msg-1',
+  }], {
+    now: NOW,
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+  })
+
+  assert.equal(result.ops[0]?.op, 'NOOP')
+  assert.equal(result.ops[0]?.reason, 'forgotten')
+  assert.equal(result.memories.length, 1)
+  assert.equal(result.memories[0]?.content, 'I drink coffee.')
+  assert.equal(result.memories[0]?.status, 'active')
+})
+
+test('a model MERGE that would write forgotten text is blocked', () => {
+  const existing = [
+    memory({ id: 'mem-a', content: 'I drink coffee.' }),
+    memory({ id: 'mem-b', content: 'I like coffee.' }),
+  ]
+  const result = applyReconcileOps(existing, [{
+    op: 'MERGE',
+    targetIds: ['mem-a', 'mem-b'],
+    content: DELETED,
+    reason: 'duplicate',
+    evidenceQuote: DELETED,
+    messageRef: 'msg-1',
+  }], {
+    now: NOW,
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+  })
+
+  assert.equal(result.ops[0]?.op, 'NOOP')
+  assert.equal(result.ops[0]?.reason, 'forgotten')
+  assert.deepEqual(result.memories.map((item) => item.content), ['I drink coffee.', 'I like coffee.'])
+  assert.deepEqual(result.memories.map((item) => item.status), ['active', 'active'])
+})
+
+test('clearing all memories removes the tombstone store', async () => {
+  const storage = installStorage()
+  rememberForgottenMemory(DELETED)
+  assert.ok(storage.getItem(MEMORY_FORGOTTEN_STORAGE_KEY), 'fixture must persist a tombstone')
+
+  await purgeClearedMemories([], {}, NOW)
+
+  assert.equal(storage.getItem(MEMORY_FORGOTTEN_STORAGE_KEY), null)
+  assert.deepEqual(loadForgottenMemoryFingerprints(), [])
 })
 
 test('daily consolidation also refuses deleted diary text', async () => {

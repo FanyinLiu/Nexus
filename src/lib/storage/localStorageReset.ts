@@ -16,6 +16,7 @@ import {
   DREAM_DIARY_STORAGE_KEY,
   flushPendingStorageWrites,
   LEGACY_MEMORY_STORAGE_KEY,
+  MEMORY_FORGOTTEN_STORAGE_KEY,
   MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
   PRESENCE_HISTORY_STORAGE_KEY,
@@ -27,6 +28,9 @@ export const MEMORY_LOCAL_STORAGE_DROP_KEYS: readonly string[] = Object.freeze([
   MEMORY_STORAGE_KEY,
   LEGACY_MEMORY_STORAGE_KEY,
   MEMORY_V1_BACKUP_STORAGE_KEY,
+  // Clear-all removes the tombstones with the memories they suppress; keeping
+  // them would leave delete-derived state behind after an explicit wipe.
+  MEMORY_FORGOTTEN_STORAGE_KEY,
   // Dream rows are derived from memories, so clearing memory must take them
   // too rather than leaving transformed excerpts behind.
   DREAM_DIARY_STORAGE_KEY,

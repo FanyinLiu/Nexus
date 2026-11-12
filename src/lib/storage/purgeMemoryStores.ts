@@ -103,7 +103,7 @@ export function readMemoryDataFiles(): Record<string, string> {
 export function purgeDeletedMemory(memory: MemoryItem, at = new Date().toISOString()): void {
   holdDeletedMemory(memory)
   // Keep a hash-only tombstone so the extraction path cannot re-add the same
-  // wording on the next mention. Clear-all deliberately does not do this.
+  // wording on the next mention. Clear-all wipes the whole tombstone store.
   rememberForgottenMemory(memory.content)
   // Cache keys and the per-model ledger both quote the removed memory.
   forgetMemoryFromRecallIndexLedger(memory.id)

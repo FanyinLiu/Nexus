@@ -1,18 +1,24 @@
 /**
  * Suppression fingerprints for memories the user deleted one by one.
  *
- * A delete is a privacy boundary, so the store keeps only a stable hash of
- * the normalized wording, never the wording itself. Matching is exact after
+ * A delete writes only a versioned SHA-256 fingerprint of the normalized
+ * wording (first 128 bits), never the wording itself. Matching is exact after
  * trim / whitespace collapse / lowercase / trailing-punctuation removal; no
  * fuzzy or semantic matching is attempted.
+ *
+ * Unprefixed 32-bit fingerprints from the first format are dropped on read:
+ * they stored no plaintext, so they cannot be rehashed into the new format.
+ * This also keeps a mixed store from treating bare hashes as live tombstones.
  */
 
-import { stableTextHash } from '../../lib/common.ts'
+import { sha256Hex } from '../../lib/sha256.ts'
 
 /** Keep the newest tombstones only; older facts may be extracted again. */
 export const FORGOTTEN_MEMORY_LIMIT = 500
 
-const FINGERPRINT_PATTERN = /^v1:[0-9a-z]+$/
+/** 128 bits of SHA-256, hex-encoded, under the current format version. */
+const FINGERPRINT_PATTERN = /^v2:[0-9a-f]{32}$/
+const FINGERPRINT_HEX_LENGTH = 32
 
 /** Case, whitespace, and trailing punctuation are not part of the identity. */
 export function normalizeForgottenMemoryText(content: string): string {
@@ -28,7 +34,7 @@ export function normalizeForgottenMemoryText(content: string): string {
 export function fingerprintForgottenMemoryText(content: string): string {
   const normalized = normalizeForgottenMemoryText(content)
   if (!normalized) return ''
-  return `v1:${stableTextHash(normalized)}`
+  return `v2:${sha256Hex(normalized).slice(0, FINGERPRINT_HEX_LENGTH)}`
 }
 
 /** True when the exact normalized text is in the suppression list. */
