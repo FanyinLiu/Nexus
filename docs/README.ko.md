@@ -24,17 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **현재 안정 버전:** v0.5.1. 자세한 내용은 [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md). 설치된 앱의 Qwen3 음성이 정상적으로 시작되고, 끼어들기는 지금 문장만 끊으며, 펫이 꺼져도 패널이 일반 알림을 대신 맡고, 첫 안내 뒤 패널은 더 가볍게 닫힙니다. 공식 설치 패키지는 보호된 tag 워크플로로만 GitHub Releases에 게시됩니다.
+> **현재 안정 버전:** v0.5.2. 자세한 내용은 [RELEASE-NOTES-v0.5.2.md](RELEASE-NOTES-v0.5.2.md). 개인정보 스위치가 메인 프로세스에서 지켜지고, 로그와 MCP 출력은 가려지며, 알림과 창이 더 안정되고, 삭제한 기억은 다시 배우지 않으며, 오류와 승인 대화상자는 일상적인 말로 바뀌었습니다. 공식 설치 패키지는 보호된 tag 워크플로로만 GitHub Releases에 게시됩니다.
 
-> **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 현재 공개 안정 버전은 v0.5.1입니다. 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)이 기준입니다. Phase 1 최소 데스크톱 동반 루프는 이미 공개되었습니다. 성문 깨우기, 카메라, 서명된 설치 패키지는 이 버전에 없습니다.
+> **개발 범위 안내:** 이 다국어 README는 장기 기능 목록을 보존합니다. 현재 공개 안정 버전은 v0.5.2입니다. 루트 [README](../README.md)와 [Nexus 업그레이드 통합 계획](NEXUS_UPGRADE_INTEGRATION_PLAN.md)이 기준입니다. Phase 1 최소 데스크톱 동반 루프는 이미 공개되었습니다. 성문 깨우기, 카메라, 서명된 설치 패키지는 이 버전에 없습니다.
 
 ---
 
-## 이번 안정 업데이트 — v0.5.1
+## 이번 안정 업데이트 — v0.5.2
+
+> **주제: 덜 방해하고, 조금 더 안정적으로.** 개인정보 스위치가 메인 프로세스에서 지켜지고, 말하거나 듣는 동안 대기 중인 알림은 기다리며, 삭제한 기억은 다시 배우지 않고, 시작할 때 권한 팝업이 줄고, 오류와 승인 대화상자도 일상적인 말로 바뀌었어요. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.5.2.md) 와 [중문 릴리스 노트](RELEASE-NOTES-v0.5.2.zh-CN.md).
+
+## 이전 공개 버전 — v0.5.1
 
 > **주제: 0.5.0의 작은 문제 몇 가지를 고쳤어요.** 설치된 앱의 Qwen3 음성이 정상적으로 시작되고, 끼어들기는 지금 문장만 끊어요. 펫 창이 사라지거나 멈춰도 패널이 일반 알림을 대신 맡고, 신규 사용자만 첫 안내 뒤 처음 숨긴 패널이 정리됩니다. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.5.1.md) 와 [중문 릴리스 노트](RELEASE-NOTES-v0.5.1.zh-CN.md).
 
-## 이전 공개 버전 — v0.5.0
+## 이전 업데이트 — v0.5.0
 
 > **주제: 이 컴퓨터 안에 있어요.** 바쁠 때는 조용히 적어 두고, 한가해지면 말해요. 수첩, 핵심만 있는 알림, 작은 띠, 마우스가 가까울 때의 한 번 보기, 타이핑 중 조용함, 돌아왔을 때의 개수, 매일 기록. 자세한 내용은 [English release notes](RELEASE-NOTES-v0.5.0.md) 와 [중문 릴리스 노트](RELEASE-NOTES-v0.5.0.zh-CN.md).
 
@@ -78,7 +82,7 @@ Nexus는 먼저 조용히 있는 것을 우선하며, 짧고 대략적이고 일
 
 ## 이전 버전 기록
 
-README에는 현재 안정 버전 v0.5.1과 이전 공개 버전 v0.5.0의 핵심만 남깁니다. 더 오래된 기록은 [CHANGELOG](../CHANGELOG.md)와 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
+README에는 현재 안정 버전 v0.5.2와 이전 공개 버전 v0.5.1의 핵심만 남깁니다. 더 오래된 기록은 [CHANGELOG](../CHANGELOG.md)와 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)에 모으고, README 상단에서 오래된 버전 번호를 계속 관리하지 않습니다.
 
 ---
 
@@ -93,7 +97,7 @@ README에는 현재 안정 버전 v0.5.1과 이전 공개 버전 v0.5.0의 핵�
 | 안전/개인정보 확인 | [안전 및 지원](#안전-및-지원) |
 | 커뮤니티 참여 | [커뮤니티](#커뮤니티) · [Community Guide](COMMUNITY.md) |
 | 0.4 방향 이해 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 현재 안정 버전 보기 | [v0.5.1 Release Notes](RELEASE-NOTES-v0.5.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 현재 안정 버전 보기 | [v0.5.2 Release Notes](RELEASE-NOTES-v0.5.2.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 왜 Nexus인가?
 
@@ -188,7 +192,7 @@ README에는 현재 안정 버전 v0.5.1과 이전 공개 버전 v0.5.0의 핵�
 
 [release 페이지](https://github.com/FanyinLiu/Nexus/releases/latest) 에서 최신 설치 프로그램을 다운로드하세요:
 
-> 아래 표는 v0.5.1 정식 릴리스 계약입니다. 설치 파일은 보호된 tag 워크플로가 GitHub Releases에 성공적으로 게시한 실제 아티팩트만 기준으로 하며, 로컬 또는 제3자 재배포 패키지는 사용하지 마세요.
+> 아래 표는 v0.5.2 정식 릴리스 계약입니다. 설치 파일은 보호된 tag 워크플로가 GitHub Releases에 성공적으로 게시한 실제 아티팩트만 기준으로 하며, 로컬 또는 제3자 재배포 패키지는 사용하지 마세요.
 
 | 플랫폼 | 파일 |
 |---|---|
@@ -197,7 +201,7 @@ README에는 현재 안정 버전 v0.5.1과 이전 공개 버전 v0.5.0의 핵�
 | Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **첫 실행 시 보안 경고가 표시되며, 이는 정상입니다.**
-> Nexus v0.5.1은 Apple Developer ID / notarization 또는 Windows
+> Nexus v0.5.2는 Apple Developer ID / notarization 또는 Windows
 > 코드 서명을 사용하지 않습니다. macOS의 ad-hoc 서명은 Apple의
 > 신뢰를 뜻하지 않으며 Windows 설치 프로그램은 `NotSigned`로 표시됩니다.
 > 시스템 경고는 안전 결론이 아니므로 배포 출처와 SHA-256을 확인하세요.
@@ -311,7 +315,7 @@ npm run package:win     # 또는 package:mac / package:linux
 
 Nexus는 개인 유지 프로젝트로, issue와 PR 처리 속도는 정확한 분류에 달려 있습니다:
 
-커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱에서의 행동으로 이어졌습니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 현재 안정 버전 설명은 [v0.5.1 Release Notes](RELEASE-NOTES-v0.5.1.md), 릴리스 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
+커뮤니티 문서는 특정 릴리스 하나에만 속하지 않고 모든 버전을 관통하는 입구입니다. 0.3은 안전, 기억, 설정 기반을 마무리하고, 0.4는 데스크톱 동반자 인식으로 들어가며, 0.5는 데스크톱에서의 행동으로 이어졌습니다. 장기 입구는 [Community Guide](COMMUNITY.md), 0.4 방향은 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md), 현재 안정 버전 설명은 [v0.5.2 Release Notes](RELEASE-NOTES-v0.5.2.md), 릴리스 hardening은 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)입니다.
 
 - 🐛 **버그를 발견했나요?** → [버그 신고](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **명확한 기능 아이디어?** → [기능 요청](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)

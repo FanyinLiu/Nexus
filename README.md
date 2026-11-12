@@ -8,11 +8,11 @@ Nexus 是一个 **本地优先的 AI 桌面伙伴**。
 
 一句话：**Nexus 是一个住在电脑里的 AI 伙伴。**
 
-> **当前稳定版：** v0.5.1；发行说明见 [RELEASE-NOTES-v0.5.1.md](docs/RELEASE-NOTES-v0.5.1.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
+> **当前稳定版：** v0.5.2；发行说明见 [RELEASE-NOTES-v0.5.2.md](docs/RELEASE-NOTES-v0.5.2.md)。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases；更早历史统一放在 Releases。
 
 ## 这个项目是什么
 
-Nexus 是一种“陪伴式桌面 AI”。当前公开稳定版是 **v0.5.1**：
+Nexus 是一种“陪伴式桌面 AI”。当前公开稳定版是 **v0.5.2**：
 
 - **桌宠形象**：伙伴以 Live2D 常驻桌面，而不是只存在于聊天记录里。内置形象是 Mao、Haru 和 Hiyori，默认是 Mao。导入 Cubism 模型会在激活前检查资源；缺动作或表情仍可显示并说明限制。
 - **自然对话**：文字是默认入口；语音输入/输出可选，目录里包含 Grok STT/TTS。
@@ -46,7 +46,7 @@ Nexus 的形象应该服务于三个感觉：
 
 ## 第一阶段只做什么
 
-> 这一节是项目起点的设计约束，不是当前稳定版的功能上限。当前公开产品是 v0.5.1。
+> 这一节是项目起点的设计约束，不是当前稳定版的功能上限。当前公开产品是 v0.5.2。
 
 第一阶段的目标不是做完整产品，而是验证一个最小体验闭环：
 
@@ -101,7 +101,7 @@ Nexus 的形象应该服务于三个感觉：
 
 ## 当前实现状态
 
-v0.5.1 是当前公开稳定版。第一阶段最小闭环已经成立，默认体验建立在它上面：
+v0.5.2 是当前公开稳定版。第一阶段最小闭环已经成立，默认体验建立在它上面：
 
 - 当前桌宠只有 Live2D：内置形象是 Mao、Haru 和 Hiyori，默认是 Mao。导入前检查 Moc、纹理和已声明资源。Grok 语音与 Qwen 3.8-max / GLM-5.3 进入默认目录。
 - 桌面陪伴感知保持短期、粗粒度、可暂停和可清理；时间说法是“一会儿 / 半小时左右”，不是精确到分秒。
@@ -123,7 +123,18 @@ v0.5.1 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 - 基础检查可以下载本地首次运行 QA 报告，包含检查项、首次对话耗时和隐私标记；不会导出聊天内容、模型输出、API Key 或 provider secret。
 - 本地开发时，Nexus 网页预览地址是 `http://127.0.0.1:47821/`；`11434/v1` 是 Ollama API，不是网页预览。
 
-## 本次稳定更新 — v0.5.1
+## 本次稳定更新 — v0.5.2
+
+> **主题：少打扰，也更稳一点。** 隐私开关现在真正守住；说话或听的时候，排队的提醒会等着；删掉的记忆不会被重新学回来；启动时不再主动弹权限提示；报错和批准框也都改成了日常说法。详见 [中文发行说明](docs/RELEASE-NOTES-v0.5.2.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.5.2.md)。
+
+一句话记住 0.5.2：
+
+- **关掉的隐私开关会守住，日志也不再带账号密码。**
+- **说话或听的时候，排队的提醒先等着。**
+- **删掉的记忆不会被重新学回来。**
+- **启动时少弹权限提示，报错也更好懂。**
+
+## 上一公开版本 — v0.5.1
 
 > **主题：修好了几处小毛病。** 安装版里的 Qwen3 语音能正常启动了；打断只切当前这一句，排队的提醒和信会接着说；宠物窗口没了或卡住时，面板接手普通提醒；新用户第一次收起面板更省内存。详见 [中文发行说明](docs/RELEASE-NOTES-v0.5.1.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.5.1.md)。
 
@@ -134,7 +145,7 @@ v0.5.1 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 - **宠物掉线或卡住时，面板接手普通提醒。**
 - **新用户引导后收起面板，少占一点内存。**
 
-## 上一公开版本 — v0.5.0
+## 更早更新 — v0.5.0
 
 > **主题：她活在你的电脑里。** 忙的时候她先记下，不打断；有空了再说。小本子记下没来得及说的话，提醒只说重点，旁边可以弹一条小条，鼠标靠近她看一眼，打字时保持安静，回来告诉你攒了几条，日记改叫每日记录。详见 [中文发行说明](docs/RELEASE-NOTES-v0.5.0.zh-CN.md) 与 [English release notes](docs/RELEASE-NOTES-v0.5.0.md)。
 
@@ -237,7 +248,7 @@ v0.5.1 是当前公开稳定版。第一阶段最小闭环已经成立，默认�
 
 ## 旧版本记录
 
-README 顶部只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
+README 顶部只保留当前稳定版 v0.5.2 和上一公开版本 v0.5.1 的重点。更早版本的完整历史统一放在 [CHANGELOG](CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，避免首页继续滚动维护旧版本号。
 
 ## 设计原则
 
@@ -263,10 +274,10 @@ README 顶部只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重
 
 普通用户的安装主路径不是 npm，而是桌面安装包：
 
-> 以下文件名是 v0.5.1 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
+> 以下文件名是 v0.5.2 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
 
 - Windows x64：从官方 GitHub Releases 下载 `Nexus-Setup-<版本号>.exe`；同一 release 的校验清单是 `SHA256SUMS-windows.txt`。
-- macOS arm64：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`；同一 release 的校验清单是 `SHA256SUMS-macos.txt`；v0.5.1 不提供 macOS x64 / universal 包。
+- macOS arm64：下载 `.dmg` 或 `.zip`，把 `Nexus.app` 放进 `/Applications`；同一 release 的校验清单是 `SHA256SUMS-macos.txt`；v0.5.2 不提供 macOS x64 / universal 包。
 - Linux x64：下载 `.AppImage`、`.deb` 或 `.tar.gz`，并使用同一 release 的 `SHA256SUMS-linux.txt` 校验 SHA-256。只下载其中一种格式时，可在下载目录直接运行：
 
   ```bash
@@ -281,8 +292,8 @@ README 顶部只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重
 
 当前桌面安装包还没有 Apple Developer ID、公证和 Windows 代码签名证书，所以首次启动会看到系统信任提示。这是当前发行策略，不代表系统已经信任安装包。官方 GitHub Releases 是唯一下载来源；如果你不确定文件来源，删除它并从 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases/latest) 重新下载，不要从镜像或转载压缩包安装。
 
-- **macOS / Gatekeeper**：v0.5.1 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
-- **Windows / SmartScreen**：v0.5.1 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
+- **macOS / Gatekeeper**：v0.5.2 的 macOS arm64 应用采用 ad-hoc 签名。ad-hoc 只保证包内代码一致性，不等于 Apple Developer ID 信任或公证；Gatekeeper 仍可能拦截首次启动。把 `Nexus.app` 放进 `/Applications` 后，可右键点击 Nexus.app -> 打开 -> 在弹窗中确认；也可以在终端运行 `xattr -dr com.apple.quarantine /Applications/Nexus.app`。
+- **Windows / SmartScreen**：v0.5.2 的 Windows x64 安装器状态为 `NotSigned`。运行 `Nexus-Setup-<版本号>.exe` 后，SmartScreen 可能显示“Windows 已保护你的电脑”；确认文件来自官方 GitHub Releases 后，点击“详细信息”，再点击“仍要运行”。
 
 #### macOS 未签名自动更新限制
 
@@ -403,7 +414,7 @@ npm run distribution:audit
 [COMMUNITY.md](docs/COMMUNITY.md)，0.4 系列方向见
 [v0.4 Desktop Companion Awareness](docs/V0.4_DESKTOP_COMPANION_AWARENESS.md)，
 当前稳定版说明见
-[RELEASE-NOTES-v0.5.1.md](docs/RELEASE-NOTES-v0.5.1.md)，
+[RELEASE-NOTES-v0.5.2.md](docs/RELEASE-NOTES-v0.5.2.md)，
 发布加固清单见
 [RELEASE-CANDIDATE-v0.4-HARDENING.md](docs/RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 提交人格、提示词或桌宠素材前，请先看 [Nexus Companion Prompt Baseline](docs/NEXUS_COMPANION_PROMPT.md)；
@@ -416,7 +427,7 @@ Nexus 的长期想象空间很大，但当前最重要的是把已经公开的�
 
 **Nexus 是一个住在电脑里的 AI 伙伴。**
 
-v0.5.1 已经能常驻桌面、对话、记住重要的事，并在授权后提供轻量帮助。忙的时候她先记下，提醒只说重点。声纹唤醒留给 0.6，摄像头留给 0.7；签名安装包也还不是当前发行策略。
+v0.5.2 已经能常驻桌面、对话、记住重要的事，并在授权后提供轻量帮助。忙的时候她先记下，提醒只说重点。声纹唤醒留给 0.6，摄像头留给 0.7；签名安装包也还不是当前发行策略。
 
 ## License
 

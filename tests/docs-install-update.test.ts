@@ -14,7 +14,7 @@ test('README installation section documents the manual Windows/Linux update path
 
   assert.match(readme, /## 安装与更新/)
   assert.match(readme, /目前 Windows 和 Linux 没有自动更新/)
-  assert.ok(!readme.includes('v0.5.1 的 Windows 和 Linux'))
+  assert.ok(!readme.includes('v0.5.2 的 Windows 和 Linux'))
   assert.match(readme, /官方 GitHub Releases 手动下载/)
   assert.match(readme, /SHA256SUMS-windows\.txt/)
   assert.match(readme, /SHA256SUMS-linux\.txt/)
@@ -32,25 +32,25 @@ const LOCALIZED_MANUAL_UPDATE_LABELS = [
   [
     'docs/README.zh-CN.md',
     '目前 Windows 和 Linux 没有自动更新',
-    'v0.5.1 的 Windows 和 Linux',
+    'v0.5.2 的 Windows 和 Linux',
     '应用不会自动下载、替换或重启安装',
   ],
   [
     'docs/README.zh-TW.md',
     '目前 Windows 和 Linux 沒有自動更新',
-    'v0.5.1 的 Windows 和 Linux',
+    'v0.5.2 的 Windows 和 Linux',
     '應用程式不會自動下載、替換或重新啟動安裝',
   ],
   [
     'docs/README.ja.md',
     '現在、Windows と Linux には自動更新がありません',
-    'v0.5.1 の Windows と Linux',
+    'v0.5.2 の Windows と Linux',
     'アプリが自動でダウンロード・置換・再起動することはありません',
   ],
   [
     'docs/README.ko.md',
     '현재 Windows와 Linux에는 자동 업데이트가 없습니다',
-    'v0.5.1의 Windows와 Linux',
+    'v0.5.2의 Windows와 Linux',
     '앱이 자동으로 내려받거나 교체하거나 다시 시작하지 않습니다',
   ],
 ] as const

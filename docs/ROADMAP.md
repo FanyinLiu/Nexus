@@ -1,6 +1,6 @@
 # Nexus Roadmap — companion-first phases
 
-> Last updated 2026-11-10. Stewardship follows Klein's product direction.
+> Last updated 2026-11-12. Stewardship follows Klein's product direction.
 > For the short-term MVP and Chinese execution plan, see
 > [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md). When planning
 > near-term work, Phase 1 in that document is the active scope.
@@ -27,12 +27,17 @@ The larger product steps are:
   hardening, check-in policy, companion-surface cohesion and transparency,
   maintenance and hardening, and release
   hardening. `v0.4.0` is the stable quiet-observation foundation; the current
-  public stable release is v0.5.1, which shipped as the current stable release
-  on 2026-11-10 under a version-scoped maintainer exception. v0.5.1 is the
-  patch on 0.5.0: packaged builds include the Qwen3 Python voice script again,
-  interrupting only cuts the current line, the panel takes over reminders when
-  the pet is offline, and the first hidden panel is released after onboarding.
-  `v0.5.0` was the previous desktop-life release, shipped as stable on
+  public stable release is v0.5.2, which shipped as the current stable release
+  on 2026-11-12 under a version-scoped maintainer exception. v0.5.2 is a patch
+  on 0.5.1: saved privacy switches are enforced in the main process, logs and
+  MCP output are redacted, reminders survive clock changes and voice sessions,
+  deleted memories stay deleted, and user-facing errors and approvals use
+  plain language. `v0.5.1` was the previous patch release, shipped as stable on
+  2026-11-10 under a version-scoped maintainer exception: packaged builds
+  include the Qwen3 Python voice script again, interrupting only cuts the
+  current line, the panel takes over reminders when the pet is offline, and the
+  first hidden panel is released after onboarding. `v0.5.0` was the previous
+  desktop-life release, shipped as stable on
   2026-11-05 under a version-scoped maintainer exception: a notebook for things
   she could not say yet, reminder key points, an optional reminder strip, one
   mouse-near glance, quiet-while-typing off by default, an away summary count,
@@ -53,7 +58,7 @@ The larger product steps are:
   (the [Companion Surface Cohesion & Transparency](V0.4.3_OPTIMIZATION_AND_COMPETITOR_PLAN_2026-07-12.md)
   follow-up) is closed. Future work must not move the
   package version, tag, GitHub Release, or README stable entry beyond
-  `v0.5.1` until a later release is explicitly prepared. The v0.5.1 stable
+  `v0.5.2` until a later release is explicitly prepared. The v0.5.2 stable
   promotion is the current release boundary.
 - **v0.4.6 — avatar runtime reliability.** Fix transparent Live2D compositing,
   recover boundedly from WebGL context loss, keep a localized readable
@@ -82,6 +87,15 @@ The larger product steps are:
   removed, and a saved choice of either becomes Mao. Minecraft
   and Factorio stay hidden. Inputs stay derived and content-free, with
   explicit pause/permission controls.
+- **v0.5.2 — privacy and reliability patch.** Shipped as stable on 2026-11-12
+  under a version-scoped maintainer exception. Saved privacy switches are
+  enforced in the main process; base-URL credentials and MCP stderr are
+  redacted from logs; webview tags are disabled and the preload bridge is
+  narrower. Reminders survive clock rollback and voice sessions, deleted
+  memories leave hash tombstones, the pet window retries failed loads, and
+  takeover panels back off and re-check visibility. Errors and approval dialogs
+  use plain language in five languages. See
+  [RELEASE-NOTES-v0.5.2.md](RELEASE-NOTES-v0.5.2.md).
 - **v0.5.1 — patch on 0.5.0.** Shipped as stable on 2026-11-10 under a
   version-scoped maintainer exception. Packaged builds include the Qwen3
   Python voice script again, so that voice path can start. Interrupting only

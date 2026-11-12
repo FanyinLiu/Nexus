@@ -6,9 +6,46 @@
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-12
+
+v0.5.2 is the current stable release. It is a patch on 0.5.1: privacy switches
+are enforced in the main process, logs and MCP output are redacted, reminders
+survive clock changes and voice sessions, deleted memories stay deleted, and
+user-facing errors use plain language in all five languages. Full detail in
+[`docs/RELEASE-NOTES-v0.5.2.md`](docs/RELEASE-NOTES-v0.5.2.md).
+
+- Privacy switches are enforced in the main process: a snoozed reminder no
+  longer reads the window title when the saved active-window switch is off or
+  companion awareness is paused. Base-URL credentials are redacted from chat
+  logs, and MCP server stderr is redacted before it reaches the run log.
+  Webview tags are disabled, and the preload bridge exposes fewer methods with
+  the trusted-sender check required first.
+- Voice sidecar scripts found inside `app.asar` are rejected instead of being
+  passed to `child_process`.
+- The pet window retries a failed load, then shows a local retry page; a
+  user-initiated show grants one fresh attempt. Failed hidden-panel takeover
+  rebuilds back off, reclaim re-checks visibility first, and sleep/wake gets a
+  30-second grace period.
+- Clock rollback no longer makes later recurring reminders look delivered.
+  Queued reminders wait through listening and continuous voice, then continue
+  once when the session ends. Deleting one memory writes a salted fingerprint
+  tombstone so later extraction and consolidation do not learn it again.
+- User-facing errors and main-process approval dialogs now use plain language
+  in all five languages, with the Settings → Connection path. External-link
+  confirmation can be turned off (default on) without skipping URL safety
+  checks. Startup no longer prompts for microphone or screen access.
+- Windows and Linux document that there is no automatic update. Same unsigned /
+  manual-download profile as 0.5.1 under a new version-scoped exception.
+- Removed dead pet roaming code and its 45ms timer. Electron 43.8.8 and
+  electron-updater 6.8.12.
+- Added IPC and runtime coverage for desktop presence, payload validation,
+  notices, chat streaming, vault, memory, and local-data migrations.
+
+The release commit is published only through the protected stable-tag workflow.
+
 ## [0.5.1] - 2026-11-10
 
-v0.5.1 is the current stable release. It is a patch on 0.5.0: packaged Qwen3
+v0.5.1 was the previous stable release. It was a patch on 0.5.0: packaged Qwen3
 voice, interrupt handling, reminder takeover when the pet is offline, and
 reclaiming the first-use panel. Full detail in
 [`docs/RELEASE-NOTES-v0.5.1.md`](docs/RELEASE-NOTES-v0.5.1.md).

@@ -24,17 +24,21 @@
   <a href="https://github.com/FanyinLiu/Nexus/releases/latest"><img src="https://img.shields.io/badge/Linux-Download-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux"></a>
 </p>
 
-> **当前稳定版：** v0.5.1，稳定入口见 [RELEASE-NOTES-v0.5.1.md](RELEASE-NOTES-v0.5.1.md)（[中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md)）。本版让安装版里的 Qwen3 语音能正常启动了，打断只切当前句，宠物掉线时面板接手普通提醒，新用户引导后收起面板更省内存。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
+> **当前稳定版：** v0.5.2，稳定入口见 [RELEASE-NOTES-v0.5.2.md](RELEASE-NOTES-v0.5.2.md)（[中文发行说明](RELEASE-NOTES-v0.5.2.zh-CN.md)）。本版让隐私开关在主进程真正生效，日志与 MCP 输出先脱敏，提醒和窗口更稳，删掉的记忆不会被重新学回来，报错和批准框也改成白话。正式安装包只由受保护的 tag 工作流发布到 GitHub Releases。
 
-> **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前公开稳定版是 v0.5.1。根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 说明：Phase 1 最小桌面伙伴闭环已经发布；声纹唤醒、摄像头和签名安装包仍不属于本版。
+> **开发范围提示：** 这份多语言 README 保留的是长期能力清单。当前公开稳定版是 v0.5.2。根目录 [README](../README.md) 和 [Nexus 升级整合计划](NEXUS_UPGRADE_INTEGRATION_PLAN.md) 说明：Phase 1 最小桌面伙伴闭环已经发布；声纹唤醒、摄像头和签名安装包仍不属于本版。
 
 ---
 
-## 本次稳定更新 — v0.5.1
+## 本次稳定更新 — v0.5.2
+
+> **主题：少打扰，也更稳一点。** 隐私开关现在真正守住；说话或听的时候，排队的提醒会等着；删掉的记忆不会被重新学回来；启动时不再主动弹权限提示；报错和批准框也都改成了日常说法。详见 [中文发行说明](RELEASE-NOTES-v0.5.2.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.5.2.md)。
+
+## 上一公开版本 — v0.5.1
 
 > **主题：修好了几处小毛病。** 安装版里的 Qwen3 语音能正常启动了；打断只切当前这一句，排队的提醒和信会接着说；宠物窗口没了或卡住时，面板接手普通提醒；新用户第一次收起面板更省内存。详见 [中文发行说明](RELEASE-NOTES-v0.5.1.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.5.1.md)。
 
-## 上一公开版本 — v0.5.0
+## 更早更新 — v0.5.0
 
 > **主题：她活在你的电脑里。** 忙的时候她先记下，不打断；有空了再说。小本子、提醒要点、提醒小条、鼠标靠近看一眼、打字时保持安静、回来告诉你攒了几条，日记改叫每日记录。详见 [中文发行说明](RELEASE-NOTES-v0.5.0.zh-CN.md) 与 [English release notes](RELEASE-NOTES-v0.5.0.md)。
 
@@ -100,7 +104,7 @@
 
 ## 旧版本记录
 
-README 只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
+README 只保留当前稳定版 v0.5.2 和上一公开版本 v0.5.1 的重点；更早历史版本统一放在 [CHANGELOG](../CHANGELOG.md) 和 [GitHub Releases](https://github.com/FanyinLiu/Nexus/releases)，不在 README 顶部继续滚动维护旧版本号。
 
 ---
 
@@ -115,7 +119,7 @@ README 只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重点；
 | 查看安全与隐私 | [安全与援助](#安全与援助) |
 | 参与社区内容 | [社区](#社区) · [Community Guide](COMMUNITY.md) |
 | 理解 0.4 方向 | [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md) |
-| 查看当前稳定版 | [v0.5.1 Release Notes](RELEASE-NOTES-v0.5.1.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
+| 查看当前稳定版 | [v0.5.2 Release Notes](RELEASE-NOTES-v0.5.2.md) · [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md) |
 
 ## 为什么是 Nexus？
 
@@ -212,7 +216,7 @@ README 只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重点；
 
 从 [release 页面](https://github.com/FanyinLiu/Nexus/releases/latest) 下载最新安装包：
 
-> 下表是 v0.5.1 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
+> 下表是 v0.5.2 正式发行契约。安装包只以受保护的 tag 工作流成功发布到 GitHub Releases 后的实际资产为准；不要使用本地或第三方转载包。
 
 | 平台 | 文件 |
 |---|---|
@@ -221,7 +225,7 @@ README 只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重点；
 | Linux x64 | `.AppImage` / `.deb` / `.tar.gz` + `SHA256SUMS-linux.txt` |
 
 > **首次启动会看到安全警告，这是正常的。**
-> Nexus v0.5.1 不使用 Apple Developer ID / 公证或 Windows
+> Nexus v0.5.2 不使用 Apple Developer ID / 公证或 Windows
 > 代码签名。macOS 的 ad-hoc 签名不等于 Apple 信任；Windows
 > 安装器会标记为 `NotSigned`。系统警告不是安全结论，用户仍需
 > 核对来源和 SHA-256。
@@ -333,7 +337,7 @@ npm run package:win     # 或 package:mac / package:linux
 
 Nexus 目前由个人维护，issue 和 PR 的处理速度取决于分流是否精准：
 
-社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 进入桌面陪伴感知；0.5 已进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，当前稳定版说明见 [v0.5.1 Release Notes](RELEASE-NOTES-v0.5.1.md)，发布加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
+社区文档会贯穿所有版本，不只属于某一次发布。0.3 收安全、记忆和设置地基；0.4 进入桌面陪伴感知；0.5 已进入桌宠桌面行为。社区可以持续贡献文档、人格模板、桌宠包、模型配置菜谱、翻译和 beta 验证报告，让项目变大但不失控。长期入口见 [Community Guide](COMMUNITY.md)，0.4 方向见 [v0.4 Desktop Companion Awareness](V0.4_DESKTOP_COMPANION_AWARENESS.md)，当前稳定版说明见 [v0.5.2 Release Notes](RELEASE-NOTES-v0.5.2.md)，发布加固清单见 [v0.4 Release Hardening](RELEASE-CANDIDATE-v0.4-HARDENING.md)。
 
 - 🐛 **发现 Bug？** → [Bug 报告](https://github.com/FanyinLiu/Nexus/issues/new?template=bug_report.yml)
 - 💡 **有明确的功能想法？** → [功能请求](https://github.com/FanyinLiu/Nexus/issues/new?template=feature_request.yml)
