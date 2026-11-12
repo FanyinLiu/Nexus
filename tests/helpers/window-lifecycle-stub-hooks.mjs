@@ -19,6 +19,8 @@ function testState() {
       monitorStarts: 0,
       monitorStops: 0,
       powerMonitorListeners: {},
+      appReady: false,
+      appReadyListeners: [],
       panelWindowSetter: null,
       uiLanguage: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
@@ -38,8 +40,11 @@ export const app = {
   isQuitting: false,
   dock: { show() {}, hide() {} },
   getPath: () => process.cwd(),
+  isReady: () => testState().appReady,
   on() {},
-  once() {},
+  once(event, listener) {
+    if (event === 'ready') testState().appReadyListeners.push(listener)
+  },
   quit() {},
 }
 export const screen = {
@@ -320,6 +325,8 @@ export function windowLifecycleState() {
       monitorStarts: 0,
       monitorStops: 0,
       powerMonitorListeners: {},
+      appReady: false,
+      appReadyListeners: [],
       panelWindowSetter: null,
       uiLanguage: null,
       snapshot: { petOnline: true, panelOnline: true, petLastSeenAt: '', voiceState: 'idle', continuousVoiceActive: false, assistantActivity: 'idle', searchInProgress: false, ttsInProgress: false },
@@ -327,6 +334,19 @@ export function windowLifecycleState() {
     }
   }
   return globalThis[STATE_KEY]
+}
+
+// Test controls for the app 'ready' boundary: the fake app starts not ready,
+// so tests can import production modules first and emit ready afterwards.
+export function setAppReady(ready) {
+  windowLifecycleState().appReady = ready === true
+}
+
+export function emitAppReady() {
+  const state = windowLifecycleState()
+  state.appReady = true
+  const listeners = state.appReadyListeners.splice(0)
+  for (const listener of listeners) listener()
 }
 
 export async function resolve(specifier, context, nextResolve) {

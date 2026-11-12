@@ -471,8 +471,25 @@ const retiredPanelTakeover = createRetiredPanelTakeover({
 // A sleeping/locked machine cannot heartbeat, so wake events get the same
 // grace as a detected wall-clock jump; otherwise the stale heartbeat would
 // immediately rebuild a hidden panel that is reclaimed moments later.
-powerMonitor?.on?.('resume', () => retiredPanelTakeover.noteSystemResume())
-powerMonitor?.on?.('unlock-screen', () => retiredPanelTakeover.noteSystemResume())
+let retiredPanelPowerListenersRegistered = false
+
+/**
+ * Subscribe the takeover grace to wake events. Electron forbids touching
+ * powerMonitor before 'ready', so this runs either immediately (already ready)
+ * or from the one-shot ready callback, and never subscribes twice.
+ */
+export function registerRetiredPanelPowerListeners() {
+  if (retiredPanelPowerListenersRegistered) return
+  retiredPanelPowerListenersRegistered = true
+  powerMonitor?.on?.('resume', () => retiredPanelTakeover.noteSystemResume())
+  powerMonitor?.on?.('unlock-screen', () => retiredPanelTakeover.noteSystemResume())
+}
+
+if (app.isReady?.()) {
+  registerRetiredPanelPowerListeners()
+} else {
+  app.once?.('ready', registerRetiredPanelPowerListeners)
+}
 
 /** Test-only: clear module singletons so a failed test cannot leak timers. */
 export function resetPanelLifecycleForTests() {
