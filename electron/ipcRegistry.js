@@ -27,6 +27,7 @@ import { getBoundWindowCapability } from './ipc/windowCapabilities.js'
 import * as reminderStrip from './services/reminderStrip.js'
 import { showProactiveNotification } from './services/proactiveNotification.js'
 import { createProactiveDeliveryContextProvider } from './services/proactiveDeliveryContext.js'
+import { getSavedDesktopContextFlags } from './services/desktopContextPolicy.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -137,9 +138,15 @@ export function registerIpc(options = {}) {
       if (state === 'idle') return 'idle'
       return 'active'
     },
+    // The panel saves the flags; the renderer preference in
+    // deliveryPreferences is only a copy. Both must allow the read.
+    isActiveWindowAllowed: () => getSavedDesktopContextFlags().activeWindow === true,
     getActiveWindow: async () => {
       // Kept dynamic: the desktop-context service pulls native Electron
       // modules, and the re-route path only reads it when awareness is on.
+      // Re-check the saved switch here too so an unwired caller cannot read
+      // a window title after the user turned the switch off.
+      if (getSavedDesktopContextFlags().activeWindow !== true) return null
       const { captureActiveWindowContext } = await import('./services/desktopContextService.js')
       const snapshot = await captureActiveWindowContext()
       if (!snapshot) return null
