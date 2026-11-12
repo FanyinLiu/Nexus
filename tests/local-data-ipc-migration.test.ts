@@ -5,6 +5,11 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
 
+import {
+  openSqliteDatabase,
+  resolveLocalDataPaths,
+} from '../electron/services/localDataStoreCore.js'
+
 register(new URL('./helpers/local-data-ipc-electron-hooks.mjs', import.meta.url))
 
 type IpcHandler = (event: unknown, payload: unknown) => Promise<Record<string, unknown>>
@@ -116,7 +121,7 @@ async function eventFromForeignFrame(channel: string): Promise<Record<string, un
   }
 }
 
-function chatApplyPayload() {
+function chatApplyPayloadWithSessions(sessionIds: string[]) {
   return {
     confirmed: true,
     migrationPackage: {
@@ -127,23 +132,27 @@ function chatApplyPayload() {
         legacyFlatChatKeyPresent: false,
         legacyFlatChatUsed: false,
       },
-      sessions: [{
-        id: 'session-1',
-        startedAt: 1_781_000_000_000,
-        lastActiveAt: 1_781_000_100_000,
+      sessions: sessionIds.map((sessionId, index) => ({
+        id: sessionId,
+        startedAt: 1_781_000_000_000 + index,
+        lastActiveAt: 1_781_000_100_000 + index,
         title: '  synthetic session  ',
         messages: [{
-          id: 'message-1',
+          id: `message-${index + 1}`,
           role: 'user',
           content: 'synthetic chat line',
           createdAt: '2026-06-19T08:00:00.000Z',
         }],
-      }],
+      })),
     },
   }
 }
 
-function memoryApplyPayload() {
+function chatApplyPayload() {
+  return chatApplyPayloadWithSessions(['session-1'])
+}
+
+function memoryApplyPayloadWithIds(longTermId: string, dailyId: string) {
   return {
     confirmed: true,
     migrationPackage: {
@@ -156,7 +165,7 @@ function memoryApplyPayload() {
         legacyLongTermUsed: false,
       },
       longTerm: [{
-        id: 'memory-1',
+        id: longTermId,
         content: 'synthetic memory line',
         category: '  preference  ',
         source: 'chat',
@@ -165,7 +174,7 @@ function memoryApplyPayload() {
         createdAt: '2026-06-19T10:00:00.000Z',
       }],
       daily: [{
-        id: 'daily-1',
+        id: dailyId,
         day: '2026-06-19',
         role: 'user',
         content: 'synthetic daily line',
@@ -174,6 +183,10 @@ function memoryApplyPayload() {
       }],
     },
   }
+}
+
+function memoryApplyPayload() {
+  return memoryApplyPayloadWithIds('memory-1', 'daily-1')
 }
 
 function companionApplyPayload() {
@@ -204,6 +217,26 @@ function companionApplyPayload() {
 async function readDomain(userDataPath: string, domainId: string) {
   const modules = await loadModules()
   return modules.store.readLocalDataDomainRecords(domainId, { userDataPath })
+}
+
+// Test-only failure injection: SQLite aborts the matching insert, leaving the
+// surrounding apply transaction open so its ROLLBACK path is exercised.
+async function installChatInsertAbortTrigger(userDataPath: string, recordId: string) {
+  const { databasePath } = await resolveLocalDataPaths({ userDataPath })
+  const db = openSqliteDatabase(databasePath)
+  try {
+    const escapedRecordId = recordId.replaceAll("'", "''")
+    db.exec(`
+      CREATE TRIGGER synthetic_chat_insert_abort
+      BEFORE INSERT ON local_data_records
+      WHEN NEW.domain_id = 'chat-sessions' AND NEW.record_id = '${escapedRecordId}'
+      BEGIN
+        SELECT RAISE(ABORT, 'synthetic middle-of-apply failure');
+      END;
+    `)
+  } finally {
+    db.close()
+  }
 }
 
 test('chat migration apply and rollback run through the IPC handler with the validated package', async () => {
@@ -289,6 +322,130 @@ test('companion migration apply and rollback run through the IPC handler', async
     assert.equal(rolledBack.recordsDeleted, 2)
     assert.deepEqual(await readDomain(dir, 'companion-relationship'), [])
     assert.deepEqual(await readDomain(dir, 'companion-tasks'), [])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('chat migration apply clears records that are not part of the package', async () => {
+  setMigrationIpcEnabled(true)
+  const dir = useTempUserData()
+  try {
+    const channel = 'local-data:chat-migration-apply'
+    const apply = await handlerFor(channel)
+    const seeded = await apply(
+      await trustedEvent(channel),
+      chatApplyPayloadWithSessions(['session-pre-existing']),
+    )
+    assert.equal(seeded.ok, true)
+    assert.deepEqual(
+      (await readDomain(dir, 'chat-sessions')).map((record) => record.recordId),
+      ['session-pre-existing'],
+    )
+
+    const applied = await apply(await trustedEvent(channel), chatApplyPayload())
+    assert.equal(applied.ok, true)
+    assert.equal(applied.recordsWritten, 1)
+
+    const records = await readDomain(dir, 'chat-sessions')
+    assert.deepEqual(records.map((record) => record.recordId), ['session-1'])
+    assert.equal(records.some((record) => record.recordId === 'session-pre-existing'), false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('memory migration apply clears both memory domains before inserting the package', async () => {
+  setMigrationIpcEnabled(true)
+  const dir = useTempUserData()
+  try {
+    const channel = 'local-data:memory-migration-apply'
+    const apply = await handlerFor(channel)
+    const seeded = await apply(
+      await trustedEvent(channel),
+      memoryApplyPayloadWithIds('memory-pre-existing', 'daily-pre-existing'),
+    )
+    assert.equal(seeded.ok, true)
+    assert.deepEqual(
+      (await readDomain(dir, 'memory-long-term')).map((record) => record.recordId),
+      ['memory-pre-existing'],
+    )
+    assert.deepEqual(
+      (await readDomain(dir, 'memory-daily')).map((record) => record.recordId),
+      ['daily-pre-existing'],
+    )
+
+    const applied = await apply(await trustedEvent(channel), memoryApplyPayload())
+    assert.equal(applied.ok, true)
+    assert.equal(applied.recordsWritten, 2)
+
+    const longTerm = await readDomain(dir, 'memory-long-term')
+    const daily = await readDomain(dir, 'memory-daily')
+    assert.deepEqual(longTerm.map((record) => record.recordId), ['memory-1'])
+    assert.deepEqual(daily.map((record) => record.recordId), ['daily-1'])
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('chat migration apply rolls back every mutation when an insert fails mid-transaction', async () => {
+  setMigrationIpcEnabled(true)
+  const dir = useTempUserData()
+  try {
+    const channel = 'local-data:chat-migration-apply'
+    const apply = await handlerFor(channel)
+    const seeded = await apply(
+      await trustedEvent(channel),
+      chatApplyPayloadWithSessions(['session-pre-existing']),
+    )
+    assert.equal(seeded.ok, true)
+
+    // The abort fires on the second insert, after the domain DELETE and the
+    // first insert have already mutated the transaction.
+    await installChatInsertAbortTrigger(dir, 'session-2')
+
+    const failed = await apply(
+      await trustedEvent(channel),
+      chatApplyPayloadWithSessions(['session-1', 'session-2']),
+    )
+    assert.equal(failed.ok, false)
+    assert.equal(failed.applied, false)
+    assert.equal(failed.recordsWritten, 0)
+
+    const records = await readDomain(dir, 'chat-sessions')
+    assert.deepEqual(records.map((record) => record.recordId), ['session-pre-existing'])
+    assert.equal(records.some((record) => record.recordId === 'session-1'), false)
+    assert.equal(records.some((record) => record.recordId === 'session-2'), false)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('chat migration rollback empties the domain instead of restoring pre-apply records', async () => {
+  setMigrationIpcEnabled(true)
+  const dir = useTempUserData()
+  try {
+    const applyChannel = 'local-data:chat-migration-apply'
+    const apply = await handlerFor(applyChannel)
+    const seeded = await apply(
+      await trustedEvent(applyChannel),
+      chatApplyPayloadWithSessions(['session-pre-apply']),
+    )
+    assert.equal(seeded.ok, true)
+
+    const applied = await apply(await trustedEvent(applyChannel), chatApplyPayload())
+    assert.equal(applied.ok, true)
+
+    const rollbackChannel = 'local-data:chat-migration-rollback'
+    const rollback = await handlerFor(rollbackChannel)
+    const rolledBack = await rollback(await trustedEvent(rollbackChannel), { confirmed: true })
+    assert.equal(rolledBack.ok, true)
+    assert.equal(rolledBack.recordsDeleted, 1)
+
+    // Current contract of this version, documented rather than fixed: rollback
+    // deletes every chat-sessions row. It does not restore the records that
+    // existed before apply, so the domain ends up empty instead of rewound.
+    assert.deepEqual(await readDomain(dir, 'chat-sessions'), [])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
