@@ -99,7 +99,6 @@ phase. Do not treat every listed feature as a current stable promise.
 | Manual Confirm | User reviews transcript before sending |
 | Continuous Mode | Persistent listening loop (listen → transcribe → reply → listen) |
 | Interruption | Stop assistant speech mid-sentence on user input |
-| OpenAI Realtime API | WebSocket-based real-time audio conversation (low latency) |
 | Provider Fallback | Automatic STT/TTS provider failover on error |
 | Diagnostics | Smoke tests and health checks for speech providers |
 
@@ -176,18 +175,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 ---
 
-## 11. Auto Skills
-
-| Feature | Description |
-|---|---|
-| Skill Generation | After complex tool-call interactions, LLM auto-generates reusable skill markdown |
-| Skill Store | Persistent skill documents in `userData/skills/` with BM25 index |
-| Skill Retrieval | Relevant skills auto-loaded into prompt context via keyword match |
-| Usage Tracking | Skills track use count; least-used evicted when over 200 limit |
-
----
-
-## 12. Desktop Context
+## 11. Desktop Context
 
 | Feature | Description |
 |---|---|
@@ -198,7 +186,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 ---
 
-## 13. Game Integrations
+## 12. Game Integrations
 
 | Feature | Description |
 |---|---|
@@ -209,7 +197,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 ---
 
-## 14. Messaging Gateways
+## 13. Messaging Gateways
 
 | Feature | Description |
 |---|---|
@@ -222,7 +210,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 ---
 
-## 15. Reminders
+## 14. Reminders
 
 | Feature | Description |
 |---|---|
@@ -232,7 +220,7 @@ phase. Do not treat every listed feature as a current stable promise.
 
 ---
 
-## 16. Security
+## 15. Security
 
 | Feature | Description |
 |---|---|
@@ -242,12 +230,11 @@ phase. Do not treat every listed feature as a current stable promise.
 
 ---
 
-## 17. Settings & UI
+## 16. Settings & UI
 
 | Feature | Description |
 |---|---|
-| Settings Drawer | 8 user-facing entries: Model, Desktop, Character, Self-check, Chat History, Voice, Memory, Tools |
-| Provider Choice Grid | Visual grid selector for providers (text, STT, TTS) |
+| Settings Drawer | The drawer opens on five default cards: Look and character, Voice, Memory and privacy, Connection, About. Each card has an Advanced section, and the 12 settings sections live there: Model, Desktop, Profile, Diagnostics, History, Letters, Voice, Memory, Background & Phrases, Connection, Proactive, Tools |
 | Tool Settings | Web search, weather, and safe tool controls stay behind the Tools entry |
 | Debug Console | Runtime event log with source filtering |
 | Onboarding | First-run setup flow |

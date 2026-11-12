@@ -137,7 +137,7 @@ export const zhTWVoice = {
   'voice.pipeline.session_stopped': '語音已停止',
   'voice.pipeline.wake_word_detected': '偵測到喚醒詞「{keyword}」，正在進入收音',
   'voice.wakeword.unavailable_with_reason': '喚醒詞沒法用：{reason}',
-  'voice.wakeword.listener_error_with_reason': '喚醒詞監聽異常：{error}',
+  'voice.wakeword.listener_error_with_reason': '喚醒詞監聽出了點問題，稍後再試試？',
   'voice.diagnostics.no_mic_api': '目前環境沒有公開麥克風錄音能力，沒法啟動語音輸入。',
   'voice.diagnostics.no_media_recorder': '目前環境不支援 MediaRecorder，沒法完成語音輸入錄音。',
   'voice.diagnostics.no_audio_tracks': '已取得錄音串流，但沒有找到可用的音訊軌道。',

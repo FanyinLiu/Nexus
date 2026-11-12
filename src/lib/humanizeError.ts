@@ -1,6 +1,7 @@
 import { t } from '../i18n/runtime.ts'
 import type { TranslationKey, TranslationParams } from '../types/i18n.ts'
 import { redactSensitiveText } from '../../shared/redaction.js'
+import { warnRedacted } from './logger.ts'
 import {
   CHAT_IPC_ERROR_CODES,
   extractChatIpcErrorCode,
@@ -67,11 +68,6 @@ interface KnownPattern {
   match: RegExp
   key: TranslationKey
   /**
-   * If true, pass the raw error message back as `{detail}` interpolation.
-   * Most patterns don't need this; the friendly message is enough.
-   */
-  withDetail?: boolean
-  /**
    * If true, the key names a microphone-permission sentence whose `_mac` /
    * `_windows` variants carry the platform-specific privacy-pane wording.
    */
@@ -84,7 +80,7 @@ interface KnownPattern {
  * serialization drops custom properties. Code mappings are authoritative and
  * checked before every regex below; the Chinese copy they replaced is gone.
  */
-const CHAT_IPC_CODE_KEYS: Record<string, { key: TranslationKey; withDetail?: boolean }> = {
+const CHAT_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
   [CHAT_IPC_ERROR_CODES.MISSING_API_KEY]: { key: 'humanize.chat.bad_api_key' },
   [CHAT_IPC_ERROR_CODES.API_KEY_HEADER_UNSAFE]: { key: 'humanize.chat.bad_api_key' },
   [CHAT_IPC_ERROR_CODES.AUTH_FAILED]: { key: 'humanize.chat.bad_api_key' },
@@ -95,10 +91,10 @@ const CHAT_IPC_CODE_KEYS: Record<string, { key: TranslationKey; withDetail?: boo
   [CHAT_IPC_ERROR_CODES.RATE_LIMITED]: { key: 'humanize.rate_limited' },
   [CHAT_IPC_ERROR_CODES.PROVIDER_SERVER_ERROR]: { key: 'humanize.server_error' },
   [CHAT_IPC_ERROR_CODES.EMPTY_CONTENT]: { key: 'humanize.chat.empty_response' },
-  // Fallback-mapped codes keep the (redacted) raw detail visible, matching
-  // how these errors used to fall through every pattern.
-  [CHAT_IPC_ERROR_CODES.UNSAFE_BASE_URL]: { key: 'humanize.fallback', withDetail: true },
-  [CHAT_IPC_ERROR_CODES.PROVIDER_STATUS]: { key: 'humanize.fallback', withDetail: true },
+  // Fallback-mapped codes use the same friendly sentence as an unmatched
+  // error; the redacted detail is logged, never interpolated into the UI.
+  [CHAT_IPC_ERROR_CODES.UNSAFE_BASE_URL]: { key: 'humanize.fallback' },
+  [CHAT_IPC_ERROR_CODES.PROVIDER_STATUS]: { key: 'humanize.fallback' },
 }
 
 const PET_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
@@ -125,7 +121,7 @@ const NET_IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
   [NET_IPC_ERROR_CODES.TIMEOUT]: { key: 'humanize.timeout' },
 }
 
-const IPC_CODE_KEYS: Record<string, { key: TranslationKey; withDetail?: boolean }> = {
+const IPC_CODE_KEYS: Record<string, { key: TranslationKey }> = {
   ...CHAT_IPC_CODE_KEYS,
   ...PET_IPC_CODE_KEYS,
   ...SPEECH_IPC_CODE_KEYS,
@@ -216,7 +212,7 @@ const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
   'humanize.stt.model_missing': 'Voice isn\'t ready yet. Download it in {settings} → {voice} → {advanced}.',
   'humanize.model.no_disk_space': 'Not enough disk space to download. Free some up and try again.',
   'humanize.model.hf_unreachable': 'Couldn\'t reach the model repository. Check your network or try a mirror.',
-  'humanize.fallback': 'Something went wrong. ({detail})',
+  'humanize.fallback': 'Something went wrong. Please try again.',
 }
 
 /**
@@ -227,24 +223,19 @@ const ENGLISH_FALLBACKS: Partial<Record<TranslationKey, string>> = {
  */
 export function lookupTranslation(
   key: TranslationKey,
-  detail?: string,
   translator: HumanizeTranslator = t,
 ): string {
   // Try the runtime translator first; if it returns the key unchanged
   // (i.e. no entry), fall back to our hardcoded English so the user
   // never sees the raw key.
-  const translated = translator(key, detail !== undefined ? { detail } : undefined)
+  const translated = translator(key)
   if (translated && translated !== key) return translated
 
   const fallback = ENGLISH_FALLBACKS[key]
-  if (fallback) {
-    return detail !== undefined
-      ? fallback.replace('{detail}', detail)
-      : fallback
-  }
+  if (fallback) return fallback
 
-  // Should never hit this — every defined key has a fallback. Never surface
-  // the raw detail here: it can contain provider internals or secrets.
+  // Should never hit this — every defined key has a fallback. The raw detail
+  // is logged by the caller and never belongs in a user-facing sentence.
   return 'Something went wrong. Please try again.'
 }
 
@@ -267,11 +258,9 @@ function translateWithFallback(key: TranslationKey, params?: TranslationParams, 
 
 /**
  * Strip secrets and absolute paths from raw error text before it reaches
- * the chat UI. ENOENT errors leak `'/Users/klein/.ssh/id_rsa'` verbatim,
- * proxied 401 echoes can include `Authorization: Bearer sk-…` tails, and
- * neither belongs in front of the user. Applied to the fallback branch
- * (the path that surfaces unmatched raw text) and to any pattern that
- * embeds the raw string via `withDetail: true`.
+ * the log. ENOENT errors leak `'/Users/klein/.ssh/id_rsa'` verbatim, proxied
+ * 401 echoes can include `Authorization: Bearer sk-…` tails, and neither
+ * belongs in front of the user or in a bug-report log.
  *
  * The chain itself is the canonical shared/redaction.js rule set — the
  * union of the three previously drifted copies, so this also covers
@@ -299,8 +288,15 @@ export function humanizeError(
     ? (error.message || error.name || 'Unknown error')
     : String(error ?? 'Unknown error')
 
+  // Every humanized failure keeps its (redacted) original in the log. The
+  // friendly sentence is all the user sees, so without this line the detail
+  // would be swallowed entirely.
+  if (error !== null && error !== undefined && raw.trim()) {
+    warnRedacted(`[Humanize] ${context} error:`, raw)
+  }
+
   if (!raw.trim()) {
-    return lookupTranslation('humanize.fallback', '—')
+    return lookupTranslation('humanize.fallback', translator)
   }
 
   // Failover aggregates join one "candidateId: message" line per failed
@@ -325,11 +321,11 @@ export function humanizeError(
     ?? extractNetIpcErrorCode(classifyTarget)
   const codeMapping = ipcCode ? IPC_CODE_KEYS[ipcCode] : undefined
   if (codeMapping) {
-    return lookupTranslation(codeMapping.key, codeMapping.withDetail ? redactSensitive(raw) : undefined, translator)
+    return lookupTranslation(codeMapping.key, translator)
   }
 
   if (context === 'pet') {
-    return lookupTranslation('settings.pet.import_error', undefined, translator)
+    return lookupTranslation('settings.pet.import_error', translator)
   }
 
   // Context-specific patterns first (more specific), then common.
@@ -345,13 +341,13 @@ export function humanizeError(
           key,
         )
       }
-      return lookupTranslation(key, pattern.withDetail ? redactSensitive(raw) : undefined, translator)
+      return lookupTranslation(key, translator)
     }
   }
 
-  // No pattern matched — generic wrapper that still includes the raw
-  // text so power users / developers can debug, but framed friendly.
-  return lookupTranslation('humanize.fallback', redactSensitive(raw), translator)
+  // No pattern matched — generic friendly sentence; the redacted original
+  // was already logged above.
+  return lookupTranslation('humanize.fallback', translator)
 }
 
 const MIC_PERMISSION_ERROR_NAMES = new Set([
@@ -398,7 +394,6 @@ export function humanizeMicPermissionError(
   const platform = options.platform ?? detectVoicePermissionPlatform()
   return lookupTranslation(
     pickMicrophonePermissionKey('humanize.voice.mic_permission', platform),
-    undefined,
     options.ti ?? t,
   )
 }
@@ -486,7 +481,7 @@ export function humanizeVoiceError(
   const speechCode = extractSpeechIpcErrorCode(error)
   const speechCodeMapping = speechCode ? SPEECH_IPC_CODE_KEYS[speechCode] : undefined
   if (speechCodeMapping) {
-    return lookupTranslation(speechCodeMapping.key, undefined, options.ti ?? t)
+    return lookupTranslation(speechCodeMapping.key, options.ti ?? t)
   }
   if (options.category !== 'playback') {
     const permissionSentence = humanizeMicPermissionError(error, {
@@ -495,7 +490,7 @@ export function humanizeVoiceError(
     })
     if (permissionSentence) return permissionSentence
   }
-  return lookupTranslation(`voice.error.${category}` as TranslationKey, undefined, options.ti ?? t)
+  return lookupTranslation(`voice.error.${category}` as TranslationKey, options.ti ?? t)
 }
 
 /**

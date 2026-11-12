@@ -58,7 +58,7 @@ export const enSettingsShell = {
   'settings.return_to_companion': 'Back to companion',
   'settings.unsaved_changes': 'Unsaved changes',
   'settings.save_failed_fallback': 'Couldn\'t save settings — try again later?',
-  'settings.save_failed_system': 'Couldn\'t save settings: {error}',
+  'settings.save_failed_system': 'Couldn’t save settings. Try again in a moment?',
   'settings.import_pet_model_unsupported': 'The current environment does not support importing local avatar models yet.',
   'settings.list_speech_voices.unsupported': 'The current environment does not support fetching the online voice list.',
   'settings.preview.busy_error': 'A previous turn is still running — please try the preview again shortly.',

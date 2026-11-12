@@ -141,7 +141,8 @@ test('the missing-model notice hides after 14s and stays when that wiring is rem
   }
   assert.equal(bare.bubble?.content, '语音还没装好，去设置里下载。')
 
-  const controller = await readFile(new URL('../src/app/controllers/useAppController.ts', import.meta.url), 'utf8')
+  const controller = (await readFile(new URL('../src/app/controllers/useAppController.ts', import.meta.url), 'utf8'))
+    .replace(/\r\n/g, '\n')
   const notice = controller.match(/presentCompanionNotice: \(content, options\) => \{[\s\S]*?\n {4}\},/)?.[0] ?? ''
   assert.match(notice, /showCompanionNoticeBubble\(presentPetDialogBubbleRef\.current, content, options\)/)
   assert.doesNotMatch(notice, /autoHideMs:\s*0/)

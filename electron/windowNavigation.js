@@ -107,6 +107,12 @@ export function summarizeWindowNavigationErrorForLog(error) {
  * Same-origin, same-path navigations are allowed only when they keep the
  * window's view role. `will-navigate` does not see `history.replaceState`,
  * so callers also apply this check to in-page URL updates.
+ *
+ * The pet fallback document and its retry marker are not renderer entry
+ * navigations: `BrowserWindow.loadFile` does not emit `will-navigate`, and the
+ * pet's own listener cancels the retry marker before this guard runs. Allowing
+ * either target here would only enable page-initiated navigations that break
+ * the retry budget or load the fallback as a ready page.
  * @param {unknown} targetUrl
  * @param {unknown} rendererEntryUrl
  */
