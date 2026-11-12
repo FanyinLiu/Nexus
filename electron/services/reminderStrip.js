@@ -21,6 +21,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mainWindow } from '../windowManager.js'
 import { createLogger } from '../logger.js'
+import { reminderStripWebPreferences } from '../webPreferences.js'
 import { focusCompanionPanel } from './proactiveNotification.js'
 import {
   REMINDER_STRIP_HEIGHT,
@@ -147,14 +148,7 @@ function createStripWindow() {
     focusable: false,
     alwaysOnTop: true,
     backgroundColor: '#00000000',
-    webPreferences: {
-      preload: STRIP_PRELOAD,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      spellcheck: false,
-    },
+    webPreferences: reminderStripWebPreferences(STRIP_PRELOAD),
   })
   win.setAlwaysOnTop(true, 'floating')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false })
