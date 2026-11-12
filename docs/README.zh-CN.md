@@ -262,11 +262,15 @@ README 只保留当前稳定版 v0.5.1 和上一公开版本 v0.5.0 的重点；
 - **.deb**：`sudo dpkg -i Nexus-<版本号>.deb`（或用发行版的包管理器打开）。
 - **校验下载**：Linux x64 资产附带 `SHA256SUMS-linux.txt`；只下载其中一种包格式时，在下载目录运行 `sha256sum --ignore-missing -c SHA256SUMS-linux.txt`，确认目标文件显示 `OK`，并确保校验文件来自同一官方 release。
 
-#### macOS unsigned auto-update limitation
+#### 自动更新说明（Windows / Linux）
+
+目前 Windows 和 Linux 没有自动更新。新版本需要从官方 GitHub Releases 手动下载安装包，并用同一 release 的 `SHA256SUMS-windows.txt` / `SHA256SUMS-linux.txt` 校验 SHA-256 后再安装；应用不会自动下载、替换或重启安装。
+
+#### macOS 未签名自动更新限制
 
 macOS arm64 未签名包只检查新版本并打开官方 release 页面，不会自动下载或替换应用。升级需要手动下载新 `.dmg` / `.zip`，重新处理 Gatekeeper 提示并替换 `/Applications/Nexus.app`。
 
-#### Windows unsigned installer limitation
+#### Windows 未签名安装器限制
 
 Windows x64 安装器状态为 `NotSigned`，无法提供发布者身份验证或稳定的 SmartScreen 声誉。确认文件来自官方 GitHub Releases 后，按上面的 SmartScreen 步骤手动运行。
 

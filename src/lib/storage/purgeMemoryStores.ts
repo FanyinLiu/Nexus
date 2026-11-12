@@ -55,6 +55,7 @@ import {
   writeJson,
 } from './core.ts'
 import { resetLocalStorage } from './localStorageReset.ts'
+import { rememberForgottenMemory } from './forgottenMemory.ts'
 
 /** Chat state listens and drops the same wording from the open transcript. */
 export const MEMORY_PLAINTEXT_PURGED_EVENT = 'nexus:memory-plaintext-purged'
@@ -101,6 +102,9 @@ export function readMemoryDataFiles(): Record<string, string> {
  */
 export function purgeDeletedMemory(memory: MemoryItem, at = new Date().toISOString()): void {
   holdDeletedMemory(memory)
+  // Keep a hash-only tombstone so the extraction path cannot re-add the same
+  // wording on the next mention. Clear-all wipes the whole tombstone store.
+  rememberForgottenMemory(memory.content)
   // Cache keys and the per-model ledger both quote the removed memory.
   forgetMemoryFromRecallIndexLedger(memory.id)
   clearMemoryEmbeddingCacheForText(memory.content)

@@ -141,6 +141,67 @@ test('preload desktopPet API keys match the Window.desktopPet type contract', ()
   )
 })
 
+test('the narrowed preload no longer exposes removed bridge methods', () => {
+  const removedMethods = [
+    'externalActionPolicyGet',
+    'factorioExecute',
+    'factorioStatus',
+    'listChatModels',
+    'localDataApplyChatMigration',
+    'localDataChatMigrationStatus',
+    'localDataCompareChatSessions',
+    'localDataRollbackChatMigration',
+    'localDataStatus',
+    'mcpStatus',
+    'memoryClearUserData',
+    'memoryKeywordSearch',
+    'memoryVectorIndex',
+    'memoryVectorStats',
+    'minecraftSendCommand',
+    'minecraftStatus',
+    'personaInit',
+    'personaOpenDir',
+    'personaPaths',
+    'personaProfileDir',
+    'pluginApprove',
+    'pluginBusPublish',
+    'pluginBusRecent',
+    'pluginBusStats',
+    'pluginBusSubscribe',
+    'pluginBusSubscriptions',
+    'pluginBusUnsubscribe',
+    'pluginDir',
+    'pluginDisable',
+    'pluginEnable',
+    'pluginRestart',
+    'pluginRevoke',
+    'pluginScan',
+    'pluginStart',
+    'pluginStatus',
+    'pluginStop',
+    'probeLocalServices',
+    'setPetFreeMode',
+    'skillGet',
+    'skillList',
+    'skillRemove',
+    'skillStats',
+    'tencentAsrDisconnect',
+    'tencentAsrStatus',
+    'vadStatus',
+    'vaultDelete',
+    'vaultIsAvailable',
+    'vaultListSlots',
+    'vaultRetrieve',
+  ]
+
+  for (const view of ['pet', 'panel'] as const) {
+    const desktopPet = loadPreloadDesktopPetApi(view).desktopPet
+    for (const method of removedMethods) {
+      assert.equal(desktopPet[method], undefined, `${view} preload still exposes ${method}`)
+    }
+  }
+})
+
 test('the pet preload exposes the request entry point and the reminder claim for model setup', () => {
   const petKeys = Object.keys(loadPreloadDesktopPetApi('pet').desktopPet)
   const modelSetupKeys = petKeys

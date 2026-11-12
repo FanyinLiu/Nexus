@@ -129,6 +129,37 @@ test('BroadcastChannel mode ignores the duplicate native storage path', async ()
   peer.close()
 })
 
+test('toggling companion pause re-syncs the policy with the window switch off', async () => {
+  FakeBroadcastChannel.reset()
+  const synced: Array<{ desktopContext: { activeWindow: boolean } }> = []
+  installWindow({
+    vaultStore: async () => undefined,
+    vaultStoreMany: async () => undefined,
+    vaultRetrieveMany: async () => ({}),
+    externalActionPolicySync: async (payload: { desktopContext: { activeWindow: boolean } }) => {
+      synced.push(payload)
+    },
+  })
+  const store = await import('../src/app/store/settingsStore.ts?pause-sync=1')
+  const { loadSettings } = await import('../src/lib/storage.ts')
+
+  await store.setSettingsSnapshot({
+    ...loadSettings(),
+    contextAwarenessEnabled: true,
+    activeWindowContextEnabled: true,
+    companionAwarenessPaused: false,
+  })
+  await flushAsyncHandlers()
+  assert.equal(synced.at(-1)?.desktopContext.activeWindow, true)
+
+  await store.updateSettingsSnapshot((current) => ({
+    ...current,
+    companionAwarenessPaused: true,
+  }))
+  await flushAsyncHandlers()
+  assert.equal(synced.at(-1)?.desktopContext.activeWindow, false)
+})
+
 test('local settings save suppresses only the self CustomEvent and broadcasts once to peers', async () => {
   FakeBroadcastChannel.reset()
   let policySyncCalls = 0

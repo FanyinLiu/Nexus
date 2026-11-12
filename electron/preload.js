@@ -53,7 +53,6 @@ const panelView = isPanelView()
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: /** @param {unknown} state */ (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
-  setPetFreeMode: /** @param {boolean} freeMode */ (freeMode) => ipcRenderer.invoke('pet-window:set-free-mode', { freeMode }),
   subscribePetWindowState: /** @param {IpcListener} listener */ (listener) => {
     /** @type {IpcEventHandler} */
     const handler = (_event, state) => listener(state)
@@ -188,9 +187,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
     })
   },
   testChatConnection: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('chat:test-connection', payload),
-  listChatModels: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('chat:list-models', payload),
   testServiceConnection: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('service:test-connection', payload),
-  probeLocalServices: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('doctor:probe-local-services', payload),
   inspectIntegrations: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('integrations:inspect', payload),
   listSpeechVoices: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('audio:list-voices', payload),
   transcribeAudio: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('audio:transcribe', payload),
@@ -244,7 +241,6 @@ contextBridge.exposeInMainWorld('desktopPet', {
   kwsStop: () => ipcRenderer.invoke('kws:stop'),
 
   // Sherpa-onnx Silero VAD (main-process, shares audio frames with KWS)
-  vadStatus: () => ipcRenderer.invoke('vad:status'),
   vadStart: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('vad:start', payload),
   vadFeed: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('vad:feed', payload),
   vadFlush: () => ipcRenderer.invoke('vad:flush'),
@@ -257,11 +253,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
 
   // Tencent Cloud Real-Time ASR
   tencentAsrConnect: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('tencent-asr:connect', payload),
-  tencentAsrDisconnect: () => ipcRenderer.invoke('tencent-asr:disconnect'),
   tencentAsrFeed: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('tencent-asr:feed', payload),
   tencentAsrFinish: () => ipcRenderer.invoke('tencent-asr:finish'),
   tencentAsrAbort: () => ipcRenderer.invoke('tencent-asr:abort'),
-  tencentAsrStatus: () => ipcRenderer.invoke('tencent-asr:status'),
   subscribeTencentAsrResult: /** @param {IpcListener} listener */ (listener) => {
     /** @type {IpcEventHandler} */
     const handler = (_event, payload) => listener(payload)
@@ -272,15 +266,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Minecraft Gateway
   minecraftConnect: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('minecraft:connect', payload),
   minecraftDisconnect: () => ipcRenderer.invoke('minecraft:disconnect'),
-  minecraftSendCommand: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('minecraft:send-command', payload),
-  minecraftStatus: () => ipcRenderer.invoke('minecraft:status'),
   minecraftGameContext: () => ipcRenderer.invoke('minecraft:game-context'),
 
   // Factorio RCON
   factorioConnect: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('factorio:connect', payload),
   factorioDisconnect: () => ipcRenderer.invoke('factorio:disconnect'),
-  factorioExecute: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('factorio:execute', payload),
-  factorioStatus: () => ipcRenderer.invoke('factorio:status'),
   factorioGameContext: () => ipcRenderer.invoke('factorio:game-context'),
 
   // Telegram Gateway
@@ -326,13 +316,11 @@ contextBridge.exposeInMainWorld('desktopPet', {
   },
 
   // MCP Host (multi-server) — start/stop/restart restricted to main process only
-  mcpStatus: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('mcp:status', payload),
   mcpListTools: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('mcp:list-tools', payload),
   mcpCallTool: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('mcp:call-tool', payload),
   mcpSyncServers: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('mcp:sync-servers', payload),
 
   // External action permission policy
-  externalActionPolicyGet: () => ipcRenderer.invoke('external-action-policy:get'),
   externalActionPolicySync: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('external-action-policy:sync', payload),
 
   // Read-only OS media-permission status for Settings permission lines
@@ -342,14 +330,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
   voiceRuntimeSync: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('voice-runtime:sync', payload),
 
   // Main-process local data foundation. Renderer storage remains authoritative in M4.
-  localDataStatus: () => ipcRenderer.invoke('local-data:status'),
   localDataMirrorOnboarding: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:mirror-onboarding', payload),
-  localDataChatMigrationStatus: () => ipcRenderer.invoke('local-data:chat-migration-status'),
   localDataReadChatSessions: () => ipcRenderer.invoke('local-data:chat-sessions-read'),
   localDataMirrorChatSession: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:chat-session-mirror', payload),
-  localDataCompareChatSessions: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:chat-comparison-preview', payload),
-  localDataApplyChatMigration: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:chat-migration-apply', payload),
-  localDataRollbackChatMigration: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:chat-migration-rollback', payload),
   localDataMemoryMigrationStatus: () => ipcRenderer.invoke('local-data:memory-migration-status'),
   localDataReadMemory: () => ipcRenderer.invoke('local-data:memory-read'),
   localDataApplyMemoryMigration: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:memory-migration-apply', payload),
@@ -361,36 +344,15 @@ contextBridge.exposeInMainWorld('desktopPet', {
   localDataApplyCompanionMigration: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:companion-migration-apply', payload),
   localDataRollbackCompanionMigration: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('local-data:companion-migration-rollback', payload),
 
-  // Plugin Host
-  pluginScan: () => ipcRenderer.invoke('plugin:scan'),
+  // Plugin Host. Lifecycle, approval, and message-bus controls stay
+  // main-process only until a renderer surface exists for them.
   pluginList: () => ipcRenderer.invoke('plugin:list'),
-  pluginStart: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:start', payload),
-  pluginStop: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:stop', payload),
-  pluginRestart: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:restart', payload),
-  pluginEnable: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:enable', payload),
-  pluginDisable: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:disable', payload),
-  pluginStatus: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:status', payload),
-  pluginDir: () => ipcRenderer.invoke('plugin:dir'),
-  pluginApprove: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:approve', payload),
-  pluginRevoke: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin:revoke', payload),
-
-  // Plugin Message Bus
-  pluginBusPublish: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin-bus:publish', payload),
-  pluginBusSubscribe: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin-bus:subscribe', payload),
-  pluginBusUnsubscribe: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin-bus:unsubscribe', payload),
-  pluginBusSubscriptions: () => ipcRenderer.invoke('plugin-bus:subscriptions'),
-  pluginBusRecent: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('plugin-bus:recent', payload),
-  pluginBusStats: () => ipcRenderer.invoke('plugin-bus:stats'),
 
   // Memory Vector Store
-  memoryVectorIndex: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:vector-index', payload),
   memoryVectorIndexBatch: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:vector-index-batch', payload),
   memoryVectorSearch: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:vector-search', payload),
   memoryVectorRemove: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:vector-remove', payload),
   memoryVectorClear: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:clear-user-data', payload),
-  memoryClearUserData: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:clear-user-data', payload),
-  memoryVectorStats: () => ipcRenderer.invoke('memory:vector-stats'),
-  memoryKeywordSearch: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:keyword-search', payload),
   memoryHybridSearch: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:hybrid-search', payload),
   memoryOllamaEmbed: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:ollama-embed', payload),
   memoryOllamaDetect: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('memory:ollama-detect', payload),
@@ -412,11 +374,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Auto-generated Skills
   skillSave: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('skill:save', payload),
   skillSearch: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('skill:search', payload),
-  skillList: () => ipcRenderer.invoke('skill:list'),
-  skillGet: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('skill:get', payload),
-  skillRemove: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('skill:remove', payload),
   skillMarkUsed: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('skill:mark-used', payload),
-  skillStats: () => ipcRenderer.invoke('skill:stats'),
 
   // Persona (SOUL.md file-based identity)
   personaLoadSoul: () => ipcRenderer.invoke('persona:load-soul'),
@@ -424,13 +382,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
   personaSaveSoul: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('persona:save-soul', payload),
   personaSaveMemory: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('persona:save-memory', payload),
   personaSaveStyle: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('persona:save-style', payload),
-  personaPaths: () => ipcRenderer.invoke('persona:paths'),
-  personaOpenDir: () => ipcRenderer.invoke('persona:open-dir'),
-  personaInit: /** @param {unknown} payload */ (payload) => ipcRenderer.invoke('persona:init', payload),
 
   // v2 per-profile persona (userData/personas/<id>/soul.md + style.json + ...)
   personaLoadProfile: /** @param {string} profileId */ (profileId) => ipcRenderer.invoke('persona:load-profile', { profileId }),
-  personaProfileDir: /** @param {string} profileId */ (profileId) => ipcRenderer.invoke('persona:profile-dir', { profileId }),
   personaImportCard: () => ipcRenderer.invoke('persona:import-card'),
 
   // Auto-updater (electron-updater + GitHub Releases)
@@ -471,13 +425,9 @@ contextBridge.exposeInMainWorld('desktopPet', {
   // Key vault (safeStorage encryption). Retrieval returns opaque refs;
   // plaintext secret values stay in main-process handlers. Arguments are
   // wrapped into object payloads so the main-process schema validation
-  // (electron/ipc/vaultPayloadSchemas.js) can reject unknown fields.
-  vaultIsAvailable: () => ipcRenderer.invoke('vault:is-available'),
+  // (electron/ipc/vaultPayloadSchemas.js) can reject unknown fields. Bulk
+  // hydration is the only renderer-facing read path.
   vaultStore: /** @param {string} slot @param {string} plaintext */ (slot, plaintext) => ipcRenderer.invoke('vault:store', { slot, plaintext }),
-  /** @param {string} slot */
-  vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', { slot }),
-  vaultDelete: /** @param {string} slot */ (slot) => ipcRenderer.invoke('vault:delete', { slot }),
-  vaultListSlots: () => ipcRenderer.invoke('vault:list-slots'),
   vaultStoreMany: /** @param {Record<string, string>} entries */ (entries) => ipcRenderer.invoke('vault:store-many', {
     entries: Object.entries(entries).map(([slot, plaintext]) => ({ slot, plaintext })),
   }),

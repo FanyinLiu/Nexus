@@ -87,13 +87,15 @@ export function useReminderScheduler({
   }, [canTrigger])
 
   const runDueCheck = useCallback((options: { mountCheck?: boolean } = {}) => {
+    // Reconcile against persisted rows first: a paused/restored window can
+    // hold a stale copy of a task another window already delivered. Reading
+    // the clock after storage means a delivery saved just before this read is
+    // never mistaken for a future stamp left by a backwards clock correction.
+    const persistedById = new Map(loadReminderTasks().map((stored) => [stored.id, stored]))
     const now = new Date()
     const threshold = now.getTime() + 1_000
 
     // Identify triggered tasks outside updater to avoid StrictMode double-fire.
-    // Reconcile against persisted rows first: a paused/restored window can
-    // hold a stale copy of a task another window already delivered.
-    const persistedById = new Map(loadReminderTasks().map((stored) => [stored.id, stored]))
     const dueTasks = tasks.filter((task) => {
       const nextRunAt = Date.parse(task.nextRunAt ?? '')
       return task.enabled && Number.isFinite(nextRunAt) && nextRunAt <= threshold
@@ -114,8 +116,8 @@ export function useReminderScheduler({
       // occurrence either. Leave the row untouched for the pet window.
       !takeoverOnlyNotice || task.action.kind === 'notice'
     ))
-    const staleTasks = dueTasks.filter((task) => reminderAlreadyTriggered(task, persistedById.get(task.id)))
-    const triggeredTasks = dueTasks.filter((task) => !reminderAlreadyTriggered(task, persistedById.get(task.id)))
+    const staleTasks = dueTasks.filter((task) => reminderAlreadyTriggered(task, persistedById.get(task.id), now))
+    const triggeredTasks = dueTasks.filter((task) => !reminderAlreadyTriggered(task, persistedById.get(task.id), now))
 
     if (staleTasks.length > 0) {
       // A paused/restored window may hold the old due row. Drain it into the
@@ -124,7 +126,7 @@ export function useReminderScheduler({
       const staleIds = new Set(staleTasks.map((task) => task.id))
       setTasks((current) => sortReminderTasks(current.map((task) => (
         staleIds.has(task.id)
-          ? reconcileTriggeredTaskWithPersisted(task, persistedById.get(task.id))
+          ? reconcileTriggeredTaskWithPersisted(task, persistedById.get(task.id), now)
           : task
       ))))
     }

@@ -49,9 +49,6 @@ test('sanitizePetWindowStatePatch keeps only pet window fields', () => {
     isPinned: true,
     clickThrough: false,
     petHotspotActive: true,
-    locomotionActivity: 'roaming',
-    freeMode: true,
-    roamCapable: false,
   })
 })
 

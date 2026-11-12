@@ -40,9 +40,8 @@ unchanged.
 - A missing key must never be replaced by a fabricated signature, a new key
   introduced during the release, or an unsigned manifest upload.
 
-This exception ends with v0.5.1. v0.5.2 and later must publish the signed
-profile by configuring `NEXUS_UPDATE_SIGNING_KEY`, or record a new
-version-scoped exception before tagging.
+The project currently still ships the unsigned-manual update posture. When
+that practice changes, update README and RELEASING in the same version.
 
 ### v0.5.1 stable record — 2026-11-10
 
@@ -80,22 +79,23 @@ count, and daily-log copy. The stable handoff lives in
 release commit by the protected workflow; no physical-device evidence is
 claimed.
 
-### v0.5.0 unsigned update channel exception — 2026-11-06
+### v0.5.0–v0.5.1 unsigned update channel exception — 2026-11-06
 
-For v0.5.0 only, 音梵 (the owner) explicitly authorized publishing the stable
-release without the `NEXUS_UPDATE_SIGNING_KEY` secret. This does not waive any
-gate: tag provenance, `release:unsigned:gate`, `prerelease-check`, packaging,
-per-platform checksum generation, remote asset closure, and draft publication
-still run unchanged.
+For v0.5.0 and v0.5.1, 音梵 (the owner) explicitly authorized publishing the
+stable release without the `NEXUS_UPDATE_SIGNING_KEY` secret. This does not
+waive any gate: tag provenance, `release:unsigned:gate`, `prerelease-check`,
+packaging, per-platform checksum generation, remote asset closure, and draft
+publication still run unchanged.
 
 The accepted profile is `unsigned-manual`:
 
 - Windows and Linux publish installers and `SHA256SUMS-*.txt` only. Their
   `latest.yml` / `latest-linux*.yml` and `.sig` files are removed before the
   checksum and upload steps and are never published.
-- Windows and Linux therefore have **no automatic update** for v0.5.0. Users
-  must download the next version manually from the official GitHub Release.
-  Release notes and support replies must not claim Windows/Linux auto-update.
+- Windows and Linux therefore have **no automatic update** for v0.5.0 and
+  v0.5.1. Users must download the next version manually from the official
+  GitHub Release. Release notes and support replies must not claim
+  Windows/Linux auto-update.
 - The macOS arm64 build stays ad-hoc signed and manual-download. Its
   `latest-mac.yml` is produced but not consumed by the unsigned macOS runtime.
 - The Windows x64 installer stays `NotSigned`; the SmartScreen warning is
@@ -103,9 +103,8 @@ The accepted profile is `unsigned-manual`:
 - A missing key must never be replaced by a fabricated signature, a new key
   introduced during the release, or an unsigned manifest upload.
 
-This exception ends with v0.5.0. v0.5.1 and later must publish the signed
-profile by configuring `NEXUS_UPDATE_SIGNING_KEY`, or record a new
-version-scoped exception before tagging.
+The project currently still ships the same unsigned-manual update posture.
+When that practice changes, update README and RELEASING in the same version.
 
 ### v0.4.3 maintainer exception — 2026-07-16
 
@@ -299,11 +298,11 @@ Nexus is distributed as a desktop app, not as an npm-installed end-user app.
 - **v0.5.1 platform scope** is macOS arm64, Windows x64, and Linux x64. Do not
   describe the macOS asset as x64 or universal.
 - **Updates are platform-specific.** Windows and Linux may consume published
-  update metadata when the signed profile is active. For v0.5.1 the
-  `unsigned-manual` profile is active: Windows and Linux publish no updater
-  metadata and users download the next version manually from GitHub Releases.
-  Unsigned macOS builds only check for a version and open the official release
-  page for a manual download.
+  update metadata when the signed profile is active. The project currently
+  still ships the `unsigned-manual` profile: Windows and Linux publish no
+  updater metadata and users download the next version manually from GitHub
+  Releases. Unsigned macOS builds only check for a version and open the official
+  release page for a manual download.
 - **npm** is the developer path: `npm install`, `npm run electron:dev`,
   `npm run doctor`, packaging scripts, and release checks.
 - There is no npm installer in the current release plan. Keep the end-user path
@@ -390,11 +389,11 @@ Current v0.5.1 release posture:
   manifests and signatures before checksums and upload; only installers and
   `SHA256SUMS-*` are published, and both the per-platform checksum audit and
   the remote closure audit run with `--update-profile unsigned-manual`. An
-  unsigned manifest is never uploaded because the client refuses it. v0.5.1
-  uses `unsigned-manual` under the 2026-11-10 exception: Windows and Linux
-  publish no updater metadata and have no automatic updates, so users download
-  the next version manually from GitHub Releases. The private key is never
-  stored in this repository.
+  unsigned manifest is never uploaded because the client refuses it. The
+  project currently still ships `unsigned-manual`: Windows and Linux publish no
+  updater metadata and have no automatic updates, so users download the next
+  version manually from GitHub Releases. The private key is never stored in
+  this repository.
 - **Official source.** Only `https://github.com/FanyinLiu/Nexus/releases` is
   official. Release notes and READMEs must tell users to delete artifacts from
   mirrors or unknown sources and download again from GitHub.

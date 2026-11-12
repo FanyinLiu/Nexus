@@ -8,6 +8,8 @@
  * set for a key (enforced by scripts/i18n-main-audit.mjs).
  */
 
+import { MAIN_APPROVAL_MESSAGES } from './mainMessagesApprovalTable.js'
+
 export const MAIN_MESSAGE_LOCALES = Object.freeze(['zh-CN', 'zh-TW', 'en-US', 'ja', 'ko'])
 
 export const MAIN_MESSAGES = Object.freeze({
@@ -145,6 +147,7 @@ export const MAIN_MESSAGES = Object.freeze({
     'net.responseTooLarge': '{label} 太大了，没能读进来。',
     'common.ok': '确定',
     'common.cancel': '取消',
+    ...MAIN_APPROVAL_MESSAGES['zh-CN'],
   }),
   'zh-TW': Object.freeze({
     'audio.outputBaseUrlMissing': '請先填寫語音輸出的 API Base URL。',
@@ -280,6 +283,7 @@ export const MAIN_MESSAGES = Object.freeze({
     'net.responseTooLarge': '{label} 太大了，沒能讀進來。',
     'common.ok': '確定',
     'common.cancel': '取消',
+    ...MAIN_APPROVAL_MESSAGES['zh-TW'],
   }),
   'en-US': Object.freeze({
     'audio.outputBaseUrlMissing': 'Fill in the speech output API Base URL first.',
@@ -415,6 +419,7 @@ export const MAIN_MESSAGES = Object.freeze({
     'net.responseTooLarge': 'The {label} was too large to read.',
     'common.ok': 'OK',
     'common.cancel': 'Cancel',
+    ...MAIN_APPROVAL_MESSAGES['en-US'],
   }),
   ja: Object.freeze({
     'audio.outputBaseUrlMissing': '先に音声出力の API Base URL を入力してください。',
@@ -550,6 +555,7 @@ export const MAIN_MESSAGES = Object.freeze({
     'net.responseTooLarge': '{label} が大きすぎて読み込めませんでした。',
     'common.ok': 'OK',
     'common.cancel': 'キャンセル',
+    ...MAIN_APPROVAL_MESSAGES['ja'],
   }),
   ko: Object.freeze({
     'audio.outputBaseUrlMissing': '먼저 음성 출력 API Base URL을 입력해 주세요.',
@@ -685,5 +691,6 @@ export const MAIN_MESSAGES = Object.freeze({
     'net.responseTooLarge': '{label}이(가) 너무 커서 읽지 못했어요.',
     'common.ok': '확인',
     'common.cancel': '취소',
+    ...MAIN_APPROVAL_MESSAGES['ko'],
   }),
 })

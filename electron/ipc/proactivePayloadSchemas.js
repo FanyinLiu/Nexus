@@ -128,6 +128,16 @@ const inboxUpdateSchema = {
   },
 }
 
+const showNotificationSchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    title: { type: 'string', optional: true },
+    body: { type: 'string', optional: true },
+  },
+}
+
 /** @param {unknown} payload @returns {ProactiveDeliveryPayload} */
 export function validateProactiveDeliveryPayload(payload) {
   return /** @type {ProactiveDeliveryPayload} */ (
@@ -139,5 +149,15 @@ export function validateProactiveDeliveryPayload(payload) {
 export function validateInboxUpdatePayload(payload) {
   return /** @type {InboxUpdatePayload} */ (
     validateIpcPayload('inbox:update', payload, inboxUpdateSchema)
+  )
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ title?: string, body?: string }}
+ */
+export function validateProactiveShowNotificationPayload(payload) {
+  return /** @type {{ title?: string, body?: string }} */ (
+    validateIpcPayload('proactive:show-notification', payload, showNotificationSchema)
   )
 }

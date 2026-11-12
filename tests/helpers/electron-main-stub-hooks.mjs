@@ -85,6 +85,30 @@ export function destroyReminderStrip() {}
 `,
     }
   }
+  if (url.endsWith('/electron/services/proactiveDeliveryContextWiring.js')) {
+    // ipcRegistry's only caller. Record the dependency bag it was handed so a
+    // test can assert the saved-switch reader is the module's real export.
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source: `export function createProactiveDeliveryContextWiring(deps) {
+        globalThis.__nexusTestDeliveryWiringDeps = deps
+        return {
+          getDeliveryContext: async () => ({
+            panelFocused: false,
+            fullscreen: false,
+            focusState: 'active',
+            inQuietHours: false,
+            systemDnd: null,
+            awayNotificationsEnabled: false,
+            stripEnabled: true,
+          }),
+          isActiveWindowAllowed: () => false,
+          getActiveWindow: async () => null,
+        }
+      }\n`,
+    }
+  }
   return nextLoad(url, context)
 }
 
