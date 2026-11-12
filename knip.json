@@ -30,6 +30,7 @@
     "tests/helpers/tsx-test-loader.mjs",
     "tests/helpers/tts-net-request-mock-hooks.mjs",
     "tests/helpers/tts-net-request-mock.mjs",
+    "tests/helpers/vault-ipc-stub-hooks.mjs",
     "tests/helpers/wakewordHarness.ts",
     "tests/helpers/window-ipc-stub-hooks.mjs",
     "tests/helpers/window-lifecycle-stub-hooks.mjs"
