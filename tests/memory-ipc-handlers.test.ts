@@ -247,6 +247,29 @@ test('long-term memory round-trips through the IPC handlers and clear removes it
   assert.deepEqual(await harness.invoke('memory:long-term-load', sender), { exists: false, memories: [] })
 })
 
+test('long-term load rejects an untrusted sender instead of returning seeded rows', async (t) => {
+  const harness = await createHarness(t)
+  const sender = harness.trustedSender('panel')
+
+  assert.deepEqual(
+    await harness.invoke('memory:long-term-save', sender, { memories: SYNTHETIC_ROWS }),
+    { ok: true, count: 2 },
+  )
+
+  const outcome = await harness
+    .invoke('memory:long-term-load', harness.untrustedSender())
+    .then((value) => ({ rejected: false as const, value }), () => ({ rejected: true as const }))
+  assert.equal(outcome.rejected, true, 'untrusted long-term load must reject')
+  assert.doesNotMatch(JSON.stringify(outcome), /synthetic memory alpha/)
+
+  // A trusted sender still reads the seeded rows, so the rejection above came
+  // from the sender guard rather than from an empty store.
+  assert.deepEqual(
+    await harness.invoke('memory:long-term-load', sender),
+    { exists: true, memories: SYNTHETIC_ROWS },
+  )
+})
+
 test('clear-user-data clears vectors and the proactive inbox for a trusted panel only', async (t) => {
   const harness = await createHarness(t)
   const sender = harness.trustedSender('panel')
@@ -373,6 +396,31 @@ test('vector index, search, remove and stats handlers forward validated payloads
     storePath: 'app-user-data/memory-vectors.json',
     logPath: 'app-user-data/memory-vectors.log',
   })
+})
+
+test('vector search rejects an untrusted sender before calling the store', async (t) => {
+  const harness = await createHarness(t)
+  const sender = harness.trustedSender('pet')
+  const searchPayload = {
+    queryEmbedding: [1, 0, 0],
+    limit: 5,
+    threshold: 0.2,
+    layer: 'long_term',
+    model: 'synthetic-model',
+  }
+
+  await assert.rejects(
+    () => harness.invoke('memory:vector-search', harness.untrustedSender(), searchPayload),
+  )
+  assert.deepEqual(harness.backend.searchSimilar, [])
+
+  // The same payload reaches the store for a trusted sender, so the rejection
+  // above is the sender guard rather than payload validation.
+  assert.deepEqual(
+    await harness.invoke('memory:vector-search', sender, searchPayload),
+    [{ id: 'mem-1', content: 'synthetic memory alpha', layer: 'long_term', score: 0.9 }],
+  )
+  assert.equal(harness.backend.searchSimilar.length, 1)
 })
 
 test('keyword and hybrid search handlers forward the query to the store', async (t) => {
