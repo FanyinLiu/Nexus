@@ -5,8 +5,10 @@ import path from 'node:path'
 import test from 'node:test'
 
 import {
+  createExternalWindowOpenHandler,
   externalWindowOpenNeedsConfirmation,
   isAllowlistedExternalWindowOpenUrl,
+  normalizeExternalWindowOpenUrl,
 } from '../electron/windowNavigation.js'
 import {
   configureExternalOpenConfirmationStore,
@@ -77,4 +79,61 @@ test('external open confirmation defaults on and keeps a partial panel save', ()
     uiLanguage: 'ko',
   })
   assert.deepEqual(getExternalOpenConfirmation(), saved)
+})
+
+function createOpenHarness(requiresConfirmation: boolean) {
+  const opened: string[] = []
+  let confirmations = 0
+  let warnings = 0
+  const open = createExternalWindowOpenHandler({
+    normalizeUrl: normalizeExternalWindowOpenUrl,
+    getRequiresConfirmation: () => requiresConfirmation,
+    confirmOpen: async () => {
+      confirmations += 1
+      return true
+    },
+    openExternal: async (url) => {
+      opened.push(url)
+    },
+    reportBlocked: () => {
+      warnings += 1
+    },
+    reportOpenFailed: () => {
+      warnings += 1
+    },
+  })
+  return {
+    open,
+    opened,
+    confirmations: () => confirmations,
+    warnings: () => warnings,
+  }
+}
+
+test('confirmation off still blocks non-http and unsafe URLs before opening', async () => {
+  const harness = createOpenHarness(false)
+
+  for (const url of [
+    'file:///etc/passwd',
+    'javascript:alert(1)',
+    'https://127.0.0.1/private',
+    'http://169.254.169.254/latest/meta-data',
+    'https://localhost/',
+  ]) {
+    await harness.open(url, 'pet')
+  }
+
+  assert.deepEqual(harness.opened, [])
+  assert.equal(harness.confirmations(), 0)
+  assert.equal(harness.warnings(), 5)
+})
+
+test('confirmation off still opens a safe https URL without a dialog', async () => {
+  const harness = createOpenHarness(false)
+
+  await harness.open('https://example.com/article', 'pet')
+
+  assert.deepEqual(harness.opened, ['https://example.com/article'])
+  assert.equal(harness.confirmations(), 0)
+  assert.equal(harness.warnings(), 0)
 })

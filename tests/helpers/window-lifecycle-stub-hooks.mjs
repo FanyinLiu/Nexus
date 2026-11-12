@@ -270,6 +270,31 @@ export function getSavedBounds() { return null }
 export function trackWindow() {}
 `
 
+const WINDOW_NAVIGATION_STUB = `
+// Load the real module through a query-suffixed URL: the suffix match below
+// would otherwise intercept the plain path and keep the role guard stubbed.
+import {
+  isAllowedRendererNavigation,
+  isAllowlistedExternalWindowOpenUrl,
+  normalizeExternalWindowOpenUrl,
+  summarizeWindowNavigationErrorForLog,
+  summarizeWindowNavigationUrlForLog,
+} from './windowNavigation.js?window-lifecycle-real'
+
+export {
+  isAllowedRendererNavigation,
+  isAllowlistedExternalWindowOpenUrl,
+  normalizeExternalWindowOpenUrl,
+  summarizeWindowNavigationErrorForLog,
+  summarizeWindowNavigationUrlForLog,
+}
+
+// External-open confirmation remains test-controlled so lifecycle tests never
+// touch the saved preference or a real dialog.
+export function createExternalWindowOpenHandler() { return async () => {} }
+export function externalWindowOpenNeedsConfirmation() { return false }
+`
+
 const USER_FACING_DIALOGS_STUB = `
 export function externalOpenDialogCopy() { return { title: '', message: '', detail: '' } }
 export function normalizeDialogLocale(locale) {
@@ -309,6 +334,7 @@ const MODULE_STUBS = new Map([
   ['/electron/windowRuntimeState.js', WINDOW_RUNTIME_STATE_STUB],
   ['/electron/rendererServer.js', RENDERER_SERVER_STUB],
   ['/electron/services/windowBoundsStore.js', WINDOW_BOUNDS_STORE_STUB],
+  ['/electron/windowNavigation.js', WINDOW_NAVIGATION_STUB],
   ['/electron/userFacingDialogs.js', USER_FACING_DIALOGS_STUB],
   ['/electron/services/externalOpenConfirmation.js', EXTERNAL_OPEN_CONFIRMATION_STUB],
   ['/electron/ipc/windowCapabilities.js', WINDOW_CAPABILITIES_STUB],

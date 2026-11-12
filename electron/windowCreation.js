@@ -13,7 +13,7 @@ import {
 } from './windowAssets.js'
 import { getSavedBounds, trackWindow } from './services/windowBoundsStore.js'
 import {
-  externalWindowOpenNeedsConfirmation,
+  createExternalWindowOpenHandler,
   isAllowedRendererNavigation,
   normalizeExternalWindowOpenUrl,
   summarizeWindowNavigationErrorForLog,
@@ -164,33 +164,30 @@ async function confirmExternalWindowOpen(parent, url) {
   }
 }
 
-async function openExternalUrlFromWindow(url, label, parent) {
-  let safeUrl
-  try {
-    safeUrl = normalizeExternalWindowOpenUrl(url)
-  } catch (err) {
-    console.warn(
-      `[security] blocked ${label} external URL:`,
-      summarizeWindowNavigationUrlForLog(url),
-      summarizeWindowNavigationErrorForLog(err),
-    )
-    return
-  }
-
-  const requiresConfirmation = getExternalOpenConfirmation().requiresConfirmation
-  if (externalWindowOpenNeedsConfirmation(safeUrl, requiresConfirmation)) {
-    const accepted = await confirmExternalWindowOpen(parent, safeUrl)
-    if (!accepted) return
-  }
-
-  shell.openExternal(safeUrl).catch((err) => {
-    console.warn(
-      `[security] failed to open ${label} external URL:`,
-      summarizeWindowNavigationUrlForLog(safeUrl),
-      summarizeWindowNavigationErrorForLog(err),
-    )
-  })
+function reportBlockedExternalOpen(label, url, err) {
+  console.warn(
+    `[security] blocked ${label} external URL:`,
+    summarizeWindowNavigationUrlForLog(url),
+    summarizeWindowNavigationErrorForLog(err),
+  )
 }
+
+function reportExternalOpenFailure(label, safeUrl, err) {
+  console.warn(
+    `[security] failed to open ${label} external URL:`,
+    summarizeWindowNavigationUrlForLog(safeUrl),
+    summarizeWindowNavigationErrorForLog(err),
+  )
+}
+
+const openExternalUrlFromWindow = createExternalWindowOpenHandler({
+  normalizeUrl: normalizeExternalWindowOpenUrl,
+  getRequiresConfirmation: () => getExternalOpenConfirmation().requiresConfirmation,
+  confirmOpen: (parent, url) => confirmExternalWindowOpen(parent, url),
+  openExternal: (url) => shell.openExternal(url),
+  reportBlocked: reportBlockedExternalOpen,
+  reportOpenFailed: reportExternalOpenFailure,
+})
 
 function attachNavigationGuards(win, label, view) {
   const viewKind = view === 'panel' ? 'panel' : 'pet'
