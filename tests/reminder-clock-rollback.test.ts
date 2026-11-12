@@ -82,11 +82,10 @@ function createScheduler(initialTasks: Task[], onTrigger: (task: Task) => void) 
   return { renderer, getTasks: () => tasks }
 }
 
-test('an ahead-of-time trigger stamp does not suppress the current due instant', () => {
+test('an ahead-of-time trigger stamp does not suppress the current recurring due instant', () => {
   const dueAt = new Date(NOW + MINUTE).toISOString()
   const now = new Date(NOW + 2 * MINUTE)
   const schedules: ReminderTaskSchedule[] = [
-    { kind: 'at', at: dueAt },
     { kind: 'every', everyMinutes: 15, anchorAt: new Date(NOW - 14 * MINUTE).toISOString() },
     { kind: 'cron', expression: '* * * * *' },
   ]
@@ -111,6 +110,18 @@ test('an ahead-of-time trigger stamp does not suppress the current due instant',
   }
 })
 
+test('a one-shot trigger stamp at or after its due instant is final even when the clock rolled back', () => {
+  const dueAt = new Date(NOW + MINUTE).toISOString()
+  const now = new Date(NOW + 2 * MINUTE)
+  const task = makeTask('once-final', { kind: 'at', at: dueAt }, { nextRunAt: dueAt })
+
+  assert.equal(
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: AHEAD_STAMP }, now),
+    true,
+    'a one-shot reminder that fired under a fast clock never fires again',
+  )
+})
+
 test('a handoff keeps a due occurrence whose trigger stamp is ahead of the corrected clock', () => {
   const dueAt = new Date(NOW + MINUTE).toISOString()
   const task = makeTask('handoff', {
@@ -129,36 +140,76 @@ test('a handoff keeps a due occurrence whose trigger stamp is ahead of the corre
   assert.equal(handedOff.nextRunAt, dueAt, 'the due occurrence survives the handoff')
 })
 
-test('a one-shot reminder still fires once after the clock rolls back behind its trigger stamp', (t) => {
+test('a one-shot reminder fired under a fast clock is not replayed after a restart', (t) => {
   const { readTasks, writeTasks } = installEnvironment(t)
   const dueAt = new Date(NOW + MINUTE).toISOString()
-  const task = makeTask('once', { kind: 'at', at: dueAt }, {
-    nextRunAt: dueAt,
+  // Persisted after the fast-clock fire: the trigger stamp is ahead of the
+  // corrected clock and nextRunAt was already cleared.
+  const fired = makeTask('once-restart', { kind: 'at', at: dueAt }, {
     lastTriggeredAt: AHEAD_STAMP,
   })
-  writeTasks([task])
+  writeTasks([fired])
 
   const triggered: string[] = []
-  const { renderer } = createScheduler([task], (triggeredTask) => { triggered.push(triggeredTask.id) })
+  const { renderer, getTasks } = createScheduler([fired], (triggeredTask) => { triggered.push(triggeredTask.id) })
   try {
+    // Mounting recomputes a run time from the one-shot schedule; the second
+    // render arms the timer for the real due instant.
+    renderer.render(undefined)
     renderer.render(undefined)
     t.mock.timers.tick(MINUTE)
     renderer.render(undefined)
 
-    assert.deepEqual(triggered, ['once'], 'the corrected due instant is delivered')
-    assert.equal(
-      readTasks()[0]?.lastTriggeredAt,
-      new Date(NOW + MINUTE).toISOString(),
-      'the ahead-of-time stamp is replaced by the real delivery time',
-    )
-
-    t.mock.timers.tick(MINUTE)
-    renderer.render(undefined)
-    assert.deepEqual(triggered, ['once'], 'the same occurrence is not replayed')
+    assert.deepEqual(triggered, [], 'the already delivered one-shot reminder is not replayed')
+    assert.equal(getTasks()[0]?.nextRunAt, undefined, 'the stale due row is drained')
+    assert.equal(readTasks()[0]?.lastTriggeredAt, AHEAD_STAMP, 'the original trigger record is kept')
   } finally {
     renderer.unmount()
   }
 })
+
+const ONE_SHOT_RESTORE_COPIES: Array<{
+  label: string
+  makeStale: (dueAt: string) => Task
+}> = [
+  {
+    label: 'a pre-correction copy',
+    makeStale: (dueAt) => makeTask('once-restore', { kind: 'at', at: dueAt }, { nextRunAt: dueAt }),
+  },
+  {
+    label: 'an already triggered copy',
+    makeStale: (dueAt) => makeTask('once-restore', { kind: 'at', at: dueAt }, {
+      nextRunAt: dueAt,
+      lastTriggeredAt: AHEAD_STAMP,
+    }),
+  },
+]
+
+for (const { label, makeStale } of ONE_SHOT_RESTORE_COPIES) {
+  test(`an old window restoring ${label} does not replay a fast-clock one-shot delivery`, (t) => {
+    const { writeTasks } = installEnvironment(t)
+    const dueAt = new Date(NOW + MINUTE).toISOString()
+    // The window that fired under the fast clock already saved this row.
+    writeTasks([makeTask('once-restore', { kind: 'at', at: dueAt }, {
+      lastTriggeredAt: AHEAD_STAMP,
+    })])
+
+    const triggered: string[] = []
+    const { renderer, getTasks } = createScheduler([makeStale(dueAt)], (triggeredTask) => {
+      triggered.push(triggeredTask.id)
+    })
+    try {
+      renderer.render(undefined)
+      t.mock.timers.tick(MINUTE)
+      renderer.render(undefined)
+
+      assert.deepEqual(triggered, [], `${label}: the restored one-shot reminder is not replayed`)
+      assert.equal(getTasks()[0]?.nextRunAt, undefined, `${label}: the stale due row is drained`)
+    } finally {
+      renderer.unmount()
+    }
+  })
+}
 
 test('a recurring reminder fires every later occurrence once after the clock rolls back and never replays', (t) => {
   const { writeTasks } = installEnvironment(t)
@@ -205,6 +256,90 @@ test('a recurring reminder fires every later occurrence once after the clock rol
       renderer.unmount()
     }
   }
+})
+
+const RECURRING_ROLLBACK_SCHEDULES: ReminderTaskSchedule[] = [
+  { kind: 'every', everyMinutes: 15, anchorAt: new Date(NOW - 14 * MINUTE).toISOString() },
+  { kind: 'cron', expression: '* * * * *' },
+]
+
+for (const schedule of RECURRING_ROLLBACK_SCHEDULES) {
+  for (const mode of ['restart', 'restore'] as const) {
+    test(`a ${schedule.kind} reminder fired under a fast clock catches up after a ${mode}`, (t) => {
+      const { writeTasks } = installEnvironment(t)
+      const dueAt = computeNextReminderRun(schedule, new Date(NOW))
+      assert.equal(dueAt, new Date(NOW + MINUTE).toISOString(), `${schedule.kind}: first occurrence is one minute away`)
+
+      // Persisted by the window that fired while the clock was ahead: its
+      // next run is also ahead of the corrected clock.
+      const fired = makeTask(schedule.kind, schedule, {
+        nextRunAt: computeNextReminderRun(schedule, new Date(Date.parse(AHEAD_STAMP))),
+        lastTriggeredAt: AHEAD_STAMP,
+      })
+      writeTasks([fired])
+
+      // A restart loads that row; a restore keeps an older in-memory copy.
+      const initial = mode === 'restart'
+        ? [fired]
+        : [makeTask(schedule.kind, schedule, { nextRunAt: dueAt })]
+
+      const triggered: string[] = []
+      const { renderer } = createScheduler(initial, (triggeredTask) => { triggered.push(triggeredTask.id) })
+      try {
+        renderer.render(undefined)
+        renderer.render(undefined)
+        t.mock.timers.tick(MINUTE)
+        renderer.render(undefined)
+        assert.deepEqual(
+          triggered,
+          [schedule.kind],
+          `${mode}/${schedule.kind}: the missed occurrence is caught up instead of staying suppressed`,
+        )
+
+        const interval = schedule.kind === 'every' ? schedule.everyMinutes * MINUTE : MINUTE
+        t.mock.timers.tick(interval)
+        renderer.render(undefined)
+        assert.deepEqual(
+          triggered,
+          [schedule.kind, schedule.kind],
+          `${mode}/${schedule.kind}: later occurrences still fire`,
+        )
+      } finally {
+        renderer.unmount()
+      }
+    })
+  }
+}
+
+test('a recurring trigger stamp a fraction of a second ahead of now is still a future stamp', () => {
+  const dueAt = new Date(NOW - MINUTE).toISOString()
+  const task = makeTask('boundary', {
+    kind: 'every',
+    everyMinutes: 1,
+    anchorAt: new Date(NOW - 2 * MINUTE).toISOString(),
+  }, { nextRunAt: dueAt })
+  const now = new Date(NOW)
+
+  assert.equal(
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: now.toISOString() }, now),
+    true,
+    'a stamp at the current instant is a delivery of the due occurrence',
+  )
+  assert.equal(
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: new Date(NOW + 1).toISOString() }, now),
+    false,
+    'a stamp one millisecond ahead is future and is ignored',
+  )
+  assert.equal(
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: new Date(NOW + 500).toISOString() }, now),
+    false,
+    'a sub-second future stamp is not within any tolerance',
+  )
+  assert.equal(
+    reminderAlreadyTriggered(task, { ...task, lastTriggeredAt: new Date(NOW - 1).toISOString() }, now),
+    true,
+    'a stamp just behind now is a delivery',
+  )
 })
 
 test('a same-instant delivery from another window is still not replayed after a clock change', (t) => {

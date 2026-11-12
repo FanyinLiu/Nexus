@@ -257,11 +257,16 @@ export function refreshReminderTask(task: ReminderTask, from = new Date()) {
 /**
  * Whether `stored` already fired at or after the due instant held by `task`.
  *
- * A trigger stamp later than `now` cannot describe a real delivery of this
- * occurrence: it was written while the system clock was ahead and then
- * corrected backwards. Ignoring it lets the corrected schedule deliver the
- * occurrences between the rolled-back time and the old ahead-of-time stamp
- * instead of skipping them until wall time catches up.
+ * For recurring schedules, a trigger stamp later than `now` cannot describe a
+ * real delivery of this occurrence: it was written while the system clock was
+ * ahead and then corrected backwards. Ignoring it lets the corrected schedule
+ * deliver the occurrences between the rolled-back time and the old
+ * ahead-of-time stamp instead of skipping them until wall time catches up.
+ *
+ * A one-shot reminder is different: once a trigger record covers its only due
+ * instant it is done, however wrong the clock was when it fired. Replaying it
+ * after a rollback would repeat a delivery the user already saw, and there is
+ * no later occurrence to catch up.
  */
 export function reminderAlreadyTriggered(
   task: ReminderTask,
@@ -270,10 +275,10 @@ export function reminderAlreadyTriggered(
 ): boolean {
   const dueAt = Date.parse(task.nextRunAt ?? '')
   const triggeredAt = Date.parse(stored?.lastTriggeredAt ?? '')
-  return Number.isFinite(dueAt)
-    && Number.isFinite(triggeredAt)
-    && triggeredAt <= now.getTime()
-    && triggeredAt >= dueAt
+  if (!Number.isFinite(dueAt) || !Number.isFinite(triggeredAt) || triggeredAt < dueAt) {
+    return false
+  }
+  return task.schedule.kind === 'at' || triggeredAt <= now.getTime()
 }
 
 /**
