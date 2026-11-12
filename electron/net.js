@@ -2,6 +2,7 @@
 import { net } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { NET_IPC_ERROR_CODES } from '../shared/netErrorCodes.js'
+import { mainT } from './mainMessages.js'
 import {
   canonicalizeLoopbackUrl,
   buildSafeRedirectRequestOptions,
@@ -169,14 +170,14 @@ export async function readResponseBufferWithLimit(response, options = {}) {
   const contentLength = Number.parseInt(response.headers.get('content-length') ?? '0', 10)
 
   if (Number.isFinite(contentLength) && contentLength > maxBytes) {
-    throw new Error(`${label} 太大：${contentLength} bytes。`)
+    throw new Error(mainT('net.responseTooLarge', { label }))
   }
 
   const reader = response.body?.getReader?.()
   if (!reader) {
     const buffer = Buffer.from(await response.arrayBuffer())
     if (buffer.length > maxBytes) {
-      throw new Error(`${label} 太大：${buffer.length} bytes。`)
+      throw new Error(mainT('net.responseTooLarge', { label }))
     }
     return buffer
   }
@@ -194,7 +195,7 @@ export async function readResponseBufferWithLimit(response, options = {}) {
     totalBytes += chunk.length
     if (totalBytes > maxBytes) {
       await reader.cancel?.().catch(() => undefined)
-      throw new Error(`${label} 太大：超过 ${maxBytes} bytes。`)
+      throw new Error(mainT('net.responseTooLarge', { label }))
     }
     chunks.push(chunk)
   }
