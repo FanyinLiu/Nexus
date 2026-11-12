@@ -28,7 +28,7 @@ test('IPC contract audit inventories the current preload and main handler surfac
 
   assert.equal(report.schemaVersion, 1)
   assert.equal(summary.errors, 0)
-  assert.equal(report.counts.preloadInvokeChannels, 215)
+  assert.equal(report.counts.preloadInvokeChannels, 168)
   assert.equal(report.counts.mainHandlerChannels, 215)
   assert.equal(report.counts.preloadSubscriptionChannels, 28)
   assert.equal(report.errors.missingHandlers.length, 0)
@@ -79,7 +79,7 @@ test('IPC contract audit inventories the current preload and main handler surfac
   const localDataChatComparison = findChannel(report, 'local-data:chat-comparison-preview')
   assert.equal(localDataChatComparison?.riskLevel, 'high')
   assert.equal(localDataChatComparison?.riskDomain, 'local-user-data')
-  assert.equal(localDataChatComparison?.rendererPayload, true)
+  assert.equal(localDataChatComparison?.rendererPayload, false)
   assert.equal(localDataChatComparison?.payloadValidation, 'schema')
   assert.equal(localDataChatComparison?.trustedSender, true)
   assert.equal(localDataChatComparison?.auditLogged, true)
@@ -88,7 +88,7 @@ test('IPC contract audit inventories the current preload and main handler surfac
   const localDataChatMigrationApply = findChannel(report, 'local-data:chat-migration-apply')
   assert.equal(localDataChatMigrationApply?.riskLevel, 'high')
   assert.equal(localDataChatMigrationApply?.riskDomain, 'local-user-data')
-  assert.equal(localDataChatMigrationApply?.rendererPayload, true)
+  assert.equal(localDataChatMigrationApply?.rendererPayload, false)
   assert.equal(localDataChatMigrationApply?.payloadValidation, 'schema')
   assert.equal(localDataChatMigrationApply?.trustedSender, true)
   assert.equal(localDataChatMigrationApply?.auditLogged, true)
@@ -97,7 +97,7 @@ test('IPC contract audit inventories the current preload and main handler surfac
   const localDataChatMigrationRollback = findChannel(report, 'local-data:chat-migration-rollback')
   assert.equal(localDataChatMigrationRollback?.riskLevel, 'high')
   assert.equal(localDataChatMigrationRollback?.riskDomain, 'local-user-data')
-  assert.equal(localDataChatMigrationRollback?.rendererPayload, true)
+  assert.equal(localDataChatMigrationRollback?.rendererPayload, false)
   assert.equal(localDataChatMigrationRollback?.payloadValidation, 'schema')
   assert.equal(localDataChatMigrationRollback?.trustedSender, true)
   assert.equal(localDataChatMigrationRollback?.auditLogged, true)
@@ -149,6 +149,22 @@ test('IPC contract audit inventories the current preload and main handler surfac
     assert.equal(item?.auditLogged, true)
     assert.equal(item?.permissionHint, true)
   }
+})
+
+test('IPC contract audit treats the narrowed bridge handlers as intentionally main-only', () => {
+  const report = buildIpcContractReport()
+  const intentional = report.intentionallyMainOnlyHandlers.map((item) => item.channel).sort()
+
+  assert.deepEqual(report.warnings.mainOnlyHandlers, [])
+  assert.equal(intentional.length, 47)
+  assert.ok(intentional.includes('vault:retrieve'))
+  assert.ok(intentional.includes('vault:delete'))
+  assert.ok(intentional.includes('memory:keyword-search'))
+  assert.ok(intentional.includes('plugin:approve'))
+  assert.ok(intentional.includes('local-data:chat-migration-apply'))
+  // The clear-all channel is still exposed through the retained
+  // memoryVectorClear bridge method, so it must not be listed as main-only.
+  assert.ok(!intentional.includes('memory:clear-user-data'))
 })
 
 test('IPC contract audit classifies high-risk channels without reading secret values', () => {
@@ -583,11 +599,67 @@ test('IPC contract audit pins payload validation and renderer payload for every 
     .map(({ channel, payloadValidation, rendererPayload }) => ({ channel, payloadValidation, rendererPayload }))
     .sort((a, b) => a.channel.localeCompare(b.channel))
 
+  // These handlers stay registered but intentionally lost their preload
+  // exposure in the D2 bridge narrowing, so they carry no renderer payload.
+  const expectedMainOnlyChannels = [
+    'chat:list-models',
+    'doctor:probe-local-services',
+    'external-action-policy:get',
+    'factorio:execute',
+    'factorio:status',
+    'local-data:chat-comparison-preview',
+    'local-data:chat-migration-apply',
+    'local-data:chat-migration-rollback',
+    'local-data:chat-migration-status',
+    'local-data:status',
+    'mcp:status',
+    'memory:keyword-search',
+    'memory:vector-index',
+    'memory:vector-stats',
+    'minecraft:send-command',
+    'minecraft:status',
+    'persona:init',
+    'persona:open-dir',
+    'persona:paths',
+    'persona:profile-dir',
+    'plugin-bus:publish',
+    'plugin-bus:recent',
+    'plugin-bus:stats',
+    'plugin-bus:subscribe',
+    'plugin-bus:subscriptions',
+    'plugin-bus:unsubscribe',
+    'plugin:approve',
+    'plugin:dir',
+    'plugin:disable',
+    'plugin:enable',
+    'plugin:restart',
+    'plugin:revoke',
+    'plugin:scan',
+    'plugin:start',
+    'plugin:status',
+    'plugin:stop',
+    'skill:get',
+    'skill:list',
+    'skill:remove',
+    'skill:stats',
+    'tencent-asr:disconnect',
+    'tencent-asr:status',
+    'vad:status',
+    'vault:delete',
+    'vault:is-available',
+    'vault:list-slots',
+    'vault:retrieve',
+  ]
+
   const expectedInventory = [
     ...expectedNoneChannels.map((channel) => ({ channel, payloadValidation: 'none', rendererPayload: false })),
     ...expectedManualChannels.map((channel) => ({ channel, payloadValidation: 'manual', rendererPayload: true })),
     ...expectedSchemaChannels.map((channel) => ({ channel, payloadValidation: 'schema', rendererPayload: true })),
-  ].sort((a, b) => a.channel.localeCompare(b.channel))
+  ]
+    .map((item) => (expectedMainOnlyChannels.includes(item.channel)
+      ? { ...item, rendererPayload: false }
+      : item))
+    .sort((a, b) => a.channel.localeCompare(b.channel))
 
   assert.deepEqual(actualInventory, expectedInventory)
   assert.equal(

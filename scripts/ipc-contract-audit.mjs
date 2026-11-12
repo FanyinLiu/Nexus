@@ -12,6 +12,61 @@ const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ELECTRON_DIR = 'electron'
 const PRELOAD_PATH = join(ELECTRON_DIR, 'preload.js')
 
+// Handlers deliberately kept in the main process while their renderer bridge
+// methods are removed. With contextIsolation the renderer can only reach main
+// through preload, so these channels stay unreachable until a renderer surface
+// exists. Listing them explicitly keeps the main-only warning meaningful for
+// accidental omissions instead of swallowing the whole narrowed bridge.
+export const INTENTIONALLY_MAIN_ONLY_CHANNELS = Object.freeze(new Set([
+  'chat:list-models',
+  'doctor:probe-local-services',
+  'external-action-policy:get',
+  'factorio:execute',
+  'factorio:status',
+  'local-data:chat-comparison-preview',
+  'local-data:chat-migration-apply',
+  'local-data:chat-migration-rollback',
+  'local-data:chat-migration-status',
+  'local-data:status',
+  'mcp:status',
+  'memory:keyword-search',
+  'memory:vector-index',
+  'memory:vector-stats',
+  'minecraft:send-command',
+  'minecraft:status',
+  'persona:init',
+  'persona:open-dir',
+  'persona:paths',
+  'persona:profile-dir',
+  'plugin-bus:publish',
+  'plugin-bus:recent',
+  'plugin-bus:stats',
+  'plugin-bus:subscribe',
+  'plugin-bus:subscriptions',
+  'plugin-bus:unsubscribe',
+  'plugin:approve',
+  'plugin:dir',
+  'plugin:disable',
+  'plugin:enable',
+  'plugin:restart',
+  'plugin:revoke',
+  'plugin:scan',
+  'plugin:start',
+  'plugin:status',
+  'plugin:stop',
+  'skill:get',
+  'skill:list',
+  'skill:remove',
+  'skill:stats',
+  'tencent-asr:disconnect',
+  'tencent-asr:status',
+  'vad:status',
+  'vault:delete',
+  'vault:is-available',
+  'vault:list-slots',
+  'vault:retrieve',
+]))
+
 function readText(root, path) {
   return readFileSync(join(root, path), 'utf8')
 }
@@ -288,7 +343,11 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     .map(([channel, list]) => ({ channel, locations: list.map((item) => item.location) }))
 
   const mainOnlyHandlers = handlerChannels
-    .filter((channel) => !invokeIndex.has(channel))
+    .filter((channel) => !invokeIndex.has(channel) && !INTENTIONALLY_MAIN_ONLY_CHANNELS.has(channel))
+    .map((channel) => ({ channel, location: handlerIndex.get(channel)?.[0]?.location ?? null }))
+
+  const intentionallyMainOnlyHandlers = handlerChannels
+    .filter((channel) => !invokeIndex.has(channel) && INTENTIONALLY_MAIN_ONLY_CHANNELS.has(channel))
     .map((channel) => ({ channel, location: handlerIndex.get(channel)?.[0]?.location ?? null }))
 
   const missingTrustedSender = handlers
@@ -366,6 +425,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
       rendererPayload: payloadChannelSet.has(handler.channel),
     })),
     subscriptions,
+    intentionallyMainOnlyHandlers,
     errors,
     warnings,
     summary: {
