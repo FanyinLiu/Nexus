@@ -8,8 +8,11 @@
  * preferences instead of reusing a stale snapshot.
  *
  * Fullscreen is read only when desktop awareness is allowed: otherwise the
- * active-window snapshot must not be consulted at all. DND stays null until
- * M1.1 adds platform detection, which the router treats as "not muted".
+ * active-window snapshot must not be consulted at all. The renderer
+ * preference alone is not enough — the main process also owns the saved
+ * desktop-context switch, so a stale or forged preference cannot reopen the
+ * capture path. DND stays null until M1.1 adds platform detection, which the
+ * router treats as "not muted".
  */
 
 /** @typedef {import('../../shared/proactiveDelivery.js').DeliveryContext} DeliveryContext */
@@ -23,6 +26,7 @@ import { isLikelyFullscreenSurface, isQuietHour } from '../../shared/proactiveSi
  * @property {() => boolean} isPanelFocused
  * @property {() => FocusState} getFocusState
  * @property {() => Promise<{ title?: string | null, appName?: string | null } | null>} getActiveWindow
+ * @property {() => boolean} isActiveWindowAllowed Saved main-process switch.
  * @property {() => ProactiveDeliveryPreferences | null} getPreferences
  * @property {() => number} now
  */
@@ -37,17 +41,19 @@ export function createProactiveDeliveryContextProvider({
   isPanelFocused,
   getFocusState,
   getActiveWindow,
+  isActiveWindowAllowed,
   getPreferences,
   now,
 }) {
   /**
-   * Current delivery context. `getActiveWindow` is awaited only when the
-   * preferences allow desktop awareness.
+   * Current delivery context. `getActiveWindow` is awaited only when both the
+   * renderer preference and the saved main-process switch allow it.
    * @returns {Promise<DeliveryContext>}
    */
   async function getDeliveryContext() {
     const preferences = getPreferences()
     const desktopAwarenessAllowed = preferences?.desktopAwarenessAllowed === true
+      && isActiveWindowAllowed() === true
     let fullscreen = false
     if (desktopAwarenessAllowed) {
       const snapshot = await getActiveWindow()

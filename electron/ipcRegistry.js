@@ -26,7 +26,8 @@ import * as proactiveIpc from './ipc/proactiveIpc.js'
 import { getBoundWindowCapability } from './ipc/windowCapabilities.js'
 import * as reminderStrip from './services/reminderStrip.js'
 import { showProactiveNotification } from './services/proactiveNotification.js'
-import { createProactiveDeliveryContextProvider } from './services/proactiveDeliveryContext.js'
+import { createProactiveDeliveryContextWiring } from './services/proactiveDeliveryContextWiring.js'
+import { getSavedDesktopContextFlags } from './services/desktopContextPolicy.js'
 import * as mcpIpc from './ipc/mcpIpc.js'
 import * as externalActionPolicyIpc from './ipc/externalActionPolicyIpc.js'
 import * as voiceRuntimeIpc from './ipc/voiceRuntimeIpc.js'
@@ -129,7 +130,7 @@ export function registerIpc(options = {}) {
   // Renderer-supplied preferences are kept in memory only: a snoozed strip
   // item needs the latest quiet window, not a persisted copy of app settings.
   const deliveryPreferences = { current: null }
-  const deliveryContext = createProactiveDeliveryContextProvider({
+  const deliveryContext = createProactiveDeliveryContextWiring({
     isPanelFocused,
     getFocusState: () => {
       const state = powerMonitor.getSystemIdleState(FOCUS_IDLE_THRESHOLD_SECONDS)
@@ -137,16 +138,12 @@ export function registerIpc(options = {}) {
       if (state === 'idle') return 'idle'
       return 'active'
     },
-    getActiveWindow: async () => {
-      // Kept dynamic: the desktop-context service pulls native Electron
-      // modules, and the re-route path only reads it when awareness is on.
+    getSavedDesktopContextFlags,
+    // Kept dynamic: the desktop-context service pulls native Electron
+    // modules, and the re-route path only loads it when awareness is on.
+    loadCaptureActiveWindowContext: async () => {
       const { captureActiveWindowContext } = await import('./services/desktopContextService.js')
-      const snapshot = await captureActiveWindowContext()
-      if (!snapshot) return null
-      return {
-        title: typeof snapshot.activeWindowTitle === 'string' ? snapshot.activeWindowTitle : '',
-        appName: typeof snapshot.activeWindowAppName === 'string' ? snapshot.activeWindowAppName : '',
-      }
+      return captureActiveWindowContext
     },
     getPreferences: () => deliveryPreferences.current,
     now: () => Date.now(),
