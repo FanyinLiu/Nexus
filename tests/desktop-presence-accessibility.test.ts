@@ -18,7 +18,7 @@ type HookCounts = { starts: number; stops: number; keydown: number; keyup: numbe
 
 const stubGlobal = globalThis as unknown as {
   __nexusDesktopPresenceStub?: StubState
-  __nexusDesktopPresenceHookCounts?: HookCounts
+  __nexusDesktopPresenceHook?: HookCounts
 }
 
 function stubState(): StubState {
@@ -26,7 +26,7 @@ function stubState(): StubState {
 }
 
 function hookCounts(): HookCounts {
-  return (stubGlobal.__nexusDesktopPresenceHookCounts ??= {
+  return (stubGlobal.__nexusDesktopPresenceHook ??= {
     starts: 0,
     stops: 0,
     keydown: 0,
