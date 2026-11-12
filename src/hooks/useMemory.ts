@@ -34,6 +34,7 @@ import {
   MEMORY_LOCAL_DATA_AUTHORITY_CHANGED_EVENT,
   readMemoryFromLocalData,
   syncMemoryToLocalData,
+  forgetMemorySuppression,
 } from '../lib/index.ts'
 import { purgeClearedMemories, purgeDeletedMemory } from '../lib/storage/purgeMemoryStores.ts'
 import { useTranslation } from '../i18n/useTranslation.ts'
@@ -269,6 +270,8 @@ export function useMemory({ settings }: UseMemoryParams) {
   }, [])
 
   const addManualMemory = useCallback((content: string) => {
+    // An explicit add overrides an earlier delete tombstone.
+    forgetMemorySuppression(content)
     const nextMemories = mergeMemories(memoriesRef.current, [createManualMemory(content)])
     memoriesRef.current = nextMemories
     setMemories(nextMemories)

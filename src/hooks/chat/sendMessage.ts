@@ -9,6 +9,7 @@ import { noteUserMessageAndCheckReminder } from '../../features/safety/disclosur
 import {
   createDailyMemoryEntry,
   extractMemoriesFromMessage,
+  isForgottenMemoryText,
 } from '../../features/memory/index.ts'
 import { archiveEvictedMemories } from '../../features/memory/memoryCapCommit.ts'
 import { bookClearPlanReminders } from '../../features/memory/loopOutreach.ts'
@@ -16,7 +17,7 @@ import { planTurnMemoryWrite } from '../../features/memory/reconcile.ts'
 import { appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import { formatTraceLabel, logVoiceEvent } from '../../features/voice/index.ts'
-import { createId, shorten } from '../../lib/index.ts'
+import { createId, loadForgottenMemoryFingerprints, shorten } from '../../lib/index.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type {
   ChatMessage,
@@ -243,16 +244,21 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
       const nextMessages = [...messagesRef.current, userMessage]
       const memoryRevision = bumpMemoryReconcileRevision()
       const memoryPaused = currentSettings.memoryPaused === true
+      const forgottenFingerprints = loadForgottenMemoryFingerprints()
       const candidates = memoryPaused || leaveAlone
         ? []
         : extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.())
+      const activeCandidates = candidates.filter((candidate) => (
+        !isForgottenMemoryText(candidate.content, forgottenFingerprints)
+      ))
       const plan = planTurnMemoryWrite({
         memoryPaused,
         existing: ctx.memoriesRef.current,
-        candidates,
+        candidates: activeCandidates,
         now: userMessage.createdAt,
         utterance: content,
         messageId: userMessage.id,
+        forgottenFingerprints,
       })
       let nextMemories = plan.memories
       let nextDailyMemories = ctx.dailyMemoriesRef.current
@@ -291,8 +297,9 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
               model: currentSettings.model,
             },
             existing: plan.memories,
-            candidates,
+            candidates: activeCandidates,
             now: userMessage.createdAt,
+            forgottenFingerprints,
             completeChat,
             applyMemories: (memories) => {
               ctx.memoriesRef.current = memories

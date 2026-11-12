@@ -103,6 +103,8 @@ export async function consolidateDailyMemory(input: {
   embed?: MemoryTextEmbedder
   runId?: string
   memoryPaused?: boolean
+  /** Fingerprints of memories the user deleted; they are never re-extracted. */
+  forgottenFingerprints?: readonly string[]
 }): Promise<MemoryReconcileResult> {
   if (input.memoryPaused) {
     return { memories: [...input.memories], ops: [], decisionSource: 'fallback' }
@@ -127,6 +129,7 @@ export async function consolidateDailyMemory(input: {
       utterance,
       complete: input.complete,
       embed: input.embed,
+      forgottenFingerprints: input.forgottenFingerprints,
     })
     const absorbed = isSensitiveMemoryText(utterance)
       ? { memories: reconciled.memories, ops: [] }
