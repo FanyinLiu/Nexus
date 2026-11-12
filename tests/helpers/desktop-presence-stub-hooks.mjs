@@ -56,6 +56,9 @@ export const systemPreferences = {
     return state.trustAccessibility === true
   },
 }
+export const ipcMain = {
+  handle() {},
+}
 export const app = {
   on() {},
   once() {},
