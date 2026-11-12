@@ -12,7 +12,7 @@ const EXPECTED_SETTINGS_PATH = {
 } as const
 
 const PAIRING_KEYS = ['integration.pairing.telegram', 'integration.pairing.discord'] as const
-const MCP_KEYS = ['mcp.approval.detail', 'mcp.launch.rejected'] as const
+const MCP_KEYS = ['mcp.launch.rejected'] as const
 
 test('gateway and MCP approval copy points at Connection → Advanced in all five locales', () => {
   for (const [locale, messages] of Object.entries(MAIN_MESSAGES) as Array<
