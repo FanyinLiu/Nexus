@@ -45,6 +45,7 @@ import {
   clearPanelNavigationFailure,
   markPanelNavigationFailed,
 } from './panelContentReady.js'
+import { trustedRendererWebPreferences } from './webPreferences.js'
 import { createWindowLoadRetry } from './windowLoadRetry.js'
 import {
   PET_LOAD_FALLBACK_RETRY_URL,
@@ -255,17 +256,6 @@ function attachDevToolsShortcut(win) {
   })
 }
 
-function trustedRendererWebPreferences() {
-  return {
-    preload: getPreloadPath(),
-    contextIsolation: true,
-    nodeIntegration: false,
-    sandbox: true,
-    webSecurity: true,
-  }
-}
-
-
 // Shared BrowserWindow options for every pet window (primary + clones):
 // frameless, transparent, click-through-capable, always-on-top floating.
 function petWindowConstructorOptions({ x, y, width, height }) {
@@ -291,7 +281,7 @@ function petWindowConstructorOptions({ x, y, width, height }) {
     fullscreenable: false,
     backgroundColor: '#00000000',
     icon: getPetIconPath(),
-    webPreferences: trustedRendererWebPreferences(),
+    webPreferences: trustedRendererWebPreferences(getPreloadPath()),
   }
 }
 
@@ -545,7 +535,7 @@ export function createPanelWindowWithOptions(options = {}) {
     fullscreenable: false,
     backgroundColor: '#00000000',
     icon: getPetIconPath(),
-    webPreferences: trustedRendererWebPreferences(),
+    webPreferences: trustedRendererWebPreferences(getPreloadPath()),
   })
 
   applyWindowsAppDetails(win)

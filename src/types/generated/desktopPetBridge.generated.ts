@@ -596,7 +596,7 @@ export interface DesktopPetBridgeMethodArguments {
   modelsDownloadMissing: readonly [payload?: { speechInputProviderId?: string }]
   modelsGetInventory: readonly []
   modelsNetworkProbe: readonly []
-  notificationWatcherSet: unknown
+  notificationWatcherSet: readonly [payload?: { enabled?: boolean; appsPattern?: string }]
   notificationWatcherStatus: readonly []
   onMemoryFlushRequest: unknown
   openDesktopTypingPermission: readonly []
@@ -610,14 +610,14 @@ export interface DesktopPetBridgeMethodArguments {
   paraformerStart: readonly []
   paraformerStatus: readonly []
   personaImportCard: readonly []
-  personaInit: unknown
+  personaInit: readonly [payload?: { defaultSoul?: string }]
   personaLoadMemory: readonly []
   personaLoadProfile: unknown
   personaLoadSoul: readonly []
   personaOpenDir: readonly []
   personaPaths: readonly []
   personaProfileDir: unknown
-  personaSaveMemory: unknown
+  personaSaveMemory: readonly [payload?: { content?: string }]
   personaSaveSoul: unknown
   personaSaveStyle: unknown
   pluginApprove: readonly [payload: { id: string }]
@@ -649,13 +649,13 @@ export interface DesktopPetBridgeMethodArguments {
   sensevoiceStatus: readonly []
   sensevoiceTranscribe: unknown
   setDesktopPresencePreferences: readonly [preferences: { gazeFollowEnabled: boolean; typingAwarenessEnabled: boolean }]
-  setLaunchOnStartup: unknown
+  setLaunchOnStartup: readonly [value?: boolean]
   setNotificationChannels: unknown
   setPanelWindowState: readonly [state?: { collapsed?: boolean }]
   setPetFreeMode: unknown
   setSystemVibrancy: unknown
-  showConfirmDialog: unknown
-  showProactiveNotification: unknown
+  showConfirmDialog: readonly [message?: string]
+  showProactiveNotification: readonly [payload?: { title?: string; body?: string }]
   skillGet: readonly [payload: { id: string }]
   skillList: readonly []
   skillMarkUsed: readonly [payload: { id: string }]
@@ -1031,6 +1031,7 @@ export interface DesktopPetGeneratedBridge {
   minecraftGameContext: (...args: DesktopPetBridgeMethodArguments['minecraftGameContext']) => Promise<DesktopPetBridgeMethodResults['minecraftGameContext']>
   minecraftStatus: (...args: DesktopPetBridgeMethodArguments['minecraftStatus']) => Promise<DesktopPetBridgeMethodResults['minecraftStatus']>
   modelsGetInventory: (...args: DesktopPetBridgeMethodArguments['modelsGetInventory']) => Promise<DesktopPetBridgeMethodResults['modelsGetInventory']>
+  notificationWatcherSet: (...args: DesktopPetBridgeMethodArguments['notificationWatcherSet']) => Promise<DesktopPetBridgeMethodResults['notificationWatcherSet']>
   notificationWatcherStatus: (...args: DesktopPetBridgeMethodArguments['notificationWatcherStatus']) => Promise<DesktopPetBridgeMethodResults['notificationWatcherStatus']>
   openDesktopTypingPermission: (...args: DesktopPetBridgeMethodArguments['openDesktopTypingPermission']) => Promise<DesktopPetBridgeMethodResults['openDesktopTypingPermission']>
   openPanel: (...args: DesktopPetBridgeMethodArguments['openPanel']) => Promise<DesktopPetBridgeMethodResults['openPanel']>
@@ -1038,8 +1039,10 @@ export interface DesktopPetGeneratedBridge {
   paraformerAbort: (...args: DesktopPetBridgeMethodArguments['paraformerAbort']) => Promise<DesktopPetBridgeMethodResults['paraformerAbort']>
   paraformerStart: (...args: DesktopPetBridgeMethodArguments['paraformerStart']) => Promise<DesktopPetBridgeMethodResults['paraformerStart']>
   paraformerStatus: (...args: DesktopPetBridgeMethodArguments['paraformerStatus']) => Promise<DesktopPetBridgeMethodResults['paraformerStatus']>
+  personaInit: (...args: DesktopPetBridgeMethodArguments['personaInit']) => Promise<DesktopPetBridgeMethodResults['personaInit']>
   personaOpenDir: (...args: DesktopPetBridgeMethodArguments['personaOpenDir']) => Promise<DesktopPetBridgeMethodResults['personaOpenDir']>
   personaPaths: (...args: DesktopPetBridgeMethodArguments['personaPaths']) => Promise<DesktopPetBridgeMethodResults['personaPaths']>
+  personaSaveMemory: (...args: DesktopPetBridgeMethodArguments['personaSaveMemory']) => Promise<DesktopPetBridgeMethodResults['personaSaveMemory']>
   pluginBusStats: (...args: DesktopPetBridgeMethodArguments['pluginBusStats']) => Promise<DesktopPetBridgeMethodResults['pluginBusStats']>
   pluginDir: (...args: DesktopPetBridgeMethodArguments['pluginDir']) => Promise<DesktopPetBridgeMethodResults['pluginDir']>
   requestModelSetup: (...args: DesktopPetBridgeMethodArguments['requestModelSetup']) => Promise<DesktopPetBridgeMethodResults['requestModelSetup']>
@@ -1048,7 +1051,10 @@ export interface DesktopPetGeneratedBridge {
   sensevoiceStart: (...args: DesktopPetBridgeMethodArguments['sensevoiceStart']) => Promise<DesktopPetBridgeMethodResults['sensevoiceStart']>
   sensevoiceStatus: (...args: DesktopPetBridgeMethodArguments['sensevoiceStatus']) => Promise<DesktopPetBridgeMethodResults['sensevoiceStatus']>
   setDesktopPresencePreferences: (...args: DesktopPetBridgeMethodArguments['setDesktopPresencePreferences']) => Promise<DesktopPetBridgeMethodResults['setDesktopPresencePreferences']>
+  setLaunchOnStartup: (...args: DesktopPetBridgeMethodArguments['setLaunchOnStartup']) => Promise<DesktopPetBridgeMethodResults['setLaunchOnStartup']>
   setPanelWindowState: (...args: DesktopPetBridgeMethodArguments['setPanelWindowState']) => Promise<DesktopPetBridgeMethodResults['setPanelWindowState']>
+  showConfirmDialog: (...args: DesktopPetBridgeMethodArguments['showConfirmDialog']) => Promise<DesktopPetBridgeMethodResults['showConfirmDialog']>
+  showProactiveNotification: (...args: DesktopPetBridgeMethodArguments['showProactiveNotification']) => Promise<DesktopPetBridgeMethodResults['showProactiveNotification']>
   skillGet: (...args: DesktopPetBridgeMethodArguments['skillGet']) => Promise<DesktopPetBridgeMethodResults['skillGet']>
   skillList: (...args: DesktopPetBridgeMethodArguments['skillList']) => Promise<DesktopPetBridgeMethodResults['skillList']>
   skillMarkUsed: (...args: DesktopPetBridgeMethodArguments['skillMarkUsed']) => Promise<DesktopPetBridgeMethodResults['skillMarkUsed']>

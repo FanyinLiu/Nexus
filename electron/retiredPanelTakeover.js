@@ -17,6 +17,20 @@ export const RETIRED_PANEL_RESUME_GRACE_MS = 30_000
 export const RETIRED_PANEL_CLOCK_JUMP_THRESHOLD_MS = 60_000
 
 /**
+ * First retry delay after a failed takeover build. It matches the normal poll
+ * interval so a transient failure still retries on the next scheduled tick.
+ */
+export const RETIRED_PANEL_TAKEOVER_BACKOFF_BASE_MS = RETIRED_PANEL_TAKEOVER_INTERVAL_MS
+
+/**
+ * Ceiling for the exponential retry delay. A renderer that keeps failing is
+ * retried at most once every two minutes: frequent enough to recover soon
+ * after a transient fault, sparse enough to stop burning CPU and window
+ * churn. Delays grow 5s, 10s, 20s, 40s, 80s, then settle at 120s.
+ */
+export const RETIRED_PANEL_TAKEOVER_BACKOFF_MAX_MS = 120_000
+
+/**
  * @typedef {Object} RetiredPanelTakeoverDeps
  * @property {() => ({ petOnline?: boolean } & Record<string, unknown>)} getSnapshot
  * @property {() => boolean} hasPanelWindow
@@ -69,10 +83,30 @@ export function createRetiredPanelTakeover({
   /** @type {number | null} */
   let lastTickAt = null
   let graceUntil = 0
+  let consecutiveCreateFailures = 0
+  /** @type {number | null} */
+  let nextCreateAt = null
+  // Invalidates callbacks from a build that was still pending when the driver
+  // stopped, so a late failure cannot poison the next run's backoff state.
+  let creationEpoch = 0
 
   const enterResumeGrace = (at = now()) => {
     graceUntil = at + resumeGraceMs
     return graceUntil
+  }
+
+  const clearCreateBackoff = () => {
+    consecutiveCreateFailures = 0
+    nextCreateAt = null
+  }
+
+  const noteCreateFailure = () => {
+    consecutiveCreateFailures += 1
+    const delay = Math.min(
+      RETIRED_PANEL_TAKEOVER_BACKOFF_BASE_MS * (2 ** (consecutiveCreateFailures - 1)),
+      RETIRED_PANEL_TAKEOVER_BACKOFF_MAX_MS,
+    )
+    nextCreateAt = now() + delay
   }
 
   const stop = () => {
@@ -80,11 +114,14 @@ export function createRetiredPanelTakeover({
       clearIntervalFn(timer)
       timer = null
     }
+    creationEpoch += 1
+    creating = false
     lastPetOnline = null
     petOnlineSince = null
     lastActionAt = 0
     lastTickAt = null
     graceUntil = 0
+    clearCreateBackoff()
   }
 
   const tick = () => {
@@ -102,7 +139,9 @@ export function createRetiredPanelTakeover({
     }
     lastTickAt = nowMs
     if (hasPanelWindow()) {
-      creating = false
+      // A build in flight already owns a window (load retries reuse it); it is
+      // not a ready panel, so the creating flag and retry schedule stay with
+      // the async creation path. Only the ready callback clears the backoff.
       const snapshot = getSnapshot()
       const petOnline = Boolean(snapshot?.petOnline)
       lastPetOnline = petOnline
@@ -126,26 +165,43 @@ export function createRetiredPanelTakeover({
     const petOnline = Boolean(snapshot?.petOnline)
     lastPetOnline = petOnline
     petOnlineSince = null
-    if (petOnline) return 'pet_online'
+    if (petOnline) {
+      // A recovered pet owns the scheduler again; forget the failed rebuild.
+      clearCreateBackoff()
+      return 'pet_online'
+    }
     if (creating) return 'creating'
     if (nowMs < graceUntil) return 'grace'
+    if (nextCreateAt !== null && nowMs < nextCreateAt) return 'backoff'
 
     creating = true
-    lastActionAt = now()
+    lastActionAt = nowMs
+    const epoch = creationEpoch
     let pending
     try {
       pending = createHiddenPanel()
     } catch {
       creating = false
+      noteCreateFailure()
       return 'create_failed'
     }
     Promise.resolve(pending)
       .then((win) => {
-        if (win) onHiddenPanelReady(win)
+        if (epoch !== creationEpoch) return
+        if (!win) {
+          noteCreateFailure()
+          return
+        }
+        // Only a panel that actually became ready clears the backoff.
+        clearCreateBackoff()
+        onHiddenPanelReady(win)
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (epoch !== creationEpoch) return
+        noteCreateFailure()
+      })
       .finally(() => {
-        creating = false
+        if (epoch === creationEpoch) creating = false
       })
     return 'created'
   }
@@ -172,6 +228,7 @@ export function createRetiredPanelTakeover({
     lastActionAt = 0
     lastTickAt = null
     graceUntil = 0
+    clearCreateBackoff()
   }
 
   return {
@@ -182,7 +239,17 @@ export function createRetiredPanelTakeover({
     noteClockJump: () => enterResumeGrace(),
     isArmed: () => armed,
     isRunning: () => timer !== null,
-    debugState: () => ({ armed, creating, lastPetOnline, petOnlineSince, lastActionAt, lastTickAt, graceUntil }),
+    debugState: () => ({
+      armed,
+      creating,
+      lastPetOnline,
+      petOnlineSince,
+      lastActionAt,
+      lastTickAt,
+      graceUntil,
+      consecutiveCreateFailures,
+      nextCreateAt,
+    }),
     resetForTests,
   }
 }
