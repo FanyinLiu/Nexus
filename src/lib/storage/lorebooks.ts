@@ -5,6 +5,7 @@ import {
   writeJson,
   writeJsonDebounced,
 } from './core.ts'
+import { stableTextHash } from '../common.ts'
 import { isObject } from '../guards.ts'
 import { normalizeIsoOr } from '../localDate.ts'
 import { hasChanged, normalizeBoundedText, normalizeString } from '../normalize.ts'
@@ -30,14 +31,6 @@ function normalizePriority(value: unknown): number {
   return Math.round(priority)
 }
 
-function stableHash(value: string): string {
-  let hash = 5381
-  for (let i = 0; i < value.length; i += 1) {
-    hash = Math.imul(hash, 33) ^ value.charCodeAt(i)
-  }
-  return (hash >>> 0).toString(36)
-}
-
 function makeStableLorebookId(entry: {
   label: string
   keywords: string[]
@@ -45,7 +38,7 @@ function makeStableLorebookId(entry: {
   createdAt: string
 }, index: number): string {
   const basis = [entry.label, entry.keywords.join(','), entry.content, entry.createdAt, String(index)].join('\n')
-  return `lorebook-${stableHash(basis)}`
+  return `lorebook-${stableTextHash(basis)}`
 }
 
 function normalizeLorebookEntry(raw: unknown, now: string, index: number): LorebookEntry | null {
