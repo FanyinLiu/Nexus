@@ -99,6 +99,68 @@ ipcMain.handle('app:ping', () => true)
   })
 })
 
+test('IPC contract audit rejects a trust check after a payload read', () => {
+  withIpcContractFixture({
+    'electron/ipc/app.js': `
+const { ipcMain } = require('electron')
+
+function requireTrustedSender() {}
+
+ipcMain.handle('app:ping', (event, payload) => {
+  const data = payload?.value
+  requireTrustedSender(event)
+  return data
+})
+`,
+  }, (root) => {
+    const report = buildIpcContractReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.deepEqual(report.errors.missingTrustedSender.map((item) => item.channel), ['app:ping'])
+  })
+})
+
+test('IPC contract audit rejects a trust check hidden inside a conditional', () => {
+  withIpcContractFixture({
+    'electron/ipc/app.js': `
+const { ipcMain } = require('electron')
+
+function requireTrustedSender() {}
+
+ipcMain.handle('app:ping', (event, payload) => {
+  if (payload === 'never') requireTrustedSender(event)
+  return true
+})
+`,
+  }, (root) => {
+    const report = buildIpcContractReport(root)
+
+    assert.equal(report.summary.ok, false)
+    assert.deepEqual(report.errors.missingTrustedSender.map((item) => item.channel), ['app:ping'])
+  })
+})
+
+test('IPC contract audit accepts a leading comment before the trust check', () => {
+  withIpcContractFixture({
+    'electron/ipc/app.js': `
+const { ipcMain } = require('electron')
+
+function requireTrustedSender() {}
+
+ipcMain.handle('app:ping', (event) => {
+  // This must run before any payload field is read.
+  requireTrustedSender(event)
+  return true
+})
+`,
+  }, (root) => {
+    const report = buildIpcContractReport(root)
+
+    assert.equal(report.summary.ok, true)
+    assert.deepEqual(report.errors.missingTrustedSender, [])
+  })
+})
+
 test('IPC contract audit scans electron/main.js for handlers outside the IPC directory', () => {
   withIpcContractFixture({
     'electron/main.js': `const { ipcMain } = require('electron')

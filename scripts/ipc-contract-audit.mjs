@@ -245,6 +245,40 @@ export function listMainHandlerFiles(root = DEFAULT_ROOT) {
   return walkJsFiles(resolve(root), ELECTRON_DIR)
 }
 
+/**
+ * Returns the handler's body when it is a block, or the concise expression
+ * body itself. `null` means the second argument is not a function literal.
+ * @param {import('typescript6').Node | undefined} handlerNode
+ */
+function handlerBody(handlerNode) {
+  if (!handlerNode) return null
+  if (ts.isArrowFunction(handlerNode) || ts.isFunctionExpression(handlerNode)) {
+    return handlerNode.body
+  }
+  return null
+}
+
+/**
+ * A handler complies only when its first statement is a `requireTrustedSender`
+ * call. Comments and blank lines do not appear in the AST, so a documented
+ * leading check still passes, while a check after a data read or nested inside
+ * a conditional does not.
+ * @param {import('typescript6').Node | undefined} handlerNode
+ */
+function startsWithTrustedSenderCheck(handlerNode) {
+  const body = handlerBody(handlerNode)
+  if (!body) return false
+  const first = ts.isBlock(body) ? body.statements[0] : body
+  if (!first) return false
+  const expression = ts.isExpressionStatement(first) ? first.expression : first
+  if (!ts.isCallExpression(expression)) return false
+  const callee = expression.expression
+  if (!ts.isIdentifier(callee) || callee.text !== 'requireTrustedSender') return false
+  const firstArgument = expression.arguments[0]
+  if (!firstArgument || !ts.isIdentifier(firstArgument) || firstArgument.text !== 'event') return false
+  return true
+}
+
 function extractMainHandlers(root) {
   const handlers = []
 
@@ -262,7 +296,7 @@ function extractMainHandlers(root) {
           handlers.push({
             channel,
             location: { file, line: lineFor(sourceFile, node.getStart(sourceFile)) },
-            trustedSender: /requireTrustedSender\s*\(\s*event\s*\)/.test(handlerSource),
+            trustedSender: startsWithTrustedSenderCheck(handlerNode),
             payloadValidation: detectHandlerValidation(handlerSource),
             auditLogged: /\baudit\s*\(|runAuditedExternalAction\s*\(|runAuditedPetModelAction\s*\(|runAuditedPluginAction\s*\(|runAuditedVaultAction\s*\(|runAuditedVtsAction\s*\(|applyChatLocalDataMigration\s*\(|rollbackChatLocalDataMigration\s*\(|mirrorChatLocalDataSession\s*\(|compareChatLocalDataSessions\s*\(|applyMemoryLocalDataMigration\s*\(|rollbackMemoryLocalDataMigration\s*\(|applyCompanionLocalDataMigration\s*\(|compareCompanionLocalData\s*\(|rollbackCompanionLocalDataMigration\s*\(|mirrorCompanionLocalDataDataset\s*\(/.test(handlerSource),
             permissionHint: /(dialog\.showMessageBox|dialog\.show(?:Save|Open)Dialog|saveTextFileFromDialog|openTextFileFromDialog|invokeRegisteredTool|normalizeDesktopContextPolicy|runAuditedExternalAction|runAuditedPetModelAction|runAuditedPluginAction|runAuditedVaultAction|runAuditedVtsAction|requireExternalActionPermission|syncExternalActionPolicy|requiresConfirmation|approve|policy|confirm)/.test(handlerSource),
