@@ -16,7 +16,11 @@
 import { Readable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import { SPEECH_IPC_ERROR_CODES } from '../../shared/speechErrorCodes.js'
+import { createLogger } from '../logger.js'
+import { mainT } from '../mainMessages.js'
 import { escapeXml } from '../textNormalize.js'
+
+const log = createLogger('voice.edgeTts')
 
 const TRUSTED_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4'
 const WS_BASE_URL = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1'
@@ -139,7 +143,8 @@ export async function synthesizeEdgeTts(text, options = {}) {
       ws = new globalThis.WebSocket(wsUrl)
     } catch (err) {
       clearTimeout(connectTimeout)
-      reject(new Error(`Edge TTS 连接没能建起来：${err.message}`))
+      log.warn(`connection construction failed: ${err.message}`)
+      reject(new Error(mainT('tts.edgeConnectionFailed')))
       return
     }
 
@@ -195,14 +200,14 @@ export async function synthesizeEdgeTts(text, options = {}) {
     ws.addEventListener('error', (event) => {
       clearTimeout(connectTimeout)
       clearTimeout(synthesisTimeout)
-      const msg = `Edge TTS 连接出了点状况：${event.message || 'unknown'}`
-      console.error('[Edge-TTS]', msg)
+      log.warn(`connection issue: ${event.message || 'unknown'}`)
+      const message = mainT('tts.edgeConnectionIssue')
       if (!resolved) {
         resolved = true
-        reject(new Error(msg))
+        reject(new Error(message))
       } else {
         streamEnded = true
-        pcmStream.destroy(new Error(msg))
+        pcmStream.destroy(new Error(message))
       }
     })
 
@@ -211,7 +216,8 @@ export async function synthesizeEdgeTts(text, options = {}) {
       clearTimeout(synthesisTimeout)
       if (!resolved) {
         resolved = true
-        reject(new Error('Edge TTS WebSocket 连接关闭'))
+        log.warn('websocket closed before the stream started')
+        reject(new Error(mainT('tts.edgeConnectionClosed')))
       } else {
         // Ensure stream ends
         if (!streamEnded && !pcmStream.destroyed) {

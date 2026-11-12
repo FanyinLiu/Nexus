@@ -8,6 +8,7 @@ import {
   recordOnThisDayFired,
 } from '../src/features/memory/onThisDayLedger.ts'
 import { ensureLocaleLoaded, setLocale } from '../src/i18n/runtime.ts'
+import { enMessages } from '../src/i18n/locales/en/index.ts'
 import { loadSettings } from '../src/lib/storage.ts'
 import type { AppSettings } from '../src/types/app.ts'
 import type { ChatMessage } from '../src/types/chat.ts'
@@ -45,6 +46,16 @@ before(async () => {
   await ensureLocaleLoaded('en-US')
   setLocale('en-US')
 })
+
+function captureWarnings() {
+  const lines: string[] = []
+  const originalWarn = console.warn
+  console.warn = (...args: unknown[]) => { lines.push(args.map(String).join(' ')) }
+  return {
+    lines,
+    restore: () => { console.warn = originalWarn },
+  }
+}
 
 beforeEach(() => {
   const localStorage = new MemoryStorage()
@@ -284,8 +295,8 @@ function makePausedMemoryOptions() {
 
 test('text-source failure surfaces humanized advice, keeps raw text on diagnostic surfaces', async () => {
   const { runner, calls } = createFailingRunner(new Error(RAW_PROVIDER_ERROR))
-
-  const result = await runner(makeOptions(false))
+  const captured = captureWarnings()
+  const result = await runner(makeOptions(false)).finally(() => captured.restore())
   assert.equal(result, false)
 
   // Error banner: humanized 429 advice, no raw provider text.
@@ -293,10 +304,11 @@ test('text-source failure surfaces humanized advice, keeps raw text on diagnosti
   assert.match(calls.setError[0] ?? '', /(too many|wait|moment)/i)
   assert.doesNotMatch(calls.setError[0] ?? '', /状态码|429/)
 
-  // Failure bubble: humanized as well.
+  // Failure bubble: fixed companion copy; the raw detail only reaches the log.
   const bubble = calls.bubbles.at(-1) ?? ''
-  assert.match(bubble, /(too many|wait|moment)/i)
-  assert.doesNotMatch(bubble, /状态码/)
+  assert.equal(bubble, enMessages['chat.assistant.failure_bubble'])
+  assert.doesNotMatch(bubble, /状态码|429/)
+  assert.ok(captured.lines.some((line) => line.includes(RAW_PROVIDER_ERROR)), 'raw error must reach the log')
 
   // Bus abort reason stays raw — downstream logging depends on it.
   const aborted = calls.busEvents.find((event) => event.type === 'session:aborted')
@@ -306,14 +318,14 @@ test('text-source failure surfaces humanized advice, keeps raw text on diagnosti
 
 test('voice-source failure humanizes the system message and status, keeps the voice trace raw', async () => {
   const { runner, calls } = createFailingRunner(new Error(RAW_PROVIDER_ERROR))
-
-  const result = await runner(makeOptions(true))
+  const captured = captureWarnings()
+  const result = await runner(makeOptions(true)).finally(() => captured.restore())
   assert.equal(result, false)
 
-  // System message in the chat: humanized.
+  // System message in the chat: fixed companion copy, no provider text.
   assert.equal(calls.systemMessages.length, 1)
-  assert.match(calls.systemMessages[0].content, /(too many|wait|moment)/i)
-  assert.doesNotMatch(calls.systemMessages[0].content, /状态码/)
+  assert.equal(calls.systemMessages[0].content, enMessages['chat.assistant.voice_send_failed_system'])
+  assert.doesNotMatch(calls.systemMessages[0].content, /状态码|429/)
   assert.equal(calls.systemMessages[0].tone, 'error')
 
   // Voice pipeline status: humanized preview.
@@ -326,8 +338,10 @@ test('voice-source failure humanizes the system message and status, keeps the vo
   assert.equal(calls.voiceTraces[0].tone, 'error')
   assert.match(calls.voiceTraces[0].detail, /状态码：429/)
 
-  // Error banner: voice summary wrapping the humanized message.
-  assert.match(calls.setError[0] ?? '', /(too many|wait|moment)/i)
+  // Error banner: fixed voice summary, never the provider text.
+  assert.equal(calls.setError[0], enMessages['chat.assistant.voice_send_failed_summary'])
+  assert.doesNotMatch(calls.setError[0] ?? '', /状态码|429/)
+  assert.ok(captured.lines.some((line) => line.includes(RAW_PROVIDER_ERROR)), 'raw error must reach the log')
 })
 
 test('stale streaming TTS turns attach the completion rejection before aborting', async () => {

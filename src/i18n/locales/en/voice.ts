@@ -137,7 +137,7 @@ export const enVoice = {
   'voice.pipeline.session_stopped': 'Voice stopped',
   'voice.pipeline.wake_word_detected': 'Wake word "{keyword}" detected — switching to listening',
   'voice.wakeword.unavailable_with_reason': 'Wake word unavailable: {reason}',
-  'voice.wakeword.listener_error_with_reason': 'Wake-word listener error: {error}',
+  'voice.wakeword.listener_error_with_reason': 'The wake-word listener ran into a problem. Try again in a moment?',
   'voice.diagnostics.no_mic_api': 'The current environment does not expose microphone recording — speech input cannot start.',
   'voice.diagnostics.no_media_recorder': 'The current environment does not support MediaRecorder — speech input cannot record.',
   'voice.diagnostics.no_audio_tracks': 'Recording stream acquired, but no usable audio track found.',

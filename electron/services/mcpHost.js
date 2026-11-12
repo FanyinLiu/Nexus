@@ -22,8 +22,38 @@ import {
 import { getRedactedErrorMessage } from './errorRedaction.js'
 import { runConfirmedMcpToolCall } from './mcpToolConfirmation.js'
 import { mainT } from '../mainMessages.js'
+import { createLogger } from '../logger.js'
 
+const log = createLogger('mcpHost')
 const REQUEST_TIMEOUT_MS = 15_000
+// Keeps an unterminated stderr line from growing without bound. On overflow,
+// redact and flush everything except the trailing overlap, which stays buffered
+// so a token straddling the cap can still be redacted as one piece.
+const MAX_STDERR_BUFFER_CHARS = 64 * 1024
+const STDERR_OVERFLOW_OVERLAP_CHARS = 512
+// A forced overflow flush can hand the logger tens of KB, but the logger keeps
+// only 160 chars, so redacting the whole buffer is wasted work. Cap the text
+// first; the discarded tail is dropped, never logged raw.
+const MAX_STDERR_LOG_CHARS = 2 * 1024
+
+/**
+ * Cap stderr text to the amount the logger can actually use before redaction
+ * runs. Cuts at the last whitespace inside the cap when there is one so a
+ * token is not split in half; falls back to a hard cut for a single huge token.
+ * @param {string} text
+ * @returns {string}
+ */
+export function capMcpStderrForLog(text) {
+  if (text.length <= MAX_STDERR_LOG_CHARS) return text
+  const slice = text.slice(0, MAX_STDERR_LOG_CHARS)
+  const boundary = Math.max(
+    slice.lastIndexOf(' '),
+    slice.lastIndexOf('\t'),
+    slice.lastIndexOf('\n'),
+    slice.lastIndexOf('\r'),
+  )
+  return boundary > 0 ? slice.slice(0, boundary) : slice
+}
 
 // Shell metacharacters that could enable command injection when shell: true is used.
 // We reject commands containing these to allow safe spawning without a shell.
@@ -62,6 +92,7 @@ class McpInstance {
     /** @type {Map<number, { resolve: Function, reject: Function, timeoutId: ReturnType<typeof setTimeout> }>} */
     this.pending = new Map()
     this.lineBuffer = ''
+    this.stderrBuffer = ''
 
     // ── Per-instance resource metrics ──
     this.metrics = {
@@ -150,6 +181,76 @@ class McpInstance {
     for (const line of lines) {
       this._handleLine(line)
     }
+  }
+
+  _logStderrLine(line) {
+    // Redact the assembled line first: a secret split across two `data`
+    // chunks only matches a rule once both fragments are joined. Cap first so
+    // a forced overflow flush redacts ~2KB instead of the whole 64KB buffer.
+    const text = getRedactedErrorMessage(capMcpStderrForLog(line)).trim()
+    if (text) log.warn(`${mcpLogScope(this.id)} stderr: ${text}`)
+  }
+
+  _flushStderrBuffer() {
+    const buffered = this.stderrBuffer
+    this.stderrBuffer = ''
+    if (buffered) this._logStderrLine(buffered)
+  }
+
+  _drainStderrBuffer(chunk) {
+    this.stderrBuffer += chunk
+    const lines = this.stderrBuffer.split('\n')
+    this.stderrBuffer = lines.pop() ?? ''
+    for (const line of lines) {
+      this._logStderrLine(line)
+    }
+    // An unterminated line larger than the cap must not be dropped or written
+    // raw, so spill the redacted prefix without waiting for a newline while
+    // keeping the tail buffered for the next chunk.
+    if (this.stderrBuffer.length >= MAX_STDERR_BUFFER_CHARS) {
+      this._spillStderrOverflow()
+    }
+  }
+
+  _spillStderrOverflow() {
+    const nominalCut = this.stderrBuffer.length - STDERR_OVERFLOW_OVERLAP_CHARS
+    // Prefer a whitespace boundary so the flushed prefix does not end in the
+    // middle of a token; fall back to the exact overlap when none is near.
+    const windowStart = Math.max(0, nominalCut - STDERR_OVERFLOW_OVERLAP_CHARS)
+    const window = this.stderrBuffer.slice(windowStart, nominalCut)
+    const isBreak = (ch) => ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n'
+    let lastBreak = -1
+    for (let i = window.length - 1; i >= 0; i -= 1) {
+      if (isBreak(window[i])) {
+        lastBreak = i
+        break
+      }
+    }
+    let cut = lastBreak >= 0 ? windowStart + lastBreak + 1 : nominalCut
+    if (lastBreak >= 0) {
+      // A prefix redaction rule needs the keyword before the break as well
+      // (e.g. `Bearer <token>` or `api_key = <value>`), otherwise the keyword
+      // is flushed alone and the value in the tail no longer matches. Skip the
+      // whole whitespace run (two spaces in `Bearer  <token>`), then walk back
+      // two words so the keyword and any `=` separator stay with the value.
+      // The search stays inside the same 512-char window, so the retained tail
+      // is bounded at ~1024 chars; a huge preceding word that does not fit
+      // keeps the whole window buffered instead of splitting a secret.
+      let pos = lastBreak
+      while (pos >= 0 && isBreak(window[pos])) pos -= 1
+      const firstWordEnd = pos
+      while (pos >= 0 && !isBreak(window[pos])) pos -= 1
+      while (pos >= 0 && isBreak(window[pos])) pos -= 1
+      if (firstWordEnd >= 0 && pos >= 0) {
+        while (pos >= 0 && !isBreak(window[pos])) pos -= 1
+        cut = windowStart + pos + 1
+      } else {
+        cut = windowStart
+      }
+    }
+    const flushable = this.stderrBuffer.slice(0, cut)
+    this.stderrBuffer = this.stderrBuffer.slice(cut)
+    if (flushable) this._logStderrLine(flushable)
   }
 
   async _performHandshake() {
@@ -273,6 +374,7 @@ class McpInstance {
     this.state = 'starting'
     this.tools.clear()
     this.lineBuffer = ''
+    this.stderrBuffer = ''
     this._rejectAllPending('MCP host restarting')
 
     console.info(`${mcpLogScope(this.id)} spawning: ${summarizeMcpCommandForLog(command, args)}`)
@@ -294,7 +396,13 @@ class McpInstance {
     }
 
     const child = spawn(spawnCommand, spawnArgs, {
-      stdio: ['pipe', 'pipe', 'inherit'],
+      // MCP transports JSON-RPC over stdin/stdout. stderr is diagnostics only:
+      // pipe it so a server that echoes tokens, paths, or user text cannot
+      // write straight into the app run log unredacted. stderr is buffered by
+      // line (with a 64KB cap on a partial line) and redacted before the
+      // main-process logger writes it, so secrets split across chunks are
+      // still caught (see the stderr handler below).
+      stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
       env: buildMcpSpawnEnv(process.env, serverEnv),
     })
@@ -305,6 +413,12 @@ class McpInstance {
 
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk) => this._drainLineBuffer(chunk))
+
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (chunk) => this._drainStderrBuffer(chunk))
+    // Exit and stream close can both fire; _flushStderrBuffer is idempotent and
+    // redacts any partial line before it is written.
+    child.stderr.once('close', () => this._flushStderrBuffer())
 
     await new Promise((resolve, reject) => {
       child.once('error', (err) => {
@@ -317,6 +431,7 @@ class McpInstance {
 
     // Register exit listener BEFORE handshake to avoid missing early exits
     child.once('exit', (code, signal) => {
+      this._flushStderrBuffer()
       console.warn(`${mcpLogScope(this.id)} process exited (code=${code}, signal=${signal})`)
       this.process = null
       this.pid = null
@@ -328,6 +443,8 @@ class McpInstance {
         this._scheduleRestart()
       }
     })
+
+    child.once('close', () => this._flushStderrBuffer())
 
     try {
       await this._performHandshake()

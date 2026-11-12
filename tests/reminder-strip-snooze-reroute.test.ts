@@ -5,6 +5,7 @@ import path from 'node:path'
 import { test, type TestContext } from 'node:test'
 
 import { createProactiveIpc } from '../electron/ipc/proactiveIpc.js'
+import { createProactiveDeliveryContextProvider } from '../electron/services/proactiveDeliveryContext.js'
 import { createProactiveInboxStore } from '../electron/services/proactiveInboxStore.js'
 import { createReminderStripSession } from '../electron/services/reminderStripSession.js'
 import { REMINDER_STRIP_SNOOZE_MS } from '../electron/services/reminderStripQueue.js'
@@ -75,7 +76,9 @@ async function flushAsyncWork(): Promise<void> {
 type Handler = (event: unknown, payload?: unknown) => unknown
 type SentMessage = { channel: string; payload: unknown }
 
-function createHarness(t: TestContext) {
+function createHarness(t: TestContext, options: {
+  getDeliveryContext?: () => Promise<DeliveryContext>
+} = {}) {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const directory = createTempDir()
   const store = createProactiveInboxStore({
@@ -145,10 +148,10 @@ function createHarness(t: TestContext) {
       notifications.push(payload)
     },
     isPanelFocused: () => false,
-    getDeliveryContext: async () => {
+    getDeliveryContext: options.getDeliveryContext ?? (async () => {
       if (contextShouldThrow) throw new Error('context unavailable')
       return context
-    },
+    }),
   })
 
   assert.ok(configured)
@@ -271,6 +274,50 @@ test('a quiet-hours re-route drops the strip item and leaves the inbox untouched
   assert.equal(inboxStatus(harness.store, message.id), 'unread')
   assert.equal(harness.store.list().unreadCount, 1)
   assert.deepEqual(harness.changes(), [])
+})
+
+test('a snoozed reshow reads the active window only while the saved switch is on', async (t) => {
+  let reads = 0
+  let savedActiveWindow = false
+  const provider = createProactiveDeliveryContextProvider({
+    isPanelFocused: () => false,
+    getFocusState: () => 'active',
+    getActiveWindow: async () => {
+      reads += 1
+      return { title: 'YouTube — Fullscreen', appName: 'Safari' }
+    },
+    isActiveWindowAllowed: () => savedActiveWindow,
+    getPreferences: () => ({
+      // Equal bounds disable quiet hours (isQuietHour), so the fixed epoch cannot
+      // land inside them when the runner's local time zone differs from UTC.
+      quietStart: 23,
+      quietEnd: 23,
+      desktopAwarenessAllowed: true,
+      awayNotificationsEnabled: false,
+      stripEnabled: true,
+    }),
+    now: () => NOW,
+  })
+  const harness = createHarness(t, { getDeliveryContext: provider.getDeliveryContext })
+  const message = makeMessage()
+  await harness.deliver(message)
+
+  snooze(harness, message.id)
+  t.mock.timers.tick(REMINDER_STRIP_SNOOZE_MS)
+  await flushAsyncWork()
+
+  // Saved switch off: the reshown item may return, but no title is read.
+  assert.equal(reads, 0)
+  assert.equal(harness.session.snapshot().items.length, 1)
+
+  snooze(harness, message.id)
+  savedActiveWindow = true
+  t.mock.timers.tick(REMINDER_STRIP_SNOOZE_MS)
+  await flushAsyncWork()
+
+  // Positive control: with the saved switch on the same path reads once.
+  assert.equal(reads, 1)
+  assert.equal(harness.session.snapshot().items.length, 0)
 })
 
 test('a failed context read drops the strip item and keeps the inbox entry', async (t) => {

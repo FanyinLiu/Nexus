@@ -51,7 +51,6 @@ returnedSlotNameTotalLength
   'electron/preload.js': `
 Retrieval returns opaque refs;
 plaintext secret values stay in main-process handlers.
-vaultRetrieve: (slot) => ipcRenderer.invoke('vault:retrieve', { slot })
 vaultRetrieveMany: (slots) => ipcRenderer.invoke('vault:retrieve-many', { slots })
 `,
   'electron/ipc/chatIpc.js': `
@@ -99,7 +98,6 @@ hydrateProfileKeys
   'src/vite-env.d.ts': `
 Retrieval returns opaque
 nexus-vault-ref tokens; plaintext is resolved only in the main process.
-vaultRetrieve: (slot: string) => Promise<string>
 vaultRetrieveMany: (slots: string[]) => Promise<Record<string, string>>
 `,
   'tests/vault-audit.test.ts': `

@@ -36,7 +36,6 @@ export const TS_NOCHECK_BASELINE = [
   'electron/net.js',
   'electron/netHelpers.js',
   'electron/panelWindowController.js',
-  'electron/petLocomotion.js',
   'electron/petWindowInstances.js',
   'electron/platformProfile.js',
   'electron/rendererServer.js',

@@ -1,5 +1,18 @@
 import { t } from '../i18n/runtime.ts'
 
+/**
+ * Stable, non-cryptographic 32-bit text fingerprint. Used where an id or
+ * tombstone must survive restarts without storing the source text itself.
+ * Collisions are acceptable for those call sites; do not use it for secrets.
+ */
+export function stableTextHash(value: string): string {
+  let hash = 5381
+  for (let i = 0; i < value.length; i += 1) {
+    hash = Math.imul(hash, 33) ^ value.charCodeAt(i)
+  }
+  return (hash >>> 0).toString(36)
+}
+
 /** Bound `value` to [min, max]. Non-finite values snap to `min`. */
 export function clamp(value: number, min: number, max: number) {
   if (!Number.isFinite(value)) return min

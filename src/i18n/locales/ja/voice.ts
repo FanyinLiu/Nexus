@@ -137,7 +137,7 @@ export const jaVoice = {
   'voice.pipeline.session_stopped': '音声を停止しました',
   'voice.pipeline.wake_word_detected': 'ウェイクワード「{keyword}」を検出、収音に切り替えています',
   'voice.wakeword.unavailable_with_reason': 'ウェイクワードは利用できません: {reason}',
-  'voice.wakeword.listener_error_with_reason': 'ウェイクワード監視エラー: {error}',
+  'voice.wakeword.listener_error_with_reason': 'ウェイクワードの監視で問題が起きました。あとでもう一度試してみてください。',
   'voice.diagnostics.no_mic_api': '現在の環境はマイク録音機能を公開していないため、音声入力を開始できません。',
   'voice.diagnostics.no_media_recorder': '現在の環境は MediaRecorder に対応していないため、音声入力録音を実行できません。',
   'voice.diagnostics.no_audio_tracks': '録音ストリームを取得しましたが、利用可能な音声トラックが見つかりません。',

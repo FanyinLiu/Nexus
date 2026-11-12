@@ -9,8 +9,63 @@ import ts from 'typescript6'
 import { isWindowCapabilityClassified, getRequiredWindowCapability } from '../electron/ipc/windowCapabilities.js'
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const IPC_DIR = join('electron', 'ipc')
-const PRELOAD_PATH = join('electron', 'preload.js')
+const ELECTRON_DIR = 'electron'
+const PRELOAD_PATH = join(ELECTRON_DIR, 'preload.js')
+
+// Handlers deliberately kept in the main process while their renderer bridge
+// methods are removed. With contextIsolation the renderer can only reach main
+// through preload, so these channels stay unreachable until a renderer surface
+// exists. Listing them explicitly keeps the main-only warning meaningful for
+// accidental omissions instead of swallowing the whole narrowed bridge.
+export const INTENTIONALLY_MAIN_ONLY_CHANNELS = Object.freeze(new Set([
+  'chat:list-models',
+  'doctor:probe-local-services',
+  'external-action-policy:get',
+  'factorio:execute',
+  'factorio:status',
+  'local-data:chat-comparison-preview',
+  'local-data:chat-migration-apply',
+  'local-data:chat-migration-rollback',
+  'local-data:chat-migration-status',
+  'local-data:status',
+  'mcp:status',
+  'memory:keyword-search',
+  'memory:vector-index',
+  'memory:vector-stats',
+  'minecraft:send-command',
+  'minecraft:status',
+  'persona:init',
+  'persona:open-dir',
+  'persona:paths',
+  'persona:profile-dir',
+  'plugin-bus:publish',
+  'plugin-bus:recent',
+  'plugin-bus:stats',
+  'plugin-bus:subscribe',
+  'plugin-bus:subscriptions',
+  'plugin-bus:unsubscribe',
+  'plugin:approve',
+  'plugin:dir',
+  'plugin:disable',
+  'plugin:enable',
+  'plugin:restart',
+  'plugin:revoke',
+  'plugin:scan',
+  'plugin:start',
+  'plugin:status',
+  'plugin:stop',
+  'skill:get',
+  'skill:list',
+  'skill:remove',
+  'skill:stats',
+  'tencent-asr:disconnect',
+  'tencent-asr:status',
+  'vad:status',
+  'vault:delete',
+  'vault:is-available',
+  'vault:list-slots',
+  'vault:retrieve',
+]))
 
 function readText(root, path) {
   return readFileSync(join(root, path), 'utf8')
@@ -20,6 +75,7 @@ function walkJsFiles(root, path) {
   const directory = join(root, path)
   const files = []
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === 'node_modules') continue
     const fullPath = join(directory, entry.name)
     const relativePath = relative(root, fullPath)
     if (entry.isDirectory()) {
@@ -178,10 +234,55 @@ function classifyRisk(channel) {
   return { level: 'low', domain: 'app-state' }
 }
 
+/**
+ * Lists the JavaScript files whose `ipcMain.handle` calls feed the handler inventory.
+ * Scanning all of `electron/` keeps handlers registered in `main.js` or a non-IPC
+ * module visible to the every-channel pin test.
+ * @param {string} [root] Repository root override for fixture scans.
+ * @returns {string[]} Repository-relative JavaScript file paths, sorted.
+ */
+export function listMainHandlerFiles(root = DEFAULT_ROOT) {
+  return walkJsFiles(resolve(root), ELECTRON_DIR)
+}
+
+/**
+ * Returns the handler's body when it is a block, or the concise expression
+ * body itself. `null` means the second argument is not a function literal.
+ * @param {import('typescript6').Node | undefined} handlerNode
+ */
+function handlerBody(handlerNode) {
+  if (!handlerNode) return null
+  if (ts.isArrowFunction(handlerNode) || ts.isFunctionExpression(handlerNode)) {
+    return handlerNode.body
+  }
+  return null
+}
+
+/**
+ * A handler complies only when its first statement is a `requireTrustedSender`
+ * call. Comments and blank lines do not appear in the AST, so a documented
+ * leading check still passes, while a check after a data read or nested inside
+ * a conditional does not.
+ * @param {import('typescript6').Node | undefined} handlerNode
+ */
+function startsWithTrustedSenderCheck(handlerNode) {
+  const body = handlerBody(handlerNode)
+  if (!body) return false
+  const first = ts.isBlock(body) ? body.statements[0] : body
+  if (!first) return false
+  const expression = ts.isExpressionStatement(first) ? first.expression : first
+  if (!ts.isCallExpression(expression)) return false
+  const callee = expression.expression
+  if (!ts.isIdentifier(callee) || callee.text !== 'requireTrustedSender') return false
+  const firstArgument = expression.arguments[0]
+  if (!firstArgument || !ts.isIdentifier(firstArgument) || firstArgument.text !== 'event') return false
+  return true
+}
+
 function extractMainHandlers(root) {
   const handlers = []
 
-  for (const file of walkJsFiles(root, IPC_DIR)) {
+  for (const file of listMainHandlerFiles(root)) {
     const source = readText(root, file)
     const sourceFile = parseSource(file, source)
 
@@ -195,7 +296,7 @@ function extractMainHandlers(root) {
           handlers.push({
             channel,
             location: { file, line: lineFor(sourceFile, node.getStart(sourceFile)) },
-            trustedSender: /requireTrustedSender\s*\(\s*event\s*\)/.test(handlerSource),
+            trustedSender: startsWithTrustedSenderCheck(handlerNode),
             payloadValidation: detectHandlerValidation(handlerSource),
             auditLogged: /\baudit\s*\(|runAuditedExternalAction\s*\(|runAuditedPetModelAction\s*\(|runAuditedPluginAction\s*\(|runAuditedVaultAction\s*\(|runAuditedVtsAction\s*\(|applyChatLocalDataMigration\s*\(|rollbackChatLocalDataMigration\s*\(|mirrorChatLocalDataSession\s*\(|compareChatLocalDataSessions\s*\(|applyMemoryLocalDataMigration\s*\(|rollbackMemoryLocalDataMigration\s*\(|applyCompanionLocalDataMigration\s*\(|compareCompanionLocalData\s*\(|rollbackCompanionLocalDataMigration\s*\(|mirrorCompanionLocalDataDataset\s*\(/.test(handlerSource),
             permissionHint: /(dialog\.showMessageBox|dialog\.show(?:Save|Open)Dialog|saveTextFileFromDialog|openTextFileFromDialog|invokeRegisteredTool|normalizeDesktopContextPolicy|runAuditedExternalAction|runAuditedPetModelAction|runAuditedPluginAction|runAuditedVaultAction|runAuditedVtsAction|requireExternalActionPermission|syncExternalActionPolicy|requiresConfirmation|approve|policy|confirm)/.test(handlerSource),
@@ -276,7 +377,11 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     .map(([channel, list]) => ({ channel, locations: list.map((item) => item.location) }))
 
   const mainOnlyHandlers = handlerChannels
-    .filter((channel) => !invokeIndex.has(channel))
+    .filter((channel) => !invokeIndex.has(channel) && !INTENTIONALLY_MAIN_ONLY_CHANNELS.has(channel))
+    .map((channel) => ({ channel, location: handlerIndex.get(channel)?.[0]?.location ?? null }))
+
+  const intentionallyMainOnlyHandlers = handlerChannels
+    .filter((channel) => !invokeIndex.has(channel) && INTENTIONALLY_MAIN_ONLY_CHANNELS.has(channel))
     .map((channel) => ({ channel, location: handlerIndex.get(channel)?.[0]?.location ?? null }))
 
   const missingTrustedSender = handlers
@@ -327,7 +432,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
     repoRoot,
     sources: {
       preload: PRELOAD_PATH,
-      ipcDirectory: IPC_DIR,
+      handlerScanRoot: ELECTRON_DIR,
     },
     counts: {
       preloadInvokeChannels: invokeChannels.length,
@@ -354,6 +459,7 @@ export function buildIpcContractReport(root = DEFAULT_ROOT) {
       rendererPayload: payloadChannelSet.has(handler.channel),
     })),
     subscriptions,
+    intentionallyMainOnlyHandlers,
     errors,
     warnings,
     summary: {

@@ -8,16 +8,9 @@ import type {
   PetDialogBubbleState,
 } from '../../../types/index.ts'
 import type { StreamingSpeechOutputController } from '../../voice/types.ts'
+import type { SpeechPlaybackFailureOptions } from '../speechPlaybackFailure.ts'
 import type { AbortSetter } from '../streamAbort.ts'
 import type { UseChatContext } from '../types.ts'
-
-type SpeechPlaybackFailureOptions = {
-  traceId?: string
-  traceLabel?: string
-  source: 'text' | 'voice' | 'telegram' | 'discord' | 'notification'
-  fromVoice: boolean
-  shouldResumeContinuousVoice: boolean
-}
 
 export type AssistantReplyRunnerOptions = {
   currentSettings: AppSettings

@@ -223,16 +223,14 @@ function readPetWindow() {
 
 function pinPet(pet) {
   if (!pet) return null
-  // Locomotion can walk a free-mode pet toward the pointer. Put it back
-  // before each sample so the cursor stays on the side we just chose.
+  // Keep the pet at a fixed spot so every sample sees the same window bounds.
   try { execFileSync('xdotool', ['windowmove', pet.id, '420', '160']) } catch { /* read back whatever stuck */ }
   return listVisibleNexusWindows().find((item) => item.id === pet.id) ?? readPetWindow() ?? pet
 }
 
 function cursorBeside(pet, side, jitter) {
   const midY = Math.round(pet.y + Math.min(pet.height, 400) / 2)
-  // Farther than the 260px cursor-tease radius around the pet center, and
-  // still on a 1280-wide smoke display when the pet sits at x=420.
+  // Still on a 1280-wide smoke display when the pet sits at x=420.
   const x = side === 'left'
     ? Math.max(8, pet.x - 360)
     : pet.x + pet.width + 360

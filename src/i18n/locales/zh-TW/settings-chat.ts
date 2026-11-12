@@ -25,7 +25,7 @@ export const zhTWSettingsChat = {
   'settings.chat.import_card': '匯入角色卡',
   'settings.chat.importing_card': '匯入中...',
   'settings.chat.import_card_success': '已匯入角色「{name}」，含 {count} 條關鍵詞背景。',
-  'settings.chat.import_card_error': '角色卡沒能匯入：{error}',
+  'settings.chat.import_card_error': '角色卡沒能匯入，換一張再試試？',
   'settings.chat.vts_title': 'VTube Studio 整合',
   'settings.chat.vts_hint': '透過 WebSocket API 控制 VTube Studio 中的角色模型，Nexus 提供 AI 對話和情緒驅動。',
   'settings.chat.vts_enabled': '啟用 VTube Studio 橋接',

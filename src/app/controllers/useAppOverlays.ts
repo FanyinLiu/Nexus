@@ -32,6 +32,7 @@ import {
   syncSpeechProviderProfiles,
   syncTextProviderProfiles,
 } from '../../lib'
+import { warnRedacted } from '../../lib/logger.ts'
 import { updateSettingsFromDraft } from '../store/settingsStore.ts'
 import { commitSettingsUpdate } from '../store/commitSettingsUpdate.ts'
 import { syncWindowViewToUrl } from '../appSupport.ts'
@@ -529,10 +530,9 @@ export function useAppOverlays({
           vaultFree: saveOptions?.vaultFree === true,
         })
       } catch (error) {
-        const message = error instanceof Error ? error.message : t('settings.save_failed_fallback')
-        console.error('[Settings] save failed:', error)
-        chat.setError(message)
-        chat.appendSystemMessage(t('settings.save_failed_system', { error: message }), 'error')
+        warnRedacted('[Settings] save failed:', error)
+        chat.setError(t('settings.save_failed_fallback'))
+        chat.appendSystemMessage(t('settings.save_failed_system'), 'error')
         throw error
       }
     },

@@ -70,7 +70,6 @@ const petWindowStateSchema = {
     isPinned: optionalBoolean,
     clickThrough: optionalBoolean,
     petHotspotActive: optionalBoolean,
-    roamCapable: optionalBoolean,
   },
 }
 
@@ -204,12 +203,33 @@ const modelSetupRequestSchema = {
   },
 }
 
+const systemVibrancySchema = {
+  type: 'object',
+  optional: true,
+  default: {},
+  fields: {
+    enabled: optionalBoolean,
+  },
+}
+
+const launchOnStartupSchema = {
+  type: 'boolean',
+  optional: true,
+  default: false,
+}
+
+const confirmDialogSchema = {
+  type: 'string',
+  optional: true,
+  default: '',
+}
+
 /**
  * @param {unknown} payload
- * @returns {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean, roamCapable?: boolean }}
+ * @returns {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean }}
  */
 export function validatePetWindowStatePayload(payload) {
-  return /** @type {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean, roamCapable?: boolean }} */ (
+  return /** @type {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean }} */ (
     validateIpcPayload('pet-window:update-state', payload, petWindowStateSchema)
   )
 }
@@ -339,5 +359,35 @@ export function validateModelSetupReminderPayload(payload) {
 export function validateModelSetupResolvePayload(payload) {
   return /** @type {{ reason: 'shown'|'dismissed'|'installed' }} */ (
     validateIpcPayload('window:resolve-model-setup-request', payload, modelSetupResolveSchema)
+  )
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {{ enabled?: boolean }}
+ */
+export function validateSystemVibrancyPayload(payload) {
+  return /** @type {{ enabled?: boolean }} */ (
+    validateIpcPayload('window:set-system-vibrancy', payload, systemVibrancySchema)
+  )
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function validateLaunchOnStartupPayload(value) {
+  return /** @type {boolean} */ (
+    validateIpcPayload('app:set-launch-on-startup', value, launchOnStartupSchema)
+  )
+}
+
+/**
+ * @param {unknown} message
+ * @returns {string}
+ */
+export function validateConfirmDialogPayload(message) {
+  return /** @type {string} */ (
+    validateIpcPayload('dialog:confirm', message, confirmDialogSchema)
   )
 }

@@ -1,7 +1,9 @@
 // @ts-check
 export {
   validateClosePanelPayload,
+  validateConfirmDialogPayload,
   validateDesktopContextRequestPayload,
+  validateLaunchOnStartupPayload,
   validateMediaSessionControlPayload,
   validateModelSetupReminderPayload,
   validateModelSetupRequestPayload,
@@ -12,6 +14,7 @@ export {
   validateRuntimeHeartbeatPayload,
   validateRuntimeStateUpdatePayload,
   validateSpeechStopPlaybackPayload,
+  validateSystemVibrancyPayload,
   validateWindowDragPayload,
 } from './windowPayloadSchemas.js'
 export {
@@ -100,3 +103,13 @@ export {
   validatePluginBusTopicPayload,
   validatePluginIdPayload,
 } from './pluginPayloadSchemas.js'
+export {
+  validateNotificationWatcherSetPayload,
+} from './notificationPayloadSchemas.js'
+export {
+  validatePersonaInitPayload,
+  validatePersonaSaveMemoryPayload,
+} from './personaPayloadSchemas.js'
+export {
+  validateProactiveShowNotificationPayload,
+} from './proactivePayloadSchemas.js'

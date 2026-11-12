@@ -169,6 +169,29 @@ test('combined screenshot flag requires both context awareness and screen contex
   assert.equal(buildExternalActionPolicySyncPayload(subOff).desktopContext.screenshot, false)
 })
 
+test('active window sync turns off while companion awareness is paused', () => {
+  const enabled = settings({
+    contextAwarenessEnabled: true,
+    activeWindowContextEnabled: true,
+    companionAwarenessPaused: false,
+  })
+  assert.equal(buildExternalActionPolicySyncPayload(enabled).desktopContext.activeWindow, true)
+
+  const paused = settings({
+    contextAwarenessEnabled: true,
+    activeWindowContextEnabled: true,
+    companionAwarenessPaused: true,
+  })
+  assert.equal(buildExternalActionPolicySyncPayload(paused).desktopContext.activeWindow, false)
+
+  const masterOff = settings({
+    contextAwarenessEnabled: false,
+    activeWindowContextEnabled: true,
+    companionAwarenessPaused: false,
+  })
+  assert.equal(buildExternalActionPolicySyncPayload(masterOff).desktopContext.activeWindow, false)
+})
+
 test('policy sync payload carries the store revision unchanged', () => {
   const payload = buildExternalActionPolicySyncPayload(settings({ settingsRevision: 7 }))
   assert.equal(payload.settingsRevision, 7)

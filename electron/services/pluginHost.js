@@ -11,6 +11,11 @@ import {
   isPluginCommandTrusted as _isPluginCommandTrusted,
 } from './pluginHostUtils.js'
 import { getRedactedErrorMessage } from './errorRedaction.js'
+import { readMainUiLocale } from '../mainMessages.js'
+import {
+  buildBatchPluginApprovalDialog,
+  buildPluginApprovalDialog,
+} from './approvalDialogCopy.js'
 
 const PLUGINS_DIR_NAME = 'plugins'
 const PLUGIN_MANIFEST_FILE = 'plugin.json'
@@ -273,41 +278,20 @@ export function listPlugins() {
 }
 
 async function promptBatchPluginApproval(plugins) {
-  const listing = plugins.map((p) => `  • ${p.name} (${p.id} v${p.version})`).join('\n')
-  const { response } = await dialog.showMessageBox({
-    type: 'question',
-    buttons: ['全部允许', '全部拒绝'],
-    defaultId: 1,
-    cancelId: 1,
-    title: `${plugins.length} 个插件需要授权`,
-    message: `发现 ${plugins.length} 个插件需要授权启动`,
-    detail: `${listing}\n\n允许后它们将作为本地进程运行，并可提供 MCP 工具。`,
-  })
+  const { response } = await dialog.showMessageBox(buildBatchPluginApprovalDialog({
+    plugins,
+    locale: readMainUiLocale(),
+  }))
   return response === 0 ? plugins : []
 }
 
 async function promptPluginApproval(plugin) {
   const isReapproval = _approvedPlugins.has(plugin.id)
-  const { response } = await dialog.showMessageBox({
-    type: 'question',
-    buttons: ['允许启动', '拒绝'],
-    defaultId: 1,
-    cancelId: 1,
-    title: isReapproval ? '插件更新授权' : '新插件授权',
-    message: isReapproval
-      ? `插件「${plugin.name}」的启动命令已变更，需要重新授权`
-      : `发现新插件「${plugin.name}」`,
-    detail: [
-      `插件 ID：${plugin.id}`,
-      `版本：${plugin.version}`,
-      plugin.description ? `描述：${plugin.description}` : '',
-      `命令：${plugin.command}`,
-      '',
-      isReapproval
-        ? '该插件的命令或参数已变更。重新授权后它将作为本地进程运行。'
-        : '该插件请求自动启动权限。允许后它将作为本地进程运行，并可提供 MCP 工具。',
-    ].filter(Boolean).join('\n'),
-  })
+  const { response } = await dialog.showMessageBox(buildPluginApprovalDialog({
+    plugin,
+    isReapproval,
+    locale: readMainUiLocale(),
+  }))
   return response === 0
 }
 
