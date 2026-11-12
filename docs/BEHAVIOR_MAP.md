@@ -55,7 +55,7 @@ Nexus 是 Electron 桌面伴侣应用（Live2D 宠物 + 聊天 + 语音 + 记忆
 - 渲染：`src/features/pet/`（`presence.ts`、`activityState.ts`、`idleSequence.ts`、`performance.ts`）
 - Live2D：`src/features/pet/components/live2d/`（`lifecycle.ts` 加载生命周期、`frameRender.ts`、`expressions.ts`、`blink.ts`、`vendor.ts` — **pixi.js 8 + jannchie Live2D 包**，见 §3）
 - VTS：`src/features/pet/vts/`、`electron/services/vtsBridge.js`、`electron/ipc/vtsBridgeIpc.js`
-- 主进程模型服务：`electron/services/petModelService.js`、`live2dModelDiscoveryService.js`、`petImportPolicy.js`、`electron/petLocomotion.js`、`petWindowInstances.js`
+- 主进程模型服务：`electron/services/petModelService.js`、`live2dModelDiscoveryService.js`、`petImportPolicy.js`、`petWindowInstances.js`
 
 ### 工具 / MCP / 插件
 - 行为：内置工具执行、web 搜索、天气、MCP 服务器宿主、插件宿主与消息总线

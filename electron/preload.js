@@ -53,7 +53,6 @@ const panelView = isPanelView()
 contextBridge.exposeInMainWorld('desktopPet', {
   updatePetWindowState: /** @param {unknown} state */ (state) => ipcRenderer.invoke('pet-window:update-state', state),
   getPetWindowState: () => ipcRenderer.invoke('pet-window:get-state'),
-  setPetFreeMode: /** @param {boolean} freeMode */ (freeMode) => ipcRenderer.invoke('pet-window:set-free-mode', { freeMode }),
   subscribePetWindowState: /** @param {IpcListener} listener */ (listener) => {
     /** @type {IpcEventHandler} */
     const handler = (_event, state) => listener(state)

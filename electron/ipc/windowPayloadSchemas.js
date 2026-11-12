@@ -70,7 +70,6 @@ const petWindowStateSchema = {
     isPinned: optionalBoolean,
     clickThrough: optionalBoolean,
     petHotspotActive: optionalBoolean,
-    roamCapable: optionalBoolean,
   },
 }
 
@@ -204,15 +203,6 @@ const modelSetupRequestSchema = {
   },
 }
 
-const petFreeModeSchema = {
-  type: 'object',
-  optional: true,
-  default: {},
-  fields: {
-    freeMode: optionalBoolean,
-  },
-}
-
 const systemVibrancySchema = {
   type: 'object',
   optional: true,
@@ -236,10 +226,10 @@ const confirmDialogSchema = {
 
 /**
  * @param {unknown} payload
- * @returns {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean, roamCapable?: boolean }}
+ * @returns {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean }}
  */
 export function validatePetWindowStatePayload(payload) {
-  return /** @type {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean, roamCapable?: boolean }} */ (
+  return /** @type {{ isPinned?: boolean, clickThrough?: boolean, petHotspotActive?: boolean }} */ (
     validateIpcPayload('pet-window:update-state', payload, petWindowStateSchema)
   )
 }
@@ -369,16 +359,6 @@ export function validateModelSetupReminderPayload(payload) {
 export function validateModelSetupResolvePayload(payload) {
   return /** @type {{ reason: 'shown'|'dismissed'|'installed' }} */ (
     validateIpcPayload('window:resolve-model-setup-request', payload, modelSetupResolveSchema)
-  )
-}
-
-/**
- * @param {unknown} payload
- * @returns {{ freeMode?: boolean }}
- */
-export function validatePetFreeModePayload(payload) {
-  return /** @type {{ freeMode?: boolean }} */ (
-    validateIpcPayload('pet-window:set-free-mode', payload, petFreeModeSchema)
   )
 }
 

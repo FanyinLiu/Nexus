@@ -25,7 +25,6 @@ import { mainT } from './mainMessages.js'
 import {
   applyPetWindowInstances,
   configurePetWindowInstances,
-  getPetInstanceForWindow,
 } from './petWindowInstances.js'
 import { configurePanelWindowController } from './panelWindowController.js'
 import { popupPetContextMenu } from './petContextMenu.js'
@@ -70,7 +69,6 @@ export { getPetIconPath } from './windowAssets.js'
 export {
   getPetWindowStateForEvent,
   updatePetWindowStateForEvent,
-  setPetFreeModeForEvent,
 } from './petWindowInstances.js'
 export {
   panelWindowState,
@@ -263,8 +261,6 @@ export function getPlatformProfile() {
 export function dragWindowBy(event, delta) {
   const sourceWindow = BrowserWindow.fromWebContents(event.sender) ?? mainWindow
   if (!sourceWindow || sourceWindow.isDestroyed()) return
-  const dragInst = getPetInstanceForWindow(sourceWindow)
-  if (dragInst) dragInst.loco.noteDrag(delta)
 
   const bounds = sourceWindow.getBounds()
   const display = screen.getDisplayMatching(bounds)

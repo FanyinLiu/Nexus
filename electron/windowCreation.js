@@ -352,7 +352,6 @@ export function createMainWindow({ showOnReady = true } = {}) {
       }
       syncRuntimeState()
       syncPetWindowState()
-      inst.loco.start()
     },
     onExhausted: () => {
       if (win.isDestroyed() || showingFallback) return
