@@ -288,8 +288,10 @@ test('a snoozed reshow reads the active window only while the saved switch is on
     },
     isActiveWindowAllowed: () => savedActiveWindow,
     getPreferences: () => ({
+      // Equal bounds disable quiet hours (isQuietHour), so the fixed epoch cannot
+      // land inside them when the runner's local time zone differs from UTC.
       quietStart: 23,
-      quietEnd: 8,
+      quietEnd: 23,
       desktopAwarenessAllowed: true,
       awayNotificationsEnabled: false,
       stripEnabled: true,
