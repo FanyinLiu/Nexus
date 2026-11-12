@@ -54,6 +54,7 @@ export function scheduleMemoryReconcile(input: {
   completeChat: CompleteChat
   embed?: MemoryTextEmbedder
   forgottenFingerprints?: readonly string[]
+  forgottenSalt?: string
   applyMemories: (memories: MemoryItem[]) => void
   onLog: (title: string, detail: string) => void
 }): void {
@@ -96,6 +97,7 @@ export function scheduleMemoryReconcile(input: {
         now: input.now,
         embed: input.embed,
         forgottenFingerprints: input.forgottenFingerprints,
+        forgottenSalt: input.forgottenSalt,
       })
       if (result.decisionSource !== 'model') {
         input.onLog('Memory reconcile used fallback', result.fallbackReason ?? 'fallback')

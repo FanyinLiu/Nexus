@@ -24,8 +24,10 @@ export const DAILY_MEMORY_STORAGE_KEY = 'nexus:memory:daily'
 export const MEMORY_V1_BACKUP_STORAGE_KEY = 'nexus:memory:v1-backup'
 /** Append-only reconcile and cap decisions. */
 export const MEMORY_OP_LOG_STORAGE_KEY = 'nexus:memory:op-log'
-/** Hashes of user-deleted memory text; never the text itself. */
+/** Salted hashes of user-deleted memory text; never the text itself. */
 export const MEMORY_FORGOTTEN_STORAGE_KEY = 'nexus:memory:forgotten'
+/** Per-install salt paired with the tombstones; deleted with them on clear-all. */
+export const MEMORY_FORGOTTEN_SALT_STORAGE_KEY = 'nexus:memory:forgotten-salt'
 /** Pre-images taken before each daily memory run. */
 export const MEMORY_RUN_SNAPSHOT_STORAGE_KEY = 'nexus:memory:run-snapshots'
 /** Legacy SOUL-card text. Read once into the live persona, then removed. */

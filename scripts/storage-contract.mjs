@@ -32,6 +32,7 @@ export const STORAGE_KEY_CONTRACTS = [
   { constant: 'MEMORY_V1_BACKUP_STORAGE_KEY', key: 'nexus:memory:v1-backup', domain: 'memory', classification: 'legacy-compat', authority: 'renderer-localStorage-legacy-cleanup', migration: 'delete-on-memory-reset' },
   { constant: 'MEMORY_OP_LOG_STORAGE_KEY', key: 'nexus:memory:op-log', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'MEMORY_FORGOTTEN_STORAGE_KEY', key: 'nexus:memory:forgotten', domain: 'memory', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
+  { constant: 'MEMORY_FORGOTTEN_SALT_STORAGE_KEY', key: 'nexus:memory:forgotten-salt', domain: 'memory', classification: 'settings', authority: 'renderer-localStorage', migration: 'keep-renderer-cache' },
   { constant: 'MEMORY_RUN_SNAPSHOT_STORAGE_KEY', key: 'nexus:memory:run-snapshots', domain: 'memory', classification: 'user-data', authority: 'renderer-localStorage', migration: 'migrate-to-main-sqlite' },
   { constant: 'COMPANION_SOUL_STORAGE_KEY', key: 'nexus:companion:soul', domain: 'memory', classification: 'legacy-compat', authority: 'renderer-localStorage', migration: 'read-only-migration-source' },
   { constant: 'MEMORY_LOCAL_DATA_AUTHORITY_CONSENT_KEY', key: 'nexus:memory:local-data-authority-consent', domain: 'memory', classification: 'settings', authority: 'renderer-localStorage-hidden-feature-consent', migration: 'keep-until-memory-authority-cutover' },

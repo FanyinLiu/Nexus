@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
 import { test } from 'node:test'
 
 import {
   FORGOTTEN_MEMORY_LIMIT,
   addForgottenMemoryFingerprint,
   fingerprintForgottenMemoryText,
+  isForgottenMemoryText,
   normalizeForgottenMemoryText,
 } from '../src/features/memory/forgottenMemories.ts'
 import { extractMemoriesFromMessage } from '../src/features/memory/memory.ts'
@@ -16,16 +16,22 @@ import {
   reconcileFromModelText,
 } from '../src/features/memory/reconcile.ts'
 import type { ChatMessage, DailyMemoryEntry, MemoryItem } from '../src/types/index.ts'
-import { MEMORY_FORGOTTEN_STORAGE_KEY } from '../src/lib/storage/core.ts'
+import {
+  MEMORY_FORGOTTEN_SALT_STORAGE_KEY,
+  MEMORY_FORGOTTEN_STORAGE_KEY,
+} from '../src/lib/storage/core.ts'
 import {
   forgetMemorySuppression,
   loadForgottenMemoryFingerprints,
+  loadForgottenMemorySalt,
   rememberForgottenMemory,
 } from '../src/lib/storage/forgottenMemory.ts'
 import { purgeClearedMemories, purgeDeletedMemory } from '../src/lib/storage/purgeMemoryStores.ts'
 
 const NOW = '2026-10-15T00:00:00.000Z'
 const DELETED = 'I like green tea with jasmine.'
+const SALT = '0123456789abcdef0123456789abcdef'
+const OTHER_SALT = 'fedcba9876543210fedcba9876543210'
 const noEmbed = () => null
 
 function installStorage(): Storage {
@@ -68,18 +74,40 @@ function diaryEntry(content: string): DailyMemoryEntry {
   return { id: 'diary-1', day: '2026-10-15', role: 'user', content, source: 'chat', createdAt: NOW }
 }
 
-/** Same truncation as the production fingerprint, computed with node:crypto. */
-function expectedFingerprint(content: string): string {
-  const digest = createHash('sha256').update(normalizeForgottenMemoryText(content), 'utf8').digest('hex')
-  return `v2:${digest.slice(0, 32)}`
+function fnv1a32(value: string, seed: number): number {
+  let hash = seed >>> 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash >>> 0
+}
+
+/** Independent reference for the production 64-bit salted fingerprint. */
+function expectedFingerprint(content: string, salt: string): string {
+  const input = `${salt}\u0000${normalizeForgottenMemoryText(content)}`
+  const first = fnv1a32(input, 0x811c9dc5).toString(16).padStart(8, '0')
+  const second = fnv1a32(input, 0x9e3779b9).toString(16).padStart(8, '0')
+  return `v2:${first}${second}`
+}
+
+/** The djb2-style hash v1 used; kept only to prove the regression fixture. */
+function legacyV1Hash(value: string): string {
+  let hash = 5381
+  for (let index = 0; index < value.length; index += 1) {
+    hash = Math.imul(hash, 33) ^ value.charCodeAt(index)
+  }
+  return (hash >>> 0).toString(36)
 }
 
 test('deleting a memory leaves a fingerprint that blocks re-extraction', () => {
   installStorage()
   purgeDeletedMemory(memory({ id: 'mem-deleted', content: DELETED }), NOW)
 
+  const salt = loadForgottenMemorySalt()
   const fingerprints = loadForgottenMemoryFingerprints()
-  assert.deepEqual(fingerprints, [fingerprintForgottenMemoryText(DELETED)])
+  assert.match(salt, /^[0-9a-f]{32}$/)
+  assert.deepEqual(fingerprints, [fingerprintForgottenMemoryText(DELETED, salt)])
 
   const candidates = extractMemoriesFromMessage(userMessage(DELETED))
   assert.ok(candidates.length > 0, 'fixture must extract at least one candidate')
@@ -91,6 +119,7 @@ test('deleting a memory leaves a fingerprint that blocks re-extraction', () => {
     embed: noEmbed,
     utterance: DELETED,
     forgottenFingerprints: fingerprints,
+    forgottenSalt: salt,
   })
   assert.deepEqual(plan.memories, [])
 })
@@ -114,6 +143,7 @@ test('case, whitespace, and trailing punctuation still match the tombstone', () 
     embed: noEmbed,
     utterance: variant,
     forgottenFingerprints: loadForgottenMemoryFingerprints(),
+    forgottenSalt: loadForgottenMemorySalt(),
   })
   assert.deepEqual(plan.memories, [])
 
@@ -128,6 +158,7 @@ test('case, whitespace, and trailing punctuation still match the tombstone', () 
     embed: noEmbed,
     utterance: unrelated,
     forgottenFingerprints: loadForgottenMemoryFingerprints(),
+    forgottenSalt: loadForgottenMemorySalt(),
   })
   assert.deepEqual(saved.memories.map((item) => item.content), [unrelated])
 })
@@ -142,33 +173,53 @@ test('persisted suppression data contains no plaintext of the deleted memory', (
   assert.ok(Array.isArray(stored) && stored.length > 0, 'delete must persist at least one tombstone')
   for (const entry of stored) {
     assert.ok(typeof entry === 'string')
-    assert.match(entry, /^v2:[0-9a-f]{32}$/, 'tombstones must be hash-only entries')
+    assert.match(entry, /^v2:[0-9a-f]{16}$/, 'tombstones must be hash-only entries')
   }
+
+  const rawSalt = storage.getItem(MEMORY_FORGOTTEN_SALT_STORAGE_KEY)
+  assert.ok(rawSalt, 'delete must persist the per-install salt')
+  assert.match(JSON.parse(rawSalt) as string, /^[0-9a-f]{32}$/)
 
   const normalized = normalizeForgottenMemoryText(DELETED)
-  const lower = raw.toLowerCase()
-  assert.equal(lower.includes(normalized), false)
-  for (const token of normalized.split(' ')) {
-    if (token.length < 4) continue
-    assert.equal(lower.includes(token), false, `persisted blob must not contain "${token}"`)
+  for (const blob of [raw, rawSalt]) {
+    const lower = blob.toLowerCase()
+    assert.equal(lower.includes(normalized), false)
+    for (const token of normalized.split(' ')) {
+      if (token.length < 4) continue
+      assert.equal(lower.includes(token), false, `persisted blob must not contain "${token}"`)
+    }
   }
-  assert.deepEqual(stored, [fingerprintForgottenMemoryText(DELETED)])
+  assert.deepEqual(stored, [fingerprintForgottenMemoryText(DELETED, JSON.parse(rawSalt) as string)])
 })
 
-test('new fingerprints are a versioned 128-bit SHA-256, not the old 32-bit hash', () => {
-  const fingerprint = fingerprintForgottenMemoryText(DELETED)
-  assert.match(fingerprint, /^v2:[0-9a-f]{32}$/)
-  assert.equal(fingerprint.length, 'v2:'.length + 32)
-  assert.equal(fingerprint, expectedFingerprint(DELETED))
+test('new fingerprints are a salted 64-bit hash, not a v1 or SHA-256 form', () => {
+  const fingerprint = fingerprintForgottenMemoryText(DELETED, SALT)
+  assert.match(fingerprint, /^v2:[0-9a-f]{16}$/)
+  assert.equal(fingerprint.length, 'v2:'.length + 16)
+  assert.equal(fingerprint, expectedFingerprint(DELETED, SALT))
   assert.equal(fingerprint.includes('green tea'), false)
+  // The unreleased SHA-256 format stored 32 hex digits and is dropped on read.
+  assert.doesNotMatch(fingerprint, /^v2:[0-9a-f]{32}$/)
 })
 
-test('legacy unprefixed and v1 fingerprints are dropped on read', () => {
+test('the per-install salt changes the fingerprint and scopes the tombstone', () => {
+  const saltedHere = fingerprintForgottenMemoryText(DELETED, SALT)
+  const saltedElsewhere = fingerprintForgottenMemoryText(DELETED, OTHER_SALT)
+  assert.notEqual(saltedHere, saltedElsewhere)
+
+  assert.equal(isForgottenMemoryText(DELETED, [saltedHere], SALT), true)
+  assert.equal(isForgottenMemoryText(DELETED, [saltedHere], OTHER_SALT), false)
+  assert.equal(isForgottenMemoryText(DELETED, [saltedHere], ''), false)
+})
+
+test('legacy v1, unprefixed, and unreleased SHA-256 v2 entries are dropped on read', () => {
   const storage = installStorage()
-  const current = fingerprintForgottenMemoryText(DELETED)
+  const current = fingerprintForgottenMemoryText(DELETED, SALT)
+  storage.setItem(MEMORY_FORGOTTEN_SALT_STORAGE_KEY, JSON.stringify(SALT))
   storage.setItem(MEMORY_FORGOTTEN_STORAGE_KEY, JSON.stringify([
     '1a2b3c4d',
     'v1:deadbeef',
+    'v2:0123456789abcdef0123456789abcdef',
     current,
   ]))
 
@@ -181,10 +232,11 @@ test('the tombstone list keeps only the newest capped entries', () => {
     rememberForgottenMemory(`remembered detail number ${index}`)
   }
 
+  const salt = loadForgottenMemorySalt()
   const fingerprints = loadForgottenMemoryFingerprints()
   assert.equal(fingerprints.length, FORGOTTEN_MEMORY_LIMIT)
-  assert.equal(fingerprints[0], fingerprintForgottenMemoryText(`remembered detail number ${FORGOTTEN_MEMORY_LIMIT}`))
-  assert.equal(fingerprints.includes(fingerprintForgottenMemoryText('remembered detail number 0')), false)
+  assert.equal(fingerprints[0], fingerprintForgottenMemoryText(`remembered detail number ${FORGOTTEN_MEMORY_LIMIT}`, salt))
+  assert.equal(fingerprints.includes(fingerprintForgottenMemoryText('remembered detail number 0', salt)), false)
 })
 
 test('a manual re-add lifts the suppression and permits extraction again', () => {
@@ -204,6 +256,7 @@ test('a manual re-add lifts the suppression and permits extraction again', () =>
     embed: noEmbed,
     utterance: DELETED,
     forgottenFingerprints: loadForgottenMemoryFingerprints(),
+    forgottenSalt: loadForgottenMemorySalt(),
   })
   assert.deepEqual(plan.memories.map((item) => item.content), [DELETED])
 })
@@ -221,7 +274,12 @@ test('a model ADD of deleted text is refused even when it bypasses candidate fil
         messageRef: 'msg-1',
       }],
     }),
-    { now: NOW, embed: noEmbed, forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)] },
+    {
+      now: NOW,
+      embed: noEmbed,
+      forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED, SALT)],
+      forgottenSalt: SALT,
+    },
   )
   assert.deepEqual(result.memories, [])
   assert.equal(result.ops[0]?.reason, 'forgotten')
@@ -238,7 +296,8 @@ test('a model UPDATE to forgotten text is blocked', () => {
     messageRef: 'msg-1',
   }], {
     now: NOW,
-    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED, SALT)],
+    forgottenSalt: SALT,
   })
 
   assert.equal(result.ops[0]?.op, 'NOOP')
@@ -257,7 +316,8 @@ test('a model SUPERSEDE with forgotten text is blocked', () => {
     messageRef: 'msg-1',
   }], {
     now: NOW,
-    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED, SALT)],
+    forgottenSalt: SALT,
   })
 
   assert.equal(result.ops[0]?.op, 'NOOP')
@@ -281,7 +341,8 @@ test('a model MERGE that would write forgotten text is blocked', () => {
     messageRef: 'msg-1',
   }], {
     now: NOW,
-    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED, SALT)],
+    forgottenSalt: SALT,
   })
 
   assert.equal(result.ops[0]?.op, 'NOOP')
@@ -290,15 +351,18 @@ test('a model MERGE that would write forgotten text is blocked', () => {
   assert.deepEqual(result.memories.map((item) => item.status), ['active', 'active'])
 })
 
-test('clearing all memories removes the tombstone store', async () => {
+test('clearing all memories removes both the tombstones and the salt', async () => {
   const storage = installStorage()
   rememberForgottenMemory(DELETED)
   assert.ok(storage.getItem(MEMORY_FORGOTTEN_STORAGE_KEY), 'fixture must persist a tombstone')
+  assert.ok(storage.getItem(MEMORY_FORGOTTEN_SALT_STORAGE_KEY), 'fixture must persist the salt')
 
   await purgeClearedMemories([], {}, NOW)
 
   assert.equal(storage.getItem(MEMORY_FORGOTTEN_STORAGE_KEY), null)
+  assert.equal(storage.getItem(MEMORY_FORGOTTEN_SALT_STORAGE_KEY), null)
   assert.deepEqual(loadForgottenMemoryFingerprints(), [])
+  assert.equal(loadForgottenMemorySalt(), '')
 })
 
 test('daily consolidation also refuses deleted diary text', async () => {
@@ -317,13 +381,51 @@ test('daily consolidation also refuses deleted diary text', async () => {
       }],
     }),
     embed: noEmbed,
-    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED)],
+    forgottenFingerprints: [fingerprintForgottenMemoryText(DELETED, SALT)],
+    forgottenSalt: SALT,
   })
   assert.deepEqual(result.memories, [])
 })
 
 test('adding the same fingerprint twice keeps one capped entry', () => {
-  const once = addForgottenMemoryFingerprint([], DELETED)
-  const twice = addForgottenMemoryFingerprint(once, '  i LIKE green tea with jasmine!! ')
+  const once = addForgottenMemoryFingerprint([], DELETED, SALT)
+  const twice = addForgottenMemoryFingerprint(once, '  i LIKE green tea with jasmine!! ', SALT)
   assert.deepEqual(twice, once)
+})
+
+test('v1 Chinese collision no longer tombstones a different sentence', () => {
+  const first = '我每天听抹茶'
+  const second = '我每天听播客'
+  assert.equal(legacyV1Hash(first), legacyV1Hash(second), 'fixture must reproduce the v1 collision')
+
+  installStorage()
+  rememberForgottenMemory(first)
+  const salt = loadForgottenMemorySalt()
+  const fingerprints = loadForgottenMemoryFingerprints()
+
+  assert.notEqual(
+    fingerprintForgottenMemoryText(first, salt),
+    fingerprintForgottenMemoryText(second, salt),
+  )
+  assert.equal(isForgottenMemoryText(first, fingerprints, salt), true)
+  assert.equal(isForgottenMemoryText(second, fingerprints, salt), false)
+
+  const allowed = planTurnMemoryWrite({
+    memoryPaused: false,
+    existing: [],
+    candidates: [memory({ id: 'mem-second', content: second })],
+    now: NOW,
+    embed: noEmbed,
+    utterance: second,
+    forgottenFingerprints: fingerprints,
+    forgottenSalt: salt,
+  })
+  assert.deepEqual(allowed.memories.map((item) => item.content), [second])
+
+  installStorage()
+  rememberForgottenMemory(second)
+  const reversedSalt = loadForgottenMemorySalt()
+  const reversed = loadForgottenMemoryFingerprints()
+  assert.equal(isForgottenMemoryText(second, reversed, reversedSalt), true)
+  assert.equal(isForgottenMemoryText(first, reversed, reversedSalt), false)
 })

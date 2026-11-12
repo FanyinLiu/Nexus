@@ -227,6 +227,7 @@ export function applyReconcileOps(
     actor?: MemoryOpActor
     candidates?: readonly MemoryItem[]
     forgottenFingerprints?: readonly string[]
+    forgottenSalt?: string
     createId?: (prefix: string) => string
     createOpId?: (index: number) => string
     runId?: string
@@ -238,6 +239,7 @@ export function applyReconcileOps(
   const createOpId = options.createOpId ?? ((index: number) => `memory-op-${index}-${Date.parse(now) || index}`)
   const candidates = options.candidates ?? []
   const forgottenFingerprints = options.forgottenFingerprints ?? []
+  const forgottenSalt = options.forgottenSalt ?? ''
   let memories = existing.map((memory) => ({ ...memory }))
   const ops: MemoryOpRecord[] = []
 
@@ -274,7 +276,7 @@ export function applyReconcileOps(
         push('NOOP', [], 'empty-add')
         continue
       }
-      if (isForgottenMemoryText(content, forgottenFingerprints)) {
+      if (isForgottenMemoryText(content, forgottenFingerprints, forgottenSalt)) {
         push('NOOP', [], 'forgotten')
         continue
       }
@@ -343,7 +345,7 @@ export function applyReconcileOps(
         push('NOOP', [target.id], 'empty-update')
         continue
       }
-      if (content && isForgottenMemoryText(content, forgottenFingerprints)) {
+      if (content && isForgottenMemoryText(content, forgottenFingerprints, forgottenSalt)) {
         push('NOOP', [target.id], 'forgotten')
         continue
       }
@@ -394,7 +396,7 @@ export function applyReconcileOps(
         push('NOOP', [target.id], 'empty-supersede')
         continue
       }
-      if (isForgottenMemoryText(content, forgottenFingerprints)) {
+      if (isForgottenMemoryText(content, forgottenFingerprints, forgottenSalt)) {
         push('NOOP', [target.id], 'forgotten')
         continue
       }
@@ -457,7 +459,7 @@ export function applyReconcileOps(
       const content = isProtectedMemory(survivor)
         ? survivor.content
         : (draft.content?.trim() || survivor.content)
-      if (isForgottenMemoryText(content, forgottenFingerprints)) {
+      if (isForgottenMemoryText(content, forgottenFingerprints, forgottenSalt)) {
         push('NOOP', draft.targetIds, 'forgotten')
         continue
       }
@@ -558,12 +560,13 @@ function fallbackResult(
   createId?: (prefix: string) => string,
   utterance?: string,
   forgottenFingerprints?: readonly string[],
+  forgottenSalt?: string,
 ): MemoryReconcileResult {
   const applied = withLoopResolution(
     applyReconcileOps(
       existing,
       buildFallbackReconcileOps(existing, candidates, embed),
-      { now, actor: 'turn', candidates, createId, forgottenFingerprints },
+      { now, actor: 'turn', candidates, createId, forgottenFingerprints, forgottenSalt },
     ),
     utteranceText(utterance, candidates),
     now,
@@ -645,20 +648,21 @@ export async function reconcileExtractedMemories(input: {
   createId?: (prefix: string) => string
   utterance?: string
   forgottenFingerprints?: readonly string[]
+  forgottenSalt?: string
 }): Promise<MemoryReconcileResult> {
   const now = input.now ?? new Date().toISOString()
   const candidates = input.candidates.filter((candidate) => (
-    !isForgottenMemoryText(candidate.content, input.forgottenFingerprints)
+    !isForgottenMemoryText(candidate.content, input.forgottenFingerprints, input.forgottenSalt ?? '')
   ))
   try {
     if (!input.complete) {
-      return fallbackResult(input.existing, candidates, now, 'no-model', input.embed, input.createId, input.utterance, input.forgottenFingerprints)
+      return fallbackResult(input.existing, candidates, now, 'no-model', input.embed, input.createId, input.utterance, input.forgottenFingerprints, input.forgottenSalt)
     }
     let text: string | null = null
     try {
       text = (await input.complete(buildReconcilePrompt(input.existing, candidates))) ?? null
     } catch {
-      return fallbackResult(input.existing, candidates, now, 'model-failed', input.embed, input.createId, input.utterance, input.forgottenFingerprints)
+      return fallbackResult(input.existing, candidates, now, 'model-failed', input.embed, input.createId, input.utterance, input.forgottenFingerprints, input.forgottenSalt)
     }
     return reconcileFromModelText(input.existing, candidates, text ?? '', {
       now,
@@ -666,9 +670,10 @@ export async function reconcileExtractedMemories(input: {
       createId: input.createId,
       utterance: input.utterance,
       forgottenFingerprints: input.forgottenFingerprints,
+      forgottenSalt: input.forgottenSalt,
     })
   } catch {
-    return fallbackResult(input.existing, candidates, now, 'model-failed', input.embed, input.createId, input.utterance, input.forgottenFingerprints)
+    return fallbackResult(input.existing, candidates, now, 'model-failed', input.embed, input.createId, input.utterance, input.forgottenFingerprints, input.forgottenSalt)
   }
 }
 
@@ -683,17 +688,18 @@ export function reconcileFromModelText(
     createId?: (prefix: string) => string
     utterance?: string
     forgottenFingerprints?: readonly string[]
+    forgottenSalt?: string
   },
 ): MemoryReconcileResult {
   const now = options?.now ?? new Date().toISOString()
   const utterance = options?.utterance
   const allowedCandidates = candidates.filter((candidate) => (
-    !isForgottenMemoryText(candidate.content, options?.forgottenFingerprints)
+    !isForgottenMemoryText(candidate.content, options?.forgottenFingerprints, options?.forgottenSalt ?? '')
   ))
   try {
     const parsed = parseReconcileResponse(text)
     if (!parsed.ok) {
-      return fallbackResult(existing, allowedCandidates, now, 'invalid-response', options?.embed, options?.createId, utterance, options?.forgottenFingerprints)
+      return fallbackResult(existing, allowedCandidates, now, 'invalid-response', options?.embed, options?.createId, utterance, options?.forgottenFingerprints, options?.forgottenSalt)
     }
     if (exceedsLossGuard(parsed.ops, existing)) {
       return {
@@ -710,13 +716,14 @@ export function reconcileFromModelText(
         candidates: allowedCandidates,
         createId: options?.createId,
         forgottenFingerprints: options?.forgottenFingerprints,
+        forgottenSalt: options?.forgottenSalt,
       }),
       utteranceText(utterance, allowedCandidates),
       now,
     )
     return { memories: applied.memories, ops: applied.ops, decisionSource: 'model' }
   } catch {
-    return fallbackResult(existing, allowedCandidates, now, 'model-failed', options?.embed, options?.createId, utterance, options?.forgottenFingerprints)
+    return fallbackResult(existing, allowedCandidates, now, 'model-failed', options?.embed, options?.createId, utterance, options?.forgottenFingerprints, options?.forgottenSalt)
   }
 }
 
@@ -736,6 +743,8 @@ export function planTurnMemoryWrite(input: {
   messageId?: string
   /** Fingerprints of memories the user deleted; they are never re-added. */
   forgottenFingerprints?: readonly string[]
+  /** Per-install salt the tombstones were hashed with. */
+  forgottenSalt?: string
 }): TurnMemoryWritePlan {
   if (input.memoryPaused) {
     return { paused: true, memories: [...input.existing], evicted: [], ops: [] }
@@ -744,7 +753,7 @@ export function planTurnMemoryWrite(input: {
   const notSensitive = input.candidates.filter((candidate) => !isSensitiveMemoryText(candidate.content))
   const held = input.candidates.length - notSensitive.length
   const safeCandidates = notSensitive.filter((candidate) => (
-    !isForgottenMemoryText(candidate.content, input.forgottenFingerprints)
+    !isForgottenMemoryText(candidate.content, input.forgottenFingerprints, input.forgottenSalt ?? '')
   ))
   if (!safeCandidates.length && !utterance) {
     return { paused: false, memories: [...input.existing], evicted: [], ops: [] }
@@ -763,6 +772,7 @@ export function planTurnMemoryWrite(input: {
         candidates: safeCandidates,
         createId: input.createId,
         forgottenFingerprints: input.forgottenFingerprints,
+        forgottenSalt: input.forgottenSalt,
       },
     )
     : { memories: [...input.existing], ops: [] as MemoryOpRecord[] }

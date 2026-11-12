@@ -17,7 +17,7 @@ import { planTurnMemoryWrite } from '../../features/memory/reconcile.ts'
 import { appendMemoryOpLog } from '../../lib/storage/memoryOpLog.ts'
 import { emitPetNotify } from '../../lib/petNotifyBus.ts'
 import { formatTraceLabel, logVoiceEvent } from '../../features/voice/index.ts'
-import { createId, loadForgottenMemoryFingerprints, shorten } from '../../lib/index.ts'
+import { createId, loadForgottenMemoryFingerprints, loadForgottenMemorySalt, shorten } from '../../lib/index.ts'
 import type { Translator } from '../../types/i18n.ts'
 import type {
   ChatMessage,
@@ -245,11 +245,12 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
       const memoryRevision = bumpMemoryReconcileRevision()
       const memoryPaused = currentSettings.memoryPaused === true
       const forgottenFingerprints = loadForgottenMemoryFingerprints()
+      const forgottenSalt = loadForgottenMemorySalt()
       const candidates = memoryPaused || leaveAlone
         ? []
         : extractMemoriesFromMessage(userMessage, ctx.getEmotionSnapshot?.())
       const activeCandidates = candidates.filter((candidate) => (
-        !isForgottenMemoryText(candidate.content, forgottenFingerprints)
+        !isForgottenMemoryText(candidate.content, forgottenFingerprints, forgottenSalt)
       ))
       const plan = planTurnMemoryWrite({
         memoryPaused,
@@ -259,6 +260,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
         utterance: content,
         messageId: userMessage.id,
         forgottenFingerprints,
+        forgottenSalt,
       })
       let nextMemories = plan.memories
       let nextDailyMemories = ctx.dailyMemoriesRef.current
@@ -300,6 +302,7 @@ export function createSendMessageHandler(dependencies: SendMessageDependencies) 
             candidates: activeCandidates,
             now: userMessage.createdAt,
             forgottenFingerprints,
+            forgottenSalt,
             completeChat,
             applyMemories: (memories) => {
               ctx.memoriesRef.current = memories

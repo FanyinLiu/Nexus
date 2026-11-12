@@ -52,7 +52,7 @@ import type { ChatMessage } from '../types/chat.ts'
 import type { ReminderTaskDraftInput } from '../features/reminders/schedule.ts'
 import { loadMessageFollowUps, settleMessageFollowUp } from '../lib/storage/messageFollowUps.ts'
 import { loadProactiveAgenda, saveProactiveAgenda } from '../lib/storage/proactiveAgenda.ts'
-import { loadForgottenMemoryFingerprints } from '../lib/storage/forgottenMemory.ts'
+import { loadForgottenMemoryFingerprints, loadForgottenMemorySalt } from '../lib/storage/forgottenMemory.ts'
 import type { AppSettings, DailyMemoryStore, FocusState, MemoryItem } from '../types'
 
 const TICK_MS = 60_000
@@ -196,6 +196,7 @@ export function useProactiveAgenda(options: {
         runId,
         memoryPaused: current.settingsRef.current?.memoryPaused === true,
         forgottenFingerprints: loadForgottenMemoryFingerprints(),
+        forgottenSalt: loadForgottenMemorySalt(),
       })
       if (revision !== getMemoryReconcileRevision() || current.busyRef?.current) {
         current.onLog('Daily consolidation skipped', 'chat moved on')
