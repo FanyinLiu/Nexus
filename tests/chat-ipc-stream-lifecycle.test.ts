@@ -289,6 +289,62 @@ test('chat:complete retries a pre-header network blip before failing', async () 
   assert.deepEqual(presenceCalls[2].args, ['network_error'])
 })
 
+test('chat:complete-stream stops after the second attempt instead of spending a third', async () => {
+  const requestedUrls: string[] = []
+  testGlobals.__nexusChatIpcFetch = async (url) => {
+    requestedUrls.push(String(url))
+    if (requestedUrls.length < 3) {
+      return jsonResponse({ error: { message: 'synthetic upstream overloaded' } }, 503)
+    }
+    // A third attempt would succeed, so a loosened attempt cap returns content
+    // the user must never see and this test turns green.
+    return sseResponse([
+      'data: {"choices":[{"delta":{"content":"third attempt must not run"}}]}\n\n',
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n',
+      'data: [DONE]\n\n',
+    ])
+  }
+
+  const frames: StreamFrame[] = []
+  const settled = await invoke(
+    'chat:complete-stream',
+    chatPayload(BASE_URL, { requestId: 'req-retry-cap-stream' }),
+    frames,
+  ).then(
+    (value) => ({ ok: true as const, value }),
+    (error: Error) => ({ ok: false as const, error }),
+  )
+
+  // maxAttempts: 2 in the handler means one retry: two attempts, then failure.
+  assert.equal(requestedUrls.length, 2)
+  assert.equal(settled.ok, false)
+  assert.deepEqual(contentDeltas(frames), [])
+  assert.deepEqual(presenceNames(), ['begin', 'retryResume', 'retryWait', 'retryResume', 'fail'])
+})
+
+test('chat:complete stops after the second attempt instead of spending a third', async () => {
+  const requestedUrls: string[] = []
+  testGlobals.__nexusChatIpcFetch = async (url) => {
+    requestedUrls.push(String(url))
+    if (requestedUrls.length < 3) {
+      return jsonResponse({ error: { message: 'synthetic upstream overloaded' } }, 503)
+    }
+    // A third attempt would succeed, so a loosened attempt cap returns content
+    // the user must never see and this test turns green.
+    return jsonResponse({ choices: [{ message: { content: 'third attempt must not run' } }] })
+  }
+
+  const settled = await invoke('chat:complete', chatPayload(BASE_URL)).then(
+    (value) => ({ ok: true as const, value }),
+    (error: Error) => ({ ok: false as const, error }),
+  )
+
+  // maxAttempts: 2 in the handler means one retry: two attempts, then failure.
+  assert.equal(requestedUrls.length, 2)
+  assert.equal(settled.ok, false)
+  assert.deepEqual(presenceNames(), ['begin', 'retryResume', 'retryWait', 'retryResume', 'fail'])
+})
+
 test('a failure after a 200 body started is not retried as a fresh stream', async () => {
   const requestedUrls: string[] = []
   testGlobals.__nexusChatIpcFetch = async (url) => {
